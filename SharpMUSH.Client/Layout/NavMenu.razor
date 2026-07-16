@@ -10,6 +10,7 @@
 @inject AccountAuthService AccountAuth
 @inject CharacterSwitchService CharacterSwitch
 @inject ApplicationRegistryClient Registry
+@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="phosphor-sidebar @(IsCollapsed ? "phosphor-sidebar--collapsed" : "")">
@@ -149,6 +150,7 @@
                               Characters="AccountAuth.Characters"
                               ActiveCharacter="AccountAuth.ActiveCharacter"
                               OnSwitchCharacter="HandleSwitchCharacterAsync"
+                              OnOpenInNewTab="HandleOpenInNewTabAsync"
                               OnLogout="HandleLogoutAsync" />
             </div>
         </Authorized>
@@ -317,6 +319,18 @@
     /// </summary>
     private async Task HandleSwitchCharacterAsync(AccountAuthService.CharacterSummary character)
         => await CharacterSwitch.SwitchAsync(character);
+
+    /// <summary>
+    /// Opens a new browser tab already acting as <paramref name="character"/>. A tab opened via
+    /// <c>window.open</c> inherits a COPY of this tab's sessionStorage — including the account
+    /// session, which is what lets the new tab authenticate at all, but also the OPENER's active
+    /// character, not the one just clicked here. So the target is passed explicitly as a one-shot
+    /// <c>?as=&lt;dbref&gt;-&lt;creationTime&gt;</c> entry hint that the new tab's MainLayout consumes
+    /// and immediately strips from the URL. Both halves of the key are required — a bare dbref is
+    /// ambiguous across a recycled object, and SwitchCharacterRequest needs both anyway.
+    /// </summary>
+    private async Task HandleOpenInNewTabAsync(AccountAuthService.CharacterSummary character)
+        => await JS.InvokeVoidAsync("open", $"/?as={character.DbrefNumber}-{character.CreationTime}", "_blank");
 
     private async Task HandleLogoutAsync()
     {

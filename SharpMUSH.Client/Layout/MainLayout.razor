@@ -7,7 +7,6 @@
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
 @inject TerminalServiceHost Terminal
-@inject PlayTerminalServiceHost PlayTerminal
 @inject CharacterSwitchService CharacterSwitch
 @inject AccountAuthService AccountAuth
 @inject AuthenticationStateProvider AuthStateProvider
@@ -200,6 +199,8 @@
         if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
             await AccountAuth.GetCharactersAsync();
 
+        await ConsumeCharacterHintAsync();
+
         // Same latch here: otherwise the topbar would keep showing the "Dev Mode" menu (and
         // hide the Disconnect item) even after an explicit logout, since the debug identity's
         // IsAuthenticated never flips to false on its own.
@@ -234,6 +235,39 @@
         // Deliberately do NOT open the terminal drawer: switching connects in the background;
         // the toolbar toggle opens the terminal when the player wants it.
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Consumes a one-shot <c>?as=&lt;dbref&gt;-&lt;creationTime&gt;</c> entry hint written by
+    /// NavMenu's "open in new tab" affordance, then strips it from the URL immediately (replace-style
+    /// navigation) so it can't survive a reload or be re-consumed. A hint naming a character this
+    /// account does not own is ignored — the roster (<see cref="AccountAuthService.Characters"/>) is
+    /// the authority here, and the server would reject the switch anyway. A malformed hint is ignored
+    /// without throwing. Switching itself (<see cref="SwitchCharacterAsync"/> /
+    /// <see cref="CharacterSwitchService"/>) never touches the URL — this hint is an entry parameter
+    /// only.
+    /// </summary>
+    private async Task ConsumeCharacterHintAsync()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var hint = System.Web.HttpUtility.ParseQueryString(uri.Query)["as"];
+        if (string.IsNullOrEmpty(hint)) return;
+
+        // Strip first: the hint must not survive a reload or be re-consumed, regardless of whether
+        // it turns out to be valid/owned below.
+        NavigationManager.NavigateTo(uri.GetLeftPart(UriPartial.Path), replace: true);
+
+        var parts = hint.Split('-');
+        if (parts.Length != 2
+            || !int.TryParse(parts[0], out var dbref)
+            || !long.TryParse(parts[1], out var creationTime))
+            return;
+
+        var target = AccountAuth.Characters
+            .FirstOrDefault(c => c.DbrefNumber == dbref && c.CreationTime == creationTime);
+        if (target is null) return;
+
+        await SwitchCharacterAsync(target);
     }
 
     private async Task AccountLogoutAsync()
