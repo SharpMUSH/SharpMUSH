@@ -1,6 +1,6 @@
 @using SharpMUSH.Client.Services
 @inject AccountAuthService AccountAuth
-@inject ITerminalService Terminal
+@inject TerminalServiceHost Terminal
 @inject OttAuthService OttAuth
 
 <MudPaper Elevation="0" Class="char-picker" Style="padding:0.75rem;">
@@ -105,7 +105,11 @@
         var character = AccountAuth.Characters.FirstOrDefault(c => c.DbrefNumber == _selectedDbref);
         if (character is null) { _connectError = "Character not found."; _busy = false; return; }
 
-        var token = await AccountAuth.GetOttForCharacterAsync(character);
+        // Same flow as MainLayout's character switch: SwitchCharacterAsync mints the OTT AND is
+        // authoritative for identity (it calls AccountAuth.SetActiveCharacter), so this no longer
+        // writes Terminal.ConnectedPlayerName directly — that left this path and MainLayout's path
+        // disagreeing about who owns identity.
+        var token = await AccountAuth.SwitchCharacterAsync(character);
         if (token is null)
         {
             _connectError = "Failed to get authentication token. The account session may have expired — please log in again.";
@@ -116,7 +120,9 @@
 
         try
         {
-            Terminal.ConnectedPlayerName = character.Name;
+            // Recreate rather than reconnect — see MainLayout.SwitchCharacterAsync for why a plain
+            // reconnect risks the server rebinding to a stale resume token.
+            await Terminal.RecreateAsync();
             await Terminal.ConnectWithOttAsync(ServerUri, token);
             await OnConnected.InvokeAsync();
         }

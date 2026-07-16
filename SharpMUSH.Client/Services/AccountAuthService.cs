@@ -329,6 +329,12 @@ public class AccountAuthService(
 	/// </summary>
 	public Task<DebugOttResponse?> GetDebugOttAsync() => _debugOttTask ??= GetDebugOttCoreAsync();
 
+	/// <summary>
+	/// Drops the cached debug OTT. The token is single-use server-side but cached for the app
+	/// lifetime, so a recreated terminal in dev cannot reuse it — the next caller must mint a fresh one.
+	/// </summary>
+	public void InvalidateDebugOtt() => _debugOttTask = null;
+
 	private async Task<DebugOttResponse?> GetDebugOttCoreAsync()
 	{
 		// Force a genuine suspension before touching any state, for exactly the reentrancy reason

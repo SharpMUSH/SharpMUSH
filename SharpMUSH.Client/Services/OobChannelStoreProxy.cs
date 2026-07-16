@@ -15,11 +15,24 @@ public sealed class OobChannelStoreProxy : IOobChannelStore
 
 	public event Action<string>? ChannelUpdated;
 
-	/// <summary>Swaps the backing store, re-pointing the forwarder without touching subscribers.</summary>
+	/// <summary>
+	/// Swaps the backing store, re-pointing the forwarder without touching subscribers.
+	/// </summary>
+	/// <remarks>
+	/// Drops the outgoing store's payloads first (while <see cref="Forward"/> is still wired to it),
+	/// so every package it held raises <see cref="ChannelUpdated"/> one last time before the swap.
+	/// Without this, a recreate (character switch) silently re-points at a fresh, empty store with no
+	/// event at all — subscribers like <c>Play.razor</c>'s sidebar would keep rendering the PREVIOUS
+	/// character's room contents/who-list until the new connection happened to push fresh OOB data.
+	/// Reuses <see cref="IOobChannelStore.Clear"/> rather than inventing a second reset mechanism.
+	/// </remarks>
 	public void SetInner(IOobChannelStore inner)
 	{
 		if (_inner is not null)
+		{
+			_inner.Clear();
 			_inner.ChannelUpdated -= Forward;
+		}
 
 		_inner = inner;
 		_inner.ChannelUpdated += Forward;

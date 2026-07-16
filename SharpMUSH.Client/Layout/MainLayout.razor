@@ -6,7 +6,8 @@
 @implements IDisposable
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
-@inject ITerminalService Terminal
+@inject TerminalServiceHost Terminal
+@inject PlayTerminalServiceHost PlayTerminal
 @inject AccountAuthService AccountAuth
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ILayoutService LayoutService
@@ -70,7 +71,7 @@
 
             <AccountChrome IsLoggedIn="AccountAuth.IsLoggedIn"
                            IsDebugAuth="_isDebugAuth"
-                           DisplayName="@(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")"
+                           DisplayName="@(AccountAuth.ActiveCharacter?.Name ?? AccountAuth.Username ?? "DebugAdmin")"
                            UserInitial="@UserInitial"
                            AccountUsername="@AccountAuth.Username"
                            Characters="AccountAuth.Characters"
@@ -149,7 +150,6 @@
     private bool _isPlayRoute = false;
     private bool _terminalOpen = false;
     private bool _characterActive = false;
-    private string? _terminalPlayerName;
     private bool _isDebugAuth;
     private LayoutConfiguration? _layout;
     private string _searchQuery = string.Empty;
@@ -158,7 +158,7 @@
     {
         get
         {
-            var name = _terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin";
+            var name = AccountAuth.ActiveCharacter?.Name ?? AccountAuth.Username ?? "DebugAdmin";
             return name.Length > 0 ? name[0].ToString().ToUpper() : "?";
         }
     }
@@ -227,14 +227,25 @@
     {
         var token = await AccountAuth.SwitchCharacterAsync(character);
         if (token is null) return;
-        await Terminal.DisconnectAsync();
-        await Task.Delay(200);
 
+        // Recreate rather than reconnect. WebSocketClientService's resume token survives a
+        // DisconnectAsync, so reconnecting sends a resume frame and the server may rebind the
+        // socket to the PREVIOUS character's session — silently discarding the new OTT. A fresh
+        // client starts with a null resume token and sends hello, which cannot rebind.
         var serverUri = Terminal.ServerUri ?? "ws://localhost:4202/ws";
+        AccountAuth.InvalidateDebugOtt();
+
+        await Terminal.RecreateAsync();
+        // The play terminal was never switched before this: nothing in the codebase disconnected
+        // it, so it stayed logged in as the old character. /play re-auto-starts via its own logic.
+        await PlayTerminal.RecreateAsync();
+
+        // Identity commits regardless of whether the connection succeeds; a failed auto-login
+        // surfaces as a terminal error with a retry, not a rollback.
         await Terminal.ConnectWithOttAsync(serverUri, token);
-        _terminalPlayerName = character.Name;
-        // Deliberately do NOT open the terminal drawer: switching characters connects in the
-        // background; the toolbar toggle opens the terminal when the player wants it.
+
+        // Deliberately do NOT open the terminal drawer: switching connects in the background;
+        // the toolbar toggle opens the terminal when the player wants it.
         StateHasChanged();
     }
 
@@ -242,7 +253,6 @@
     {
         await AccountAuth.LogoutAsync();
         await Terminal.DisconnectAsync();
-        _terminalPlayerName = null;
         // _isDebugAuth is computed once in OnInitializedAsync and otherwise never flips back to
         // false on its own (the debug identity's IsAuthenticated never changes), so without this
         // the topbar keeps showing the "DebugAdmin" chip (ADMIN with a different icon) after an
