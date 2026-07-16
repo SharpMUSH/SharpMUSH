@@ -50,6 +50,8 @@ Telnet has a first-class account concept: `ConnectionState.AccountMode`, `Connec
 
 **8. Zero-character lockout during a login freeze.** `AnyStaffCharacterAsync` (AuthController.cs:322) returns false over an empty list, so when `Net.Logins` is disabled a 0-character account gets 403 (AuthController.cs:185, :229) — meaning someone who lost their last character cannot log in to make a replacement.
 
+**9. `PLAYER\`CREATE` fires from one of five call sites.** The event is documented in `SharpMUSH.Documentation/Helpfiles/SharpMUSH/sharpevents.md` with args `(objid, name, how, descriptor, email)`, and `how` is documented as taking `pcreate|create|register` — sharpevents.md:44 even shows a worked example gating on it. But it is triggered only from `@pcreate` (WizardCommands.cs:1964). Not from telnet `make` (AccountSocketCommands.cs:234), not from the portal's `POST /api/account/characters` (AccountController.cs:86), not from `pcreate()` (UtilityFunctions.cs:49). **The documented `how=create` and `how=register` values are emitted by nothing.**
+
 ## Non-goals
 
 Deferred to the account-protection spec: Turnstile, Cloudflare proxy hardening, dedicated rate limits, invite codes, email verification, SMTP, password reset. `IsVerified` (SharpAccount.cs:26) stays a dead field until then.
@@ -126,6 +128,32 @@ Fix defect 8: a 0-character account must be able to log in while `Net.Logins` is
 
 Collapse the duplicate registration UI — `/register` and the `Login.razor:50` Register tab — into one implementation.
 
+### 9. Admin-hookable character application
+
+An admin must be able to gather extra information before a character exists, without touching C# or rebuilding the client. **The mechanism already exists and is implemented** — this spec wires it into creation rather than inventing anything.
+
+**What exists (Area 21, Dynamic Applications — `docs/design/dynamic-applications.md`).** Phases 1–8 landed and are green; the design doc's "No code in this pass" non-goal is **stale**. A Portal Schema Document (`kind: form|view`, pages → sections → elements) is emitted by softcode and rendered by a passive client. `SchemaAppService`, `SchemaFormRenderer`/`SchemaViewRenderer`, `DynamicApplication.razor` (`@page "/apps/{Slug}"`), and a DB-backed `RegisteredApplication` registry behind `ApplicationsController` (Wizard+) all ship today, on all three providers. Actions are `/http/...` round-trips dispatched by `HttpHandlerCommandService` to softcode `<POST>` attributes. The governing principle is **"the portal renders; softcode decides"** — no game policy in the client, no client-side branching (`show_if` is deliberately absent; progression is a returned replacement `schema`).
+
+`examples/packages/chargen/` and `examples/packages/chargen-app/` already ship a working "Character Application" as two `@ainstall`-able YAML files. Compiled components are *also* hookable without a client rebuild: `PluginComponentLoader.cs` loads plugin UI assemblies over HTTP via `Assembly.Load` in Mono-WASM and resolves types by reflection, and `DynamicApplication.razor` branches to `DynamicComponent` for them.
+
+**Registry refinements vs. the design doc** (per `docs/todo/area-21-applications.md`): access is a single hierarchical `MinimumRole`, not `allowedRoles[]`; writes are `[Authorize(Roles = Wizard)]`, which notably excludes God (#1) — a known portal-wide quirk.
+
+**Designation.** A registered Application may be designated as *the* character-creation application. When one is designated, the Create Character flow (§6) renders it instead of the plain name+password dialog.
+
+**Sequence.** Creation stays in C# — softcode cannot link a character to an account (`LinkCharacterAsync` has no softcode surface, and exposing one is out of scope):
+
+1. Portal renders the designated Application's schema and collects fields.
+2. **Validate POST** → softcode replies with the existing envelope: `{ok: false, errors}` binds to fields and **nothing is created**; `{ok: true}` proceeds.
+3. C# creates the character, sets the password, and links it to the account — the §3 validation still applies, so an application cannot smuggle in a duplicate or banned name.
+4. **Apply POST** → the new character's DBRef plus the gathered data go to softcode, which decides what to do with them.
+5. `PLAYER\`CREATE` fires normally. It carries no application payload and gets no special casing.
+
+The veto in step 2 is load-bearing: softcode reacting only after creation could not undo it, and since nothing is ever truly deleted (`BuildingCommands.cs:451`), a rejected application would otherwise leave a permanent half-character.
+
+This inverts the shipped `chargen` package, whose submit handler `@create`s the character itself. That package's contract changes accordingly — it becomes validate + apply, not create.
+
+**Fix defect 9 at the source.** All four creation paths funnel through `CreatePlayerCommand` → `CreatePlayerCommandHandler` (CreatePlayerCommandHandler.cs:11) → `CreatePlayerAsync`. Trigger `PLAYER\`CREATE` **in the handler**, with `how` carried on the command as provenance, rather than adding a call at each of the four sites. A character created from anywhere then fires the event for the Event Object (`#9`) to act on, and no future creation path can forget to. Event dispatch already swallows handler exceptions (EventService.cs:160), so a broken handler cannot break creation.
+
 ## Testing
 
 - **Validation:** all four creation paths reject malformed, duplicate, and banned names; `@pcreate` parity preserved; sitelock enforced on the HTTP route.
@@ -133,6 +161,8 @@ Collapse the duplicate registration UI — `/register` and the `Login.razor:50` 
 - **Max characters:** enforced at HTTP and telnet; unlimited default preserves current behavior.
 - **Destruction:** `@nuke` unlinks the edge; `GOING` characters absent from `GetCharactersForAccountAsync` in all three providers; `switch-character`/`link-character` reject `GOING`; a pre-existing dangling edge is filtered retroactively.
 - **N=0:** all three config modes render correctly; terminals stay disconnected; creation from the panel links, activates, and connects; login succeeds during a login freeze.
+- **Application hook:** with no Application designated, creation falls back to the plain dialog; with one designated, its schema renders; a `{ok: false}` validate response binds errors and creates **nothing**; a successful flow creates, links, and posts DBRef + data to the apply route; §3 name validation still rejects duplicate/banned names submitted through an application; a throwing softcode handler does not break creation.
+- **`PLAYER\`CREATE`:** fires once per creation from all four paths (`@pcreate`, `make`, portal, `pcreate()`) with the correct `how`; existing `@pcreate` behavior unchanged.
 - **Regression:** account registration still returns `Characters: []` and login still handles an empty list.
 
 Per project convention: config-sensitive tests toggling `Net.PlayerCreation`/`Net.Logins` **must** carry `NotInParallel("ConfigMutation")` — this suite is flaky under TUnit parallelism via shared session state. Integration/Explicit suites run under Podman; clear stale containers first.
