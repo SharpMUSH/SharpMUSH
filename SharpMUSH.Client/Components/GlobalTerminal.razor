@@ -238,7 +238,20 @@
     private bool _showLoginPanel;
     private string? _loginPlayer;
     private string? _loginPassword;
-    private string? _playerName;
+
+    /// <summary>
+    /// The connbar's identity label, derived live from <see cref="AccountAuthService.ActiveCharacter"/>
+    /// — the single source of truth for "who is logged in" (same pattern as NavMenu.razor's
+    /// <c>DisplayName</c>). Deliberately not a cached field: caching this per-terminal was the root
+    /// cause of two stale-identity bugs — the connbar showing "not logged in" after
+    /// <c>RecreateAsync</c>'s disconnect announcement during a character switch (nothing ever
+    /// restored a nulled cache), and a remounted terminal showing the roster's first character
+    /// instead of the actually-active one. This is intentionally independent of
+    /// <c>Terminal.ConnectedPlayerName</c> (see <see cref="SetPlayerName"/>), which is a distinct,
+    /// still-live piece of state Play.razor's page header reads off the play terminal instance.
+    /// </summary>
+    private string? _playerName => AccountAuth.ActiveCharacter?.Name;
+
     private readonly List<TerminalLine> _displayLines = [];
     private bool _autoScroll = true;
 
@@ -294,9 +307,7 @@
 
         Terminal.LineReceived += OnLineReceived;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
-
-        // Restore player name from the shared terminal service (survives component re-mounts)
-        _playerName = Terminal.ConnectedPlayerName;
+        AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
 
         var (savedPlayer, savedPassword) = await Credentials.LoadAsync();
         _loginPlayer = savedPlayer;
@@ -306,9 +317,6 @@
         await AccountAuth.InitAsync();
         if (!string.IsNullOrWhiteSpace(AccountAuth.Username))
             _accountIdentifier = AccountAuth.Username;
-
-        if (_connected && _playerName is null && AccountAuth.Characters.Count > 0)
-            _playerName = AccountAuth.Characters[0].Name;
 
         DebugLine($"[DBG] init: connected={_connected} isLoggedIn={AccountAuth.IsLoggedIn}");
 
@@ -465,19 +473,19 @@
         StateHasChanged();
     }
 
-    private void SetPlayerName(string? name)
-    {
-        _playerName = name;
-        Terminal.ConnectedPlayerName = name;
-    }
+    /// <summary>
+    /// Records the connected player's name on the underlying terminal service. This is distinct
+    /// from the connbar's own <see cref="_playerName"/> (which reads <c>AccountAuth.ActiveCharacter</c>
+    /// directly and ignores this): <c>Terminal.ConnectedPlayerName</c> is a separate piece of state
+    /// that Play.razor's page header reads off the play terminal instance
+    /// (<c>PlayTerminal.ConnectedPlayerName ?? "Play Terminal"</c>), independent of the account
+    /// system — it still needs to be maintained for direct/manual "Character" tab and dev-debug
+    /// connects, which never touch <c>AccountAuth</c> at all.
+    /// </summary>
+    private void SetPlayerName(string? name) => Terminal.ConnectedPlayerName = name;
 
     private Task OnCharacterPickerConnected()
     {
-        // CharacterPicker handles connection via Terminal.RecreateAsync() + ConnectWithOttAsync,
-        // which never writes ConnectedPlayerName on the fresh inner (Task 7 made AccountAuth the
-        // sole owner of identity — CharacterPicker's own write was correctly removed). Read the
-        // same source of truth MainLayout uses instead of a terminal property nothing sets anymore.
-        _playerName = AccountAuth.ActiveCharacter?.Name;
         _showLoginPanel = false;
         _showCharacterPicker = false;
         StateHasChanged();
@@ -593,6 +601,12 @@
         InvokeAsync(StateHasChanged);
     }
 
+    // GlobalTerminal is a sibling of MainLayout's own AccountAuth reads, not a child of anything
+    // that re-renders it when identity changes on its own — without this, a switch that doesn't
+    // also flip the terminal's connection state (there is none today, but this mirrors NavMenu's
+    // established pattern defensively) would leave the connbar stale until some unrelated render.
+    private void OnActiveCharacterChanged() => InvokeAsync(StateHasChanged);
+
     private void AddLocalLine(string text, TerminalLineSource source)
     {
         _displayLines.Add(new TerminalLine(DateTime.Now, text, source));
@@ -616,6 +630,7 @@
     {
         Terminal.LineReceived -= OnLineReceived;
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
+        AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
 
         if (_cmdLinkHandle is not null)
         {

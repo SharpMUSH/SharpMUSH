@@ -257,13 +257,13 @@ public class SwitchCharacterFlowTests : BunitContext, IAsyncDisposable
 		{
 			await cut.InvokeAsync(() => ClickSwitchToBeta(cut));
 		}
-		catch (InvalidOperationException) { /* expected: ConnectWithOttAsync deliberately fails */ }
+		catch (InvalidOperationException ex) when (ex.Message == "boom") { /* expected: ConnectWithOttAsync deliberately fails */ }
 
 		try
 		{
 			cut.WaitForAssertion(() => terminal.Second.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
 		}
-		catch (InvalidOperationException) { /* same expected fault, possibly observed on this later poll instead */ }
+		catch (InvalidOperationException ex) when (ex.Message == "boom") { /* same expected fault, possibly observed on this later poll instead */ }
 
 		// Identity commits regardless of whether the connection succeeds; a failed auto-login
 		// surfaces as a terminal error with a retry, not a rollback.

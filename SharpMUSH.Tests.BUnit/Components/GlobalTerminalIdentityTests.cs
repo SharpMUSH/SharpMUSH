@@ -182,6 +182,88 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		await Assert.That(cut.Markup).DoesNotContain("not logged in");
 	}
 
+	/// <summary>
+	/// Fix pass 2, Finding 1. This is the MainLayout character-switch shape specifically (as opposed
+	/// to the character-picker flow above): identity commits on <c>AccountAuth</c> first, then
+	/// <c>TerminalServiceHost.RecreateAsync()</c> announces a genuine disconnect (dropping the old,
+	/// now-stale-identity connection), then a fresh connect on the recreated inner announces
+	/// <c>true</c> — <c>GlobalTerminal.OnConnectionChanged(true)</c> never itself restores identity,
+	/// so this only passes if the connbar derives its label from <c>AccountAuth.ActiveCharacter</c>
+	/// live rather than a field nulled by the disconnect announcement and never written back.
+	/// </summary>
+	[Test]
+	public async Task Recreate_then_a_genuine_connect_shows_the_active_character_not_a_stale_null()
+	{
+		var (first, second) = RegisterTerminal();
+		first.IsConnected.Returns(true);
+		first.ConnectedPlayerName.Returns((string?)null);
+		var auth = await CreateLoggedInAuthAsync();
+
+		var cut = Render<GlobalTerminal>();
+
+		// Preconditions: connected from the start (so init's own auto-connect/picker branches never
+		// engage — this test is about the switch shape, not first-login), showing the roster default.
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("Alpha"))
+				throw new InvalidOperationException("not showing Alpha yet");
+		});
+
+		// The switch is authoritative for identity and commits before the terminal is touched at all
+		// (mirrors MainLayout.SwitchCharacterAsync's own ordering).
+		auth.SetActiveCharacter(Beta);
+
+		var host = Services.GetRequiredService<TerminalServiceHost>();
+		await cut.InvokeAsync(() => host.RecreateAsync());
+
+		// Confirms the disconnect announcement actually reached the connbar before asserting on the
+		// pre-fix symptom: at this exact point the OLD code had already nulled _playerName via
+		// OnConnectionChanged(false) and nothing had restored it yet.
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Markup.Contains("Connected"))
+				throw new InvalidOperationException("recreate's disconnect announcement hasn't landed yet");
+		});
+
+		await cut.InvokeAsync(() => second.ConnectionStateChanged += Raise.Event<Action<bool>>(true));
+
+		await Assert.That(cut.Markup).Contains("Beta");
+		await Assert.That(cut.Markup).DoesNotContain("not logged in");
+	}
+
+	/// <summary>
+	/// Fix pass 2, Finding 2. Identical bug to the one already fixed in NavMenu.razor, in a different
+	/// file: <c>OnInitializedAsync</c> used to fall back to <c>AccountAuth.Characters[0]</c> — the
+	/// roster's FIRST entry — whenever the dead <c>Terminal.ConnectedPlayerName</c> read came back
+	/// null (which, after a recreate, it always does). Remounting the drawer after switching to Beta
+	/// showed "Alpha" as a result. This renders GlobalTerminal fresh with the roster's active
+	/// character already reassigned to Beta (simulating a switch that happened before this mount —
+	/// the terminal itself is already connected, since the real connection is a singleton facade that
+	/// survives remounts) and confirms the remount shows the ACTUALLY active character.
+	/// </summary>
+	[Test]
+	public async Task Remount_with_a_non_default_active_character_shows_that_character_not_the_roster_first()
+	{
+		var (first, _) = RegisterTerminal();
+		first.IsConnected.Returns(true);
+		first.ConnectedPlayerName.Returns((string?)null);
+		var auth = await CreateLoggedInAuthAsync();
+
+		// Simulates a switch that already committed before this mount (e.g. the drawer was closed
+		// during the switch and is now being reopened/remounted).
+		auth.SetActiveCharacter(Beta);
+
+		var cut = Render<GlobalTerminal>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("Beta"))
+				throw new InvalidOperationException("not showing Beta yet");
+		});
+		await Assert.That(cut.Markup).Contains("Beta");
+		await Assert.That(cut.Markup).DoesNotContain("Alpha");
+	}
+
 	public new async ValueTask DisposeAsync()
 	{
 		foreach (var client in _ownedHttpClients)
