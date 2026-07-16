@@ -18,7 +18,7 @@
 
     @* Mobile-only pane switcher: the three IDE panes can't coexist on a phone, so show one at
        a time. Selecting an object/attribute drills forward automatically (see handlers). *@
-    <div class="sc-mobilebar mobile-only">
+    <div class="sc-mobilebar">
         <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Objects ? "sc-mobiletab--on" : "")"
                 @onclick="@(() => _mobilePane = MobilePane.Objects)">Objects</button>
         <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Attrs ? "sc-mobiletab--on" : "")"
