@@ -83,13 +83,22 @@ public class NavMenuActiveCharacterTests : BunitContext, IAsyncDisposable
 		Services.AddSingleton<IStringLocalizer<SharedResource>, NavMenuStubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 
+		// Wrapped in the real facades (not bare substitutes) — NavMenu now also injects
+		// CharacterSwitchService, which needs the concrete TerminalServiceHost/PlayTerminalServiceHost
+		// types to depend on. None of these tests trigger an actual switch.
 		var terminal = Substitute.For<ITerminalService>();
 		terminal.IsConnected.Returns(false);
-		Services.AddSingleton(terminal);
+		var terminalHost = new TerminalServiceHost(() => terminal);
+		Services.AddSingleton(terminalHost);
+		Services.AddSingleton<ITerminalService>(terminalHost);
 
 		var playTerminal = Substitute.For<IPlayTerminalService>();
 		playTerminal.IsConnected.Returns(false);
-		Services.AddSingleton(playTerminal);
+		var playTerminalHost = new PlayTerminalServiceHost(() => playTerminal);
+		Services.AddSingleton(playTerminalHost);
+		Services.AddSingleton<IPlayTerminalService>(playTerminalHost);
+
+		Services.AddSingleton<CharacterSwitchService>();
 
 		Auth = this.AddAuthorization();
 		Auth.SetAuthorized("headwiz");

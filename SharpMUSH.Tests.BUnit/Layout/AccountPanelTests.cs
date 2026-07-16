@@ -145,13 +145,22 @@ public class AccountPanelTests : BunitContext
 	{
 		Auth.SetAuthorized("headwiz");
 
+		// Wrapped in the real facades (not bare substitutes) — mirrors production wiring and gives
+		// NavMenu's now-required CharacterSwitchService injection something concrete to depend on.
+		// Neither of these two card-only tests actually triggers a switch.
 		var terminal = Substitute.For<ITerminalService>();
 		terminal.IsConnected.Returns(false);
-		Services.AddSingleton(terminal);
+		var terminalHost = new TerminalServiceHost(() => terminal);
+		Services.AddSingleton(terminalHost);
+		Services.AddSingleton<ITerminalService>(terminalHost);
 
 		var playTerminal = Substitute.For<IPlayTerminalService>();
 		playTerminal.IsConnected.Returns(false);
-		Services.AddSingleton(playTerminal);
+		var playTerminalHost = new PlayTerminalServiceHost(() => playTerminal);
+		Services.AddSingleton(playTerminalHost);
+		Services.AddSingleton<IPlayTerminalService>(playTerminalHost);
+
+		Services.AddSingleton<CharacterSwitchService>();
 
 		var apiClient = new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
 		var factory = Substitute.For<IHttpClientFactory>();
@@ -307,6 +316,64 @@ public class AccountPanelTests : BunitContext
 	}
 
 	[Test]
+	public async Task Character_rows_are_keyboard_reachable_and_activatable()
+	{
+		var alpha = new CharacterSummary(1, 1L, "Alpha", "");
+		var beta = new CharacterSummary(2, 2L, "Beta", "");
+		CharacterSummary? chosen = null;
+		var cut = RenderPanel(
+			characters: [alpha, beta],
+			initialOpen: true,
+			onSwitchCharacter: EventCallback.Factory.Create<CharacterSummary>(this, c => chosen = c));
+
+		cut.Find(".account-panel-switch-btn").Click();
+		var betaRow = cut.FindAll(".account-panel-character").Single(r => r.TextContent.Contains("Beta"));
+
+		// Reachable: a keyboard user tabbing through the popover must be able to land on the row.
+		await Assert.That(betaRow.GetAttribute("role")).IsEqualTo("menuitem");
+		await Assert.That(betaRow.GetAttribute("tabindex")).IsEqualTo("0");
+
+		// Activatable: Enter (and Space) must do what a click does, since the row can't be a real
+		// <button> — it already hosts the sibling "open in a new tab" button, and nesting interactive
+		// controls is invalid HTML.
+		betaRow.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+		await Assert.That(chosen).IsEqualTo(beta);
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".account-panel").Count != 0)
+				throw new InvalidOperationException("panel still open after Enter-activating a row");
+		});
+	}
+
+	[Test]
+	public async Task Opening_a_character_in_a_new_tab_invokes_OnOpenInNewTab_without_switching()
+	{
+		var alpha = new CharacterSummary(1, 1L, "Alpha", "");
+		var beta = new CharacterSummary(2, 2L, "Beta", "");
+		CharacterSummary? opened = null;
+		CharacterSummary? switched = null;
+		var cut = RenderPanel(
+			characters: [alpha, beta],
+			initialOpen: true,
+			onSwitchCharacter: EventCallback.Factory.Create<CharacterSummary>(this, c => switched = c),
+			onOpenInNewTab: EventCallback.Factory.Create<CharacterSummary>(this, c => opened = c));
+
+		cut.Find(".account-panel-switch-btn").Click();
+		var betaRow = cut.FindAll(".account-panel-character").Single(r => r.TextContent.Contains("Beta"));
+		var newTabButton = betaRow.QuerySelector(".account-panel-newtab")!;
+		await Assert.That(newTabButton.TagName).IsEqualTo("BUTTON");
+
+		newTabButton.Click();
+
+		await Assert.That(opened).IsEqualTo(beta);
+		// @onclick:stopPropagation on the inner button must keep the row's own click (which would
+		// switch and close the panel) from also firing.
+		await Assert.That(switched).IsNull();
+		await Assert.That(cut.FindAll(".account-panel").Count).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task Account_Management_routes_to_slash_account()
 	{
 		var cut = RenderPanel(initialOpen: true);
@@ -348,7 +415,7 @@ public class AccountPanelTests : BunitContext
 		var cut = RenderPanel(characters: [], initialOpen: true);
 
 		await Assert.That(cut.FindAll(".account-panel-item--inert").Count).IsEqualTo(1);
-		await Assert.That(cut.Find(".account-panel-item--inert").TextContent).Contains("No characters");
+		await Assert.That(cut.Find(".account-panel-item--inert").TextContent).Contains("No character");
 
 		// The submenu section must not exist at all — not just be unreachable.
 		await Assert.That(cut.FindAll(".account-panel-level--submenu").Count).IsEqualTo(0);

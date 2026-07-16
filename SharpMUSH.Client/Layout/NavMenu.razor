@@ -8,6 +8,7 @@
 @inject IPlayTerminalService PlayTerminal
 @inject NavigationManager Nav
 @inject AccountAuthService AccountAuth
+@inject CharacterSwitchService CharacterSwitch
 @inject ApplicationRegistryClient Registry
 @implements IDisposable
 
@@ -306,17 +307,16 @@
     private void TogglePanel() => _panelOpen = !_panelOpen;
 
     /// <summary>
-    /// Identity-only switch: commits <see cref="AccountAuthService.ActiveCharacter"/> (and mints a
-    /// fresh OTT) so every surface reading it — this card, the topbar chip, etc. — updates at once.
-    /// Deliberately does NOT reconnect the command/play terminals the way
-    /// <c>MainLayout.SwitchCharacterAsync</c> does: that flow needs the concrete
-    /// <c>TerminalServiceHost</c>/<c>PlayTerminalServiceHost</c> facades (for <c>RecreateAsync</c>),
-    /// which is out of this task's scope ("do not touch the terminal services"). Known gap, flagged
-    /// for a follow-up: switching a character from this panel does not yet reconnect the terminal
-    /// the way the topbar switcher (AccountChrome, deleted in a later task) does.
+    /// Full switch flow via the shared <see cref="CharacterSwitchService"/> — the same one
+    /// <c>MainLayout</c> and <c>CharacterPicker</c> use. Mints a fresh OTT (commits
+    /// <see cref="AccountAuthService.ActiveCharacter"/>, so every surface reading it — this card, the
+    /// topbar chip, etc. — updates at once), recreates both terminal facades, and reconnects the
+    /// command terminal. An earlier version of this panel was identity-only (commits the name change
+    /// but never reconnects the terminal, leaving it authenticated as the old character) — fixed by
+    /// routing through the same service every other switch surface uses.
     /// </summary>
     private async Task HandleSwitchCharacterAsync(AccountAuthService.CharacterSummary character)
-        => await AccountAuth.SwitchCharacterAsync(character);
+        => await CharacterSwitch.SwitchAsync(character);
 
     private async Task HandleLogoutAsync()
     {

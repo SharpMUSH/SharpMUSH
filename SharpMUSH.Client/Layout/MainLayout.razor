@@ -8,6 +8,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject TerminalServiceHost Terminal
 @inject PlayTerminalServiceHost PlayTerminal
+@inject CharacterSwitchService CharacterSwitch
 @inject AccountAuthService AccountAuth
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ILayoutService LayoutService
@@ -225,30 +226,10 @@
 
     private async Task SwitchCharacterAsync(AccountAuthService.CharacterSummary character)
     {
-        var token = await AccountAuth.SwitchCharacterAsync(character);
-        if (token is null) return;
-
-        // Recreate rather than reconnect. WebSocketClientService's resume token survives a
-        // DisconnectAsync, so reconnecting sends a resume frame and the server may rebind the
-        // socket to the PREVIOUS character's session — silently discarding the new OTT. A fresh
-        // client starts with a null resume token and sends hello, which cannot rebind.
-        var serverUri = Terminal.ServerUri ?? "ws://localhost:4202/ws";
-        AccountAuth.InvalidateDebugOtt();
-
-        await Terminal.RecreateAsync();
-        // The play terminal was never switched before this: nothing in the codebase disconnected
-        // it, so it stayed logged in as the old character. Recreating it here leaves it honestly
-        // disconnected rather than stale — RecreateAsync's ConnectionStateChanged(false) reports
-        // that truthfully to any subscriber. /play does NOT auto-reconnect it: GlobalTerminal's
-        // only auto-start runs in OnInitializedAsync, once, at first mount, and there is no other
-        // reconnect entry point. The player must revisit/reload /play to log back in. This is a
-        // deliberate, accepted limitation (still strictly better than the old silent-stale-login
-        // behavior) — do not "fix" this comment to claim reconnection happens somewhere.
-        await PlayTerminal.RecreateAsync();
-
-        // Identity commits regardless of whether the connection succeeds; a failed auto-login
-        // surfaces as a terminal error with a retry, not a rollback.
-        await Terminal.ConnectWithOttAsync(serverUri, token);
+        // Full flow (mint OTT -> recreate both terminal facades -> reconnect) lives in
+        // CharacterSwitchService, shared with CharacterPicker and the nav account panel — see there
+        // for the resume-token rebind rationale and the play-terminal deliberate-disconnect note.
+        if (!await CharacterSwitch.SwitchAsync(character)) return;
 
         // Deliberately do NOT open the terminal drawer: switching connects in the background;
         // the toolbar toggle opens the terminal when the player wants it.

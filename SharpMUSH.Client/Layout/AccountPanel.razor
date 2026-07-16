@@ -36,7 +36,7 @@
                         {
                             <div class="account-panel-item account-panel-item--inert">
                                 <span class="account-panel-item-icon">&#8644;</span>
-                                <span class="account-panel-item-label">No characters yet</span>
+                                <span class="account-panel-item-label">No character</span>
                             </div>
                         }
                         <a href="/account" class="account-panel-item" @onclick="ClosePanelAsync">
@@ -61,17 +61,19 @@
                             <div class="account-panel-characters">
                                 @foreach (var character in Characters)
                                 {
-                                    var current = character;
-                                    var isActive = IsActive(current);
+                                    var isActive = IsActive(character);
                                     <div class="account-panel-character @(isActive ? "account-panel-character--active" : "")"
-                                         @onclick="() => SelectCharacterAsync(current)">
+                                         role="menuitem"
+                                         tabindex="0"
+                                         @onclick="() => SelectCharacterAsync(character)"
+                                         @onkeydown="e => HandleCharacterKeyDownAsync(e, character)">
                                         <span class="account-panel-character-check">@(isActive ? "✓" : "")</span>
-                                        <span class="account-panel-character-name">@current.Name</span>
-                                        <span class="account-panel-character-dbref">#@current.DbrefNumber</span>
+                                        <span class="account-panel-character-name">@character.Name</span>
+                                        <span class="account-panel-character-dbref">#@character.DbrefNumber</span>
                                         <button type="button"
                                                 class="account-panel-newtab"
-                                                title="Open @current.Name in a new tab"
-                                                @onclick="() => OnOpenInNewTab.InvokeAsync(current)"
+                                                title="Open @character.Name in a new tab"
+                                                @onclick="() => OnOpenInNewTab.InvokeAsync(character)"
                                                 @onclick:stopPropagation="true">
                                             <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Style="font-size:0.8125rem;" />
                                         </button>
@@ -132,9 +134,13 @@
             {
                 await _panelRef.FocusAsync();
             }
-            catch (JSException)
+            catch (Exception ex) when (ex is JSException or InvalidOperationException)
             {
-                // Best-effort: focus is a UX nicety, not load-bearing for correctness.
+                // Best-effort: focus is a UX nicety, not load-bearing for correctness. A live browser
+                // failure surfaces as JSException; an ElementReference not wired up to JS interop
+                // (e.g. MudPopoverProvider missing from the render tree) surfaces as
+                // InvalidOperationException ("ElementReference has not been configured correctly") —
+                // both are non-fatal here.
             }
         }
 
@@ -155,6 +161,17 @@
     {
         await OnSwitchCharacter.InvokeAsync(character);
         await ClosePanelAsync();
+    }
+
+    // The row itself is a <div role="menuitem">, not a <button> — it can't be one, since it already
+    // hosts the sibling "open in a new tab" <button> and nesting interactive controls is invalid HTML.
+    // Enter/Space are what ARIA's menuitem pattern (and native buttons) treat as "activate".
+    private async Task HandleCharacterKeyDownAsync(KeyboardEventArgs e, AccountAuthService.CharacterSummary character)
+    {
+        if (e.Key is "Enter" or " ")
+        {
+            await SelectCharacterAsync(character);
+        }
     }
 
     private async Task HandleLogoutAsync()

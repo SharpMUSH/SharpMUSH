@@ -114,6 +114,15 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		var host = new TerminalServiceHost(() => queue.Dequeue());
 		Services.AddSingleton(host);
 		Services.AddSingleton<ITerminalService>(host);
+
+		// CharacterPicker now goes through CharacterSwitchService (Task 8 fix pass, Finding 1) rather
+		// than calling TerminalServiceHost directly, so its dependencies must be resolvable even though
+		// this test class never exercises the play terminal itself.
+		var playHost = new PlayTerminalServiceHost(() => Substitute.For<IPlayTerminalService>());
+		Services.AddSingleton(playHost);
+		Services.AddSingleton<IPlayTerminalService>(playHost);
+		Services.AddSingleton<CharacterSwitchService>();
+
 		return (first, second);
 	}
 

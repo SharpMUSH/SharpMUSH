@@ -49,6 +49,11 @@ public static class TerminalServiceCollectionExtensions
 				sp.GetRequiredService<ILogger<TerminalService>>())));
 		services.AddSingleton<IPlayTerminalService>(sp => sp.GetRequiredService<PlayTerminalServiceHost>());
 
+		// Shared character-switch flow (mint OTT -> recreate both terminal facades -> reconnect the
+		// command terminal) — see CharacterSwitchService for why every switch surface must go through
+		// this one place. Depends on the concrete facades above, so it belongs in this registration.
+		services.AddSingleton<CharacterSwitchService>();
+
 		return services;
 	}
 }

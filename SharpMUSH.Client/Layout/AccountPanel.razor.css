@@ -1,14 +1,3 @@
-/* Full-viewport, fully transparent — its only job is to close the panel on an outside click.
-   DarkBackground/LightBackground are both off in the markup, so this rule only needs to guarantee
-   it never paints anything visible even if that default ever changes upstream. */
-.account-panel-scrim {
-    background: transparent !important;
-}
-
-.account-panel-popover {
-    z-index: 1500;
-}
-
 .account-panel {
     width: 236px;
     background: var(--surface-2);

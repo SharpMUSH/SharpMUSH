@@ -171,6 +171,9 @@ public class SwitchCharacterFlowTests : BunitContext, IAsyncDisposable
 			throw new InvalidOperationException($"Test setup login failed: {error}");
 
 		Services.AddSingleton(auth);
+		// MainLayout now routes its switch through the shared service (Task 8 fix pass, Finding 1) —
+		// depends on the concrete facades registered by RegisterTerminal/RegisterPlayTerminal above.
+		Services.AddSingleton<CharacterSwitchService>();
 		return auth;
 	}
 
