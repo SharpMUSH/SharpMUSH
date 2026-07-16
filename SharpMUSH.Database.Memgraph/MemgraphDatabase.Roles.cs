@@ -26,7 +26,7 @@ public partial class MemgraphDatabase : IRoleRegistryService
 			{
 				slug = role.Slug,
 				name = role.Name,
-				color = (object?)role.Color ?? DBNull.Value,
+				color = (object?)role.Color,
 				priority = role.Priority,
 				isSystem = role.IsSystem,
 				permissionsJson = SerializePermissions(role.Permissions),

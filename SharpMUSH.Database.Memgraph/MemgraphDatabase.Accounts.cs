@@ -49,7 +49,7 @@ CREATE (a:Account {
 	id: $id, username: $username, email: $email, passwordHash: $passwordHash,
 	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, mustChangePassword: false, isDisabled: false
 })
-""", new { id, username, email = (object?)email ?? DBNull.Value, passwordHash = hashedPassword, createdAt = now, updatedAt = now }, cancellationToken);
+""", new { id, username, email = (object?)email, passwordHash = hashedPassword, createdAt = now, updatedAt = now }, cancellationToken);
 
 		return new SharpAccount
 		{
@@ -83,7 +83,7 @@ CREATE (a:Account {
 		var key = accountId.Contains('/') ? accountId.Split('/')[1] : accountId;
 		await ExecuteWithRetryAsync(
 			"MATCH (a:Account {id: $id}) SET a.email = $email, a.updatedAt = $now",
-			new { id = key, email = (object?)newEmail ?? DBNull.Value, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
+			new { id = key, email = (object?)newEmail, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
 	}
 
 	public async ValueTask UpdateAccountUsernameAsync(string accountId, string newUsername, CancellationToken cancellationToken = default)
