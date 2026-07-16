@@ -66,17 +66,6 @@
                     title="@(_terminalOpen ? "Close Terminal" : "Open Terminal")">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:1.125rem;" />
             </button>
-
-            <div class="phosphor-topbar-divider"></div>
-
-            <AccountChrome IsLoggedIn="AccountAuth.IsLoggedIn"
-                           IsDebugAuth="_isDebugAuth"
-                           DisplayName="@(AccountAuth.ActiveCharacter?.Name ?? AccountAuth.Username ?? "DebugAdmin")"
-                           UserInitial="@UserInitial"
-                           AccountUsername="@AccountAuth.Username"
-                           Characters="AccountAuth.Characters"
-                           OnSwitchCharacter="SwitchCharacterAsync"
-                           OnLogout="AccountLogoutAsync" />
         </header>
 
         <main class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
@@ -153,15 +142,6 @@
     private bool _isDebugAuth;
     private LayoutConfiguration? _layout;
     private string _searchQuery = string.Empty;
-
-    private string UserInitial
-    {
-        get
-        {
-            var name = AccountAuth.ActiveCharacter?.Name ?? AccountAuth.Username ?? "DebugAdmin";
-            return name.Length > 0 ? name[0].ToString().ToUpper() : "?";
-        }
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -268,22 +248,6 @@
         if (target is null) return;
 
         await SwitchCharacterAsync(target);
-    }
-
-    private async Task AccountLogoutAsync()
-    {
-        await AccountAuth.LogoutAsync();
-        await Terminal.DisconnectAsync();
-        // _isDebugAuth is computed once in OnInitializedAsync and otherwise never flips back to
-        // false on its own (the debug identity's IsAuthenticated never changes), so without this
-        // the topbar keeps showing the "DebugAdmin" chip (ADMIN with a different icon) after an
-        // explicit logout. Navigate to "/" (the anonymous home, which has no [Authorize]) rather
-        // than /login: logging out should return a visitor to anonymous browsing, not force them
-        // onto a sign-in screen. EnsureAccountRoutingAsync won't re-trigger debug re-auth here
-        // because ExplicitlyLoggedOut is now latched (set by AccountAuth.LogoutAsync above).
-        _isDebugAuth = false;
-        StateHasChanged();
-        NavigationManager.NavigateTo("/", forceLoad: false);
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)

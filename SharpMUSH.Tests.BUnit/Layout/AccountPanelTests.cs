@@ -139,8 +139,8 @@ public class AccountPanelTests : BunitContext
 
 	/// <summary>Real NavMenu, unauthenticated AccountAuthService (no login call) — the card only
 	/// depends on the cascaded ClaimsPrincipal, not on AccountAuth actually holding a session.
-	/// Wrapped in <see cref="MudHarness"/> for the same reason <c>AccountChromeTests</c> is: the
-	/// panel now renders a MudPopover, which needs a MudPopoverProvider in the tree.</summary>
+	/// Wrapped in <see cref="MudHarness"/> because the panel renders a MudPopover, which needs a
+	/// MudPopoverProvider in the tree.</summary>
 	private IRenderedComponent<MudHarness> RenderNavMenu(bool isCollapsed)
 	{
 		Auth.SetAuthorized("headwiz");

@@ -5,6 +5,7 @@ using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
+using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Layout;
@@ -20,7 +21,7 @@ namespace SharpMUSH.Tests.BUnit.Layout;
 /// <c>SwitchCharacterFlowTests.SwitchFlowApiHandler</c>, duplicated rather than shared because it is
 /// file-scoped there.
 /// </summary>
-file sealed class NavMenuSwitchApiHandler(IReadOnlyList<CharacterSummary> characters) : HttpMessageHandler
+file sealed class NavMenuSwitchApiHandler(IReadOnlyList<CharacterSummary> characters, bool failSwitch = false) : HttpMessageHandler
 {
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
@@ -53,6 +54,13 @@ file sealed class NavMenuSwitchApiHandler(IReadOnlyList<CharacterSummary> charac
 
 		if (request.Method == HttpMethod.Post && path == "api/auth/switch-character")
 		{
+			// failSwitch simulates an expired account session: the server rejects the OTT mint, which
+			// is what CharacterSwitchService.SwitchAsync surfaces as a false return.
+			if (failSwitch)
+			{
+				return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+			}
+
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = JsonContent.Create(new { ott = "new-character-ott", expiresIn = 300 })
@@ -133,9 +141,9 @@ public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 		return new PlayTerminalRig(first);
 	}
 
-	private async Task<AccountAuthService> CreateLoggedInAuthAsync()
+	private async Task<AccountAuthService> CreateLoggedInAuthAsync(bool failSwitch = false)
 	{
-		var apiClient = new HttpClient(new NavMenuSwitchApiHandler([Alpha, Beta])) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = new HttpClient(new NavMenuSwitchApiHandler([Alpha, Beta], failSwitch)) { BaseAddress = new Uri("https://localhost:8081/") };
 		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
@@ -231,6 +239,40 @@ public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 				throw new InvalidOperationException("identity not committed yet");
 		});
 		await Assert.That(auth.ActiveCharacter?.Name).IsEqualTo("Beta");
+	}
+
+	/// <summary>
+	/// Review finding on this task: <c>HandleSwitchCharacterAsync</c> used to discard
+	/// <c>CharacterSwitchService.SwitchAsync</c>'s <c>bool</c> return entirely, so a failed OTT mint
+	/// (e.g. an expired account session — <see cref="NavMenuSwitchApiHandler"/>'s <c>failSwitch</c>)
+	/// left the user with a dead button and no explanation. That was tolerable while
+	/// <c>AccountChrome</c> existed as a second, equally-silent switcher; once this panel became the
+	/// ONLY switcher (this task), the silence needed an affordance. Asserts via a substituted
+	/// <see cref="ISnackbar"/> (registered after <c>AddMudServices</c>, so it wins DI resolution)
+	/// rather than DOM text, since <c>AccountPanel.SelectCharacterAsync</c> closes the panel
+	/// immediately after this handler returns regardless of outcome — an inline in-panel message
+	/// would not still be on screen to assert against.
+	/// </summary>
+	[Test]
+	public async Task Switching_from_the_panel_surfaces_an_error_when_the_ott_mint_fails()
+	{
+		RegisterTerminal();
+		RegisterPlayTerminal();
+		await CreateLoggedInAuthAsync(failSwitch: true);
+
+		var snackbar = Substitute.For<ISnackbar>();
+		Services.AddSingleton(snackbar);
+
+		var cut = RenderNavMenu();
+
+		await cut.InvokeAsync(() => ClickSwitchToBetaViaPanel(cut));
+
+		cut.WaitForAssertion(() =>
+			snackbar.Received(1).Add(
+				Arg.Is<string>(m => m.Contains("Beta")),
+				Severity.Error,
+				Arg.Any<Action<SnackbarOptions>?>(),
+				Arg.Any<string?>()));
 	}
 
 	public new async ValueTask DisposeAsync()
