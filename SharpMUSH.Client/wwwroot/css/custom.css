@@ -508,6 +508,7 @@ body {
 	padding: 0.625rem;
 	border-top: 1px solid var(--border-soft);
 	flex-shrink: 0;
+	position: relative;
 }
 .phosphor-profile-card {
 	display: flex;
@@ -576,6 +577,15 @@ body {
 	font-size: 0.65625rem;
 	color: var(--text-faint);
 	white-space: nowrap;
+}
+.phosphor-profile-chevron {
+	font-size: 1rem !important;
+	flex-shrink: 0;
+	color: var(--text-faint) !important;
+}
+.phosphor-profile-card[aria-expanded="true"] .phosphor-profile-chevron {
+	color: var(--accent) !important;
+	transform: rotate(180deg);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

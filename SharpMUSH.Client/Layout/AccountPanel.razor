@@ -1,0 +1,173 @@
+@* Popover opened by the bottom-left nav profile card (NavMenu.razor). Two levels: root account
+   actions, and a character-switch submenu that slides in as a second panel — the Slack/Discord/
+   Linear pattern for an app-shell's persistent account block. Anchored ABOVE the card (it lives at
+   the bottom of a scrolling sidebar) and Fixed so sidebar scroll never displaces it.
+
+   Behavior (not implemented here, exposed for the host to wire): OnOpenInNewTab is invoked but not
+   acted on — Task 9 wires the actual window.open call in NavMenu.razor. *@
+
+<div class="account-panel-anchor">
+    @if (IsOpen)
+    {
+        <MudOverlay Visible="true"
+                    DarkBackground="false"
+                    LightBackground="false"
+                    Class="account-panel-scrim"
+                    OnClick="ClosePanelAsync" />
+        <MudPopover Open="true"
+                    Fixed="true"
+                    AnchorOrigin="Origin.TopLeft"
+                    TransformOrigin="Origin.BottomLeft"
+                    Paper="false"
+                    Class="account-panel-popover">
+            <div class="account-panel" tabindex="-1" @ref="_panelRef" @onkeydown="HandleKeyDownAsync">
+                <div class="account-panel-track @(_level == PanelLevel.Submenu ? "account-panel-track--submenu" : "")">
+
+                    @* ── Root level ── *@
+                    <div class="account-panel-level account-panel-level--root">
+                        @if (HasCharacters)
+                        {
+                            <button type="button" class="account-panel-item account-panel-switch-btn" @onclick="OpenSubmenu">
+                                <span class="account-panel-item-icon">&#8644;</span>
+                                <span class="account-panel-item-label">Switch Character</span>
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="account-panel-item account-panel-item--inert">
+                                <span class="account-panel-item-icon">&#8644;</span>
+                                <span class="account-panel-item-label">No characters yet</span>
+                            </div>
+                        }
+                        <a href="/account" class="account-panel-item" @onclick="ClosePanelAsync">
+                            <span class="account-panel-item-icon">&#9881;</span>
+                            <span class="account-panel-item-label">Account Management</span>
+                        </a>
+                        <div class="account-panel-divider"></div>
+                        <button type="button" class="account-panel-item account-panel-item--danger" @onclick="HandleLogoutAsync">
+                            <span class="account-panel-item-icon">&#9211;</span>
+                            <span class="account-panel-item-label">Logout</span>
+                        </button>
+                    </div>
+
+                    @* ── Character submenu — entirely absent when there is nothing to switch to. ── *@
+                    @if (HasCharacters)
+                    {
+                        <div class="account-panel-level account-panel-level--submenu">
+                            <button type="button" class="account-panel-back" @onclick="BackToRoot">
+                                <span class="account-panel-item-icon">&#8249;</span>
+                                <span>Switch Character</span>
+                            </button>
+                            <div class="account-panel-characters">
+                                @foreach (var character in Characters)
+                                {
+                                    var current = character;
+                                    var isActive = IsActive(current);
+                                    <div class="account-panel-character @(isActive ? "account-panel-character--active" : "")"
+                                         @onclick="() => SelectCharacterAsync(current)">
+                                        <span class="account-panel-character-check">@(isActive ? "✓" : "")</span>
+                                        <span class="account-panel-character-name">@current.Name</span>
+                                        <span class="account-panel-character-dbref">#@current.DbrefNumber</span>
+                                        <button type="button"
+                                                class="account-panel-newtab"
+                                                title="Open @current.Name in a new tab"
+                                                @onclick="() => OnOpenInNewTab.InvokeAsync(current)"
+                                                @onclick:stopPropagation="true">
+                                            <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Style="font-size:0.8125rem;" />
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </MudPopover>
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public IReadOnlyList<AccountAuthService.CharacterSummary> Characters { get; set; } = [];
+    [Parameter] public AccountAuthService.CharacterSummary? ActiveCharacter { get; set; }
+    [Parameter] public EventCallback<AccountAuthService.CharacterSummary> OnSwitchCharacter { get; set; }
+    [Parameter] public EventCallback<AccountAuthService.CharacterSummary> OnOpenInNewTab { get; set; }
+    [Parameter] public EventCallback OnLogout { get; set; }
+
+    private enum PanelLevel { Root, Submenu }
+
+    private PanelLevel _level = PanelLevel.Root;
+    private ElementReference _panelRef;
+    private bool _wasOpen;
+
+    private bool HasCharacters => Characters.Count > 0;
+
+    private bool IsActive(AccountAuthService.CharacterSummary character)
+        => ActiveCharacter is not null
+           && ActiveCharacter.DbrefNumber == character.DbrefNumber
+           && ActiveCharacter.CreationTime == character.CreationTime;
+
+    protected override void OnParametersSet()
+    {
+        // A parent-driven close (e.g. re-clicking the card) bypasses ClosePanelAsync, so the level
+        // reset has to happen here too — otherwise the next open silently resumes mid-submenu.
+        if (!IsOpen)
+        {
+            _level = PanelLevel.Root;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Move real keyboard focus onto the panel exactly once per open — not every render, or a
+        // re-render triggered while the panel is open (e.g. switching levels) would keep stealing
+        // focus back from whatever the user just interacted with. Needed so a mouse-opened panel is
+        // still Escape-able without an extra Tab: the browser has to actually be focused on this
+        // element for a real keydown to reach it (bUnit's synthetic KeyDown bypasses this, but a
+        // live browser does not).
+        if (IsOpen && !_wasOpen)
+        {
+            try
+            {
+                await _panelRef.FocusAsync();
+            }
+            catch (JSException)
+            {
+                // Best-effort: focus is a UX nicety, not load-bearing for correctness.
+            }
+        }
+
+        _wasOpen = IsOpen;
+    }
+
+    private void OpenSubmenu() => _level = PanelLevel.Submenu;
+
+    private void BackToRoot() => _level = PanelLevel.Root;
+
+    private async Task ClosePanelAsync()
+    {
+        _level = PanelLevel.Root;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private async Task SelectCharacterAsync(AccountAuthService.CharacterSummary character)
+    {
+        await OnSwitchCharacter.InvokeAsync(character);
+        await ClosePanelAsync();
+    }
+
+    private async Task HandleLogoutAsync()
+    {
+        await OnLogout.InvokeAsync();
+        await ClosePanelAsync();
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await ClosePanelAsync();
+        }
+    }
+}
