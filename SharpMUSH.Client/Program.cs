@@ -43,28 +43,8 @@ builder.Services.AddSingleton<PackagesAdminService>();
 builder.Services.AddSingleton<BannedNamesService>();
 builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<AdminAccountsService>();
-// The registered singletons are stable FACADES (Task 6). Each holds a swappable inner terminal so a
-// character switch can dispose and rebuild the connection — every @inject site and
-// MushQueryService's constructor capture keep pointing at the facade, which never changes identity.
-// The websocket clients are transient: each recreated terminal gets a brand-new one, which is what
-// clears the resume token and forces hello instead of resume. The concrete facade type is also
-// registered directly (aliased to the same instance) so the character-switch flow can call
-// RecreateAsync() without casting from the interface.
-builder.Services.AddTransient<IWebSocketClientService, WebSocketClientService>();
-builder.Services.AddSingleton(sp => new TerminalServiceHost(
-	() => new TerminalService(
-		sp.GetRequiredService<IWebSocketClientService>(),
-		sp.GetRequiredService<ILogger<TerminalService>>())));
-builder.Services.AddSingleton<ITerminalService>(sp => sp.GetRequiredService<TerminalServiceHost>());
-
-// Second, independent connection for the /play page (player interactions), separate from the
-// command/softcode terminal above. Both are singletons so each survives navigation.
-builder.Services.AddTransient<IPlayWebSocketClientService, PlayWebSocketClientService>();
-builder.Services.AddSingleton(sp => new PlayTerminalServiceHost(
-	() => new PlayTerminalService(
-		sp.GetRequiredService<IPlayWebSocketClientService>(),
-		sp.GetRequiredService<ILogger<TerminalService>>())));
-builder.Services.AddSingleton<IPlayTerminalService>(sp => sp.GetRequiredService<PlayTerminalServiceHost>());
+// Registers the terminal facades (Task 6) — see AddTerminalServices for the rationale.
+builder.Services.AddTerminalServices();
 builder.Services.AddSingleton<MushQueryService>();
 builder.Services.AddHttpClient("help", c =>
 {
