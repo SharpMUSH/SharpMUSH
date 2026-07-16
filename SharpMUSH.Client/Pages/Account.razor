@@ -282,7 +282,7 @@
     private async Task LogoutAsync()
     {
         await AccountAuth.LogoutAsync();
-        // Mirror MainLayout's AccountLogoutAsync: _isDebugAuth is computed once in
+        // Mirror NavMenu's HandleLogoutAsync: _isDebugAuth is computed once in
         // OnInitializedAsync and otherwise stays true after logout, which would keep this page's
         // "Debug Mode" alert showing the stale DebugAdmin identity instead of the plain
         // "not logged in" message. Land on "/" (the anonymous home) rather than /login: logging

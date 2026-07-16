@@ -82,7 +82,7 @@ internal sealed class SwitchServiceApiHandler : HttpMessageHandler
 /// account panel (<c>NavMenu</c>) all go through one place. No component is rendered: the service has
 /// no UI surface of its own. <see cref="BunitContext"/> is used only for its <c>JSInterop</c>
 /// convenience (sessionStorage fakes for the real <see cref="AccountAuthService"/>), the same reason
-/// <c>SwitchCharacterFlowTests</c> uses it.
+/// the UI-level switch tests (<c>NavMenuCharacterSwitchTests</c>, <c>NewTabCharacterTests</c>) use it.
 /// </summary>
 public class CharacterSwitchServiceTests : BunitContext, IAsyncDisposable
 {
@@ -237,8 +237,8 @@ public class CharacterSwitchServiceTests : BunitContext, IAsyncDisposable
 		catch (InvalidOperationException ex) when (ex.Message == "boom")
 		{
 			// Expected: no try/catch inside the service — a failed auto-login surfaces as a terminal
-			// error, not a silently-swallowed rollback. There is a MainLayout-level test pinning the
-			// same no-rollback contract for the topbar surface.
+			// error, not a silently-swallowed rollback. This is the only place that pins the
+			// no-rollback contract; there is no topbar surface anymore (AccountChrome was deleted).
 		}
 
 		await Assert.That(rig.Auth.ActiveCharacter?.DbrefNumber).IsEqualTo(2);

@@ -175,7 +175,57 @@ public class AccountPanelTests : BunitContext
 		return Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm => nm.Add(c => c.IsCollapsed, isCollapsed)));
 	}
 
+	/// <summary>Same wiring as <see cref="RenderNavMenu"/> but unauthenticated. AccountChromeTests's
+	/// Anonymous_RendersSignInLink covered the equivalent topbar-chrome branch before that surface was
+	/// deleted; this is a pre-existing gap on the nav panel side, not one opened by that deletion — but
+	/// NavMenu's &lt;NotAuthorized&gt; branch (NavMenu.razor:158-175) is now the app's ONLY sign-in
+	/// affordance, so it needs a pin of its own.</summary>
+	private IRenderedComponent<MudHarness> RenderNavMenuAnonymous(bool isCollapsed)
+	{
+		Auth.SetNotAuthorized();
+
+		var terminal = Substitute.For<ITerminalService>();
+		terminal.IsConnected.Returns(false);
+		var terminalHost = new TerminalServiceHost(() => terminal);
+		Services.AddSingleton(terminalHost);
+		Services.AddSingleton<ITerminalService>(terminalHost);
+
+		var playTerminal = Substitute.For<IPlayTerminalService>();
+		playTerminal.IsConnected.Returns(false);
+		var playTerminalHost = new PlayTerminalServiceHost(() => playTerminal);
+		Services.AddSingleton(playTerminalHost);
+		Services.AddSingleton<IPlayTerminalService>(playTerminalHost);
+
+		Services.AddSingleton<CharacterSwitchService>();
+
+		var apiClient = new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var factory = Substitute.For<IHttpClientFactory>();
+		factory.CreateClient("api").Returns(apiClient);
+		Services.AddSingleton(factory);
+		Services.AddSingleton(sp => new ApplicationRegistryClient(
+			sp.GetRequiredService<IHttpClientFactory>(),
+			NullLogger<ApplicationRegistryClient>.Instance));
+		Services.AddSingleton(sp => new AccountAuthService(
+			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance));
+
+		return Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm => nm.Add(c => c.IsCollapsed, isCollapsed)));
+	}
+
 	// ── Card wiring (real NavMenu) ──────────────────────────────────────────────────────────
+
+	[Test]
+	public async Task Anonymous_visitor_gets_a_sign_in_link_and_no_account_panel()
+	{
+		var cut = RenderNavMenuAnonymous(isCollapsed: false);
+
+		var link = cut.Find("a.phosphor-profile-card");
+		await Assert.That(link.GetAttribute("href")).IsEqualTo("/login");
+		await Assert.That(cut.Markup).Contains("Sign in");
+
+		// No account chip/panel affordance at all — not just closed, but structurally absent.
+		await Assert.That(cut.FindAll("button.phosphor-profile-card").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".account-panel").Count).IsEqualTo(0);
+	}
 
 	[Test]
 	public async Task Panel_is_closed_until_the_card_is_clicked()

@@ -78,7 +78,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		// it in this test (CreateLoggedInAuthAsync's LoginAsync doesn't call InitAsync), so it
 		// genuinely re-hydrates from "sessionStorage". Without these, the unconfigured Loose getItem
 		// reads return null and InitCoreAsync would wipe the session LoginAsync just set up (same
-		// wrinkle documented in SwitchCharacterFlowTests).
+		// wrinkle documented in NewTabCharacterTests/NavMenuCharacterSwitchTests).
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session-token-1");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.username").SetResult("headwiz");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword").SetResult(bool.FalseString);

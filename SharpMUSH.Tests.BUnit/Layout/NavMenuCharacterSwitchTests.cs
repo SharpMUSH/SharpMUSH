@@ -18,7 +18,7 @@ namespace SharpMUSH.Tests.BUnit.Layout;
 
 /// <summary>
 /// Fakes the endpoints NavMenu's own init and the switch flow touch — same shape as
-/// <c>SwitchCharacterFlowTests.SwitchFlowApiHandler</c>, duplicated rather than shared because it is
+/// <c>NewTabCharacterTests.NewTabApiHandler</c>, duplicated rather than shared because it is
 /// file-scoped there.
 /// </summary>
 file sealed class NavMenuSwitchApiHandler(IReadOnlyList<CharacterSummary> characters, bool failSwitch = false) : HttpMessageHandler
@@ -84,8 +84,8 @@ file sealed class NavMenuSwitchStubLocalizer<T> : IStringLocalizer<T>
 /// the command/play terminals never reconnected, so the terminal kept acting as the OLD character and
 /// the freshly-minted OTT was silently discarded). This exercises the actual user gesture — open the
 /// panel, open the character submenu, click a row — through the real <see cref="NavMenu"/> render
-/// tree, mirroring <c>SwitchCharacterFlowTests</c>'s harness for <see cref="MainLayout"/> but pointed
-/// at the nav panel instead of the topbar chrome.
+/// tree; the nav panel is now the only switcher, so there is no separate topbar surface to compare
+/// against.
 /// </summary>
 public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 {

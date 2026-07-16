@@ -21,8 +21,8 @@ namespace SharpMUSH.Tests.BUnit.Layout;
 /// Fakes the endpoints touched by both halves of this feature: NavMenu/MainLayout init
 /// (<c>api/auth/account-login</c>, <c>api/applications</c>, <c>api/setup/status</c>) and the switch
 /// flow the consumer half drives (<c>api/auth/switch-character</c>) — same shape as
-/// <c>SwitchCharacterFlowTests.SwitchFlowApiHandler</c>, duplicated rather than shared because it is
-/// file-scoped there.
+/// <c>NavMenuCharacterSwitchTests.NavMenuSwitchApiHandler</c>, duplicated rather than shared because
+/// it is file-scoped there.
 /// </summary>
 file sealed class NewTabApiHandler(IReadOnlyList<CharacterSummary> characters) : HttpMessageHandler
 {
@@ -94,8 +94,9 @@ file sealed class NewTabStubLocalizer<T> : IStringLocalizer<T>
 ///   honored; a hint naming a character this account doesn't own, or a malformed hint, is silently
 ///   ignored, since the server would reject an unowned switch anyway.
 ///
-/// DI wiring mirrors <c>SwitchCharacterFlowTests</c> (proven to render <see cref="MainLayout"/>) and
-/// <c>NavMenuCharacterSwitchTests</c> (proven to render <see cref="NavMenu"/> standalone).
+/// DI wiring mirrors <c>NavMenuCharacterSwitchTests</c> (proven to render <see cref="NavMenu"/>
+/// standalone); rendering <see cref="MainLayout"/> itself is proven directly by the consumer tests
+/// below.
 /// </summary>
 public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 {
@@ -228,6 +229,12 @@ public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 				throw new InvalidOperationException("hint not consumed yet");
 		});
 		await Assert.That(auth.ActiveCharacter?.Name).IsEqualTo("Beta");
+
+		// MainLayout.SwitchCharacterAsync deliberately does NOT open the terminal drawer on a
+		// background/new-tab switch — the toolbar toggle opens it when the player wants it.
+		// phosphor-terminal-header appears in exactly one place repo-wide (MainLayout.razor, inside
+		// the `@if (_terminalOpen)` block), so its absence here is the pin for that contract.
+		await Assert.That(cut.Markup).DoesNotContain("phosphor-terminal-header");
 	}
 
 	[Test]
