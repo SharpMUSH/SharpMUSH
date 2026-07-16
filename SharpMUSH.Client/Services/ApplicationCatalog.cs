@@ -29,15 +29,19 @@ public sealed class ApplicationCatalog
 	/// Loads the application registry once at startup. Uses a bare client with a short timeout so a
 	/// slow/unreachable API degrades to an empty catalog instead of hanging boot. The GET is anonymous.
 	/// </summary>
-	public static async Task<ApplicationCatalog> LoadAsync(string hostBaseAddress)
+	/// <param name="apiBaseAddress">
+	/// The server's API root, already resolved by <see cref="ApiBaseAddressResolver"/> — this takes the
+	/// answer rather than deriving its own, so it cannot disagree with the "api" HttpClient about where
+	/// the API lives.
+	/// </param>
+	public static async Task<ApplicationCatalog> LoadAsync(Uri apiBaseAddress)
 	{
 		try
 		{
-			var uri = new UriBuilder(hostBaseAddress) { Scheme = "https", Port = 8081 }.Uri;
-			using var http = new HttpClient { BaseAddress = uri, Timeout = TimeSpan.FromSeconds(5) };
+			using var http = new HttpClient { BaseAddress = apiBaseAddress, Timeout = TimeSpan.FromSeconds(5) };
 			var apps = await http.GetFromJsonAsync<List<PortalApplication>>("api/applications");
 			var catalog = new ApplicationCatalog(apps ?? []);
-			Console.WriteLine($"[ApplicationCatalog] Loaded {catalog._bySlug.Count} application(s), {catalog.WidgetApps.Count} widget(s) from {uri}api/applications.");
+			Console.WriteLine($"[ApplicationCatalog] Loaded {catalog._bySlug.Count} application(s), {catalog.WidgetApps.Count} widget(s) from {apiBaseAddress}api/applications.");
 			return catalog;
 		}
 		catch (Exception ex)

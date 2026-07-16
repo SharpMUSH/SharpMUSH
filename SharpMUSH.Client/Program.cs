@@ -81,10 +81,18 @@ registry.Register(new OnlineCharactersWidgetDescriptor());
 registry.Register(new QuickstartWidgetDescriptor());
 registry.Register(new SchemaWidgetDescriptor());
 
+// Where the server's API lives: same origin as the app itself unless configuration says otherwise
+// (the dev launch profile splits the client on http:8080 from the API on https:8081 and opts in via
+// appsettings.Development.json). Resolved once here and shared by every API caller below, so the
+// answer cannot drift between them.
+var apiBaseAddress = ApiBaseAddressResolver.Resolve(
+	builder.HostEnvironment.BaseAddress,
+	builder.Configuration[ApiBaseAddressResolver.ConfigurationKey]);
+
 // Bridge Widget-kind Dynamic Applications (Area 21) into the layout palette: load the registry once
 // at startup (anonymous) and register a synthetic widget per app, rendered by SchemaWidget. The
 // catalog is also injected so SchemaWidget can resolve a placement's schema/data routes by slug.
-var applicationCatalog = await ApplicationCatalog.LoadAsync(builder.HostEnvironment.BaseAddress);
+var applicationCatalog = await ApplicationCatalog.LoadAsync(apiBaseAddress);
 foreach (var widgetApp in applicationCatalog.WidgetApps)
 {
 	registry.Register(new ApplicationPortalWidget(widgetApp));
@@ -105,15 +113,7 @@ builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredServi
 // Same singleton, exposed for scene group join/leave (client-only control surface).
 builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<ConnectionStateService>());
 
-builder.Services.AddHttpClient("api", sp =>
-{
-	var uri = new UriBuilder(builder.HostEnvironment.BaseAddress)
-	{
-		Scheme = "https",
-		Port = 8081
-	};
-	sp.BaseAddress = uri.Uri;
-});
+builder.Services.AddHttpClient("api", c => c.BaseAddress = apiBaseAddress);
 
 if (builder.HostEnvironment.IsDevelopment())
 {
