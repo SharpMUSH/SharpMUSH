@@ -57,6 +57,62 @@ public class AccountAuthService(
 	public IReadOnlyList<string> Permissions { get; private set; } = [];
 
 	/// <summary>
+	/// The character this tab is currently acting as. Defaults to the first character on the
+	/// roster when a session hydrates, and is reassigned by <see cref="SwitchCharacterAsync"/>.
+	/// Null when the account holds no characters.
+	/// </summary>
+	/// <remarks>
+	/// Blazor WASM gives each browser tab its own DI container, so this singleton field is
+	/// already tab-scoped — two tabs may hold different active characters on one account.
+	/// </remarks>
+	public CharacterSummary? ActiveCharacter { get; private set; }
+
+	/// <summary>True when the account holds at least one character.</summary>
+	public bool HasCharacters => Characters.Count > 0;
+
+	/// <summary>
+	/// The single gate for "may this tab drive a terminal?". Read this instead of re-deriving
+	/// the condition per component — divergent local derivations are what left the nav card
+	/// showing a stale name.
+	/// </summary>
+	public bool CanUseTerminal => IsLoggedIn && ActiveCharacter is not null;
+
+	/// <summary>Raised whenever <see cref="ActiveCharacter"/> changes to a different character.</summary>
+	public event Action? ActiveCharacterChanged;
+
+	/// <summary>
+	/// Sets the active character and raises <see cref="ActiveCharacterChanged"/> if it actually
+	/// changed. Idempotent: re-setting the same character raises nothing, so callers may set
+	/// defensively without causing render storms.
+	/// </summary>
+	public void SetActiveCharacter(CharacterSummary? character)
+	{
+		if (ActiveCharacter?.DbrefNumber == character?.DbrefNumber
+		    && ActiveCharacter?.CreationTime == character?.CreationTime)
+			return;
+
+		ActiveCharacter = character;
+		RaiseActiveCharacterChanged();
+	}
+
+	/// <summary>
+	/// Raises <see cref="ActiveCharacterChanged"/> defensively — mirrors
+	/// <see cref="RaiseAuthStateChanged"/>: a subscriber's render exception must never propagate
+	/// back into the caller mid-switch.
+	/// </summary>
+	private void RaiseActiveCharacterChanged()
+	{
+		try
+		{
+			ActiveCharacterChanged?.Invoke();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "An ActiveCharacterChanged subscriber threw; swallowed");
+		}
+	}
+
+	/// <summary>
 	/// True once the user has explicitly logged out in this tab (sessionStorage-latched).
 	/// Guards against dev-mode debug re-auth (and any other silent re-login) undoing an
 	/// explicit logout on the next component init/reload — cleared by any successful
