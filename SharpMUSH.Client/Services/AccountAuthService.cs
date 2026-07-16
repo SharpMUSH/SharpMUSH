@@ -182,7 +182,7 @@ public class AccountAuthService(
 			return;
 		}
 
-		Username = await js.InvokeAsync<string?>("localStorage.getItem", UsernameKey);
+		Username = await js.InvokeAsync<string?>("sessionStorage.getItem", UsernameKey);
 		var mustChangePassword = await js.InvokeAsync<string?>("sessionStorage.getItem", MustChangePasswordKey);
 		MustChangePassword = string.Equals(mustChangePassword, bool.TrueString, StringComparison.OrdinalIgnoreCase);
 		Role = await js.InvokeAsync<string?>("sessionStorage.getItem", RoleKey);
@@ -570,7 +570,7 @@ public class AccountAuthService(
 		if (success)
 		{
 			Username = newUsername;
-			await js.InvokeVoidAsync("localStorage.setItem", UsernameKey, newUsername);
+			await js.InvokeVoidAsync("sessionStorage.setItem", UsernameKey, newUsername);
 		}
 		return (success, error);
 	}
@@ -604,6 +604,7 @@ public class AccountAuthService(
 		// previous boot's cached debug-OTT response.
 		_debugOttTask = null;
 		await js.InvokeVoidAsync("sessionStorage.removeItem", SessionTokenKey);
+		await js.InvokeVoidAsync("sessionStorage.removeItem", UsernameKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", MustChangePasswordKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", PermissionsKey);
@@ -629,7 +630,7 @@ public class AccountAuthService(
 		Role = role;
 		Permissions = permissions ?? [];
 		await js.InvokeVoidAsync("sessionStorage.setItem", SessionTokenKey, token);
-		await js.InvokeVoidAsync("localStorage.setItem", UsernameKey, username);
+		await js.InvokeVoidAsync("sessionStorage.setItem", UsernameKey, username);
 		await SetMustChangePasswordAsync(mustChangePassword);
 		if (role is null)
 			await js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);
