@@ -123,8 +123,8 @@ public class SwitchCharacterFlowTests : BunitContext, IAsyncDisposable
 		Auth.SetAuthorized("headwiz");
 	}
 
-	private sealed record TerminalRig(TerminalServiceHost Host, ITerminalService First, ITerminalService Second);
-	private sealed record PlayTerminalRig(PlayTerminalServiceHost Host, IPlayTerminalService First, IPlayTerminalService Second);
+	private sealed record TerminalRig(ITerminalService First, ITerminalService Second);
+	private sealed record PlayTerminalRig(IPlayTerminalService First);
 
 	/// <summary>
 	/// Registers a real <see cref="TerminalServiceHost"/> (concrete type AND its interface aliased
@@ -140,7 +140,7 @@ public class SwitchCharacterFlowTests : BunitContext, IAsyncDisposable
 		var host = new TerminalServiceHost(() => queue.Dequeue());
 		Services.AddSingleton(host);
 		Services.AddSingleton<ITerminalService>(host);
-		return new TerminalRig(host, first, second);
+		return new TerminalRig(first, second);
 	}
 
 	private PlayTerminalRig RegisterPlayTerminal()
@@ -151,7 +151,7 @@ public class SwitchCharacterFlowTests : BunitContext, IAsyncDisposable
 		var host = new PlayTerminalServiceHost(() => queue.Dequeue());
 		Services.AddSingleton(host);
 		Services.AddSingleton<IPlayTerminalService>(host);
-		return new PlayTerminalRig(host, first, second);
+		return new PlayTerminalRig(first);
 	}
 
 	private async Task<AccountAuthService> CreateLoggedInAuthAsync()
@@ -174,12 +174,10 @@ public class SwitchCharacterFlowTests : BunitContext, IAsyncDisposable
 		return auth;
 	}
 
-	private IRenderedComponent<MainLayout> RenderMainLayout() => Render<MainLayout>();
-
-	/// <summary>Opens the account menu and clicks the "Beta" entry — the exact user gesture that
-	/// invokes <c>MainLayout.SwitchCharacterAsync</c> via <c>AccountChrome.OnSwitchCharacter</c>.</summary>
 	/// <summary>
-	/// Each character row renders as its own <c>div.mud-menu-item</c> (MudBlazor's <c>MudMenuItem</c>),
+	/// Opens the account menu and clicks the "Beta" entry — the exact user gesture that invokes
+	/// <c>MainLayout.SwitchCharacterAsync</c> via <c>AccountChrome.OnSwitchCharacter</c>. Each
+	/// character row renders as its own <c>div.mud-menu-item</c> (MudBlazor's <c>MudMenuItem</c>),
 	/// which is the element carrying the actual <c>@onclick</c> handler — ancestor wrapper divs (the
 	/// popover provider, the popover surface, the listbox) all contain "Beta (#2)" too via their
 	/// aggregated text, so a broad "any element containing this text" search would land on one of
@@ -203,9 +201,9 @@ public class SwitchCharacterFlowTests : BunitContext, IAsyncDisposable
 		var playTerminal = RegisterPlayTerminal();
 		await CreateLoggedInAuthAsync();
 
-		var cut = RenderMainLayout();
+		var cut = Render<MainLayout>();
 
-		cut.InvokeAsync(() => ClickSwitchToBeta(cut));
+		await cut.InvokeAsync(() => ClickSwitchToBeta(cut));
 		cut.WaitForAssertion(() => terminal.First.Received(1).DisposeAsync());
 
 		// Both the command terminal AND the play terminal recreated — nothing in the codebase ever
@@ -222,11 +220,11 @@ public class SwitchCharacterFlowTests : BunitContext, IAsyncDisposable
 		RegisterPlayTerminal();
 		await CreateLoggedInAuthAsync();
 
-		var cut = RenderMainLayout();
+		var cut = Render<MainLayout>();
 		await Assert.That(cut.Markup).DoesNotContain("phosphor-terminal-header")
 			.Because("the drawer must not be open before switching either");
 
-		cut.InvokeAsync(() => ClickSwitchToBeta(cut));
+		await cut.InvokeAsync(() => ClickSwitchToBeta(cut));
 		// Wait for the async switch (mint OTT -> recreate x2 -> connect) to fully settle.
 		cut.WaitForAssertion(() => terminal.First.Received(1).DisposeAsync());
 
@@ -240,17 +238,32 @@ public class SwitchCharacterFlowTests : BunitContext, IAsyncDisposable
 	{
 		var terminal = RegisterTerminal();
 		RegisterPlayTerminal();
-		// The post-recreate inner never reports a successful connection — ConnectWithOttAsync
-		// completes (no exception; a real network failure surfaces asynchronously via
-		// ConnectionStateChanged, not a thrown exception) but IsConnected stays false throughout,
-		// simulating a failed auto-login.
-		terminal.Second.IsConnected.Returns(false);
+		// The post-recreate inner's connect attempt genuinely fails — a thrown exception, not the
+		// previous version's `terminal.Second.IsConnected.Returns(false)`, which only configured a
+		// substitute's already-default value and asserted nothing. That no-op meant this test passed
+		// even with a try/catch rollback added to MainLayout (the exact regression its name claims to
+		// guard against); a real throw makes it fail if such a rollback ever resets ActiveCharacter.
+		terminal.Second.ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>())
+			.Returns(Task.FromException(new InvalidOperationException("boom")));
 		var auth = await CreateLoggedInAuthAsync();
 
-		var cut = RenderMainLayout();
+		var cut = Render<MainLayout>();
 
-		cut.InvokeAsync(() => ClickSwitchToBeta(cut));
-		cut.WaitForAssertion(() => terminal.Second.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
+		// MainLayout.SwitchCharacterAsync has no try/catch around ConnectWithOttAsync today, so the
+		// configured failure surfaces as an unhandled exception through Blazor's event-dispatch path —
+		// expected and irrelevant to what this test checks (the ActiveCharacter side effect, which
+		// commits earlier in the method, before the throwing call).
+		try
+		{
+			await cut.InvokeAsync(() => ClickSwitchToBeta(cut));
+		}
+		catch (InvalidOperationException) { /* expected: ConnectWithOttAsync deliberately fails */ }
+
+		try
+		{
+			cut.WaitForAssertion(() => terminal.Second.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
+		}
+		catch (InvalidOperationException) { /* same expected fault, possibly observed on this later poll instead */ }
 
 		// Identity commits regardless of whether the connection succeeds; a failed auto-login
 		// surfaces as a terminal error with a retry, not a rollback.

@@ -36,9 +36,59 @@ public class TerminalServiceHostTests
 		sut.ConnectionStateChanged += _ => seen++;
 
 		await sut.RecreateAsync();
+		// RecreateAsync itself now announces the new (disconnected) inner's state (Finding 2) — that
+		// is the first of the two counted here — before the new inner's own event below reaches the
+		// same subscriber.
 		second.ConnectionStateChanged += Raise.Event<Action<bool>>(true);
 
-		await Assert.That(seen).IsEqualTo(1);
+		await Assert.That(seen).IsEqualTo(2);
+	}
+
+	/// <summary>
+	/// Detaching the old inner before disposing it (so its own teardown events, if any, never reach
+	/// the facade) means a recreate would otherwise announce nothing at all — subscribers keep
+	/// whatever <c>_connected</c> they last observed even though the underlying socket is gone. The
+	/// play terminal has no self-correcting reconnect (unlike the command terminal's
+	/// <c>ConnectWithOttAsync</c>, which raises its own <c>true</c> afterwards), so it depends on this
+	/// facade telling the truth directly.
+	/// </summary>
+	[Test]
+	public async Task RecreateAsync_announces_disconnection_to_facade_subscribers()
+	{
+		var first = Substitute.For<ITerminalService>();
+		var second = Substitute.For<ITerminalService>();
+		var queue = new Queue<ITerminalService>([first, second]);
+		var sut = new TerminalServiceHost(() => queue.Dequeue());
+
+		// Subscriber taken BEFORE the recreate — the @inject sites' situation exactly.
+		var seen = new List<bool>();
+		sut.ConnectionStateChanged += seen.Add;
+
+		await sut.RecreateAsync();
+
+		await Assert.That(seen).IsEquivalentTo([false]);
+	}
+
+	/// <summary>
+	/// The command terminal's flow is recreate (announces false) then <c>ConnectWithOttAsync</c> on
+	/// the new inner (which, on a real socket, eventually raises its own true). The disconnect
+	/// announcement must not double-fire or clobber that later, genuine event.
+	/// </summary>
+	[Test]
+	public async Task RecreateAsyncs_disconnect_announcement_does_not_fight_a_subsequent_connect()
+	{
+		var first = Substitute.For<ITerminalService>();
+		var second = Substitute.For<ITerminalService>();
+		var queue = new Queue<ITerminalService>([first, second]);
+		var sut = new TerminalServiceHost(() => queue.Dequeue());
+
+		var seen = new List<bool>();
+		sut.ConnectionStateChanged += seen.Add;
+
+		await sut.RecreateAsync();
+		second.ConnectionStateChanged += Raise.Event<Action<bool>>(true);
+
+		await Assert.That(seen).IsEquivalentTo([false, true]);
 	}
 
 	[Test]
@@ -53,12 +103,15 @@ public class TerminalServiceHostTests
 		sut.ConnectionStateChanged += _ => seen++;
 
 		await sut.RecreateAsync();
+		// RecreateAsync's own disconnect announcement (Finding 2) already counts once here — the
+		// count this test cares about is whether it grows any further from the OLD inner below.
+		await Assert.That(seen).IsEqualTo(1);
 
 		// Raise on the OLD inner, after it has been replaced — a still-attached handler here would
 		// mean a half-disposed old terminal keeps delivering lines/state changes alongside the new one.
 		first.ConnectionStateChanged += Raise.Event<Action<bool>>(true);
 
-		await Assert.That(seen).IsEqualTo(0);
+		await Assert.That(seen).IsEqualTo(1);
 	}
 
 	[Test]

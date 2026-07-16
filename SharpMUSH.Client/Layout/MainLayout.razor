@@ -237,7 +237,13 @@
 
         await Terminal.RecreateAsync();
         // The play terminal was never switched before this: nothing in the codebase disconnected
-        // it, so it stayed logged in as the old character. /play re-auto-starts via its own logic.
+        // it, so it stayed logged in as the old character. Recreating it here leaves it honestly
+        // disconnected rather than stale — RecreateAsync's ConnectionStateChanged(false) reports
+        // that truthfully to any subscriber. /play does NOT auto-reconnect it: GlobalTerminal's
+        // only auto-start runs in OnInitializedAsync, once, at first mount, and there is no other
+        // reconnect entry point. The player must revisit/reload /play to log back in. This is a
+        // deliberate, accepted limitation (still strictly better than the old silent-stale-login
+        // behavior) — do not "fix" this comment to claim reconnection happens somewhere.
         await PlayTerminal.RecreateAsync();
 
         // Identity commits regardless of whether the connection succeeds; a failed auto-login

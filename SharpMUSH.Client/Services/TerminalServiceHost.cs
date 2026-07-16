@@ -33,6 +33,15 @@ public class TerminalServiceHost : ITerminalService
 	/// Disposes the current inner terminal and builds a fresh one. Subscribers keep their
 	/// subscriptions to this facade and are re-pointed transparently.
 	/// </summary>
+	/// <remarks>
+	/// Detaching the old inner before disposing it means its own <c>ConnectionStateChanged(false)</c>
+	/// (if it raises one on teardown) never reaches facade subscribers — so this announces the new
+	/// inner's (genuinely disconnected) state explicitly once it is attached. A caller that goes on to
+	/// connect the new inner (e.g. <c>ConnectWithOttAsync</c>) will raise its own <c>true</c>
+	/// afterwards; that is a second, later, genuine event from the current inner, not a conflict with
+	/// this one. A caller that never reconnects (the play terminal, today) leaves subscribers correctly
+	/// reporting "disconnected" instead of caching a stale "connected" for a socket that is gone.
+	/// </remarks>
 	public async Task RecreateAsync()
 	{
 		Detach(_inner);
@@ -40,6 +49,8 @@ public class TerminalServiceHost : ITerminalService
 
 		_inner = _factory();
 		Attach(_inner);
+
+		OnConnectionState(false);
 	}
 
 	private void Attach(ITerminalService inner)

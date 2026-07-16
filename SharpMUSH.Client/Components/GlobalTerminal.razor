@@ -473,8 +473,11 @@
 
     private Task OnCharacterPickerConnected()
     {
-        // CharacterPicker handles connection; grab name from terminal service
-        _playerName = Terminal.ConnectedPlayerName;
+        // CharacterPicker handles connection via Terminal.RecreateAsync() + ConnectWithOttAsync,
+        // which never writes ConnectedPlayerName on the fresh inner (Task 7 made AccountAuth the
+        // sole owner of identity — CharacterPicker's own write was correctly removed). Read the
+        // same source of truth MainLayout uses instead of a terminal property nothing sets anymore.
+        _playerName = AccountAuth.ActiveCharacter?.Name;
         _showLoginPanel = false;
         _showCharacterPicker = false;
         StateHasChanged();
