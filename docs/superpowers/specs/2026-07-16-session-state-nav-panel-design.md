@@ -156,6 +156,13 @@ Move `UsernameKey` from `localStorage` to `sessionStorage` (AccountAuthService.c
 
 Existing suites must stay green: the 124 bUnit tests from #691 and the full local run (4808/4809). Per project convention, integration/Explicit suites run under Podman — clear stale containers first.
 
+## Known gaps shipped by this spec
+
+Accepted deliberately, fixed in the character-lifecycle spec that follows:
+
+- **The switcher lists nuked characters.** `@destroy`/`@nuke` only flag `GOING`/`GOING_TWICE` — nothing is ever deleted (`BuildingCommands.cs:451`: actual deletion "requires a garbage collection system"), and `GetCharactersForAccountAsync` (ArangoDatabase.Accounts.cs:161) does not filter `GOING`. Nuke also never unlinks the account edge — `UnlinkCharacterFromAccountAsync` is called only from `AccountController.cs:168` and `AdminAccountsController.cs:121`. So a nuked character remains listed and selectable in the panel built here. This spec does not make it worse; it does surface it more prominently.
+- **`NoCharacters` renders but offers nothing.** By design — see Non-goals.
+
 ## Open questions
 
-None. Registration is explicitly deferred to a follow-up spec.
+None. Character lifecycle and account protection are explicitly deferred to follow-up specs.
