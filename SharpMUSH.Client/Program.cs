@@ -42,6 +42,7 @@ builder.Services.AddSingleton<RestrictionsService>();
 builder.Services.AddSingleton<PackagesAdminService>();
 builder.Services.AddSingleton<BannedNamesService>();
 builder.Services.AddSingleton<SitelockService>();
+builder.Services.AddSingleton<AdminAccountsService>();
 builder.Services.AddSingleton<IWebSocketClientService, WebSocketClientService>();
 builder.Services.AddSingleton<ITerminalService, TerminalService>();
 // Second, independent connection for the /play page (player interactions), separate from the
@@ -61,6 +62,7 @@ builder.Services.AddSingleton<HelpService>(sp =>
 builder.Services.AddScoped<CredentialService>();
 builder.Services.AddSingleton<OttAuthService>();
 builder.Services.AddSingleton<AccountAuthService>();
+builder.Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());
 builder.Services.AddSingleton<DatabaseConversionService>();
 builder.Services.AddSingleton<IThemeService, ThemeService>();
 
@@ -92,9 +94,10 @@ builder.Services.AddSingleton<IWidgetRegistry>(registry);
 builder.Services.AddSingleton<ILayoutService, LayoutService>();
 builder.Services.AddSingleton<ICharacterStateService, CharacterStateService>();
 builder.Services.AddSingleton<INotificationService, NotificationService>();
-builder.Services.AddSingleton<IGameHubConnectionFactory>(_ =>
+builder.Services.AddSingleton<IGameHubConnectionFactory>(sp =>
 	new GameHubConnectionFactory(
 		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/game",
+		sp.GetRequiredService<IAccountAuthState>(),
 		// Phase 9: scene realtime is a separate connection to the plugin-owned SceneHub at /hubs/scene.
 		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/scene"));
 builder.Services.AddSingleton<ConnectionStateService>();
@@ -118,10 +121,7 @@ if (builder.HostEnvironment.IsDevelopment())
 }
 else
 {
-	builder.Services.AddOidcAuthentication(options =>
-	{
-		builder.Configuration.Bind("Local", options.ProviderOptions);
-	});
+	builder.Services.AddScoped<AuthenticationStateProvider, AccountAuthStateProvider>();
 }
 
 builder.Services.AddCascadingAuthenticationState();

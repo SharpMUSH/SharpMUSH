@@ -32,12 +32,13 @@ public interface IConnectionStateService
 	event Action? OnPluginsChanged;
 
 	/// <summary>
-	/// Opens the hub connection authenticated with <paramref name="accessToken"/>.
-	/// The token is passed as the <c>access_token</c> query parameter so the hub
-	/// can authenticate the Blazor WASM client without cookies.
-	/// No-ops if already connected.
+	/// Opens the hub connection, authenticated with the caller's current account-session token
+	/// (passed as the <c>access_token</c> query parameter so the hub can authenticate the Blazor
+	/// WASM client without cookies). The token is resolved live on every connect and automatic-reconnect
+	/// attempt, not captured once up front, so a session established/renewed after this call was first
+	/// made is still picked up. No-ops if already connected.
 	/// </summary>
-	Task ConnectAsync(string accessToken);
+	Task ConnectAsync();
 
 	/// <summary>
 	/// Closes the hub connection gracefully.

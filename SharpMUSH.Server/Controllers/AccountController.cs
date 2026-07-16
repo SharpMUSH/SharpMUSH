@@ -26,27 +26,41 @@ public class AccountController(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<AccountController> logger) : ControllerBase
 {
-	private async Task<string?> GetAccountIdFromBearerAsync()
+	/// <summary>
+	/// Resolves the account session bearer. Unless <paramref name="allowMustChangePassword"/>,
+	/// accounts flagged MustChangePassword are rejected with 403 — the flag is enforced
+	/// server-side, not advisory: a flagged session may only change its password or log out.
+	/// </summary>
+	private async Task<(string? AccountId, IActionResult? Failure)> GetAccountIdFromBearerAsync(bool allowMustChangePassword = false)
 	{
 		var header = Request.Headers.Authorization.FirstOrDefault();
 		if (header is null || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-			return null;
+			return (null, Unauthorized("Invalid or expired account session."));
 
 		var token = header["Bearer ".Length..].Trim();
-		return await accountSessionStore.ValidateAsync(token);
-	}
+		var accountId = await accountSessionStore.ValidateAsync(token);
+		if (accountId is null)
+			return (null, Unauthorized("Invalid or expired account session."));
 
-	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
+		var account = await accountService.GetByIdAsync(accountId);
+		if (account is null || account.IsDisabled)
+			return (null, Unauthorized("Account not found or disabled."));
+
+		if (!allowMustChangePassword && account.MustChangePassword)
+			return (null, StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action."));
+
+		return (accountId, null);
+	}
 
 	/// <summary>List all characters linked to the authenticated account.</summary>
 	[HttpGet("characters")]
 	public async Task<IActionResult> GetCharacters()
 	{
-		var accountId = await GetAccountIdFromBearerAsync();
-		if (accountId is null) return Unauthorized("Invalid or expired account session.");
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
 
-		var characters = await accountService.GetCharactersAsync(accountId);
-		var summaries = await BuildSummariesAsync(characters);
+		var characters = await accountService.GetCharactersAsync(accountId!);
+		var summaries = await CharacterSummaryMapper.BuildSummariesAsync(characters);
 		return Ok(summaries);
 	}
 
@@ -56,8 +70,11 @@ public class AccountController(
 	[HttpPost("characters")]
 	public async Task<IActionResult> CreateCharacter([FromBody] CreateCharacterRequest request)
 	{
-		var accountId = await GetAccountIdFromBearerAsync();
-		if (accountId is null) return Unauthorized("Invalid or expired account session.");
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
+
+		if (!options.CurrentValue.Net.PlayerCreation)
+			return StatusCode(StatusCodes.Status403Forbidden, "Player creation is disabled on this server.");
 
 		if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("Name and Password are required.");
@@ -71,7 +88,7 @@ public class AccountController(
 				new DBRef((int)defaultHome), new DBRef((int)defaultHome),
 				startingQuota));
 
-			await accountService.LinkCharacterAsync(accountId, playerRef);
+			await accountService.LinkCharacterAsync(accountId!, playerRef);
 
 			logger.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via API", LogSanitizer.Sanitize(accountId), LogSanitizer.Sanitize(request.Name), playerRef.Number);
 			return Ok(new { DbrefNumber = playerRef.Number, CreationTime = playerRef.CreationMilliseconds });
@@ -93,8 +110,8 @@ public class AccountController(
 	[HttpPost("link-character")]
 	public async Task<IActionResult> LinkCharacter([FromBody] LinkCharacterRequest request)
 	{
-		var accountId = await GetAccountIdFromBearerAsync();
-		if (accountId is null) return Unauthorized("Invalid or expired account session.");
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
 
 		if (string.IsNullOrWhiteSpace(request.CharacterName))
 			return BadRequest("CharacterName is required.");
@@ -135,7 +152,7 @@ public class AccountController(
 		if (existingOwner is not null && existingOwner.Id != accountId)
 			return Conflict("Character is already linked to another account.");
 
-		await accountService.LinkCharacterAsync(accountId, charRef);
+		await accountService.LinkCharacterAsync(accountId!, charRef);
 
 		logger.LogInformation("Account {AccountId}: linked existing character #{Key}", LogSanitizer.Sanitize(accountId), player.Object.Key);
 		return Ok(new { DbrefNumber = player.Object.Key, CreationTime = player.Object.CreationTime, player.Object.Name });
@@ -145,10 +162,10 @@ public class AccountController(
 	[HttpDelete("characters/{dbrefNumber:int}")]
 	public async Task<IActionResult> UnlinkCharacter(int dbrefNumber)
 	{
-		var accountId = await GetAccountIdFromBearerAsync();
-		if (accountId is null) return Unauthorized("Invalid or expired account session.");
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
 
-		await accountService.UnlinkCharacterAsync(accountId, new DBRef(dbrefNumber));
+		await accountService.UnlinkCharacterAsync(accountId!, new DBRef(dbrefNumber));
 		logger.LogInformation("Account {AccountId}: unlinked character #{Key}", LogSanitizer.Sanitize(accountId), dbrefNumber);
 		return NoContent();
 	}
@@ -159,10 +176,10 @@ public class AccountController(
 	[HttpPut("password")]
 	public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
 	{
-		var accountId = await GetAccountIdFromBearerAsync();
-		if (accountId is null) return Unauthorized("Invalid or expired account session.");
+		var (accountId, failure) = await GetAccountIdFromBearerAsync(allowMustChangePassword: true);
+		if (failure is not null) return failure;
 
-		var result = await accountService.ChangePasswordAsync(accountId, request.OldPassword, request.NewPassword);
+		var result = await accountService.ChangePasswordAsync(accountId!, request.OldPassword, request.NewPassword);
 		return result.Match<IActionResult>(
 			_ => NoContent(),
 			err => Unauthorized(err.Value));
@@ -174,10 +191,10 @@ public class AccountController(
 	[HttpPut("email")]
 	public async Task<IActionResult> ChangeEmail([FromBody] ChangeEmailRequest request)
 	{
-		var accountId = await GetAccountIdFromBearerAsync();
-		if (accountId is null) return Unauthorized("Invalid or expired account session.");
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
 
-		var result = await accountService.ChangeEmailAsync(accountId, request.NewEmail, request.CurrentPassword);
+		var result = await accountService.ChangeEmailAsync(accountId!, request.NewEmail, request.CurrentPassword);
 		return result.Match<IActionResult>(
 			_ => NoContent(),
 			err => err.Value.Contains("already registered", StringComparison.OrdinalIgnoreCase)
@@ -191,10 +208,10 @@ public class AccountController(
 	[HttpPut("username")]
 	public async Task<IActionResult> ChangeUsername([FromBody] ChangeUsernameRequest request)
 	{
-		var accountId = await GetAccountIdFromBearerAsync();
-		if (accountId is null) return Unauthorized("Invalid or expired account session.");
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
 
-		var result = await accountService.ChangeUsernameAsync(accountId, request.NewUsername);
+		var result = await accountService.ChangeUsernameAsync(accountId!, request.NewUsername);
 		return result.Match<IActionResult>(
 			_ => NoContent(),
 			err => Conflict(err.Value));
@@ -210,20 +227,6 @@ public class AccountController(
 			var token = header["Bearer ".Length..].Trim();
 			await accountSessionStore.RevokeAsync(token);
 		}
-		// Also drop the httpOnly refresh cookie set by the JWT login endpoints so a
-		// logged-out browser cannot silently mint new access tokens.
-		Response.Cookies.Delete(AuthController.RefreshCookieName, new CookieOptions { Path = "/api/auth" });
 		return NoContent();
-	}
-
-	private static async Task<IReadOnlyList<CharacterSummary>> BuildSummariesAsync(IReadOnlyList<SharpPlayer> characters)
-	{
-		var result = new List<CharacterSummary>();
-		foreach (var c in characters)
-		{
-			var flags = string.Join(" ", await c.Object.Flags.Value.Select(f => f.Name).ToListAsync());
-			result.Add(new CharacterSummary(c.Object.Key, c.Object.CreationTime, c.Object.Name, flags));
-		}
-		return result;
 	}
 }

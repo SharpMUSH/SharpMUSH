@@ -937,16 +937,13 @@ public partial class ArangoDatabase
 	}
 	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken ct = default)
 	{
-		// If salt is provided (imported password), use the password as-is (it's already hashed)
-		// Otherwise, hash the password for new passwords
-		var hashed = salt != null
-			? password
-			: passwordService.HashPassword(player.Object.DBRef.ToString(), password);
-
+		// Every caller passes an ALREADY-HASHED password (via PasswordService.HashPassword /
+		// @password / @newpassword, or an imported PennMUSH hash when salt != null). Store it
+		// verbatim; hashing here would double-hash and the character could never connect.
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Players, new
 		{
-			player.Id,
-			PasswordHash = hashed,
+			_key = ExtractKey(player.Id!),
+			PasswordHash = password,
 			PasswordSalt = salt
 		}, mergeObjects: true, cancellationToken: ct);
 	}
@@ -955,7 +952,7 @@ public partial class ArangoDatabase
 	{
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Players, new
 		{
-			player.Id,
+			_key = ExtractKey(player.Id!),
 			Quota = quota
 		}, mergeObjects: true, cancellationToken: ct);
 	}

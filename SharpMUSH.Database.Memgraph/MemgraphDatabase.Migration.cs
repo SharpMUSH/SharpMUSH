@@ -92,7 +92,10 @@ public partial class MemgraphDatabase
 "CREATE INDEX ON :SysManagedAttribute(objid)",
 "CREATE INDEX ON :SysRemote(name)",
 "CREATE INDEX ON :SysPackageRevision(packageId)",
-"CREATE INDEX ON :SysRole(slug)"
+"CREATE INDEX ON :SysRole(slug)",
+"CREATE INDEX ON :Session(token)",
+"CREATE INDEX ON :Session(accountId)",
+"CREATE INDEX ON :Session(originIp)"
 };
 
 			// DDL (CREATE INDEX) must run as auto-commit in Memgraph — explicit/managed
@@ -296,6 +299,19 @@ MERGE (o)-[:HAS_FLAG]->(f)
 			// Seed the default FORMAT`* attributes on the Ancestor Player (#4) so a plain player inherits
 			// the PennMUSH-style say/pose/semipose/emit render templates. Idempotent.
 			await AncestorSeed.SeedAncestorPlayerFormatsAsync(this, cancellationToken);
+
+			// First-run setup inference (only when the state node is missing): a game with a
+			// claimed account (non-empty passwordHash) must not re-open the first-run wizard.
+			// This lives inside the _migrated guard above, so it runs at most once per process —
+			// matching the rest of the seed data it runs alongside. MERGE + ON CREATE SET keeps
+			// this idempotent: a retry after a transient post-commit error re-runs the MERGE
+			// instead of duplicating the node, and the inference only ever applies on the create.
+			var claimed = (await ExecuteWithRetryAsync(
+				"MATCH (a:Account) WHERE a.passwordHash IS NOT NULL AND a.passwordHash <> '' RETURN a LIMIT 1",
+				new { }, cancellationToken)).Result.Count > 0;
+			await ExecuteWithRetryAsync(
+				"MERGE (s:ServerState {id: 'state'}) ON CREATE SET s.setupCompleted = $claimed",
+				new { claimed }, cancellationToken);
 
 			logger.LogInformation("Memgraph Migration Completed");
 			_migrated = true;

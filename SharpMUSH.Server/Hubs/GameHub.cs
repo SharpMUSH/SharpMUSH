@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Messaging.Abstractions;
+using SharpMUSH.Server.Authentication;
 using System.Security.Claims;
 
 namespace SharpMUSH.Server.Hubs;
@@ -43,7 +44,7 @@ public interface IGameHubClient
 /// plugin's own SceneHub at /hubs/scene; see SharpMUSH.Plugins.Scene/Web. This hub is scene-agnostic.)
 /// </summary>
 [Authorize]
-public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGameHubClient>
+public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnectionRegistry registry, SitelockGuard sitelockGuard) : Hub<IGameHubClient>
 {
 	/// <summary>Claim name that carries the authenticated character's dbref.</summary>
 	public const string CharacterDbrefClaim = "character_dbref";
@@ -61,6 +62,15 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGam
 	/// <inheritdoc/>
 	public override async Task OnConnectedAsync()
 	{
+		var ip = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+		if (sitelockGuard.IsBlocked(ip, host: "", SitelockGuard.Connect))
+		{
+			logger.LogWarning("[GameHub] Connection {ConnectionId} (ip {Ip}) blocked by sitelock rule; aborting",
+				Context.ConnectionId, ip);
+			Context.Abort();
+			return;
+		}
+
 		var dbref = Context.User?.FindFirst(CharacterDbrefClaim)?.Value;
 		if (!string.IsNullOrWhiteSpace(dbref))
 		{
@@ -74,6 +84,10 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGam
 				Context.ConnectionId, CharacterDbrefClaim);
 		}
 
+		var accountId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+		if (accountId is not null)
+			registry.Add(Context.ConnectionId, accountId, ip, () => Context.Abort());
+
 		await base.OnConnectedAsync();
 	}
 
@@ -81,6 +95,7 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGam
 	public override async Task OnDisconnectedAsync(Exception? exception)
 	{
 		logger.LogInformation("[GameHub] Connection {ConnectionId} disconnected", Context.ConnectionId);
+		registry.Remove(Context.ConnectionId);
 		await base.OnDisconnectedAsync(exception);
 	}
 

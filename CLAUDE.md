@@ -51,7 +51,8 @@ Key environment variables:
 - `ARANGO_CONNECTION_STRING` — ArangoDB connection string
 - `MEMGRAPH_URI` — Bolt URI for Memgraph (default: `bolt://localhost:7687`)
 - `NATS_URL` — NATS server URL (falls back to embedded Testcontainer in dev)
-- `SHARPMUSH_BOOTSTRAP_USERNAME` / `SHARPMUSH_BOOTSTRAP_PASSWORD` — initial admin credentials
+
+First-run admin setup: web portal `/setup` (first visitor claims the pre-generated admin linked to `#1`); or set God's password in-game.
 
 ## Architecture
 
@@ -98,15 +99,15 @@ The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all 
 - `IWikiService` (via `InMemoryWikiService`) — wiki CRUD
 - `ISceneService` (via `InMemorySceneService`) — real-time scene participation
 - `IGameHubConnectionFactory` / `IConnectionStateService` — SignalR lifecycle management
-- `AccountAuthService` / `OttAuthService` — JWT stored in WASM memory; auth bridging
+- `AccountAuthService` / `OttAuthService` — account-session token stored in WASM memory; auth bridging
 - `ITerminalService` / `IWebSocketClientService` — raw WebSocket terminal
 
 **Authentication modes:**
 - Development: `DebugAuthStateProvider` (bypasses auth, hardcoded wizard user)
-- Production: OIDC via `appsettings.json` `Local` section
+- Production: `AccountAuthStateProvider` backed by the account session
 
 **SignalR real-time flow:**
-- Client connects to `/hubs/game` with JWT bearer token
+- Client connects to `/hubs/game` authenticated via the `AccountSession` token
 - `GameHub` adds client to `char:{dbref}` group on connect
 - Client calls `SendCommand` → NATS → engine → NATS → `ReceiveOutput` back to client
 - Room events broadcast to `room:{dbref}` group
@@ -137,7 +138,7 @@ public static ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAtt
 
 ### Authentication Architecture
 
-ASP.NET Identity manages web accounts (email/password). Game characters retain MUSH passwords in the object DB, linked by `AccountId`. JWT (15 min) lives in WASM memory only; an httpOnly refresh cookie enables silent renewal. The `JwtService` signs tokens; `IAccountSessionStore` / `IOttStore` / `IRefreshTokenStore` manage server-side state.
+A custom `SharpAccount` model (not ASP.NET Identity) manages web accounts (email/password). Game characters retain MUSH passwords in the object DB, linked by `AccountId`. A single DB-backed account-session token authenticates both REST and SignalR via the `AccountSession` scheme (JWT + refresh cookie retired — see `docs/design/architectural-decisions.md` §1.2); roles/permissions resolve server-side (FusionCache) rather than being baked into a token. Bans revoke sessions and drop live connections immediately (`BanEnforcementService`). Sitelock (glob/CIDR) gates auth surfaces using trusted forwarded-headers client IPs; anonymous browsing stays open. `IAccountSessionStore` / `IOttStore` manage server-side state.
 
 ## Code Style
 

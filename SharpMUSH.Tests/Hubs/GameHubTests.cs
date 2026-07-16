@@ -2,8 +2,11 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
+using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
 
 namespace SharpMUSH.Tests.Hubs;
@@ -14,13 +17,25 @@ namespace SharpMUSH.Tests.Hubs;
 /// </summary>
 public class GameHubTests
 {
+	/// <summary>
+	/// A partial-mocked <see cref="SitelockGuard"/> (its <c>IsBlocked</c> is <c>virtual</c> for exactly
+	/// this reason) that answers a fixed verdict without needing a full <see cref="SharpMUSHOptions"/>.
+	/// </summary>
+	private static SitelockGuard BuildSitelockGuard(bool blocked)
+	{
+		var guard = Substitute.For<SitelockGuard>(Substitute.For<IOptionsWrapper<SharpMUSHOptions>>());
+		guard.IsBlocked(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(blocked);
+		return guard;
+	}
+
 	private static (GameHub hub, IGroupManager groups) BuildHub(string? characterDbref = "42")
 	{
 		var (hub, groups, _) = BuildHubWithBus(characterDbref);
 		return (hub, groups);
 	}
 
-	private static (GameHub hub, IGroupManager groups, IMessageBus bus) BuildHubWithBus(string? characterDbref = "42")
+	private static (GameHub hub, IGroupManager groups, IMessageBus bus) BuildHubWithBus(
+		string? characterDbref = "42", SitelockGuard? sitelockGuard = null)
 	{
 		var groups = Substitute.For<IGroupManager>();
 		groups.AddToGroupAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -48,7 +63,10 @@ public class GameHubTests
 		bus.Publish(Arg.Any<GameCommandMessage>(), Arg.Any<CancellationToken>())
 			.Returns(Task.CompletedTask);
 
-		var hub = new GameHub(bus, NullLogger<GameHub>.Instance)
+		var registry = new HubConnectionRegistry();
+		var guard = sitelockGuard ?? BuildSitelockGuard(blocked: false);
+
+		var hub = new GameHub(bus, NullLogger<GameHub>.Instance, registry, guard)
 		{
 			Groups = groups,
 			Clients = clients,
@@ -82,6 +100,31 @@ public class GameHubTests
 			Arg.Any<string>(),
 			Arg.Any<string>(),
 			Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task OnConnectedAsync_WhenSitelockBlocked_AbortsAndNeverJoinsGroup()
+	{
+		var (hub, groups, _) = BuildHubWithBus("42", sitelockGuard: BuildSitelockGuard(blocked: true));
+
+		await hub.OnConnectedAsync();
+
+		hub.Context.Received(1).Abort();
+		await groups.DidNotReceive().AddToGroupAsync(
+			Arg.Any<string>(),
+			Arg.Any<string>(),
+			Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task OnConnectedAsync_WhenSitelockNotBlocked_JoinsGroupNormally()
+	{
+		var (hub, groups, _) = BuildHubWithBus("42", sitelockGuard: BuildSitelockGuard(blocked: false));
+
+		await hub.OnConnectedAsync();
+
+		hub.Context.DidNotReceive().Abort();
+		await groups.Received(1).AddToGroupAsync("conn-001", "char:42", Arg.Any<CancellationToken>());
 	}
 
 	[Test]

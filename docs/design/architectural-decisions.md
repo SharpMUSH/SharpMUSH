@@ -41,19 +41,64 @@ character password required after account authentication.
 
 ### 1.2 Token Strategy: JWT in Memory + httpOnly Refresh Cookie
 
-**Decision:** Short-lived JWT (15 min) held in WASM memory (C# static service,
+> **Amended & confirmed 2026-07-15 — reversed.** The DB-backed account-session
+> token is now the **single** web credential; it authenticates both REST and
+> SignalR via the `AccountSession` scheme. JWT issuance and the httpOnly
+> refresh-cookie flow described below are **retired** — `JwtService`,
+> `IRefreshTokenStore`, and the `jwt-refresh` / `jwt-switch-character`
+> endpoints are gone. Rationale:
+> 1. **Single-instance deployment.** The usual case for a stateless bearer
+>    token — horizontal scaling without a shared session store — doesn't
+>    apply; SharpMUSH runs as one server instance, so a DB-backed session
+>    costs nothing a JWT would have saved.
+> 2. **Revocation-heavy domain.** Bans, forced logout, and admin-initiated
+>    disable all need to kill a credential *immediately*. A signed JWT lives
+>    until its own expiry unless backed by a revocation list (which just
+>    reintroduces server-side state anyway); a DB-backed session row can be
+>    deleted outright.
+> 3. **The JWT→SignalR path was never actually wired in production.**
+>    Exploration for this reversal found `GameHub` requires a
+>    `character_dbref` claim to bind the connection, but `JwtService` never
+>    emitted that claim, and the hub had no `?access_token` query-string
+>    reader (SignalR can't attach an `Authorization` header to its WebSocket
+>    handshake). So a JWT could not have authenticated a live SignalR
+>    connection as shipped — the "JWT for REST, cookie for hub" split was
+>    aspirational, not real.
+>
+> If a third-party API consumer ever needs a stateless, audience-scoped
+> credential, JWT can be reintroduced *for that audience specifically*,
+> issued alongside (not instead of) the account session — see the current
+> implementation note below. The original design is kept here, marked
+> superseded, for the historical rationale.
+
+**Decision (superseded):** Short-lived JWT (15 min) held in WASM memory (C# static service,
 not localStorage). httpOnly secure refresh cookie enables silent renewal.
 
-**Flow:**
+**Flow (superseded):**
 1. Account login → server returns JWT + sets httpOnly refresh cookie
 2. WASM stores JWT in `AccountAuthService` (memory-only, dies on tab close)
 3. On JWT expiry → silent refresh via cookie (no user interaction)
 4. Tab close → JWT gone, refresh cookie remains → next visit auto-refreshes
 
-**Existing implementation** (partially built):
+**Existing implementation (superseded):**
 - `IAccountSessionStore` already manages session tokens with sliding TTL (15min)
 - `AccountAuthService` on client handles login/token storage
 - Needs: httpOnly cookie mechanism (currently uses in-memory session token)
+
+**Current implementation:** a single DB-backed account-session token (opaque,
+server-generated, revocable) is issued at account login and is the sole web
+credential — no separate JWT, no refresh cookie. It authenticates REST calls
+via the `AccountSession` auth scheme and authenticates the SignalR `GameHub`
+connection directly (the client passes the session token where the hub reads
+it; no bearer JWT is ever issued to the browser). Roles and permissions are
+resolved server-side on each request/connection (cached via FusionCache)
+rather than baked into a token payload, so a role change or disable takes
+effect on the next check rather than waiting for token expiry.
+`BanEnforcementService` deletes the session row and force-drops any live
+telnet, WebSocket, or SignalR connection tied to the account the instant
+`@account/disable` runs or a connection matches an active `@sitelock` rule —
+immediate revocation a stateless JWT cannot provide without reintroducing a
+server-side blocklist.
 
 ### 1.3 Account ↔ Character: Tab = Character, Characterless Mode
 

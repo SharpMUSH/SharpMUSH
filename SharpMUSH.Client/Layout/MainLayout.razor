@@ -68,64 +68,14 @@
 
             <div class="phosphor-topbar-divider"></div>
 
-            @if (AccountAuth.IsLoggedIn || _isDebugAuth)
-            {
-                <MudMenu Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                    <ActivatorContent>
-                        <button class="phosphor-user-btn" @onclick="@context.ToggleAsync">
-                            <span class="phosphor-user-avatar">@UserInitial</span>
-                            <span class="phosphor-user-name">@(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")</span>
-                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Style="font-size:0.9375rem;color:var(--text-faint);" />
-                        </button>
-                    </ActivatorContent>
-                    <ChildContent>
-                        @if (_isDebugAuth)
-                        {
-                            <MudMenuItem Disabled="true">
-                                <MudText Typo="Typo.caption" Style="color:#888;">Dev Mode (DebugAdmin)</MudText>
-                            </MudMenuItem>
-                        }
-                        else
-                        {
-                            <MudMenuItem Disabled="true">
-                                <MudText Typo="Typo.caption" Style="color:#888;">
-                                    Account: @AccountAuth.Username
-                                </MudText>
-                            </MudMenuItem>
-                            @if (AccountAuth.Characters.Count > 0)
-                            {
-                                <MudDivider />
-                                <MudMenuItem Disabled="true">
-                                    <MudText Typo="Typo.caption" Style="color:#888;">Play as:</MudText>
-                                </MudMenuItem>
-                                @foreach (var c in AccountAuth.Characters)
-                                {
-                                    var character = c;
-                                    <MudMenuItem OnClick="() => SwitchCharacterAsync(character)">
-                                        @character.Name (#@character.DbrefNumber)
-                                    </MudMenuItem>
-                                }
-                            }
-                        }
-                        <MudDivider />
-                        <MudMenuItem Href="/account">
-                            <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small" Class="mr-2" />
-                            Account Settings
-                        </MudMenuItem>
-                        @if (!_isDebugAuth)
-                        {
-                            <MudMenuItem OnClick="AccountLogoutAsync">
-                                <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Class="mr-2" />
-                                Disconnect
-                            </MudMenuItem>
-                        }
-                    </ChildContent>
-                </MudMenu>
-            }
-            else
-            {
-                <LoginDisplay />
-            }
+            <AccountChrome IsLoggedIn="AccountAuth.IsLoggedIn"
+                           IsDebugAuth="_isDebugAuth"
+                           DisplayName="@(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")"
+                           UserInitial="@UserInitial"
+                           AccountUsername="@AccountAuth.Username"
+                           Characters="AccountAuth.Characters"
+                           OnSwitchCharacter="SwitchCharacterAsync"
+                           OnLogout="AccountLogoutAsync" />
         </header>
 
         <main class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
@@ -227,8 +177,12 @@
         // DebugAuthStateProvider sets AuthenticationType = "Server authentication".
         // In debug mode, always refresh the session so server restarts (which clear the
         // in-memory AccountSessionStore) don't leave the client with a stale token.
+        // Guarded by ExplicitlyLoggedOut: without this, a dev who logs out would be silently
+        // re-authenticated as the debug admin on the very next reload/navigation, since the
+        // debug identity is always "authenticated" in Development. The latch sticks until the
+        // next real login (via /login, or a fresh tab — sessionStorage is tab-scoped).
         var isDebugMode = authState.User.Identity?.AuthenticationType == "Server authentication";
-        if (isDebugMode || (authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn))
+        if (!AccountAuth.ExplicitlyLoggedOut && (isDebugMode || (authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn)))
         {
             var debugOtt = await AccountAuth.GetDebugOttAsync();
             if (debugOtt is not null && !Terminal.IsConnected)
@@ -245,7 +199,10 @@
         if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
             await AccountAuth.GetCharactersAsync();
 
-        _isDebugAuth = authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
+        // Same latch here: otherwise the topbar would keep showing the "Dev Mode" menu (and
+        // hide the Disconnect item) even after an explicit logout, since the debug identity's
+        // IsAuthenticated never flips to false on its own.
+        _isDebugAuth = !AccountAuth.ExplicitlyLoggedOut && authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         await EnsureAccountRoutingAsync();
 
         LayoutService.OnLayoutChanged += HandleLayoutChanged;
@@ -268,7 +225,7 @@
 
     private async Task SwitchCharacterAsync(AccountAuthService.CharacterSummary character)
     {
-        var token = await AccountAuth.GetOttForCharacterAsync(character);
+        var token = await AccountAuth.SwitchCharacterAsync(character);
         if (token is null) return;
         await Terminal.DisconnectAsync();
         await Task.Delay(200);
@@ -276,7 +233,8 @@
         var serverUri = Terminal.ServerUri ?? "ws://localhost:4202/ws";
         await Terminal.ConnectWithOttAsync(serverUri, token);
         _terminalPlayerName = character.Name;
-        _terminalOpen = true;
+        // Deliberately do NOT open the terminal drawer: switching characters connects in the
+        // background; the toolbar toggle opens the terminal when the player wants it.
         StateHasChanged();
     }
 
@@ -285,7 +243,16 @@
         await AccountAuth.LogoutAsync();
         await Terminal.DisconnectAsync();
         _terminalPlayerName = null;
+        // _isDebugAuth is computed once in OnInitializedAsync and otherwise never flips back to
+        // false on its own (the debug identity's IsAuthenticated never changes), so without this
+        // the topbar keeps showing the "DebugAdmin" chip (ADMIN with a different icon) after an
+        // explicit logout. Navigate to "/" (the anonymous home, which has no [Authorize]) rather
+        // than /login: logging out should return a visitor to anonymous browsing, not force them
+        // onto a sign-in screen. EnsureAccountRoutingAsync won't re-trigger debug re-auth here
+        // because ExplicitlyLoggedOut is now latched (set by AccountAuth.LogoutAsync above).
+        _isDebugAuth = false;
         StateHasChanged();
+        NavigationManager.NavigateTo("/", forceLoad: false);
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -360,26 +327,43 @@
     private static string Capitalize(string s)
         => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s[1..];
 
+    private bool? _needsSetup;
+
     private async Task EnsureAccountRoutingAsync()
     {
         var currentPath = new Uri(NavigationManager.Uri).AbsolutePath;
+
+        // First-run wizard: while the game is unclaimed, every route funnels to /setup.
+        // Cache only the negative — once claimed, stop asking the server on each navigation.
+        //
+        // !_isDebugAuth is intentional, not a bug: in dev mode a debug-auth'd user who explicitly
+        // logs out on an unclaimed game drops out of debug auth and lands here, which now routes
+        // them to /setup. That's the correct destination — on an unclaimed game there's no
+        // "anonymous portal" to fall back to, since onboarding is the only meaningful place to
+        // send anyone. Do not special-case _isDebugAuth further to try to keep them off /setup.
+        if (_needsSetup != false && !_isDebugAuth)
+        {
+            // null means the status check failed (transient error, cold server, stale proxy,
+            // etc.) — leave _needsSetup as-is so the next navigation retries instead of
+            // latching a false negative that would hide the wizard for the rest of the session.
+            var result = await AccountAuth.NeedsSetupAsync();
+            if (result is not null)
+                _needsSetup = result;
+
+            if (_needsSetup == true)
+            {
+                if (!string.Equals(currentPath, "/setup", StringComparison.OrdinalIgnoreCase))
+                    NavigationManager.NavigateTo("/setup");
+                return;
+            }
+        }
 
         if (AccountAuth.IsLoggedIn && AccountAuth.MustChangePassword)
         {
             if (!string.Equals(currentPath, "/account", StringComparison.OrdinalIgnoreCase))
                 NavigationManager.NavigateTo("/account");
-            return;
         }
-
-        if (AccountAuth.IsLoggedIn || _isDebugAuth || !IsHomePath(currentPath))
-            return;
-
-        if (await AccountAuth.NeedsSetupAsync())
-            NavigationManager.NavigateTo("/setup");
     }
-
-    private static bool IsHomePath(string currentPath)
-        => string.IsNullOrEmpty(currentPath) || currentPath == "/";
 
     // One hamburger, two behaviors by viewport: on a phone it opens the off-canvas
     // drawer; on desktop it toggles the icon rail (unchanged). matchMedia keeps the

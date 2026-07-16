@@ -49,7 +49,7 @@ CREATE (a:Account {
 	id: $id, username: $username, email: $email, passwordHash: $passwordHash,
 	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, mustChangePassword: false, isDisabled: false
 })
-""", new { id, username, email = (object?)email ?? DBNull.Value, passwordHash = hashedPassword, createdAt = now, updatedAt = now }, cancellationToken);
+""", new { id, username, email = (object?)email, passwordHash = hashedPassword, createdAt = now, updatedAt = now }, cancellationToken);
 
 		return new SharpAccount
 		{
@@ -83,7 +83,7 @@ CREATE (a:Account {
 		var key = accountId.Contains('/') ? accountId.Split('/')[1] : accountId;
 		await ExecuteWithRetryAsync(
 			"MATCH (a:Account {id: $id}) SET a.email = $email, a.updatedAt = $now",
-			new { id = key, email = (object?)newEmail ?? DBNull.Value, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
+			new { id = key, email = (object?)newEmail, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
 	}
 
 	public async ValueTask UpdateAccountUsernameAsync(string accountId, string newUsername, CancellationToken cancellationToken = default)
@@ -147,6 +147,21 @@ MATCH (a:Account)-[:OWNS_CHARACTER]->(p:Player)-[:IS_OBJECT]->(o:Object {key: $d
 RETURN a
 """, new { dbref = characterRef.Number }, cancellationToken);
 		return result.Result.Count > 0 ? MapNodeToAccount(result.Result[0]["a"].As<INode>()) : null;
+	}
+
+	public async ValueTask UpdateAccountDisabledAsync(string accountId, bool value, CancellationToken cancellationToken = default)
+	{
+		var key = accountId.Contains('/') ? accountId.Split('/')[1] : accountId;
+		await ExecuteWithRetryAsync(
+			"MATCH (a:Account {id: $id}) SET a.isDisabled = $value, a.updatedAt = $now",
+			new { id = key, value, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
+	}
+
+	public async ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken cancellationToken = default)
+	{
+		var result = await ExecuteWithRetryAsync(
+			"MATCH (a:Account) RETURN a ORDER BY a.username", new { }, cancellationToken);
+		return result.Result.Select(r => MapNodeToAccount(r["a"].As<INode>())).ToList();
 	}
 
 	private static SharpAccount MapNodeToAccount(INode node)

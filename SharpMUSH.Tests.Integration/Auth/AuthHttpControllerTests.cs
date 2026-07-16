@@ -7,18 +7,15 @@ namespace SharpMUSH.Tests.Integration.Auth;
 
 /// <summary>
 /// HTTP-level integration tests for <c>AuthController</c> and <c>AccountController</c>:
-/// registration, login, character creation, character switching (JWT), token refresh
-/// (rotation + httpOnly cookie), and the link-existing-character flow.
-///
-/// The test server runs in the Development environment, where Startup generates an
-/// ephemeral JWT signing key — so the jwt-* endpoints are fully operational.
+/// registration, login, character creation, and the link-existing-character flow.
+/// Character switching and OTT issuance via the account session are covered by
+/// <c>SwitchCharacterTests</c>; this class carries the registration/login/link matrix.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class AuthHttpControllerTests(ServerWebAppFactory factory)
 {
 	private record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 	private record AccountLoginResponse(string AccountId, string Username, List<CharacterSummary> Characters, string AccountSessionToken, bool MustChangePassword);
-	private record JwtTokenResponse(string AccessToken, string RefreshToken, int ExpiresIn, string Role);
 	private record CreatedCharacterResponse(int DbrefNumber, long CreationTime);
 	private record MushTokenResponse(string Token, int ExpiresIn);
 
@@ -26,8 +23,6 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 	private record AccountLoginRequest(string UsernameOrEmail, string Password);
 	private record CreateCharacterRequest(string Name, string Password);
 	private record LinkCharacterRequest(string CharacterName, string CharacterPassword);
-	private record JwtSwitchCharacterRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
-	private record JwtRefreshRequest(string? RefreshToken);
 	private record MushTokenRequest(string? PlayerName, string? Password, string? AccountSessionToken, int? CharacterKey, long? CharacterCreationTime);
 
 	private const string Password = "Integration-Test-Pw-1!";
@@ -106,7 +101,11 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 	}
 
-	[Test]
+	// Plain non-staff account-login expecting success races the shared Net.Logins substitute
+	// mutated by LoginsConfigApiTests/SwitchCharacterTests/PlayerCreationApiTests/
+	// AdminAccountsApiTests — see the comment on AdminAccountsApiTests'
+	// UnlinkCharacter_RemovesItFromTargetsCharacterList for the full explanation.
+	[Test, NotInParallel("ConfigMutation")]
 	public async Task AccountLogin_CorrectPassword_ReturnsSessionAndCharacters()
 	{
 		var (http, account) = await RegisterAccountAsync();
@@ -122,79 +121,9 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(login.Characters.Count).IsEqualTo(1);
 	}
 
-	[Test]
-	public async Task JwtSwitchCharacter_LinkedCharacter_IssuesTokenPairAndRefreshCookie()
-	{
-		var (http, account) = await RegisterAccountAsync();
-		var character = await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Switch"), Password);
-
-		var response = await http.PostAsJsonAsync("api/auth/jwt-switch-character",
-			new JwtSwitchCharacterRequest(account.AccountSessionToken, character.DbrefNumber, character.CreationTime));
-
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-		var tokens = await response.Content.ReadFromJsonAsync<JwtTokenResponse>();
-		await Assert.That(tokens!.AccessToken).IsNotEmpty();
-		await Assert.That(tokens.RefreshToken).IsNotEmpty();
-		await Assert.That(tokens.Role).IsEqualTo("Player");
-
-		var setCookies = response.Headers.GetValues("Set-Cookie").ToList();
-		await Assert.That(setCookies.Any(c => c.StartsWith("sharpmush_refresh="))).IsTrue();
-		await Assert.That(setCookies.First(c => c.StartsWith("sharpmush_refresh="))).Contains("httponly");
-	}
-
-	[Test]
-	public async Task JwtSwitchCharacter_UnlinkedCharacter_Returns401()
-	{
-		var (http, account) = await RegisterAccountAsync();
-
-		var response = await http.PostAsJsonAsync("api/auth/jwt-switch-character",
-			new JwtSwitchCharacterRequest(account.AccountSessionToken, 999999, 0));
-
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
-	}
-
-	[Test]
-	public async Task JwtRefresh_ValidToken_RotatesAndRejectsReuse()
-	{
-		var (http, account) = await RegisterAccountAsync();
-		var character = await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Refresh"), Password);
-
-		var login = await http.PostAsJsonAsync("api/auth/jwt-switch-character",
-			new JwtSwitchCharacterRequest(account.AccountSessionToken, character.DbrefNumber, character.CreationTime));
-		var tokens = await login.Content.ReadFromJsonAsync<JwtTokenResponse>();
-
-		var refresh = await http.PostAsJsonAsync("api/auth/jwt-refresh", new JwtRefreshRequest(tokens!.RefreshToken));
-		await Assert.That(refresh.StatusCode).IsEqualTo(HttpStatusCode.OK);
-		var refreshed = await refresh.Content.ReadFromJsonAsync<JwtTokenResponse>();
-		await Assert.That(refreshed!.RefreshToken).IsNotEqualTo(tokens.RefreshToken);
-
-		// Reusing the consumed token must fail (single-use rotation).
-		var reuse = await http.PostAsJsonAsync("api/auth/jwt-refresh", new JwtRefreshRequest(tokens.RefreshToken));
-		await Assert.That(reuse.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
-	}
-
-	[Test]
-	public async Task JwtRefresh_GarbageToken_Returns401()
-	{
-		var http = CreateClient();
-
-		var response = await http.PostAsJsonAsync("api/auth/jwt-refresh",
-			new JwtRefreshRequest("not-a-real-token"));
-
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
-	}
-
-	[Test]
-	public async Task JwtRefresh_NoTokenNoCookie_Returns400()
-	{
-		var http = CreateClient();
-
-		var response = await http.PostAsJsonAsync("api/auth/jwt-refresh", new JwtRefreshRequest((string?)null));
-
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
-	}
-
-	[Test]
+	// Same Net.Logins race as AccountLogin_CorrectPassword_ReturnsSessionAndCharacters above:
+	// mush-token via account session is gated by Net.Logins too.
+	[Test, NotInParallel("ConfigMutation")]
 	public async Task MushToken_ViaAccountSession_IssuesOttWithoutCharacterPassword()
 	{
 		var (http, account) = await RegisterAccountAsync();

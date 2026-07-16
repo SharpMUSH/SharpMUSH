@@ -56,6 +56,10 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private static ILocalizationService? LocalizationService { get; set; }
 
+	private static ConfigurationReloadService? ConfigReloadService { get; set; }
+
+	private static IBanEnforcer? BanEnforcer { get; set; }
+
 	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
 	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
 
@@ -93,6 +97,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IMessageBus messageBus,
 		ILocalizationService localizationService,
 		IGameBroadcastService gameBroadcastService,
+		ConfigurationReloadService configReloadService,
+		IBanEnforcer banEnforcer,
 		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
 		Mediator = mediator;
@@ -125,6 +131,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		MessageBus = messageBus;
 		LocalizationService = localizationService;
 		GameBroadcastService = gameBroadcastService;
+		ConfigReloadService = configReloadService;
+		BanEnforcer = banEnforcer;
 		FunctionLibrary = functionLibrary;
 
 		foreach (var command in Generated.CommandLibrary.Commands)

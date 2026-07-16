@@ -801,5 +801,38 @@ public interface ISharpDatabase
 	/// <summary>Returns the account that owns <paramref name="characterRef"/>, or null if the character has no account.</summary>
 	ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken cancellationToken = default);
 
+	/// <summary>Sets or clears the account's disabled (banned) flag.</summary>
+	ValueTask UpdateAccountDisabledAsync(string accountId, bool value, CancellationToken cancellationToken = default);
+
+	/// <summary>Returns all accounts. Admin tooling only — account counts are small.</summary>
+	ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken cancellationToken = default);
+
+	#endregion
+
+	#region Server State Methods
+
+	/// <summary>
+	/// Returns the game-wide server state document. Returns a default
+	/// (SetupCompleted = false) if the document does not exist yet.
+	/// </summary>
+	ValueTask<SharpServerState> GetServerStateAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>Sets the game-wide SetupCompleted flag (upserts the state document).</summary>
+	ValueTask SetServerSetupCompletedAsync(bool value, CancellationToken cancellationToken = default);
+
+	#endregion
+
+	#region Session Methods
+
+	/// <summary>Creates or replaces a session document keyed by its token.</summary>
+	ValueTask UpsertSessionAsync(SharpSession session, CancellationToken cancellationToken = default);
+
+	/// <summary>Returns the session for a token, or null if absent.</summary>
+	ValueTask<SharpSession?> GetSessionAsync(string token, CancellationToken cancellationToken = default);
+
+	ValueTask DeleteSessionAsync(string token, CancellationToken cancellationToken = default);
+	ValueTask DeleteSessionsForAccountAsync(string accountId, CancellationToken cancellationToken = default);
+	ValueTask DeleteSessionsForIpAsync(string originIp, CancellationToken cancellationToken = default);
+
 	#endregion
 }

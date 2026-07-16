@@ -112,24 +112,52 @@
         }
     </nav>
 
-    <div class="phosphor-profile-wrap">
-        <a href="/account" class="phosphor-profile-card" title="@DisplayName">
-            <div class="phosphor-avatar-wrap">
-                <div class="phosphor-avatar"
-                     style="@($"background:linear-gradient(140deg,hsl({AvatarHue} 38% 32%),hsl({AvatarHue} 32% 22%));color:hsl({AvatarHue} 45% 82%);")">
-                    @AvatarInitial
-                </div>
-                <span class="phosphor-avatar-dot @(_characterActive ? "phosphor-avatar-dot--online" : "phosphor-avatar-dot--offline")"></span>
+    @* Claims-driven: gated on the cascaded ClaimsPrincipal (not just AccountAuth.Username/Characters)
+       so it flips to the anonymous "Sign in" affordance the instant DebugAuthStateProvider /
+       AccountAuthStateProvider report an unauthenticated principal — including right after an
+       explicit logout. Falling back to AccountAuth's fields alone previously left this card
+       showing the literal "DebugAdmin" sentinel post-logout, since nothing here ever gated on
+       auth state at all. *@
+    <AuthorizeView>
+        <Authorized>
+            <div class="phosphor-profile-wrap">
+                <a href="/account" class="phosphor-profile-card" title="@DisplayName">
+                    <div class="phosphor-avatar-wrap">
+                        <div class="phosphor-avatar"
+                             style="@($"background:linear-gradient(140deg,hsl({AvatarHue} 38% 32%),hsl({AvatarHue} 32% 22%));color:hsl({AvatarHue} 45% 82%);")">
+                            @AvatarInitial
+                        </div>
+                        <span class="phosphor-avatar-dot @(_characterActive ? "phosphor-avatar-dot--online" : "phosphor-avatar-dot--offline")"></span>
+                    </div>
+                    @if (!IsCollapsed)
+                    {
+                        <div style="text-align:left;line-height:1.2;overflow:hidden;">
+                            <div class="phosphor-profile-name">@DisplayName</div>
+                            <div class="phosphor-profile-sub">@UserTag · @(_characterActive ? "online" : "offline")</div>
+                        </div>
+                    }
+                </a>
             </div>
-            @if (!IsCollapsed)
-            {
-                <div style="text-align:left;line-height:1.2;overflow:hidden;">
-                    <div class="phosphor-profile-name">@DisplayName</div>
-                    <div class="phosphor-profile-sub">@UserTag · @(_characterActive ? "online" : "offline")</div>
-                </div>
-            }
-        </a>
-    </div>
+        </Authorized>
+        <NotAuthorized>
+            <div class="phosphor-profile-wrap">
+                <a href="/login" class="phosphor-profile-card" title="Sign in">
+                    <div class="phosphor-avatar-wrap">
+                        <div class="phosphor-avatar" style="background:var(--surface-3);color:var(--text-faint);">
+                            <MudIcon Icon="@Icons.Material.Filled.Login" Style="font-size:1.1rem;" />
+                        </div>
+                    </div>
+                    @if (!IsCollapsed)
+                    {
+                        <div style="text-align:left;line-height:1.2;overflow:hidden;">
+                            <div class="phosphor-profile-name">Sign in</div>
+                            <div class="phosphor-profile-sub">guest</div>
+                        </div>
+                    }
+                </a>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
 </div>
 
 @code {

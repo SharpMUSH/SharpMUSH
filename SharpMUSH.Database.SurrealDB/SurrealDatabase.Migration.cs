@@ -85,6 +85,8 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS channel_name ON channel FIELDS name UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS counter_name ON counter FIELDS name UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS mail_key ON mail FIELDS key UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS session_account ON session FIELDS accountId",
+				"DEFINE INDEX IF NOT EXISTS session_ip ON session FIELDS originIp",
 				// Category is part of page identity: backfill legacy null categories, then key on all three.
 				"UPDATE wiki_page SET category = 'general' WHERE category = NONE",
 				"DEFINE INDEX IF NOT EXISTS wiki_page_slug ON wiki_page FIELDS namespace, category, slug UNIQUE",
@@ -186,6 +188,8 @@ public partial class SurrealDatabase
 					cancellationToken);
 			}
 
+			await EnsureServerStateAsync(cancellationToken);
+
 			logger.LogInformation("SurrealDB Migration Completed");
 		}
 		catch (Exception ex)
@@ -225,6 +229,26 @@ public partial class SurrealDatabase
 			$"SELECT VALUE appliedAt FROM migration:⟨{migrationId}⟩", ct);
 		var rows = response.GetValue<List<long>>(0);
 		return rows is { Count: > 0 };
+	}
+
+	// First-run setup inference: create the server_state doc if missing; a game that already has
+	// a claimed account (non-empty passwordHash) must not re-open the wizard. Runs every Migrate()
+	// call, but only ever acts when the state doc doesn't exist yet — an existing record (whatever
+	// its value) is never overwritten, so this never downgrades a completed setup.
+	private async Task EnsureServerStateAsync(CancellationToken cancellationToken)
+	{
+		var existing = await ExecuteAsync("SELECT * FROM server_state:state",
+			new Dictionary<string, object?>(), cancellationToken);
+		if (existing.GetValue<List<ServerStateDbRecord>>(0) is { Count: > 0 })
+			return;
+
+		var claimed = await ExecuteAsync(
+			"SELECT * FROM account WHERE passwordHash != NONE AND passwordHash != '' LIMIT 1",
+			new Dictionary<string, object?>(), cancellationToken);
+		var setupCompleted = claimed.GetValue<List<AccountDbRecord>>(0) is { Count: > 0 };
+
+		await ExecuteAsync("CREATE server_state:state CONTENT { setupCompleted: $value }",
+			new Dictionary<string, object?> { ["value"] = setupCompleted }, cancellationToken);
 	}
 
 	/// <summary>

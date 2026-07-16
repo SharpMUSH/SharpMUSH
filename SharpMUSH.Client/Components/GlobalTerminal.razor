@@ -314,12 +314,15 @@
 
         if (!_connected)
         {
-            if (HostEnv.IsDevelopment() && !AccountAuth.IsLoggedIn)
+            if (HostEnv.IsDevelopment() && !AccountAuth.IsLoggedIn && !AccountAuth.ExplicitlyLoggedOut)
             {
                 // In dev, the Blazor AuthStateProvider hasn't necessarily run yet, so
                 // AccountAuth.IsLoggedIn may still be false.  Call GetDebugOttAsync()
                 // directly — it both populates AccountSessionToken and returns the OTT
                 // in one round-trip, avoiding any ordering dependency.
+                // Guarded by ExplicitlyLoggedOut (mirrors MainLayout): GlobalTerminal is mounted
+                // on nearly every page via MainLayout, so without this guard, any reload/nav
+                // after an explicit logout would silently re-authenticate as the debug admin.
                 DebugLine("[DBG] dev path: fetching debug OTT");
                 var debugOtt = await AccountAuth.GetDebugOttAsync();
                 DebugLine($"[DBG] dev path: ott={(debugOtt?.Token is null ? "NULL" : "OK")} account={(debugOtt?.AccountId is null ? "NULL" : "OK")}");

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -7,6 +8,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -23,9 +25,20 @@ public partial class Commands
 		var handle = parser.CurrentState.Handle!.Value;
 		var state = ConnectionService!.Get(handle)?.State;
 
+		if (await IsSitelockedAsync(handle, SitelockMatcher.CreateFlag))
+		{
+			return new None();
+		}
+
 		if (state is IConnectionService.ConnectionState.LoggedIn)
 		{
 			await NotifyService!.Notify(handle, "You are already connected as a character.");
+			return new None();
+		}
+
+		if (!Configuration!.CurrentValue.Net.PlayerCreation)
+		{
+			await NotifyPlayerCreationDisabledAsync(handle);
 			return new None();
 		}
 
@@ -33,21 +46,22 @@ public partial class Commands
 		string username, password;
 		string? email = null;
 
-		// The command framework places args in "0", "1", "2"
-		var arg0 = rawArgs.TryGetValue("0", out var a0) ? a0.Message?.ToString()?.Trim() : null;
-		var arg1 = rawArgs.TryGetValue("1", out var a1) ? a1.Message?.ToString()?.Trim() : null;
-		var arg2 = rawArgs.TryGetValue("2", out var a2) ? a2.Message?.ToString()?.Trim() : null;
+		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"]/["2"];
+		// Arguments["0"] holds the entire remainder of the line after the command word,
+		// so we split it on whitespace ourselves.
+		var arg0 = rawArgs.TryGetValue("0", out var a0) ? a0.Message?.ToString() : null;
+		var tokens = arg0?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) ?? [];
 
-		if (arg2 is not null)
+		if (tokens.Length == 3)
 		{
-			username = arg0 ?? string.Empty;
-			email = arg1;
-			password = arg2;
+			username = tokens[0];
+			email = tokens[1];
+			password = tokens[2];
 		}
-		else if (arg1 is not null)
+		else if (tokens.Length == 2)
 		{
-			username = arg0 ?? string.Empty;
-			password = arg1;
+			username = tokens[0];
+			password = tokens[1];
 		}
 		else
 		{
@@ -88,14 +102,30 @@ public partial class Commands
 		var handle = parser.CurrentState.Handle!.Value;
 		var state = ConnectionService!.Get(handle)?.State;
 
+		if (await IsSitelockedAsync(handle, SitelockMatcher.ConnectFlag))
+		{
+			return new None();
+		}
+
 		if (state is IConnectionService.ConnectionState.LoggedIn)
 		{
 			await NotifyService!.Notify(handle, "You are already connected as a character.");
 			return new None();
 		}
 
-		var identifier = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToString()?.Trim() : null;
-		var password = parser.CurrentState.Arguments.TryGetValue("1", out var a1) ? a1.Message?.ToString()?.Trim() : null;
+		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"];
+		// Arguments["0"] holds the entire remainder of the line after the command word,
+		// so we split it on whitespace ourselves.
+		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToString() : null;
+		var tokens = arg0?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) ?? [];
+		string? identifier = null;
+		string? password = null;
+
+		if (tokens.Length == 2)
+		{
+			identifier = tokens[0];
+			password = tokens[1];
+		}
 
 		if (string.IsNullOrWhiteSpace(identifier) || string.IsNullOrWhiteSpace(password))
 		{
@@ -108,6 +138,16 @@ public partial class Commands
 		{
 			await NotifyService!.Notify(handle, "Invalid account name or password.");
 			return new None();
+		}
+
+		if (!Configuration!.CurrentValue.Net.Logins)
+		{
+			var linked = await AccountService.GetCharactersAsync(account.Id!);
+			if (!await AnyStaffCharacterAsync(linked))
+			{
+				await NotifyService!.Notify(handle, "Logins are disabled.");
+				return new None();
+			}
 		}
 
 		await ConnectionService.BindAccount(handle, account.Id!);
@@ -142,10 +182,21 @@ public partial class Commands
 		var handle = parser.CurrentState.Handle!.Value;
 		var connectionData = ConnectionService!.Get(handle);
 
+		if (await IsSitelockedAsync(handle, SitelockMatcher.CreateFlag))
+		{
+			return new None();
+		}
+
 		if (connectionData?.State != IConnectionService.ConnectionState.AccountMode)
 		{
 			await NotifyService!.Notify(handle,
 				"You must be logged in to an account first. Use: login <display-name-or-email> <password>");
+			return new None();
+		}
+
+		if (!Configuration!.CurrentValue.Net.PlayerCreation)
+		{
+			await NotifyPlayerCreationDisabledAsync(handle);
 			return new None();
 		}
 
@@ -155,8 +206,19 @@ public partial class Commands
 			return new None();
 		}
 
-		var charName = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToString()?.Trim() : null;
-		var charPassword = parser.CurrentState.Arguments.TryGetValue("1", out var a1) ? a1.Message?.ToString()?.Trim() : null;
+		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"];
+		// Arguments["0"] holds the entire remainder of the line after the command word,
+		// so we split it on whitespace ourselves.
+		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToString() : null;
+		var tokens = arg0?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) ?? [];
+		string? charName = null;
+		string? charPassword = null;
+
+		if (tokens.Length == 2)
+		{
+			charName = tokens[0];
+			charPassword = tokens[1];
+		}
 
 		if (string.IsNullOrWhiteSpace(charName) || string.IsNullOrWhiteSpace(charPassword))
 		{
@@ -183,21 +245,7 @@ public partial class Commands
 		}
 		var foundPlayer = playerNode.AsPlayer;
 
-		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
-		await EventService!.TriggerEventAsync(parser, "PLAYER`CONNECT", playerDbRef,
-			$"#{foundPlayer.Object.Key}", connectionCount.ToString(), handle.ToString());
-
-		// Refresh everyone in the room the player just appeared in.
-		var makeConnectRoomContainer = await foundPlayer.Location.WithCancellation(CancellationToken.None);
-		await EventService.TriggerEventAsync(
-			parser,
-			SharpEvents.RoomContents,
-			playerDbRef,
-			makeConnectRoomContainer.Object().DBRef.ToString(),
-			"connect");
-
-		await SyncPlayerOutputPreferences(handle, foundPlayer.Object);
-		await ShowPostLoginMessages(parser, handle, new Library.DiscriminatedUnions.AnySharpObject(foundPlayer));
+		await CompletePlayerLoginAsync(parser, handle, foundPlayer, playerDbRef);
 
 		Logger?.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via MAKE",
 			accountId, charName, foundPlayer.Object.Key);
@@ -215,6 +263,11 @@ public partial class Commands
 	{
 		var handle = parser.CurrentState.Handle!.Value;
 		var connectionData = ConnectionService!.Get(handle);
+
+		if (await IsSitelockedAsync(handle, SitelockMatcher.ConnectFlag))
+		{
+			return new None();
+		}
 
 		if (connectionData?.State != IConnectionService.ConnectionState.AccountMode)
 		{
@@ -251,25 +304,64 @@ public partial class Commands
 		var playerDbRef = new DBRef(character.Object.Key, character.Object.CreationTime);
 		await ConnectionService.Bind(handle, playerDbRef);
 
-		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
-		await EventService!.TriggerEventAsync(parser, "PLAYER`CONNECT", playerDbRef,
-			$"#{character.Object.Key}", connectionCount.ToString(), handle.ToString());
-
-		// Refresh everyone in the room the player just appeared in.
-		var playConnectRoomContainer = await character.Location.WithCancellation(CancellationToken.None);
-		await EventService.TriggerEventAsync(
-			parser,
-			SharpEvents.RoomContents,
-			playerDbRef,
-			playConnectRoomContainer.Object().DBRef.ToString(),
-			"connect");
-
-		await SyncPlayerOutputPreferences(handle, character.Object);
-		await ShowPostLoginMessages(parser, handle, new Library.DiscriminatedUnions.AnySharpObject(character));
+		await CompletePlayerLoginAsync(parser, handle, character, playerDbRef);
 
 		Logger?.LogInformation("Account {AccountId}: playing as {Name} (#{Key}) via PLAY",
 			accountId, character.Object.Name, character.Object.Key);
 
 		return new CallState(playerDbRef);
 	}
+
+	/// <summary>
+	/// True if the telnet connection at <paramref name="handle"/> is sitelocked out of
+	/// <paramref name="surfaceFlag"/>, notifying it with the standard restriction message when so.
+	/// Mirrors <see cref="SocketCommands.Connect"/>'s inline sitelock gate: the account-mode surfaces
+	/// (REGISTER/LOGIN/MAKE/PLAY) are unauthenticated entry points into account mutation exactly like
+	/// CONNECT, so they must be gated the same way. SharpMUSH.Implementation cannot reference the
+	/// Server-layer <c>SitelockGuard</c>, so this calls <see cref="SitelockMatcher.IsBlocked"/> directly
+	/// off the connection's origin metadata, same as <see cref="SocketCommands.Connect"/> does.
+	/// </summary>
+	private static async ValueTask<bool> IsSitelockedAsync(long handle, string surfaceFlag)
+	{
+		var connectionData = ConnectionService!.Get(handle);
+		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
+		var hostName = connectionData?.HostName ?? ipAddress;
+
+		if (!SitelockMatcher.IsBlocked(Configuration!.CurrentValue.SitelockRules.Rules, ipAddress, hostName, surfaceFlag))
+		{
+			return false;
+		}
+
+		await NotifyService!.Notify(handle, "Access from your location is restricted.");
+		return true;
+	}
+
+	/// <summary>
+	/// PennMUSH-style refusal for a disabled <c>Net.PlayerCreation</c>: prefer the configured
+	/// <c>register_create_file</c> contents (same resolution as <see cref="Handlers.ConnectionStateEventHandler"/>'s
+	/// <c>connect_file</c> handling) and fall back to the hardcoded message when it's unset/missing/empty.
+	/// </summary>
+	private static async ValueTask NotifyPlayerCreationDisabledAsync(long handle)
+	{
+		var registerFile = Configuration!.CurrentValue.Message.RegisterCreateFile;
+		if (!string.IsNullOrEmpty(registerFile) && File.Exists(registerFile))
+		{
+			var registerText = await File.ReadAllTextAsync(registerFile);
+			if (!string.IsNullOrWhiteSpace(registerText))
+			{
+				await NotifyService!.Notify(handle, registerText);
+				return;
+			}
+		}
+
+		await NotifyService!.Notify(handle, "Player creation is disabled on this server.");
+	}
+
+	/// <summary>
+	/// PennMUSH semantics: an account qualifies for login while <c>Net.Logins</c> is disabled
+	/// if ANY linked character is staff (character #1, or WIZARD-flagged). <c>IsWizard()</c>
+	/// already covers character #1 (God), so a single async predicate suffices.
+	/// </summary>
+	private static async ValueTask<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters) =>
+		await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await new AnySharpObject(character).IsWizard());
 }

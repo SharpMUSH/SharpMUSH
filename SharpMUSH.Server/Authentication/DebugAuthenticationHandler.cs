@@ -14,9 +14,10 @@ namespace SharpMUSH.Server.Authentication;
 /// as the bootstrap admin account (the account linked to player #1), mirroring the
 /// client-side DebugAuthStateProvider.
 ///
-/// Emits the same claim set that <see cref="JwtService"/> would produce so that
-/// <see cref="GameHub"/>, <see cref="Controllers.ApiControllerBase"/>, and all other
-/// server-side consumers see a fully-populated principal with no dev-mode special cases.
+/// Emits the same claim set that <see cref="AccountSessionAuthenticationHandler"/> would
+/// produce so that <see cref="GameHub"/>, <see cref="Controllers.ApiControllerBase"/>, and
+/// all other server-side consumers see a fully-populated principal with no dev-mode special
+/// cases.
 ///
 /// Falls back to static placeholder claims if the DB is not yet initialised (e.g. during
 /// a very early request before <see cref="Services.BootstrapService"/> has run).
@@ -30,8 +31,21 @@ public class DebugAuthenticationHandler(
 {
 	public const string SchemeName = "DebugAuth";
 
+	// Authentication runs per HTTP request; without a cache every dev request costs two DB
+	// lookups just to rebuild an identical claim set. The account claims only change on the
+	// rare setup-claim rename, so a short TTL keeps dev requests cheap without going stale.
+	private static readonly TimeSpan ClaimsCacheTtl = TimeSpan.FromSeconds(30);
+	private static (List<Claim> Claims, DateTimeOffset At)? _cachedClaims;
+
 	protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
 	{
+		if (_cachedClaims is { } cached && DateTimeOffset.UtcNow - cached.At < ClaimsCacheTtl)
+		{
+			var cachedIdentity = new ClaimsIdentity(cached.Claims, SchemeName);
+			return AuthenticateResult.Success(
+				new AuthenticationTicket(new ClaimsPrincipal(cachedIdentity), SchemeName));
+		}
+
 		var claims = new List<Claim> { new(ClaimTypes.Role, "Admin") };
 		// The bootstrap account owns player #1 (God), the top of the hierarchy. Role
 		// checks are exact string matches, so emit a claim for every PortalRole — this
@@ -90,6 +104,11 @@ public class DebugAuthenticationHandler(
 			Logger.LogWarning(ex, "[DebugAuth] Failed to resolve bootstrap account; using static fallback claims");
 			EmitStaticFallback(claims);
 		}
+
+		// Only cache fully-resolved claims — fallback claims must retry next request so the
+		// real account shows up as soon as bootstrap completes.
+		if (claims.Any(c => c.Type == ClaimTypes.NameIdentifier && c.Value != "debug-bootstrap-pending"))
+			_cachedClaims = (claims, DateTimeOffset.UtcNow);
 
 		var identity = new ClaimsIdentity(claims, SchemeName);
 		var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);

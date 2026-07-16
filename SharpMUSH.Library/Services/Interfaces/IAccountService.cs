@@ -7,7 +7,13 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface IAccountService
 {
 	/// <summary>
-	/// Attempts to authenticate using either a username or email plus password.
+	/// Attempts to authenticate against the full login matrix. <paramref name="usernameOrEmail"/> may be:
+	/// an account username or email, matched against that account's own password, or against the
+	/// password of any character linked to the account; or a character name (no linked account of its
+	/// own), matched only against that specific character's password, resolving to the character's
+	/// owning account. Legacy PennMUSH character password hashes are transparently rehashed on success.
+	/// An account with an empty stored password hash (e.g. the pre-generated, unclaimed admin account)
+	/// can never match at the account level — only a linked character's own password can authenticate it.
 	/// Returns the account on success, or <c>null</c> on auth failure / disabled / not found.
 	/// </summary>
 	ValueTask<SharpAccount?> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default);
@@ -56,4 +62,17 @@ public interface IAccountService
 
 	ValueTask<OneOf<Success, Error<string>>> DisableAccountAsync(string accountId, CancellationToken ct = default);
 	ValueTask DeleteAccountAsync(string accountId, CancellationToken ct = default);
+
+	/// <summary>Admin/setup password set: no old-password proof. Optionally flags MustChangePassword.</summary>
+	ValueTask<OneOf<Success, Error<string>>> SetPasswordAsync(string accountId, string newPassword, bool mustChangePassword, CancellationToken ct = default);
+
+	/// <summary>
+	/// Creates an account with an EMPTY password hash (unclaimed — cannot be logged into
+	/// until a password is set). Used by BootstrapService for the pre-generated admin.
+	/// </summary>
+	ValueTask<SharpAccount> CreateUnclaimedAccountAsync(string username, CancellationToken ct = default);
+
+	ValueTask<OneOf<Success, Error<string>>> EnableAccountAsync(string accountId, CancellationToken ct = default);
+
+	ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken ct = default);
 }

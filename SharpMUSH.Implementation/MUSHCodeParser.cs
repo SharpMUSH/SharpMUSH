@@ -70,7 +70,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		foreach (var (commandName, commandInfo) in commandLibrary)
 		{
-			if (commandInfo.IsSystem)
+			// SOCKET commands (CONNECT/WHO/QUIT/REGISTER/LOGIN/MAKE/PLAY) are dispatched exclusively
+			// by the dedicated pre-login SOCKET blocks in the visitor (exact match for any Handle,
+			// unambiguous-prefix abbreviation only while pre-login). They must NOT enter the general
+			// in-game command trie: FindShortestMatch would otherwise abbreviate them for a logged-in
+			// player (e.g. bare "q" -> QUIT), silently disconnecting them. The trie is only ever
+			// consulted post-login, so SOCKET commands never belong here.
+			if (commandInfo.IsSystem
+			    && !commandInfo.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET))
 			{
 				trie.Add(commandName, commandInfo.LibraryInformation);
 			}

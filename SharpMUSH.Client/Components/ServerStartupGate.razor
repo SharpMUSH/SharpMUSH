@@ -1,0 +1,101 @@
+@** Gate wrapped INSIDE ThemeProvider but AROUND CascadingAuthenticationState in App.razor: no
+    AuthenticationStateProvider runs until the server has answered a health probe. That is what
+    stops DebugAuthStateProvider from ever fabricating a "server not ready" identity — there is
+    simply no auth query issued until the server is actually up.
+
+    Renders ChildContent once /api/health answers 2xx; until then renders a full-screen "Game is
+    starting up" view (visual family of OnboardingLayout: dark gradient + glow + logo). Polls on
+    the injectable PollInterval (tests use a short one instead of the real 2.5s) and once healthy
+    flips permanently for the app's lifetime — a later probe failure never re-gates. *@
+@implements IDisposable
+
+@if (_healthy)
+{
+    @ChildContent
+}
+else
+{
+    <div class="startup-gate-shell">
+        <div class="startup-gate-glow"></div>
+        <div class="startup-gate-body">
+            <div class="startup-gate-brand">
+                <img src="assets/Logo.svg" alt="SharpMUSH" class="startup-gate-logo" />
+                <h1 class="startup-gate-title">SharpMUSH</h1>
+            </div>
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" Class="startup-gate-spinner" />
+            <MudText Typo="Typo.h6" Align="Align.Center" Class="startup-gate-message">Game is starting up&hellip;</MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center" Class="startup-gate-submessage">
+                Waiting for the server to come online&hellip;
+            </MudText>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Real default is 2.5s; tests override with a short value so the poll loop
+    /// completes in test time instead of wall-clock time.</summary>
+    [Parameter]
+    public TimeSpan PollInterval { get; set; } = TimeSpan.FromMilliseconds(2500);
+
+    /// <summary>Per-probe timeout — a hung/black-holed request must not stall the next attempt.</summary>
+    [Parameter]
+    public TimeSpan ProbeTimeout { get; set; } = TimeSpan.FromSeconds(3);
+
+    [Inject]
+    private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+
+    private bool _healthy;
+    private CancellationTokenSource? _lifetimeCts;
+
+    protected override void OnInitialized()
+    {
+        _lifetimeCts = new CancellationTokenSource();
+        _ = PollLoopAsync(_lifetimeCts.Token);
+    }
+
+    private async Task PollLoopAsync(CancellationToken lifetimeToken)
+    {
+        while (!lifetimeToken.IsCancellationRequested)
+        {
+            if (await ProbeAsync(lifetimeToken))
+            {
+                _healthy = true;
+                await InvokeAsync(StateHasChanged);
+                // Flip permanently: once healthy, stop probing for the remainder of the app's
+                // lifetime so a later transient blip can never re-gate the UI.
+                return;
+            }
+
+            try
+            {
+                await Task.Delay(PollInterval, lifetimeToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
+    }
+
+    /// <summary>Any exception or non-2xx response counts as "not ready yet".</summary>
+    private async Task<bool> ProbeAsync(CancellationToken lifetimeToken)
+    {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
+        timeoutCts.CancelAfter(ProbeTimeout);
+        try
+        {
+            var client = HttpClientFactory.CreateClient("api");
+            var response = await client.GetAsync("api/health", timeoutCts.Token);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public void Dispose() => _lifetimeCts?.Cancel();
+}

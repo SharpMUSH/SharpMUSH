@@ -4,8 +4,8 @@ using SharpMUSH.Library.Authorization;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// Reads the caller's <see cref="PortalRole"/> from their JWT claims. The token carries a single
-/// (highest) role claim (see JwtService), so comparison against an application's minimum role is a
+/// Reads the caller's <see cref="PortalRole"/> from their claims principal. The principal carries a
+/// single (highest) role claim, so comparison against an application's minimum role is a
 /// straightforward hierarchy check.
 /// </summary>
 public static class PortalRoleHelper

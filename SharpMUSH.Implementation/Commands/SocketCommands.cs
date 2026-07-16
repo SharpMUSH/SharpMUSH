@@ -11,6 +11,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using System.Text.RegularExpressions;
@@ -120,10 +121,20 @@ public partial class Commands
 		var handle = parser.CurrentState.Handle!.Value;
 		var connectionData = ConnectionService.Get(handle);
 		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
+		var hostName = connectionData?.HostName ?? ipAddress;
+
+		// Task 15: sitelock gate for the whole connect surface (character login, OTT/token login,
+		// AND guest login below all count as a "game connection"). Checked before any username/
+		// credential parsing so a blocked site never learns whether a name it tried is valid.
+		if (SitelockMatcher.IsBlocked(Configuration!.CurrentValue.SitelockRules.Rules, ipAddress, hostName, SitelockMatcher.ConnectFlag))
+		{
+			await NotifyService!.Notify(handle, "Access from your location is restricted.");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
 		if (username.Equals("guest", StringComparison.OrdinalIgnoreCase))
 		{
-			return await HandleGuestLogin(parser, handle, ipAddress);
+			return await HandleGuestLogin(parser, handle, ipAddress, hostName);
 		}
 
 		if (username.Equals("token", StringComparison.OrdinalIgnoreCase))
@@ -208,33 +219,17 @@ public partial class Commands
 			Logger?.LogInformation("Rehashed legacy password for player #{Key}", foundDB.Object.Key);
 		}
 
+		if (!Configuration!.CurrentValue.Net.Logins
+			&& !await new AnySharpObject(foundDB).IsWizard())
+		{
+			await NotifyService!.Notify(handle, "Logins are disabled.");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
 		await ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
 
-		// Trigger PLAYER`CONNECT event - PennMUSH compatible
-		// PennMUSH spec: player`connect (objid, number of connections, descriptor)
-		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
-		await EventService!.TriggerEventAsync(
-			parser,
-			"PLAYER`CONNECT",
-			playerDbRef, // Enactor is the player who connected
-			$"#{foundDB.Object.Key}",
-			connectionCount.ToString(),
-			parser.CurrentState.Handle!.Value.ToString());
-
-		// Refresh everyone in the room the player just appeared in.
-		var connectRoomContainer = await foundDB.Location.WithCancellation(CancellationToken.None);
-		await EventService.TriggerEventAsync(
-			parser,
-			SharpEvents.RoomContents,
-			playerDbRef,
-			connectRoomContainer.Object().DBRef.ToString(),
-			"connect");
-
-		await SyncPlayerOutputPreferences(parser.CurrentState.Handle!.Value, foundDB.Object);
-
-		// Show post-login messages and auto-look (PennMUSH-compatible login experience)
-		await ShowPostLoginMessages(parser, parser.CurrentState.Handle!.Value, new AnySharpObject(foundDB));
+		await CompletePlayerLoginAsync(parser, parser.CurrentState.Handle!.Value, foundDB, playerDbRef);
 		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new CallState(playerDbRef);
 	}
@@ -263,33 +258,37 @@ public partial class Commands
 		}
 		var foundPlayer = playerNode.AsPlayer;
 
+		if (!Configuration!.CurrentValue.Net.Logins
+			&& !await new AnySharpObject(foundPlayer).IsWizard())
+		{
+			await NotifyService!.Notify(handle, "Logins are disabled.");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		await ConnectionService!.Bind(handle, playerDbRef.Value);
 
-		var connectionCount = await ConnectionService.Get(playerDbRef.Value).CountAsync();
-		await EventService!.TriggerEventAsync(
-			parser, "PLAYER`CONNECT", playerDbRef,
-			$"#{foundPlayer.Object.Key}",
-			connectionCount.ToString(),
-			handle.ToString());
-
-		// Refresh everyone in the room the player just appeared in.
-		var tokenConnectRoomContainer = await foundPlayer.Location.WithCancellation(CancellationToken.None);
-		await EventService.TriggerEventAsync(
-			parser,
-			SharpEvents.RoomContents,
-			playerDbRef.Value,
-			tokenConnectRoomContainer.Object().DBRef.ToString(),
-			"connect");
-
-		await SyncPlayerOutputPreferences(handle, foundPlayer.Object);
-		await ShowPostLoginMessages(parser, handle, new AnySharpObject(foundPlayer));
+		await CompletePlayerLoginAsync(parser, handle, foundPlayer, playerDbRef.Value);
 		Logger?.LogInformation("OTT login succeeded for player {Name} (#{Key}) from {IP}",
 			foundPlayer.Object.Name, foundPlayer.Object.Key, ipAddress);
 		return new CallState(playerDbRef.Value);
 	}
 
-	private static async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress)
+	private static async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress, string hostName)
 	{
+		// Task 15: guest-specific sitelock gate, on top of (not instead of) the !connect gate
+		// already applied in Connect() above — a site can allow normal logins but disallow guests.
+		if (SitelockMatcher.IsBlocked(Configuration!.CurrentValue.SitelockRules.Rules, ipAddress, hostName, SitelockMatcher.GuestFlag))
+		{
+			await NotifyService!.Notify(handle, "Access from your location is restricted.");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (!Configuration!.CurrentValue.Net.Logins)
+		{
+			await NotifyService!.Notify(handle, "Logins are disabled.");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		if (!Configuration!.CurrentValue.Net.Guests)
 		{
 			await NotifyService!.Notify(handle, "Guest logins are not enabled.");
@@ -418,28 +417,7 @@ public partial class Commands
 		var playerDbRef = new DBRef(selectedGuest.Object.Key, selectedGuest.Object.CreationTime);
 		await ConnectionService!.Bind(handle, playerDbRef);
 
-		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
-		await EventService!.TriggerEventAsync(
-			parser,
-			"PLAYER`CONNECT",
-			playerDbRef,
-			$"#{selectedGuest.Object.Key}",
-			connectionCount.ToString(),
-			handle.ToString());
-
-		// Refresh everyone in the room the player just appeared in.
-		var guestConnectRoomContainer = await selectedGuest.Location.WithCancellation(CancellationToken.None);
-		await EventService.TriggerEventAsync(
-			parser,
-			SharpEvents.RoomContents,
-			playerDbRef,
-			guestConnectRoomContainer.Object().DBRef.ToString(),
-			"connect");
-
-		await SyncPlayerOutputPreferences(handle, selectedGuest.Object);
-
-		// Show post-login messages and auto-look (PennMUSH-compatible login experience)
-		await ShowPostLoginMessages(parser, handle, new AnySharpObject(selectedGuest), isGuest: true);
+		await CompletePlayerLoginAsync(parser, handle, selectedGuest, playerDbRef, isGuest: true);
 		Logger?.LogDebug("Successful guest login for {@guest}", selectedGuest.Object);
 		return new CallState(playerDbRef);
 	}
@@ -502,6 +480,42 @@ public partial class Commands
 		if (string.IsNullOrEmpty(filePath)) return null;
 		if (!File.Exists(filePath)) return null;
 		return await File.ReadAllTextAsync(filePath);
+	}
+
+	/// <summary>
+	/// The shared post-login sequence run after a handle is bound to <paramref name="player"/>:
+	/// triggers <c>PLAYER`CONNECT</c>, refreshes the login room's contents, syncs the connection's
+	/// output preferences, and shows post-login messages (MOTD/auto-look). Identical across
+	/// CONNECT (name/password and OTT token) and the account-mode MAKE/PLAY commands; guest logins
+	/// share the same sequence but additionally show the guest file, hence <paramref name="isGuest"/>.
+	/// </summary>
+	private static async ValueTask CompletePlayerLoginAsync(
+		IMUSHCodeParser parser, long handle, SharpPlayer player, DBRef playerRef, bool isGuest = false)
+	{
+		// Trigger PLAYER`CONNECT event - PennMUSH compatible
+		// PennMUSH spec: player`connect (objid, number of connections, descriptor)
+		var connectionCount = await ConnectionService!.Get(playerRef).CountAsync();
+		await EventService!.TriggerEventAsync(
+			parser,
+			"PLAYER`CONNECT",
+			playerRef,
+			$"#{player.Object.Key}",
+			connectionCount.ToString(),
+			handle.ToString());
+
+		// Refresh everyone in the room the player just appeared in.
+		var connectRoomContainer = await player.Location.WithCancellation(CancellationToken.None);
+		await EventService.TriggerEventAsync(
+			parser,
+			SharpEvents.RoomContents,
+			playerRef,
+			connectRoomContainer.Object().DBRef.ToString(),
+			"connect");
+
+		await SyncPlayerOutputPreferences(handle, player.Object);
+
+		// Show post-login messages and auto-look (PennMUSH-compatible login experience)
+		await ShowPostLoginMessages(parser, handle, new AnySharpObject(player), isGuest);
 	}
 
 	/// <summary>

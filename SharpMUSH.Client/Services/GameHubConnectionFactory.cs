@@ -12,18 +12,19 @@ namespace SharpMUSH.Client.Services;
 public interface IGameHubConnectionFactory
 {
 	/// <summary>
-	/// Creates and returns a new hub connection configured with the supplied
-	/// <paramref name="accessToken"/>.  The caller is responsible for starting
-	/// and disposing the returned connection.
+	/// Creates and returns a new hub connection authenticated with the current
+	/// account-session token (re-read on every connect/reconnect attempt — see
+	/// <see cref="GameHubConnectionFactory.ResolveAccessTokenAsync"/>).  The caller
+	/// is responsible for starting and disposing the returned connection.
 	/// </summary>
-	IGameHubConnection Create(string accessToken);
+	IGameHubConnection Create();
 
 	/// <summary>
 	/// Creates a connection to the plugin-owned scene realtime hub (<c>/hubs/scene</c>), where the
 	/// Scene plugin's <c>SceneHub</c> is mapped (Phase 9). Returns <c>null</c> when no scene hub URL is
 	/// configured. The caller starts and disposes the returned connection.
 	/// </summary>
-	IGameHubConnection? CreateScene(string accessToken);
+	IGameHubConnection? CreateScene();
 }
 
 /// <summary>
@@ -34,28 +35,47 @@ public sealed class GameHubConnectionFactory : IGameHubConnectionFactory
 {
 	private readonly string _hubUrl;
 	private readonly string? _sceneHubUrl;
+	private readonly IAccountAuthState _accountAuth;
 
 	/// <param name="hubUrl">Absolute URL of the game hub endpoint, e.g. "https://host/hubs/game".</param>
+	/// <param name="accountAuth">
+	/// Live source of the account-session token. Held (not copied) so <see cref="ResolveAccessTokenAsync"/>
+	/// always reflects the current session — including a login/logout that happens after this factory
+	/// was constructed.
+	/// </param>
 	/// <param name="sceneHubUrl">Absolute URL of the scene hub endpoint, e.g. "https://host/hubs/scene".</param>
-	public GameHubConnectionFactory(string hubUrl, string? sceneHubUrl = null)
+	public GameHubConnectionFactory(string hubUrl, IAccountAuthState accountAuth, string? sceneHubUrl = null)
 	{
 		_hubUrl = hubUrl;
+		_accountAuth = accountAuth;
 		_sceneHubUrl = sceneHubUrl;
 	}
 
-	/// <inheritdoc/>
-	public IGameHubConnection Create(string accessToken) => Build(_hubUrl, accessToken);
+	/// <summary>
+	/// Resolves the token SignalR's <c>AccessTokenProvider</c> hands to the hub on every (re)connect
+	/// attempt. Deliberately reads <see cref="IAccountAuthState.AccountSessionToken"/> live on each
+	/// call rather than closing over a value captured once at build time: <c>WithAutomaticReconnect</c>
+	/// re-invokes this delegate on every reconnect attempt against the same long-lived
+	/// <see cref="HubConnection"/>, so a snapshot would keep offering a stale (or since-cleared) token
+	/// after a logout/re-login in the same tab. Public (not private) so tests can call it directly
+	/// without reaching into <see cref="HubConnection"/>'s internals, which do not expose the
+	/// configured provider for inspection.
+	/// </summary>
+	public Task<string?> ResolveAccessTokenAsync() => Task.FromResult(_accountAuth.AccountSessionToken);
 
 	/// <inheritdoc/>
-	public IGameHubConnection? CreateScene(string accessToken) =>
-		_sceneHubUrl is null ? null : Build(_sceneHubUrl, accessToken);
+	public IGameHubConnection Create() => Build(_hubUrl);
 
-	private static IGameHubConnection Build(string url, string accessToken)
+	/// <inheritdoc/>
+	public IGameHubConnection? CreateScene() =>
+		_sceneHubUrl is null ? null : Build(_sceneHubUrl);
+
+	private IGameHubConnection Build(string url)
 	{
 		var connection = new HubConnectionBuilder()
 			.WithUrl(url, opts =>
 			{
-				opts.AccessTokenProvider = () => Task.FromResult<string?>(accessToken);
+				opts.AccessTokenProvider = ResolveAccessTokenAsync;
 			})
 			.WithAutomaticReconnect(new ExponentialBackOffRetryPolicy())
 			.Build();
