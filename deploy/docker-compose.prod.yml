@@ -96,24 +96,27 @@ services:
     restart: unless-stopped
 
   # --- Nightly encrypted backup of the single game-data volume to your bucket ---
+  # OPT-IN — see the backup service in docker-compose.cloudflare.yml for why the profile exists and
+  # why these vars are `:-` rather than `:?`. Enable with COMPOSE_PROFILES=backup in deploy/.env.
   backup:
     image: mazzolino/restic:1.8      # pinned (not :latest) so backups are reproducible
     container_name: sharpmush-backup
     hostname: sharpmush
+    profiles: [backup]
     environment:
       - RUN_ON_STARTUP=false
       # 6-field cron (sec min hour dom mon dow): every day at 03:30.
       - BACKUP_CRON=0 30 3 * * *
-      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY:?set RESTIC_REPOSITORY in deploy/.env}
-      - RESTIC_PASSWORD=${RESTIC_PASSWORD:?set RESTIC_PASSWORD in deploy/.env}
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY:-}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD:-}
       - RESTIC_BACKUP_SOURCES=/data
       - RESTIC_BACKUP_ARGS=--tag sharpmush --host sharpmush
       # Retention: keep a week of dailies + a month of weeklies, prune the rest.
       - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --prune
       # Credentials for the storage backend. These are for Backblaze B2; swap for
       # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY if you use S3 or Cloudflare R2.
-      - B2_ACCOUNT_ID=${B2_ACCOUNT_ID}
-      - B2_ACCOUNT_KEY=${B2_ACCOUNT_KEY}
+      - B2_ACCOUNT_ID=${B2_ACCOUNT_ID:-}
+      - B2_ACCOUNT_KEY=${B2_ACCOUNT_KEY:-}
     volumes:
       - app-data:/data:ro          # read-only: the backup can never corrupt live data
     networks:

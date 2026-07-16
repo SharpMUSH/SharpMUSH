@@ -144,20 +144,33 @@ services:
     restart: unless-stopped
 
   # Nightly encrypted backup of the game-data volume — identical to the prod stack.
+  #
+  # OPT-IN. Backups are off unless you enable the "backup" profile, which you do by setting
+  # COMPOSE_PROFILES=backup in deploy/.env (see .env.example) — so the stack has no half-configured
+  # backup state: either .env carries real restic credentials and the profile is on, or the service
+  # does not exist at all. Without this, an unconfigured box ran restic against a placeholder repo
+  # and crash-looped on `b2_authorize_account: 401` forever.
+  #
+  # Note the vars below are NOT `:?`-guarded like the rest of this file. Compose interpolates every
+  # service in the file *before* it filters by profile, so a `:?` here would abort the whole stack
+  # even with the profile off — the exact failure the profile exists to prevent. `:-` keeps
+  # interpolation quiet; restic itself reports a missing repository if you enable the profile
+  # without configuring it.
   backup:
     image: mazzolino/restic:1.8      # pinned (not :latest) so backups are reproducible
     container_name: sharpmush-backup
     hostname: sharpmush
+    profiles: [backup]
     environment:
       - RUN_ON_STARTUP=false
       - BACKUP_CRON=0 30 3 * * *
-      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY:?set RESTIC_REPOSITORY in deploy/.env}
-      - RESTIC_PASSWORD=${RESTIC_PASSWORD:?set RESTIC_PASSWORD in deploy/.env}
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY:-}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD:-}
       - RESTIC_BACKUP_SOURCES=/data
       - RESTIC_BACKUP_ARGS=--tag sharpmush --host sharpmush
       - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --prune
-      - B2_ACCOUNT_ID=${B2_ACCOUNT_ID}
-      - B2_ACCOUNT_KEY=${B2_ACCOUNT_KEY}
+      - B2_ACCOUNT_ID=${B2_ACCOUNT_ID:-}
+      - B2_ACCOUNT_KEY=${B2_ACCOUNT_KEY:-}
     volumes:
       - app-data:/data:ro
     networks:
