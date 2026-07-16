@@ -105,14 +105,13 @@ builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredServi
 // Same singleton, exposed for scene group join/leave (client-only control surface).
 builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<ConnectionStateService>());
 
+// Same origin as the app itself unless configuration says otherwise; the dev launch profile splits
+// the client (http:8080) from the API (https:8081) and opts in via appsettings.Development.json.
 builder.Services.AddHttpClient("api", sp =>
 {
-	var uri = new UriBuilder(builder.HostEnvironment.BaseAddress)
-	{
-		Scheme = "https",
-		Port = 8081
-	};
-	sp.BaseAddress = uri.Uri;
+	sp.BaseAddress = ApiBaseAddressResolver.Resolve(
+		builder.HostEnvironment.BaseAddress,
+		builder.Configuration[ApiBaseAddressResolver.ConfigurationKey]);
 });
 
 if (builder.HostEnvironment.IsDevelopment())
