@@ -240,17 +240,30 @@
     private string? _loginPassword;
 
     /// <summary>
-    /// The connbar's identity label, derived live from <see cref="AccountAuthService.ActiveCharacter"/>
-    /// — the single source of truth for "who is logged in" (same pattern as NavMenu.razor's
-    /// <c>DisplayName</c>). Deliberately not a cached field: caching this per-terminal was the root
-    /// cause of two stale-identity bugs — the connbar showing "not logged in" after
+    /// The connbar's identity label, derived live rather than cached: caching this per-terminal was
+    /// the root cause of two earlier stale-identity bugs — the connbar showing "not logged in" after
     /// <c>RecreateAsync</c>'s disconnect announcement during a character switch (nothing ever
     /// restored a nulled cache), and a remounted terminal showing the roster's first character
-    /// instead of the actually-active one. This is intentionally independent of
-    /// <c>Terminal.ConnectedPlayerName</c> (see <see cref="SetPlayerName"/>), which is a distinct,
-    /// still-live piece of state Play.razor's page header reads off the play terminal instance.
+    /// instead of the actually-active one.
+    /// <para>
+    /// Prefers <c>Terminal.ConnectedPlayerName</c> when set, falling back to
+    /// <see cref="AccountAuthService.ActiveCharacter"/>. Account-based connects (character picker,
+    /// switch, dev-debug auto-connect) never write <c>Terminal.ConnectedPlayerName</c> — see
+    /// <see cref="SetPlayerName"/> — so they always fall through to <c>ActiveCharacter</c>. Direct
+    /// connects (manual "Character" tab credentials, a typed <c>connect &lt;name&gt; ...</c>, and
+    /// dev-debug's own OTT connect) set only <c>Terminal.ConnectedPlayerName</c> and never touch
+    /// <c>AccountAuth</c> at all, so they need the primary read here — an account-only property
+    /// regressed every one of them to "not logged in".
+    /// </para>
+    /// <para>
+    /// Uses <see cref="string.IsNullOrEmpty"/>, not <c>??</c>: an unconnected/never-set
+    /// <c>ConnectedPlayerName</c> can come back as <c>""</c> rather than <c>null</c> depending on the
+    /// backing terminal, which <c>??</c> would treat as a set name and never fall through.
+    /// </para>
     /// </summary>
-    private string? _playerName => AccountAuth.ActiveCharacter?.Name;
+    private string? _playerName => string.IsNullOrEmpty(Terminal.ConnectedPlayerName)
+        ? AccountAuth.ActiveCharacter?.Name
+        : Terminal.ConnectedPlayerName;
 
     private readonly List<TerminalLine> _displayLines = [];
     private bool _autoScroll = true;
@@ -474,13 +487,16 @@
     }
 
     /// <summary>
-    /// Records the connected player's name on the underlying terminal service. This is distinct
-    /// from the connbar's own <see cref="_playerName"/> (which reads <c>AccountAuth.ActiveCharacter</c>
-    /// directly and ignores this): <c>Terminal.ConnectedPlayerName</c> is a separate piece of state
-    /// that Play.razor's page header reads off the play terminal instance
-    /// (<c>PlayTerminal.ConnectedPlayerName ?? "Play Terminal"</c>), independent of the account
-    /// system — it still needs to be maintained for direct/manual "Character" tab and dev-debug
-    /// connects, which never touch <c>AccountAuth</c> at all.
+    /// Records the connected player's name on the underlying terminal service. <c>_playerName</c>
+    /// reads this back directly, preferring it over <c>AccountAuth.ActiveCharacter</c>, and
+    /// Play.razor's page header reads it off the play terminal instance the same way
+    /// (<c>PlayTerminal.ConnectedPlayerName ?? "Play Terminal"</c>). Direct/manual "Character" tab
+    /// and typed-<c>connect</c> flows depend on this write — they never touch <c>AccountAuth</c> at
+    /// all. The single-character auto-login and dev-debug OTT paths call this too (matching the
+    /// character they just resolved), but that is redundant rather than load-bearing: those paths
+    /// also land on the same character via <c>AccountAuth.ActiveCharacter</c>, which
+    /// <see cref="_playerName"/> falls back to. The multi-character picker/switch paths never call
+    /// this, so they rely on the <c>ActiveCharacter</c> fallback outright.
     /// </summary>
     private void SetPlayerName(string? name) => Terminal.ConnectedPlayerName = name;
 

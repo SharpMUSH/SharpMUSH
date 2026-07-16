@@ -264,6 +264,44 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		await Assert.That(cut.Markup).DoesNotContain("Alpha");
 	}
 
+	/// <summary>
+	/// Fix pass 3. The account-only <c>_playerName</c> property regressed every non-account connect
+	/// path: the manual "Character" tab credentials flow, a typed <c>connect &lt;name&gt; &lt;password&gt;</c>,
+	/// and dev-debug auto-connect all set only <c>Terminal.ConnectedPlayerName</c> and never touch
+	/// <c>AccountAuth</c> at all. This renders <c>GlobalTerminal</c> with no account login whatsoever
+	/// (no <c>sessionStorage</c> seeded, so <c>AccountAuth.IsLoggedIn</c> and
+	/// <c>AccountAuth.ActiveCharacter</c> both stay null/false) and an already-connected terminal whose
+	/// <c>ConnectedPlayerName</c> is set — exactly the shape a direct "Character" tab connect leaves
+	/// behind — and asserts the connbar shows that name rather than falling back to "not logged in".
+	/// </summary>
+	[Test]
+	public async Task Direct_connect_with_no_account_login_shows_the_terminal_player_name()
+	{
+		var (first, _) = RegisterTerminal();
+		first.IsConnected.Returns(true);
+		first.ConnectedPlayerName.Returns("DirectChar");
+
+		// No login call and no seeded sessionStorage keys: Loose mode returns null for the
+		// unconfigured getItem reads, so AccountAuth.InitAsync() finds no session and
+		// AccountAuth.ActiveCharacter stays null throughout — the direct-connect shape.
+		Services.AddSingleton(Substitute.For<IHttpClientFactory>());
+		Services.AddSingleton(sp => new AccountAuthService(
+			sp.GetRequiredService<IHttpClientFactory>(),
+			sp.GetRequiredService<IJSRuntime>(),
+			NullLogger<AccountAuthService>.Instance));
+
+		var cut = Render<GlobalTerminal>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("DirectChar"))
+				throw new InvalidOperationException("not showing DirectChar yet");
+		});
+
+		await Assert.That(cut.Markup).Contains("DirectChar");
+		await Assert.That(cut.Markup).DoesNotContain("not logged in");
+	}
+
 	public new async ValueTask DisposeAsync()
 	{
 		foreach (var client in _ownedHttpClients)
