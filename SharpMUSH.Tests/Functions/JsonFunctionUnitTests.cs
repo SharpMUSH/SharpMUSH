@@ -68,6 +68,14 @@ public class JsonFunctionUnitTests
 	[Arguments("""json_array(iter(a b,json(object,k,json(string,%i0))))""", """[{"k":"a"},{"k":"b"}]""")]
 	// Elements that are not valid JSON are an error, like json(array,...).
 	[Arguments("json_array(a b c)", "#-1 BAD ARGUMENT FORMAT TO json_array")]
+	// json_array splits BEFORE parsing, so a value containing the delimiter is shredded into
+	// fragments that are no longer valid JSON. A space is the default delimiter, and player names
+	// routinely contain spaces — callers must pass a delimiter their data cannot contain.
+	[Arguments("""json_array(json(string,Package Manager))""", "#-1 BAD ARGUMENT FORMAT TO json_array")]
+	[Arguments("""json_array(iter(a,json(string,Package Manager),,%r),%r)""", """["Package Manager"]""")]
+	// An empty list yields an empty array, same as the argumentless form — so json_array() needs
+	// no base-case guard, unlike fold(), which drops its base case on an empty list.
+	[Arguments("""json_array(iter(,json(string,%i0)))""", "[]")]
 	public async Task JsonArray(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;

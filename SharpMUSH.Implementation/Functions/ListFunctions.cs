@@ -308,7 +308,9 @@ public partial class Functions
 		return lastValue;
 	}
 
-	[SharpFunction(Name = "fold", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "base"])]
+	// Argument order is (attr, list, base, delimiter) — matching the helpfile and the indices read
+	// below. These names drive the LSP's inlay hints, so a wrong order mislabels real code.
+	[SharpFunction(Name = "fold", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "base", "delimiter"])]
 	public static async ValueTask<CallState> Fold(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -323,7 +325,14 @@ public partial class Functions
 
 		if (list.Length == 0)
 		{
-			return CallState.Empty;
+			// Folding nothing into a base case is the base case — the identity every reduce
+			// shares (Haskell `foldl f z [] = z`, Python `reduce(f, [], init)`). The base is the
+			// answer when there is nothing to combine into it, not merely a seed for a first
+			// call, so returning empty here loses the caller's own value. With no base there is
+			// genuinely nothing to return.
+			// PennMUSH's fun_fold has no empty-list guard: it calls <attr> once with %1 read
+			// from an unset slot. That is a defect, not a contract, and is not reproduced.
+			return baseCase is null ? CallState.Empty : new CallState(baseCase);
 		}
 
 		MString accumulator;

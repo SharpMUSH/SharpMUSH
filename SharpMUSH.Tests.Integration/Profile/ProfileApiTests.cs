@@ -93,6 +93,36 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
+	/// Both routes assemble their array with json_array(iter(...)), and json_array() splits its
+	/// input BEFORE parsing each element — so a row containing the separator is shredded into
+	/// invalid JSON. Rows embed the player's name, names contain spaces, and space is
+	/// json_array()'s default separator; the routes pass %r instead. This pins that choice: a
+	/// player whose name has a space must survive the round trip intact.
+	/// </summary>
+	[Test]
+	public async Task Characters_HandlesNamesContainingTheDefaultSeparator()
+	{
+		var mediator = factory.Services.GetRequiredService<IMediator>();
+		var home = new DBRef(0, null);
+		await mediator.Send(new CreatePlayerCommand("Spaced Out Name", "testpass", home, home, 1));
+
+		var http = factory.CreateHttpClient();
+		var response = await http.GetAsync("http/characters");
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		// A shredded row surfaces as a parse failure or an error string, not a usable array.
+		using var doc = JsonDocument.Parse(body);
+		await Assert.That(doc.RootElement.ValueKind).IsEqualTo(JsonValueKind.Array);
+
+		var names = doc.RootElement.EnumerateArray()
+			.Select(row => row.GetProperty("name").GetString())
+			.ToList();
+
+		await Assert.That(names).Contains("Spaced Out Name");
+	}
+
+	/// <summary>
 	/// #7 Package Manager is seeded as a real PLAYER (it owns softcode-package objects), so a
 	/// type-based roster picks it up even though nobody plays it. FN`CHARVIS excludes it by the
 	/// {{$package_manager}} config ref rather than a literal #7 — the seed numbering is
