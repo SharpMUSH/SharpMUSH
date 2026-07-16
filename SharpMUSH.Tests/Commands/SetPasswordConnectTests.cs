@@ -49,7 +49,7 @@ public class SetPasswordConnectTests
 		return handle;
 	}
 
-	[Test, NotInParallel(nameof(SetPasswordConnectTests))]
+	[Test, NotInParallel([nameof(SetPasswordConnectTests), "ConfigMutation"])]
 	public async ValueTask SetPassword_ThenConnectWithPlaintext_Binds()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("setpwconnect");

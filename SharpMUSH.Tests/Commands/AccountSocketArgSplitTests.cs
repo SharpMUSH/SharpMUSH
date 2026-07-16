@@ -41,7 +41,7 @@ public class AccountSocketArgSplitTests
 		return handle;
 	}
 
-	[Test, NotInParallel(nameof(AccountSocketArgSplitTests))]
+	[Test, NotInParallel([nameof(AccountSocketArgSplitTests), "ConfigMutation"])]
 	public async ValueTask Register_TwoTokens_CreatesAccount()
 	{
 		var username = TestIsolationHelpers.GenerateUniqueName("regtwo");
@@ -57,7 +57,7 @@ public class AccountSocketArgSplitTests
 		await Assert.That(state).IsEqualTo(IConnectionService.ConnectionState.AccountMode);
 	}
 
-	[Test, NotInParallel(nameof(AccountSocketArgSplitTests))]
+	[Test, NotInParallel([nameof(AccountSocketArgSplitTests), "ConfigMutation"])]
 	public async ValueTask Register_ThreeTokens_CreatesAccountWithEmail()
 	{
 		var username = TestIsolationHelpers.GenerateUniqueName("regthree");
@@ -74,7 +74,7 @@ public class AccountSocketArgSplitTests
 		await Assert.That(state).IsEqualTo(IConnectionService.ConnectionState.AccountMode);
 	}
 
-	[Test, NotInParallel(nameof(AccountSocketArgSplitTests))]
+	[Test, NotInParallel([nameof(AccountSocketArgSplitTests), "ConfigMutation"])]
 	public async ValueTask Register_OneToken_ShowsUsageError()
 	{
 		var handle = await RegisterConnectionAsync(4003L);
@@ -91,7 +91,7 @@ public class AccountSocketArgSplitTests
 		await Assert.That(state).IsNotEqualTo(IConnectionService.ConnectionState.AccountMode);
 	}
 
-	[Test, NotInParallel(nameof(AccountSocketArgSplitTests))]
+	[Test, NotInParallel([nameof(AccountSocketArgSplitTests), "ConfigMutation"])]
 	public async ValueTask Login_AfterRegister_Succeeds()
 	{
 		var username = TestIsolationHelpers.GenerateUniqueName("loginok");

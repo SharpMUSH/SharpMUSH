@@ -16,7 +16,11 @@ public class SetupAutoCompleteTests
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	[Test, NotInParallel("ServerStateTests")] // shares the ServerState doc with ServerStateTests
+	// Serialized against ServerStateTests (shared ServerState doc) AND ConfigMutation: this test
+	// temporarily mutates the *shared* God character's password, and the ConfigMutation-group
+	// connect tests (e.g. LoginsConfigTests) authenticate as God — they must not observe the
+	// transient "hashed-anything" value while it is set here.
+	[Test, NotInParallel(["ServerStateTests", "ConfigMutation"])]
 	public async Task SettingGodsPassword_CompletesSetup()
 	{
 		await Db.SetServerSetupCompletedAsync(false);
@@ -36,17 +40,24 @@ public class SetupAutoCompleteTests
 		}
 		finally
 		{
-			// Restore God's original (unhashed/no-op) password. Passing a non-null salt makes the
-			// handler treat the password as already-hashed, so this writes the original hash back
-			// verbatim instead of re-hashing it. Runs even if an assertion above threw, so a failed
-			// assertion can't leave God's password (or SetupCompleted) mutated for later tests.
-			await Db.SetPlayerPasswordAsync(god, originalPasswordHash, originalPasswordSalt ?? "");
+			// Restore God's original password/salt verbatim THROUGH the mediator command so the
+			// object/name caches are invalidated to match. The mutation above (SetPlayerPasswordCommand)
+			// evicts the God caches; a parallel test that reads God can then repopulate them with the
+			// mutated value. A direct Db.SetPlayerPasswordAsync restore writes the DB but leaves that
+			// stale value in cache for its whole TTL, breaking parallel God-login tests. Routing the
+			// restore through the command re-invalidates, keeping cache and DB consistent. (Post the
+			// double-hash fix the command stores the password verbatim, so the original hash is written
+			// back without re-hashing.) Runs even if an assertion above threw, so a failed assertion
+			// can't leave God's password (or SetupCompleted) mutated for later tests.
+			await Mediator.Send(new SetPlayerPasswordCommand(god, originalPasswordHash, originalPasswordSalt));
 
 			await Db.SetServerSetupCompletedAsync(false); // restore for setup-flow tests
 		}
 	}
 
-	[Test, NotInParallel("ServerStateTests")] // shares the ServerState doc with ServerStateTests
+	// See SettingGodsPassword_CompletesSetup — also serialized against the God-authenticating
+	// ConfigMutation connect tests while it mutates the shared God password.
+	[Test, NotInParallel(["ServerStateTests", "ConfigMutation"])]
 	public async Task SettingGodsEmptyPassword_DoesNotCompleteSetup()
 	{
 		await Db.SetServerSetupCompletedAsync(false);
@@ -65,7 +76,9 @@ public class SetupAutoCompleteTests
 		}
 		finally
 		{
-			await Db.SetPlayerPasswordAsync(god, originalPasswordHash, originalPasswordSalt ?? "");
+			// Restore through the command (not a direct DB write) so the God caches are re-invalidated
+			// to match the DB — see SettingGodsPassword_CompletesSetup for the full rationale.
+			await Mediator.Send(new SetPlayerPasswordCommand(god, originalPasswordHash, originalPasswordSalt));
 			await Db.SetServerSetupCompletedAsync(false); // restore for setup-flow tests
 		}
 	}

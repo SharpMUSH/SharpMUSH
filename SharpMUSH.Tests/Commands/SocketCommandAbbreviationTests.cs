@@ -59,7 +59,7 @@ public class SocketCommandAbbreviationTests
 
 	private static string PlainMessage(CallState result) => result.Message?.ToString() ?? "";
 
-	[Test, NotInParallel(nameof(SocketCommandAbbreviationTests))]
+	[Test, NotInParallel([nameof(SocketCommandAbbreviationTests), "ConfigMutation"])]
 	public async ValueTask Connect_FullCommand_Succeeds()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrfull");
@@ -72,7 +72,7 @@ public class SocketCommandAbbreviationTests
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
 	}
 
-	[Test, NotInParallel(nameof(SocketCommandAbbreviationTests))]
+	[Test, NotInParallel([nameof(SocketCommandAbbreviationTests), "ConfigMutation"])]
 	public async ValueTask Connect_ConAbbreviation_Succeeds()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrcon");
@@ -85,7 +85,7 @@ public class SocketCommandAbbreviationTests
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
 	}
 
-	[Test, NotInParallel(nameof(SocketCommandAbbreviationTests))]
+	[Test, NotInParallel([nameof(SocketCommandAbbreviationTests), "ConfigMutation"])]
 	public async ValueTask Connect_CoAbbreviation_Succeeds()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrco");
@@ -98,7 +98,7 @@ public class SocketCommandAbbreviationTests
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
 	}
 
-	[Test, NotInParallel(nameof(SocketCommandAbbreviationTests))]
+	[Test, NotInParallel([nameof(SocketCommandAbbreviationTests), "ConfigMutation"])]
 	public async ValueTask Connect_ConnAbbreviation_Succeeds()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrconn");
@@ -116,7 +116,7 @@ public class SocketCommandAbbreviationTests
 	/// password through "con" must fail auth exactly like a wrong password through "connect"
 	/// would, and the right password through "con" must still succeed.
 	/// </summary>
-	[Test, NotInParallel(nameof(SocketCommandAbbreviationTests))]
+	[Test, NotInParallel([nameof(SocketCommandAbbreviationTests), "ConfigMutation"])]
 	public async ValueTask Connect_AbbreviationPassword_WrongFailsRightSucceeds()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrpass");
@@ -139,7 +139,7 @@ public class SocketCommandAbbreviationTests
 	/// there is no real ambiguous-prefix case to exercise here). This must still fall through to
 	/// the existing "no such command at login" behavior, unchanged.
 	/// </summary>
-	[Test, NotInParallel(nameof(SocketCommandAbbreviationTests))]
+	[Test, NotInParallel([nameof(SocketCommandAbbreviationTests), "ConfigMutation"])]
 	public async ValueTask UnknownAbbreviation_DoesNotConnect_NoSuchCommandAtLogin()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrxyz");
@@ -168,7 +168,7 @@ public class SocketCommandAbbreviationTests
 	/// block was gated only on <c>Handle is not null</c> (true for the whole connection lifetime),
 	/// so a logged-in player typing "q" was silently QUIT'd.
 	/// </summary>
-	[Test, NotInParallel(nameof(SocketCommandAbbreviationTests))]
+	[Test, NotInParallel([nameof(SocketCommandAbbreviationTests), "ConfigMutation"])]
 	public async ValueTask PostLogin_BareAbbreviation_DoesNotDispatchQuit()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrpost");
