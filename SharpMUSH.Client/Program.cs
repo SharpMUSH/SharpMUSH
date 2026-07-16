@@ -113,7 +113,7 @@ builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredServi
 // Same singleton, exposed for scene group join/leave (client-only control surface).
 builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<ConnectionStateService>());
 
-builder.Services.AddHttpClient("api", sp => sp.BaseAddress = apiBaseAddress);
+builder.Services.AddHttpClient("api", c => c.BaseAddress = apiBaseAddress);
 
 if (builder.HostEnvironment.IsDevelopment())
 {
