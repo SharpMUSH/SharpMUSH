@@ -29,6 +29,8 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	// stale waiter from a previous/interrupted login cannot initialize the wrong socket.
 	private CancellationTokenSource? _loginCts;
 
+	private bool _disposed;
+
 	public event Action<TerminalLine>? LineReceived;
 	public event Action<bool>? ConnectionStateChanged;
 
@@ -57,9 +59,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		// New connection/login: drop any OOB payloads from a previous session so the UI never
 		// renders stale cross-session data until fresh OOB arrives.
 		_oob.Clear();
-		wsService.MessageReceived -= HandleMessage;
-		wsService.ConnectionStateChanged -= HandleStateChange;
-		wsService.Reattached -= HandleReattached;
+		UnsubscribeWebSocketHandlers();
 		wsService.MessageReceived += HandleMessage;
 		wsService.ConnectionStateChanged += HandleStateChange;
 		wsService.Reattached += HandleReattached;
@@ -67,6 +67,13 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		_logger.LogInformation("Connecting to {ServerUri}", serverUri);
 		await wsService.ConnectAsync(serverUri);
 		AddSystemLine($"Connected to {serverUri}");
+	}
+
+	private void UnsubscribeWebSocketHandlers()
+	{
+		wsService.MessageReceived -= HandleMessage;
+		wsService.ConnectionStateChanged -= HandleStateChange;
+		wsService.Reattached -= HandleReattached;
 	}
 
 	/// <inheritdoc/>
@@ -171,10 +178,39 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		_loginCts?.Cancel();
 		ConnectedPlayerName = null;
 		await wsService.DisconnectAsync();
-		wsService.MessageReceived -= HandleMessage;
-		wsService.ConnectionStateChanged -= HandleStateChange;
-		wsService.Reattached -= HandleReattached;
+		UnsubscribeWebSocketHandlers();
 		AddSystemLine("Disconnected.");
+	}
+
+	/// <summary>
+	/// Tears the instance down so a replacement can be built cleanly. Unsubscribes the websocket
+	/// handlers wired in <see cref="ConnectAsync"/>, cancels the login wait, and disposes the
+	/// send semaphore and the websocket client.
+	/// </summary>
+	/// <remarks>
+	/// Recreation — rather than reconnection — is what makes a character switch safe: a fresh
+	/// <see cref="IWebSocketClientService"/> starts with a null resume token and therefore sends
+	/// hello instead of resume, so the server cannot rebind the socket to the previous
+	/// character's session.
+	/// </remarks>
+	public async ValueTask DisposeAsync()
+	{
+		if (_disposed) return;
+		_disposed = true;
+
+		UnsubscribeWebSocketHandlers();
+
+		_loginCts?.Cancel();
+		_loginCts?.Dispose();
+		_loginCts = null;
+
+		_sendSemaphore.Dispose();
+
+		LineReceived = null;
+		ConnectionStateChanged = null;
+
+		await wsService.DisposeAsync();
+		GC.SuppressFinalize(this);
 	}
 
 	public async Task SendAsync(string command)

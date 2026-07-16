@@ -2,7 +2,7 @@ using SharpMUSH.Client.Models;
 
 namespace SharpMUSH.Client.Services;
 
-public interface ITerminalService
+public interface ITerminalService : IAsyncDisposable
 {
 	/// <summary>Fires on every new terminal line received from the server or sent by the client.</summary>
 	event Action<TerminalLine>? LineReceived;
