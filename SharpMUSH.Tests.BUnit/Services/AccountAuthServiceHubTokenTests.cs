@@ -23,12 +23,20 @@ file sealed class FakeAccountAuthState : IAccountAuthState
 	public IReadOnlyList<string> Permissions { get; set; } = [];
 	public bool ExplicitlyLoggedOut { get; set; }
 	public event Action? AuthStateChanged;
+	public AccountAuthService.CharacterSummary? ActiveCharacter { get; set; }
+	public bool HasCharacters => false;
+	public bool CanUseTerminal => false;
+	public event Action? ActiveCharacterChanged;
 	public Task InitAsync() => Task.CompletedTask;
 	public Task<AccountAuthService.DebugOttResponse?> GetDebugOttAsync() =>
 		Task.FromResult<AccountAuthService.DebugOttResponse?>(null);
 
-	// Keep the compiler from warning about the never-invoked event on this test double.
-	public void Touch() => AuthStateChanged?.Invoke();
+	// Keep the compiler from warning about the never-invoked events on this test double.
+	public void Touch()
+	{
+		AuthStateChanged?.Invoke();
+		ActiveCharacterChanged?.Invoke();
+	}
 }
 
 /// <summary>

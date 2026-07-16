@@ -56,4 +56,28 @@ public class AccountAuthServiceActiveCharacterTests
 		var sut = MakeService();
 		await Assert.That(sut.HasCharacters).IsFalse();
 	}
+
+	[Test]
+	public async Task SwitchCharacterAsync_without_a_session_leaves_ActiveCharacter_untouched()
+	{
+		var sut = MakeService();
+		var before = sut.ActiveCharacter;
+
+		var ott = await sut.SwitchCharacterAsync(new CharacterSummary(7, 1000L, "Wizard", ""));
+
+		await Assert.That(ott).IsNull();
+		await Assert.That(sut.ActiveCharacter).IsEqualTo(before);
+	}
+
+	[Test]
+	public async Task SetActiveCharacter_null_then_roster_default_picks_first()
+	{
+		var sut = MakeService();
+		sut.SetActiveCharacter(new CharacterSummary(1, 1L, "First", ""));
+		await Assert.That(sut.ActiveCharacter!.Name).IsEqualTo("First");
+
+		// Switching to a different character replaces it — the default does not stick.
+		sut.SetActiveCharacter(new CharacterSummary(2, 2L, "Second", ""));
+		await Assert.That(sut.ActiveCharacter!.Name).IsEqualTo("Second");
+	}
 }

@@ -113,6 +113,18 @@ public class AccountAuthService(
 	}
 
 	/// <summary>
+	/// Assigns the roster and defaults <see cref="ActiveCharacter"/> to its first entry when
+	/// nothing is active yet. First-character-is-the-default is correct at hydrate; the bug this
+	/// replaces was re-deriving it on every render, which froze it forever after a switch.
+	/// </summary>
+	private void SetCharacters(IReadOnlyList<CharacterSummary> characters)
+	{
+		Characters = characters;
+		if (ActiveCharacter is null)
+			SetActiveCharacter(characters.FirstOrDefault());
+	}
+
+	/// <summary>
 	/// True once the user has explicitly logged out in this tab (sessionStorage-latched).
 	/// Guards against dev-mode debug re-auth (and any other silent re-login) undoing an
 	/// explicit logout on the next component init/reload — cleared by any successful
@@ -165,6 +177,7 @@ public class AccountAuthService(
 			MustChangePassword = false;
 			Role = null;
 			Permissions = [];
+			SetActiveCharacter(null);
 			RaiseAuthStateChanged();
 			return;
 		}
@@ -197,7 +210,7 @@ public class AccountAuthService(
 			if (result is null) return (false, "Unexpected server response.", []);
 
 			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
-			Characters = result.Characters;
+			SetCharacters(result.Characters);
 			return (true, null, result.Characters);
 		}
 		catch (Exception ex)
@@ -223,7 +236,7 @@ public class AccountAuthService(
 			if (result is null) return (false, "Unexpected server response.", []);
 
 			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
-			Characters = result.Characters;
+			SetCharacters(result.Characters);
 			return (true, null, result.Characters);
 		}
 		catch (Exception ex)
@@ -289,7 +302,7 @@ public class AccountAuthService(
 				return (true, null, false);
 
 			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
-			Characters = result.Characters;
+			SetCharacters(result.Characters);
 			return (true, null, true);
 		}
 		catch (Exception ex)
@@ -442,7 +455,12 @@ public class AccountAuthService(
 			}
 
 			var result = await response.Content.ReadFromJsonAsync<SwitchCharacterResponse>();
-			return result?.Ott;
+			if (result?.Ott is null) return null;
+
+			// The switch is authoritative for identity: every consumer reads ActiveCharacter
+			// rather than deriving its own answer.
+			SetActiveCharacter(character);
+			return result.Ott;
 		}
 		catch (Exception ex)
 		{
@@ -462,7 +480,7 @@ public class AccountAuthService(
 			http.DefaultRequestHeaders.Authorization =
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 			var characters = await http.GetFromJsonAsync<IReadOnlyList<CharacterSummary>>("api/account/characters");
-			Characters = characters ?? [];
+			SetCharacters(characters ?? []);
 			return Characters;
 		}
 		catch (Exception ex)
@@ -493,7 +511,7 @@ public class AccountAuthService(
 			if (result is null) return (false, "Unexpected server response.", null);
 
 			var character = new CharacterSummary(result.DbrefNumber, result.CreationTime ?? 0, name, "");
-			Characters = [.. Characters, character];
+			SetCharacters([.. Characters, character]);
 			return (true, null, character);
 		}
 		catch (Exception ex)
@@ -517,7 +535,7 @@ public class AccountAuthService(
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync());
 
-			Characters = Characters.Where(c => c.DbrefNumber != dbrefNumber).ToList();
+			SetCharacters(Characters.Where(c => c.DbrefNumber != dbrefNumber).ToList());
 			return (true, null);
 		}
 		catch (Exception ex)
@@ -577,10 +595,11 @@ public class AccountAuthService(
 
 		AccountSessionToken = null;
 		Username = null;
-		Characters = [];
+		SetCharacters([]);
 		MustChangePassword = false;
 		Role = null;
 		Permissions = [];
+		SetActiveCharacter(null);
 		// A fresh intentional login later must mint (and redeem) its own token, not resurrect the
 		// previous boot's cached debug-OTT response.
 		_debugOttTask = null;
