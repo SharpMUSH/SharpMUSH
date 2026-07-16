@@ -150,6 +150,23 @@ An admin must be able to gather extra information before a character exists, wit
 
 The veto in step 2 is load-bearing: softcode reacting only after creation could not undo it, and since nothing is ever truly deleted (`BuildingCommands.cs:451`), a rejected application would otherwise leave a permanent half-character.
 
+**Contract: convention, not new grammar.** The two endpoints require **no change to the Portal Schema Document**. `PortalSchemaDocument.Actions` is already `IReadOnlyDictionary<string, SchemaAction>` — an arbitrary named map, not a fixed `submit` slot — and `SchemaActionResult` already carries `Ok` + `Errors`. The design doc's `"submit"` is an example key, not a constraint. So a character-creation application simply declares two entries:
+
+```jsonc
+"actions": {
+  "validate": { "transport": "http", "method": "POST", "route": "/http/chargen/validate",
+                "payload": "fields", "on_error": { "bind_field_errors": true } },
+  "apply":    { "transport": "http", "method": "POST", "route": "/http/chargen/apply",
+                "payload": "fields" }
+}
+```
+
+`schema_version` stays at 1; no renderer, registry, or provider migration is needed, and applications that don't opt in are untouched.
+
+What *is* new is that the **portal invokes these programmatically** rather than from a user-clicked button — the creation flow calls `validate`, performs the C# create/link, then calls `apply`, passing the new DBRef alongside the fields. Well-known action names are therefore part of the character-creation contract: an application designated for creation **must** declare both, and registration should reject one that doesn't.
+
+Rejected alternatives: first-class `ValidateRoute`/`ApplyRoute` on `RegisteredApplication` (duplicates what `actions` already expresses, and costs a migration on all three providers); and expanding the schema grammar to `schema_version: 2` (pushes a two-phase lifecycle policy into the client, which contradicts Area 21's "the portal renders; softcode decides" stance, and burdens every existing app with a contract only one flow needs).
+
 This inverts the shipped `chargen` package, whose submit handler `@create`s the character itself. That package's contract changes accordingly — it becomes validate + apply, not create.
 
 **Fix defect 9 at the source.** All four creation paths funnel through `CreatePlayerCommand` → `CreatePlayerCommandHandler` (CreatePlayerCommandHandler.cs:11) → `CreatePlayerAsync`. Trigger `PLAYER\`CREATE` **in the handler**, with `how` carried on the command as provenance, rather than adding a call at each of the four sites. A character created from anywhere then fires the event for the Event Object (`#9`) to act on, and no future creation path can forget to. Event dispatch already swallows handler exceptions (EventService.cs:160), so a broken handler cannot break creation.
@@ -161,7 +178,8 @@ This inverts the shipped `chargen` package, whose submit handler `@create`s the 
 - **Max characters:** enforced at HTTP and telnet; unlimited default preserves current behavior.
 - **Destruction:** `@nuke` unlinks the edge; `GOING` characters absent from `GetCharactersForAccountAsync` in all three providers; `switch-character`/`link-character` reject `GOING`; a pre-existing dangling edge is filtered retroactively.
 - **N=0:** all three config modes render correctly; terminals stay disconnected; creation from the panel links, activates, and connects; login succeeds during a login freeze.
-- **Application hook:** with no Application designated, creation falls back to the plain dialog; with one designated, its schema renders; a `{ok: false}` validate response binds errors and creates **nothing**; a successful flow creates, links, and posts DBRef + data to the apply route; §3 name validation still rejects duplicate/banned names submitted through an application; a throwing softcode handler does not break creation.
+- **Application hook:** with no Application designated, creation falls back to the plain dialog; with one designated, its schema renders; a `{ok: false}` validate response binds errors and creates **nothing**; a successful flow creates, links, and posts DBRef + data to the apply route; §3 name validation still rejects duplicate/banned names submitted through an application; a throwing softcode handler does not break creation; registering an application for creation without both `validate` and `apply` actions is rejected.
+- **Area 21 regression:** existing applications (including `kind: view` and widget apps) are unaffected — `schema_version` stays 1 and the actions map is unchanged for anything that doesn't opt in.
 - **`PLAYER\`CREATE`:** fires once per creation from all four paths (`@pcreate`, `make`, portal, `pcreate()`) with the correct `how`; existing `@pcreate` behavior unchanged.
 - **Regression:** account registration still returns `Characters: []` and login still handles an empty list.
 
