@@ -16,6 +16,7 @@ Two entry points, pick one based on how you terminate TLS:
 | `docker-compose.prod.yml` | The stack: nats, connectionserver, sharpmush-server, backup, and **Caddy** for TLS. Use this if the box faces the internet directly. |
 | `docker-compose.cloudflare.yml` | Same stack but fronted by a **Cloudflare Tunnel** instead of Caddy (no open web ports, hidden origin IP). See the Cloudflare section below. |
 | `Caddyfile` | Automatic-HTTPS reverse proxy config used by `docker-compose.prod.yml` |
+| `sharpmush.service` | Optional systemd unit — brings the stack up from the compose file on boot |
 | `.env.example` | Template for secrets/config — copy to `.env` and fill in |
 | `.gitignore` | Keeps your real `.env` out of git |
 | `README.md` | This file |
@@ -25,10 +26,12 @@ Two entry points, pick one based on how you terminate TLS:
 ```bash
 cd deploy
 cp .env.example .env
-# Edit .env: set your domain and restic/B2 credentials.
-#   openssl rand -base64 32   # for RESTIC_PASSWORD  (SAVE THIS — losing it makes backups unrecoverable)
+# Edit .env: set your domain.
 
-# Initialise the restic repository once (creates the encrypted repo in your bucket):
+# OPTIONAL — backups. Skip this whole block and the stack runs fine without them.
+# Set the restic/B2 credentials in .env, uncomment COMPOSE_PROFILES=backup, then
+# initialise the repository once (creates the encrypted repo in your bucket):
+#   openssl rand -base64 32   # for RESTIC_PASSWORD  (SAVE THIS — losing it makes backups unrecoverable)
 docker compose -f docker-compose.prod.yml run --rm backup restic init
 
 # Build and start everything:
@@ -154,8 +157,8 @@ that resolves straight to your server:
 
 ```bash
 cd deploy
-cp .env.example .env      # fill in CLOUDFLARE_TUNNEL_TOKEN plus the usual domain/restic values
-docker compose -f docker-compose.cloudflare.yml run --rm backup restic init   # once
+cp .env.example .env      # fill in CLOUDFLARE_TUNNEL_TOKEN and your domain
+docker compose -f docker-compose.cloudflare.yml run --rm backup restic init   # optional, once — backups only
 docker compose -f docker-compose.cloudflare.yml up -d --build
 ```
 
@@ -171,12 +174,49 @@ Check the tunnel is healthy with `docker compose -f docker-compose.cloudflare.ym
 | 8080 | ASP.NET server (HTTP) | no — internal, reached via the tunnel |
 | 4222 / 8222 | NATS client / monitoring | no — internal only |
 
+## Starting on boot
+
+`restart: unless-stopped` already brings the containers back after a reboot, and for most
+boxes that is enough. But it replays the **last state**, not the **declared** one: it
+restarts whatever happened to be running when the box went down. A `docker compose down`,
+a hand-stopped container, or an edited compose file therefore survives the reboot, and the
+box silently drifts from what `deploy/` says it should be.
+
+`sharpmush.service` closes that gap by running `docker compose up -d` on boot, so the box
+reconciles against the compose file every time it starts:
+
+```bash
+# as root, on the host
+ln -s /opt/SharpMUSH/deploy/sharpmush.service /etc/systemd/system/sharpmush.service
+systemctl daemon-reload
+systemctl enable --now sharpmush.service
+```
+
+It pulls before starting (so a boot also picks up an image the box missed while it was
+down) and tolerates a registry outage rather than keeping the game offline. Edit the
+`WorkingDirectory` and the compose filename in the unit if your checkout is not at
+`/opt/SharpMUSH` or you deploy the Caddy stack.
+
+Note this does not replace watchtower, which handles updates while the box is *up*.
+
 ## Backups (restic)
 
-The `backup` service snapshots the `app-data` volume (the SurrealDB RocksDB store +
-wiki assets — i.e. the entire game) to your bucket every night at 03:30, keeping 7
+**Backups are opt-in and off by default.** The `backup` service lives behind a compose
+profile, so it is not created at all until you turn it on — an unconfigured box gets no
+backup container rather than one crash-looping against a repository that does not exist.
+To enable it, fill in the restic settings in `.env` and uncomment:
+
+```bash
+COMPOSE_PROFILES=backup
+```
+
+Once enabled, the `backup` service snapshots the `app-data` volume (the SurrealDB RocksDB
+store + wiki assets — i.e. the entire game) to your bucket every night at 03:30, keeping 7
 daily and 4 weekly snapshots. The volume is mounted **read-only**, so a backup run can
 never corrupt live data.
+
+The `docker compose run --rm backup …` commands below work whether or not the profile is
+enabled — `run` activates a service's profile automatically.
 
 > The commands below (and under **Updating**) omit `-f` by exporting `COMPOSE_FILE`, so
 > they work for either stack. Set it once per shell to whichever stack you deployed:

@@ -1,0 +1,46 @@
+# Brings the whole stack up on boot, from the compose file — not just whatever containers happened
+# to be running when the box went down.
+#
+# `restart: unless-stopped` on the services already survives a reboot, so this is not about
+# restarting crashed containers. It is about reconciliation: the restart policy replays the LAST
+# STATE, while this unit replays the DECLARED state. Without it, a `docker compose down`, a
+# hand-stopped container, or an edited compose file quietly persists across the next boot, and the
+# box drifts from what deploy/ says it should be.
+#
+# Install (as root, on the host):
+#   ln -s /opt/SharpMUSH/deploy/sharpmush.service /etc/systemd/system/sharpmush.service
+#   systemctl daemon-reload
+#   systemctl enable --now sharpmush.service
+#
+# Adjust WorkingDirectory below if the checkout does not live at /opt/SharpMUSH.
+# Swap the compose file in the Exec* lines for docker-compose.prod.yml on a Caddy-fronted host.
+
+[Unit]
+Description=SharpMUSH stack (docker compose)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/SharpMUSH/deploy
+
+# Pull first so a boot also picks up any image the box missed while it was down; `|| true` because
+# a transient registry outage must never keep the game offline — compose will just start the images
+# already on disk. (watchtower still handles steady-state updates while the box is up.)
+ExecStartPre=-/usr/bin/docker compose -f docker-compose.cloudflare.yml pull --quiet
+
+# --remove-orphans so a service deleted from the compose file also disappears from the box, rather
+# than lingering as an unmanaged container that nothing owns.
+ExecStart=/usr/bin/docker compose -f docker-compose.cloudflare.yml up -d --remove-orphans
+
+# Leave containers running on `systemctl stop` of this unit? No — stop means stop. On shutdown this
+# lets compose tear the stack down gracefully instead of letting the docker daemon SIGKILL it.
+ExecStop=/usr/bin/docker compose -f docker-compose.cloudflare.yml down
+
+# Boot pulls images over a possibly-slow link; the default 90s is not enough.
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
