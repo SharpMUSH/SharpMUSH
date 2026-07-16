@@ -94,7 +94,13 @@ Re-creation — rather than the current reconnect — is what fixes the resume-t
 2. `RecreateAsync()` on **both** hosts — including play, which today is never touched.
 3. Set `ActiveCharacter`; raise `ActiveCharacterChanged`.
 4. Auto-connect the command terminal in the background with the new OTT. **No window opens.**
-5. Play reconnects only through `/play`'s existing auto-start logic, and only if the user is on that page.
+5. The play terminal is recreated and **left disconnected**.
+
+> **Correction (2026-07-16, during implementation).** This step originally read "Play reconnects only through `/play`'s existing auto-start logic, and only if the user is on that page." **That path does not exist.** The play terminal's only auto-start is `GlobalTerminal.OnInitializedAsync`, which runs at component init and never again; `GlobalTerminal` exposes no reconnect entry point. So a recreated play terminal stays disconnected until the component re-initializes.
+>
+> Accepted deliberately rather than fixed here: after a switch the play terminal shows as disconnected, and the player reconnects by navigating to `/play` afresh or reloading. `TerminalServiceHost.RecreateAsync` announces the disconnection to facade subscribers so the UI reports the truth instead of accepting input into a dead socket.
+>
+> This remains strictly better than the pre-change behavior, where the play terminal was never switched at all and stayed logged in as the **old character** indefinitely. Giving `/play` a real reconnect entry point is follow-up work.
 
 Open terminal windows close on switch; none reopen. The connection is still established — "close all, open none" applies to windows, not the socket.
 
