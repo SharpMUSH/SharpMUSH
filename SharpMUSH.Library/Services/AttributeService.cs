@@ -541,7 +541,7 @@ public class AttributeService(
 
 		var filtered = results
 			.Where(x => !x.IsMortalDark()
-			             && !darkPrefixes.Any(dp => (x.LongName ?? "").StartsWith(dp, StringComparison.OrdinalIgnoreCase)));
+			             && !darkPrefixes.Any(dp => x.LongName.StartsWith(dp, StringComparison.OrdinalIgnoreCase)));
 
 		var permitted = new List<SharpAttribute>();
 		foreach (var attr in filtered)
@@ -594,7 +594,7 @@ public class AttributeService(
 
 		var filtered = results
 			.Where(x => !x.IsMortalDark()
-			             && !darkPrefixes.Any(dp => (x.LongName ?? "").StartsWith(dp, StringComparison.OrdinalIgnoreCase)))
+			             && !darkPrefixes.Any(dp => x.LongName.StartsWith(dp, StringComparison.OrdinalIgnoreCase)))
 			.OrderBy(x => x.LongName, _attributeSort);
 
 		foreach (var attr in filtered)

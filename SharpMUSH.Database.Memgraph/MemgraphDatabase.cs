@@ -574,7 +574,7 @@ RETURN o, p
 		node["name"].As<string>(),
 		flags,
 		null,
-		node.Properties.ContainsKey("longName") ? node["longName"].As<string?>() : null,
+		node["longName"].As<string>(),
 		new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<SharpAttribute>>(new FreshEnumerable<SharpAttribute>(() => GetTopLevelAttributesAsync(id, innerCt)))),
 		new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 		new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)))
@@ -595,7 +595,7 @@ RETURN o, p
 		node["name"].As<string>(),
 		flags,
 		null,
-		node.Properties.ContainsKey("longName") ? node["longName"].As<string?>() : null,
+		node["longName"].As<string>(),
 		new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<LazySharpAttribute>>(new FreshEnumerable<LazySharpAttribute>(() => GetTopLevelLazyAttributesAsync(id, innerCt)))),
 		new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 		new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)),

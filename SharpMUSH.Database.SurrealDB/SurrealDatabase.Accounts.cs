@@ -112,8 +112,13 @@ CREATE account CONTENT {
 	{
 		var key = NormalizeSurrealId(accountId, "account");
 		var parameters = new Dictionary<string, object?> { ["id"] = new StringRecordId(key) };
-		await ExecuteAsync("DELETE $id", parameters, cancellationToken);
-		await ExecuteAsync("DELETE account_owns_character WHERE in = $id", parameters, cancellationToken);
+		// One transaction so the account row and its ownership edges are torn down atomically.
+		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"DELETE account_owns_character WHERE in = $id;" +
+			"DELETE $id;" +
+			"COMMIT TRANSACTION",
+			parameters, cancellationToken);
 	}
 
 	public async ValueTask LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
