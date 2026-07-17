@@ -239,6 +239,21 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("fold(test/ADD_FUNC_FOLD,1 2 3)", "6")]
+	[Arguments("fold(test/ADD_FUNC_FOLD,1 2 3,10)", "16")]
+	// Folding an empty list yields the base case — the identity every reduce shares
+	// (Haskell `foldl f z [] = z`, Python `reduce(f, [], init) -> init`). The base case is the
+	// answer when there is nothing to combine into it; it is not merely a seed for a first call.
+	// (PennMUSH's fun_fold has no empty guard and calls <attr> once with %1 read from a NULL
+	// slot — a defect we deliberately do not reproduce.)
+	[Arguments("fold(test/ADD_FUNC_FOLD,,10)", "10")]
+	// A base case that is falsy or blank is still the base case, not "no base case".
+	[Arguments("fold(test/ADD_FUNC_FOLD,,0)", "0")]
+	// The base case survives regardless of how the empty list was delimited.
+	[Arguments("fold(test/ADD_FUNC_FOLD,,10,|)", "10")]
+	// With no base case there is nothing to return for an empty list.
+	[Arguments("fold(test/ADD_FUNC_FOLD,)", "")]
+	// A single element with no base case is that element — <attr> is never called.
+	[Arguments("fold(test/ADD_FUNC_FOLD,7)", "7")]
 	public async Task Fold(string function, string expected)
 	{
 		var objNum = await CreateObjectWithAttribute("fold_obj", "ADD_FUNC_FOLD", "add(%0,%1)");

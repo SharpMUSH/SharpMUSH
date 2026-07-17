@@ -25,8 +25,8 @@ packages:
     description: Inbound HTTP verb routers (attach mode)
   - path: profile-handler/
     package: profile-handler
-    version: 1.0.0
-    description: Read-only character directory + profile API (requires http-handler)
+    version: 1.1.0
+    description: Read-only character directory, online list + profile API (requires http-handler)
   - path: chargen/
     package: chargen
     version: 1.0.0

@@ -1,8 +1,8 @@
 format: 1
 package: profile-handler
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
-description: "Read-only character directory and profile API, served through the HTTP verb routers."
+description: "Read-only character directory, online list, and profile API, served through the HTTP verb routers."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [http, api, profile, portal]
@@ -32,17 +32,35 @@ objects:
       # One character-directory row. %0 = player. created = unix ms.
       FN`CHARROW: |-
         json(object,name,json(string,name(%0)),objid,json(string,objid(%0)),created,json(number,ctime(%0,1)),category,json(string,u(FN`CHARCAT,%0)))
-      # fold() step: append a row to the JSON array. %0 = array so far, %1 = player.
-      FN`JARRINS: |-
-        json_mod(%0,insert,$\[[json_query(%0,size)]\],u(FN`CHARROW,%1))
-      # Directory visibility predicate (%0): 1 lists, 0 hides. Default hides Guests.
+      # Directory visibility predicate (%0): 1 lists, 0 hides. Default hides Guests and the
+      # package_manager system principal — it is seeded as a real PLAYER because it owns
+      # softcode-package objects, so a type search finds it, but nobody plays it. Matched by
+      # config ref, not a literal dbref: the seed numbering is config-driven and has moved.
       FN`CHARVIS: |-
-        not(strmatch(u(FN`CHARCAT,%0),Guest))
+        cand(not(strmatch(u(FN`CHARCAT,%0),Guest)),not(strmatch(num(%0),num({{$package_manager}}))))
+      # Online visibility predicate (%0): the directory rules, plus DARK. lwho() applies
+      # CanSee() against the *caller*, and this handler is wizard-flagged — for a privileged
+      # looker CanSee() is unconditionally true, so without this a DARK player would be
+      # exposed to anonymous web visitors. Hide them here instead.
+      FN`ONLINEVIS: |-
+        cand(u(FN`CHARVIS,%0),not(hasflag(%0,DARK)))
 
       # ── Routes (children of http-handler's GET verb) ─────────────────────
-      # GET /http/characters — every visible player as a JSON array.
+      # Both routes build their array with json_array(iter(...)) over a %r-separated list.
+      # json_array() splits its input BEFORE parsing each element, so the separator must be
+      # something a row cannot contain: names routinely contain spaces (the default separator),
+      # newlines cannot occur. It also yields [] for an empty list, so neither route needs a
+      # base-case guard.
+      #
+      # GET /http/characters — every visible player as a JSON array. This is the roster: it says
+      # who EXISTS, not who is connected. For connections see GET`ONLINE.
       GET`CHARACTERS: |-
-        @respond/type application/json; think fold(me/FN`JARRINS,filter(me/FN`CHARVIS,lsearch(all,type,player)),\[\])
+        @respond/type application/json; think json_array(iter(filter(me/FN`CHARVIS,lsearch(all,type,player)),u(me/FN`CHARROW,%i0),,%r),%r)
+      # GET /http/online — connected, visible players, same row shape as GET`CHARACTERS.
+      # lwho() is the authoritative connection list (the same source WHO reads), so objects that
+      # never bind a connection — seeded principals like package_manager — can't appear here.
+      GET`ONLINE: |-
+        @respond/type application/json; think json_array(iter(filter(me/FN`ONLINEVIS,lwho()),u(me/FN`CHARROW,%i0),,%r),%r)
       # GET /http/profile?objid=#1:123 — one character's public profile.
       GET`PROFILE: |-
         @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json(object,character,json(string,name(%q<form.objid>)),objid,json(string,objid(%q<form.objid>)),dbref,json(string,num(%q<form.objid>)),fields,json(object,fullname,u(FN`FIELD,%q<form.objid>,fullname),alias,u(FN`FIELD,%q<form.objid>,alias),age,u(FN`FIELD,%q<form.objid>,age),concept,u(FN`FIELD,%q<form.objid>,concept),faction,u(FN`FIELD,%q<form.objid>,faction),description,u(FN`FIELD,%q<form.objid>,description)))

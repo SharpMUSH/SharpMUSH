@@ -39,12 +39,12 @@ public sealed class RecentWikiActivityWidgetDescriptor : IPortalWidget
 	public Type? ConfigType => null;
 }
 
-/// <summary>The character directory list, linking to profiles.</summary>
+/// <summary>Characters currently connected (lwho()), linking to profiles.</summary>
 public sealed class OnlineCharactersWidgetDescriptor : IPortalWidget
 {
 	public string Name => "OnlineCharacters";
-	public string DisplayName => "Characters";
-	public string Description => "Lists characters and links to their profiles.";
+	public string DisplayName => "Online Characters";
+	public string Description => "Lists the characters currently connected, and links to their profiles.";
 	public WidgetSize DefaultSize => WidgetSize.Medium;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent, WidgetZone.LeftSidebar, WidgetZone.RightSidebar];
 	public Type ComponentType => typeof(OnlineCharactersWidget);

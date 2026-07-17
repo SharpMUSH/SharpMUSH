@@ -3,7 +3,7 @@
 @inject CharacterDirectoryService CharacterDirectory
 
 <MudPaper Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
-    <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:0.75rem;">Characters</MudText>
+    <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:0.75rem;">Online Now</MudText>
     @if (_loading)
     {
         @for (var i = 0; i < 4; i++) { <MudSkeleton Height="32px" Class="mb-1" /> }
@@ -17,7 +17,10 @@
                     <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(c.Name.GetHashCode()) % 360},55%,35%);font-size:0.6875rem;width:28px;height:28px;")">
                         @c.Name[0].ToString().ToUpper()
                     </MudAvatar>
-                    <span style="position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:50%;background:var(--text-faint);border:2px solid var(--surface);"></span>
+                    @* Everyone in this list came from lwho(), so the dot is always the connected
+                       colour. It used to be painted faint over the full roster, which made the
+                       whole widget read as presence data it never had. *@
+                    <span style="position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);"></span>
                 </div>
                 <MudLink Href="@($"/characters/{c.Objid}")" Style="color:var(--text);font-size:0.8125rem;">@c.Name</MudLink>
             </div>
@@ -31,7 +34,7 @@
     }
     else
     {
-        <MudText Style="color:var(--text-faint);font-size:0.8125rem;">No characters found.</MudText>
+        <MudText Style="color:var(--text-faint);font-size:0.8125rem;">No one is connected right now.</MudText>
     }
 </MudPaper>
 
@@ -44,7 +47,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _characters = await CharacterDirectory.ListAsync();
+        _characters = await CharacterDirectory.ListOnlineAsync();
         _loading = false;
     }
 }
