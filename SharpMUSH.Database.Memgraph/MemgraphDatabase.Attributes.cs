@@ -263,11 +263,12 @@ RETURN child ORDER BY child.longName
 			if (isLast)
 			{
 				sb.AppendLine($"ON CREATE SET {childAlias}.key = ${keyParam}, {childAlias}.longName = ${longParam}, {childAlias}.value = $value");
-				sb.AppendLine($"ON MATCH SET {childAlias}.value = $value");
+				sb.AppendLine($"ON MATCH SET {childAlias}.longName = ${longParam}, {childAlias}.value = $value");
 			}
 			else
 			{
 				sb.AppendLine($"ON CREATE SET {childAlias}.key = ${keyParam}, {childAlias}.longName = ${longParam}, {childAlias}.value = $emptyValue");
+				sb.AppendLine($"ON MATCH SET {childAlias}.longName = ${longParam}");
 			}
 		}
 

@@ -76,7 +76,7 @@ public class GetCommandAttributesQueryHandler(
 	{
 		foreach (var cached in ancestorCommands)
 		{
-			var longName = cached.Attribute.LongName ?? "";
+			var longName = cached.Attribute.LongName;
 
 			// Child/parent attribute of the same name already won — ancestor is shadowed.
 			if (!seenNames.Add(longName))
