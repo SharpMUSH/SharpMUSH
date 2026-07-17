@@ -130,20 +130,21 @@ public class AccountAuthServiceActiveCharacterTests
 	}
 
 	[Test]
-	public async Task CanUseTerminal_is_false_without_a_session()
+	public async Task IsLoggedIn_is_false_without_a_session_even_with_an_active_character()
 	{
 		var sut = MakeService();
 		sut.SetActiveCharacter(new CharacterSummary(7, 1000L, "Wizard", ""));
 
-		// IsLoggedIn is false: AccountSessionToken was never set.
-		await Assert.That(sut.CanUseTerminal).IsFalse();
+		// AccountSessionToken was never set, so this tab has no session regardless of ActiveCharacter.
+		await Assert.That(sut.IsLoggedIn).IsFalse();
+		await Assert.That(sut.ActiveCharacter).IsNotNull();
 	}
 
 	[Test]
-	public async Task HasCharacters_is_false_on_an_empty_roster()
+	public async Task Characters_is_empty_on_an_empty_roster()
 	{
 		var sut = MakeService();
-		await Assert.That(sut.HasCharacters).IsFalse();
+		await Assert.That(sut.Characters.Count).IsEqualTo(0);
 	}
 
 	[Test]
@@ -286,13 +287,13 @@ public class AccountAuthServiceActiveCharacterTests
 
 	/// <summary>
 	/// Branch-review Finding 1 (b): unlinking the LAST character must leave
-	/// <see cref="AccountAuthService.ActiveCharacter"/> null, <see cref="AccountAuthService.HasCharacters"/>
-	/// false, and <see cref="AccountAuthService.CanUseTerminal"/> false — the spec's state table
-	/// treats <c>NoCharacters</c> and <c>Active</c> as mutually exclusive, so this must never leave
-	/// <c>HasCharacters == false</c> while <c>CanUseTerminal == true</c>.
+	/// <see cref="AccountAuthService.ActiveCharacter"/> null AND <see cref="AccountAuthService.Characters"/>
+	/// empty — the spec's state table treats "no characters" and "an active character" as mutually
+	/// exclusive, so this must never leave an empty roster while <c>ActiveCharacter</c> still names
+	/// something.
 	/// </summary>
 	[Test]
-	public async Task UnlinkCharacterAsync_LastCharacter_LeavesNoActiveCharacterAndGatesClosed()
+	public async Task UnlinkCharacterAsync_LastCharacter_LeavesNoActiveCharacterAndEmptyRoster()
 	{
 		var a = new CharacterSummary(1, 100L, "A", "");
 		var sut = await MakeUnlinkableServiceAsync([a]);
@@ -305,8 +306,6 @@ public class AccountAuthServiceActiveCharacterTests
 		await Assert.That(error).IsNull();
 		await Assert.That(sut.Characters).IsEmpty();
 		await Assert.That(sut.ActiveCharacter).IsNull();
-		await Assert.That(sut.HasCharacters).IsFalse();
-		await Assert.That(sut.CanUseTerminal).IsFalse();
 	}
 
 	/// <summary>

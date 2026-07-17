@@ -67,16 +67,6 @@ public class AccountAuthService(
 	/// </remarks>
 	public CharacterSummary? ActiveCharacter { get; private set; }
 
-	/// <summary>True when the account holds at least one character.</summary>
-	public bool HasCharacters => Characters.Count > 0;
-
-	/// <summary>
-	/// The single gate for "may this tab drive a terminal?". Read this instead of re-deriving
-	/// the condition per component — divergent local derivations are what left the nav card
-	/// showing a stale name.
-	/// </summary>
-	public bool CanUseTerminal => IsLoggedIn && ActiveCharacter is not null;
-
 	/// <summary>Raised whenever <see cref="ActiveCharacter"/> changes to a different character.</summary>
 	public event Action? ActiveCharacterChanged;
 

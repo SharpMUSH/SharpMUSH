@@ -18,8 +18,6 @@ public class AccountAuthStateProviderTests
 		public bool ExplicitlyLoggedOut { get; set; }
 		public event Action? AuthStateChanged;
 		public AccountAuthService.CharacterSummary? ActiveCharacter { get; set; }
-		public bool HasCharacters => false;
-		public bool CanUseTerminal => false;
 		public event Action? ActiveCharacterChanged;
 		public void Fire()
 		{
