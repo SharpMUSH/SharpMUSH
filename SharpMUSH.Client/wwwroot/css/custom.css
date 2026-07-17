@@ -1420,17 +1420,10 @@ body {
 	color: var(--accent);
 }
 
-/* ── Reusable helpers (consumed by the page batches) ── */
-.mobile-only { display: none; }
-
 /* ══ PHONE-WIDTH content: single-column helpers + a condensed topbar. Tablets and
    landscape phones are WIDER than this, so they keep the desktop multi-column content
    (the readability win) — only their chrome goes touch-friendly (next block). ══ */
 @media (max-width: 760px) {
-	.mobile-only { display: revert; }
-	.desktop-only { display: none !important; }
-	.mobile-stack { flex-direction: column !important; }
-	.mobile-full { width: 100% !important; }
 
 	/* Condense the topbar: drop the search box, kbd hint, language picker, and divider.
 	   Tablets (>760px) keep them — they have the room. */

@@ -200,10 +200,13 @@
     text-overflow: ellipsis;
 }
 
-/* The mobile pane switcher itself is hidden on desktop (.mobile-only handles that).
-   On desktop all three panes show side by side as authored. */
+/* Hidden on desktop, where all three panes show side by side as authored. Both this rule
+   and the reveal in the phone block below are scoped, so they carry equal specificity and
+   the media query wins on source order. A global `.mobile-only` helper cannot do this job:
+   scoped CSS appends a [b-<hash>] attribute to every selector here, outbidding any plain
+   utility class. */
 .sc-mobilebar {
-    display: flex;
+    display: none;
     gap: 0.375rem;
     padding: 0.5rem 0.625rem;
     background: var(--surface-3);
@@ -234,6 +237,9 @@
 /* Mobile: one full-height pane at a time, chosen by the switcher. The editor pane keeps
    a real height so Monaco lays out; panes scroll internally rather than the page. */
 @media (max-width: 760px) {
+    .sc-mobilebar {
+        display: flex;
+    }
     .sc-shell {
         flex-direction: column !important;
         height: 100% !important;
