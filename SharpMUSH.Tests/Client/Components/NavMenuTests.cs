@@ -69,7 +69,14 @@ public class NavMenuTests : MudBlazorTestContext
 
 		var cut = Render<NavMenu>(parameters => parameters.Add(p => p.IsCollapsed, false));
 
-		await Assert.That(cut.FindAll("a[href='/account']").Count).IsEqualTo(1);
+		// The profile card is the account-panel trigger button, not a direct link. Account
+		// management, character switching, and logout live inside the popover it opens — so
+		// /account is only reachable once the panel is open, not from the closed default render.
+		var card = cut.Find("button.phosphor-profile-card");
+		await Assert.That(card.GetAttribute("aria-haspopup")).IsEqualTo("true");
+		// The anonymous "Sign in" card (the NotAuthorized branch) must not be the one rendered.
+		await Assert.That(cut.FindAll("a.phosphor-profile-card[href='/login']").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("a[href='/account']").Count).IsEqualTo(0);
 	}
 
 	[Test]
