@@ -340,12 +340,14 @@ public partial class SurrealDatabase
 				["ownerKey"] = ownerKey
 			};
 
+			// Re-create the owner edge inside a transaction so the attribute is never observed
+			// owner-less between the DELETE and the RELATE (examine -> GetAttributeOwnerAsync returns
+			// null, then crashes) — the same guard as ReassignAttributeOwnerAsync.
 			await ExecuteAsync(
-				"DELETE has_attribute_owner WHERE in = attribute:⟨$attrKey⟩",
-				ownerParams, cancellationToken);
-
-			await ExecuteAsync(
-				"RELATE attribute:⟨$attrKey⟩->has_attribute_owner->player:$ownerKey",
+				"BEGIN TRANSACTION;" +
+				"DELETE has_attribute_owner WHERE in = attribute:⟨$attrKey⟩;" +
+				"RELATE attribute:⟨$attrKey⟩->has_attribute_owner->player:$ownerKey;" +
+				"COMMIT TRANSACTION",
 				ownerParams, cancellationToken);
 		}
 
@@ -481,11 +483,17 @@ public partial class SurrealDatabase
 		else
 		{
 			var deleteParams = new Dictionary<string, object?> { ["key"] = attrKey };
-			await ExecuteAsync("DELETE has_attribute WHERE out = attribute:⟨$key⟩", deleteParams, cancellationToken);
-			await ExecuteAsync("DELETE has_attribute_flag WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-			await ExecuteAsync("DELETE has_attribute_owner WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-			await ExecuteAsync("DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-			await ExecuteAsync("DELETE attribute:⟨$key⟩", deleteParams, cancellationToken);
+			// One transaction: the owner edge is deleted before the node, so without isolation a
+			// concurrent examine sees the still-present node with no owner and crashes.
+			await ExecuteAsync(
+				"BEGIN TRANSACTION;" +
+				"DELETE has_attribute WHERE out = attribute:⟨$key⟩;" +
+				"DELETE has_attribute_flag WHERE in = attribute:⟨$key⟩;" +
+				"DELETE has_attribute_owner WHERE in = attribute:⟨$key⟩;" +
+				"DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩;" +
+				"DELETE attribute:⟨$key⟩;" +
+				"COMMIT TRANSACTION",
+				deleteParams, cancellationToken);
 
 			if (attribute.Length > 1)
 			{
@@ -510,12 +518,18 @@ public partial class SurrealDatabase
 		await WipeAttributeDescendantsAsync(attrKey, cancellationToken);
 
 		var deleteParams = new Dictionary<string, object?> { ["key"] = attrKey };
-		await ExecuteAsync("DELETE has_attribute WHERE out = attribute:⟨$key⟩", deleteParams, cancellationToken);
-		await ExecuteAsync("DELETE has_attribute WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-		await ExecuteAsync("DELETE has_attribute_flag WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-		await ExecuteAsync("DELETE has_attribute_owner WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-		await ExecuteAsync("DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-		await ExecuteAsync("DELETE attribute:⟨$key⟩", deleteParams, cancellationToken);
+		// One transaction: owner edge deleted before the node — isolate so a concurrent examine never
+		// sees the node without its owner.
+		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"DELETE has_attribute WHERE out = attribute:⟨$key⟩;" +
+			"DELETE has_attribute WHERE in = attribute:⟨$key⟩;" +
+			"DELETE has_attribute_flag WHERE in = attribute:⟨$key⟩;" +
+			"DELETE has_attribute_owner WHERE in = attribute:⟨$key⟩;" +
+			"DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩;" +
+			"DELETE attribute:⟨$key⟩;" +
+			"COMMIT TRANSACTION",
+			deleteParams, cancellationToken);
 
 		if (attribute.Length > 1)
 		{

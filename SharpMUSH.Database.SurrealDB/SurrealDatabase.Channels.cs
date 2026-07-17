@@ -68,14 +68,15 @@ public partial class SurrealDatabase
 			["ownerKey"] = ownerObjKey
 		};
 
-		// Use deterministic record ID so repeated creates are idempotent under unique name index
+		// Deterministic record ID so repeated creates are idempotent under the unique name index.
+		// One transaction so the channel node and its owner/membership edges commit together —
+		// otherwise the channel is visible before its owner edge and GetChannelOwnerAsync throws.
 		await ExecuteAsync(
-			"UPSERT channel:⟨$name⟩ SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = ''",
-			parameters, cancellationToken);
-
-		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"UPSERT channel:⟨$name⟩ SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = '';" +
 			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->object:$ownerKey;" +
-			"RELATE object:$ownerKey->member_of_channel->(SELECT VALUE id FROM channel WHERE name = $name LIMIT 1) SET combine = false, gagged = false, hide = false, mute = false, title = ''",
+			"RELATE object:$ownerKey->member_of_channel->(SELECT VALUE id FROM channel WHERE name = $name LIMIT 1) SET combine = false, gagged = false, hide = false, mute = false, title = '';" +
+			"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 	}
 
@@ -120,9 +121,13 @@ public partial class SurrealDatabase
 			["ownerKey"] = ownerObjKey
 		};
 
+		// One transaction so the channel is never momentarily owner-less between the DELETE and the
+		// RELATE (GetChannelOwnerAsync throws on a missing owner_of_channel edge).
 		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
 			"DELETE owner_of_channel WHERE in IN (SELECT VALUE id FROM channel WHERE name = $name);" +
-			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->object:$ownerKey",
+			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->object:$ownerKey;" +
+			"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 	}
 
@@ -131,10 +136,13 @@ public partial class SurrealDatabase
 		var channelName = channel.Name.ToPlainText();
 		var parameters = new Dictionary<string, object?> { ["name"] = channelName };
 
+		// One transaction so the channel and its edges are torn down atomically.
 		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
 			"DELETE member_of_channel WHERE out IN (SELECT VALUE id FROM channel WHERE name = $name);" +
 			"DELETE owner_of_channel WHERE in IN (SELECT VALUE id FROM channel WHERE name = $name);" +
-			"DELETE channel WHERE name = $name",
+			"DELETE channel WHERE name = $name;" +
+			"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 	}
 

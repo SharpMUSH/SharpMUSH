@@ -154,14 +154,15 @@ public partial class SurrealDatabase
 			["toKey"] = toKey
 		};
 
-		// Create mail using the same deterministic record ID used by later record-id-based operations
+		// Deterministic record ID used by later record-id-based operations. One transaction so the
+		// mail row and its received_mail/mail_sender edges commit together, matching ArangoDB's
+		// Exclusive=[Mails, ReceivedMail, SenderOfMail].
 		await ExecuteAsync(
-			"UPSERT mail:⟨$mailKey⟩ SET key = $mailKey, dateSent = $dateSent, fresh = $fresh, read = $read, tagged = $tagged, urgent = $urgent, forwarded = $forwarded, cleared = $cleared, folder = $folder, content = $content, subject = $subject",
-			parameters, cancellationToken);
-
-		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"UPSERT mail:⟨$mailKey⟩ SET key = $mailKey, dateSent = $dateSent, fresh = $fresh, read = $read, tagged = $tagged, urgent = $urgent, forwarded = $forwarded, cleared = $cleared, folder = $folder, content = $content, subject = $subject;" +
 			"RELATE player:$toKey->received_mail->mail:⟨$mailKey⟩;" +
-			"RELATE mail:⟨$mailKey⟩->mail_sender->object:$fromKey",
+			"RELATE mail:⟨$mailKey⟩->mail_sender->object:$fromKey;" +
+			"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 	}
 
@@ -196,10 +197,13 @@ public partial class SurrealDatabase
 		var mailKey = ExtractKeyString(mailId);
 		var parameters = new Dictionary<string, object?> { ["key"] = mailKey };
 
+		// One transaction so the mail row and its edges are torn down atomically.
 		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
 			"DELETE received_mail WHERE out = mail:⟨$key⟩;" +
 			"DELETE mail_sender WHERE in = mail:⟨$key⟩;" +
-			"DELETE mail:⟨$key⟩",
+			"DELETE mail:⟨$key⟩;" +
+			"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 	}
 

@@ -272,14 +272,22 @@ RETURN child ORDER BY child.longName
 			}
 		}
 
+		// Own EVERY level — the leaf and every branch parent auto-created along the path — not just
+		// the leaf. A branch parent (e.g. FOO when setting FOO`BAR) that is never owned comes back with
+		// a null owner, and a reader (examine) crashes on it. This whole query is one implicit
+		// transaction, so the reassignment is atomic to concurrent readers.
+		var allAliases = string.Join(", ", Enumerable.Range(0, attribute.Length).Select(i => $"a{i}"));
 		var leafAlias = $"a{attribute.Length - 1}";
 
-		sb.AppendLine($"WITH {leafAlias}");
-		sb.AppendLine($"OPTIONAL MATCH ({leafAlias})-[oldOwner:HAS_ATTRIBUTE_OWNER]->()");
-		sb.AppendLine("DELETE oldOwner");
-		sb.AppendLine($"WITH {leafAlias}");
-		sb.AppendLine($"MATCH (p:Player {{key: $ownerKey}})");
-		sb.AppendLine($"CREATE ({leafAlias})-[:HAS_ATTRIBUTE_OWNER]->(p)");
+		sb.AppendLine($"WITH {allAliases}");
+		sb.AppendLine("MATCH (p:Player {key: $ownerKey})");
+		sb.AppendLine($"WITH {allAliases}, p");
+		for (var i = 0; i < attribute.Length; i++)
+			sb.AppendLine($"OPTIONAL MATCH (a{i})-[oo{i}:HAS_ATTRIBUTE_OWNER]->()");
+		sb.AppendLine($"DELETE {string.Join(", ", Enumerable.Range(0, attribute.Length).Select(i => $"oo{i}"))}");
+		sb.AppendLine($"WITH {allAliases}, p");
+		for (var i = 0; i < attribute.Length; i++)
+			sb.AppendLine($"CREATE (a{i})-[:HAS_ATTRIBUTE_OWNER]->(p)");
 		sb.AppendLine($"RETURN {leafAlias}.key AS leafKey");
 
 		var result = await ExecuteWithRetryAsync(sb.ToString(), parameters, cancellationToken);
