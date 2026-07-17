@@ -115,8 +115,8 @@ CREATE account CONTENT {
 		// One transaction so the account row and its ownership edges are torn down atomically.
 		await ExecuteAsync(
 			"BEGIN TRANSACTION;" +
-			"DELETE $id;" +
 			"DELETE account_owns_character WHERE in = $id;" +
+			"DELETE $id;" +
 			"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 	}
