@@ -20,9 +20,9 @@ public static class TerminalServiceCollectionExtensions
 	/// </summary>
 	public static IServiceCollection AddTerminalServices(this IServiceCollection services)
 	{
-		// The transient interface registrations are kept for Pages/WebSocketTest.razor, which injects
-		// IWebSocketClientService / IPlayWebSocketClientService directly as a standalone diagnostic
-		// tool independent of the terminal facades below.
+		// The transient interface registration is kept for Pages/WebSocketTest.razor, which injects
+		// IWebSocketClientService directly as a standalone diagnostic tool independent of the terminal
+		// facades below.
 		//
 		// The terminal factories deliberately do NOT resolve through those registrations — they build
 		// the websocket client via ActivatorUtilities.CreateInstance instead of
@@ -42,7 +42,6 @@ public static class TerminalServiceCollectionExtensions
 
 		// Second, independent connection for the /play page (player interactions), separate from the
 		// command/softcode terminal above. Both are singletons so each survives navigation.
-		services.AddTransient<IPlayWebSocketClientService, PlayWebSocketClientService>();
 		services.AddSingleton(sp => new PlayTerminalServiceHost(
 			() => new PlayTerminalService(
 				ActivatorUtilities.CreateInstance<PlayWebSocketClientService>(sp),

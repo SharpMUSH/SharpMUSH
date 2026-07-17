@@ -3,10 +3,11 @@
    Linear pattern for an app-shell's persistent account block. Anchored ABOVE the card (it lives at
    the bottom of a scrolling sidebar) and Fixed so sidebar scroll never displaces it.
 
-   Behavior (not implemented here, exposed for the host to wire): OnOpenInNewTab is invoked but not
-   acted on — Task 9 wires the actual window.open call in NavMenu.razor. *@
+   Behavior: OnOpenInNewTab is exposed for the host to wire, not acted on here — NavMenu.razor's
+   HandleOpenInNewTabAsync (Task 9) is what actually calls window.open, carrying the target
+   character via a one-shot ?as=<dbref>-<creationTime> entry hint. *@
 
-<div class="account-panel-anchor">
+<div>
     @if (IsOpen)
     {
         <MudOverlay Visible="true"
@@ -18,8 +19,7 @@
                     Fixed="true"
                     AnchorOrigin="Origin.TopLeft"
                     TransformOrigin="Origin.BottomLeft"
-                    Paper="false"
-                    Class="account-panel-popover">
+                    Paper="false">
             <div class="account-panel" tabindex="-1" @ref="_panelRef" @onkeydown="HandleKeyDownAsync">
                 <div class="account-panel-track @(_level == PanelLevel.Submenu ? "account-panel-track--submenu" : "")">
 
@@ -58,7 +58,7 @@
                                 <span class="account-panel-item-icon">&#8249;</span>
                                 <span>Switch Character</span>
                             </button>
-                            <div class="account-panel-characters">
+                            <div class="account-panel-characters" role="menu">
                                 @foreach (var character in Characters)
                                 {
                                     var isActive = IsActive(character);

@@ -113,14 +113,24 @@ public class AccountAuthService(
 	}
 
 	/// <summary>
-	/// Assigns the roster and defaults <see cref="ActiveCharacter"/> to its first entry when
-	/// nothing is active yet. First-character-is-the-default is correct at hydrate; the bug this
-	/// replaces was re-deriving it on every render, which froze it forever after a switch.
+	/// Assigns the roster and defaults <see cref="ActiveCharacter"/> to its first entry whenever
+	/// nothing is active, OR whatever was active is no longer IN this roster. First-character-is-
+	/// the-default is correct at hydrate; the original bug this replaced was re-deriving the default
+	/// on every render, which froze it forever after a switch — fixed by only defaulting when null.
+	/// That "only-when-null" guard was itself incomplete: every public method that mutates the
+	/// roster (including <see cref="UnlinkCharacterAsync"/>) routes through here, and unlinking the
+	/// ACTIVE character produced a new roster that still satisfied "ActiveCharacter is not null"
+	/// while no longer containing it — ActiveCharacter kept naming a character the account no
+	/// longer owns. Re-validating membership on every assignment closes that gap: a still-present
+	/// active character is left alone (regardless of its new position in the roster); an absent one
+	/// is reseated exactly like the null case.
 	/// </summary>
 	private void SetCharacters(IReadOnlyList<CharacterSummary> characters)
 	{
 		Characters = characters;
-		if (ActiveCharacter is null)
+		var activeStillPresent = ActiveCharacter is not null && characters.Any(c =>
+			c.DbrefNumber == ActiveCharacter.DbrefNumber && c.CreationTime == ActiveCharacter.CreationTime);
+		if (!activeStillPresent)
 			SetActiveCharacter(characters.FirstOrDefault());
 	}
 

@@ -51,9 +51,14 @@ public class CharacterSwitchService(
 
 		// Recreate rather than reconnect. WebSocketClientService's resume token survives a
 		// DisconnectAsync, so reconnecting sends a resume frame and the server may rebind the socket to
-		// the PREVIOUS character's session — silently discarding the new OTT. A fresh client starts with
-		// a null resume token and sends hello, which cannot rebind. Capture the URI BEFORE recreating:
-		// the new inner's ServerUri is null until it connects.
+		// the PREVIOUS character's session — silently discarding the new OTT. Recreating sidesteps that:
+		// THIS flow's fresh inner client starts with a null resume token and sends hello, which cannot
+		// rebind. That guarantee holds only because this flow recreates — it is not a general property
+		// of WebSocketClientService. DisconnectAsync itself never clears _resumeToken/_lastSeq, so other
+		// connect entry points that reconnect a surviving client instead of recreating one (notably
+		// NavMenu.HandleLogoutAsync, which calls DisconnectAsync, not RecreateAsync) can still carry a
+		// tainted inner into their next connect. Capture the URI BEFORE recreating: the new inner's
+		// ServerUri is null until it connects.
 		var serverUri = serverUriOverride ?? terminal.ServerUri ?? DefaultServerUri;
 		accountAuth.InvalidateDebugOtt();
 

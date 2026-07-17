@@ -181,9 +181,12 @@
 
         await ConsumeCharacterHintAsync();
 
-        // Same latch here: otherwise the topbar would keep showing the "Dev Mode" menu (and
-        // hide the Disconnect item) even after an explicit logout, since the debug identity's
-        // IsAuthenticated never flips to false on its own.
+        // Same latch here: the "Dev Mode" topbar this field once guarded is gone, but the field
+        // isn't dead — it's read by the /setup routing gate below (~:339, "!_isDebugAuth"), which
+        // must NOT funnel a debug-authenticated dev to /setup on an unclaimed game. Without the
+        // latch, an explicit logout here would still read as "authenticated" via the debug
+        // identity (its IsAuthenticated never flips to false on its own) and wrongly reach that
+        // gate as if a real anonymous visitor had shown up.
         _isDebugAuth = !AccountAuth.ExplicitlyLoggedOut && authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         await EnsureAccountRoutingAsync();
 

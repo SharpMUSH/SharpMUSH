@@ -282,12 +282,13 @@
     private async Task LogoutAsync()
     {
         await AccountAuth.LogoutAsync();
-        // Mirror NavMenu's HandleLogoutAsync: _isDebugAuth is computed once in
-        // OnInitializedAsync and otherwise stays true after logout, which would keep this page's
-        // "Debug Mode" alert showing the stale DebugAdmin identity instead of the plain
-        // "not logged in" message. Land on "/" (the anonymous home) rather than /login: logging
-        // out returns a visitor to anonymous browsing, not a forced sign-in screen. This won't
-        // re-trigger debug re-auth since AccountAuth.LogoutAsync above latches ExplicitlyLoggedOut.
+        // _isDebugAuth is computed once in OnInitializedAsync and otherwise stays true after
+        // logout, which would keep this page's "Debug Mode" alert showing the stale DebugAdmin
+        // identity instead of the plain "not logged in" message — reset it directly here.
+        // (NavMenu's HandleLogoutAsync has no flag of its own to mirror: it just disconnects both
+        // terminals and navigates away.) Land on "/" (the anonymous home) rather than /login:
+        // logging out returns a visitor to anonymous browsing, not a forced sign-in screen. This
+        // won't re-trigger debug re-auth since AccountAuth.LogoutAsync above latches ExplicitlyLoggedOut.
         _isDebugAuth = false;
         Nav.NavigateTo("/", forceLoad: false);
     }
