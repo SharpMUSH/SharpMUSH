@@ -1536,7 +1536,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, PadType.Right, truncType));
 	}
 
-	[SharpFunction(Name = "lpos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["target", "list", "delimiter"])]
+	[SharpFunction(Name = "lpos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string", "character"])]
 	public static ValueTask<CallState> ListPositions(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(
 			string.Join(" ",
@@ -2167,7 +2167,7 @@ public partial class Functions
 		return result.ToString();
 	}
 
-	[SharpFunction(Name = "wrap", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["string", "width", "osep", "isep", "indent"])]
+	[SharpFunction(Name = "wrap", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["string", "width", "first line width", "line separator"])]
 	public static async ValueTask<CallState> Wrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;

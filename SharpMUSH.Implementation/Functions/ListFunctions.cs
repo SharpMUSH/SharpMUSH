@@ -185,7 +185,10 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
-	[SharpFunction(Name = "filterbool", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
+	// (attribute, list, delimiter, outsep) — arg 0 is the boolean predicate attribute, read below
+	// as Arguments["0"]; matches the helpfile filterbool([<obj>]/<attr>, <list>[, <delim>[, <osep>]]).
+	// These names drive the LSP's inlay hints, so a wrong order mislabels real code.
+	[SharpFunction(Name = "filterbool", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
 	public static async ValueTask<CallState> FilterBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -657,7 +660,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(iteration));
 	}
 
-	[SharpFunction(Name = "last", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "count", "delimiter"])]
+	[SharpFunction(Name = "last", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
 	public static ValueTask<CallState> Last(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1556,7 +1559,11 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(result));
 	}
 
-	[SharpFunction(Name = "step", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["start", "end", "increment", "expression"])]
+	// (attribute, list, step, delimiter, outsep) — arg 0 is the attribute, arg 2 the group size,
+	// matching the helpfile step([<obj>/]<attr>, <list>, <step>[, <delim>[, <osep>]]). The previous
+	// names (start, end, increment, expression) were copied from an unrelated numeric-range function
+	// and mislabelled every argument in the LSP's inlay hints.
+	[SharpFunction(Name = "step", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "step", "delimiter", "outsep"])]
 	public static async ValueTask<CallState> Step(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);

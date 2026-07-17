@@ -732,7 +732,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", resultId));
 	}
 
-	[SharpFunction(Name = "mwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
+	[SharpFunction(Name = "mwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public static async ValueTask<CallState> MortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Mortal viewer context - can't see hidden (DARK) players unless executor is a wizard
@@ -749,7 +749,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", await nonHiddenConnections.ToArrayAsync()));
 	}
 
-	[SharpFunction(Name = "mwhoid", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
+	[SharpFunction(Name = "mwhoid", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public static async ValueTask<CallState> MortalWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Mortal viewer context - can't see hidden (DARK) players unless executor is a wizard
@@ -766,7 +766,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", await nonHiddenConnectionsObjIds.ToArrayAsync()));
 	}
 
-	[SharpFunction(Name = "nmwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = ["flags"])]
+	[SharpFunction(Name = "nmwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static async ValueTask<CallState> NumberMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var count = await ConnectionService!
@@ -949,7 +949,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "terminfo", MinArgs = 1, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "capability"])]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]
 	public static async ValueTask<CallState> TerminalInformation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);

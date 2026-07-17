@@ -311,7 +311,7 @@ public partial class Functions
 		var from = await mail.From.WithCancellation(CancellationToken.None);
 		return new CallState(from.Object()?.DBRef.ToString() ?? "#-1");
 	}
-	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["player", "subject", "message"])]
+	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["player", "message"])]
 	public static async ValueTask<CallState> mailsend(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
