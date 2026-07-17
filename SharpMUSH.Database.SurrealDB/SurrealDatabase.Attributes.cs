@@ -326,19 +326,28 @@ public partial class SurrealDatabase
 
 		if (lastAttrKey == null) return false;
 
-		var ownerParams = new Dictionary<string, object?>
+		// Every attribute node must have an owner — the leaf AND every branch parent auto-created
+		// along the path (e.g. setting FOO`BAR creates FOO, which must be owned too). Previously only
+		// the leaf was owned, so branch parents came back owner-less and any consumer that reads the
+		// owner (examine) tripped over the missing edge.
+		for (var level = 0; level < attribute.Length; level++)
 		{
-			["attrKey"] = lastAttrKey,
-			["ownerKey"] = ownerKey
-		};
+			var levelLongName = string.Join('`', attribute.Take(level + 1));
+			var levelAttrKey = $"{objKey}_{levelLongName}";
+			var ownerParams = new Dictionary<string, object?>
+			{
+				["attrKey"] = levelAttrKey,
+				["ownerKey"] = ownerKey
+			};
 
-		await ExecuteAsync(
-			"DELETE has_attribute_owner WHERE in = attribute:⟨$attrKey⟩",
-			ownerParams, cancellationToken);
+			await ExecuteAsync(
+				"DELETE has_attribute_owner WHERE in = attribute:⟨$attrKey⟩",
+				ownerParams, cancellationToken);
 
-		await ExecuteAsync(
-			"RELATE attribute:⟨$attrKey⟩->has_attribute_owner->player:$ownerKey",
-			ownerParams, cancellationToken);
+			await ExecuteAsync(
+				"RELATE attribute:⟨$attrKey⟩->has_attribute_owner->player:$ownerKey",
+				ownerParams, cancellationToken);
+		}
 
 	// Set branch flag on parent attribute nodes (not the root typed node)
 	for (var i = 0; i < attribute.Length - 1; i++)

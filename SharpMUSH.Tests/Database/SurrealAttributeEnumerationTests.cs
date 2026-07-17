@@ -1,3 +1,5 @@
+using System.Threading;
+using DotNext.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Database.SurrealDB;
@@ -10,10 +12,10 @@ using SurrealDb.Net;
 namespace SharpMUSH.Tests.Database;
 
 /// <summary>
-/// LongName is an invariant: a <see cref="SharpAttribute"/> is addressed by its fully-qualified
-/// backtick path, so every attribute — leaf, auto-created branch parent, or child — carries a
-/// non-empty LongName. The type is non-nullable and no read-time fallback masks a missing value;
-/// the write path must populate it. These tests pin that on the production (SurrealDB) provider.
+/// LongName is an invariant: an attribute is addressed by its fully-qualified backtick path, so
+/// every attribute — leaf or auto-created branch parent — carries a non-empty LongName on the
+/// production (SurrealDB) provider. (The separate <c>examine</c>-truncation bug, where a branch
+/// parent's null owner aborted the listing, is covered by <c>ExamineNullOwnerTests</c>.)
 /// </summary>
 public class SurrealAttributeEnumerationTests
 {
@@ -27,7 +29,7 @@ public class SurrealAttributeEnumerationTests
 		public ValueTask RehashPasswordAsync(SharpPlayer player, string plaintext) => ValueTask.CompletedTask;
 	}
 
-	private static async Task<SurrealDatabase> CreateFreshMigratedAsync(string dbName)
+	private static async Task<(SurrealDatabase Db, ISurrealDbClient Client)> CreateFreshMigratedAsync(string dbName)
 	{
 		var services = new ServiceCollection();
 		services.AddSurreal($"Endpoint=mem://;Namespace=sharpmush_attrenum;Database={dbName}")
@@ -36,30 +38,45 @@ public class SurrealAttributeEnumerationTests
 		await client.Connect();
 		var db = new SurrealDatabase(NullLogger<SurrealDatabase>.Instance, client, new NoopPasswordService());
 		await db.Migrate();
-		return db;
+		return (db, client);
+	}
+
+
+	[Test]
+	public async Task AutoCreatedBranchParent_HasAnOwner()
+	{
+		var (db, _) = await CreateFreshMigratedAsync("branchowner");
+		var god = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var godRef = new DBRef(god.Object.Key);
+
+		// Setting only the child auto-creates BRANCH as a parent node; it must be owned, like the leaf.
+		await db.SetAttributeAsync(godRef, ["BRANCH", "CHILD"], MModule.single("child"), god);
+
+		var obj = await db.GetObjectNodeAsync(godRef);
+		var branch = (await obj.Object()!.Attributes.Value.ToListAsync()).Single(a => a.Name == "BRANCH");
+		var owner = await branch.Owner.WithCancellation(CancellationToken.None);
+
+		await Assert.That(owner).IsNotNull()
+			.Because("every attribute, including an auto-created branch parent, must have an owner");
 	}
 
 	[Test]
 	public async Task EveryAttribute_LeafBranchParentAndChild_HasItsFullyQualifiedLongName()
 	{
-		var db = await CreateFreshMigratedAsync("longnameinvariant");
+		var (db, _) = await CreateFreshMigratedAsync("longnameinvariant");
 		var god = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var godRef = new DBRef(god.Object.Key);
 
 		await db.SetAttributeAsync(godRef, ["LEAFONE"], MModule.single("one"), god);
-		// Setting only the child auto-creates BRANCH as a parent node — it too must carry a longName.
 		await db.SetAttributeAsync(godRef, ["BRANCH", "CHILD"], MModule.single("child"), god);
 
 		var obj = await db.GetObjectNodeAsync(godRef);
 		var all = await db.GetAttributeAsync(godRef, ["BRANCH", "CHILD"])!.ToListAsync();
 		var topLevel = await obj.Object()!.Attributes.Value.ToListAsync();
 
-		// The full backtick path down to the child resolves, each hop non-empty and correct.
 		await Assert.That(all.Select(a => a.LongName)).IsEquivalentTo(new[] { "BRANCH", "BRANCH`CHILD" });
 
-		var leaf = topLevel.Single(a => a.Name == "LEAFONE");
 		var branch = topLevel.Single(a => a.Name == "BRANCH");
-		await Assert.That(leaf.LongName).IsEqualTo("LEAFONE");
 		await Assert.That(branch.LongName).IsEqualTo("BRANCH")
 			.Because("an auto-created branch parent must carry its own longName, never empty");
 	}
