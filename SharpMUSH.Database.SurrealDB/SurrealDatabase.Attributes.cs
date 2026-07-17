@@ -788,9 +788,16 @@ public partial class SurrealDatabase
 					["attrKey"] = attrKey,
 					["newKey"] = newKey
 				};
+				// Re-create the owner edge inside a transaction so the attribute is never observed
+				// owner-less between the DELETE and the RELATE — a concurrent examine ->
+				// GetAttributeOwnerAsync would otherwise see a null owner and crash. SurrealDB graph-edge
+				// in/out cannot be UPDATEd, so the edge must be re-created; the transaction is what makes
+				// that atomic to outside readers.
 				await ExecuteAsync(
+					"BEGIN TRANSACTION;" +
 					"DELETE has_attribute_owner WHERE in = attribute:⟨$attrKey⟩;" +
-					"RELATE attribute:⟨$attrKey⟩->has_attribute_owner->player:$newKey",
+					"RELATE attribute:⟨$attrKey⟩->has_attribute_owner->player:$newKey;" +
+					"COMMIT TRANSACTION",
 					attrParams, cancellationToken);
 			}
 		}

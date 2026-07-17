@@ -635,9 +635,15 @@ public partial class SurrealDatabase
 			["ownerKey"] = ownerKey
 		};
 
+		// Replace the owner edge inside a single transaction so a concurrent reader never observes the
+		// object owner-less between the DELETE and the RELATE (GetObjectOwnerAsync throws on no owner).
+		// SurrealDB graph-edge in/out cannot be UPDATEd, so the edge must be re-created — the
+		// transaction is what makes that atomic to outside readers.
 		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
 			"DELETE has_owner WHERE in = object:$key;" +
-			"RELATE object:$key->has_owner->player:$ownerKey",
+			"RELATE object:$key->has_owner->player:$ownerKey;" +
+			"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 	}
 
