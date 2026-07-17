@@ -33,7 +33,14 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/characters");
 			return rows is null ? [] : rows.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList();
 		}
-		catch (Exception ex) when (ex is HttpRequestException or JsonException)
+		// These handlers are redefinable per game, so a malformed response is a configuration
+		// mistake rather than a bug here: degrade to an empty list instead of taking the page down.
+		// JsonException covers a body that is not JSON; InvalidOperationException covers a
+		// Content-Type whose charset is unrecognised, which fails while reading the body, before
+		// any parsing. NotSupportedException is documented on ReadFromJsonAsync for an unusable
+		// content type — it does not fire on this stack today, but it is part of the API's contract.
+		catch (Exception ex) when (ex is HttpRequestException or JsonException
+			or InvalidOperationException or NotSupportedException)
 		{
 			logger.LogWarning(ex, "Failed to load character directory.");
 			return [];
@@ -54,7 +61,14 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/online");
 			return rows is null ? [] : rows.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList();
 		}
-		catch (Exception ex) when (ex is HttpRequestException or JsonException)
+		// These handlers are redefinable per game, so a malformed response is a configuration
+		// mistake rather than a bug here: degrade to an empty list instead of taking the page down.
+		// JsonException covers a body that is not JSON; InvalidOperationException covers a
+		// Content-Type whose charset is unrecognised, which fails while reading the body, before
+		// any parsing. NotSupportedException is documented on ReadFromJsonAsync for an unusable
+		// content type — it does not fire on this stack today, but it is part of the API's contract.
+		catch (Exception ex) when (ex is HttpRequestException or JsonException
+			or InvalidOperationException or NotSupportedException)
 		{
 			logger.LogWarning(ex, "Failed to load the online character list.");
 			return [];

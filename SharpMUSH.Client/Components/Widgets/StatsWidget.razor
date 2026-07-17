@@ -36,11 +36,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var recentTask = WikiService.GetRecentChangesAsync(10);
+        // AsTask() up front, once: these return ValueTask, which may be consumed only once, and
+        // both WhenAll and the reads below need to await them. Converting at the call site keeps
+        // each result awaitable twice regardless of how the services back their ValueTask.
+        var recentTask = WikiService.GetRecentChangesAsync(10).AsTask();
         var charsTask = CharacterDirectory.ListAsync();
         var onlineTask = CharacterDirectory.ListOnlineAsync();
-        var scenesTask = SceneService.GetActiveScenesAsync();
-        await Task.WhenAll(recentTask.AsTask(), charsTask, onlineTask, scenesTask.AsTask());
+        var scenesTask = SceneService.GetActiveScenesAsync().AsTask();
+        await Task.WhenAll(recentTask, charsTask, onlineTask, scenesTask);
 
         _recent = (await recentTask).Count;
         _characters = (await charsTask).Count;

@@ -77,6 +77,22 @@ file sealed class EmptyBodyHandler : HttpMessageHandler
 }
 
 /// <summary>
+/// Serves valid JSON under a Content-Type carrying an unrecognised charset — what a redefined
+/// handler produces from a typo in `@respond/type application/json; charset=…`. Reading the body
+/// then throws InvalidOperationException before any JSON is parsed.
+/// </summary>
+file sealed class BadCharsetHandler : HttpMessageHandler
+{
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		var content = new StringContent("[]");
+		content.Headers.Remove("Content-Type");
+		content.Headers.TryAddWithoutValidation("Content-Type", "application/json; charset=bogus-charset");
+		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+	}
+}
+
+/// <summary>
 /// The widget must render presence, not the roster. It previously called ListAsync() (every
 /// character) while painting a presence dot on each row, so seeded principals like Package Manager
 /// appeared to be connected.
@@ -125,6 +141,23 @@ public class OnlineCharactersWidgetTests : BunitContext
 	public async Task NobodyConnected_SaysSo_RatherThanShowingCharacters()
 	{
 		Wire(this, new NobodyOnlineHandler());
+
+		var cut = Render<OnlineCharactersWidget>();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Markup.Contains("mud-skeleton")) throw new InvalidOperationException("still loading");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Markup).Contains("No one is connected");
+	}
+
+	// An unrecognised charset makes reading the body throw InvalidOperationException before the
+	// JSON parser is ever reached, so the JsonException filter does not cover it. Reachable from a
+	// typo in a redefined handler's `@respond/type`.
+	[TUnit.Core.Test]
+	public async Task BadCharsetHeader_DegradesToEmptyState_RatherThanThrowing()
+	{
+		Wire(this, new BadCharsetHandler());
 
 		var cut = Render<OnlineCharactersWidget>();
 		cut.WaitForAssertion(() =>
