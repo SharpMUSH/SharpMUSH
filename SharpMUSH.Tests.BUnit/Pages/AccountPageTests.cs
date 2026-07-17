@@ -80,7 +80,7 @@ public class AccountPageTests : BunitContext, IAsyncDisposable
 		if (loggedIn)
 		{
 			JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session-token-1");
-			JSInterop.Setup<string?>("localStorage.getItem", "sharpmush.account.username").SetResult("headwiz");
+			JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.username").SetResult("headwiz");
 			JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword")
 				.SetResult(mustChangePassword ? bool.TrueString : bool.FalseString);
 			JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.role").SetResult("Wizard");

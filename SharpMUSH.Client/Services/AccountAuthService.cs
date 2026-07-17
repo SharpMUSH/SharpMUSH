@@ -57,6 +57,74 @@ public class AccountAuthService(
 	public IReadOnlyList<string> Permissions { get; private set; } = [];
 
 	/// <summary>
+	/// The character this tab is currently acting as. Defaults to the first character on the
+	/// roster when a session hydrates, and is reassigned by <see cref="SwitchCharacterAsync"/>.
+	/// Null when the account holds no characters.
+	/// </summary>
+	/// <remarks>
+	/// Blazor WASM gives each browser tab its own DI container, so this singleton field is
+	/// already tab-scoped — two tabs may hold different active characters on one account.
+	/// </remarks>
+	public CharacterSummary? ActiveCharacter { get; private set; }
+
+	/// <summary>Raised whenever <see cref="ActiveCharacter"/> changes to a different character.</summary>
+	public event Action? ActiveCharacterChanged;
+
+	/// <summary>
+	/// Sets the active character and raises <see cref="ActiveCharacterChanged"/> if it actually
+	/// changed. Idempotent: re-setting the same character raises nothing, so callers may set
+	/// defensively without causing render storms.
+	/// </summary>
+	public void SetActiveCharacter(CharacterSummary? character)
+	{
+		if (ActiveCharacter?.DbrefNumber == character?.DbrefNumber
+		    && ActiveCharacter?.CreationTime == character?.CreationTime)
+			return;
+
+		ActiveCharacter = character;
+		RaiseActiveCharacterChanged();
+	}
+
+	/// <summary>
+	/// Raises <see cref="ActiveCharacterChanged"/> defensively — mirrors
+	/// <see cref="RaiseAuthStateChanged"/>: a subscriber's render exception must never propagate
+	/// back into the caller mid-switch.
+	/// </summary>
+	private void RaiseActiveCharacterChanged()
+	{
+		try
+		{
+			ActiveCharacterChanged?.Invoke();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "An ActiveCharacterChanged subscriber threw; swallowed");
+		}
+	}
+
+	/// <summary>
+	/// Assigns the roster and defaults <see cref="ActiveCharacter"/> to its first entry whenever
+	/// nothing is active, OR whatever was active is no longer IN this roster. First-character-is-
+	/// the-default is correct at hydrate; the original bug this replaced was re-deriving the default
+	/// on every render, which froze it forever after a switch — fixed by only defaulting when null.
+	/// That "only-when-null" guard was itself incomplete: every public method that mutates the
+	/// roster (including <see cref="UnlinkCharacterAsync"/>) routes through here, and unlinking the
+	/// ACTIVE character produced a new roster that still satisfied "ActiveCharacter is not null"
+	/// while no longer containing it — ActiveCharacter kept naming a character the account no
+	/// longer owns. Re-validating membership on every assignment closes that gap: a still-present
+	/// active character is left alone (regardless of its new position in the roster); an absent one
+	/// is reseated exactly like the null case.
+	/// </summary>
+	private void SetCharacters(IReadOnlyList<CharacterSummary> characters)
+	{
+		Characters = characters;
+		var activeStillPresent = ActiveCharacter is not null && characters.Any(c =>
+			c.DbrefNumber == ActiveCharacter.DbrefNumber && c.CreationTime == ActiveCharacter.CreationTime);
+		if (!activeStillPresent)
+			SetActiveCharacter(characters.FirstOrDefault());
+	}
+
+	/// <summary>
 	/// True once the user has explicitly logged out in this tab (sessionStorage-latched).
 	/// Guards against dev-mode debug re-auth (and any other silent re-login) undoing an
 	/// explicit logout on the next component init/reload — cleared by any successful
@@ -109,11 +177,12 @@ public class AccountAuthService(
 			MustChangePassword = false;
 			Role = null;
 			Permissions = [];
+			SetActiveCharacter(null);
 			RaiseAuthStateChanged();
 			return;
 		}
 
-		Username = await js.InvokeAsync<string?>("localStorage.getItem", UsernameKey);
+		Username = await js.InvokeAsync<string?>("sessionStorage.getItem", UsernameKey);
 		var mustChangePassword = await js.InvokeAsync<string?>("sessionStorage.getItem", MustChangePasswordKey);
 		MustChangePassword = string.Equals(mustChangePassword, bool.TrueString, StringComparison.OrdinalIgnoreCase);
 		Role = await js.InvokeAsync<string?>("sessionStorage.getItem", RoleKey);
@@ -141,7 +210,7 @@ public class AccountAuthService(
 			if (result is null) return (false, "Unexpected server response.", []);
 
 			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
-			Characters = result.Characters;
+			SetCharacters(result.Characters);
 			return (true, null, result.Characters);
 		}
 		catch (Exception ex)
@@ -167,7 +236,7 @@ public class AccountAuthService(
 			if (result is null) return (false, "Unexpected server response.", []);
 
 			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
-			Characters = result.Characters;
+			SetCharacters(result.Characters);
 			return (true, null, result.Characters);
 		}
 		catch (Exception ex)
@@ -233,7 +302,7 @@ public class AccountAuthService(
 				return (true, null, false);
 
 			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
-			Characters = result.Characters;
+			SetCharacters(result.Characters);
 			return (true, null, true);
 		}
 		catch (Exception ex)
@@ -259,6 +328,12 @@ public class AccountAuthService(
 	/// attempt will fail server-side.
 	/// </summary>
 	public Task<DebugOttResponse?> GetDebugOttAsync() => _debugOttTask ??= GetDebugOttCoreAsync();
+
+	/// <summary>
+	/// Drops the cached debug OTT. The token is single-use server-side but cached for the app
+	/// lifetime, so a recreated terminal in dev cannot reuse it — the next caller must mint a fresh one.
+	/// </summary>
+	public void InvalidateDebugOtt() => _debugOttTask = null;
 
 	private async Task<DebugOttResponse?> GetDebugOttCoreAsync()
 	{
@@ -361,7 +436,7 @@ public class AccountAuthService(
 	/// <summary>
 	/// Switch the active character under the current account session and return an OTT for it.
 	/// Calls <c>POST api/auth/switch-character</c>, the session-based replacement for the retired
-	/// <c>jwt-switch-character</c> flow (Task 7/8): the same account session stays active — this
+	/// <c>jwt-switch-character</c> flow: the same account session stays active — this
 	/// mints no new token family, just a fresh single-use OTT for the target character.
 	/// </summary>
 	public async Task<string?> SwitchCharacterAsync(CharacterSummary character)
@@ -386,7 +461,12 @@ public class AccountAuthService(
 			}
 
 			var result = await response.Content.ReadFromJsonAsync<SwitchCharacterResponse>();
-			return result?.Ott;
+			if (result?.Ott is null) return null;
+
+			// The switch is authoritative for identity: every consumer reads ActiveCharacter
+			// rather than deriving its own answer.
+			SetActiveCharacter(character);
+			return result.Ott;
 		}
 		catch (Exception ex)
 		{
@@ -406,7 +486,7 @@ public class AccountAuthService(
 			http.DefaultRequestHeaders.Authorization =
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 			var characters = await http.GetFromJsonAsync<IReadOnlyList<CharacterSummary>>("api/account/characters");
-			Characters = characters ?? [];
+			SetCharacters(characters ?? []);
 			return Characters;
 		}
 		catch (Exception ex)
@@ -437,7 +517,7 @@ public class AccountAuthService(
 			if (result is null) return (false, "Unexpected server response.", null);
 
 			var character = new CharacterSummary(result.DbrefNumber, result.CreationTime ?? 0, name, "");
-			Characters = [.. Characters, character];
+			SetCharacters([.. Characters, character]);
 			return (true, null, character);
 		}
 		catch (Exception ex)
@@ -461,7 +541,7 @@ public class AccountAuthService(
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync());
 
-			Characters = Characters.Where(c => c.DbrefNumber != dbrefNumber).ToList();
+			SetCharacters(Characters.Where(c => c.DbrefNumber != dbrefNumber).ToList());
 			return (true, null);
 		}
 		catch (Exception ex)
@@ -496,7 +576,7 @@ public class AccountAuthService(
 		if (success)
 		{
 			Username = newUsername;
-			await js.InvokeVoidAsync("localStorage.setItem", UsernameKey, newUsername);
+			await js.InvokeVoidAsync("sessionStorage.setItem", UsernameKey, newUsername);
 		}
 		return (success, error);
 	}
@@ -521,14 +601,16 @@ public class AccountAuthService(
 
 		AccountSessionToken = null;
 		Username = null;
-		Characters = [];
+		SetCharacters([]);
 		MustChangePassword = false;
 		Role = null;
 		Permissions = [];
+		SetActiveCharacter(null);
 		// A fresh intentional login later must mint (and redeem) its own token, not resurrect the
 		// previous boot's cached debug-OTT response.
 		_debugOttTask = null;
 		await js.InvokeVoidAsync("sessionStorage.removeItem", SessionTokenKey);
+		await js.InvokeVoidAsync("sessionStorage.removeItem", UsernameKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", MustChangePasswordKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", PermissionsKey);
@@ -554,7 +636,7 @@ public class AccountAuthService(
 		Role = role;
 		Permissions = permissions ?? [];
 		await js.InvokeVoidAsync("sessionStorage.setItem", SessionTokenKey, token);
-		await js.InvokeVoidAsync("localStorage.setItem", UsernameKey, username);
+		await js.InvokeVoidAsync("sessionStorage.setItem", UsernameKey, username);
 		await SetMustChangePasswordAsync(mustChangePassword);
 		if (role is null)
 			await js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);

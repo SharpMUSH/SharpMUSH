@@ -45,9 +45,9 @@ public class DebugAuthStateProvider : AuthenticationStateProvider
 	public DebugAuthStateProvider(IAccountAuthState accountAuth)
 	{
 		_accountAuth = accountAuth;
-		// So every AuthorizeView (nav items, the sidebar's bottom-left account indicator, the
-		// topbar's AccountChrome) flips live the instant AccountAuthService raises AuthStateChanged
-		// (login/register/setup/logout) instead of waiting for the next unrelated re-render.
+		// So every AuthorizeView (nav items, the sidebar's bottom-left account card/panel) flips live
+		// the instant AccountAuthService raises AuthStateChanged (login/register/setup/logout) instead
+		// of waiting for the next unrelated re-render.
 		_accountAuth.AuthStateChanged += HandleAccountAuthStateChanged;
 	}
 

@@ -6,7 +6,8 @@
 @implements IDisposable
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
-@inject ITerminalService Terminal
+@inject TerminalServiceHost Terminal
+@inject CharacterSwitchService CharacterSwitch
 @inject AccountAuthService AccountAuth
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ILayoutService LayoutService
@@ -65,17 +66,6 @@
                     title="@(_terminalOpen ? "Close Terminal" : "Open Terminal")">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:1.125rem;" />
             </button>
-
-            <div class="phosphor-topbar-divider"></div>
-
-            <AccountChrome IsLoggedIn="AccountAuth.IsLoggedIn"
-                           IsDebugAuth="_isDebugAuth"
-                           DisplayName="@(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")"
-                           UserInitial="@UserInitial"
-                           AccountUsername="@AccountAuth.Username"
-                           Characters="AccountAuth.Characters"
-                           OnSwitchCharacter="SwitchCharacterAsync"
-                           OnLogout="AccountLogoutAsync" />
         </header>
 
         <main class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
@@ -149,19 +139,9 @@
     private bool _isPlayRoute = false;
     private bool _terminalOpen = false;
     private bool _characterActive = false;
-    private string? _terminalPlayerName;
     private bool _isDebugAuth;
     private LayoutConfiguration? _layout;
     private string _searchQuery = string.Empty;
-
-    private string UserInitial
-    {
-        get
-        {
-            var name = _terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin";
-            return name.Length > 0 ? name[0].ToString().ToUpper() : "?";
-        }
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -199,9 +179,14 @@
         if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
             await AccountAuth.GetCharactersAsync();
 
-        // Same latch here: otherwise the topbar would keep showing the "Dev Mode" menu (and
-        // hide the Disconnect item) even after an explicit logout, since the debug identity's
-        // IsAuthenticated never flips to false on its own.
+        await ConsumeCharacterHintAsync();
+
+        // Same latch here: the "Dev Mode" topbar this field once guarded is gone, but the field
+        // isn't dead — it's read by the /setup routing gate below (~:339, "!_isDebugAuth"), which
+        // must NOT funnel a debug-authenticated dev to /setup on an unclaimed game. Without the
+        // latch, an explicit logout here would still read as "authenticated" via the debug
+        // identity (its IsAuthenticated never flips to false on its own) and wrongly reach that
+        // gate as if a real anonymous visitor had shown up.
         _isDebugAuth = !AccountAuth.ExplicitlyLoggedOut && authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         await EnsureAccountRoutingAsync();
 
@@ -225,34 +210,47 @@
 
     private async Task SwitchCharacterAsync(AccountAuthService.CharacterSummary character)
     {
-        var token = await AccountAuth.SwitchCharacterAsync(character);
-        if (token is null) return;
-        await Terminal.DisconnectAsync();
-        await Task.Delay(200);
+        // Full flow (mint OTT -> recreate both terminal facades -> reconnect) lives in
+        // CharacterSwitchService, shared with CharacterPicker and the nav account panel — see there
+        // for the resume-token rebind rationale and the play-terminal deliberate-disconnect note.
+        if (!await CharacterSwitch.SwitchAsync(character)) return;
 
-        var serverUri = Terminal.ServerUri ?? "ws://localhost:4202/ws";
-        await Terminal.ConnectWithOttAsync(serverUri, token);
-        _terminalPlayerName = character.Name;
-        // Deliberately do NOT open the terminal drawer: switching characters connects in the
-        // background; the toolbar toggle opens the terminal when the player wants it.
+        // Deliberately do NOT open the terminal drawer: switching connects in the background;
+        // the toolbar toggle opens the terminal when the player wants it.
         StateHasChanged();
     }
 
-    private async Task AccountLogoutAsync()
+    /// <summary>
+    /// Consumes a one-shot <c>?as=&lt;dbref&gt;-&lt;creationTime&gt;</c> entry hint written by
+    /// NavMenu's "open in new tab" affordance, then strips it from the URL immediately (replace-style
+    /// navigation) so it can't survive a reload or be re-consumed. A hint naming a character this
+    /// account does not own is ignored — the roster (<see cref="AccountAuthService.Characters"/>) is
+    /// the authority here, and the server would reject the switch anyway. A malformed hint is ignored
+    /// without throwing. Switching itself (<see cref="SwitchCharacterAsync"/> /
+    /// <see cref="CharacterSwitchService"/>) never touches the URL — this hint is an entry parameter
+    /// only.
+    /// </summary>
+    private async Task ConsumeCharacterHintAsync()
     {
-        await AccountAuth.LogoutAsync();
-        await Terminal.DisconnectAsync();
-        _terminalPlayerName = null;
-        // _isDebugAuth is computed once in OnInitializedAsync and otherwise never flips back to
-        // false on its own (the debug identity's IsAuthenticated never changes), so without this
-        // the topbar keeps showing the "DebugAdmin" chip (ADMIN with a different icon) after an
-        // explicit logout. Navigate to "/" (the anonymous home, which has no [Authorize]) rather
-        // than /login: logging out should return a visitor to anonymous browsing, not force them
-        // onto a sign-in screen. EnsureAccountRoutingAsync won't re-trigger debug re-auth here
-        // because ExplicitlyLoggedOut is now latched (set by AccountAuth.LogoutAsync above).
-        _isDebugAuth = false;
-        StateHasChanged();
-        NavigationManager.NavigateTo("/", forceLoad: false);
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var hint = System.Web.HttpUtility.ParseQueryString(uri.Query)["as"];
+        if (string.IsNullOrEmpty(hint)) return;
+
+        // Strip first: the hint must not survive a reload or be re-consumed, regardless of whether
+        // it turns out to be valid/owned below.
+        NavigationManager.NavigateTo(uri.GetLeftPart(UriPartial.Path), replace: true);
+
+        var parts = hint.Split('-');
+        if (parts.Length != 2
+            || !int.TryParse(parts[0], out var dbref)
+            || !long.TryParse(parts[1], out var creationTime))
+            return;
+
+        var target = AccountAuth.Characters
+            .FirstOrDefault(c => c.DbrefNumber == dbref && c.CreationTime == creationTime);
+        if (target is null) return;
+
+        await SwitchCharacterAsync(target);
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)

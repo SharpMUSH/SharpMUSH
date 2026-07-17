@@ -144,7 +144,7 @@ A custom `SharpAccount` model (not ASP.NET Identity) manages web accounts (email
 
 - **C# files**: tabs, indent size 2
 - **Razor files**: spaces, indent size 4
-- `TreatWarningsAsErrors` is enabled in every project
+- `TreatWarningsAsErrors` is enabled in most projects, but not all — notably `SharpMUSH.Tests.BUnit` and `SharpMUSH.Tests.ScenePlugin` do not set it (the source-generated projects and `templates/` don't either). `SharpMUSH.Tests`, `SharpMUSH.Tests.Infrastructure`, and `SharpMUSH.Tests.Integration` DO set it. Check the specific `.csproj` before assuming either way.
 - Prefer `var` throughout; no `this.` qualifier
 - Discriminated unions via `OneOf<T1, T2>` (never nullable returns from services)
 - Source-generated `Mediator` (not MediatR) for command/query dispatching

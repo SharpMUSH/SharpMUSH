@@ -238,7 +238,33 @@
     private bool _showLoginPanel;
     private string? _loginPlayer;
     private string? _loginPassword;
-    private string? _playerName;
+
+    /// <summary>
+    /// The connbar's identity label, derived live rather than cached: caching this per-terminal was
+    /// the root cause of two earlier stale-identity bugs — the connbar showing "not logged in" after
+    /// <c>RecreateAsync</c>'s disconnect announcement during a character switch (nothing ever
+    /// restored a nulled cache), and a remounted terminal showing the roster's first character
+    /// instead of the actually-active one.
+    /// <para>
+    /// Prefers <c>Terminal.ConnectedPlayerName</c> when set, falling back to
+    /// <see cref="AccountAuthService.ActiveCharacter"/>. Account-based connects (character picker,
+    /// switch, dev-debug auto-connect) never write <c>Terminal.ConnectedPlayerName</c> — see
+    /// <see cref="SetPlayerName"/> — so they always fall through to <c>ActiveCharacter</c>. Direct
+    /// connects (manual "Character" tab credentials, a typed <c>connect &lt;name&gt; ...</c>, and
+    /// dev-debug's own OTT connect) set only <c>Terminal.ConnectedPlayerName</c> and never touch
+    /// <c>AccountAuth</c> at all, so they need the primary read here — an account-only property
+    /// regressed every one of them to "not logged in".
+    /// </para>
+    /// <para>
+    /// <c>ConnectedPlayerName</c> is the terminal's own login identity; <c>ActiveCharacter</c> is the
+    /// account-level fallback used when the terminal hasn't recorded one. <see cref="string.IsNullOrEmpty"/>
+    /// expresses that precedence directly.
+    /// </para>
+    /// </summary>
+    private string? _playerName => string.IsNullOrEmpty(Terminal.ConnectedPlayerName)
+        ? AccountAuth.ActiveCharacter?.Name
+        : Terminal.ConnectedPlayerName;
+
     private readonly List<TerminalLine> _displayLines = [];
     private bool _autoScroll = true;
 
@@ -294,9 +320,7 @@
 
         Terminal.LineReceived += OnLineReceived;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
-
-        // Restore player name from the shared terminal service (survives component re-mounts)
-        _playerName = Terminal.ConnectedPlayerName;
+        AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
 
         var (savedPlayer, savedPassword) = await Credentials.LoadAsync();
         _loginPlayer = savedPlayer;
@@ -306,9 +330,6 @@
         await AccountAuth.InitAsync();
         if (!string.IsNullOrWhiteSpace(AccountAuth.Username))
             _accountIdentifier = AccountAuth.Username;
-
-        if (_connected && _playerName is null && AccountAuth.Characters.Count > 0)
-            _playerName = AccountAuth.Characters[0].Name;
 
         DebugLine($"[DBG] init: connected={_connected} isLoggedIn={AccountAuth.IsLoggedIn}");
 
@@ -465,16 +486,22 @@
         StateHasChanged();
     }
 
-    private void SetPlayerName(string? name)
-    {
-        _playerName = name;
-        Terminal.ConnectedPlayerName = name;
-    }
+    /// <summary>
+    /// Records the connected player's name on the underlying terminal service. <c>_playerName</c>
+    /// reads this back directly, preferring it over <c>AccountAuth.ActiveCharacter</c>, and
+    /// Play.razor's page header reads it off the play terminal instance the same way
+    /// (<c>PlayTerminal.ConnectedPlayerName ?? "Play Terminal"</c>). Direct/manual "Character" tab
+    /// and typed-<c>connect</c> flows depend on this write — they never touch <c>AccountAuth</c> at
+    /// all. The single-character auto-login and dev-debug OTT paths call this too (matching the
+    /// character they just resolved), but that is redundant rather than load-bearing: those paths
+    /// also land on the same character via <c>AccountAuth.ActiveCharacter</c>, which
+    /// <see cref="_playerName"/> falls back to. The multi-character picker/switch paths never call
+    /// this, so they rely on the <c>ActiveCharacter</c> fallback outright.
+    /// </summary>
+    private void SetPlayerName(string? name) => Terminal.ConnectedPlayerName = name;
 
     private Task OnCharacterPickerConnected()
     {
-        // CharacterPicker handles connection; grab name from terminal service
-        _playerName = Terminal.ConnectedPlayerName;
         _showLoginPanel = false;
         _showCharacterPicker = false;
         StateHasChanged();
@@ -590,6 +617,12 @@
         InvokeAsync(StateHasChanged);
     }
 
+    // GlobalTerminal is a sibling of MainLayout's own AccountAuth reads, not a child of anything
+    // that re-renders it when identity changes on its own — without this, a switch that doesn't
+    // also flip the terminal's connection state (there is none today, but this mirrors NavMenu's
+    // established pattern defensively) would leave the connbar stale until some unrelated render.
+    private void OnActiveCharacterChanged() => InvokeAsync(StateHasChanged);
+
     private void AddLocalLine(string text, TerminalLineSource source)
     {
         _displayLines.Add(new TerminalLine(DateTime.Now, text, source));
@@ -613,6 +646,7 @@
     {
         Terminal.LineReceived -= OnLineReceived;
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
+        AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
 
         if (_cmdLinkHandle is not null)
         {

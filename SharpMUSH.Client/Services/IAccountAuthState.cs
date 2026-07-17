@@ -31,6 +31,12 @@ public interface IAccountAuthState
 	/// <summary>Raised whenever login/logout changes the session.</summary>
 	event Action? AuthStateChanged;
 
+	/// <summary>The character this tab is currently acting as, or null when none.</summary>
+	AccountAuthService.CharacterSummary? ActiveCharacter { get; }
+
+	/// <summary>Raised whenever <see cref="ActiveCharacter"/> changes to a different character.</summary>
+	event Action? ActiveCharacterChanged;
+
 	/// <summary>
 	/// Single-flight, idempotent hydration from storage. Must be safe to call from any auth-state
 	/// query (concurrently or repeatedly) before consulting <see cref="IsLoggedIn"/>,

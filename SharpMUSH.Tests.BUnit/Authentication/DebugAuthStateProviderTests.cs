@@ -30,7 +30,13 @@ public class DebugAuthStateProviderTests
 		public IReadOnlyList<string> Permissions { get; set; } = [];
 		public bool ExplicitlyLoggedOut { get; set; }
 		public event Action? AuthStateChanged;
-		public void Fire() => AuthStateChanged?.Invoke();
+		public AccountAuthService.CharacterSummary? ActiveCharacter { get; set; }
+		public event Action? ActiveCharacterChanged;
+		public void Fire()
+		{
+			AuthStateChanged?.Invoke();
+			ActiveCharacterChanged?.Invoke();
+		}
 
 		/// <summary>No-op: this fake is always constructed already "hydrated" via its properties.</summary>
 		public Task InitAsync() => Task.CompletedTask;

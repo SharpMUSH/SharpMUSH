@@ -20,11 +20,18 @@ public abstract class MudBlazorTestContext : BunitContext
 	{
 		Services.AddMudServices();
 		Services.AddLocalization();
-		// NavMenu (and other chrome) inject ITerminalService to gate character-scoped
-		// links on connection state; a disconnected stub is enough for rendering tests.
-		Services.AddSingleton(Substitute.For<ITerminalService>());
-		// NavMenu also injects IPlayTerminalService for the Play-session status dot; a disconnected stub suffices.
-		Services.AddSingleton(Substitute.For<IPlayTerminalService>());
+		// NavMenu (and other chrome) inject ITerminalService to gate character-scoped links on
+		// connection state, and CharacterSwitchService to run the shared switch flow. In production
+		// the interface and the concrete TerminalServiceHost facade are the SAME singleton, so mirror
+		// that: register the concrete hosts (wrapping disconnected stubs so nothing hits the network)
+		// and alias the interfaces to them. Only the concrete hosts expose RecreateAsync, which
+		// CharacterSwitchService's constructor requires.
+		var terminalHost = new TerminalServiceHost(() => Substitute.For<ITerminalService>());
+		var playTerminalHost = new PlayTerminalServiceHost(() => Substitute.For<IPlayTerminalService>());
+		Services.AddSingleton(terminalHost);
+		Services.AddSingleton(playTerminalHost);
+		Services.AddSingleton<ITerminalService>(terminalHost);
+		Services.AddSingleton<IPlayTerminalService>(playTerminalHost);
 		// NavMenu renders <ApplicationNavLinks>, which calls ApplicationRegistryClient.ListAsync()
 		// on init. Back it with a stub HTTP factory that returns an empty list so chrome renders
 		// without a live API; application-specific tests register their own client.
@@ -35,6 +42,10 @@ public abstract class MudBlazorTestContext : BunitContext
 		// so stubs suffice; Username/Characters default to empty.
 		Services.AddSingleton(new AccountAuthService(
 			StubFactoryReturningEmptyList(), Substitute.For<IJSRuntime>(), NullLogger<AccountAuthService>.Instance));
+		// NavMenu's account panel injects CharacterSwitchService. Render tests never invoke a switch,
+		// but it must be resolvable; the container builds it from the AccountAuthService and terminal
+		// hosts registered above.
+		Services.AddSingleton<CharacterSwitchService>();
 	}
 
 	private static IHttpClientFactory StubFactoryReturningEmptyList()

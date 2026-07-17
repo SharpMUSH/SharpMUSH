@@ -8,7 +8,10 @@
 @inject IPlayTerminalService PlayTerminal
 @inject NavigationManager Nav
 @inject AccountAuthService AccountAuth
+@inject CharacterSwitchService CharacterSwitch
 @inject ApplicationRegistryClient Registry
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
 @implements IDisposable
 
 <div class="phosphor-sidebar @(IsCollapsed ? "phosphor-sidebar--collapsed" : "")">
@@ -121,7 +124,12 @@
     <AuthorizeView>
         <Authorized>
             <div class="phosphor-profile-wrap">
-                <a href="/account" class="phosphor-profile-card" title="@DisplayName">
+                <button type="button"
+                        class="phosphor-profile-card"
+                        title="@DisplayName"
+                        aria-haspopup="true"
+                        aria-expanded="@(_panelOpen ? "true" : "false")"
+                        @onclick="TogglePanel">
                     <div class="phosphor-avatar-wrap">
                         <div class="phosphor-avatar"
                              style="@($"background:linear-gradient(140deg,hsl({AvatarHue} 38% 32%),hsl({AvatarHue} 32% 22%));color:hsl({AvatarHue} 45% 82%);")">
@@ -131,12 +139,20 @@
                     </div>
                     @if (!IsCollapsed)
                     {
-                        <div style="text-align:left;line-height:1.2;overflow:hidden;">
+                        <div style="text-align:left;line-height:1.2;overflow:hidden;flex:1;">
                             <div class="phosphor-profile-name">@DisplayName</div>
                             <div class="phosphor-profile-sub">@UserTag · @(_characterActive ? "online" : "offline")</div>
                         </div>
+                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Class="phosphor-profile-chevron" />
                     }
-                </a>
+                </button>
+                <AccountPanel IsOpen="_panelOpen"
+                              IsOpenChanged="@(open => _panelOpen = open)"
+                              Characters="AccountAuth.Characters"
+                              ActiveCharacter="AccountAuth.ActiveCharacter"
+                              OnSwitchCharacter="HandleSwitchCharacterAsync"
+                              OnOpenInNewTab="HandleOpenInNewTabAsync"
+                              OnLogout="HandleLogoutAsync" />
             </div>
         </Authorized>
         <NotAuthorized>
@@ -172,6 +188,7 @@
     private IReadOnlyList<string> _novelSections = [];
 
     private bool _characterActive;
+    private bool _panelOpen;
 
     // Play-session terminal status, surfaced as a dot on the Play nav item.
     private bool _playActive;
@@ -192,7 +209,7 @@
     {
         get
         {
-            var ch = AccountAuth.Characters.FirstOrDefault();
+            var ch = AccountAuth.ActiveCharacter;
             if (ch is not null && ch.Name.Length > 0)
                 return ch.Name[0].ToString().ToUpper();
             var user = AccountAuth.Username;
@@ -210,20 +227,13 @@
         }
     }
 
-    private string DisplayName
-    {
-        get
-        {
-            var ch = AccountAuth.Characters.FirstOrDefault();
-            return ch?.Name ?? AccountAuth.Username ?? "DebugAdmin";
-        }
-    }
+    private string DisplayName => AccountAuth.ActiveCharacter?.Name ?? AccountAuth.Username ?? "DebugAdmin";
 
     private string UserTag
     {
         get
         {
-            var ch = AccountAuth.Characters.FirstOrDefault();
+            var ch = AccountAuth.ActiveCharacter;
             return ch is not null ? $"#{ch.DbrefNumber}" : "account";
         }
     }
@@ -237,6 +247,7 @@
         PlayTerminal.ConnectionStateChanged += OnPlayConnectionChanged;
         PlayTerminal.LineReceived += OnPlayLine;
         Nav.LocationChanged += OnLocationChanged;
+        AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
     }
 
     protected override async Task OnInitializedAsync()
@@ -291,11 +302,68 @@
     private bool IsOnPlay()
         => new Uri(Nav.Uri).AbsolutePath.TrimEnd('/').Equals("/play", StringComparison.OrdinalIgnoreCase);
 
+    // NavMenu is a sibling of MainLayout, not a child: no parameter flow reaches it, so it must
+    // subscribe. This is the notification path whose absence left the card stale.
+    private void OnActiveCharacterChanged()
+        => InvokeAsync(StateHasChanged);
+
+    private void TogglePanel() => _panelOpen = !_panelOpen;
+
+    /// <summary>
+    /// Full switch flow via the shared <see cref="CharacterSwitchService"/> — the same one
+    /// <c>MainLayout</c> and <c>CharacterPicker</c> use. Mints a fresh OTT (commits
+    /// <see cref="AccountAuthService.ActiveCharacter"/>, so every surface reading it — this card, the
+    /// topbar chip, etc. — updates at once), recreates both terminal facades, and reconnects the
+    /// command terminal. An earlier version of this panel was identity-only (commits the name change
+    /// but never reconnects the terminal, leaving it authenticated as the old character) — fixed by
+    /// routing through the same service every other switch surface uses.
+    ///
+    /// <see cref="CharacterSwitchService.SwitchAsync"/> returns <c>false</c> when minting the OTT fails
+    /// (e.g. an expired account session) — nothing else in that method ran, so the panel would
+    /// otherwise close on its own (<c>AccountPanel.SelectCharacterAsync</c>) with no feedback at all.
+    /// Now that this panel is the only switcher (post-<c>AccountChrome</c> removal), that silent no-op
+    /// would leave the user with a dead button and no explanation, so surface it via the same
+    /// <c>ISnackbar</c> pattern used elsewhere in the client (e.g. <c>Sitelock.razor</c>) — an inline
+    /// message inside the panel would flash and vanish, since the panel closes right after this method
+    /// returns regardless of outcome.
+    /// </summary>
+    private async Task HandleSwitchCharacterAsync(AccountAuthService.CharacterSummary character)
+    {
+        var switched = await CharacterSwitch.SwitchAsync(character);
+        if (!switched)
+        {
+            Snackbar.Add(
+                $"Couldn't switch to {character.Name}. The account session may have expired — please log in again.",
+                Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Opens a new browser tab already acting as <paramref name="character"/>. A tab opened via
+    /// <c>window.open</c> inherits a COPY of this tab's sessionStorage — including the account
+    /// session, which is what lets the new tab authenticate at all, but also the OPENER's active
+    /// character, not the one just clicked here. So the target is passed explicitly as a one-shot
+    /// <c>?as=&lt;dbref&gt;-&lt;creationTime&gt;</c> entry hint that the new tab's MainLayout consumes
+    /// and immediately strips from the URL. Both halves of the key are required — a bare dbref is
+    /// ambiguous across a recycled object, and SwitchCharacterRequest needs both anyway.
+    /// </summary>
+    private async Task HandleOpenInNewTabAsync(AccountAuthService.CharacterSummary character)
+        => await JS.InvokeVoidAsync("open", $"/?as={character.DbrefNumber}-{character.CreationTime}", "_blank");
+
+    private async Task HandleLogoutAsync()
+    {
+        await AccountAuth.LogoutAsync();
+        await Terminal.DisconnectAsync();
+        await PlayTerminal.DisconnectAsync();
+        Nav.NavigateTo("/", forceLoad: false);
+    }
+
     public void Dispose()
     {
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         PlayTerminal.ConnectionStateChanged -= OnPlayConnectionChanged;
         PlayTerminal.LineReceived -= OnPlayLine;
         Nav.LocationChanged -= OnLocationChanged;
+        AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
     }
 }

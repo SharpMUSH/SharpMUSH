@@ -1,7 +1,6 @@
 @using SharpMUSH.Client.Services
 @inject AccountAuthService AccountAuth
-@inject ITerminalService Terminal
-@inject OttAuthService OttAuth
+@inject CharacterSwitchService CharacterSwitch
 
 <MudPaper Elevation="0" Class="char-picker" Style="padding:0.75rem;">
     <MudText Typo="Typo.subtitle1" Style="margin-bottom:0.5rem;">
@@ -105,19 +104,26 @@
         var character = AccountAuth.Characters.FirstOrDefault(c => c.DbrefNumber == _selectedDbref);
         if (character is null) { _connectError = "Character not found."; _busy = false; return; }
 
-        var token = await AccountAuth.GetOttForCharacterAsync(character);
-        if (token is null)
-        {
-            _connectError = "Failed to get authentication token. The account session may have expired — please log in again.";
-            _busy = false;
-            StateHasChanged();
-            return;
-        }
-
         try
         {
-            Terminal.ConnectedPlayerName = character.Name;
-            await Terminal.ConnectWithOttAsync(ServerUri, token);
+            // Same flow as MainLayout's character switch, via the shared CharacterSwitchService:
+            // mints the OTT (authoritative for identity — commits AccountAuth.ActiveCharacter),
+            // recreates both terminal facades to avoid a stale-resume-token rebind, then reconnects.
+            // ServerUri is passed explicitly since no terminal connection exists yet at this point in
+            // the flow (Terminal.ServerUri would still be null).
+            //
+            // The mint is deliberately INSIDE this try/catch, not before it: a throw here surfaces as
+            // _connectError next to the picker's own controls, rather than propagating up to the app's
+            // error boundary and losing the in-place "pick another character and retry" affordance.
+            var switched = await CharacterSwitch.SwitchAsync(character, ServerUri);
+            if (!switched)
+            {
+                _connectError = "Failed to get authentication token. The account session may have expired — please log in again.";
+                _busy = false;
+                StateHasChanged();
+                return;
+            }
+
             await OnConnected.InvokeAsync();
         }
         catch (Exception ex)
