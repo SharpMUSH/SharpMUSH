@@ -4,7 +4,7 @@ namespace SharpMUSH.Client.Services;
 /// Canonical character-switch flow, shared by every surface that lets a player switch which
 /// character they're playing: the topbar chrome (<c>MainLayout</c>), the post-login
 /// <c>CharacterPicker</c>, and the nav account panel (<c>NavMenu</c>/<c>AccountPanel</c>). Extracted
-/// out of <c>MainLayout.SwitchCharacterAsync</c> (Task 8 review) once the same sequence started
+/// out of <c>MainLayout.SwitchCharacterAsync</c> once the same sequence started
 /// drifting between three copy-pasted call sites — the nav panel's copy quietly dropped the terminal
 /// reconnect and <see cref="AccountAuthService.InvalidateDebugOtt"/> steps, leaving its "switch"
 /// button rename the profile card without ever reconnecting the terminal as the new character.
@@ -13,7 +13,8 @@ namespace SharpMUSH.Client.Services;
 /// Depends on the concrete <see cref="TerminalServiceHost"/>/<see cref="PlayTerminalServiceHost"/>
 /// facades rather than <see cref="ITerminalService"/>/<see cref="IPlayTerminalService"/> because only
 /// the concrete facades expose <c>RecreateAsync</c> — deliberately absent from the plain interfaces
-/// (Task 7). Both facades are DI singletons (see <see cref="TerminalServiceCollectionExtensions"/>),
+/// to keep other consumers from recreating the connection out from under a switch in progress. Both
+/// facades are DI singletons (see <see cref="TerminalServiceCollectionExtensions"/>),
 /// so this service is safe to register as a singleton too.
 /// </remarks>
 public class CharacterSwitchService(

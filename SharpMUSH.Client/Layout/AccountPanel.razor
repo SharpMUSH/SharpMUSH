@@ -4,12 +4,13 @@
    the bottom of a scrolling sidebar) and Fixed so sidebar scroll never displaces it.
 
    Behavior: OnOpenInNewTab is exposed for the host to wire, not acted on here — NavMenu.razor's
-   HandleOpenInNewTabAsync (Task 9) is what actually calls window.open, carrying the target
+   HandleOpenInNewTabAsync is what actually calls window.open, carrying the target
    character via a one-shot ?as=<dbref>-<creationTime> entry hint. *@
 
 <div>
     @if (IsOpen)
     {
+        @* account-panel-scrim carries no CSS rule — it's a test hook, selected by AccountPanelTests. *@
         <MudOverlay Visible="true"
                     DarkBackground="false"
                     LightBackground="false"

@@ -203,7 +203,7 @@ public class TerminalServiceHostTests
 		services.AddLogging();
 		services.AddTerminalServices();
 
-		var provider = services.BuildServiceProvider();
+		await using var provider = services.BuildServiceProvider();
 
 		var commandConcrete = provider.GetRequiredService<TerminalServiceHost>();
 		var commandViaInterface = provider.GetRequiredService<ITerminalService>();

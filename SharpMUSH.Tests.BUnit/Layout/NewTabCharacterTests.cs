@@ -301,6 +301,52 @@ public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 		await Assert.That(cut.Markup).IsNotEmpty();
 	}
 
+	[Test]
+	public async Task An_as_hint_with_a_non_numeric_dbref_is_ignored_without_throwing()
+	{
+		RegisterTerminal();
+		RegisterPlayTerminal();
+		var auth = await CreateLoggedInAuthAsync();
+		var nav = Services.GetRequiredService<NavigationManager>();
+
+		// Two parts, so parts.Length != 2 does NOT short-circuit — this exercises the
+		// int.TryParse(parts[0], ...) failure path specifically.
+		var cut = RenderMainLayoutAt("/?as=abc-2");
+
+		cut.WaitForAssertion(() =>
+		{
+			if (nav.Uri.Contains("as="))
+				throw new InvalidOperationException("hint not stripped yet");
+		});
+
+		await Task.Delay(50);
+		await Assert.That(auth.ActiveCharacter?.DbrefNumber).IsEqualTo(1);
+		await Assert.That(cut.Markup).IsNotEmpty();
+	}
+
+	[Test]
+	public async Task An_as_hint_with_a_non_numeric_creation_time_is_ignored_without_throwing()
+	{
+		RegisterTerminal();
+		RegisterPlayTerminal();
+		var auth = await CreateLoggedInAuthAsync();
+		var nav = Services.GetRequiredService<NavigationManager>();
+
+		// Two parts, with a parseable dbref — this exercises the
+		// long.TryParse(parts[1], ...) failure path specifically.
+		var cut = RenderMainLayoutAt("/?as=1-xyz");
+
+		cut.WaitForAssertion(() =>
+		{
+			if (nav.Uri.Contains("as="))
+				throw new InvalidOperationException("hint not stripped yet");
+		});
+
+		await Task.Delay(50);
+		await Assert.That(auth.ActiveCharacter?.DbrefNumber).IsEqualTo(1);
+		await Assert.That(cut.Markup).IsNotEmpty();
+	}
+
 	public new async ValueTask DisposeAsync()
 	{
 		foreach (var client in _ownedHttpClients)

@@ -43,7 +43,7 @@ builder.Services.AddSingleton<PackagesAdminService>();
 builder.Services.AddSingleton<BannedNamesService>();
 builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<AdminAccountsService>();
-// Registers the terminal facades (Task 6) — see AddTerminalServices for the rationale.
+// Registers the terminal facades — see AddTerminalServices for the rationale.
 builder.Services.AddTerminalServices();
 builder.Services.AddSingleton<MushQueryService>();
 builder.Services.AddHttpClient("help", c =>

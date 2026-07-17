@@ -256,9 +256,9 @@
     /// regressed every one of them to "not logged in".
     /// </para>
     /// <para>
-    /// Uses <see cref="string.IsNullOrEmpty"/>, not <c>??</c>: an unconnected/never-set
-    /// <c>ConnectedPlayerName</c> can come back as <c>""</c> rather than <c>null</c> depending on the
-    /// backing terminal, which <c>??</c> would treat as a set name and never fall through.
+    /// <c>ConnectedPlayerName</c> is the terminal's own login identity; <c>ActiveCharacter</c> is the
+    /// account-level fallback used when the terminal hasn't recorded one. <see cref="string.IsNullOrEmpty"/>
+    /// expresses that precedence directly.
     /// </para>
     /// </summary>
     private string? _playerName => string.IsNullOrEmpty(Terminal.ConnectedPlayerName)

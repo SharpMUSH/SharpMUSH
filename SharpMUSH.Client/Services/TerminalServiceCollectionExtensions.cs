@@ -4,14 +4,14 @@ using Microsoft.Extensions.Logging;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// Registers the terminal facades (Task 6) as DI singletons. Extracted from <c>Program.cs</c> into a
+/// Registers the terminal facades as DI singletons. Extracted from <c>Program.cs</c> into a
 /// real production method so the registration shape itself can be exercised by tests directly, rather
 /// than re-typed inside a test fixture where it could silently drift from what actually runs.
 /// </summary>
 public static class TerminalServiceCollectionExtensions
 {
 	/// <summary>
-	/// Registers both terminal connections as stable facades (Task 6). Each holds a swappable inner
+	/// Registers both terminal connections as stable facades. Each holds a swappable inner
 	/// terminal so a character switch can dispose and rebuild the connection — every <c>@inject</c>
 	/// site and <see cref="MushQueryService"/>'s constructor capture keep pointing at the facade, which
 	/// never changes identity. The concrete facade type is also registered directly (aliased to the
