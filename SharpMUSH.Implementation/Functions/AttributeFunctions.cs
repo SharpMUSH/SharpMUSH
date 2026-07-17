@@ -697,7 +697,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "nattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "pattern"])]
+	[SharpFunction(Name = "nattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
@@ -1109,7 +1109,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "regnattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
+	[SharpFunction(Name = "regnattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> RegularExpressionNumberAttributes(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
@@ -1141,7 +1141,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "regnattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
+	[SharpFunction(Name = "regnattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> RegularExpressionNumberAttributesParent(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
@@ -1893,7 +1893,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "xget", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute", "default"])]
+	[SharpFunction(Name = "xget", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
 	public static async ValueTask<CallState> AlternativeGet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbref = MModule.plainText(parser.CurrentState.Arguments["0"].Message!);
