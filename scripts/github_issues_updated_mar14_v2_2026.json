@@ -1,0 +1,83 @@
+{
+  "analysis_date": "2026-03-14",
+  "version": "v2-post-branch-update",
+  "summary": {
+    "features_complete": "96.9% (217/224)",
+    "not_implemented_exceptions": 0,
+    "todos_total": 47,
+    "todos_reduction_from_original": "80.6%",
+    "test_methods": 1995,
+    "total_loc": 132168,
+    "exception_elimination_days": 65
+  },
+  "major_changes_since_jan27": [
+    "SLL prediction mode (171x faster parser)",
+    "Token stream rewriting for CBRACK (orphaned ])",
+    "Token stream rewriting for CBRACE (orphaned })",
+    "BBS grammar fixes (Fix B: brace function semantics)",
+    "inFunction save/restore in bracePattern",
+    "split() empty input fix (PennMUSH behavior)",
+    "Myrddin BBS v4.0.6 full integration test",
+    "Player deletion @destroy/@nuke implementation",
+    "Blazor Admin UI expansion",
+    "95 new test methods added"
+  ],
+  "issues": [
+    {
+      "number": 1,
+      "title": "Parser Improvements: Q-Registers and lsargs",
+      "priority": "MEDIUM",
+      "effort_hours": "8-12",
+      "labels": ["enhancement", "parser"],
+      "body": "## Parser Improvements\n\n### Items\n1. **SharpMUSHParserVisitor.cs:1845** — Handle Q-registers containing evaluation strings properly\n2. **SharpMUSHParserVisitor.cs:1663** — Implement lsargs (list-style arguments) support\n3. **SharpMUSHParserVisitor.cs:1682** — Implement parsed message alternative for better performance\n\n### Why\nThese are parser enhancements for better PennMUSH compatibility.\n\n### Current Status\nCore parser working. SLL mode enabled (171x faster). BBS compatibility proven.\n\n### Tasks\n- [ ] Handle Q-registers with evaluation strings\n- [ ] Add lsargs support\n- [ ] Implement parsed message alternative"
+    },
+    {
+      "number": 2,
+      "title": "Parser Refactoring: Function Resolution and Argument Handling",
+      "priority": "MEDIUM",
+      "effort_hours": "4-6",
+      "labels": ["enhancement", "refactoring"],
+      "body": "## Parser Refactoring\n\n### Items\n1. **SharpMUSHParserVisitor.cs:418** — Move function resolution to Library Service\n2. **SharpMUSHParserVisitor.cs:538** — Depth checking before argument refinement\n3. **SharpMUSHParserVisitor.cs:600** — Pass ParserContexts directly as arguments\n4. **SharpMUSHParserVisitor.cs:1595** — Single-token command argument splitting\n\n### Why\nCode organization and performance improvements.\n\n### Tasks\n- [ ] Refactor function resolution to dedicated service\n- [ ] Review depth checking timing\n- [ ] Pass ParserContexts directly"
+    },
+    {
+      "number": 3,
+      "title": "Command Enhancements: Stack Rewinding, Flags, Validation",
+      "priority": "MEDIUM",
+      "effort_hours": "6-10",
+      "labels": ["enhancement", "commands"],
+      "body": "## Command Enhancements\n\n### Items\n1. **GeneralCommands.cs:6164** — Implement parser stack rewinding\n2. **GeneralCommands.cs:6359** — Retroactive flag updates to existing attributes\n3. **GeneralCommands.cs:6452** — Attribute validation via regex patterns\n4. **MoreCommands.cs:1874** — Money/penny transfer system\n5. **WizardCommands.cs:683/704/2370** — SPEAK() function integration\n\n### Why\nEnhanced PennMUSH command compatibility.\n\n### Tasks\n- [ ] Implement parser stack rewinding\n- [ ] Retroactive flag updates\n- [ ] Attribute regex validation\n- [ ] Money transfer\n- [ ] SPEAK() integration"
+    },
+    {
+      "number": 4,
+      "title": "Function Enhancements: ANSI, WebSocket, Character Iteration",
+      "priority": "LOW",
+      "effort_hours": "8-12",
+      "labels": ["enhancement", "functions"],
+      "body": "## Function Enhancements\n\n### Items\n1. **UtilityFunctions.cs:27** — pcreate() timestamp format\n2. **UtilityFunctions.cs:64** — Move ANSI processing to AnsiMarkup module\n3. **HTMLFunctions.cs:246** — WebSocket/out-of-band HTML communication\n4. **JSONFunctions.cs:480** — WebSocket/out-of-band JSON communication\n5. **StringFunctions.cs:1017** — Apply attribute function to each character\n6. **StringFunctions.cs:1042** — ANSI reconstruction after text replacements\n\n### Why\nEnhanced function compatibility with PennMUSH.\n\n### Tasks\n- [ ] pcreate() timestamp format\n- [ ] ANSI module refactoring\n- [ ] WebSocket communication"
+    },
+    {
+      "number": 5,
+      "title": "Service and Infrastructure TODOs",
+      "priority": "LOW",
+      "effort_hours": "6-8",
+      "labels": ["enhancement", "infrastructure"],
+      "body": "## Service and Infrastructure\n\n### Items\n1. **ISharpDatabase.cs:145** — Return type for attribute pattern queries\n2. **QueueCommandListRequest.cs** — Return new PID for output/tracking\n3. **PennMUSHDatabaseConverter.cs:816** — Pueblo escape stripping\n4. **ConfigSchemaService.cs:25** — Add logging\n\n### Why\nInfrastructure and migration tool improvements.\n\n### Tasks\n- [ ] Reconsider attribute pattern return type\n- [ ] Return PID from queue requests\n- [ ] Implement Pueblo escape stripping\n- [ ] Add logging to ConfigSchemaService"
+    },
+    {
+      "number": 6,
+      "title": "Test Infrastructure: Skipped and Failing Tests",
+      "priority": "LOW",
+      "effort_hours": "12-15",
+      "labels": ["testing", "quality"],
+      "body": "## Test Infrastructure\n\n### Context\nThere are **243 tests currently skipped** and several TODO comments in test files that indicate test improvements needed.\n\n### Skipped Test Categories\n- RecursionAndInvocationLimitTests: 3 tests (need NotifyService checks)\n- ListFunctionUnitTests: 4 tests (implementation issues)\n- HelpfileTests: 2 tests (moving to new help system)\n- Various others: 234 tests across all categories\n\n### TODO Items in Tests\n1. **RecursionAndInvocationLimitTests.cs** — NotifyService recursion error checks\n2. **RegistersUnitTests.cs** — Full server integration tests\n3. **ListFunctionUnitTests.cs** — %iL value, #@ token, ibreak() evaluation\n4. **StringFunctionUnitTests.cs** — decomposeweb and decompose bugs\n5. **DatabaseCommandTests.cs** — Loop bug investigation\n6. **CommandUnitTests.cs** — Eval vs noparse evaluation\n\n### Priority\n- Investigate and fix top 20 skipped tests\n- Document reason for remaining skipped tests\n\n### Tasks\n- [ ] Fix decompose() bug (StringFunctionUnitTests.cs:272)\n- [ ] Fix eval vs noparse (CommandUnitTests.cs:32)\n- [ ] Investigate loop bug (DatabaseCommandTests.cs:259)\n- [ ] Enable server integration tests in RegistersUnitTests\n- [ ] Fix ListFunctionUnitTests skipped tests"
+    },
+    {
+      "number": 7,
+      "title": "Complete 7 Remaining Administrative Commands",
+      "priority": "LOW",
+      "effort_hours": "15-30",
+      "labels": ["commands", "enhancement", "admin"],
+      "body": "## Remaining 7 Administrative Commands\n\nAll remaining commands are optional administrative enhancements.\n\n### Commands\n1. **@ALLHALT** — Emergency halt all queued commands\n2. **@CHOWNALL** — Change ownership of all objects\n3. **@POLL** — Polling/survey system\n4. **@PURGE** — Purge inactive objects\n5. **@READCACHE** — Display cache statistics\n6. **@SHUTDOWN** — Server shutdown\n7. **@SUGGEST** — Suggestion system\n\n### Implementation Notes\n- All in WizardCommands.cs\n- None are production blockers\n- Implement based on operational need\n\n### Tasks\n- [ ] @ALLHALT (halt queued commands)\n- [ ] @CHOWNALL (bulk ownership change)\n- [ ] @POLL (polling system)\n- [ ] @PURGE (object purge)\n- [ ] @READCACHE (cache stats)\n- [ ] @SHUTDOWN (server shutdown)\n- [ ] @SUGGEST (suggestion system)"
+    }
+  ]
+}
