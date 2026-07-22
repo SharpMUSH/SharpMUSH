@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -7,6 +9,7 @@ namespace SharpMUSH.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class SuggestionController(
 	IExpandedObjectDataService objectDataService,
 	ILogger<SuggestionController> logger)

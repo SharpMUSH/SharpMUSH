@@ -76,6 +76,35 @@ public class AccountAuthServiceHubTokenTests : BunitContext
 	/// snapshot would keep re-offering the stale, now-invalid token to the hub on every automatic
 	/// reconnect attempt.
 	/// </summary>
+	/// <summary>
+	/// The hub connection carries the tab's active character as a <c>character</c> query param so the
+	/// server (which validates it against the account) binds the connection to the switched-to
+	/// character rather than the primary. Numeric key, not "#N": '#' is a URL fragment delimiter.
+	/// </summary>
+	[Test]
+	public async Task ResolveHubUrl_WithActiveCharacter_AppendsCharacterQueryParam()
+	{
+		var accountAuth = new FakeAccountAuthState
+		{
+			AccountSessionToken = "t",
+			ActiveCharacter = new AccountAuthService.CharacterSummary(7, 777L, "Bob", "")
+		};
+		var factory = new GameHubConnectionFactory("https://localhost/hubs/game", accountAuth);
+
+		await Assert.That(factory.ResolveHubUrl("https://localhost/hubs/game"))
+			.IsEqualTo("https://localhost/hubs/game?character=7");
+	}
+
+	[Test]
+	public async Task ResolveHubUrl_NoActiveCharacter_ReturnsUrlUnchanged()
+	{
+		var accountAuth = new FakeAccountAuthState { AccountSessionToken = "t", ActiveCharacter = null };
+		var factory = new GameHubConnectionFactory("https://localhost/hubs/game", accountAuth);
+
+		await Assert.That(factory.ResolveHubUrl("https://localhost/hubs/game"))
+			.IsEqualTo("https://localhost/hubs/game");
+	}
+
 	[Test]
 	public async Task ResolveAccessTokenAsync_AfterLogout_ReturnsNull()
 	{
