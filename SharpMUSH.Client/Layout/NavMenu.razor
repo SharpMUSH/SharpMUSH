@@ -309,34 +309,9 @@
 
     private void TogglePanel() => _panelOpen = !_panelOpen;
 
-    /// <summary>
-    /// Full switch flow via the shared <see cref="CharacterSwitchService"/> — the same one
-    /// <c>MainLayout</c> and <c>CharacterPicker</c> use. Mints a fresh OTT (commits
-    /// <see cref="AccountAuthService.ActiveCharacter"/>, so every surface reading it — this card, the
-    /// topbar chip, etc. — updates at once), recreates both terminal facades, and reconnects the
-    /// command terminal. An earlier version of this panel was identity-only (commits the name change
-    /// but never reconnects the terminal, leaving it authenticated as the old character) — fixed by
-    /// routing through the same service every other switch surface uses.
-    ///
-    /// <see cref="CharacterSwitchService.SwitchAsync"/> returns <c>false</c> when minting the OTT fails
-    /// (e.g. an expired account session) — nothing else in that method ran, so the panel would
-    /// otherwise close on its own (<c>AccountPanel.SelectCharacterAsync</c>) with no feedback at all.
-    /// Now that this panel is the only switcher (post-<c>AccountChrome</c> removal), that silent no-op
-    /// would leave the user with a dead button and no explanation, so surface it via the same
-    /// <c>ISnackbar</c> pattern used elsewhere in the client (e.g. <c>Sitelock.razor</c>) — an inline
-    /// message inside the panel would flash and vanish, since the panel closes right after this method
-    /// returns regardless of outcome.
-    /// </summary>
-    private async Task HandleSwitchCharacterAsync(AccountAuthService.CharacterSummary character)
-    {
-        var switched = await CharacterSwitch.SwitchAsync(character);
-        if (!switched)
-        {
-            Snackbar.Add(
-                $"Couldn't switch to {character.Name}. The account session may have expired — please log in again.",
-                Severity.Error);
-        }
-    }
+    /// <summary>Switches the portal's active character (SignalR + REST); does not touch the terminal.</summary>
+    private Task HandleSwitchCharacterAsync(AccountAuthService.CharacterSummary character)
+        => CharacterSwitch.SwitchAsync(character);
 
     /// <summary>
     /// Opens a new browser tab already acting as <paramref name="character"/>. A tab opened via

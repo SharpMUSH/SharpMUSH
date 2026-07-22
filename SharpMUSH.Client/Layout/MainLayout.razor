@@ -7,7 +7,7 @@
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
 @inject TerminalServiceHost Terminal
-@inject CharacterSwitchService CharacterSwitch
+@inject TerminalLoginService TerminalLogin
 @inject AccountAuthService AccountAuth
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ILayoutService LayoutService
@@ -166,7 +166,7 @@
         {
             var debugOtt = await AccountAuth.GetDebugOttAsync();
             if (debugOtt is not null && !Terminal.IsConnected)
-                _ = Terminal.ConnectWithOttAsync("ws://localhost:4202/ws", debugOtt.Token);
+                _ = Terminal.ConnectWithOttAsync(TerminalLogin.ServerUri, debugOtt.Token);
 
             // Auto-start the command terminal on load: open the docked drawer once a connection exists/begins.
             _terminalOpen = true;
@@ -208,15 +208,10 @@
         });
     }
 
-    private async Task SwitchCharacterAsync(AccountAuthService.CharacterSummary character)
+    private async Task ConnectAsHintedCharacterAsync(AccountAuthService.CharacterSummary character)
     {
-        // Full flow (mint OTT -> recreate both terminal facades -> reconnect) lives in
-        // CharacterSwitchService, shared with CharacterPicker and the nav account panel — see there
-        // for the resume-token rebind rationale and the play-terminal deliberate-disconnect note.
-        if (!await CharacterSwitch.SwitchAsync(character)) return;
-
-        // Deliberately do NOT open the terminal drawer: switching connects in the background;
-        // the toolbar toggle opens the terminal when the player wants it.
+        AccountAuth.SetActiveCharacter(character);
+        await TerminalLogin.ConnectAsCharacterAsync(character);
         StateHasChanged();
     }
 
@@ -250,7 +245,7 @@
             .FirstOrDefault(c => c.DbrefNumber == dbref && c.CreationTime == creationTime);
         if (target is null) return;
 
-        await SwitchCharacterAsync(target);
+        await ConnectAsHintedCharacterAsync(target);
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)

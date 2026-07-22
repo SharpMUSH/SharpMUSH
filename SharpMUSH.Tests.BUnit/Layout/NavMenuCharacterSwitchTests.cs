@@ -11,6 +11,7 @@ using NSubstitute;
 using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.BUnit.Components;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
 
@@ -90,6 +91,7 @@ file sealed class NavMenuSwitchStubLocalizer<T> : IStringLocalizer<T>
 public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _ownedHttpClients = [];
+	private IConnectionStateService _connection = null!;
 	private BunitAuthorizationContext Auth { get; }
 
 	private static readonly CharacterSummary Alpha = new(1, 1L, "Alpha", "");
@@ -158,10 +160,8 @@ public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 			throw new InvalidOperationException($"Test setup login failed: {error}");
 
 		Services.AddSingleton(auth);
-		// The service under test — registered exactly the way TerminalServiceCollectionExtensions
-		// wires it in production, depending on the concrete facades registered by RegisterTerminal/
-		// RegisterPlayTerminal above.
-		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
+		_connection = Substitute.For<IConnectionStateService>();
+		Services.AddSingleton(_connection);
 		Services.AddSingleton<CharacterSwitchService>();
 		return auth;
 	}
@@ -190,28 +190,30 @@ public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 		=> Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm => nm.Add(c => c.IsCollapsed, isCollapsed)));
 
 	[Test]
-	public async Task Switching_from_the_panel_recreates_both_terminals()
+	public async Task Switching_from_the_panel_does_not_touch_the_terminals()
 	{
 		var terminal = RegisterTerminal();
 		var playTerminal = RegisterPlayTerminal();
-		await CreateLoggedInAuthAsync();
+		var auth = await CreateLoggedInAuthAsync();
 
 		var cut = RenderNavMenu();
 
 		await cut.InvokeAsync(() => ClickSwitchToBetaViaPanel(cut));
-		cut.WaitForAssertion(() => terminal.First.Received(1).DisposeAsync());
+		cut.WaitForAssertion(() =>
+		{
+			if (auth.ActiveCharacter?.DbrefNumber != 2)
+				throw new InvalidOperationException("switch not applied yet");
+		});
 
-		// The panel's switch row used to be identity-only: it committed ActiveCharacter but never
-		// touched either terminal, so the command terminal stayed authenticated as the OLD character
-		// and the freshly minted OTT was silently discarded.
-		await terminal.First.Received(1).DisposeAsync();
-		await playTerminal.First.Received(1).DisposeAsync();
+		// The account-panel switch is portal-only: a terminal's character is fixed at connect.
+		await terminal.First.DidNotReceive().DisposeAsync();
+		await playTerminal.First.DidNotReceive().DisposeAsync();
 	}
 
 	[Test]
-	public async Task Switching_from_the_panel_reconnects_the_command_terminal_with_the_fresh_ott()
+	public async Task Switching_from_the_panel_reconnects_the_game_hub()
 	{
-		var terminal = RegisterTerminal();
+		RegisterTerminal();
 		RegisterPlayTerminal();
 		await CreateLoggedInAuthAsync();
 
@@ -219,8 +221,7 @@ public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 
 		await cut.InvokeAsync(() => ClickSwitchToBetaViaPanel(cut));
 
-		cut.WaitForAssertion(() => terminal.Second.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
-		await terminal.Second.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott");
+		cut.WaitForAssertion(() => _connection.Received(1).ReconnectAsync());
 	}
 
 	[Test]
@@ -240,40 +241,6 @@ public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 				throw new InvalidOperationException("identity not committed yet");
 		});
 		await Assert.That(auth.ActiveCharacter?.Name).IsEqualTo("Beta");
-	}
-
-	/// <summary>
-	/// Review finding on this task: <c>HandleSwitchCharacterAsync</c> used to discard
-	/// <c>CharacterSwitchService.SwitchAsync</c>'s <c>bool</c> return entirely, so a failed OTT mint
-	/// (e.g. an expired account session — <see cref="NavMenuSwitchApiHandler"/>'s <c>failSwitch</c>)
-	/// left the user with a dead button and no explanation. That was tolerable while
-	/// <c>AccountChrome</c> existed as a second, equally-silent switcher; once this panel became the
-	/// ONLY switcher (this task), the silence needed an affordance. Asserts via a substituted
-	/// <see cref="ISnackbar"/> (registered after <c>AddMudServices</c>, so it wins DI resolution)
-	/// rather than DOM text, since <c>AccountPanel.SelectCharacterAsync</c> closes the panel
-	/// immediately after this handler returns regardless of outcome — an inline in-panel message
-	/// would not still be on screen to assert against.
-	/// </summary>
-	[Test]
-	public async Task Switching_from_the_panel_surfaces_an_error_when_the_ott_mint_fails()
-	{
-		RegisterTerminal();
-		RegisterPlayTerminal();
-		await CreateLoggedInAuthAsync(failSwitch: true);
-
-		var snackbar = Substitute.For<ISnackbar>();
-		Services.AddSingleton(snackbar);
-
-		var cut = RenderNavMenu();
-
-		await cut.InvokeAsync(() => ClickSwitchToBetaViaPanel(cut));
-
-		cut.WaitForAssertion(() =>
-			snackbar.Received(1).Add(
-				Arg.Is<string>(m => m.Contains("Beta")),
-				Severity.Error,
-				Arg.Any<Action<SnackbarOptions>?>(),
-				Arg.Any<string?>()));
 	}
 
 	public new async ValueTask DisposeAsync()

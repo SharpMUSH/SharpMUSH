@@ -62,8 +62,7 @@
         <div style="padding:0.375rem 0.625rem;background:var(--surface);border-top:1px solid var(--border-soft);">
             @if (_showCharacterPicker)
             {
-                <CharacterPicker ServerUri="@_serverUri"
-                                 OnConnected="OnCharacterPickerConnected"
+                <CharacterPicker OnConnected="OnCharacterPickerConnected"
                                  OnCancelled="OnCharacterPickerCancelled" />
             }
             else

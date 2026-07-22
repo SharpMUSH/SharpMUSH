@@ -1,6 +1,6 @@
 @using SharpMUSH.Client.Services
 @inject AccountAuthService AccountAuth
-@inject CharacterSwitchService CharacterSwitch
+@inject TerminalLoginService TerminalLogin
 
 <MudPaper Elevation="0" Class="char-picker" Style="padding:0.75rem;">
     <MudText Typo="Typo.subtitle1" Style="margin-bottom:0.5rem;">
@@ -77,7 +77,6 @@
 </MudPaper>
 
 @code {
-    [Parameter] public string ServerUri { get; set; } = "ws://localhost:4202/ws";
     [Parameter] public EventCallback OnConnected { get; set; }
     [Parameter] public EventCallback OnCancelled { get; set; }
 
@@ -106,17 +105,8 @@
 
         try
         {
-            // Same flow as MainLayout's character switch, via the shared CharacterSwitchService:
-            // mints the OTT (authoritative for identity — commits AccountAuth.ActiveCharacter),
-            // recreates both terminal facades to avoid a stale-resume-token rebind, then reconnects.
-            // ServerUri is passed explicitly since no terminal connection exists yet at this point in
-            // the flow (Terminal.ServerUri would still be null).
-            //
-            // The mint is deliberately INSIDE this try/catch, not before it: a throw here surfaces as
-            // _connectError next to the picker's own controls, rather than propagating up to the app's
-            // error boundary and losing the in-place "pick another character and retry" affordance.
-            var switched = await CharacterSwitch.SwitchAsync(character, ServerUri);
-            if (!switched)
+            var connected = await TerminalLogin.ConnectAsCharacterAsync(character);
+            if (!connected)
             {
                 _connectError = "Failed to get authentication token. The account session may have expired — please log in again.";
                 _busy = false;

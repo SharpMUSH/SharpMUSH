@@ -41,11 +41,11 @@ file sealed class GlobalTerminalApiHandler(IReadOnlyList<CharacterSummary> chara
 			});
 		}
 
-		if (request.Method == HttpMethod.Post && path == "api/auth/switch-character")
+		if (request.Method == HttpMethod.Post && path == "api/auth/mush-token")
 		{
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{
-				Content = JsonContent.Create(new { ott = "new-character-ott", expiresIn = 300 })
+				Content = JsonContent.Create(new { token = "new-character-ott", expiresIn = 60 })
 			});
 		}
 
@@ -115,14 +115,10 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		Services.AddSingleton(host);
 		Services.AddSingleton<ITerminalService>(host);
 
-		// CharacterPicker now goes through CharacterSwitchService (Task 8 fix pass, Finding 1) rather
-		// than calling TerminalServiceHost directly, so its dependencies must be resolvable even though
-		// this test class never exercises the play terminal itself.
 		var playHost = new PlayTerminalServiceHost(() => Substitute.For<IPlayTerminalService>());
 		Services.AddSingleton(playHost);
 		Services.AddSingleton<IPlayTerminalService>(playHost);
-		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
-		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddSingleton<TerminalLoginService>();
 
 		return (first, second);
 	}
@@ -159,15 +155,11 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 	[Test]
 	public async Task Connecting_via_character_picker_shows_the_active_character_not_a_dead_terminal_property()
 	{
-		var (_, second) = RegisterTerminal();
+		var (first, _) = RegisterTerminal();
 		var auth = await CreateLoggedInAuthAsync();
 
 		var cut = Render<GlobalTerminal>();
 
-		// Preconditions: logged in with >1 character routes GlobalTerminal into the character-picker
-		// panel instead of auto-connecting or showing the plain login form. OnInitializedAsync's own
-		// AccountAuth.InitAsync() call genuinely yields (Task.Yield()), so the picker doesn't appear
-		// in the synchronous first render — wait for it rather than asserting immediately.
 		cut.WaitForAssertion(() =>
 		{
 			if (!cut.Markup.Contains("char-picker"))
@@ -176,17 +168,13 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 
 		await cut.InvokeAsync(() => ClickCharacterPickerConnect(cut));
 
-		// Confirms the picker's flow (RecreateAsync -> ConnectWithOttAsync on the fresh, second inner)
-		// actually ran before asserting on its effect.
-		cut.WaitForAssertion(() => second.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
+		// The picker connects the current terminal as the selected character (no recreate — a terminal
+		// is only switched by opening a new tab).
+		cut.WaitForAssertion(() => first.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
 
 		await Assert.That(auth.ActiveCharacter?.Name).IsEqualTo("Alpha");
 
-		// Second never has its ConnectedPlayerName written (Task 7 removed that write), so the old
-		// `_playerName = Terminal.ConnectedPlayerName` read would stay null forever here — simulate a
-		// connect completing so the connection bar's playerName branch renders, and confirm it shows
-		// the active character rather than "not logged in".
-		await cut.InvokeAsync(() => second.ConnectionStateChanged += Raise.Event<Action<bool>>(true));
+		await cut.InvokeAsync(() => first.ConnectionStateChanged += Raise.Event<Action<bool>>(true));
 
 		await Assert.That(cut.Markup).Contains("Alpha");
 		await Assert.That(cut.Markup).DoesNotContain("not logged in");

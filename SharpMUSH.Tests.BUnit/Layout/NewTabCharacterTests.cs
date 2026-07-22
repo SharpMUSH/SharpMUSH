@@ -165,6 +165,7 @@ public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 		Services.AddSingleton(auth);
 		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddSingleton<TerminalLoginService>();
 		return auth;
 	}
 
