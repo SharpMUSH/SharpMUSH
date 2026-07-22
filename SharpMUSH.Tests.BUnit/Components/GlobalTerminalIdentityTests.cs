@@ -121,6 +121,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		var playHost = new PlayTerminalServiceHost(() => Substitute.For<IPlayTerminalService>());
 		Services.AddSingleton(playHost);
 		Services.AddSingleton<IPlayTerminalService>(playHost);
+		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 
 		return (first, second);

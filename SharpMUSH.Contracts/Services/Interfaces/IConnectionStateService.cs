@@ -47,6 +47,13 @@ public interface IConnectionStateService
 	Task DisconnectAsync();
 
 	/// <summary>
+	/// Rebuilds a live hub connection so it re-authenticates and re-binds with whatever the account
+	/// state now says (e.g. a switched active character, carried on the connection URL). No-ops when
+	/// there is no live connection to rebind.
+	/// </summary>
+	Task ReconnectAsync();
+
+	/// <summary>
 	/// Sends a raw command string to the game engine via the hub.
 	/// Throws <see cref="InvalidOperationException"/> when not connected.
 	/// </summary>

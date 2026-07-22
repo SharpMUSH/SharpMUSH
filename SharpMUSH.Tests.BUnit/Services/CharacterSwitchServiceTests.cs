@@ -4,6 +4,7 @@ using Bunit;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
 
 namespace SharpMUSH.Tests.BUnit.Services;
@@ -109,6 +110,7 @@ public class CharacterSwitchServiceTests : BunitContext, IAsyncDisposable
 		PlayTerminalServiceHost PlayTerminal,
 		IPlayTerminalService PlayTerminalFirst,
 		IPlayTerminalService PlayTerminalSecond,
+		IConnectionStateService Connection,
 		CharacterSwitchService Service);
 
 	private async Task<Rig> BuildAsync()
@@ -134,9 +136,10 @@ public class CharacterSwitchServiceTests : BunitContext, IAsyncDisposable
 		var playQueue = new Queue<IPlayTerminalService>([playFirst, playSecond]);
 		var playTerminal = new PlayTerminalServiceHost(() => playQueue.Dequeue());
 
-		var service = new CharacterSwitchService(auth, terminal, playTerminal);
+		var connection = Substitute.For<IConnectionStateService>();
+		var service = new CharacterSwitchService(auth, terminal, playTerminal, connection);
 
-		return new Rig(auth, handler, terminal, terminalFirst, terminalSecond, playTerminal, playFirst, playSecond, service);
+		return new Rig(auth, handler, terminal, terminalFirst, terminalSecond, playTerminal, playFirst, playSecond, connection, service);
 	}
 
 	[Test]
@@ -165,6 +168,27 @@ public class CharacterSwitchServiceTests : BunitContext, IAsyncDisposable
 		await Assert.That(rig.Auth.ActiveCharacter?.Name).IsEqualTo("Beta");
 		await rig.TerminalFirst.Received(1).DisposeAsync();
 		await rig.TerminalSecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott");
+	}
+
+	[Test]
+	public async Task SwitchAsync_reconnects_the_game_hub_so_the_portal_follows_the_active_character()
+	{
+		var rig = await BuildAsync();
+
+		await rig.Service.SwitchAsync(Beta);
+
+		await rig.Connection.Received(1).ReconnectAsync();
+	}
+
+	[Test]
+	public async Task SwitchAsync_does_not_reconnect_the_hub_when_the_ott_mint_fails()
+	{
+		var rig = await BuildAsync();
+		rig.ApiHandler.MintOtt = null;
+
+		await rig.Service.SwitchAsync(Beta);
+
+		await rig.Connection.DidNotReceive().ReconnectAsync();
 	}
 
 	[Test]

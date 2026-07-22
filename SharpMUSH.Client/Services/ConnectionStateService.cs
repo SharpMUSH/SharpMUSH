@@ -170,6 +170,14 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	}
 
 	/// <inheritdoc/>
+	public async Task ReconnectAsync()
+	{
+		if (_hub is null) return;
+		await DisconnectAsync();
+		await ConnectAsync();
+	}
+
+	/// <inheritdoc/>
 	public Task SendCommandAsync(string command)
 	{
 		if (_hub is null || !IsConnected)

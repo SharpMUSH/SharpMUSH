@@ -161,6 +161,7 @@ public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 		// The service under test — registered exactly the way TerminalServiceCollectionExtensions
 		// wires it in production, depending on the concrete facades registered by RegisterTerminal/
 		// RegisterPlayTerminal above.
+		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 		return auth;
 	}

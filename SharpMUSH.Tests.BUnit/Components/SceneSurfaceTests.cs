@@ -119,6 +119,7 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 
 	public Task ConnectAsync() => Task.CompletedTask;
 	public Task DisconnectAsync() => Task.CompletedTask;
+	public Task ReconnectAsync() => Task.CompletedTask;
 
 	public Task SendCommandAsync(string command)
 	{

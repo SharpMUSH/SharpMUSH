@@ -98,6 +98,7 @@ public class NavMenuActiveCharacterTests : BunitContext, IAsyncDisposable
 		Services.AddSingleton(playTerminalHost);
 		Services.AddSingleton<IPlayTerminalService>(playTerminalHost);
 
+		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 
 		Auth = this.AddAuthorization();

@@ -163,6 +163,7 @@ public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 			throw new InvalidOperationException($"Test setup login failed: {error}");
 
 		Services.AddSingleton(auth);
+		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 		return auth;
 	}

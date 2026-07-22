@@ -20,7 +20,8 @@ namespace SharpMUSH.Client.Services;
 public class CharacterSwitchService(
 	AccountAuthService accountAuth,
 	TerminalServiceHost terminal,
-	PlayTerminalServiceHost playTerminal)
+	PlayTerminalServiceHost playTerminal,
+	SharpMUSH.Library.Services.Interfaces.IConnectionStateService connectionState)
 {
 	private const string DefaultServerUri = "ws://localhost:4202/ws";
 
@@ -62,6 +63,8 @@ public class CharacterSwitchService(
 		// ServerUri is null until it connects.
 		var serverUri = serverUriOverride ?? terminal.ServerUri ?? DefaultServerUri;
 		accountAuth.InvalidateDebugOtt();
+
+		await connectionState.ReconnectAsync();
 
 		await terminal.RecreateAsync();
 		// The play terminal was never switched before this: nothing in the codebase disconnected it, so
