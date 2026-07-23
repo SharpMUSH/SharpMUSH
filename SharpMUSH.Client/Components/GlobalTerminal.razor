@@ -3,7 +3,6 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Hosting
 @using Microsoft.JSInterop
-@inject ITerminalService DefaultTerminal
 @inject IJSRuntime JsRuntime
 @inject CredentialService Credentials
 @inject OttAuthService OttAuth
@@ -182,11 +181,11 @@
     [Parameter] public string? DefaultServerUri { get; set; }
 
     /// <summary>
-    /// Optional terminal service to drive this instance. When null, the injected command terminal
-    /// (<c>ITerminalService</c>) is used. The /play page passes its own <c>IPlayTerminalService</c>
-    /// so the player session is a separate connection from the command/softcode terminal.
+    /// The terminal service this instance renders and drives. Required — each render site names its
+    /// own terminal (the command terminal in the drawer, the play terminal on /play), so there is no
+    /// ambient default that another caller could accidentally reach.
     /// </summary>
-    [Parameter] public ITerminalService? TerminalOverride { get; set; }
+    [Parameter, EditorRequired] public ITerminalService Terminal { get; set; } = default!;
 
     /// <summary>
     /// Whether this terminal shows the connection/auto-login <c>[DBG]</c> diagnostic lines.
@@ -210,7 +209,6 @@
     /// </summary>
     [Parameter] public int TargetColumns { get; set; }
 
-    private ITerminalService Terminal => TerminalOverride ?? DefaultTerminal;
 
     /// <summary>Writes a diagnostic line only when this terminal opted in and we are in dev.</summary>
     private void DebugLine(string text)
