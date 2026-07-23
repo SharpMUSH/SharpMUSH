@@ -80,8 +80,10 @@ public partial class SurrealDatabase
 
 		var parameters = new Dictionary<string, object?> { ["name"] = name };
 		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
 			"DELETE has_flags WHERE out = object_flag:⟨$name⟩;" +
-			"DELETE object_flag:⟨$name⟩",
+			"DELETE object_flag:⟨$name⟩;" +
+			"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 		return true;
 	}
@@ -225,8 +227,10 @@ public partial class SurrealDatabase
 
 		var parameters = new Dictionary<string, object?> { ["name"] = name };
 		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
 			"DELETE has_powers WHERE out = power:⟨$name⟩;" +
-			"DELETE power:⟨$name⟩",
+			"DELETE power:⟨$name⟩;" +
+			"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 		return true;
 	}

@@ -44,13 +44,18 @@ public partial class SurrealDatabase
 			["homeKey"] = home.Number
 		};
 
+		// One transaction so the object and its is_object/has_owner/at_location/has_home edges commit
+		// together — otherwise the base record is visible before its owner/location/home edges, and a
+		// concurrent reader resolving .Owner/.Location/.Home (all throw on a missing edge) crashes.
 		await ExecuteAsync("""
+			BEGIN TRANSACTION;
 			CREATE object:$key SET key = $key, name = $name, type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0;
 			CREATE player:$key SET key = $key, passwordHash = $hash, passwordSalt = $salt, aliases = [], quota = $quota;
 			RELATE player:$key->is_object->object:$key;
 			RELATE object:$key->has_owner->player:$key;
 			RELATE player:$key->at_location->room:$locKey;
-			RELATE player:$key->has_home->room:$homeKey
+			RELATE player:$key->has_home->room:$homeKey;
+			COMMIT TRANSACTION
 			""", parameters, cancellationToken);
 
 		return new DBRef(nextKey, now);
@@ -70,11 +75,15 @@ public partial class SurrealDatabase
 			["ownerKey"] = creatorKey
 		};
 
+		// One transaction so the object and its is_object/has_owner edges commit together (a reader
+		// resolving .Owner throws on a missing has_owner edge).
 		await ExecuteAsync("""
+			BEGIN TRANSACTION;
 			CREATE object:$key SET key = $key, name = $name, type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0;
 			CREATE room:$key SET key = $key, aliases = [];
 			RELATE room:$key->is_object->object:$key;
-			RELATE object:$key->has_owner->player:$ownerKey
+			RELATE object:$key->has_owner->player:$ownerKey;
+			COMMIT TRANSACTION
 			""", parameters, cancellationToken);
 
 		return new DBRef(nextKey, now);
@@ -103,13 +112,17 @@ public partial class SurrealDatabase
 			["emptyLocks"] = "{}"
 		};
 
+		// One transaction so the object and all its edges commit together — the has_owner edge is the
+		// last statement, so without this the object is visible and owner-less across the whole create.
 		await ExecuteAsync(
+			$"BEGIN TRANSACTION;" +
 			$"CREATE object:$key SET key = $key, name = $name, type = 'THING', creationTime = $now, modifiedTime = $now, locks = $emptyLocks, warnings = 0;" +
 			$"CREATE thing:$key SET key = $key, aliases = [];" +
 			$"RELATE thing:$key->is_object->object:$key;" +
 			$"RELATE thing:$key->at_location->{locTable}:$locKey;" +
 			$"RELATE thing:$key->has_home->{homeTable}:$homeKey;" +
-			$"RELATE object:$key->has_owner->player:$ownerKey",
+			$"RELATE object:$key->has_owner->player:$ownerKey;" +
+			$"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 
 		return new DBRef(nextKey, now);
@@ -136,12 +149,15 @@ public partial class SurrealDatabase
 			["emptyLocks"] = "{}"
 		};
 
+		// One transaction so the object and all its edges commit together (has_owner is last).
 		await ExecuteAsync(
+			$"BEGIN TRANSACTION;" +
 			$"CREATE object:$key SET key = $key, name = $name, type = 'EXIT', creationTime = $now, modifiedTime = $now, locks = $emptyLocks, warnings = 0;" +
 			$"CREATE exit:$key SET key = $key, aliases = $aliases;" +
 			$"RELATE exit:$key->is_object->object:$key;" +
 			$"RELATE exit:$key->at_location->{locTable}:$locKey;" +
-			$"RELATE object:$key->has_owner->player:$ownerKey",
+			$"RELATE object:$key->has_owner->player:$ownerKey;" +
+			$"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 
 		return new DBRef(nextKey, now);
@@ -552,9 +568,13 @@ public partial class SurrealDatabase
 			["homeKey"] = homeKey
 		};
 
+		// One transaction so the object is never momentarily home-less between DELETE and RELATE
+		// (GetHomeAsync throws on a missing has_home edge).
 		await ExecuteAsync(
+			$"BEGIN TRANSACTION;" +
 			$"DELETE has_home WHERE in = {srcTable}:$objKey;" +
-			$"RELATE {srcTable}:$objKey->has_home->{destTable}:$homeKey",
+			$"RELATE {srcTable}:$objKey->has_home->{destTable}:$homeKey;" +
+			$"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 	}
 
@@ -571,9 +591,13 @@ public partial class SurrealDatabase
 			["locKey"] = locKey
 		};
 
+		// One transaction so the object is never momentarily location-less between DELETE and RELATE
+		// (GetLocationForTypedAsync throws on a missing at_location edge).
 		await ExecuteAsync(
+			$"BEGIN TRANSACTION;" +
 			$"DELETE at_location WHERE in = {srcTable}:$objKey;" +
-			$"RELATE {srcTable}:$objKey->at_location->{destTable}:$locKey",
+			$"RELATE {srcTable}:$objKey->at_location->{destTable}:$locKey;" +
+			$"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 	}
 
@@ -582,20 +606,21 @@ public partial class SurrealDatabase
 		var objKey = obj.Object().Key;
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 
-		await ExecuteAsync("DELETE has_parent WHERE in = object:$key", parameters, cancellationToken);
-
-		if (parent != null)
+		if (parent == null)
 		{
-			var parentKey = parent.Object().Key;
-			var parentParams = new Dictionary<string, object?>
-			{
-				["key"] = objKey,
-				["parentKey"] = parentKey
-			};
-			await ExecuteAsync(
-				"RELATE object:$key->has_parent->object:$parentKey",
-				parentParams, cancellationToken);
+			await ExecuteAsync("DELETE has_parent WHERE in = object:$key", parameters, cancellationToken);
+			return;
 		}
+
+		// Replace the parent edge in one transaction so a concurrent reader never sees it detached
+		// between the DELETE and the RELATE.
+		parameters["parentKey"] = parent.Object().Key;
+		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"DELETE has_parent WHERE in = object:$key;" +
+			"RELATE object:$key->has_parent->object:$parentKey;" +
+			"COMMIT TRANSACTION",
+			parameters, cancellationToken);
 	}
 
 	public async ValueTask UnsetObjectParent(AnySharpObject obj, CancellationToken cancellationToken = default)
@@ -606,20 +631,21 @@ public partial class SurrealDatabase
 		var objKey = obj.Object().Key;
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 
-		await ExecuteAsync("DELETE has_zone WHERE in = object:$key", parameters, cancellationToken);
-
-		if (zone != null)
+		if (zone == null)
 		{
-			var zoneKey = zone.Object().Key;
-			var zoneParams = new Dictionary<string, object?>
-			{
-				["key"] = objKey,
-				["zoneKey"] = zoneKey
-			};
-			await ExecuteAsync(
-				"RELATE object:$key->has_zone->object:$zoneKey",
-				zoneParams, cancellationToken);
+			await ExecuteAsync("DELETE has_zone WHERE in = object:$key", parameters, cancellationToken);
+			return;
 		}
+
+		// Replace the zone edge in one transaction so a concurrent reader never sees it detached
+		// between the DELETE and the RELATE.
+		parameters["zoneKey"] = zone.Object().Key;
+		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"DELETE has_zone WHERE in = object:$key;" +
+			"RELATE object:$key->has_zone->object:$zoneKey;" +
+			"COMMIT TRANSACTION",
+			parameters, cancellationToken);
 	}
 
 	public async ValueTask UnsetObjectZone(AnySharpObject obj, CancellationToken cancellationToken = default)
@@ -635,9 +661,15 @@ public partial class SurrealDatabase
 			["ownerKey"] = ownerKey
 		};
 
+		// Replace the owner edge inside a single transaction so a concurrent reader never observes the
+		// object owner-less between the DELETE and the RELATE (GetObjectOwnerAsync throws on no owner).
+		// SurrealDB graph-edge in/out cannot be UPDATEd, so the edge must be re-created — the
+		// transaction is what makes that atomic to outside readers.
 		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
 			"DELETE has_owner WHERE in = object:$key;" +
-			"RELATE object:$key->has_owner->player:$ownerKey",
+			"RELATE object:$key->has_owner->player:$ownerKey;" +
+			"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 	}
 

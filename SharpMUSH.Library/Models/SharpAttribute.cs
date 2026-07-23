@@ -9,7 +9,7 @@ public record SharpAttribute(
 	string Name,
 	IEnumerable<SharpAttributeFlag> Flags,
 	int? CommandListIndex,
-	[property: JsonIgnore] string? LongName,
+	[property: JsonIgnore] string LongName,
 	[property: JsonIgnore] AsyncLazy<IAsyncEnumerable<SharpAttribute>> Leaves,
 	[property: JsonIgnore] AsyncLazy<SharpPlayer?> Owner,
 	[property: JsonIgnore] AsyncLazy<SharpAttributeEntry?> SharpAttributeEntry)
@@ -23,7 +23,7 @@ public record LazySharpAttribute(
 	string Name,
 	IEnumerable<SharpAttributeFlag> Flags,
 	int? CommandListIndex,
-	[property: JsonIgnore] string? LongName,
+	[property: JsonIgnore] string LongName,
 	[property: JsonIgnore] AsyncLazy<IAsyncEnumerable<LazySharpAttribute>> Leaves,
 	[property: JsonIgnore] AsyncLazy<SharpPlayer?> Owner,
 	[property: JsonIgnore] AsyncLazy<SharpAttributeEntry?> SharpAttributeEntry,

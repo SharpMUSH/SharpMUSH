@@ -687,7 +687,7 @@ public partial class SurrealDatabase(
 			record.name,
 			flags,
 			null,
-			string.IsNullOrEmpty(record.longName) ? null : record.longName,
+			record.longName,
 			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<SharpAttribute>>(new FreshEnumerable<SharpAttribute>(() => GetTopLevelAttributesAsync(id, innerCt)))),
 			new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 			new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)))
@@ -707,7 +707,7 @@ public partial class SurrealDatabase(
 			record.name,
 			flags,
 			null,
-			string.IsNullOrEmpty(record.longName) ? null : record.longName,
+			record.longName,
 			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<LazySharpAttribute>>(new FreshEnumerable<LazySharpAttribute>(() => GetTopLevelLazyAttributesAsync(id, innerCt)))),
 			new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 			new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)),

@@ -13,6 +13,7 @@ using SurrealDb.Net;
 using SurrealDb.Net.Models.Response;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -255,9 +256,35 @@ public partial class SurrealDatabase
 
 		var typedRecordId = GetSurrealRecordId(objRecords[0].type.ToLower(), objKey);
 
-		string currentParentRecordId = typedRecordId;
-		string? lastAttrKey = null;
+		// Read each level's default-flag config up front so the write below can run as a single
+		// transaction with no interleaved reads.
+		var defaultFlagsPerLevel = new List<string[]>();
+		for (var i = 0; i < attribute.Length; i++)
+		{
+			var levelLongName = string.Join('`', attribute.Take(i + 1));
+			var attrEntry = await GetSharpAttributeEntry(levelLongName, cancellationToken);
+			defaultFlagsPerLevel.Add(attrEntry?.DefaultFlags ?? []);
+		}
 
+		// The entire attribute write is ONE transaction: every attribute node, its edge to its parent,
+		// its owner edge, and its flags are committed together. No partial state is ever visible to a
+		// concurrent reader — a newly-created node (leaf or auto-created branch parent) is never observed
+		// owner-less (which would crash examine via GetAttributeOwnerAsync), and a re-set re-owns atomically.
+		// ExecuteAsync inlines $params textually, so each value gets a distinctive, unique param name to
+		// avoid cross-statement token collisions.
+		var txnParams = new Dictionary<string, object?>();
+		var paramCounter = 0;
+		string P(object? v)
+		{
+			var name = $"txnp{paramCounter++}";
+			txnParams[name] = v;
+			return $"${name}";
+		}
+
+		var sb = new StringBuilder();
+		sb.Append("BEGIN TRANSACTION;");
+
+		// 1. Attribute nodes + the edge linking each to its parent.
 		for (var i = 0; i < attribute.Length; i++)
 		{
 			var attrName = attribute[i];
@@ -265,115 +292,54 @@ public partial class SurrealDatabase
 			var attrKey = $"{objKey}_{longName}";
 			var isLast = i == attribute.Length - 1;
 
-			if (isLast)
-			{
-				var upsertParams = new Dictionary<string, object?>
-				{
-					["key"] = attrKey,
-					["name"] = attrName,
-					["longName"] = longName,
-					["value"] = serializedValue
-				};
-
-				await ExecuteAsync(
-					"UPSERT attribute:⟨$key⟩ SET key = $key, name = $name, longName = $longName, value = $value",
-					upsertParams, cancellationToken);
-			}
-			else
-			{
-				var upsertParams = new Dictionary<string, object?>
-				{
-					["key"] = attrKey,
-					["name"] = attrName,
-					["longName"] = longName
-				};
-
-				await ExecuteAsync(
-					"UPSERT attribute:⟨$key⟩ SET key = $key, name = $name, longName = $longName, value = value ?? ''",
-					upsertParams, cancellationToken);
-			}
+			var valueAssignment = isLast ? $"value = {P(serializedValue)}" : "value = value ?? ''";
+			sb.Append($"UPSERT attribute:⟨{P(attrKey)}⟩ SET key = {P(attrKey)}, name = {P(attrName)}, longName = {P(longName)}, {valueAssignment};");
 
 			if (i == 0)
 			{
-				var edgeId = $"{currentParentRecordId.Replace(":", "_")}__attr_{EscapeString(attrKey)}";
-				var edgeParams = new Dictionary<string, object?>
-				{
-					["childKey"] = attrKey,
-					["edgeId"] = edgeId
-				};
-				await ExecuteAsync(
-					$"UPSERT has_attribute:⟨$edgeId⟩ SET in = {currentParentRecordId}, out = attribute:⟨$childKey⟩",
-					edgeParams, cancellationToken);
+				var edgeId = $"{typedRecordId.Replace(":", "_")}__attr_{EscapeString(attrKey)}";
+				sb.Append($"UPSERT has_attribute:⟨{P(edgeId)}⟩ SET in = {typedRecordId}, out = attribute:⟨{P(attrKey)}⟩;");
 			}
 			else
 			{
 				var prevAttrKey = $"{objKey}_{string.Join('`', attribute.Take(i))}";
 				var edgeId = $"attr_{EscapeString(prevAttrKey)}__attr_{EscapeString(attrKey)}";
-				var innerEdgeParams = new Dictionary<string, object?>
-				{
-					["parentKey"] = prevAttrKey,
-					["childKey"] = attrKey,
-					["edgeId"] = edgeId
-				};
-				await ExecuteAsync(
-					"UPSERT has_attribute:⟨$edgeId⟩ SET in = attribute:⟨$parentKey⟩, out = attribute:⟨$childKey⟩",
-					innerEdgeParams, cancellationToken);
+				sb.Append($"UPSERT has_attribute:⟨{P(edgeId)}⟩ SET in = attribute:⟨{P(prevAttrKey)}⟩, out = attribute:⟨{P(attrKey)}⟩;");
 			}
-
-			currentParentRecordId = $"attribute:⟨{attrKey}⟩";
-			lastAttrKey = attrKey;
 		}
 
-		if (lastAttrKey == null) return false;
-
-		var ownerParams = new Dictionary<string, object?>
+		// 2. Owner edge for EVERY level — leaf and every auto-created branch parent. Deleted-then-recreated
+		// so a re-set re-owns; because it is inside this transaction the swap is atomic to readers.
+		for (var i = 0; i < attribute.Length; i++)
 		{
-			["attrKey"] = lastAttrKey,
-			["ownerKey"] = ownerKey
-		};
+			var attrKey = $"{objKey}_{string.Join('`', attribute.Take(i + 1))}";
+			sb.Append($"DELETE has_attribute_owner WHERE in = attribute:⟨{P(attrKey)}⟩;");
+			sb.Append($"RELATE attribute:⟨{P(attrKey)}⟩->has_attribute_owner->player:{P(ownerKey)};");
+		}
 
-		await ExecuteAsync(
-			"DELETE has_attribute_owner WHERE in = attribute:⟨$attrKey⟩",
-			ownerParams, cancellationToken);
-
-		await ExecuteAsync(
-			"RELATE attribute:⟨$attrKey⟩->has_attribute_owner->player:$ownerKey",
-			ownerParams, cancellationToken);
-
-	// Set branch flag on parent attribute nodes (not the root typed node)
-	for (var i = 0; i < attribute.Length - 1; i++)
-	{
-		var longName = string.Join('`', attribute.Take(i + 1));
-		var attrKey = $"{objKey}_{longName}";
-		var escapedAttrKey = EscapeRecordId(attrKey);
-		var branchParams = new Dictionary<string, object?>();
-		await ExecuteAsync(
-			$"RELATE attribute:⟨{escapedAttrKey}⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = 'BRANCH' AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨{escapedAttrKey}⟩) LIMIT 1)",
-			branchParams, cancellationToken);
-	}
-
-	for (var i = 0; i < attribute.Length; i++)
-	{
-		var longName = string.Join('`', attribute.Take(i + 1));
-		var attrEntry = await GetSharpAttributeEntry(longName, cancellationToken);
-		var flagNames = attrEntry?.DefaultFlags ?? [];
-
-		var attrKey = $"{objKey}_{longName}";
-		var escapedAttrKey = EscapeRecordId(attrKey);
-		foreach (var flagName in flagNames)
+		// 3. BRANCH flag on every parent node (not the leaf, not the root typed node).
+		for (var i = 0; i < attribute.Length - 1; i++)
 		{
-			var flagParams = new Dictionary<string, object?>
+			var attrKey = $"{objKey}_{string.Join('`', attribute.Take(i + 1))}";
+			var escapedAttrKey = EscapeRecordId(attrKey);
+			sb.Append($"RELATE attribute:⟨{escapedAttrKey}⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = 'BRANCH' AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨{escapedAttrKey}⟩) LIMIT 1);");
+		}
+
+		// 4. Default flags configured for each level's attribute entry.
+		for (var i = 0; i < attribute.Length; i++)
+		{
+			var attrKey = $"{objKey}_{string.Join('`', attribute.Take(i + 1))}";
+			var escapedAttrKey = EscapeRecordId(attrKey);
+			foreach (var flagName in defaultFlagsPerLevel[i])
 			{
-				["flagName"] = flagName
-			};
-
-			await ExecuteAsync(
-				$"RELATE attribute:⟨{escapedAttrKey}⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = string::uppercase($flagName) AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨{escapedAttrKey}⟩) LIMIT 1)",
-				flagParams, cancellationToken);
+				sb.Append($"RELATE attribute:⟨{escapedAttrKey}⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = string::uppercase({P(flagName)}) AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨{escapedAttrKey}⟩) LIMIT 1);");
+			}
 		}
-	}
 
-	return true;
+		sb.Append("COMMIT TRANSACTION");
+
+		await ExecuteAsync(sb.ToString(), txnParams, cancellationToken);
+		return true;
 	}
 
 	public async ValueTask<bool> SetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
@@ -472,11 +438,17 @@ public partial class SurrealDatabase
 		else
 		{
 			var deleteParams = new Dictionary<string, object?> { ["key"] = attrKey };
-			await ExecuteAsync("DELETE has_attribute WHERE out = attribute:⟨$key⟩", deleteParams, cancellationToken);
-			await ExecuteAsync("DELETE has_attribute_flag WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-			await ExecuteAsync("DELETE has_attribute_owner WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-			await ExecuteAsync("DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-			await ExecuteAsync("DELETE attribute:⟨$key⟩", deleteParams, cancellationToken);
+			// One transaction: the owner edge is deleted before the node, so without isolation a
+			// concurrent examine sees the still-present node with no owner and crashes.
+			await ExecuteAsync(
+				"BEGIN TRANSACTION;" +
+				"DELETE has_attribute WHERE out = attribute:⟨$key⟩;" +
+				"DELETE has_attribute_flag WHERE in = attribute:⟨$key⟩;" +
+				"DELETE has_attribute_owner WHERE in = attribute:⟨$key⟩;" +
+				"DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩;" +
+				"DELETE attribute:⟨$key⟩;" +
+				"COMMIT TRANSACTION",
+				deleteParams, cancellationToken);
 
 			if (attribute.Length > 1)
 			{
@@ -501,12 +473,18 @@ public partial class SurrealDatabase
 		await WipeAttributeDescendantsAsync(attrKey, cancellationToken);
 
 		var deleteParams = new Dictionary<string, object?> { ["key"] = attrKey };
-		await ExecuteAsync("DELETE has_attribute WHERE out = attribute:⟨$key⟩", deleteParams, cancellationToken);
-		await ExecuteAsync("DELETE has_attribute WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-		await ExecuteAsync("DELETE has_attribute_flag WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-		await ExecuteAsync("DELETE has_attribute_owner WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-		await ExecuteAsync("DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
-		await ExecuteAsync("DELETE attribute:⟨$key⟩", deleteParams, cancellationToken);
+		// One transaction: owner edge deleted before the node — isolate so a concurrent examine never
+		// sees the node without its owner.
+		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"DELETE has_attribute WHERE out = attribute:⟨$key⟩;" +
+			"DELETE has_attribute WHERE in = attribute:⟨$key⟩;" +
+			"DELETE has_attribute_flag WHERE in = attribute:⟨$key⟩;" +
+			"DELETE has_attribute_owner WHERE in = attribute:⟨$key⟩;" +
+			"DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩;" +
+			"DELETE attribute:⟨$key⟩;" +
+			"COMMIT TRANSACTION",
+			deleteParams, cancellationToken);
 
 		if (attribute.Length > 1)
 		{
@@ -779,9 +757,16 @@ public partial class SurrealDatabase
 					["attrKey"] = attrKey,
 					["newKey"] = newKey
 				};
+				// Re-create the owner edge inside a transaction so the attribute is never observed
+				// owner-less between the DELETE and the RELATE — a concurrent examine ->
+				// GetAttributeOwnerAsync would otherwise see a null owner and crash. SurrealDB graph-edge
+				// in/out cannot be UPDATEd, so the edge must be re-created; the transaction is what makes
+				// that atomic to outside readers.
 				await ExecuteAsync(
+					"BEGIN TRANSACTION;" +
 					"DELETE has_attribute_owner WHERE in = attribute:⟨$attrKey⟩;" +
-					"RELATE attribute:⟨$attrKey⟩->has_attribute_owner->player:$newKey",
+					"RELATE attribute:⟨$attrKey⟩->has_attribute_owner->player:$newKey;" +
+					"COMMIT TRANSACTION",
 					attrParams, cancellationToken);
 			}
 		}

@@ -277,9 +277,14 @@ public partial class SurrealDatabase
 			["destKey"] = destKey
 		};
 
+		// One transaction so the object is never momentarily location-less between the DELETE and the
+		// RELATE — this is the hot object-movement path, and GetLocationForTypedAsync throws on a
+		// missing at_location edge, so an un-isolated gap here is a concurrent-read crash.
 		await ExecuteAsync(
+			$"BEGIN TRANSACTION;" +
 			$"DELETE at_location WHERE in = {srcTable}:$srcKey;" +
-			$"RELATE {srcTable}:$srcKey->at_location->{destTable}:$destKey",
+			$"RELATE {srcTable}:$srcKey->at_location->{destTable}:$destKey;" +
+			$"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 	}
 

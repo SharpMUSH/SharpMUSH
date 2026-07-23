@@ -38,7 +38,7 @@ public static class CommandAttributeScanner
 			foreach (var attr in attrList)
 			{
 				if (attr.Flags.Any(f => f.Name == "no_inherit"))
-					noInheritPrefixes.Add((attr.LongName ?? "") + "`");
+					noInheritPrefixes.Add(attr.LongName + "`");
 			}
 		}
 
@@ -47,12 +47,12 @@ public static class CommandAttributeScanner
 		foreach (var attr in attrList)
 		{
 			if (attr.Flags.Any(flag => flag.Name == "no_command"))
-				localNoCommandPrefixes.Add((attr.LongName ?? "") + "`");
+				localNoCommandPrefixes.Add(attr.LongName + "`");
 		}
 
 		foreach (var attr in attrList)
 		{
-			var longName = attr.LongName ?? "";
+			var longName = attr.LongName;
 
 			// Skip if no_inherit (or descendant of no_inherit) and we're looking at parent attributes
 			if (!isLocal)

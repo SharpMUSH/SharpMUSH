@@ -423,3 +423,6 @@ pennmush
 # Agent worktrees (created by the Agent tool; never commit)
 .claude/worktrees/
 .superpowers/
+
+# Local SurrealDB rocksdb data dir from running the server locally
+surrealdb-data/
