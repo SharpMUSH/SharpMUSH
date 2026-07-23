@@ -60,13 +60,6 @@
     @if (_showLoginPanel && !_connected)
     {
         <div style="padding:0.375rem 0.625rem;background:var(--surface);border-top:1px solid var(--border-soft);">
-            @if (_showCharacterPicker)
-            {
-                <CharacterPicker OnConnected="OnCharacterPickerConnected"
-                                 OnCancelled="OnCharacterPickerCancelled" />
-            }
-            else
-            {
                 <MudTabs Rounded="false" MinimumTabWidth="100px" Style="font-size:0.75rem;">
                     <MudTabPanel Text="Character">
                         <div style="display:flex;flex-direction:column;gap:0.375rem;padding-top:0.25rem;">
@@ -156,7 +149,6 @@
                         }
                     </MudTabPanel>
                 </MudTabs>
-            }
         </div>
     }
 
@@ -276,7 +268,6 @@
     private string _regPassword = string.Empty;
     private bool _accountBusy;
     private string? _accountError;
-    private bool _showCharacterPicker;
 
     private DotNetObjectReference<GlobalTerminal>? _selfRef;
     private IJSObjectReference? _cmdLinkHandle;
@@ -354,27 +345,12 @@
             }
             else if (AccountAuth.IsLoggedIn)
             {
-                DebugLine("[DBG] account path entered");
                 var chars = AccountAuth.Characters.Count > 0
                     ? AccountAuth.Characters
                     : await AccountAuth.GetCharactersAsync();
-
-                DebugLine($"[DBG] account path: chars={chars.Count}");
-                if (chars.Count == 1)
-                {
-                    var ott = await AccountAuth.GetOttForCharacterAsync(chars[0]);
-                    DebugLine($"[DBG] account path: ott={(ott is null ? "NULL" : "OK")}");
-                    if (ott is not null)
-                    {
-                        SetPlayerName(chars[0].Name);
-                        await Terminal.ConnectWithOttAsync(_serverUri, ott);
-                    }
-                }
-                else if (chars.Count > 1)
-                {
-                    _showLoginPanel = true;
-                    _showCharacterPicker = true;
-                }
+                var target = AccountAuth.ActiveCharacter ?? chars.FirstOrDefault();
+                if (target is not null)
+                    await ConnectAsCharacterAsync(target);
             }
         }
 
@@ -460,8 +436,7 @@
         }
 
         _accountPassword = string.Empty;
-        _showCharacterPicker = true;
-        StateHasChanged();
+        await AutoConnectAfterLoginAsync();
     }
 
     private async Task AccountRegisterAsync()
@@ -481,8 +456,7 @@
         }
 
         _regPassword = string.Empty;
-        _showCharacterPicker = true;
-        StateHasChanged();
+        await AutoConnectAfterLoginAsync();
     }
 
     /// <summary>
@@ -499,19 +473,24 @@
     /// </summary>
     private void SetPlayerName(string? name) => Terminal.ConnectedPlayerName = name;
 
-    private Task OnCharacterPickerConnected()
+    /// <summary>Connects this terminal (the override on /play, else the command terminal) as the given character.</summary>
+    private async Task<bool> ConnectAsCharacterAsync(AccountAuthService.CharacterSummary character)
     {
-        _showLoginPanel = false;
-        _showCharacterPicker = false;
-        StateHasChanged();
-        return Task.CompletedTask;
+        var ott = await AccountAuth.GetOttForCharacterAsync(character);
+        if (ott is null) return false;
+
+        AccountAuth.SetActiveCharacter(character);
+        SetPlayerName(character.Name);
+        await Terminal.ConnectWithOttAsync(_serverUri, ott);
+        return true;
     }
 
-    private Task OnCharacterPickerCancelled()
+    private async Task AutoConnectAfterLoginAsync()
     {
-        _showCharacterPicker = false;
+        var target = AccountAuth.ActiveCharacter ?? AccountAuth.Characters.FirstOrDefault();
+        if (target is not null && await ConnectAsCharacterAsync(target))
+            _showLoginPanel = false;
         StateHasChanged();
-        return Task.CompletedTask;
     }
 
     private async Task ConnectAsync()

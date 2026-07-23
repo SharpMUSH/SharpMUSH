@@ -118,7 +118,6 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		var playHost = new PlayTerminalServiceHost(() => Substitute.For<IPlayTerminalService>());
 		Services.AddSingleton(playHost);
 		Services.AddSingleton<IPlayTerminalService>(playHost);
-		Services.AddSingleton<TerminalLoginService>();
 
 		return (first, second);
 	}
@@ -140,44 +139,35 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		return auth;
 	}
 
-	/// <summary>
-	/// The character picker's own "Connect" button — distinct from the connection bar's top-level
-	/// "Connect" button (rendered whenever <c>!_connected</c>, which is throughout this flow), so the
-	/// search is scoped to <c>.char-picker</c>.
-	/// </summary>
-	private static void ClickCharacterPickerConnect(IRenderedComponent<GlobalTerminal> cut)
-	{
-		cut.Find(".char-picker").QuerySelectorAll("button")
-			.First(b => b.TextContent.Trim() == "Connect")
-			.Click();
-	}
-
 	[Test]
-	public async Task Connecting_via_character_picker_shows_the_active_character_not_a_dead_terminal_property()
+	public async Task Multi_character_account_auto_connects_as_the_active_character()
 	{
 		var (first, _) = RegisterTerminal();
 		var auth = await CreateLoggedInAuthAsync();
 
 		var cut = Render<GlobalTerminal>();
 
-		cut.WaitForAssertion(() =>
-		{
-			if (!cut.Markup.Contains("char-picker"))
-				throw new InvalidOperationException("character picker not shown yet");
-		});
-
-		await cut.InvokeAsync(() => ClickCharacterPickerConnect(cut));
-
-		// The picker connects the current terminal as the selected character (no recreate — a terminal
-		// is only switched by opening a new tab).
+		// No picker: the terminal auto-connects as the active character (Alpha, the roster default).
 		cut.WaitForAssertion(() => first.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
-
 		await Assert.That(auth.ActiveCharacter?.Name).IsEqualTo("Alpha");
 
 		await cut.InvokeAsync(() => first.ConnectionStateChanged += Raise.Event<Action<bool>>(true));
 
 		await Assert.That(cut.Markup).Contains("Alpha");
 		await Assert.That(cut.Markup).DoesNotContain("not logged in");
+	}
+
+	[Test]
+	public async Task Play_override_auto_connects_the_play_terminal_not_the_command_terminal()
+	{
+		var (command, _) = RegisterTerminal();
+		var play = Substitute.For<ITerminalService>();
+		await CreateLoggedInAuthAsync();
+
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.TerminalOverride, play));
+
+		cut.WaitForAssertion(() => play.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
+		await command.DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>());
 	}
 
 	/// <summary>
