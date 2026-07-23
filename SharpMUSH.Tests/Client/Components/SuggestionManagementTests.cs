@@ -2,9 +2,11 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
+using NSubstitute;
 using SharpMUSH.Client.Pages.Admin;
 using SharpMUSH.Library.ExpandedObjectData;
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
 
 namespace SharpMUSH.Tests.Client.Components;
@@ -28,7 +30,9 @@ public class SuggestionManagementTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData());
-		ctx.Services.AddScoped(_ => httpClient);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		httpFactory.CreateClient("api").Returns(httpClient);
+		ctx.Services.AddScoped(_ => httpFactory);
 
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(100);
@@ -52,7 +56,9 @@ public class SuggestionManagementTests
 				{ "functions", new HashSet<string> { "add", "sub" } }
 			}
 		});
-		ctx.Services.AddScoped(_ => httpClient);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		httpFactory.CreateClient("api").Returns(httpClient);
+		ctx.Services.AddScoped(_ => httpFactory);
 
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(200);
@@ -76,7 +82,9 @@ public class SuggestionManagementTests
 				{ "functions", new HashSet<string> { "add", "sub" } }
 			}
 		});
-		ctx.Services.AddScoped(_ => httpClient);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		httpFactory.CreateClient("api").Returns(httpClient);
+		ctx.Services.AddScoped(_ => httpFactory);
 
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(200);
@@ -100,7 +108,9 @@ public class SuggestionManagementTests
 				{ "commands", new HashSet<string> { "@create" } }
 			}
 		});
-		ctx.Services.AddScoped(_ => httpClient);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		httpFactory.CreateClient("api").Returns(httpClient);
+		ctx.Services.AddScoped(_ => httpFactory);
 
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(200);
@@ -123,7 +133,9 @@ public class SuggestionManagementTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData());
-		ctx.Services.AddScoped(_ => httpClient);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		httpFactory.CreateClient("api").Returns(httpClient);
+		ctx.Services.AddScoped(_ => httpFactory);
 
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(100);
@@ -140,7 +152,9 @@ public class SuggestionManagementTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData());
-		ctx.Services.AddScoped(_ => httpClient);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		httpFactory.CreateClient("api").Returns(httpClient);
+		ctx.Services.AddScoped(_ => httpFactory);
 
 		var cut = ctx.Render<SuggestionManagement>();
 
@@ -156,7 +170,9 @@ public class SuggestionManagementTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData());
-		ctx.Services.AddScoped(_ => httpClient);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		httpFactory.CreateClient("api").Returns(httpClient);
+		ctx.Services.AddScoped(_ => httpFactory);
 
 		var cut = ctx.Render<SuggestionManagement>();
 
@@ -172,7 +188,9 @@ public class SuggestionManagementTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData());
-		ctx.Services.AddScoped(_ => httpClient);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		httpFactory.CreateClient("api").Returns(httpClient);
+		ctx.Services.AddScoped(_ => httpFactory);
 
 		var cut = ctx.Render<SuggestionManagement>();
 
@@ -196,7 +214,9 @@ public class SuggestionManagementTests
 				{ "help", new HashSet<string> { "intro" } }
 			}
 		});
-		ctx.Services.AddScoped(_ => httpClient);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		httpFactory.CreateClient("api").Returns(httpClient);
+		ctx.Services.AddScoped(_ => httpFactory);
 
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(100);
@@ -223,7 +243,9 @@ public class SuggestionManagementTests
 				{ "commands", new HashSet<string> { "@create", "@destroy", "@dig", "@emit" } }
 			}
 		});
-		ctx.Services.AddScoped(_ => httpClient);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		httpFactory.CreateClient("api").Returns(httpClient);
+		ctx.Services.AddScoped(_ => httpFactory);
 
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(100);
@@ -244,7 +266,9 @@ public class SuggestionManagementTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData(), delayMs: 1000);
-		ctx.Services.AddScoped(_ => httpClient);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		httpFactory.CreateClient("api").Returns(httpClient);
+		ctx.Services.AddScoped(_ => httpFactory);
 
 		var cut = ctx.Render<SuggestionManagement>();
 
