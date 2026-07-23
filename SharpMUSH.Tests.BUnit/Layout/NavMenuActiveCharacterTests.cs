@@ -166,9 +166,9 @@ public class NavMenuActiveCharacterTests : BunitContext, IAsyncDisposable
 
 		// No parameter change, no parent render — exactly the sibling-component situation
 		// that left the card stale.
-		cut.InvokeAsync(() => auth.SetActiveCharacter(new CharacterSummary(2, 2L, "Beta", "")));
+		await cut.InvokeAsync(() => auth.SetActiveCharacter(new CharacterSummary(2, 2L, "Beta", "")));
 
-		cut.WaitForAssertion(() =>
+		await cut.WaitForAssertionAsync(() =>
 		{
 			if (cut.Find(".phosphor-profile-name").TextContent != "Beta")
 				throw new InvalidOperationException("card not updated yet");
