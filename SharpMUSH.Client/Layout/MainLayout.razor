@@ -79,25 +79,23 @@
             </div>
         }
 
-        @if (_terminalOpen)
-        {
-            <div class="phosphor-terminal">
-                <div class="phosphor-terminal-header">
-                    <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:0.9375rem;color:var(--accent);margin-right:0.5625rem;" />
-                    <span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;">command terminal</span>
-                    <span style="font-family:'JetBrains Mono',monospace;font-size:0.6875rem;color:var(--text-faint);margin-left:0.5rem;">
-                        · @(Terminal.IsConnected ? "connected" : "disconnected")
-                    </span>
-                    <div style="flex:1;"></div>
-                    <button class="phosphor-icon-btn" @onclick="ToggleTerminal" title="Close Terminal">
-                        <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:1.125rem;" />
-                    </button>
-                </div>
-                <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
-                    <GlobalTerminal Terminal="Terminal" />
-                </div>
+        @* Always mounted so the command terminal auto-logs in on load; hidden until opened. *@
+        <div class="phosphor-terminal" style="@(_terminalOpen ? null : "display:none;")">
+            <div class="phosphor-terminal-header">
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:0.9375rem;color:var(--accent);margin-right:0.5625rem;" />
+                <span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;">command terminal</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:0.6875rem;color:var(--text-faint);margin-left:0.5rem;">
+                    · @(Terminal.IsConnected ? "connected" : "disconnected")
+                </span>
+                <div style="flex:1;"></div>
+                <button class="phosphor-icon-btn" @onclick="ToggleTerminal" title="Close Terminal">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:1.125rem;" />
+                </button>
             </div>
-        }
+            <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+                <GlobalTerminal Terminal="Terminal" />
+            </div>
+        </div>
 
         @* Mobile-only hybrid bottom navigation. The primary destinations stay visible (the
            research-backed pattern for engagement/discoverability); "Menu" opens the full
@@ -142,6 +140,22 @@
     private bool _isDebugAuth;
     private LayoutConfiguration? _layout;
     private string _searchQuery = string.Empty;
+    private string? _pendingHintStrip;
+
+    /// <summary>
+    /// Strips the consumed <c>?as=</c> hint from the URL once rendering has settled. Nulling the
+    /// field first makes this one-shot; it cannot run during <c>OnInitializedAsync</c> (see
+    /// <see cref="ConsumeCharacterHintAsync"/>), and the first render happens before that method's
+    /// awaits complete, so this deliberately does not gate on <c>firstRender</c>.
+    /// </summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (_pendingHintStrip is null) return;
+
+        var target = _pendingHintStrip;
+        _pendingHintStrip = null;
+        NavigationManager.NavigateTo(target, replace: true);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -164,16 +178,9 @@
         var isDebugMode = authState.User.Identity?.AuthenticationType == "Server authentication";
         if (!AccountAuth.ExplicitlyLoggedOut && (isDebugMode || (authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn)))
         {
-            var debugOtt = await AccountAuth.GetDebugOttAsync();
-            if (debugOtt is not null && !Terminal.IsConnected)
-                _ = Terminal.ConnectWithOttAsync(TerminalLogin.ServerUri, debugOtt.Token);
-
-            // Auto-start the command terminal on load: open the docked drawer once a connection exists/begins.
-            _terminalOpen = true;
-        }
-        else if (Terminal.IsConnected)
-        {
-            _terminalOpen = true;
+            // Kept for its side effect: refreshes the dev session so the routing below sees the
+            // logged-in admin. The always-mounted GlobalTerminal does the terminal connect itself.
+            await AccountAuth.GetDebugOttAsync();
         }
 
         if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
@@ -217,23 +224,25 @@
 
     /// <summary>
     /// Consumes a one-shot <c>?as=&lt;dbref&gt;-&lt;creationTime&gt;</c> entry hint written by
-    /// NavMenu's "open in new tab" affordance, then strips it from the URL immediately (replace-style
-    /// navigation) so it can't survive a reload or be re-consumed. A hint naming a character this
-    /// account does not own is ignored — the roster (<see cref="AccountAuthService.Characters"/>) is
-    /// the authority here, and the server would reject the switch anyway. A malformed hint is ignored
-    /// without throwing. Switching itself (<see cref="SwitchCharacterAsync"/> /
-    /// <see cref="CharacterSwitchService"/>) never touches the URL — this hint is an entry parameter
-    /// only.
+    /// NavMenu's "open in new tab" affordance. A hint naming a character this account does not own is
+    /// ignored — the roster (<see cref="AccountAuthService.Characters"/>) is the authority here, and
+    /// the server would reject the switch anyway. A malformed hint is ignored without throwing.
     /// </summary>
+    /// <remarks>
+    /// The URL strip is deferred to the first render (<see cref="_pendingHintStrip"/>) rather than
+    /// done here: navigating during <c>OnInitializedAsync</c> raises <c>LocationChanged</c>, which
+    /// re-enters this layout's render while it is still initialising — with the always-mounted
+    /// GlobalTerminal in the tree that re-entrant render recurses until the stack overflows. The hint
+    /// is still parsed here, before <c>GlobalTerminal</c> mounts, so it auto-logs in as the hinted
+    /// character; only the cosmetic strip waits for the first render.
+    /// </remarks>
     private async Task ConsumeCharacterHintAsync()
     {
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var hint = System.Web.HttpUtility.ParseQueryString(uri.Query)["as"];
         if (string.IsNullOrEmpty(hint)) return;
 
-        // Strip first: the hint must not survive a reload or be re-consumed, regardless of whether
-        // it turns out to be valid/owned below.
-        NavigationManager.NavigateTo(uri.GetLeftPart(UriPartial.Path), replace: true);
+        _pendingHintStrip = uri.GetLeftPart(UriPartial.Path);
 
         var parts = hint.Split('-');
         if (parts.Length != 2
