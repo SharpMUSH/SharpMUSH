@@ -148,31 +148,10 @@
                     </div>
                 }
 
-                @if (_showCreateChar)
-                {
-                    <div class="acct-divider"></div>
-                    <div class="acct-subtitle">Create new character</div>
-                    <div style="display:flex;gap:0.625rem;align-items:flex-end;flex-wrap:wrap;">
-                        <MudTextField @bind-Value="_newCharName" Label="Character name"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" Style="flex:1;min-width:140px;" />
-                        <MudTextField @bind-Value="_newCharPassword" Label="Password"
-                                      InputType="InputType.Password"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" Style="flex:1;min-width:140px;" />
-                        <button class="acct-btn acct-btn-primary" disabled="@_busy" @onclick="CreateCharacterAsync">Create</button>
-                        <button class="acct-btn acct-btn-ghost" @onclick="() => _showCreateChar = false">Cancel</button>
-                    </div>
-                    @if (_charError is not null)
-                    {
-                        <MudAlert Severity="Severity.Error" Class="mt-3">@_charError</MudAlert>
-                    }
-                }
-                else
-                {
-                    <button class="acct-btn acct-btn-outline" style="margin-top:1rem;"
-                            @onclick="() => { _showCreateChar = true; _charError = null; }">
-                        + Create new character
-                    </button>
-                }
+                <a class="acct-btn acct-btn-outline" style="margin-top:1rem;display:inline-block;"
+                   href="/characters/new">
+                    + Create new character
+                </a>
             </div>
         }
 
@@ -193,10 +172,6 @@
     private string? _profileSuccess;
     private bool _busy;
     private bool _loadingChars;
-    private bool _showCreateChar;
-    private string _newCharName = string.Empty;
-    private string _newCharPassword = string.Empty;
-    private string? _charError;
     private bool _isDebugAuth;
 
     protected override async Task OnInitializedAsync()
@@ -247,26 +222,6 @@
         _newPassword = string.Empty;
         if (success) _profileSuccess = "Password updated.";
         else _profileError = error;
-        StateHasChanged();
-    }
-
-    private async Task CreateCharacterAsync()
-    {
-        _charError = null;
-        _busy = true;
-        StateHasChanged();
-        var (success, error, _) = await AccountAuth.CreateCharacterAsync(_newCharName, _newCharPassword);
-        _busy = false;
-        if (success)
-        {
-            _showCreateChar = false;
-            _newCharName = string.Empty;
-            _newCharPassword = string.Empty;
-        }
-        else
-        {
-            _charError = error;
-        }
         StateHasChanged();
     }
 
