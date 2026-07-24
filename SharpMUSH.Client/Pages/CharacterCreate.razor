@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @using SharpMUSH.Client.Services
 @inject AccountAuthService AccountAuth
+@inject ICharacterUpgradeService Upgrade
 @inject NavigationManager Nav
 
 <PageTitle>Create character — SharpMUSH</PageTitle>
@@ -43,12 +44,25 @@
         _error = null;
         _busy = true;
 
-        var (success, error, _) = await AccountAuth.CreateCharacterAsync(_name, _password);
+        var (success, error, character) = await AccountAuth.CreateCharacterAsync(_name, _password);
 
         _busy = false;
-        if (success)
-            Nav.NavigateTo("/account");
-        else
+        if (!success)
+        {
             _error = error;
+            return;
+        }
+
+        // A first character becomes the active one (a guest, or a fresh account) — start playing it
+        // everywhere. Creating an additional character just adds it to the roster.
+        if (character is not null && AccountAuth.Characters.Count == 1)
+        {
+            await Upgrade.PlayAsAsync(character);
+            Nav.NavigateTo("/play");
+        }
+        else
+        {
+            Nav.NavigateTo("/account");
+        }
     }
 }

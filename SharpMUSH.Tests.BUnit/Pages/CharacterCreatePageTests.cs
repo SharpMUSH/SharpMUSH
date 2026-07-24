@@ -34,6 +34,7 @@ file sealed class CharacterCreateApiHandler(bool succeed) : HttpMessageHandler
 public class CharacterCreatePageTests : BunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _ownedHttpClients = [];
+	private ICharacterUpgradeService _upgrade = null!;
 
 	private void SeedLoggedIn(bool createSucceeds)
 	{
@@ -51,6 +52,10 @@ public class CharacterCreatePageTests : BunitContext, IAsyncDisposable
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance));
+
+		_upgrade = Substitute.For<ICharacterUpgradeService>();
+		_upgrade.PlayAsAsync(Arg.Any<AccountAuthService.CharacterSummary>()).Returns(Task.FromResult(true));
+		Services.AddSingleton(_upgrade);
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);
@@ -76,7 +81,7 @@ public class CharacterCreatePageTests : BunitContext, IAsyncDisposable
 	}
 
 	[TUnit.Core.Test]
-	public async Task Successful_create_returns_to_account()
+	public async Task Creating_a_first_character_upgrades_and_goes_to_play()
 	{
 		SeedLoggedIn(createSucceeds: true);
 		var nav = Services.GetRequiredService<NavigationManager>();
@@ -88,9 +93,10 @@ public class CharacterCreatePageTests : BunitContext, IAsyncDisposable
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!nav.Uri.EndsWith("/account"))
-				throw new InvalidOperationException("did not navigate to /account yet");
+			if (!nav.Uri.EndsWith("/play"))
+				throw new InvalidOperationException("did not navigate to /play yet");
 		});
+		await _upgrade.Received(1).PlayAsAsync(Arg.Is<AccountAuthService.CharacterSummary>(c => c.Name == "Bob"));
 	}
 
 	public new async ValueTask DisposeAsync()

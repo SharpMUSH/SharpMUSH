@@ -50,6 +50,7 @@ public static class TerminalServiceCollectionExtensions
 
 		services.AddSingleton<CharacterSwitchService>();
 		services.AddSingleton<TerminalLoginService>();
+		services.AddSingleton<ICharacterUpgradeService, CharacterUpgradeService>();
 
 		return services;
 	}
