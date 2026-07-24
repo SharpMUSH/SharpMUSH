@@ -55,8 +55,6 @@ builder.Services.AddSingleton<HelpService>(sp =>
 	var factory = sp.GetRequiredService<IHttpClientFactory>();
 	return new HelpService(factory.CreateClient("help"));
 });
-builder.Services.AddScoped<CredentialService>();
-builder.Services.AddSingleton<OttAuthService>();
 builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());
 builder.Services.AddSingleton<DatabaseConversionService>();

@@ -30,13 +30,6 @@ public interface ITerminalService : IAsyncDisposable
 	Task ConnectAsync(string serverUri);
 
 	/// <summary>
-	/// Connect to the WebSocket server and authenticate using a One-Time Token fetched from
-	/// the SharpMUSH API.  Falls back to direct <c>connect name password</c> if the OTT
-	/// request fails (e.g. API server unreachable).
-	/// </summary>
-	Task ConnectAndLoginAsync(string serverUri, string playerName, string password, OttAuthService ottAuth);
-
-	/// <summary>
 	/// Connect to <paramref name="serverUri"/> and authenticate with an already-obtained OTT.
 	/// Used when the account session provided the token directly.
 	/// </summary>

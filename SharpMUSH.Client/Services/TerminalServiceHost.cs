@@ -84,9 +84,6 @@ public class TerminalServiceHost : ITerminalService
 
 	public Task ConnectAsync(string serverUri) => _inner.ConnectAsync(serverUri);
 
-	public Task ConnectAndLoginAsync(string serverUri, string playerName, string password, OttAuthService ottAuth)
-		=> _inner.ConnectAndLoginAsync(serverUri, playerName, password, ottAuth);
-
 	public Task ConnectWithOttAsync(string serverUri, string ott) => _inner.ConnectWithOttAsync(serverUri, ott);
 	public Task DisconnectAsync() => _inner.DisconnectAsync();
 	public Task SendAsync(string command) => _inner.SendAsync(command);
