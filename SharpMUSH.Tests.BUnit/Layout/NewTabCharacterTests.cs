@@ -131,9 +131,6 @@ public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 		var hostEnv = Substitute.For<Microsoft.AspNetCore.Components.WebAssembly.Hosting.IWebAssemblyHostEnvironment>();
 		hostEnv.Environment.Returns("Production");
 		Services.AddSingleton(hostEnv);
-		Services.AddSingleton(sp => new CredentialService(sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
-		Services.AddSingleton(sp => new OttAuthService(
-			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<OttAuthService>.Instance));
 
 		Auth = this.AddAuthorization();
 		Auth.SetAuthorized("headwiz");

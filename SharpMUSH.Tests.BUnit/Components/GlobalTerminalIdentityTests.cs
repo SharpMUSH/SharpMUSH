@@ -89,11 +89,6 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		var hostEnv = Substitute.For<IWebAssemblyHostEnvironment>();
 		hostEnv.Environment.Returns("Production");
 		Services.AddSingleton(hostEnv);
-
-		Services.AddSingleton(sp => new CredentialService(sp.GetRequiredService<IJSRuntime>()));
-		Services.AddSingleton(sp => new OttAuthService(
-			sp.GetRequiredService<IHttpClientFactory>(),
-			NullLogger<OttAuthService>.Instance));
 	}
 
 	/// <summary>
