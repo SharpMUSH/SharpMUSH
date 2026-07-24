@@ -114,11 +114,12 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	public event Action? OnConnectionStateChanged;
 	public event Action<GameOutputMessage>? OnOutputReceived;
 	public event Action<RoomEventMessage>? OnRoomEventReceived;
-	public event Action<SceneEventMessage>? OnSceneEventReceived;
 	public event Action? OnPluginsChanged;
+	public event Action<SceneEventMessage>? OnSceneEventReceived;
 
 	public Task ConnectAsync() => Task.CompletedTask;
 	public Task DisconnectAsync() => Task.CompletedTask;
+	public Task ReconnectAsync() => Task.CompletedTask;
 
 	public Task SendCommandAsync(string command)
 	{
@@ -283,7 +284,7 @@ public class SceneSurfaceTests : BunitContext
 		}, TimeSpan.FromSeconds(5));
 
 		// Round-trip the author's pose as a realtime event → it renders exactly once.
-		cut.InvokeAsync(() => _hub.RaiseScene(new SceneEventMessage(
+		await cut.InvokeAsync(() => _hub.RaiseScene(new SceneEventMessage(
 			SceneId: "S1",
 			EventType: "pose",
 			ActorName: "Mysterious Stranger",

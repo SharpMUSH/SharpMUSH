@@ -43,8 +43,9 @@ public abstract class MudBlazorTestContext : BunitContext
 		Services.AddSingleton(new AccountAuthService(
 			StubFactoryReturningEmptyList(), Substitute.For<IJSRuntime>(), NullLogger<AccountAuthService>.Instance));
 		// NavMenu's account panel injects CharacterSwitchService. Render tests never invoke a switch,
-		// but it must be resolvable; the container builds it from the AccountAuthService and terminal
-		// hosts registered above.
+		// but it must be resolvable; it depends on the AccountAuthService above and the game-hub
+		// connection state (reconnected on a switch).
+		Services.AddSingleton(Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 	}
 

@@ -9,7 +9,7 @@ using SharpMUSH.Server.Helpers;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Services;
 using System.Net;
-using System.Security.Claims;
+using SharpMUSH.Server.Authentication;
 using System.Text;
 using System.Text.Json;
 using System.Web;
@@ -109,11 +109,11 @@ public class WikiController(
 	private bool CanSeeUnpublished => User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiRead);
 
 	/// <summary>
-	/// The caller's character dbref from the JWT NameIdentifier claim. Never defaults to a
-	/// privileged dbref: a missing claim means we cannot attribute the action, so callers
-	/// must reject the request rather than silently acting as God (#1).
+	/// The caller's character dbref (the acting/primary character, from the <c>character_dbref</c>
+	/// claim). Never defaults to a privileged dbref: a missing claim means we cannot attribute the
+	/// action, so callers must reject the request rather than silently acting as God (#1).
 	/// </summary>
-	private string? CallerDbref => User.FindFirstValue(ClaimTypes.NameIdentifier);
+	private string? CallerDbref => User.GetActingCharacterDbref();
 
 	/// <summary>True when the caller is the original author of <paramref name="page"/>. Authors
 	/// always see their own drafts even without the <see cref="PortalPermission.WikiRead"/> scope.</summary>

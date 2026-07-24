@@ -99,7 +99,7 @@ The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all 
 - `IWikiService` (via `InMemoryWikiService`) — wiki CRUD
 - `ISceneService` (via `InMemorySceneService`) — real-time scene participation
 - `IGameHubConnectionFactory` / `IConnectionStateService` — SignalR lifecycle management
-- `AccountAuthService` / `OttAuthService` — account-session token stored in WASM memory; auth bridging
+- `AccountAuthService` — account-session token stored in WASM memory; mints per-character OTTs for the terminal
 - `ITerminalService` / `IWebSocketClientService` — raw WebSocket terminal
 
 **Authentication modes:**

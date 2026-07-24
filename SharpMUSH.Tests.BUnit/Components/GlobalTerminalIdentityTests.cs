@@ -41,11 +41,11 @@ file sealed class GlobalTerminalApiHandler(IReadOnlyList<CharacterSummary> chara
 			});
 		}
 
-		if (request.Method == HttpMethod.Post && path == "api/auth/switch-character")
+		if (request.Method == HttpMethod.Post && path == "api/auth/mush-token")
 		{
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{
-				Content = JsonContent.Create(new { ott = "new-character-ott", expiresIn = 300 })
+				Content = JsonContent.Create(new { token = "new-character-ott", expiresIn = 60 })
 			});
 		}
 
@@ -54,13 +54,10 @@ file sealed class GlobalTerminalApiHandler(IReadOnlyList<CharacterSummary> chara
 }
 
 /// <summary>
-/// Task 7 removed <c>CharacterPicker</c>'s own write to <c>Terminal.ConnectedPlayerName</c> —
-/// <c>AccountAuth.ActiveCharacter</c> became the sole owner of identity — but left
-/// <c>GlobalTerminal.OnCharacterPickerConnected</c> reading the now-dead
-/// <c>Terminal.ConnectedPlayerName</c> back off the freshly-recreated (and never written-to) inner
-/// terminal. The connection bar then rendered "not logged in" for a character that was actually
-/// selected and connecting. This pins the fix: <c>GlobalTerminal</c> must read
-/// <c>AccountAuth.ActiveCharacter?.Name</c> instead, exactly like <c>MainLayout</c>'s readers.
+/// Covers how <see cref="GlobalTerminal"/> resolves the connected character's display identity: it
+/// auto-connects as the active character and derives the connbar label from
+/// <c>AccountAuth.ActiveCharacter</c> (falling back to the terminal's own ConnectedPlayerName for
+/// direct connects), and it drives exactly the terminal it is given, never an ambient default.
 /// </summary>
 public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 {
@@ -92,19 +89,12 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		var hostEnv = Substitute.For<IWebAssemblyHostEnvironment>();
 		hostEnv.Environment.Returns("Production");
 		Services.AddSingleton(hostEnv);
-
-		Services.AddSingleton(sp => new CredentialService(sp.GetRequiredService<IJSRuntime>()));
-		Services.AddSingleton(sp => new OttAuthService(
-			sp.GetRequiredService<IHttpClientFactory>(),
-			NullLogger<OttAuthService>.Instance));
 	}
 
 	/// <summary>
-	/// Registers a real <see cref="TerminalServiceHost"/> (concrete type AND its interface aliased to
-	/// the same instance, mirroring production DI) backed by a two-substitute factory queue, so
-	/// <c>GlobalTerminal</c>'s injected <c>DefaultTerminal</c> and <c>CharacterPicker</c>'s injected
-	/// <c>Terminal</c> resolve to the exact same facade — required for the picker's
-	/// <c>RecreateAsync()</c> to be visible to the terminal that renders the connection bar.
+	/// A real <see cref="TerminalServiceHost"/> backed by a two-substitute factory queue, so a
+	/// <c>RecreateAsync()</c> swaps the inner from <c>First</c> to <c>Second</c> observably. Tests pass
+	/// this host to <c>GlobalTerminal</c>'s required <c>Terminal</c> parameter.
 	/// </summary>
 	private (ITerminalService First, ITerminalService Second) RegisterTerminal()
 	{
@@ -115,13 +105,9 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		Services.AddSingleton(host);
 		Services.AddSingleton<ITerminalService>(host);
 
-		// CharacterPicker now goes through CharacterSwitchService (Task 8 fix pass, Finding 1) rather
-		// than calling TerminalServiceHost directly, so its dependencies must be resolvable even though
-		// this test class never exercises the play terminal itself.
 		var playHost = new PlayTerminalServiceHost(() => Substitute.For<IPlayTerminalService>());
 		Services.AddSingleton(playHost);
 		Services.AddSingleton<IPlayTerminalService>(playHost);
-		Services.AddSingleton<CharacterSwitchService>();
 
 		return (first, second);
 	}
@@ -143,52 +129,35 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		return auth;
 	}
 
-	/// <summary>
-	/// The character picker's own "Connect" button — distinct from the connection bar's top-level
-	/// "Connect" button (rendered whenever <c>!_connected</c>, which is throughout this flow), so the
-	/// search is scoped to <c>.char-picker</c>.
-	/// </summary>
-	private static void ClickCharacterPickerConnect(IRenderedComponent<GlobalTerminal> cut)
-	{
-		cut.Find(".char-picker").QuerySelectorAll("button")
-			.First(b => b.TextContent.Trim() == "Connect")
-			.Click();
-	}
-
 	[Test]
-	public async Task Connecting_via_character_picker_shows_the_active_character_not_a_dead_terminal_property()
+	public async Task Multi_character_account_auto_connects_as_the_active_character()
 	{
-		var (_, second) = RegisterTerminal();
+		var (first, _) = RegisterTerminal();
 		var auth = await CreateLoggedInAuthAsync();
 
-		var cut = Render<GlobalTerminal>();
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, Services.GetRequiredService<TerminalServiceHost>()));
 
-		// Preconditions: logged in with >1 character routes GlobalTerminal into the character-picker
-		// panel instead of auto-connecting or showing the plain login form. OnInitializedAsync's own
-		// AccountAuth.InitAsync() call genuinely yields (Task.Yield()), so the picker doesn't appear
-		// in the synchronous first render — wait for it rather than asserting immediately.
-		cut.WaitForAssertion(() =>
-		{
-			if (!cut.Markup.Contains("char-picker"))
-				throw new InvalidOperationException("character picker not shown yet");
-		});
-
-		await cut.InvokeAsync(() => ClickCharacterPickerConnect(cut));
-
-		// Confirms the picker's flow (RecreateAsync -> ConnectWithOttAsync on the fresh, second inner)
-		// actually ran before asserting on its effect.
-		cut.WaitForAssertion(() => second.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
-
+		// No picker: the terminal auto-connects as the active character (Alpha, the roster default).
+		cut.WaitForAssertion(() => first.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
 		await Assert.That(auth.ActiveCharacter?.Name).IsEqualTo("Alpha");
 
-		// Second never has its ConnectedPlayerName written (Task 7 removed that write), so the old
-		// `_playerName = Terminal.ConnectedPlayerName` read would stay null forever here — simulate a
-		// connect completing so the connection bar's playerName branch renders, and confirm it shows
-		// the active character rather than "not logged in".
-		await cut.InvokeAsync(() => second.ConnectionStateChanged += Raise.Event<Action<bool>>(true));
+		await cut.InvokeAsync(() => first.ConnectionStateChanged += Raise.Event<Action<bool>>(true));
 
 		await Assert.That(cut.Markup).Contains("Alpha");
 		await Assert.That(cut.Markup).DoesNotContain("not logged in");
+	}
+
+	[Test]
+	public async Task Play_override_auto_connects_the_play_terminal_not_the_command_terminal()
+	{
+		var (command, _) = RegisterTerminal();
+		var play = Substitute.For<ITerminalService>();
+		await CreateLoggedInAuthAsync();
+
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, play));
+
+		cut.WaitForAssertion(() => play.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
+		await command.DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>());
 	}
 
 	/// <summary>
@@ -208,7 +177,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		first.ConnectedPlayerName.Returns((string?)null);
 		var auth = await CreateLoggedInAuthAsync();
 
-		var cut = Render<GlobalTerminal>();
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, Services.GetRequiredService<TerminalServiceHost>()));
 
 		// Preconditions: connected from the start (so init's own auto-connect/picker branches never
 		// engage — this test is about the switch shape, not first-login), showing the roster default.
@@ -262,7 +231,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		// during the switch and is now being reopened/remounted).
 		auth.SetActiveCharacter(Beta);
 
-		var cut = Render<GlobalTerminal>();
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, Services.GetRequiredService<TerminalServiceHost>()));
 
 		cut.WaitForAssertion(() =>
 		{
@@ -299,7 +268,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 			sp.GetRequiredService<IJSRuntime>(),
 			NullLogger<AccountAuthService>.Instance));
 
-		var cut = Render<GlobalTerminal>();
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, Services.GetRequiredService<TerminalServiceHost>()));
 
 		cut.WaitForAssertion(() =>
 		{

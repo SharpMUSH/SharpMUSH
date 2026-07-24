@@ -160,6 +160,7 @@ public class AccountPanelTests : BunitContext
 		Services.AddSingleton(playTerminalHost);
 		Services.AddSingleton<IPlayTerminalService>(playTerminalHost);
 
+		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 
 		var apiClient = new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
@@ -196,6 +197,7 @@ public class AccountPanelTests : BunitContext
 		Services.AddSingleton(playTerminalHost);
 		Services.AddSingleton<IPlayTerminalService>(playTerminalHost);
 
+		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 
 		var apiClient = new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") };

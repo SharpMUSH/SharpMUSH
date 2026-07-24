@@ -3,10 +3,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Hosting
 @using Microsoft.JSInterop
-@inject ITerminalService DefaultTerminal
 @inject IJSRuntime JsRuntime
-@inject CredentialService Credentials
-@inject OttAuthService OttAuth
 @inject AccountAuthService AccountAuth
 @inject IWebAssemblyHostEnvironment HostEnv
 @inject NavigationManager Navigation
@@ -41,11 +38,16 @@
         @if (!_connected)
         {
             <div style="flex:1"></div>
-            <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
-                           title="Login settings"
-                           OnClick="ToggleLoginPanel" />
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                       OnClick="ConnectAsync">Connect</MudButton>
+            @if (AccountAuth.IsLoggedIn)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           OnClick="ConnectAsync">Connect</MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                           OnClick='() => Navigation.NavigateTo("/login")'>Log in</MudButton>
+            }
         }
         else
         {
@@ -56,110 +58,6 @@
                        OnClick="DisconnectAsync">Disconnect</MudButton>
         }
     </div>
-
-    @if (_showLoginPanel && !_connected)
-    {
-        <div style="padding:0.375rem 0.625rem;background:var(--surface);border-top:1px solid var(--border-soft);">
-            @if (_showCharacterPicker)
-            {
-                <CharacterPicker ServerUri="@_serverUri"
-                                 OnConnected="OnCharacterPickerConnected"
-                                 OnCancelled="OnCharacterPickerCancelled" />
-            }
-            else
-            {
-                <MudTabs Rounded="false" MinimumTabWidth="100px" Style="font-size:0.75rem;">
-                    <MudTabPanel Text="Character">
-                        <div style="display:flex;flex-direction:column;gap:0.375rem;padding-top:0.25rem;">
-                            <MudText Typo="Typo.caption" Style="color:#888;">
-                                Player name is saved; password is sent once via HTTPS and never stored.
-                            </MudText>
-                            <div style="display:flex;gap:0.5rem;align-items:flex-end;">
-                                <MudTextField @bind-Value="_loginPlayer"
-                                              Label="Player name"
-                                              Variant="Variant.Outlined" Margin="Margin.Dense"
-                                              Style="flex:1;font-size:0.75rem;" />
-                                <MudTextField @bind-Value="_loginPassword"
-                                              Label="Password (not stored)"
-                                              InputType="InputType.Password"
-                                              Variant="Variant.Outlined" Margin="Margin.Dense"
-                                              Style="flex:1;font-size:0.75rem;" />
-                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
-                                           OnClick="SaveCredentialsAsync">Save name</MudButton>
-                                <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small"
-                                           OnClick="ClearCredentialsAsync">Clear</MudButton>
-                            </div>
-                        </div>
-                    </MudTabPanel>
-
-                    <MudTabPanel Text="Account">
-                        @if (!_showAccountRegister)
-                        {
-                            <div style="display:flex;flex-direction:column;gap:0.375rem;padding-top:0.25rem;">
-                                <MudText Typo="Typo.caption" Style="color:#888;">
-                                    Login with your SharpMUSH account to choose a character.
-                                </MudText>
-                                <div style="display:flex;gap:0.5rem;align-items:flex-end;">
-                                    <MudTextField @bind-Value="_accountIdentifier"
-                                                  Label="Account name or email"
-                                                  Variant="Variant.Outlined" Margin="Margin.Dense"
-                                                  Style="flex:1;font-size:0.75rem;" />
-                                    <MudTextField @bind-Value="_accountPassword"
-                                                  Label="Password (not stored)"
-                                                  InputType="InputType.Password"
-                                                  Variant="Variant.Outlined" Margin="Margin.Dense"
-                                                  Style="flex:1;font-size:0.75rem;" />
-                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                                               Disabled="_accountBusy"
-                                               OnClick="AccountLoginAsync">Login</MudButton>
-                                </div>
-                                @if (_accountError is not null)
-                                {
-                                    <MudText Color="Color.Error" Typo="Typo.caption">@_accountError</MudText>
-                                }
-                                <MudButton Variant="Variant.Text" Size="Size.Small"
-                                           OnClick="() => _showAccountRegister = true">
-                                    No account? Register →
-                                </MudButton>
-                            </div>
-                        }
-                        else
-                        {
-                            <div style="display:flex;flex-direction:column;gap:0.375rem;padding-top:0.25rem;">
-                                <MudText Typo="Typo.caption" Style="color:#888;">
-                                    Create a new account. Email is optional.
-                                </MudText>
-                                <div style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap;">
-                                    <MudTextField @bind-Value="_regUsername"
-                                                  Label="Account name (required)"
-                                                  Variant="Variant.Outlined" Margin="Margin.Dense"
-                                                  Style="flex:1;min-width:140px;font-size:0.75rem;" />
-                                    <MudTextField @bind-Value="_regEmail"
-                                                  Label="Email (optional)"
-                                                  Variant="Variant.Outlined" Margin="Margin.Dense"
-                                                  Style="flex:1;min-width:140px;font-size:0.75rem;" />
-                                    <MudTextField @bind-Value="_regPassword"
-                                                  Label="Password"
-                                                  InputType="InputType.Password"
-                                                  Variant="Variant.Outlined" Margin="Margin.Dense"
-                                                  Style="flex:1;min-width:140px;font-size:0.75rem;" />
-                                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
-                                               Disabled="_accountBusy"
-                                               OnClick="AccountRegisterAsync">Register</MudButton>
-                                </div>
-                                @if (_accountError is not null)
-                                {
-                                    <MudText Color="Color.Error" Typo="Typo.caption">@_accountError</MudText>
-                                }
-                                <MudButton Variant="Variant.Text" Size="Size.Small"
-                                           OnClick="() => _showAccountRegister = false">← Back to login</MudButton>
-                            </div>
-                        }
-                    </MudTabPanel>
-                </MudTabs>
-            }
-        </div>
-    }
 
     <div class="sharp-terminal-input">
         <span class="term-prompt">›</span>
@@ -191,11 +89,11 @@
     [Parameter] public string? DefaultServerUri { get; set; }
 
     /// <summary>
-    /// Optional terminal service to drive this instance. When null, the injected command terminal
-    /// (<c>ITerminalService</c>) is used. The /play page passes its own <c>IPlayTerminalService</c>
-    /// so the player session is a separate connection from the command/softcode terminal.
+    /// The terminal service this instance renders and drives. Required — each render site names its
+    /// own terminal (the command terminal in the drawer, the play terminal on /play), so there is no
+    /// ambient default that another caller could accidentally reach.
     /// </summary>
-    [Parameter] public ITerminalService? TerminalOverride { get; set; }
+    [Parameter, EditorRequired] public ITerminalService Terminal { get; set; } = default!;
 
     /// <summary>
     /// Whether this terminal shows the connection/auto-login <c>[DBG]</c> diagnostic lines.
@@ -219,7 +117,6 @@
     /// </summary>
     [Parameter] public int TargetColumns { get; set; }
 
-    private ITerminalService Terminal => TerminalOverride ?? DefaultTerminal;
 
     /// <summary>Writes a diagnostic line only when this terminal opted in and we are in dev.</summary>
     private void DebugLine(string text)
@@ -235,9 +132,6 @@
     private string _serverUri = string.Empty;
     private string _input = string.Empty;
     private bool _connected;
-    private bool _showLoginPanel;
-    private string? _loginPlayer;
-    private string? _loginPassword;
 
     /// <summary>
     /// The connbar's identity label, derived live rather than cached: caching this per-terminal was
@@ -247,18 +141,11 @@
     /// instead of the actually-active one.
     /// <para>
     /// Prefers <c>Terminal.ConnectedPlayerName</c> when set, falling back to
-    /// <see cref="AccountAuthService.ActiveCharacter"/>. Account-based connects (character picker,
-    /// switch, dev-debug auto-connect) never write <c>Terminal.ConnectedPlayerName</c> — see
-    /// <see cref="SetPlayerName"/> — so they always fall through to <c>ActiveCharacter</c>. Direct
-    /// connects (manual "Character" tab credentials, a typed <c>connect &lt;name&gt; ...</c>, and
-    /// dev-debug's own OTT connect) set only <c>Terminal.ConnectedPlayerName</c> and never touch
-    /// <c>AccountAuth</c> at all, so they need the primary read here — an account-only property
-    /// regressed every one of them to "not logged in".
-    /// </para>
-    /// <para>
-    /// <c>ConnectedPlayerName</c> is the terminal's own login identity; <c>ActiveCharacter</c> is the
-    /// account-level fallback used when the terminal hasn't recorded one. <see cref="string.IsNullOrEmpty"/>
-    /// expresses that precedence directly.
+    /// <see cref="AccountAuthService.ActiveCharacter"/>. Account-based connects (auto-login,
+    /// dev-debug) never write <c>Terminal.ConnectedPlayerName</c> — see <see cref="SetPlayerName"/> —
+    /// so they fall through to <c>ActiveCharacter</c>. A typed <c>connect &lt;name&gt; ...</c> sets
+    /// only <c>Terminal.ConnectedPlayerName</c> and never touches <c>AccountAuth</c>, so it needs the
+    /// primary read here.
     /// </para>
     /// </summary>
     private string? _playerName => string.IsNullOrEmpty(Terminal.ConnectedPlayerName)
@@ -267,17 +154,6 @@
 
     private readonly List<TerminalLine> _displayLines = [];
     private bool _autoScroll = true;
-
-    // Account tab state
-    private string _accountIdentifier = string.Empty;
-    private string _accountPassword = string.Empty;
-    private bool _showAccountRegister;
-    private string _regUsername = string.Empty;
-    private string _regEmail = string.Empty;
-    private string _regPassword = string.Empty;
-    private bool _accountBusy;
-    private string? _accountError;
-    private bool _showCharacterPicker;
 
     private DotNetObjectReference<GlobalTerminal>? _selfRef;
     private IJSObjectReference? _cmdLinkHandle;
@@ -322,14 +198,8 @@
         Terminal.ConnectionStateChanged += OnConnectionChanged;
         AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
 
-        var (savedPlayer, savedPassword) = await Credentials.LoadAsync();
-        _loginPlayer = savedPlayer;
-        _loginPassword = savedPassword;
-
         // Restore account session (sessionStorage is tab-scoped)
         await AccountAuth.InitAsync();
-        if (!string.IsNullOrWhiteSpace(AccountAuth.Username))
-            _accountIdentifier = AccountAuth.Username;
 
         DebugLine($"[DBG] init: connected={_connected} isLoggedIn={AccountAuth.IsLoggedIn}");
 
@@ -355,27 +225,12 @@
             }
             else if (AccountAuth.IsLoggedIn)
             {
-                DebugLine("[DBG] account path entered");
                 var chars = AccountAuth.Characters.Count > 0
                     ? AccountAuth.Characters
                     : await AccountAuth.GetCharactersAsync();
-
-                DebugLine($"[DBG] account path: chars={chars.Count}");
-                if (chars.Count == 1)
-                {
-                    var ott = await AccountAuth.GetOttForCharacterAsync(chars[0]);
-                    DebugLine($"[DBG] account path: ott={(ott is null ? "NULL" : "OK")}");
-                    if (ott is not null)
-                    {
-                        SetPlayerName(chars[0].Name);
-                        await Terminal.ConnectWithOttAsync(_serverUri, ott);
-                    }
-                }
-                else if (chars.Count > 1)
-                {
-                    _showLoginPanel = true;
-                    _showCharacterPicker = true;
-                }
+                var target = AccountAuth.ActiveCharacter ?? chars.FirstOrDefault();
+                if (target is not null)
+                    await ConnectAsCharacterAsync(target);
             }
         }
 
@@ -444,48 +299,6 @@
     private Task SendNawsAsync(int cols, int rows) =>
         Terminal.SendControlAsync($"{{\"type\":\"naws\",\"cols\":{cols},\"rows\":{rows}}}");
 
-    private async Task AccountLoginAsync()
-    {
-        _accountError = null;
-        _accountBusy = true;
-        StateHasChanged();
-
-        var (success, error, _) = await AccountAuth.LoginAsync(_accountIdentifier, _accountPassword);
-        _accountBusy = false;
-
-        if (!success)
-        {
-            _accountError = error ?? "Login failed.";
-            StateHasChanged();
-            return;
-        }
-
-        _accountPassword = string.Empty;
-        _showCharacterPicker = true;
-        StateHasChanged();
-    }
-
-    private async Task AccountRegisterAsync()
-    {
-        _accountError = null;
-        _accountBusy = true;
-        StateHasChanged();
-
-        var (success, error, _) = await AccountAuth.RegisterAsync(_regUsername, _regEmail, _regPassword);
-        _accountBusy = false;
-
-        if (!success)
-        {
-            _accountError = error ?? "Registration failed.";
-            StateHasChanged();
-            return;
-        }
-
-        _regPassword = string.Empty;
-        _showCharacterPicker = true;
-        StateHasChanged();
-    }
-
     /// <summary>
     /// Records the connected player's name on the underlying terminal service. <c>_playerName</c>
     /// reads this back directly, preferring it over <c>AccountAuth.ActiveCharacter</c>, and
@@ -500,36 +313,26 @@
     /// </summary>
     private void SetPlayerName(string? name) => Terminal.ConnectedPlayerName = name;
 
-    private Task OnCharacterPickerConnected()
+    /// <summary>Connects this terminal (the override on /play, else the command terminal) as the given character.</summary>
+    private async Task<bool> ConnectAsCharacterAsync(AccountAuthService.CharacterSummary character)
     {
-        _showLoginPanel = false;
-        _showCharacterPicker = false;
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
+        var ott = await AccountAuth.GetOttForCharacterAsync(character);
+        if (ott is null) return false;
 
-    private Task OnCharacterPickerCancelled()
-    {
-        _showCharacterPicker = false;
-        StateHasChanged();
-        return Task.CompletedTask;
+        AccountAuth.SetActiveCharacter(character);
+        SetPlayerName(character.Name);
+        await Terminal.ConnectWithOttAsync(_serverUri, ott);
+        return true;
     }
 
     private async Task ConnectAsync()
     {
+        var target = AccountAuth.ActiveCharacter ?? AccountAuth.Characters.FirstOrDefault();
+        if (target is null) return;
+
         try
         {
-            if (!string.IsNullOrWhiteSpace(_loginPlayer) && !string.IsNullOrWhiteSpace(_loginPassword))
-            {
-                // Use OTT flow: credentials go to API over HTTPS, WS only receives a token
-                SetPlayerName(_loginPlayer);
-                await Terminal.ConnectAndLoginAsync(_serverUri, _loginPlayer, _loginPassword, OttAuth);
-            }
-            else
-            {
-                // No credentials saved — just open the socket; user can type connect manually
-                await Terminal.ConnectAsync(_serverUri);
-            }
+            await ConnectAsCharacterAsync(target);
         }
         catch (Exception ex) { AddLocalLine($"[Error] {ex.Message}", TerminalLineSource.System); }
     }
@@ -569,30 +372,6 @@
     {
         ClearOutput();
         return Task.CompletedTask;
-    }
-
-    private void ToggleLoginPanel()
-    {
-        _showLoginPanel = !_showLoginPanel;
-        StateHasChanged();
-    }
-
-    private async Task SaveCredentialsAsync()
-    {
-        // Password is deliberately not saved — it's sent once via HTTPS to get an OTT
-        await Credentials.SaveAsync(_loginPlayer, null);
-        _showLoginPanel = false;
-        AddLocalLine("[System] Player name saved. Password is not stored.", TerminalLineSource.System);
-        StateHasChanged();
-    }
-
-    private async Task ClearCredentialsAsync()
-    {
-        await Credentials.ClearAsync();
-        _loginPlayer = null;
-        _loginPassword = null;
-        AddLocalLine("[System] Credentials cleared.", TerminalLineSource.System);
-        StateHasChanged();
     }
 
     private async Task OnInputKeyDown(KeyboardEventArgs e)

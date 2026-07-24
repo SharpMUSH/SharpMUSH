@@ -37,17 +37,8 @@ public class PlaySidebarTests : BunitContext
         defaultTerminal.Lines.Returns(Array.Empty<SharpMUSH.Client.Models.TerminalLine>());
         Services.AddSingleton(defaultTerminal);
 
-        // CredentialService depends only on IJSRuntime (already provided by bUnit JSInterop)
-        Services.AddSingleton(sp =>
-            new CredentialService(sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
-
-        // OttAuthService depends on IHttpClientFactory + ILogger
         var httpFactory = Substitute.For<IHttpClientFactory>();
         Services.AddSingleton(httpFactory);
-        Services.AddSingleton(sp =>
-            new OttAuthService(
-                sp.GetRequiredService<IHttpClientFactory>(),
-                NullLogger<OttAuthService>.Instance));
 
         // AccountAuthService depends on IHttpClientFactory + IJSRuntime + ILogger
         Services.AddSingleton(sp =>

@@ -94,32 +94,6 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		_ = WaitForLoginThenInitializeAsync(BeginLoginWait());
 	}
 
-	public async Task ConnectAndLoginAsync(string serverUri, string playerName, string password, OttAuthService ottAuth)
-	{
-		wsService.ClearSendBuffer();
-		await ConnectAsync(serverUri);
-
-		// Give the server a moment to send the connection banner
-		await Task.Delay(300);
-
-		var token = await ottAuth.GetTokenAsync(playerName, password);
-		if (token is not null)
-		{
-			_logger.LogInformation("Using OTT login for player {Name}", playerName);
-			await wsService.SendAsync($"connect token {token}");
-			AddSystemLine("[OTT] Authenticating…");
-		}
-		else
-		{
-			// OTT unavailable — fall back to direct connect (password over WSS, still encrypted)
-			_logger.LogWarning("OTT unavailable, falling back to direct connect for {Name}", playerName);
-			await wsService.SendAsync($"connect {playerName} {password}");
-			AddSystemLine("[Login] Connecting with credentials…");
-		}
-
-		_ = WaitForLoginThenInitializeAsync(BeginLoginWait());
-	}
-
 	/// <summary>
 	/// Cancels any in-flight login waiter and starts a fresh cancellation scope for the new
 	/// login attempt. Returns the token the new waiter must observe.
