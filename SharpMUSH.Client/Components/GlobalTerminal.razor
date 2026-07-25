@@ -7,6 +7,7 @@
 @inject AccountAuthService AccountAuth
 @inject IWebAssemblyHostEnvironment HostEnv
 @inject NavigationManager Navigation
+@inject ServerInfoService ServerInfo
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:0.84375rem;">
@@ -102,6 +103,13 @@
     /// additionally gated to the Development environment so production stays clean.
     /// </summary>
     [Parameter] public bool ShowDiagnostics { get; set; } = true;
+
+    /// <summary>
+    /// When set (the /play terminal), an anonymous visitor auto-connects as a temporary game guest
+    /// (<c>connect guest</c>) instead of staying disconnected. The command terminal leaves this off —
+    /// guests don't get a building/softcode surface.
+    /// </summary>
+    [Parameter] public bool AllowGuest { get; set; }
 
     /// <summary>Whether the inline Clear button shows in the input row. The /play terminal sets
     /// this false because Clear lives in its settings menu instead.</summary>
@@ -231,6 +239,10 @@
                 var target = AccountAuth.ActiveCharacter ?? chars.FirstOrDefault();
                 if (target is not null)
                     await ConnectAsCharacterAsync(target);
+            }
+            else if (AllowGuest && await ServerInfo.GuestLoginsEnabledAsync())
+            {
+                await Terminal.ConnectAsGuestAsync(_serverUri);
             }
         }
 

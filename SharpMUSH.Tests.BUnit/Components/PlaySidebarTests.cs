@@ -23,6 +23,7 @@ public class PlaySidebarTests : BunitContext
     public PlaySidebarTests()
     {
         Services.AddMudServices();
+        Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
         Services.AddLocalization();
         JSInterop.Mode = JSRuntimeMode.Loose;
 

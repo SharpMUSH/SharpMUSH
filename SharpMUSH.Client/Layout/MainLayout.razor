@@ -10,6 +10,7 @@
 @inject TerminalLoginService TerminalLogin
 @inject AccountAuthService AccountAuth
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ServerInfoService ServerInfo
 @inject ILayoutService LayoutService
 @inject IJSRuntime JS
 
@@ -105,8 +106,7 @@
         {
             <nav class="phosphor-bottomnav">
                 @BottomTab("/", Icons.Material.Filled.Home, Loc["Home"], exact: true)
-                @* Gated like the sidebar's Play link: only when a character session is active. *@
-                @if (_characterActive)
+                @if (_showPlay)
                 {
                     @BottomTab("/play", Icons.Material.Filled.SportsEsports, Loc["Play"])
                 }
@@ -137,6 +137,11 @@
     private bool _isPlayRoute = false;
     private bool _terminalOpen = false;
     private bool _characterActive = false;
+
+    // Logged-in users can Play as their character; anonymous visitors can Play only when the
+    // server accepts guests. Defaults to the config default (true) until the fetch settles.
+    private bool _guestsEnabled = true;
+    private bool _showPlay => AccountAuth.IsLoggedIn || _guestsEnabled;
     private bool _isDebugAuth;
     private LayoutConfiguration? _layout;
     private string _searchQuery = string.Empty;
@@ -199,6 +204,8 @@
 
         LayoutService.OnLayoutChanged += HandleLayoutChanged;
         _layout = await LayoutService.GetLayoutAsync(LayoutScopes.Global);
+
+        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
     }
 
     private void HandleLayoutChanged(string scope)

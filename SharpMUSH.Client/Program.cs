@@ -39,6 +39,7 @@ builder.Services.AddSingleton<SceneService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();
+builder.Services.AddSingleton<ServerInfoService>();
 builder.Services.AddSingleton<PackagesAdminService>();
 builder.Services.AddSingleton<BannedNamesService>();
 builder.Services.AddSingleton<SitelockService>();

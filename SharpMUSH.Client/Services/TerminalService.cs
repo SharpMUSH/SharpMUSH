@@ -94,6 +94,16 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		_ = WaitForLoginThenInitializeAsync(BeginLoginWait());
 	}
 
+	public async Task ConnectAsGuestAsync(string serverUri)
+	{
+		wsService.ClearSendBuffer();
+		await ConnectAsync(serverUri);
+		await Task.Delay(300);
+		AddSystemLine("[Guest] Connecting…");
+		await wsService.SendAsync("connect guest");
+		_ = WaitForLoginThenInitializeAsync(BeginLoginWait());
+	}
+
 	/// <summary>
 	/// Cancels any in-flight login waiter and starts a fresh cancellation scope for the new
 	/// login attempt. Returns the token the new waiter must observe.

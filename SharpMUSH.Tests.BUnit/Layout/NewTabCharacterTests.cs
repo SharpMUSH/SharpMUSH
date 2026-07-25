@@ -109,6 +109,7 @@ public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 	public NewTabCharacterTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		Services.AddSingleton<IStringLocalizer<SharedResource>, NewTabStubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 

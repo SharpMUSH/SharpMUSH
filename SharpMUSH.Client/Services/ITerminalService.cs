@@ -35,6 +35,12 @@ public interface ITerminalService : IAsyncDisposable
 	/// </summary>
 	Task ConnectWithOttAsync(string serverUri, string ott);
 
+	/// <summary>
+	/// Connect to <paramref name="serverUri"/> and log in as a temporary guest (<c>connect guest</c>).
+	/// Used when an anonymous visitor enters the play area.
+	/// </summary>
+	Task ConnectAsGuestAsync(string serverUri);
+
 	Task DisconnectAsync();
 
 	/// <summary>Send a raw command string to the MUSH server.</summary>

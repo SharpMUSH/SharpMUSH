@@ -69,6 +69,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 	public GlobalTerminalIdentityTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		JSInterop.Mode = JSRuntimeMode.Loose;
 
 		// GlobalTerminal.OnInitializedAsync calls AccountAuth.InitAsync() itself — the FIRST call to

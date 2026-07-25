@@ -10,6 +10,7 @@
 @inject AccountAuthService AccountAuth
 @inject CharacterSwitchService CharacterSwitch
 @inject ApplicationRegistryClient Registry
+@inject ServerInfoService ServerInfo
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 @implements IDisposable
@@ -38,7 +39,8 @@
         <div class="nav-group">
             <div class="nav-group-label">Play</div>
             @NavItem("/", Icons.Material.Filled.Home, Loc["Home"], NavLinkMatch.All)
-            @if (_characterActive)
+            @* Logged-in users Play as their character; guests Play only when the server allows it. *@
+            @if (_showPlay)
             {
                 <NavLink class="phosphor-nav-link" href="/play" Match="NavLinkMatch.Prefix">
                     <MudIcon Icon="@Icons.Material.Filled.SportsEsports" Class="phosphor-nav-icon" />
@@ -188,6 +190,11 @@
     private IReadOnlyList<string> _novelSections = [];
 
     private bool _characterActive;
+
+    // Anyone logged in can Play as their character; an anonymous visitor can Play only when the
+    // server accepts guest logins. Defaults to the config default (true) until the fetch settles.
+    private bool _guestsEnabled = true;
+    private bool _showPlay => AccountAuth.IsLoggedIn || _guestsEnabled;
     private bool _panelOpen;
 
     // Play-session terminal status, surfaced as a dot on the Play nav item.
@@ -258,6 +265,9 @@
 
         _apps = await Registry.ListAsync();
         _novelSections = PortalNavSections.NovelSections(_apps, role);
+
+        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
+        StateHasChanged();
     }
 
     private void OnConnectionChanged(bool connected)

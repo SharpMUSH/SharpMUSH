@@ -85,6 +85,7 @@ public class TerminalServiceHost : ITerminalService
 	public Task ConnectAsync(string serverUri) => _inner.ConnectAsync(serverUri);
 
 	public Task ConnectWithOttAsync(string serverUri, string ott) => _inner.ConnectWithOttAsync(serverUri, ott);
+	public Task ConnectAsGuestAsync(string serverUri) => _inner.ConnectAsGuestAsync(serverUri);
 	public Task DisconnectAsync() => _inner.DisconnectAsync();
 	public Task SendAsync(string command) => _inner.SendAsync(command);
 	public Task SendControlAsync(string controlJson) => _inner.SendControlAsync(controlJson);

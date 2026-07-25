@@ -100,6 +100,7 @@ public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 	public NavMenuCharacterSwitchTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		Services.AddSingleton<IStringLocalizer<SharedResource>, NavMenuSwitchStubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 

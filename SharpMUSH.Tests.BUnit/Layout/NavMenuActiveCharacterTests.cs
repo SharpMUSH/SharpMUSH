@@ -80,6 +80,7 @@ public class NavMenuActiveCharacterTests : BunitContext, IAsyncDisposable
 	public NavMenuActiveCharacterTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		Services.AddSingleton<IStringLocalizer<SharedResource>, NavMenuStubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 

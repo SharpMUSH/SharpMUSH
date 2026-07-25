@@ -92,6 +92,7 @@ public class AccountPanelTests : BunitContext
 	public AccountPanelTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		Services.AddSingleton<IStringLocalizer<SharedResource>, StubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		Auth = this.AddAuthorization();
