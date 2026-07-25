@@ -69,7 +69,7 @@
                     }
 
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                               Disabled="_busy" OnClick="RegisterAsync"
+                               Disabled="_busy" OnClick="RegisterAsync" Class="register-submit"
                                Style="font-weight:600;font-size:0.9375rem;height:42px;">
                         @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
                         Create Account
@@ -87,7 +87,10 @@
 </div>
 
 @code {
-    private int _tabIndex = 0;
+    private const int SignInTabIndex = 0;
+    private const int RegisterTabIndex = 1;
+
+    private int _tabIndex = SignInTabIndex;
     private bool _busy;
     private string? _error;
 
@@ -103,14 +106,17 @@
     protected override void OnInitialized()
     {
         // Populated when RedirectToLogin sent an anonymous visitor here off an [Authorize] page
-        // (see App.razor's NotAuthorized branch / RedirectToLogin.razor). Parsed by hand rather
-        // than via [SupplyParameterFromQuery] or QueryHelpers: this page isn't always reached
-        // through the Router's own query-binding path (bUnit renders it directly in tests), and
+        // (see App.razor's NotAuthorized branch / RedirectToLogin.razor), and the ?tab=register
+        // hint set by /register's redirect. Parsed by hand rather than via
+        // [SupplyParameterFromQuery] or QueryHelpers: this page isn't always reached through the
+        // Router's own query-binding path (bUnit renders it directly in tests), and
         // Microsoft.AspNetCore.WebUtilities isn't a package this WASM client references.
-        _returnUrl = ExtractReturnUrl(Nav.Uri);
+        _returnUrl = GetQueryParam(Nav.Uri, "returnUrl");
+        if (string.Equals(GetQueryParam(Nav.Uri, "tab"), "register", StringComparison.OrdinalIgnoreCase))
+            _tabIndex = RegisterTabIndex;
     }
 
-    private static string? ExtractReturnUrl(string uri)
+    private static string? GetQueryParam(string uri, string key)
     {
         var query = new Uri(uri).Query;
         if (string.IsNullOrEmpty(query)) return null;
@@ -118,7 +124,7 @@
         foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
             var parts = pair.Split('=', 2);
-            if (parts.Length == 2 && parts[0] == "returnUrl")
+            if (parts.Length == 2 && parts[0] == key)
                 return Uri.UnescapeDataString(parts[1]);
         }
         return null;

@@ -110,7 +110,7 @@ file static class AdminAccountsTestServices
             .AddSingleton(sp => new AccountAuthService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-                NullLogger<AccountAuthService>.Instance))
+                NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
             .AddSingleton(sp => new AdminAccountsService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 sp.GetRequiredService<AccountAuthService>()));

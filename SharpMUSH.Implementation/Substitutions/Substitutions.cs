@@ -75,6 +75,7 @@ public static partial class Substitutions
 				}),
 			"@" => $"#{parser.CurrentState.Caller!.Value.Number}",
 			"!" => $"#{parser.CurrentState.Executor!.Value.Number}",
+			"d" or "D" => parser.CurrentState.Handle?.ToString() ?? string.Empty,
 			"L" or "l" => await GetLocationDbRefString(parser, mediator),
 			"C" or "c" => LastCommandBeforeEvaluation(parser), // Last command before evaluation - using same implementation
 			"U" or "u" => LastCommandBeforeEvaluation(parser), // Last command after evaluation - using same implementation

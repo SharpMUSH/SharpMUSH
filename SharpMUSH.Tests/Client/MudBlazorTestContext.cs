@@ -41,7 +41,8 @@ public abstract class MudBlazorTestContext : BunitContext
 		// Its HTTP/JS dependencies are never exercised during a render (only properties are read),
 		// so stubs suffice; Username/Characters default to empty.
 		Services.AddSingleton(new AccountAuthService(
-			StubFactoryReturningEmptyList(), Substitute.For<IJSRuntime>(), NullLogger<AccountAuthService>.Instance));
+			StubFactoryReturningEmptyList(), Substitute.For<IJSRuntime>(), NullLogger<AccountAuthService>.Instance,
+			terminalHost, playTerminalHost));
 		// NavMenu's account panel injects CharacterSwitchService. Render tests never invoke a switch,
 		// but it must be resolvable; it depends on the AccountAuthService above and the game-hub
 		// connection state (reconnected on a switch).

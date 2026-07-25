@@ -172,7 +172,7 @@ public class AccountPanelTests : BunitContext
 			sp.GetRequiredService<IHttpClientFactory>(),
 			NullLogger<ApplicationRegistryClient>.Instance));
 		Services.AddSingleton(sp => new AccountAuthService(
-			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance));
+			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 
 		return Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm => nm.Add(c => c.IsCollapsed, isCollapsed)));
 	}
@@ -209,7 +209,7 @@ public class AccountPanelTests : BunitContext
 			sp.GetRequiredService<IHttpClientFactory>(),
 			NullLogger<ApplicationRegistryClient>.Instance));
 		Services.AddSingleton(sp => new AccountAuthService(
-			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance));
+			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 
 		return Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm => nm.Add(c => c.IsCollapsed, isCollapsed)));
 	}

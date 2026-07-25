@@ -32,7 +32,7 @@ public class GlobalTerminalGuestTests : BunitContext
 		Services.AddSingleton(sp => new AccountAuthService(
 			sp.GetRequiredService<IHttpClientFactory>(),
 			sp.GetRequiredService<IJSRuntime>(),
-			NullLogger<AccountAuthService>.Instance));
+			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 	}
 
 	private static ITerminalService AnonymousTerminal()

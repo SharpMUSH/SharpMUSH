@@ -1,5 +1,8 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using SharpMUSH.Client.Layout;
+using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.Client.Components;
 
@@ -30,7 +33,6 @@ public class NavMenuTests : MudBlazorTestContext
 		// Core links are present but render as icons only (no text label) when collapsed.
 		// (Scope the Home link to the nav list — the logo also points at "/".)
 		await Assert.That(cut.Find("a.phosphor-nav-link[href='/']").TextContent.Trim()).IsEmpty();
-		await Assert.That(cut.Find("a[href='/softcode']").TextContent.Trim()).IsEmpty();
 	}
 
 	[Test]
@@ -53,7 +55,6 @@ public class NavMenuTests : MudBlazorTestContext
 		await Assert.That(cut.FindAll("a[href='/scenes']").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("a[href='/wiki']").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("a[href='/characters']").Count).IsEqualTo(1);
-		await Assert.That(cut.FindAll("a[href='/softcode']").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("a[href='/help']").Count).IsEqualTo(1);
 
 		// The profile card (and its /account link) is auth-gated: anonymous visitors
@@ -87,10 +88,25 @@ public class NavMenuTests : MudBlazorTestContext
 	}
 
 	[Test]
-	public async Task Expanded_SoftcodeLinkText_IsCorrect()
+	public async Task SoftcodeLink_Hidden_WhenNotAuthorized()
 	{
+		// The softcode editor is gated behind the softcode.use policy; an anonymous/guest
+		// visitor (RenderExpanded is unauthenticated) must not see the nav item.
 		var cut = RenderExpanded();
-		await Assert.That(cut.Find("a[href='/softcode']").TextContent).Contains("Softcode");
+		await Assert.That(cut.FindAll("a[href='/softcode']").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task SoftcodeLink_Shown_WhenAuthorizedWithSoftcodeUse()
+	{
+		var auth = this.AddAuthorization();
+		auth.SetAuthorized("player");
+		auth.SetPolicies("softcode.use");
+
+		var cut = Render<NavMenu>(parameters => parameters.Add(p => p.IsCollapsed, false));
+
+		var softcodeLink = cut.Find("a[href='/softcode']");
+		await Assert.That(softcodeLink.TextContent).Contains("Softcode");
 	}
 
 	[Test]
@@ -98,6 +114,19 @@ public class NavMenuTests : MudBlazorTestContext
 	{
 		var cut = RenderExpanded();
 		await Assert.That(cut.FindAll(".phosphor-brand").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task Expanded_Brand_ShowsConfiguredGameName()
+	{
+		var serverInfo = Substitute.For<ServerInfoService>(Substitute.For<IHttpClientFactory>());
+		serverInfo.GuestLoginsEnabledAsync().Returns(Task.FromResult(true));
+		serverInfo.GameNameAsync().Returns(Task.FromResult("My Grand Game"));
+		Services.AddSingleton(serverInfo);
+
+		var cut = RenderExpanded();
+
+		await Assert.That(cut.Find(".phosphor-brand").TextContent.Trim()).IsEqualTo("My Grand Game");
 	}
 
 	[Test]

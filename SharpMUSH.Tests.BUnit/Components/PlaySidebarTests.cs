@@ -46,7 +46,7 @@ public class PlaySidebarTests : BunitContext
             new AccountAuthService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-                NullLogger<AccountAuthService>.Instance));
+                NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 
         // IWebAssemblyHostEnvironment (needed by GlobalTerminal for IsDevelopment())
         var hostEnv = Substitute.For<IWebAssemblyHostEnvironment>();

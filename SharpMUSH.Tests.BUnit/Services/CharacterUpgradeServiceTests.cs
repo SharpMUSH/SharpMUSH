@@ -70,7 +70,7 @@ public class CharacterUpgradeServiceTests : BunitContext, IAsyncDisposable
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.permissions").SetResult("[\"*\"]");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);
 
-		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance);
+		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 		var (ok, err, _) = await auth.LoginAsync("wiz", "pw");
 		if (!ok) throw new InvalidOperationException($"login failed: {err}");
 

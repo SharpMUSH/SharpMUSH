@@ -148,7 +148,7 @@
                     </div>
                 }
 
-                <a class="acct-btn acct-btn-outline" style="margin-top:1rem;display:inline-block;"
+                <a class="acct-btn acct-btn-primary" style="margin-top:1rem;display:inline-block;"
                    href="/characters/new">
                     + Create new character
                 </a>
@@ -240,8 +240,9 @@
         // _isDebugAuth is computed once in OnInitializedAsync and otherwise stays true after
         // logout, which would keep this page's "Debug Mode" alert showing the stale DebugAdmin
         // identity instead of the plain "not logged in" message — reset it directly here.
-        // (NavMenu's HandleLogoutAsync has no flag of its own to mirror: it just disconnects both
-        // terminals and navigates away.) Land on "/" (the anonymous home) rather than /login:
+        // (NavMenu's HandleLogoutAsync has no flag of its own to mirror: it just navigates away.
+        // Ending the game terminals is handled inside AccountAuth.LogoutAsync for every caller.)
+        // Land on "/" (the anonymous home) rather than /login:
         // logging out returns a visitor to anonymous browsing, not a forced sign-in screen. This
         // won't re-trigger debug re-auth since AccountAuth.LogoutAsync above latches ExplicitlyLoggedOut.
         _isDebugAuth = false;

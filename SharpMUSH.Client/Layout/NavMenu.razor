@@ -28,8 +28,7 @@
         @if (!IsCollapsed)
         {
             <div style="line-height:1.1;overflow:hidden;">
-                <div class="phosphor-brand">@Loc["AppTitle"]</div>
-                <div class="phosphor-brand-tag">GAME&nbsp;NAME</div>
+                <div class="phosphor-brand">@_gameName</div>
             </div>
         }
     </a>
@@ -72,7 +71,9 @@
 
         <div class="nav-group">
             <div class="nav-group-label">Build</div>
-            @NavItem("/softcode", Icons.Material.Filled.Code, Loc["SoftcodeEditor"])
+            <AuthorizeView Policy="softcode.use">
+                <Authorized>@NavItem("/softcode", Icons.Material.Filled.Code, Loc["SoftcodeEditor"])</Authorized>
+            </AuthorizeView>
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Build" Applications="_apps" />
             <AuthorizeView Policy="applications.admin">
                 <Authorized>@NavItem("/admin/applications", Icons.Material.Filled.Apps, "Applications")</Authorized>
@@ -195,6 +196,10 @@
     // server accepts guest logins. Defaults to the config default (true) until the fetch settles.
     private bool _guestsEnabled = true;
     private bool _showPlay => AccountAuth.IsLoggedIn || _guestsEnabled;
+
+    // The configured game name shown as the sidebar brand. Defaults to the config default until the
+    // ServerInfo fetch settles.
+    private string _gameName = "SharpMUSH";
     private bool _panelOpen;
 
     // Play-session terminal status, surfaced as a dot on the Play nav item.
@@ -267,6 +272,7 @@
         _novelSections = PortalNavSections.NovelSections(_apps, role);
 
         _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
+        _gameName = await ServerInfo.GameNameAsync();
         StateHasChanged();
     }
 
@@ -337,9 +343,9 @@
 
     private async Task HandleLogoutAsync()
     {
+        // AccountAuth.LogoutAsync is the single chokepoint that ends both game terminals (guarded on
+        // IsConnected), so this handler only has to navigate away afterwards.
         await AccountAuth.LogoutAsync();
-        await Terminal.DisconnectAsync();
-        await PlayTerminal.DisconnectAsync();
         Nav.NavigateTo("/", forceLoad: false);
     }
 

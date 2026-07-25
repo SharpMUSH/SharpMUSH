@@ -72,7 +72,7 @@ public class LoginReturnUrlTests : BunitContext, IAsyncDisposable
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-				NullLogger<AccountAuthService>.Instance))
+				NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
 			.AddSingleton(Substitute.For<ITerminalService>())
 			.AddSingleton<IStringLocalizer<SharedResource>, LoginStubLocalizer<SharedResource>>();
 

@@ -48,7 +48,7 @@ public class AccountAuthServiceInitTests : BunitContext
 		var service = new AccountAuthService(
 			Substitute.For<IHttpClientFactory>(),
 			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance);
+			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 
 		await service.InitAsync();
 
@@ -72,7 +72,7 @@ public class AccountAuthServiceInitTests : BunitContext
 		var service = new AccountAuthService(
 			Substitute.For<IHttpClientFactory>(),
 			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance);
+			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 
 		await service.InitAsync();
 
@@ -94,7 +94,7 @@ public class AccountAuthServiceInitTests : BunitContext
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance);
+		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 		await service.InitAsync();
 		await Assert.That(service.ExplicitlyLoggedOut).IsTrue();
 
@@ -126,7 +126,7 @@ public class AccountAuthServiceInitTests : BunitContext
 		var service = new AccountAuthService(
 			Substitute.For<IHttpClientFactory>(),
 			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance);
+			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 
 		await service.InitAsync();
 		await Assert.That(service.ExplicitlyLoggedOut).IsTrue();

@@ -14,10 +14,10 @@ namespace SharpMUSH.Server.Controllers;
 [Route("api/server-info")]
 public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options) : ControllerBase
 {
-	public record ServerInfoResponse(bool GuestsEnabled);
+	public record ServerInfoResponse(bool GuestsEnabled, string MudName);
 
 	[HttpGet]
 	[EnableRateLimiting("public-api")]
 	public IActionResult Get()
-		=> Ok(new ServerInfoResponse(options.CurrentValue.Net.Guests));
+		=> Ok(new ServerInfoResponse(options.CurrentValue.Net.Guests, options.CurrentValue.Net.MudName));
 }

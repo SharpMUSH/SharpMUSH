@@ -151,7 +151,7 @@ public class AccountAuthServiceHubTokenTests : BunitContext
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance);
+		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 		var character = new AccountAuthService.CharacterSummary(42, 12345L, "Bob", "");
 
 		var ott = await service.SwitchCharacterAsync(character);
@@ -176,7 +176,7 @@ public class AccountAuthServiceHubTokenTests : BunitContext
 		var service = new AccountAuthService(
 			Substitute.For<IHttpClientFactory>(),
 			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance);
+			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 		var character = new AccountAuthService.CharacterSummary(42, 12345L, "Bob", "");
 
 		// No HTTP handler configured at all: if the not-logged-in guard regresses, the call falls

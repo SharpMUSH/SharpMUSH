@@ -121,7 +121,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		factory.CreateClient("api").Returns(apiClient);
 		Services.AddSingleton(factory);
 
-		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance);
+		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 		var (success, error, _) = await auth.LoginAsync("headwiz", "password");
 		if (!success)
 			throw new InvalidOperationException($"Test setup login failed: {error}");
@@ -267,7 +267,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		Services.AddSingleton(sp => new AccountAuthService(
 			sp.GetRequiredService<IHttpClientFactory>(),
 			sp.GetRequiredService<IJSRuntime>(),
-			NullLogger<AccountAuthService>.Instance));
+			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 
 		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, Services.GetRequiredService<TerminalServiceHost>()));
 

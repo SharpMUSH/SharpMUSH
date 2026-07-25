@@ -276,6 +276,12 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 				if (TryCompletePendingRequest(plainTrimmed))
 					return;
 
+				// A late/orphaned end-marker (its request already timed out, or its id no longer
+				// matches the active one) is still an internal correlation token and must never
+				// surface in the visible buffer.
+				if (IsEndMarker(plainTrimmed))
+					return;
+
 				// Buffer the response lines for any active correlated request.
 				if (_pending.HasValue)
 					foreach (var raw in frame.Plain.Split('\n'))
@@ -305,6 +311,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 					if (TryCompletePendingRequest(line))
 						continue;
 
+					if (IsEndMarker(line))
+						continue;
+
 					_pending?.Buffer.Add(line);
 
 					if (!string.IsNullOrEmpty(line))
@@ -329,6 +338,26 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		}
 
 		return false;
+	}
+
+	/// <summary>
+	/// True when <paramref name="line"/> is a correlation end-marker (<c>SHARP_END:</c> followed by a
+	/// hex request id), regardless of whether it matches the currently pending request.
+	/// </summary>
+	private static bool IsEndMarker(string line)
+	{
+		if (!line.StartsWith(EndMarkerPrefix, StringComparison.Ordinal))
+			return false;
+
+		var id = line.AsSpan(EndMarkerPrefix.Length);
+		if (id.IsEmpty)
+			return false;
+
+		foreach (var c in id)
+			if (!char.IsAsciiHexDigit(c))
+				return false;
+
+		return true;
 	}
 
 	private void HandleStateChange(object? sender, WebSocketState state)

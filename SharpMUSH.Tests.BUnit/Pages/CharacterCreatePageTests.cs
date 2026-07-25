@@ -51,7 +51,7 @@ public class CharacterCreatePageTests : BunitContext, IAsyncDisposable
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-				NullLogger<AccountAuthService>.Instance));
+				NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 
 		_upgrade = Substitute.For<ICharacterUpgradeService>();
 		_upgrade.PlayAsAsync(Arg.Any<AccountAuthService.CharacterSummary>()).Returns(Task.FromResult(true));

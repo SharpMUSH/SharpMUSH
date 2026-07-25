@@ -19,7 +19,7 @@ public class CharacterSwitchServiceTests : BunitContext
 	private (AccountAuthService Auth, IConnectionStateService Connection, CharacterSwitchService Service) Build()
 	{
 		var auth = new AccountAuthService(
-			Substitute.For<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance);
+			Substitute.For<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 		var connection = Substitute.For<IConnectionStateService>();
 		return (auth, connection, new CharacterSwitchService(auth, connection));
 	}
