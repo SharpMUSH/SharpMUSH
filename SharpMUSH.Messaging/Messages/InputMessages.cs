@@ -33,7 +33,8 @@ public record ConnectionEstablishedMessage(
 	string IpAddress,
 	string Hostname,
 	string ConnectionType,
-	DateTimeOffset Timestamp
+	DateTimeOffset Timestamp,
+	string PresenceClass = "play"
 ) : IHandleMessage;
 
 /// <summary>

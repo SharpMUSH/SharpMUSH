@@ -17,12 +17,18 @@ public static class ResumeFrameParser
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 	};
 
-	/// <summary>The fresh-connect first frame: <c>{"type":"hello"}</c>.</summary>
-	public static string Hello() => JsonSerializer.Serialize(new HelloFrame("hello"), Json);
+	/// <summary>
+	/// The fresh-connect first frame: <c>{"type":"hello","class":"&lt;presenceClass&gt;"}</c>. The presence
+	/// class ("play" for a real interactive session, "portal" for a background query connection) rides on
+	/// the first frame so the server knows it at registration time; it survives reconnects because a
+	/// resume-to-dead re-registers fresh off its own first frame.
+	/// </summary>
+	public static string Hello(string presenceClass = "play")
+		=> JsonSerializer.Serialize(new HelloFrame("hello", presenceClass), Json);
 
-	/// <summary>The reconnect first frame: <c>{"type":"resume","token":"...","lastSeq":n}</c>.</summary>
-	public static string Resume(string token, long lastSeq)
-		=> JsonSerializer.Serialize(new ResumeFrame("resume", token, lastSeq), Json);
+	/// <summary>The reconnect first frame: <c>{"type":"resume","token":"...","lastSeq":n,"class":"..."}</c>.</summary>
+	public static string Resume(string token, long lastSeq, string presenceClass = "play")
+		=> JsonSerializer.Serialize(new ResumeFrame("resume", token, lastSeq, presenceClass), Json);
 
 	/// <summary>True if the frame is the <c>{"type":"reattached"}</c> rebind acknowledgement.</summary>
 	public static bool IsReattached(string frame) => TypeEquals(frame, "reattached");
@@ -100,7 +106,7 @@ public static class ResumeFrameParser
 
 	private static bool LooksLikeJson(string frame) => frame.Length > 0 && frame[0] == '{';
 
-	private sealed record HelloFrame(string Type);
+	private sealed record HelloFrame(string Type, string Class);
 
-	private sealed record ResumeFrame(string Type, string Token, long LastSeq);
+	private sealed record ResumeFrame(string Type, string Token, long LastSeq, string Class);
 }

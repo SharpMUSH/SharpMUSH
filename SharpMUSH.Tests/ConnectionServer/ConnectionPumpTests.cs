@@ -309,6 +309,50 @@ public class ConnectionPumpTests
 	}
 
 	[Test]
+	public async Task Registers_fresh_connection_with_the_hello_presence_class()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var pump = MakePump(bus, conn, desc);
+		var transport = new FakeTransport("{\"type\":\"hello\",\"class\":\"portal\"}", null);
+
+		await pump.RunAsync(transport, candidateHandle: 7, CancellationToken.None);
+
+		await conn.Received(1).RegisterAsync(
+			7, "1.2.3.4", "host", "fake",
+			Arg.Any<Func<byte[], ValueTask>>(),
+			Arg.Any<Func<byte[], ValueTask>>(),
+			Arg.Any<Func<System.Text.Encoding>>(),
+			Arg.Any<Action>(),
+			Arg.Any<Func<string, string, ValueTask>?>(),
+			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			"portal");
+	}
+
+	[Test]
+	public async Task Registers_fresh_connection_defaulting_presence_class_to_play()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var pump = MakePump(bus, conn, desc);
+		var transport = new FakeTransport("{\"type\":\"hello\"}", null);
+
+		await pump.RunAsync(transport, candidateHandle: 7, CancellationToken.None);
+
+		await conn.Received(1).RegisterAsync(
+			7, "1.2.3.4", "host", "fake",
+			Arg.Any<Func<byte[], ValueTask>>(),
+			Arg.Any<Func<byte[], ValueTask>>(),
+			Arg.Any<Func<System.Text.Encoding>>(),
+			Arg.Any<Action>(),
+			Arg.Any<Func<string, string, ValueTask>?>(),
+			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			"play");
+	}
+
+	[Test]
 	public async Task Reconnect_within_grace_rebinds_to_the_same_handle()
 	{
 		var bus = Substitute.For<IMessageBus>();

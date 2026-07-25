@@ -73,28 +73,21 @@ public static class SeqEnvelope
 	/// discriminator (not a substring) keeps a real first command like <c>say "hello"</c> from being
 	/// misclassified as the handshake and dropped.
 	/// </summary>
-	public static bool IsHello(string frame)
-	{
-		try
-		{
-			return JsonSerializer.Deserialize<TypedFrame>(frame, Json)?.Type == "hello";
-		}
-		catch (JsonException)
-		{
-			return false;
-		}
-	}
+	public static bool IsHello(string frame) => TryReadHello(frame, out _);
 
-	public static bool TryReadResume(string frame, out string token, out long lastSeq)
+	/// <summary>
+	/// True only if the frame is the structured <c>{"type":"hello"}</c> handshake, yielding its presence
+	/// class ("play" for a real session, "portal" for a background query connection). Defaults to "play"
+	/// when the <c>class</c> field is absent, so older clients and telnet keep counting as normal sessions.
+	/// </summary>
+	public static bool TryReadHello(string frame, out string presenceClass)
 	{
-		token = string.Empty;
-		lastSeq = 0;
+		presenceClass = "play";
 		try
 		{
-			var resume = JsonSerializer.Deserialize<ResumeFrame>(frame, Json);
-			if (resume?.Type != "resume" || resume.Token is null) return false;
-			token = resume.Token;
-			lastSeq = resume.LastSeq;
+			var hello = JsonSerializer.Deserialize<HelloFrame>(frame, Json);
+			if (hello?.Type != "hello") return false;
+			presenceClass = string.IsNullOrEmpty(hello.Class) ? "play" : hello.Class;
 			return true;
 		}
 		catch (JsonException)
@@ -103,11 +96,38 @@ public static class SeqEnvelope
 		}
 	}
 
-	private sealed record TypedFrame(string? Type);
+	public static bool TryReadResume(string frame, out string token, out long lastSeq)
+		=> TryReadResume(frame, out token, out lastSeq, out _);
+
+	/// <summary>
+	/// Reads a <c>{"type":"resume",...}</c> first frame, also yielding its presence class (default "play"
+	/// when absent) so a resume-to-dead re-registration still knows whether the connection is play or portal.
+	/// </summary>
+	public static bool TryReadResume(string frame, out string token, out long lastSeq, out string presenceClass)
+	{
+		token = string.Empty;
+		lastSeq = 0;
+		presenceClass = "play";
+		try
+		{
+			var resume = JsonSerializer.Deserialize<ResumeFrame>(frame, Json);
+			if (resume?.Type != "resume" || resume.Token is null) return false;
+			token = resume.Token;
+			lastSeq = resume.LastSeq;
+			presenceClass = string.IsNullOrEmpty(resume.Class) ? "play" : resume.Class;
+			return true;
+		}
+		catch (JsonException)
+		{
+			return false;
+		}
+	}
+
+	private sealed record HelloFrame(string? Type, string? Class);
 
 	private sealed record SeqFrame(string Type, long? Seq, string? Data);
 
-	private sealed record ResumeFrame(string Type, string? Token, long LastSeq);
+	private sealed record ResumeFrame(string Type, string? Token, long LastSeq, string? Class);
 
 	private sealed record ResumeTokenFrame(string Type, string Token);
 

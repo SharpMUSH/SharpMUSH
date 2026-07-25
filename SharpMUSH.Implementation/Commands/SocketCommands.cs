@@ -46,7 +46,7 @@ public partial class Commands
 		}
 
 		var filteredPlayers = await everyone
-			.Where(player => player.Ref.HasValue)
+			.Where(player => player.Ref.HasValue && (isWizard || player.PresenceClass != PresenceClasses.Portal))
 			.Select(async (player, i, ct) =>
 			{
 				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value), ct);

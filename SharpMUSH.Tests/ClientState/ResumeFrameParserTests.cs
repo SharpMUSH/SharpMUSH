@@ -45,7 +45,50 @@ public class ResumeFrameParserTests
 	public async Task Client_hello_frame_is_wellformed_json()
 	{
 		var frame = ResumeFrameParser.Hello();
-		await Assert.That(frame).IsEqualTo("{\"type\":\"hello\"}");
+		await Assert.That(frame).IsEqualTo("{\"type\":\"hello\",\"class\":\"play\"}");
+	}
+
+	// --- Presence class: it must survive the client→server hop on both first frames, defaulting to "play". ---
+
+	[Test]
+	public async Task Client_hello_presence_class_is_read_by_the_server()
+	{
+		var portal = ResumeFrameParser.Hello("portal");
+		await Assert.That(SeqEnvelope.TryReadHello(portal, out var portalClass)).IsTrue();
+		await Assert.That(portalClass).IsEqualTo("portal");
+
+		var play = ResumeFrameParser.Hello();
+		await Assert.That(SeqEnvelope.TryReadHello(play, out var playClass)).IsTrue();
+		await Assert.That(playClass).IsEqualTo("play");
+	}
+
+	[Test]
+	public async Task Client_resume_presence_class_is_read_by_the_server()
+	{
+		var portal = ResumeFrameParser.Resume("TOK", lastSeq: 3, presenceClass: "portal");
+		var okPortal = SeqEnvelope.TryReadResume(portal, out _, out _, out var portalClass);
+		await Assert.That(okPortal).IsTrue();
+		await Assert.That(portalClass).IsEqualTo("portal");
+
+		var play = ResumeFrameParser.Resume("TOK", lastSeq: 3);
+		var okPlay = SeqEnvelope.TryReadResume(play, out _, out _, out var playClass);
+		await Assert.That(okPlay).IsTrue();
+		await Assert.That(playClass).IsEqualTo("play");
+	}
+
+	[Test]
+	public async Task Hello_frame_without_a_class_field_defaults_to_play()
+	{
+		await Assert.That(SeqEnvelope.TryReadHello("{\"type\":\"hello\"}", out var helloClass)).IsTrue();
+		await Assert.That(helloClass).IsEqualTo("play");
+	}
+
+	[Test]
+	public async Task Resume_frame_without_a_class_field_defaults_to_play()
+	{
+		var ok = SeqEnvelope.TryReadResume("{\"type\":\"resume\",\"token\":\"tok\",\"lastSeq\":2}", out _, out _, out var resumeClass);
+		await Assert.That(ok).IsTrue();
+		await Assert.That(resumeClass).IsEqualTo("play");
 	}
 
 

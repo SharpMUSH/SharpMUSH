@@ -54,6 +54,16 @@ public class WebSocketClientService : IWebSocketClientService
 
 	public bool IsConnected => _webSocket?.State == WebSocketState.Open;
 
+	/// <summary>
+	/// The presence class declared on this connection's first frame: "play" for a real interactive game
+	/// session, "portal" for a background query connection the portal opens for out-of-band lookups (which
+	/// must NOT count as a player being online). Set once at construction/registration; rides on both the
+	/// hello and the resume first frame so it survives reconnects. Defaults to "play".
+	/// </summary>
+	// Literal (not PresenceClasses.Play) because the browser bundle deliberately does not reference
+	// SharpMUSH.Library — see the ProjectReference note in SharpMUSH.Client.csproj. Keep in sync.
+	public string PresenceClass { get; set; } = "play";
+
 	public WebSocketClientService(ILogger<WebSocketClientService> logger)
 	{
 		_logger = logger;
@@ -104,8 +114,8 @@ public class WebSocketClientService : IWebSocketClientService
 			// Mandatory first frame: resume on reconnect (we hold a token), else hello. The server
 			// uses this to rebind a reconnect to the existing session or register a fresh one.
 			var firstFrame = _resumeToken is not null
-				? ResumeFrameParser.Resume(_resumeToken, _lastSeq)
-				: ResumeFrameParser.Hello();
+				? ResumeFrameParser.Resume(_resumeToken, _lastSeq, PresenceClass)
+				: ResumeFrameParser.Hello(PresenceClass);
 			await _webSocket.SendAsync(
 				new ArraySegment<byte>(Encoding.UTF8.GetBytes(firstFrame)),
 				WebSocketMessageType.Text, true, _cancellationTokenSource.Token);

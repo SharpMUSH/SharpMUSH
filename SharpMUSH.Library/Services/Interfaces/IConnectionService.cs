@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.Models;
+﻿using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using System.Collections.Concurrent;
 using System.Text;
 
@@ -43,6 +44,8 @@ public interface IConnectionService
 		public string HostName => Metadata.GetValueOrDefault(nameof(HostName), InternetProtocolAddress);
 
 		public string ConnectionType => Metadata[nameof(ConnectionType)];
+
+		public string PresenceClass => Metadata.GetValueOrDefault(nameof(PresenceClass), PresenceClasses.Play);
 
 		public int CommandCount
 			=> int.TryParse(Metadata.GetValueOrDefault("CommandCount", "0"), out var cnt) ? cnt : 0;

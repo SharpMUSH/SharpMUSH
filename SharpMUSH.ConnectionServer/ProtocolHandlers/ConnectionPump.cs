@@ -43,7 +43,7 @@ public sealed class ConnectionPump(
 		else
 		{
 			handle = candidateHandle;
-			session = await RegisterFreshAsync(transport, handle, ct);
+			session = await RegisterFreshAsync(transport, handle, ReadPresenceClass(firstFrame), ct);
 
 			if (SeqEnvelope.TryReadResume(firstFrame, out var deadToken, out var deadLastSeq))
 			{
@@ -144,8 +144,22 @@ public sealed class ConnectionPump(
 		return (oldHandle, oldSession);
 	}
 
+	/// <summary>
+	/// The presence class carried on the first frame — "play" for a real interactive session, "portal" for
+	/// a background query connection. Read from either a hello or a resume-to-dead first frame; defaults to
+	/// "play" so telnet and older clients are unaffected.
+	/// </summary>
+	private static string ReadPresenceClass(string firstFrame)
+	{
+		if (SeqEnvelope.TryReadHello(firstFrame, out var helloClass))
+			return helloClass;
+		if (SeqEnvelope.TryReadResume(firstFrame, out _, out _, out var resumeClass))
+			return resumeClass;
+		return "play";
+	}
+
 	/// <summary>Registers a fresh session and returns its per-incarnation session id.</summary>
-	private async Task<string> RegisterFreshAsync(IDuplexTransport transport, long handle, CancellationToken ct)
+	private async Task<string> RegisterFreshAsync(IDuplexTransport transport, long handle, string presenceClass, CancellationToken ct)
 	{
 		// A fresh incarnation gets a unique session id. Replay is keyed by it (never by the reusable
 		// handle), so a recycled handle's new occupant can never read this session's buffer, and vice
@@ -193,7 +207,8 @@ public sealed class ConnectionPump(
 					catch (Exception ex) { logger.LogDebug(ex, "Bye frame send failed on forced disconnect for handle {Handle}", handle); }
 					await current.CloseAsync();
 				},
-				ex => logger.LogError(ex, "Error closing transport on forced disconnect for handle {Handle}", handle)));
+				ex => logger.LogError(ex, "Error closing transport on forced disconnect for handle {Handle}", handle)),
+			presenceClass: presenceClass);
 
 		var token = await resumeTokens.MintAsync(handle, session, ct);
 		await transport.SendAsync(SeqEnvelope.ResumeToken(token), ct);
