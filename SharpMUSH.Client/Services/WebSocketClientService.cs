@@ -20,14 +20,14 @@ public class WebSocketClientService : IWebSocketClientService
 	private string? _serverUri;
 	private volatile bool _intentionalDisconnect;
 
-	// Set when the server sends a {"bye":true} frame — an engine-initiated logout (QUIT / ban / @boot).
+	// Set when the server sends a {"type":"bye"} frame — an engine-initiated logout (QUIT / ban / @boot).
 	// Like an intentional client disconnect, it suppresses auto-reconnect: the session is gone for good,
 	// so reconnecting would only land at a fresh login prompt. Reset by the next explicit ConnectAsync.
 	private volatile bool _serverTerminated;
 
-	// Reconnect replay is always on: the client unwraps {"seq","data"} envelopes (tracking the highest
-	// seq), stores the server's resume token, and re-sends {"resume","lastSeq"} on reconnect so the
-	// ConnectionServer replays output missed during a drop / network switch.
+	// Reconnect replay is always on: the client unwraps {"type":"seq","seq","data"} envelopes (tracking
+	// the highest seq), stores the server's resume token, and re-sends {"type":"resume","token","lastSeq"}
+	// on reconnect so the ConnectionServer replays output missed during a drop / network switch.
 	private string? _resumeToken;
 	private long _lastSeq;
 
@@ -310,7 +310,7 @@ public class WebSocketClientService : IWebSocketClientService
 		}
 
 		// Attempt automatic reconnection if the disconnect was neither client-intentional nor an
-		// engine-initiated logout (the server's {"bye":true}).
+		// engine-initiated logout (the server's {"type":"bye"}).
 		if (!_intentionalDisconnect && !_serverTerminated && _serverUri is not null)
 		{
 			_ = Task.Run(async () =>

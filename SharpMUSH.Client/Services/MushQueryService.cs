@@ -5,49 +5,25 @@ namespace SharpMUSH.Client.Services;
 
 /// <summary>
 /// Sends structured MUSH query commands via <see cref="ITerminalService"/> and parses the
-/// results into typed models.  Uses a <c>think</c>-based approach with embedded format markers
+/// results into typed models.  Each query is a softcode expression with embedded format markers
 /// so output is unambiguous and permission-safe (the server enforces all MUSH permissions).
-/// When <see cref="ITerminalService.MyPort"/> is known, all structured output is routed to
-/// that specific connection via <c>pemit()</c> so it never appears on other sessions.
+/// <see cref="ITerminalService.SendCommandAsync"/> returns the result over the out-of-band channel,
+/// so structured output never appears in the visible terminal (or on other sessions).
 /// </summary>
 public partial class MushQueryService(ITerminalService terminal, ILogger<MushQueryService> logger)
 {
 	private readonly ILogger<MushQueryService> _logger = logger;
 
-	/// <summary>
-	/// Build a <c>think</c> command whose output is routed only to the editor port when known.
-	/// <paramref name="mushExpr"/> is a softcode expression (no outer brackets needed).
-	/// </summary>
-	private string RouteExpr(string mushExpr)
-	{
-		var port = terminal.MyPort;
-		return port.HasValue
-			? $"think [pemit({port.Value}, {mushExpr})]"
-			: $"think [{mushExpr}]";
-	}
-
-	/// <summary>
-	/// Build a <c>think</c> command for literal text with embedded <c>[func()]</c> calls.
-	/// Routes output to the editor port when known.
-	/// </summary>
-	private string RouteLiteral(string mushText)
-	{
-		var port = terminal.MyPort;
-		return port.HasValue
-			? $"think [pemit({port.Value}, {mushText})]"
-			: $"think {mushText}";
-	}
-
 	/// <summary>Retrieve basic details (name, type, owner) and the full attribute list for a single object.</summary>
 	public async Task<MushObject?> GetObjectAsync(string dbref)
 	{
 		_logger.LogDebug("GetObjectAsync {Dbref}", dbref);
-		var infoCmd = RouteLiteral($"SHARP_INFO:{dbref}:[name({dbref})]:[type({dbref})]:[owner({dbref})]");
+		var infoExpr = $"SHARP_INFO:{dbref}:[name({dbref})]:[type({dbref})]:[owner({dbref})]";
 		// edit() collapses actual newlines in values to @@NL@@ so SHARP_ATTR stays single-line.
-		var attrCmd = RouteExpr($"iter(lattr({dbref}/**),SHARP_ATTR:%i0::[edit(get({dbref}/%i0),%r,@@NL@@)],%b,%r)");
+		var attrExpr = $"iter(lattr({dbref}/**),SHARP_ATTR:%i0::[edit(get({dbref}/%i0),%r,@@NL@@)],%b,%r)";
 
-		var infoLines = await terminal.SendCommandAsync(infoCmd);
-		var attrLines = await terminal.SendCommandAsync(attrCmd);
+		var infoLines = await terminal.SendCommandAsync(infoExpr);
+		var attrLines = await terminal.SendCommandAsync(attrExpr);
 
 		var obj = ParseInfo(infoLines);
 		if (obj is null) return null;
@@ -61,15 +37,15 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	{
 		// edit() replaces any actual newlines in the attribute value with @@NL@@ so the
 		// SHARP_ATTR marker stays on a single line — safe even when attrs contain %r output.
-		var cmd = RouteExpr($"iter(lattr({dbref}/**),SHARP_ATTR:%i0::[edit(get({dbref}/%i0),%r,@@NL@@)],%b,%r)");
-		var lines = await terminal.SendCommandAsync(cmd);
+		var expr = $"iter(lattr({dbref}/**),SHARP_ATTR:%i0::[edit(get({dbref}/%i0),%r,@@NL@@)],%b,%r)";
+		var lines = await terminal.SendCommandAsync(expr);
 		return ParseAttributes(lines);
 	}
 
 	/// <summary>Get a single attribute value.</summary>
 	public async Task<string?> GetAttributeAsync(string dbref, string attrName)
 	{
-		var lines = await terminal.SendCommandAsync(RouteExpr($"get({dbref}/{attrName})"));
+		var lines = await terminal.SendCommandAsync($"get({dbref}/{attrName})");
 		return lines.Length > 0 ? string.Join("\n", lines) : null;
 	}
 
@@ -109,7 +85,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 			_                   => $"create({name})",   // create() already returns #N cleanly
 		};
 
-		var lines = await terminal.SendCommandAsync(RouteExpr(expr));
+		var lines = await terminal.SendCommandAsync(expr);
 		if (lines.Length == 0) return null;
 
 		var dbrefStr = lines.FirstOrDefault(l => l.TrimStart().StartsWith('#'))?.Trim();
@@ -122,7 +98,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	/// </summary>
 	public async Task<bool> IsWizardAsync()
 	{
-		var lines = await terminal.SendCommandAsync(RouteExpr("hasflag(me,WIZARD)"));
+		var lines = await terminal.SendCommandAsync("hasflag(me,WIZARD)");
 		return lines.Length > 0 && lines[0].Trim() == "1";
 	}
 
@@ -146,8 +122,8 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		// %l = the executor's location; squish() collapses the gaps when any sub-list is
 		// empty. Includes room contents, its exits, and the room object (%l) itself.
 		// before(%i0,:) strips the :creationTime suffix that DBRef.ToString() appends.
-		var cmd = RouteExpr("iter(squish([lcon(%l)] [lexits(%l)] %l),SHARP_OBJ:[before(%i0,:)]:[type(%i0)]:[name(%i0)],,%r)");
-		var lines = await terminal.SendCommandAsync(cmd);
+		var expr = "iter(squish([lcon(%l)] [lexits(%l)] %l),SHARP_OBJ:[before(%i0,:)]:[type(%i0)]:[name(%i0)],,%r)";
+		var lines = await terminal.SendCommandAsync(expr);
 		return ParseSearchResults(lines);
 	}
 
@@ -160,22 +136,17 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	{
 		// %i0 = current iter element; before(%i0,:) strips the :creationTime suffix.
 		// ,,%r uses default space iSep and newline oSep (3rd arg = iSep, 4th = oSep)
-		var cmd = RouteExpr($"iter({expression},SHARP_OBJ:[before(%i0,:)]:[type(%i0)]:[name(%i0)],,%r)");
-		var lines = await terminal.SendCommandAsync(cmd);
+		var expr = $"iter({expression},SHARP_OBJ:[before(%i0,:)]:[type(%i0)]:[name(%i0)],,%r)";
+		var lines = await terminal.SendCommandAsync(expr);
 		return ParseSearchResults(lines);
 	}
 
 	/// <summary>
 	/// Evaluate the attribute on <paramref name="dbref"/> using <c>u()</c> so MUSH evaluates
-	/// the attribute in object context. Uses <c>RouteLiteral</c> so the output is just the
-	/// result — no "think " prefix that appears when using <c>think [code]</c> inside pemit.
+	/// the attribute in object context. The result is returned over the out-of-band channel.
 	/// </summary>
 	public Task<string[]> EvalAsync(string dbref, string attrName)
-	{
-		// RouteLiteral wraps in: think [pemit(port, <text>)]
-		// The text [u(dbref/attr)] is evaluated inline — just the u() result is emitted.
-		return terminal.SendCommandAsync(RouteLiteral($"[u({dbref}/{attrName})]"));
-	}
+		=> terminal.SendCommandAsync($"u({dbref}/{attrName})");
 
 	private static MushObject? ParseInfo(string[] lines)
 	{

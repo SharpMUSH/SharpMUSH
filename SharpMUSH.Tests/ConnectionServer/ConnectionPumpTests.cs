@@ -139,7 +139,7 @@ public class ConnectionPumpTests
 		var desc = Substitute.For<IDescriptorGeneratorService>();
 		var tracker = new DetachedSessionTracker(new ManualScheduler());
 		var pump = MakePump(bus, conn, desc, tracker: tracker);
-		var transport = new FakeTransport("{\"hello\":1}", "look", null);
+		var transport = new FakeTransport("{\"type\":\"hello\"}", "look", null);
 
 		await pump.RunAsync(transport, candidateHandle: 42, CancellationToken.None);
 
@@ -173,15 +173,15 @@ public class ConnectionPumpTests
 		// Fire the captured forced-disconnect while the socket is still attached to the sink (before the
 		// receive loop drains and the finally detaches), mirroring an engine-initiated QUIT.
 		var transport = new DrainCallbackTransport(() => { forcedDisconnect!(); return Task.CompletedTask; },
-			"{\"hello\":1}");
+			"{\"type\":\"hello\"}");
 
 		await pump.RunAsync(transport, candidateHandle: 7, CancellationToken.None);
 
-		// The last frame the client saw before the close is the {"bye":true} logout notice, so it knows to
+		// The last frame the client saw before the close is the {"type":"bye"} logout notice, so it knows to
 		// stop auto-reconnecting.
 		await Assert.That(transport.Closed).IsTrue();
 		var last = System.Text.Encoding.UTF8.GetString(transport.Sent[^1]);
-		await Assert.That(last).Contains("\"bye\":true");
+		await Assert.That(last).Contains("\"type\":\"bye\"");
 	}
 
 	[Test]
@@ -192,7 +192,7 @@ public class ConnectionPumpTests
 		var desc = Substitute.For<IDescriptorGeneratorService>();
 		var pump = MakePump(bus, conn, desc);
 		// A real first command whose text contains the substring "hello" (with quotes) — NOT the
-		// {"hello":1} handshake. It must reach the game, not be misread as the hello frame and dropped.
+		// {"type":"hello"} handshake. It must reach the game, not be misread as the hello frame and dropped.
 		var transport = new FakeTransport("say \"hello\"", null);
 
 		await pump.RunAsync(transport, candidateHandle: 7, CancellationToken.None);
@@ -221,7 +221,7 @@ public class ConnectionPumpTests
 
 		var pump = MakePump(bus, conn, desc, replay);
 		using var cts = new CancellationTokenSource();
-		var transport = new FakeTransport("{\"hello\":1}", null);
+		var transport = new FakeTransport("{\"type\":\"hello\"}", null);
 
 		await pump.RunAsync(transport, candidateHandle: 7, cts.Token);
 
@@ -252,7 +252,7 @@ public class ConnectionPumpTests
 
 		var pump = MakePump(bus, conn, desc, replay, resume);
 		// The client reconnects onto the SAME, now-recycled handle 5 with the dead session's token.
-		var transport = new FakeTransport($"{{\"resume\":\"{deadToken}\",\"lastSeq\":1}}", null);
+		var transport = new FakeTransport($"{{\"type\":\"resume\",\"token\":\"{deadToken}\",\"lastSeq\":1}}", null);
 
 		await pump.RunAsync(transport, candidateHandle: 5, CancellationToken.None);
 
@@ -278,7 +278,7 @@ public class ConnectionPumpTests
 		var scheduler = new ManualScheduler();
 		var tracker = new DetachedSessionTracker(scheduler);
 		var pump = MakePump(bus, conn, desc, replay, tracker: tracker);
-		var transport = new FakeTransport("{\"hello\":1}", null);
+		var transport = new FakeTransport("{\"type\":\"hello\"}", null);
 
 		await pump.RunAsync(transport, candidateHandle: 7, CancellationToken.None);
 		await scheduler.Captured!(); // grace expires → the session is over for good
@@ -294,7 +294,7 @@ public class ConnectionPumpTests
 		var conn = Substitute.For<IConnectionServerService>();
 		var desc = Substitute.For<IDescriptorGeneratorService>();
 		var pump = MakePump(bus, conn, desc);
-		var transport = new FakeTransport("{\"hello\":1}", null);
+		var transport = new FakeTransport("{\"type\":\"hello\"}", null);
 
 		await pump.RunAsync(transport, candidateHandle: 7, CancellationToken.None);
 
@@ -333,7 +333,7 @@ public class ConnectionPumpTests
 		var token = await resume.MintAsync(9, session9);
 
 		var pump = MakePump(bus, conn, desc, replay, resume, registry, tracker);
-		var transport = new FakeTransport($"{{\"resume\":\"{token}\",\"lastSeq\":1}}", null);
+		var transport = new FakeTransport($"{{\"type\":\"resume\",\"token\":\"{token}\",\"lastSeq\":1}}", null);
 
 		await pump.RunAsync(transport, candidateHandle: 99, CancellationToken.None);
 
@@ -350,7 +350,7 @@ public class ConnectionPumpTests
 		// before the subsequent drop re-detached it in the finally).
 		await Assert.That(transport.Sent.Any(b => System.Text.Encoding.UTF8.GetString(b).Contains("reattached"))).IsTrue();
 
-		// Sent = [ {"reattached":true}, replayed seq 2 ]
+		// Sent = [ {"type":"reattached"}, replayed seq 2 ]
 		var seqs = transport.Sent
 			.Where(b => SeqEnvelope.TryReadSeq(b, out _))
 			.Select(SeqEnvelope.ReadSeq)
@@ -380,7 +380,7 @@ public class ConnectionPumpTests
 		var oldToken = await resume.MintAsync(9, "live-incarnation-9");
 
 		var pump = MakePump(bus, conn, desc, replay, resume, registry);
-		var transport = new FakeTransport($"{{\"resume\":\"{oldToken}\",\"lastSeq\":0}}", null);
+		var transport = new FakeTransport($"{{\"type\":\"resume\",\"token\":\"{oldToken}\",\"lastSeq\":0}}", null);
 
 		await pump.RunAsync(transport, candidateHandle: 99, CancellationToken.None);
 
@@ -392,7 +392,7 @@ public class ConnectionPumpTests
 		var newTokenFrame = transport.Sent
 			.Select(b => System.Text.Encoding.UTF8.GetString(b))
 			.First(s => s.Contains("resumeToken"));
-		var newToken = System.Text.Json.JsonDocument.Parse(newTokenFrame).RootElement.GetProperty("resumeToken").GetString()!;
+		var newToken = System.Text.Json.JsonDocument.Parse(newTokenFrame).RootElement.GetProperty("token").GetString()!;
 		var (newValid, newHandle, newSession) = await resume.TryResolveAsync(newToken);
 		await Assert.That(newValid).IsTrue();
 		await Assert.That(newHandle).IsEqualTo(9L);

@@ -609,7 +609,7 @@ public class AccountAuthService(
 		// the character is still in lwho(). Sending the game "QUIT" command instead routes to
 		// ConnectionService.Disconnect + a DisconnectConnectionMessage whose consumer calls the FORCED
 		// DisconnectAsync(handle) — removing the handle from the live registry immediately (lwho() drops
-		// it at once) and emitting a {"bye":true} frame so the client will not auto-reconnect. The
+		// it at once) and emitting a {"type":"bye"} frame so the client will not auto-reconnect. The
 		// follow-up DisconnectAsync is a safety net that closes the client socket and latches the
 		// intentional-disconnect flag; SendAsync awaits the flush, so QUIT is already on the wire first.
 		// Guard on IsConnected so tearing down an idle terminal is a no-op. This is the single chokepoint

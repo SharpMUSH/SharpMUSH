@@ -4,8 +4,10 @@ namespace SharpMUSH.Client.Services;
 
 /// <summary>
 /// Client-side codec for the terminal control frames, the inverse of the server's <c>SeqEnvelope</c>.
-/// Builds the outbound first frame (<c>{"hello":1}</c> / <c>{"resume","lastSeq"}</c>) and recognises the
-/// inbound <c>{"reattached"}</c>, <c>{"resumeToken"}</c>, and <c>{"seq","data"}</c> frames. Pure and
+/// Every frame shares one flat discriminated envelope <c>{"type":"&lt;kind&gt;",...}</c>. Builds the
+/// outbound first frame (<c>{"type":"hello"}</c> / <c>{"type":"resume","token","lastSeq"}</c>) and
+/// recognises the inbound <c>{"type":"reattached"}</c>, <c>{"type":"bye"}</c>,
+/// <c>{"type":"resumeToken","token"}</c>, and <c>{"type":"seq","seq","data"}</c> frames. Pure and
 /// side-effect-free for easy testing.
 /// </summary>
 public static class ResumeFrameParser
@@ -15,50 +17,24 @@ public static class ResumeFrameParser
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 	};
 
-	/// <summary>The fresh-connect first frame: <c>{"hello":1}</c>.</summary>
-	public static string Hello() => JsonSerializer.Serialize(new HelloFrame(1), Json);
+	/// <summary>The fresh-connect first frame: <c>{"type":"hello"}</c>.</summary>
+	public static string Hello() => JsonSerializer.Serialize(new HelloFrame("hello"), Json);
 
-	/// <summary>The reconnect first frame: <c>{"resume":"...","lastSeq":n}</c>.</summary>
+	/// <summary>The reconnect first frame: <c>{"type":"resume","token":"...","lastSeq":n}</c>.</summary>
 	public static string Resume(string token, long lastSeq)
-		=> JsonSerializer.Serialize(new ResumeFrame(token, lastSeq), Json);
+		=> JsonSerializer.Serialize(new ResumeFrame("resume", token, lastSeq), Json);
 
-	/// <summary>True if the frame is the <c>{"reattached":true}</c> rebind acknowledgement.</summary>
-	public static bool IsReattached(string frame)
-	{
-		if (!LooksLikeJson(frame)) return false;
-		try
-		{
-			using var doc = JsonDocument.Parse(frame);
-			return doc.RootElement.TryGetProperty("reattached", out var el)
-				&& el.ValueKind == JsonValueKind.True;
-		}
-		catch (JsonException)
-		{
-			return false;
-		}
-	}
+	/// <summary>True if the frame is the <c>{"type":"reattached"}</c> rebind acknowledgement.</summary>
+	public static bool IsReattached(string frame) => TypeEquals(frame, "reattached");
 
 	/// <summary>
-	/// True if the frame is the <c>{"bye":true}</c> engine-initiated-logout notice — the server sent it
+	/// True if the frame is the <c>{"type":"bye"}</c> engine-initiated-logout notice — the server sent it
 	/// just before closing an intentional disconnect (QUIT / ban / @boot), so the client must not
 	/// auto-reconnect. Absent on a raw socket drop, which stays resumable.
 	/// </summary>
-	public static bool IsBye(string frame)
-	{
-		if (!LooksLikeJson(frame)) return false;
-		try
-		{
-			using var doc = JsonDocument.Parse(frame);
-			return doc.RootElement.TryGetProperty("bye", out var el)
-				&& el.ValueKind == JsonValueKind.True;
-		}
-		catch (JsonException)
-		{
-			return false;
-		}
-	}
+	public static bool IsBye(string frame) => TypeEquals(frame, "bye");
 
-	/// <summary>True if the frame is a <c>{"resumeToken":"..."}</c> control frame.</summary>
+	/// <summary>True if the frame is a <c>{"type":"resumeToken","token":"..."}</c> control frame.</summary>
 	public static bool TryReadResumeToken(string frame, out string? token)
 	{
 		token = null;
@@ -66,13 +42,11 @@ public static class ResumeFrameParser
 		try
 		{
 			using var doc = JsonDocument.Parse(frame);
-			if (doc.RootElement.TryGetProperty("resumeToken", out var el))
-			{
-				token = el.GetString();
-				return token is not null;
-			}
-
-			return false;
+			var root = doc.RootElement;
+			if (!IsType(root, "resumeToken") || !root.TryGetProperty("token", out var el))
+				return false;
+			token = el.GetString();
+			return token is not null;
 		}
 		catch (JsonException)
 		{
@@ -80,7 +54,7 @@ public static class ResumeFrameParser
 		}
 	}
 
-	/// <summary>True if the frame is a <c>{"seq":n,"data":"..."}</c> envelope; yields seq + inner payload.</summary>
+	/// <summary>True if the frame is a <c>{"type":"seq","seq":n,"data":"..."}</c> envelope; yields seq + inner payload.</summary>
 	public static bool TryReadSeq(string frame, out long seq, out string? data)
 	{
 		seq = 0;
@@ -90,14 +64,13 @@ public static class ResumeFrameParser
 		{
 			using var doc = JsonDocument.Parse(frame);
 			var root = doc.RootElement;
-			if (root.TryGetProperty("seq", out var seqEl) && root.TryGetProperty("data", out var dataEl))
-			{
-				seq = seqEl.GetInt64();
-				data = dataEl.GetString();
-				return true;
-			}
-
-			return false;
+			if (!IsType(root, "seq")
+				|| !root.TryGetProperty("seq", out var seqEl)
+				|| !root.TryGetProperty("data", out var dataEl))
+				return false;
+			seq = seqEl.GetInt64();
+			data = dataEl.GetString();
+			return true;
 		}
 		catch (JsonException)
 		{
@@ -105,9 +78,29 @@ public static class ResumeFrameParser
 		}
 	}
 
+	private static bool TypeEquals(string frame, string kind)
+	{
+		if (!LooksLikeJson(frame)) return false;
+		try
+		{
+			using var doc = JsonDocument.Parse(frame);
+			return IsType(doc.RootElement, kind);
+		}
+		catch (JsonException)
+		{
+			return false;
+		}
+	}
+
+	private static bool IsType(JsonElement root, string kind) =>
+		root.ValueKind == JsonValueKind.Object
+		&& root.TryGetProperty("type", out var el)
+		&& el.ValueKind == JsonValueKind.String
+		&& el.GetString() == kind;
+
 	private static bool LooksLikeJson(string frame) => frame.Length > 0 && frame[0] == '{';
 
-	private sealed record HelloFrame(int Hello);
+	private sealed record HelloFrame(string Type);
 
-	private sealed record ResumeFrame(string Resume, long LastSeq);
+	private sealed record ResumeFrame(string Type, string Token, long LastSeq);
 }

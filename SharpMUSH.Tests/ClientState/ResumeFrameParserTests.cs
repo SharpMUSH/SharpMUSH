@@ -45,14 +45,14 @@ public class ResumeFrameParserTests
 	public async Task Client_hello_frame_is_wellformed_json()
 	{
 		var frame = ResumeFrameParser.Hello();
-		await Assert.That(frame).IsEqualTo("{\"hello\":1}");
+		await Assert.That(frame).IsEqualTo("{\"type\":\"hello\"}");
 	}
 
 
 	[Test]
 	public async Task Reads_resume_token_control_frame()
 	{
-		var ok = ResumeFrameParser.TryReadResumeToken("{\"resumeToken\":\"ABC123\"}", out var token);
+		var ok = ResumeFrameParser.TryReadResumeToken("{\"type\":\"resumeToken\",\"token\":\"ABC123\"}", out var token);
 		await Assert.That(ok).IsTrue();
 		await Assert.That(token).IsEqualTo("ABC123");
 	}
@@ -60,7 +60,7 @@ public class ResumeFrameParserTests
 	[Test]
 	public async Task Reads_seq_envelope_and_yields_inner_payload()
 	{
-		var ok = ResumeFrameParser.TryReadSeq("{\"seq\":42,\"data\":\"look here\"}", out var seq, out var data);
+		var ok = ResumeFrameParser.TryReadSeq("{\"type\":\"seq\",\"seq\":42,\"data\":\"look here\"}", out var seq, out var data);
 		await Assert.That(ok).IsTrue();
 		await Assert.That(seq).IsEqualTo(42L);
 		await Assert.That(data).IsEqualTo("look here");
@@ -84,19 +84,20 @@ public class ResumeFrameParserTests
 	[Test]
 	public async Task Recognises_reattached_ack_only_when_true()
 	{
-		await Assert.That(ResumeFrameParser.IsReattached("{\"reattached\":true}")).IsTrue();
-		await Assert.That(ResumeFrameParser.IsReattached("{\"reattached\":false}")).IsFalse();
-		await Assert.That(ResumeFrameParser.IsReattached("{\"seq\":1,\"data\":\"x\"}")).IsFalse();
+		await Assert.That(ResumeFrameParser.IsReattached("{\"type\":\"reattached\"}")).IsTrue();
+		await Assert.That(ResumeFrameParser.IsReattached("{\"type\":\"bye\"}")).IsFalse();
+		await Assert.That(ResumeFrameParser.IsReattached("{\"type\":\"seq\",\"seq\":1,\"data\":\"x\"}")).IsFalse();
+		await Assert.That(ResumeFrameParser.IsReattached("{\"type\":\"markup\",\"data\":\"x\"}")).IsFalse();
 		await Assert.That(ResumeFrameParser.IsReattached("look")).IsFalse();
 	}
 
 	[Test]
 	public async Task Recognises_bye_only_when_true_and_never_confuses_other_frames()
 	{
-		await Assert.That(ResumeFrameParser.IsBye("{\"bye\":true}")).IsTrue();
-		await Assert.That(ResumeFrameParser.IsBye("{\"bye\":false}")).IsFalse();
-		await Assert.That(ResumeFrameParser.IsBye("{\"reattached\":true}")).IsFalse();
-		await Assert.That(ResumeFrameParser.IsBye("{\"seq\":1,\"data\":\"x\"}")).IsFalse();
+		await Assert.That(ResumeFrameParser.IsBye("{\"type\":\"bye\"}")).IsTrue();
+		await Assert.That(ResumeFrameParser.IsBye("{\"type\":\"reattached\"}")).IsFalse();
+		await Assert.That(ResumeFrameParser.IsBye("{\"type\":\"seq\",\"seq\":1,\"data\":\"x\"}")).IsFalse();
+		await Assert.That(ResumeFrameParser.IsBye("{\"type\":\"markup\",\"data\":\"x\"}")).IsFalse();
 		await Assert.That(ResumeFrameParser.IsBye("say goodbye")).IsFalse();
 	}
 }

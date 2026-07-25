@@ -181,7 +181,7 @@ public sealed class ConnectionPump(
 			handle, transport.RemoteIp, transport.Hostname, transport.Kind,
 			// Close the current transport on forced disconnect, observing the fault instead of dropping it
 			// into TaskScheduler.UnobservedTaskException — same pattern as the grace-timer path. Send a
-			// {"bye":true} first so a reconnecting client knows this was an engine-initiated logout and
+			// {"type":"bye"} first so a reconnecting client knows this was an engine-initiated logout and
 			// stops auto-reconnecting; a raw socket drop sends no bye and stays resumable.
 			output, output, () => Encoding.UTF8,
 			() => TimerGraceScheduler.Fire(
