@@ -38,10 +38,8 @@ objects:
       # config ref, not a literal dbref: the seed numbering is config-driven and has moved.
       FN`CHARVIS: |-
         cand(not(strmatch(u(FN`CHARCAT,%0),Guest)),not(strmatch(num(%0),num({{$package_manager}}))))
-      # Online visibility predicate (%0): the directory rules, plus DARK. lwho() applies
-      # CanSee() against the *caller*, and this handler is wizard-flagged — for a privileged
-      # looker CanSee() is unconditionally true, so without this a DARK player would be
-      # exposed to anonymous web visitors. Hide them here instead.
+      # Online visibility predicate (%0): the character-directory rules. mwho() already hides DARK,
+      # so the DARK guard here is just a belt-and-suspenders default. Redefine to suit.
       FN`ONLINEVIS: |-
         cand(u(FN`CHARVIS,%0),not(hasflag(%0,DARK)))
 
@@ -56,11 +54,12 @@ objects:
       # who EXISTS, not who is connected. For connections see GET`ONLINE.
       GET`CHARACTERS: |-
         @respond/type application/json; think json_array(iter(filter(me/FN`CHARVIS,lsearch(all,type,player)),u(me/FN`CHARROW,%i0),,%r),%r)
-      # GET /http/online — connected, visible players, same row shape as GET`CHARACTERS.
-      # lwho() is the authoritative connection list (the same source WHO reads), so objects that
-      # never bind a connection — seeded principals like package_manager — can't appear here.
+      # GET /http/online — connected, visible players, same row shape as GET`CHARACTERS. mwho() is
+      # the mortal connection list: caller-independent (this handler is wizard-flagged), so it hides
+      # DARK players and portal-class background connections. Objects that never bind a connection
+      # can't appear.
       GET`ONLINE: |-
-        @respond/type application/json; think json_array(iter(filter(me/FN`ONLINEVIS,lwho()),u(me/FN`CHARROW,%i0),,%r),%r)
+        @respond/type application/json; think json_array(iter(filter(me/FN`ONLINEVIS,mwho()),u(me/FN`CHARROW,%i0),,%r),%r)
       # GET /http/profile?objid=#1:123 — one character's public profile.
       GET`PROFILE: |-
         @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json(object,character,json(string,name(%q<form.objid>)),objid,json(string,objid(%q<form.objid>)),dbref,json(string,num(%q<form.objid>)),fields,json(object,fullname,u(FN`FIELD,%q<form.objid>,fullname),alias,u(FN`FIELD,%q<form.objid>,alias),age,u(FN`FIELD,%q<form.objid>,age),concept,u(FN`FIELD,%q<form.objid>,concept),faction,u(FN`FIELD,%q<form.objid>,faction),description,u(FN`FIELD,%q<form.objid>,description)))

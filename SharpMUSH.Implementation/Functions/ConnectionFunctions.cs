@@ -135,10 +135,7 @@ public partial class Functions
 			return new CallState("-1");
 		}
 
-		var isWizard = await executor.IsWizard();
-		var data = await ConnectionService!.Get(located.Object.DBRef)
-			.Where(c => isWizard || c.PresenceClass != PresenceClasses.Portal)
-			.FirstOrDefaultAsync();
+		var data = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
 		return new CallState(data?.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
@@ -461,10 +458,7 @@ public partial class Functions
 			return new CallState("-1");
 		}
 
-		var isWizard = await executor.IsWizard();
-		var connectionData = await ConnectionService!.Get(locate.Object.DBRef)
-			.Where(c => isWizard || c.PresenceClass != PresenceClasses.Portal)
-			.FirstOrDefaultAsync();
+		var connectionData = await ConnectionService!.Get(locate.Object.DBRef).FirstOrDefaultAsync();
 		return new CallState(connectionData?.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
@@ -620,10 +614,9 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var lookerIsWizard = await looker.IsWizard();
 		var connectedRefs = ConnectionService!
 			.GetAll()
-			.Where(x => x.Ref is not null && (lookerIsWizard || x.PresenceClass != PresenceClasses.Portal))
+			.Where(x => x.Ref is not null)
 			.Select(x => x.Ref!.Value);
 		var connectedDbRefs = new HashSet<DBRef>(await connectedRefs.ToListAsync());
 
@@ -702,10 +695,9 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var lookerIsWizard = await looker.IsWizard();
 		var connectedRefsId = ConnectionService!
 			.GetAll()
-			.Where(x => x.Ref is not null && (lookerIsWizard || x.PresenceClass != PresenceClasses.Portal))
+			.Where(x => x.Ref is not null)
 			.Select(x => x.Ref!.Value);
 		var connectedDbRefsId = new HashSet<DBRef>(await connectedRefsId.ToListAsync());
 
@@ -750,7 +742,7 @@ public partial class Functions
 		var nonHiddenConnections = ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& (isWizard || x.PresenceClass != PresenceClasses.Portal))
+				&& x.PresenceClass != PresenceClasses.Portal)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => isWizard || !await x.HasFlag("DARK"))
 			.Select(player => $"#{player.Object().DBRef.Number}");
@@ -768,7 +760,7 @@ public partial class Functions
 		var nonHiddenConnectionsObjIds = ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& (isWizard || x.PresenceClass != PresenceClasses.Portal))
+				&& x.PresenceClass != PresenceClasses.Portal)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => isWizard || !await x.HasFlag("DARK"))
 			.Select(x => x.Object().DBRef);
@@ -814,11 +806,9 @@ public partial class Functions
 			}
 		}
 
-		var lookerIsWizard = await looker.IsWizard();
 		var count = await ConnectionService!
 			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& (lookerIsWizard || x.PresenceClass != PresenceClasses.Portal))
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
 			.CountAsync();
@@ -1139,11 +1129,9 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
-		var lookerIsWizard = await looker.IsWizard();
 		var allDbrefs = ConnectionService!
 			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& (lookerIsWizard || x.PresenceClass != PresenceClasses.Portal))
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
 			.Select(x => $"#{x.Object().DBRef.Number}");
@@ -1196,11 +1184,9 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
-		var lookerIsWizard = await looker.IsWizard();
 		var allObjIds = ConnectionService!
 			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& (lookerIsWizard || x.PresenceClass != PresenceClasses.Portal))
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
 			.Select(x => x.Object().DBRef);

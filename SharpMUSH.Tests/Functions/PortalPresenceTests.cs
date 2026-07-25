@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -9,11 +10,9 @@ using System.Text;
 namespace SharpMUSH.Tests.Functions;
 
 /// <summary>
-/// A <c>portal</c>-class connection is a background query connection the web portal opens; it must
-/// not make its character look connected to a mortal viewer (mirroring how DARK sessions are hidden),
-/// while a wizard viewer still sees it. A default <c>play</c> connection is unaffected. These drive
-/// <c>lwho()</c> — the primitive behind WHO and the portal's online widget (GET`ONLINE) — against the
-/// real connection registry, asserting the mortal/wizard split for both presence classes.
+/// A <c>portal</c>-class connection is excluded from the mortal WHO (<c>mwho()</c>, what GET`ONLINE
+/// uses) regardless of caller, but still listed by the raw <c>lwho()</c>; a <c>play</c> connection
+/// appears in both.
 /// </summary>
 public class PortalPresenceTests
 {
@@ -48,33 +47,29 @@ public class PortalPresenceTests
 		return handle;
 	}
 
-	private async Task<string[]> ListWhoAsAsync(string? lookerRef)
+	private async Task<string[]> WhoAsync(string function)
 	{
-		var code = lookerRef is null ? "lwho()" : $"lwho({lookerRef})";
-		var result = (await Parser.FunctionParse(MModule.single(code)))!.Message!.ToPlainText();
+		var result = (await Parser.FunctionParse(MModule.single(function)))!.Message!.ToPlainText();
 		return result.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 	}
 
 	[Test, NotInParallel(nameof(PortalPresenceTests))]
-	public async Task PortalOnlyConnection_HiddenFromMortal_VisibleToWizard()
+	public async Task PortalConnection_ExcludedFromMwho_ButListedByLwho()
 	{
 		var services = WebAppFactoryArg.Services;
 		var mediator = services.GetRequiredService<IMediator>();
 		var connectionService = services.GetRequiredService<IConnectionService>();
 
 		var portalRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "PortalOnly");
-		var mortalRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "PortalMortalLooker");
-		var handle = await ConnectAsAsync(portalRef, "portal");
+		var handle = await ConnectAsAsync(portalRef, PresenceClasses.Portal);
 
 		try
 		{
-			// Wizard viewer (#1 / God, the FunctionParser executor) sees the portal-only character.
-			var wizardWho = await ListWhoAsAsync(null);
-			await Assert.That(wizardWho).Contains($"#{portalRef.Number}");
-
-			// Mortal viewer does not — the character's only session is portal-class.
-			var mortalWho = await ListWhoAsAsync($"#{mortalRef.Number}");
+			var mortalWho = await WhoAsync("mwho()");
 			await Assert.That(mortalWho).DoesNotContain($"#{portalRef.Number}");
+
+			var rawWho = await WhoAsync("lwho()");
+			await Assert.That(rawWho).Contains($"#{portalRef.Number}");
 		}
 		finally
 		{
@@ -83,22 +78,18 @@ public class PortalPresenceTests
 	}
 
 	[Test, NotInParallel(nameof(PortalPresenceTests))]
-	public async Task PlayConnection_VisibleToMortalAndWizard()
+	public async Task PlayConnection_ListedByMwho()
 	{
 		var services = WebAppFactoryArg.Services;
 		var mediator = services.GetRequiredService<IMediator>();
 		var connectionService = services.GetRequiredService<IConnectionService>();
 
 		var playRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "PlayTarget");
-		var mortalRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "PlayMortalLooker");
-		var handle = await ConnectAsAsync(playRef, "play");
+		var handle = await ConnectAsAsync(playRef, PresenceClasses.Play);
 
 		try
 		{
-			var wizardWho = await ListWhoAsAsync(null);
-			await Assert.That(wizardWho).Contains($"#{playRef.Number}");
-
-			var mortalWho = await ListWhoAsAsync($"#{mortalRef.Number}");
+			var mortalWho = await WhoAsync("mwho()");
 			await Assert.That(mortalWho).Contains($"#{playRef.Number}");
 		}
 		finally
