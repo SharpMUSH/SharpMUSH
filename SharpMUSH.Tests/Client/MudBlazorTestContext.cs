@@ -47,6 +47,10 @@ public abstract class MudBlazorTestContext : BunitContext
 		// connection state (reconnected on a switch).
 		Services.AddSingleton(Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
+		// NavMenu (and other chrome) inject ServerInfoService to gate the guest "Play" affordance on
+		// the server's Net.Guests flag. The stub factory returns "[]" for its api/server-info fetch,
+		// which the service treats as an unreadable response and degrades to the config default (true).
+		Services.AddSingleton(new ServerInfoService(StubFactoryReturningEmptyList()));
 	}
 
 	private static IHttpClientFactory StubFactoryReturningEmptyList()

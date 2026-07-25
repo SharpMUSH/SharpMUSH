@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace SharpMUSH.Client.Services;
 
@@ -27,7 +28,7 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 			var info = await client.GetFromJsonAsync<ServerInfoResponse>("api/server-info");
 			return info?.GuestsEnabled ?? true;
 		}
-		catch (HttpRequestException)
+		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException or TaskCanceledException)
 		{
 			return true;
 		}
