@@ -1546,10 +1546,9 @@ public partial class Functions
 			terminfo.Add("ssl");
 		}
 
-		var transport = metadata.GetValueOrDefault("ConnectionType", "");
-		if (transport is "websocket" or "webtransport")
+		if (metadata.GetValueOrDefault("ConnectionType", "") == "websocket")
 		{
-			terminfo.Add(transport);
+			terminfo.Add("websocket");
 		}
 
 		if (metadata.GetValueOrDefault("PROMPT_NEWLINES", "0") == "1")
