@@ -31,6 +31,15 @@ public static class SeqEnvelope
 	public static byte[] Reattached()
 		=> JsonSerializer.SerializeToUtf8Bytes(new ReattachedFrame(true), Json);
 
+	/// <summary>
+	/// Serializes the <c>{"bye":true}</c> terminal-close frame. Sent immediately before the socket is
+	/// closed on an engine-initiated disconnect (QUIT / ban / @boot) so the client knows the session
+	/// ended deliberately and must NOT auto-reconnect — distinguishing it from a raw socket drop, which
+	/// carries no bye and stays resumable within the grace window.
+	/// </summary>
+	public static byte[] Bye()
+		=> JsonSerializer.SerializeToUtf8Bytes(new ByeFrame(true), Json);
+
 	/// <summary>Reads the sequence of an output envelope, throwing if the frame is not one.</summary>
 	public static long ReadSeq(byte[] frame)
 		=> JsonSerializer.Deserialize<SeqFrame>(frame, Json)?.Seq
@@ -96,4 +105,6 @@ public static class SeqEnvelope
 	private sealed record ResumeTokenFrame(string ResumeToken);
 
 	private sealed record ReattachedFrame(bool Reattached);
+
+	private sealed record ByeFrame(bool Bye);
 }

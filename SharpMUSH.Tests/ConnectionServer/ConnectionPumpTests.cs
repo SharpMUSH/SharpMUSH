@@ -152,6 +152,39 @@ public class ConnectionPumpTests
 	}
 
 	[Test]
+	public async Task Forced_disconnect_sends_bye_before_closing_the_socket()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+
+		// Capture the forced-disconnect action the pump hands to RegisterAsync (what DisconnectAsync runs
+		// on QUIT / ban / @boot).
+		Action? forcedDisconnect = null;
+		_ = conn.RegisterAsync(
+			Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+			Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
+			Arg.Any<Func<System.Text.Encoding>>(),
+			Arg.Do<Action>(a => forcedDisconnect = a),
+			Arg.Any<Func<string, string, ValueTask>?>(),
+			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>());
+
+		var pump = MakePump(bus, conn, desc);
+		// Fire the captured forced-disconnect while the socket is still attached to the sink (before the
+		// receive loop drains and the finally detaches), mirroring an engine-initiated QUIT.
+		var transport = new DrainCallbackTransport(() => { forcedDisconnect!(); return Task.CompletedTask; },
+			"{\"hello\":1}");
+
+		await pump.RunAsync(transport, candidateHandle: 7, CancellationToken.None);
+
+		// The last frame the client saw before the close is the {"bye":true} logout notice, so it knows to
+		// stop auto-reconnecting.
+		await Assert.That(transport.Closed).IsTrue();
+		var last = System.Text.Encoding.UTF8.GetString(transport.Sent[^1]);
+		await Assert.That(last).Contains("\"bye\":true");
+	}
+
+	[Test]
 	public async Task First_frame_that_merely_contains_hello_is_published_not_swallowed()
 	{
 		var bus = Substitute.For<IMessageBus>();

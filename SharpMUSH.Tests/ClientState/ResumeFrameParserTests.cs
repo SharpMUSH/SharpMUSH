@@ -35,6 +35,13 @@ public class ResumeFrameParserTests
 	}
 
 	[Test]
+	public async Task Server_bye_frame_is_recognised_by_the_client()
+	{
+		var frame = Encoding.UTF8.GetString(SeqEnvelope.Bye());
+		await Assert.That(ResumeFrameParser.IsBye(frame)).IsTrue();
+	}
+
+	[Test]
 	public async Task Client_hello_frame_is_wellformed_json()
 	{
 		var frame = ResumeFrameParser.Hello();
@@ -81,5 +88,15 @@ public class ResumeFrameParserTests
 		await Assert.That(ResumeFrameParser.IsReattached("{\"reattached\":false}")).IsFalse();
 		await Assert.That(ResumeFrameParser.IsReattached("{\"seq\":1,\"data\":\"x\"}")).IsFalse();
 		await Assert.That(ResumeFrameParser.IsReattached("look")).IsFalse();
+	}
+
+	[Test]
+	public async Task Recognises_bye_only_when_true_and_never_confuses_other_frames()
+	{
+		await Assert.That(ResumeFrameParser.IsBye("{\"bye\":true}")).IsTrue();
+		await Assert.That(ResumeFrameParser.IsBye("{\"bye\":false}")).IsFalse();
+		await Assert.That(ResumeFrameParser.IsBye("{\"reattached\":true}")).IsFalse();
+		await Assert.That(ResumeFrameParser.IsBye("{\"seq\":1,\"data\":\"x\"}")).IsFalse();
+		await Assert.That(ResumeFrameParser.IsBye("say goodbye")).IsFalse();
 	}
 }

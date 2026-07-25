@@ -38,6 +38,26 @@ public static class ResumeFrameParser
 		}
 	}
 
+	/// <summary>
+	/// True if the frame is the <c>{"bye":true}</c> engine-initiated-logout notice — the server sent it
+	/// just before closing an intentional disconnect (QUIT / ban / @boot), so the client must not
+	/// auto-reconnect. Absent on a raw socket drop, which stays resumable.
+	/// </summary>
+	public static bool IsBye(string frame)
+	{
+		if (!LooksLikeJson(frame)) return false;
+		try
+		{
+			using var doc = JsonDocument.Parse(frame);
+			return doc.RootElement.TryGetProperty("bye", out var el)
+				&& el.ValueKind == JsonValueKind.True;
+		}
+		catch (JsonException)
+		{
+			return false;
+		}
+	}
+
 	/// <summary>True if the frame is a <c>{"resumeToken":"..."}</c> control frame.</summary>
 	public static bool TryReadResumeToken(string frame, out string? token)
 	{

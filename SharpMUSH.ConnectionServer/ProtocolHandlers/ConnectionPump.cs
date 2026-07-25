@@ -180,10 +180,19 @@ public sealed class ConnectionPump(
 		await connectionService.RegisterAsync(
 			handle, transport.RemoteIp, transport.Hostname, transport.Kind,
 			// Close the current transport on forced disconnect, observing the fault instead of dropping it
-			// into TaskScheduler.UnobservedTaskException — same pattern as the grace-timer path.
+			// into TaskScheduler.UnobservedTaskException — same pattern as the grace-timer path. Send a
+			// {"bye":true} first so a reconnecting client knows this was an engine-initiated logout and
+			// stops auto-reconnecting; a raw socket drop sends no bye and stays resumable.
 			output, output, () => Encoding.UTF8,
 			() => TimerGraceScheduler.Fire(
-				() => sink.Current?.CloseAsync() ?? Task.CompletedTask,
+				async () =>
+				{
+					var current = sink.Current;
+					if (current is null) return;
+					try { await current.SendAsync(SeqEnvelope.Bye(), CancellationToken.None); }
+					catch (Exception ex) { logger.LogDebug(ex, "Bye frame send failed on forced disconnect for handle {Handle}", handle); }
+					await current.CloseAsync();
+				},
 				ex => logger.LogError(ex, "Error closing transport on forced disconnect for handle {Handle}", handle)));
 
 		var token = await resumeTokens.MintAsync(handle, session, ct);
