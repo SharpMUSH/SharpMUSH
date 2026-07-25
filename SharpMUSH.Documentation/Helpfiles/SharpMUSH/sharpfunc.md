@@ -6284,6 +6284,7 @@ a          b          areallylon d
   telnet           present if the client understands the telnet protocol.<br>
   gmcp             present if GMCP is negotiated via telnet; see help oob()<br>
   ssl              present if the client is using an SSL/TLS connection.<br>
+  websocket        present if the client is connected via WebSocket (webtransport for a WebTransport connection).<br>
   prompt_newlines  see [prompt_newlines]<br>
   stripaccents     client is receiving 7-bit ascii, no accented characters
 

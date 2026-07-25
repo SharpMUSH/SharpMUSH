@@ -1546,6 +1546,12 @@ public partial class Functions
 			terminfo.Add("ssl");
 		}
 
+		var transport = metadata.GetValueOrDefault("ConnectionType", "");
+		if (transport is "websocket" or "webtransport")
+		{
+			terminfo.Add(transport);
+		}
+
 		if (metadata.GetValueOrDefault("PROMPT_NEWLINES", "0") == "1")
 		{
 			terminfo.Add("prompt_newlines");
