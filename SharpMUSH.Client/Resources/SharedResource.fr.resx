@@ -2092,8 +2092,8 @@
   <data name="WidFormNoPages" xml:space="preserve">
     <value>Ce formulaire ne contient aucune page.</value>
   </data>
-  <data name="WidFormStep" xml:space="preserve">
-    <value>Étape</value>
+  <data name="WidFormStepOf" xml:space="preserve">
+    <value>Étape {0} sur {1}</value>
   </data>
   <data name="WidBack" xml:space="preserve">
     <value>Retour</value>

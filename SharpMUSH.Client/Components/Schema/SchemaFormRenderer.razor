@@ -26,7 +26,7 @@ else
     @if (_document.Pages.Count > 1)
     {
         <MudText Typo="Typo.caption" Class="mud-text-secondary">
-            @Loc["WidFormStep"] @(_pageIndex + 1)/@_document.Pages.Count@(string.IsNullOrWhiteSpace(page.Title) ? "" : $" — {page.Title}")
+            @Loc["WidFormStepOf", _pageIndex + 1, _document.Pages.Count]@(string.IsNullOrWhiteSpace(page.Title) ? "" : $" — {page.Title}")
         </MudText>
     }
 

@@ -16,12 +16,6 @@ using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>
-/// Echoes resource keys like the other bUnit localizer doubles, but appends the format arguments
-/// instead of running them through the key: the success copy's username arrives as <c>{0}</c> in
-/// the real resource, so a key-only echo would drop it and silently void the assertion that the
-/// claimed username is shown back to the claimer.
-/// </summary>
-/// <summary>
 /// HttpMessageHandler faking the setup-wizard API surface: GET api/setup/status and
 /// POST api/setup/complete. The complete response is configurable per test so tests can
 /// exercise the happy path, validation-only path (never reaches the handler), and the
