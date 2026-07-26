@@ -6,27 +6,28 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["WikiAdmin"] — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["WikiAdmin"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
 <div style="padding:var(--cpad);">
     <div class="adminwiki-head">
-        <div class="adminwiki-kicker">Staff · Wiki</div>
+        <div class="adminwiki-kicker">@Loc["ResAdminWikiKicker"]</div>
         <h1 class="adminwiki-title">@Loc["WikiAdmin"]</h1>
         <p class="adminwiki-intro">@Loc["WikiAdminDescription"]</p>
     </div>
 
     <div class="adminwiki-stats">
+        @* Tile labels are resource keys — a collection initializer cannot reach the injected Loc. *@
         @foreach (var tile in new[] {
-            (_totalPages, "Total pages", Icons.Material.Filled.Article,    false),
-            (_published,  "Published",   Icons.Material.Filled.Visibility, false),
-            (_drafts,     "Drafts",      Icons.Material.Filled.EditNote,   true),
-            (_protected_, "Protected",   Icons.Material.Filled.Lock,       true),
+            (_totalPages, "ResWikiStatTotalPages", Icons.Material.Filled.Article,    false),
+            (_published,  "WikiPublished",         Icons.Material.Filled.Visibility, false),
+            (_drafts,     "ResWikiStatDrafts",     Icons.Material.Filled.EditNote,   true),
+            (_protected_, "WikiProtected",         Icons.Material.Filled.Lock,       true),
         })
         {
-            var (val, label, icon, warn) = tile;
+            var (val, labelKey, icon, warn) = tile;
             <div class="adminwiki-stat">
                 <div class="adminwiki-stat-top">
-                    <span class="adminwiki-stat-label">@label</span>
+                    <span class="adminwiki-stat-label">@Loc[labelKey]</span>
                     <MudIcon Icon="@icon" Style="@($"font-size:0.875rem;color:{(warn ? "#d9a23a" : "var(--accent)")};")" />
                 </div>
                 <div class="adminwiki-stat-value">@(_statsLoaded ? val.ToString() : "—")</div>
@@ -61,7 +62,7 @@
                     <MudSelectItem T="string" Value="@("system")">system</MudSelectItem>
                 </MudSelect>
                 <MudTextField @bind-Value="_searchText" Immediate="true"
-                              Placeholder="Search titles…"
+                              Placeholder="@Loc["ResSearchTitlesPlaceholder"]"
                               Variant="Variant.Outlined" Margin="Margin.Dense"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                               Style="max-width:280px;" />
@@ -108,7 +109,7 @@
                 <CellTemplate>
                     <MudChip T="string" Size="Size.Small"
                              Style="@($"height:18px;font-size:0.625rem;padding:0 0.375rem;background:{(context.Item.Published ? "rgba(0,200,100,0.12)" : "rgba(217,162,58,0.12)")};color:{(context.Item.Published ? "#6cde9a" : "#d9a23a")};")">
-                        @(context.Item.Published ? "Published" : "Draft")
+                        @(context.Item.Published ? Loc["WikiPublished"] : Loc["ResDraft"])
                     </MudChip>
                 </CellTemplate>
             </TemplateColumn>
@@ -136,7 +137,7 @@
             <TemplateColumn Sortable="false">
                 <CellTemplate>
                     <div style="display:flex;gap:0.125rem;">
-                        <MudTooltip Text="Edit">
+                        <MudTooltip Text="@Loc["WikiEdit"]">
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
                                            Href="@($"{PageHref(context.Item)}/edit")" />
                         </MudTooltip>
@@ -144,7 +145,7 @@
                             <MudIconButton Icon="@Icons.Material.Filled.Tune" Size="Size.Small"
                                            OnClick="@(() => OpenMetadataDialog(context.Item))" />
                         </MudTooltip>
-                        <MudTooltip Text="History">
+                        <MudTooltip Text="@Loc["ResHistory"]">
                             <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small"
                                            Href="@($"{PageHref(context.Item)}/history")" />
                         </MudTooltip>
