@@ -12,7 +12,7 @@ namespace SharpMUSH.Client.Widgets;
 public sealed class SpacerWidgetDescriptor : IPortalWidget
 {
 	public string Name => "Spacer";
-	public string DisplayName => "Spacer";
+	public string DisplayName => "LayWidgetSpacer";
 	public string Description => "Empty space to push widgets apart or pad a zone (width = column span, height configurable).";
 	public WidgetSize DefaultSize => WidgetSize.Small;
 

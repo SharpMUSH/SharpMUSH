@@ -5,24 +5,25 @@
 @using SharpMUSH.Library.Models.Portal.Applications
 @using SharpMUSH.Library.Models.Portal.Widgets
 @attribute [Authorize(Policy = "applications.admin")]
+@inject IStringLocalizer<SharedResource> Loc
 @inject ApplicationRegistryClient Registry
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>Applications — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["LayApplications"] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="appadmin">
     <div class="appadmin-head">
         <div>
-            <div class="appadmin-kicker">Build · Custom widgets</div>
-            <h1 class="appadmin-title">Applications</h1>
+            <div class="appadmin-kicker">@Loc["LayAppsKicker"]</div>
+            <h1 class="appadmin-title">@Loc["LayApplications"]</h1>
         </div>
         <div class="appadmin-actions">
             <a class="aa-btn" href="/softcode">
-                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:0.875rem;" /> Schema registry
+                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:0.875rem;" /> @Loc["LayAppsSchemaRegistry"]
             </a>
             <button type="button" class="aa-btn aa-btn--primary" @onclick="@(() => Edit(null))">
-                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> New application
+                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> @Loc["LayAppsNew"]
             </button>
         </div>
     </div>
@@ -30,19 +31,19 @@
     <div class="appadmin-stats">
         @foreach (var tile in new[]
         {
-            (_apps.Count.ToString(),                                              "Applications", "registered",       Icons.Material.Filled.Apps,        "var(--accent)"),
-            (_apps.Count(a => a.KindEnum == ApplicationKind.Page).ToString(),     "Pages",        "full-screen apps",  Icons.Material.Filled.WebAsset,    "#6cde9a"),
-            (_apps.Count(a => a.KindEnum == ApplicationKind.Widget).ToString(),   "Widgets",      "dashboard zones",   Icons.Material.Filled.Dashboard,   "#5aa9ff"),
-            (_apps.Count(a => !string.IsNullOrEmpty(a.SchemaUrl)).ToString(),     "Schemas",      "softcode-defined",  Icons.Material.Filled.DataObject,  "#b39cff"),
+            (_apps.Count.ToString(),                                              "LayApplications",  "LayAppsStatRegistered", Icons.Material.Filled.Apps,        "var(--accent)"),
+            (_apps.Count(a => a.KindEnum == ApplicationKind.Page).ToString(),     "LayAppsPages",     "LayAppsStatPages",      Icons.Material.Filled.WebAsset,    "#6cde9a"),
+            (_apps.Count(a => a.KindEnum == ApplicationKind.Widget).ToString(),   "LayAppsWidgets",   "LayAppsStatWidgets",    Icons.Material.Filled.Dashboard,   "#5aa9ff"),
+            (_apps.Count(a => !string.IsNullOrEmpty(a.SchemaUrl)).ToString(),     "LayAppsSchemas",   "LayAppsStatSchemas",    Icons.Material.Filled.DataObject,  "#b39cff"),
         })
         {
-            var (val, label, sub, icon, color) = tile;
+            var (val, labelKey, subKey, icon, color) = tile;
             <div class="aa-stat">
                 <MudIcon Icon="@icon" Style="@($"font-size:1.375rem;color:{color};")" />
                 <div>
                     <div class="aa-stat-val" style="@($"color:{color};")">@(_loading ? "—" : val)</div>
-                    <div class="aa-stat-label">@label</div>
-                    <div class="aa-stat-sub">@sub</div>
+                    <div class="aa-stat-label">@Loc[labelKey]</div>
+                    <div class="aa-stat-sub">@Loc[subKey]</div>
                 </div>
             </div>
         }
@@ -59,12 +60,12 @@
                 <div class="aa-search">
                     <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;color:var(--text-faint);" />
                     <input value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)"
-                           placeholder="Search apps or schemas…" />
+                           placeholder="@Loc["LayAppsSearchPlaceholder"]" />
                 </div>
 
                 @if (Filtered.Count == 0)
                 {
-                    <div class="aa-empty-list">No applications match.</div>
+                    <div class="aa-empty-list">@Loc["LayAppsNoMatch"]</div>
                 }
                 @foreach (var app in Filtered)
                 {
@@ -90,9 +91,9 @@
                 {
                     <div class="aa-empty-detail">
                         <MudIcon Icon="@Icons.Material.Filled.Apps" Style="font-size:2.5rem;color:var(--text-faint);opacity:0.4;" />
-                        <span>Select an application, or register a new one.</span>
+                        <span>@Loc["LayAppsEmptyDetail"]</span>
                         <button type="button" class="aa-btn aa-btn--primary" @onclick="@(() => Edit(null))">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> Register application
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> @Loc["LayAppsRegister"]
                         </button>
                     </div>
                 }
@@ -111,28 +112,28 @@
                             <div class="aa-detail-slug">/apps/@_selected.Slug</div>
                         </div>
                         <div class="aa-detail-headbtns">
-                            <button type="button" class="aa-icon-btn" title="Edit" @onclick="@(() => Edit(_selected))">
+                            <button type="button" class="aa-icon-btn" title="@Loc["LayEdit"]" @onclick="@(() => Edit(_selected))">
                                 <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:1rem;" />
                             </button>
-                            <button type="button" class="aa-icon-btn aa-icon-btn--danger" title="Remove" @onclick="@(() => Delete(_selected))">
+                            <button type="button" class="aa-icon-btn aa-icon-btn--danger" title="@Loc["LayRemove"]" @onclick="@(() => Delete(_selected))">
                                 <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:1rem;" />
                             </button>
                         </div>
                     </div>
 
                     <div class="aa-meta-grid">
-                        @foreach (var field in new (string Label, string Value)[]
+                        @foreach (var field in new (string LabelKey, string Value)[]
                         {
-                            ("Schema URL",    _selected.SchemaUrl),
-                            ("Data URL",      _selected.DataUrl ?? "—"),
-                            ("Submit Route",  _selected.SubmitRoute ?? "—"),
-                            ("Nav Placement", _selected.NavPlacement ?? "—"),
-                            ("Display Order", _selected.Order.ToString()),
-                            ("Min Role",      _selected.MinimumRole),
+                            ("LayAppSchemaUrl",    _selected.SchemaUrl),
+                            ("LayAppDataUrl",      _selected.DataUrl ?? "—"),
+                            ("LayAppSubmitRoute",  _selected.SubmitRoute ?? "—"),
+                            ("LayAppNavPlacement", _selected.NavPlacement ?? "—"),
+                            ("LayAppDisplayOrder", _selected.Order.ToString()),
+                            ("LayAppMinRole",      _selected.MinimumRole),
                         })
                         {
                             <div class="aa-meta">
-                                <div class="aa-meta-label">@field.Label</div>
+                                <div class="aa-meta-label">@Loc[field.LabelKey]</div>
                                 <div class="aa-meta-val">@field.Value</div>
                             </div>
                         }
@@ -141,29 +142,29 @@
                     @if (_selected.ZoneEnums.Count > 0)
                     {
                         <div class="aa-section">
-                            <div class="aa-section-label">Allowed Zones</div>
+                            <div class="aa-section-label">@Loc["LayAppAllowedZones"]</div>
                             <div class="aa-chips">
                                 @foreach (var zone in _selected.ZoneEnums)
                                 {
-                                    <span class="aa-zone">@zone</span>
+                                    <span class="aa-zone">@Loc[zone.ResourceKey()]</span>
                                 }
                             </div>
                         </div>
                     }
 
                     <div class="aa-section">
-                        <div class="aa-section-label">Actions</div>
+                        <div class="aa-section-label">@Loc["LayActions"]</div>
                         <div class="aa-actions">
                             <a class="aa-btn aa-btn--primary" href="@($"/apps/{_selected.Slug}")">
-                                <MudIcon Icon="@Icons.Material.Filled.OpenInBrowser" Style="font-size:0.875rem;" /> Open app
+                                <MudIcon Icon="@Icons.Material.Filled.OpenInBrowser" Style="font-size:0.875rem;" /> @Loc["LayAppOpen"]
                             </a>
                             <a class="aa-btn" href="/softcode">
-                                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:0.875rem;" /> Edit in Softcode
+                                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:0.875rem;" /> @Loc["LayAppEditInSoftcode"]
                             </a>
                             @if (!string.IsNullOrEmpty(_selected.SchemaUrl))
                             {
                                 <a class="aa-btn" href="@_selected.SchemaUrl" target="_blank">
-                                    <MudIcon Icon="@Icons.Material.Filled.Link" Style="font-size:0.875rem;" /> View schema
+                                    <MudIcon Icon="@Icons.Material.Filled.Link" Style="font-size:0.875rem;" /> @Loc["LayAppViewSchema"]
                                 </a>
                             }
                         </div>
@@ -207,7 +208,7 @@
             { x => x.Existing, existing }
         };
         var dialog = await DialogService.ShowAsync<ApplicationEditDialog>(
-            existing is null ? "Register application" : $"Edit {existing.Slug}", parameters);
+            existing is null ? Loc["LayAppsRegister"] : Loc["LayAppEditTitle", existing.Slug], parameters);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
             await LoadAsync();
@@ -216,21 +217,21 @@
     private async Task Delete(PortalApplication app)
     {
         var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Remove application",
-            $"Remove '{app.DisplayName}' ({app.Slug})? This only unlinks it from the portal; the softcode is untouched.",
-            yesText: "Remove", cancelText: "Cancel");
+            Loc["LayAppRemoveTitle"],
+            Loc["LayAppRemoveConfirm", app.DisplayName, app.Slug],
+            yesText: Loc["LayRemove"], cancelText: Loc["Cancel"]);
 
         if (confirmed == true)
         {
             if (await Registry.DeleteAsync(app.Slug))
             {
-                Snackbar.Add($"Removed {app.Slug}.", Severity.Success);
+                Snackbar.Add(Loc["LayAppRemoved", app.Slug], Severity.Success);
                 if (_selected?.Slug == app.Slug) _selected = null;
                 await LoadAsync();
             }
             else
             {
-                Snackbar.Add("Failed to remove application.", Severity.Error);
+                Snackbar.Add(Loc["LayAppRemoveFailed"], Severity.Error);
             }
         }
     }

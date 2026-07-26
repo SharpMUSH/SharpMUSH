@@ -9,7 +9,7 @@ namespace SharpMUSH.Client.Widgets;
 public sealed class CharacterGalleryWidgetDescriptor : IPortalWidget
 {
 	public string Name => "CharacterGallery";
-	public string DisplayName => "Character Gallery";
+	public string DisplayName => "LayWidgetCharacterGallery";
 	public string Description => "Image gallery for a character's profile.";
 	public WidgetSize DefaultSize => WidgetSize.Medium;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent, WidgetZone.RightSidebar];

@@ -10,7 +10,7 @@ namespace SharpMUSH.Client.Widgets;
 public sealed class WelcomeTextWidgetDescriptor : IPortalWidget
 {
 	public string Name => "WelcomeText";
-	public string DisplayName => "Welcome Text";
+	public string DisplayName => "LayWidgetWelcomeText";
 	public string Description => "Displays a markdown welcome message.";
 	public WidgetSize DefaultSize => WidgetSize.Large;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent];

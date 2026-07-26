@@ -7,7 +7,7 @@ namespace SharpMUSH.Client.Widgets;
 public sealed class StatsWidgetDescriptor : IPortalWidget
 {
 	public string Name => "Stats";
-	public string DisplayName => "Game Stats";
+	public string DisplayName => "LayWidgetGameStats";
 	public string Description => "At-a-glance tiles: players online, active scenes, recent changes, characters.";
 	public WidgetSize DefaultSize => WidgetSize.Large;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent];
@@ -19,7 +19,7 @@ public sealed class StatsWidgetDescriptor : IPortalWidget
 public sealed class ActiveSceneWidgetDescriptor : IPortalWidget
 {
 	public string Name => "ActiveScene";
-	public string DisplayName => "Active Scene";
+	public string DisplayName => "LayWidgetActiveScene";
 	public string Description => "Highlights the most recent in-progress scene.";
 	public WidgetSize DefaultSize => WidgetSize.Medium;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent, WidgetZone.LeftSidebar, WidgetZone.RightSidebar];
@@ -31,7 +31,7 @@ public sealed class ActiveSceneWidgetDescriptor : IPortalWidget
 public sealed class RecentWikiActivityWidgetDescriptor : IPortalWidget
 {
 	public string Name => "RecentWikiActivity";
-	public string DisplayName => "Recent Wiki Activity";
+	public string DisplayName => "LayWidgetRecentWikiActivity";
 	public string Description => "A feed of the most recently edited wiki pages.";
 	public WidgetSize DefaultSize => WidgetSize.Medium;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent, WidgetZone.LeftSidebar, WidgetZone.RightSidebar];
@@ -43,7 +43,7 @@ public sealed class RecentWikiActivityWidgetDescriptor : IPortalWidget
 public sealed class OnlineCharactersWidgetDescriptor : IPortalWidget
 {
 	public string Name => "OnlineCharacters";
-	public string DisplayName => "Online Characters";
+	public string DisplayName => "LayWidgetOnlineCharacters";
 	public string Description => "Lists the characters currently connected, and links to their profiles.";
 	public WidgetSize DefaultSize => WidgetSize.Medium;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent, WidgetZone.LeftSidebar, WidgetZone.RightSidebar];
@@ -55,7 +55,7 @@ public sealed class OnlineCharactersWidgetDescriptor : IPortalWidget
 public sealed class QuickstartWidgetDescriptor : IPortalWidget
 {
 	public string Name => "Quickstart";
-	public string DisplayName => "Quickstart";
+	public string DisplayName => "LayWidgetQuickstart";
 	public string Description => "Getting-started links for new visitors.";
 	public WidgetSize DefaultSize => WidgetSize.Medium;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent, WidgetZone.LeftSidebar, WidgetZone.RightSidebar];

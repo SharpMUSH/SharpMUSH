@@ -80,15 +80,16 @@ public class LayoutEditorTests : BunitContext
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("Wiki Index"))
+			if (!cut.Markup.Contains("LayWidgetWikiIndex"))
 				throw new InvalidOperationException("editor not loaded yet");
 		}, TimeSpan.FromSeconds(5));
 
+		// The stubbed localizer echoes keys, so the palette renders each widget's resource key.
 		var markup = cut.Markup;
-		await Assert.That(markup).Contains("Wiki Index");
-		await Assert.That(markup).Contains("Gallery");
+		await Assert.That(markup).Contains("LayWidgetWikiIndex");
+		await Assert.That(markup).Contains("LayWidgetCharacterGallery");
 		// QuickLinks has no MainContent zone, so it is filtered out of this scope's palette.
-		await Assert.That(markup).DoesNotContain("Quick Links");
-		await Assert.That(markup).Contains("MainContent");
+		await Assert.That(markup).DoesNotContain("LayWidgetQuickLinks");
+		await Assert.That(markup).Contains("WidgetZoneMainContent");
 	}
 }

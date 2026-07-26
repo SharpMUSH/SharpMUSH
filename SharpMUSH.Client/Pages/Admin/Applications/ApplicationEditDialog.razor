@@ -11,20 +11,20 @@
     <DialogContent>
         <MudGrid>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_slug" Label="Slug" Required="true" Variant="Variant.Outlined"
-                              Disabled="@(!_isNew)" HelperText="URL key — /apps/{slug}. Cannot change after creation." />
+                <MudTextField @bind-Value="_slug" Label="@Loc["LayAppSlug"]" Required="true" Variant="Variant.Outlined"
+                              Disabled="@(!_isNew)" HelperText="@Loc["LayAppSlugHelper"]" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_displayName" Label="Display name" Required="true" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_displayName" Label="@Loc["LayAppDisplayName"]" Required="true" Variant="Variant.Outlined" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudSelect T="ApplicationKind" @bind-Value="_kind" Label="Kind" Variant="Variant.Outlined">
-                    <MudSelectItem T="ApplicationKind" Value="ApplicationKind.Page">Page (/apps/{slug})</MudSelectItem>
-                    <MudSelectItem T="ApplicationKind" Value="ApplicationKind.Widget">Widget (layout zone)</MudSelectItem>
+                <MudSelect T="ApplicationKind" @bind-Value="_kind" Label="@Loc["LayAppKind"]" Variant="Variant.Outlined">
+                    <MudSelectItem T="ApplicationKind" Value="ApplicationKind.Page">@Loc["LayAppKindPage"]</MudSelectItem>
+                    <MudSelectItem T="ApplicationKind" Value="ApplicationKind.Widget">@Loc["LayAppKindWidget"]</MudSelectItem>
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudSelect T="PortalRole" @bind-Value="_minimumRole" Label="Minimum role" Variant="Variant.Outlined">
+                <MudSelect T="PortalRole" @bind-Value="_minimumRole" Label="@Loc["LayAppMinimumRole"]" Variant="Variant.Outlined">
                     @foreach (var role in Enum.GetValues<PortalRole>())
                     {
                         <MudSelectItem T="PortalRole" Value="role">@role</MudSelectItem>
@@ -32,32 +32,32 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12">
-                <MudTextField @bind-Value="_schemaUrl" Label="Schema URL" Required="true" Variant="Variant.Outlined"
-                              HelperText="HTTP-handler route returning the Portal Schema Document, e.g. http/chargen/schema" />
+                <MudTextField @bind-Value="_schemaUrl" Label="@Loc["LayAppSchemaUrl"]" Required="true" Variant="Variant.Outlined"
+                              HelperText="@Loc["LayAppSchemaUrlHelper"]" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_dataUrl" Label="Data URL (optional)" Variant="Variant.Outlined"
-                              HelperText="View display / form prefill data" />
+                <MudTextField @bind-Value="_dataUrl" Label="@Loc["LayAppDataUrlOptional"]" Variant="Variant.Outlined"
+                              HelperText="@Loc["LayAppDataUrlHelper"]" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_submitRoute" Label="Submit route (optional)" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_submitRoute" Label="@Loc["LayAppSubmitRouteOptional"]" Variant="Variant.Outlined" />
             </MudItem>
             <MudItem xs="12" sm="4">
-                <MudTextField @bind-Value="_icon" Label="Icon (optional)" Variant="Variant.Outlined"
-                              HelperText="MudBlazor Material icon string" />
+                <MudTextField @bind-Value="_icon" Label="@Loc["LayAppIconOptional"]" Variant="Variant.Outlined"
+                              HelperText="@Loc["LayAppIconHelper"]" />
             </MudItem>
             <MudItem xs="12" sm="4">
-                <MudTextField @bind-Value="_navPlacement" Label="Nav placement (optional)" Variant="Variant.Outlined"
-                              HelperText="Set to show a Page app in nav" />
+                <MudTextField @bind-Value="_navPlacement" Label="@Loc["LayAppNavPlacementOptional"]" Variant="Variant.Outlined"
+                              HelperText="@Loc["LayAppNavPlacementHelper"]" />
             </MudItem>
             <MudItem xs="12" sm="4">
-                <MudNumericField @bind-Value="_order" Label="Order" Variant="Variant.Outlined" />
+                <MudNumericField @bind-Value="_order" Label="@Loc["LayAppOrder"]" Variant="Variant.Outlined" />
             </MudItem>
             @if (_kind == ApplicationKind.Widget)
             {
                 <MudItem xs="12">
                     <MudSelect T="WidgetZone" @bind-SelectedValues="_zones" MultiSelection="true"
-                               Label="Allowed zones" Variant="Variant.Outlined"
+                               Label="@Loc["LayAppAllowedZones"]" Variant="Variant.Outlined"
                                MultiSelectionTextFunc="@(zones => string.Join(", ", zones.Select(z => Loc[Enum.Parse<WidgetZone>(z).ResourceKey()].Value)))">
                         @foreach (var zone in Enum.GetValues<WidgetZone>())
                         {
@@ -69,13 +69,13 @@
         </MudGrid>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Disabled="_saving">Cancel</MudButton>
+        <MudButton OnClick="Cancel" Disabled="_saving">@Loc["Cancel"]</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="_saving">
             @if (_saving)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
             }
-            Save
+            @Loc["Save"]
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -125,7 +125,7 @@
         if (string.IsNullOrWhiteSpace(_slug) || string.IsNullOrWhiteSpace(_displayName)
             || string.IsNullOrWhiteSpace(_schemaUrl))
         {
-            Snackbar.Add("Slug, display name, and schema URL are required.", Severity.Warning);
+            Snackbar.Add(Loc["LayAppRequiredFields"], Severity.Warning);
             return;
         }
 
@@ -148,12 +148,12 @@
 
         if (ok)
         {
-            Snackbar.Add($"Saved {model.Slug}.", Severity.Success);
+            Snackbar.Add(Loc["LayAppSaved", model.Slug], Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
         else
         {
-            Snackbar.Add(error ?? "Save failed.", Severity.Error);
+            Snackbar.Add(error ?? Loc["LayAppSaveFailed"].Value, Severity.Error);
         }
     }
 }

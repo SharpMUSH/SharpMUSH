@@ -10,7 +10,7 @@ namespace SharpMUSH.Client.Widgets;
 public sealed class CharacterDirectoryWidgetDescriptor : IPortalWidget
 {
 	public string Name => "CharacterDirectory";
-	public string DisplayName => "Character Directory";
+	public string DisplayName => "LayWidgetCharacterDirectory";
 	public string Description => "Searchable listing of all characters.";
 	public WidgetSize DefaultSize => WidgetSize.Large;
 	public WidgetZone[] AllowedZones =>
