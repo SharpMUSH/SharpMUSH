@@ -55,7 +55,15 @@ public class BundledPackagesTests
 	{
 		foreach (var descriptor in BundledPackages.All)
 		{
-			var manifest = _manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId)).AsT0.Manifest;
+			// Assert the parse rather than assuming it: reaching AsT0 on a failed parse throws an
+			// opaque OneOf exception, and this test would silently depend on running after
+			// EveryBundledPackage_HasAnEmbeddedManifestThatParses to get a readable failure.
+			var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId));
+			await Assert.That(parsed.IsT0)
+				.IsTrue()
+				.Because($"bundled manifest '{descriptor.PackageId}' must parse");
+
+			var manifest = parsed.AsT0.Manifest;
 
 			var expected = descriptor.Requires switch
 			{
