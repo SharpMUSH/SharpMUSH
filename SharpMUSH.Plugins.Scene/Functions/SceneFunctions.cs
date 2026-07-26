@@ -917,29 +917,29 @@ public static class SceneFunctions
 		{
 			case "create":
 			case "update":
-			{
-				var parts = plot.Split('|');
-				var title = parts.Length > 0 ? parts[0] : string.Empty;
-				var description = parts.Length > 1 ? parts[1] : string.Empty;
-				var owner = parts.Length > 2 ? await SceneLocate.PlayerOrSelf(parser, parts[2]) : string.Empty;
-				var plotId = string.IsNullOrEmpty(id) ? null : id;
-				var result = await service.UpsertPlotAsync(plotId, title, description, owner);
-				return new CallState(result.Id);
-			}
+				{
+					var parts = plot.Split('|');
+					var title = parts.Length > 0 ? parts[0] : string.Empty;
+					var description = parts.Length > 1 ? parts[1] : string.Empty;
+					var owner = parts.Length > 2 ? await SceneLocate.PlayerOrSelf(parser, parts[2]) : string.Empty;
+					var plotId = string.IsNullOrEmpty(id) ? null : id;
+					var result = await service.UpsertPlotAsync(plotId, title, description, owner);
+					return new CallState(result.Id);
+				}
 			case "link":
-			{
-				var result = await service.LinkSceneToPlotAsync(plot, id);
-				return result.IsT1
-					? new CallState(SceneNotFound)
-					: new CallState(plot);
-			}
+				{
+					var result = await service.LinkSceneToPlotAsync(plot, id);
+					return result.IsT1
+						? new CallState(SceneNotFound)
+						: new CallState(plot);
+				}
 			case "unlink":
-			{
-				var result = await service.UnlinkSceneFromPlotAsync(plot, id);
-				return result.IsT1
-					? new CallState(SceneNotFound)
-					: new CallState(plot);
-			}
+				{
+					var result = await service.UnlinkSceneFromPlotAsync(plot, id);
+					return result.IsT1
+						? new CallState(SceneNotFound)
+						: new CallState(plot);
+				}
 			default:
 				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SCENEPLOT"));
 		}

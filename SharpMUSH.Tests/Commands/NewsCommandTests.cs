@@ -86,10 +86,10 @@ public class AhelpCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("anews"));
 
 		await NotifyService
-			.Received(2)	
+			.Received(2)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, "get help on a specific admin topic")
-					|| TestHelpers.MessageContains(msg, "Only Wizards and Royalty may use them.")), 
+					|| TestHelpers.MessageContains(msg, "Only Wizards and Royalty may use them.")),
 					TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 

@@ -239,10 +239,10 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	private static LibraryState MapState(SignalRState inner) => inner switch
 	{
 		SignalRState.Disconnected => LibraryState.Disconnected,
-		SignalRState.Connecting   => LibraryState.Connecting,
-		SignalRState.Connected    => LibraryState.Connected,
+		SignalRState.Connecting => LibraryState.Connecting,
+		SignalRState.Connected => LibraryState.Connected,
 		SignalRState.Reconnecting => LibraryState.Reconnecting,
-		_                         => LibraryState.Disconnected,
+		_ => LibraryState.Disconnected,
 	};
 
 	private async Task DisposeHubAsync()

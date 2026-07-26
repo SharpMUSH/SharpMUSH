@@ -218,17 +218,17 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 					new { ScheduledFor = ParseNullableLong(value), LastActivityAt = now });
 				break;
 			case "room":
-			{
-				var name = await SetObjectEdgeAsync(SceneArangoConstants.SceneInRoom, vertexId, value);
-				await UpdateSceneFieldsAsync(sceneKey, new { RoomName = name, LastActivityAt = now });
-				break;
-			}
+				{
+					var name = await SetObjectEdgeAsync(SceneArangoConstants.SceneInRoom, vertexId, value);
+					await UpdateSceneFieldsAsync(sceneKey, new { RoomName = name, LastActivityAt = now });
+					break;
+				}
 			case "owner":
-			{
-				var name = await SetObjectEdgeAsync(SceneArangoConstants.SceneOwner, vertexId, value);
-				await UpdateSceneFieldsAsync(sceneKey, new { OwnerName = name, LastActivityAt = now });
-				break;
-			}
+				{
+					var name = await SetObjectEdgeAsync(SceneArangoConstants.SceneOwner, vertexId, value);
+					await UpdateSceneFieldsAsync(sceneKey, new { OwnerName = name, LastActivityAt = now });
+					break;
+				}
 			case "plot":
 				// Link this scene into the given plot (value = plot id). Empty unlinks all.
 				await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
@@ -276,42 +276,42 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 				aql = "FOR s IN @@c FILTER s.Status == 'finished' SORT s.LastActivityAt DESC LIMIT @count RETURN s";
 				break;
 			case "scheduled":
-			{
-				var filters = "FILTER s.ScheduledFor != null";
-				if (fromUtcMillis is not null)
 				{
-					filters += " FILTER s.ScheduledFor >= @from";
-					bindVars["from"] = fromUtcMillis.Value;
+					var filters = "FILTER s.ScheduledFor != null";
+					if (fromUtcMillis is not null)
+					{
+						filters += " FILTER s.ScheduledFor >= @from";
+						bindVars["from"] = fromUtcMillis.Value;
+					}
+					if (toUtcMillis is not null)
+					{
+						filters += " FILTER s.ScheduledFor <= @to";
+						bindVars["to"] = toUtcMillis.Value;
+					}
+					aql = $"FOR s IN @@c {filters} SORT s.ScheduledFor ASC LIMIT @count RETURN s";
+					break;
 				}
-				if (toUtcMillis is not null)
-				{
-					filters += " FILTER s.ScheduledFor <= @to";
-					bindVars["to"] = toUtcMillis.Value;
-				}
-				aql = $"FOR s IN @@c {filters} SORT s.ScheduledFor ASC LIMIT @count RETURN s";
-				break;
-			}
 			case "mine":
-			{
-				// Scenes the viewer owns, started, or is a member of.
-				if (viewerDbref is null)
-					return [];
-				var (viewerVertex, _) = await ResolveObjectRefAsync(viewerDbref);
-				if (viewerVertex is null)
-					return [];
-				bindVars["viewer"] = viewerVertex;
-				bindVars["@owner"] = SceneArangoConstants.SceneOwner;
-				bindVars["@starter"] = SceneArangoConstants.SceneStarter;
-				bindVars["@member"] = SceneArangoConstants.SceneMember;
-				aql =
-					"FOR s IN @@c " +
-					"LET owned = LENGTH(FOR e IN @@owner FILTER e._from == s._id AND e._to == @viewer RETURN 1) > 0 " +
-					"LET started = LENGTH(FOR e IN @@starter FILTER e._from == s._id AND e._to == @viewer RETURN 1) > 0 " +
-					"LET joined = LENGTH(FOR e IN @@member FILTER e._to == s._id AND e._from == @viewer RETURN 1) > 0 " +
-					"FILTER owned OR started OR joined " +
-					"SORT s.LastActivityAt DESC LIMIT @count RETURN s";
-				break;
-			}
+				{
+					// Scenes the viewer owns, started, or is a member of.
+					if (viewerDbref is null)
+						return [];
+					var (viewerVertex, _) = await ResolveObjectRefAsync(viewerDbref);
+					if (viewerVertex is null)
+						return [];
+					bindVars["viewer"] = viewerVertex;
+					bindVars["@owner"] = SceneArangoConstants.SceneOwner;
+					bindVars["@starter"] = SceneArangoConstants.SceneStarter;
+					bindVars["@member"] = SceneArangoConstants.SceneMember;
+					aql =
+						"FOR s IN @@c " +
+						"LET owned = LENGTH(FOR e IN @@owner FILTER e._from == s._id AND e._to == @viewer RETURN 1) > 0 " +
+						"LET started = LENGTH(FOR e IN @@starter FILTER e._from == s._id AND e._to == @viewer RETURN 1) > 0 " +
+						"LET joined = LENGTH(FOR e IN @@member FILTER e._to == s._id AND e._from == @viewer RETURN 1) > 0 " +
+						"FILTER owned OR started OR joined " +
+						"SORT s.LastActivityAt DESC LIMIT @count RETURN s";
+					break;
+				}
 			default: // "recent" and unknown filters
 				aql = "FOR s IN @@c SORT s.LastActivityAt DESC LIMIT @count RETURN s";
 				break;
@@ -508,20 +508,20 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 					new { _key = poseKey, AuthorName = value }, mergeObjects: true);
 				break;
 			case "author":
-			{
-				var name = await SetObjectEdgeAsync(SceneArangoConstants.ScenePoseAuthor, poseVertex, value);
-				if (!string.IsNullOrEmpty(name))
-					await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
-						new { _key = poseKey, AuthorName = name }, mergeObjects: true);
-				break;
-			}
+				{
+					var name = await SetObjectEdgeAsync(SceneArangoConstants.ScenePoseAuthor, poseVertex, value);
+					if (!string.IsNullOrEmpty(name))
+						await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
+							new { _key = poseKey, AuthorName = name }, mergeObjects: true);
+					break;
+				}
 			case "origin":
-			{
-				var name = await SetObjectEdgeAsync(SceneArangoConstants.ScenePoseOrigin, poseVertex, value);
-				await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
-					new { _key = poseKey, OriginName = name }, mergeObjects: true);
-				break;
-			}
+				{
+					var name = await SetObjectEdgeAsync(SceneArangoConstants.ScenePoseOrigin, poseVertex, value);
+					await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
+						new { _key = poseKey, OriginName = name }, mergeObjects: true);
+					break;
+				}
 			case "originname":
 				await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
 					new { _key = poseKey, OriginName = value }, mergeObjects: true);
@@ -531,13 +531,13 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 					new { _key = poseKey, Source = value }, mergeObjects: true);
 				break;
 			case "tags":
-			{
-				var tagList = value
-					.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-				await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
-					new { _key = poseKey, Tags = tagList }, mergeObjects: true);
-				break;
-			}
+				{
+					var tagList = value
+						.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+					await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
+						new { _key = poseKey, Tags = tagList }, mergeObjects: true);
+					break;
+				}
 			default:
 				await SetPoseMetaKeyAsync(poseKey, lowered, value);
 				break;

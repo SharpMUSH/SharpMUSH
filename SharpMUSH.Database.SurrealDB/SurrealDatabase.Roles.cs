@@ -139,7 +139,7 @@ public partial class SurrealDatabase : IRoleRegistryService
 		var permissions = string.IsNullOrWhiteSpace(r.permissionsJson)
 			? new Dictionary<string, int>()
 			: JsonSerializer.Deserialize<Dictionary<string, int>>(r.permissionsJson, JsonOptions)
-			  ?? new Dictionary<string, int>();
+				?? new Dictionary<string, int>();
 
 		return new SharpRole
 		{

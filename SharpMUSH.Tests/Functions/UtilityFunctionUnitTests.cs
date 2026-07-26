@@ -13,7 +13,7 @@ public class UtilityFunctionUnitTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-	private IPasswordService PasswordService => WebAppFactoryArg.Services.GetRequiredService<IPasswordService>(); 
+	private IPasswordService PasswordService => WebAppFactoryArg.Services.GetRequiredService<IPasswordService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 
@@ -29,7 +29,7 @@ public class UtilityFunctionUnitTests
 		await Assert.That(PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash)).IsTrue();
 		await Assert.That(PasswordService.PasswordIsValid(result, "SomePassword2", player.PasswordHash)).IsFalse();
 	}
-	
+
 	[Test]
 	public async Task Beep()
 	{
@@ -208,7 +208,7 @@ public class UtilityFunctionUnitTests
 		{
 			["test"] = new HashSet<string> { "apple", "application", "apply", "appreciate", "apricot", "banana", "grape" }
 		});
-		
+
 		await dataService.SetExpandedServerDataAsync(suggestionData);
 
 		// "aple" is a misspelling of apple

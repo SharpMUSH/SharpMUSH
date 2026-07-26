@@ -72,7 +72,7 @@ public class ListenPatternMatcher(
 			// ancestor dbref, so it is computed once per ancestor rather than re-walked per listener.
 			var ancestorRef = await listener.Ancestor(configuration);
 			if (ancestorRef is not null && ancestorRef.Value.Number != listener.Object().DBRef.Number
-			    && !visitedObjects.Contains(ancestorRef.Value.Number))
+					&& !visitedObjects.Contains(ancestorRef.Value.Number))
 			{
 				var ancestorListenAttributes =
 					await mediator.Send(new GetAncestorListenAttributesQuery(ancestorRef.Value));

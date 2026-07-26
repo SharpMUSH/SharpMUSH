@@ -59,7 +59,11 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 		{
 			OutputFormat.Pueblo => ms.Render("pueblo"),
 			OutputFormat.Mxp => ApplyMxpLinePrefix(ms.Render("mxp")),
-			_ => ms.ToString()
+			// Explicitly the ANSI render, NOT ToString(): ToString() renders every markup in its
+			// own native form, so an HtmlMarkup span (every exit name is wrapped in <send>) went
+			// out as a literal tag to clients that negotiated neither Pueblo nor MXP. The ANSI
+			// render maps HtmlMarkup to its ANSI equivalent, or to plain text when it has none.
+			_ => ms.Render("ansi")
 		};
 
 		text = NormalizeLineEnding(text);

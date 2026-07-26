@@ -33,7 +33,7 @@ public sealed class InMemoryWikiService : IWikiService
 
 	public Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
-		var key = SlugKey(ns, category, slug);
+		var key = SlugKey(ns, category, Slugify(slug));
 		if (_slugIndex.TryGetValue(key, out var id) && _pagesById.TryGetValue(id, out var page))
 			return Task.FromResult<OneOf<WikiPage, NotFound>>(page);
 		return Task.FromResult<OneOf<WikiPage, NotFound>>(new NotFound());

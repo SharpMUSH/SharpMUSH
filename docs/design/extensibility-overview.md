@@ -51,7 +51,8 @@ sensitive logic, integration with .NET libraries) but shouldn't live in the core
 The package manager installs **YAML packages** of game objects + attributes (and, with
 `@function`, global softcode functions) at runtime, with `@ainstall`/`@aupdate` lifecycle
 hooks and three-way-merge upgrades. Default packages are bundled and auto-installed at boot
-(`http-handler`, `profile-handler`, `common-functions`, `scene`). This is the home for
+(`http-handler`, `profile-handler`, `room-contents`, `common-functions`, `scene`), and are
+upgraded in place when a build ships a newer version of one. This is the home for
 **game policy** — who may do what, formatting, capture rules — written in MUSHcode by
 admins, no C# and no recompile.
 

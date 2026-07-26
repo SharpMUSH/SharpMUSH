@@ -343,7 +343,7 @@ public class AttributeService(
 		// executable code, not a database attribute name, and can contain characters
 		// (e.g. '[', ']', '\') that are not valid in attribute names.
 		if (!applyPredicate && !lambdaPredicate &&
-		    !await validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None()))
+				!await validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None()))
 		{
 			return MModule.single(ErrorMessages.Returns.ObjectAttributeString);
 		}
@@ -541,7 +541,7 @@ public class AttributeService(
 
 		var filtered = results
 			.Where(x => !x.IsMortalDark()
-			             && !darkPrefixes.Any(dp => x.LongName.StartsWith(dp, StringComparison.OrdinalIgnoreCase)));
+									 && !darkPrefixes.Any(dp => x.LongName.StartsWith(dp, StringComparison.OrdinalIgnoreCase)));
 
 		var permitted = new List<SharpAttribute>();
 		foreach (var attr in filtered)
@@ -594,7 +594,7 @@ public class AttributeService(
 
 		var filtered = results
 			.Where(x => !x.IsMortalDark()
-			             && !darkPrefixes.Any(dp => x.LongName.StartsWith(dp, StringComparison.OrdinalIgnoreCase)))
+									 && !darkPrefixes.Any(dp => x.LongName.StartsWith(dp, StringComparison.OrdinalIgnoreCase)))
 			.OrderBy(x => x.LongName, _attributeSort);
 
 		foreach (var attr in filtered)

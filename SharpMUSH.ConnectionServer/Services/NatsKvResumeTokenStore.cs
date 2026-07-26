@@ -67,9 +67,9 @@ public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable
 		// incarnation), so anything else is rejected rather than resolved to a guessed or empty session.
 		var parts = result.Value.Value.Split(':', 3);
 		if (parts.Length != 3
-		    || parts[0] != TokenFormatVersion
-		    || !long.TryParse(parts[1], out var handle)
-		    || parts[2].Length == 0)
+				|| parts[0] != TokenFormatVersion
+				|| !long.TryParse(parts[1], out var handle)
+				|| parts[2].Length == 0)
 			return (false, 0L, string.Empty);
 		return (true, handle, parts[2]);
 	}

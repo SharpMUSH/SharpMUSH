@@ -23,8 +23,12 @@ file sealed class UpgradeApiHandler(string? mintOtt) : HttpMessageHandler
 			{
 				Content = JsonContent.Create(new
 				{
-					accountId = "acct-1", username = "wiz", characters = Array.Empty<object>(),
-					accountSessionToken = "session-token-1", mustChangePassword = false, role = "Wizard",
+					accountId = "acct-1",
+					username = "wiz",
+					characters = Array.Empty<object>(),
+					accountSessionToken = "session-token-1",
+					mustChangePassword = false,
+					role = "Wizard",
 					permissions = new[] { "*" },
 				})
 			});

@@ -143,14 +143,14 @@ public static class AnsiCodeParser
 			{
 				switch (chr)
 				{
-					case 'h': curHighlight = true;  break;
+					case 'h': curHighlight = true; break;
 					case 'H': curHighlight = false; break;
-					case 'i': invert = true;        break;
-					case 'I': invert = false;       break;
-					case 'f': blink = true;         break;
-					case 'F': blink = false;        break;
-					case 'u': underline = true;     break;
-					case 'U': underline = false;    break;
+					case 'i': invert = true; break;
+					case 'I': invert = false; break;
+					case 'f': blink = true; break;
+					case 'F': blink = false; break;
+					case 'u': underline = true; break;
+					case 'U': underline = false; break;
 					case 'n':
 						clear = true;
 						foreground = ANSILibrary.AnsiColor.NoAnsi.Instance;
@@ -170,7 +170,7 @@ public static class AnsiCodeParser
 					case 'm': foreground = AnsiBytes(curHighlight, 35); break;
 					case 'c': foreground = AnsiBytes(curHighlight, 36); break;
 					case 'w': foreground = AnsiBytes(curHighlight, 37); break;
-					case 'D': background = AnsiByte(49);                break;
+					case 'D': background = AnsiByte(49); break;
 					case 'X': background = AnsiBytes(curHighlight, 40); break;
 					case 'R': background = AnsiBytes(curHighlight, 41); break;
 					case 'G': background = AnsiBytes(curHighlight, 42); break;

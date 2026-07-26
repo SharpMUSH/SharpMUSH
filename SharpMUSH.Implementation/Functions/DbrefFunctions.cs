@@ -2334,12 +2334,12 @@ public partial class Functions
 			bool hasIt;
 			switch (flagName.ToUpperInvariant())
 			{
-				case "PLAYER":    hasIt = obj.IsPlayer; break;
-				case "ROOM":      hasIt = obj.IsRoom; break;
-				case "THING":     hasIt = obj.IsThing; break;
-				case "EXIT":      hasIt = obj.IsExit; break;
+				case "PLAYER": hasIt = obj.IsPlayer; break;
+				case "ROOM": hasIt = obj.IsRoom; break;
+				case "THING": hasIt = obj.IsThing; break;
+				case "EXIT": hasIt = obj.IsExit; break;
 				case "CONNECTED": hasIt = await ConnectionService!.IsOnline(obj); break;
-				default:          hasIt = await obj.HasFlag(flagName); break;
+				default: hasIt = await obj.HasFlag(flagName); break;
 			}
 
 			bool effective = negate ? !hasIt : hasIt;

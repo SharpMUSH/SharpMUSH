@@ -34,7 +34,8 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	public CallState(DBRef Message) : this(Message.ToString()) { }
 
 	public CallState(double Message) : this(
-		Message.ToString($"G{Definitions.Configurable.FloatPrecision}", CultureInfo.InvariantCulture)) { }
+		Message.ToString($"G{Definitions.Configurable.FloatPrecision}", CultureInfo.InvariantCulture))
+	{ }
 
 	public CallState(decimal Message) : this(Message.ToString(CultureInfo.InvariantCulture)) { }
 

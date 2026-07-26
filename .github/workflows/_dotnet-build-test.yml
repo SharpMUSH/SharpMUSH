@@ -7,6 +7,33 @@ permissions:
   contents: read
 
 jobs:
+  format:
+    name: format
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.x
+
+      # Folder mode, not solution mode: `dotnet format` cannot load the solution on the
+      # .NET 11 SDK (the MSBuild build host crashes), and whitespace rules are purely
+      # syntactic anyway. Takes ~2s for the whole repo.
+      #
+      # To fix locally, run the same command without --verify-no-changes. The formatter
+      # needs two passes to converge, so run it until it reports no changes.
+      - name: Verify formatting matches .editorconfig
+        run: |
+          dotnet format whitespace --folder . \
+            --exclude '**/bin/**' --exclude '**/obj/**' --exclude '**/TestResults/**' \
+            --verify-no-changes || {
+              echo "::error::Formatting does not match .editorconfig. Run: dotnet format whitespace --folder . --exclude '**/bin/**' --exclude '**/obj/**' --exclude '**/TestResults/**'"
+              exit 1
+            }
+
   build:
     runs-on: ubuntu-latest
 
@@ -24,7 +51,7 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore
+        run: dotnet build --no-restore -p:SkipFormatVerification=true
 
   test:
     needs: [build]
@@ -47,7 +74,7 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore
+        run: dotnet build --no-restore -p:SkipFormatVerification=true
 
       - name: Test (${{ matrix.database }})
         uses: nick-fields/retry@v4
@@ -97,7 +124,7 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore
+        run: dotnet build --no-restore -p:SkipFormatVerification=true
 
       - name: BUnit Tests
         uses: nick-fields/retry@v4
@@ -127,7 +154,7 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore
+        run: dotnet build --no-restore -p:SkipFormatVerification=true
 
       - name: Integration Test (${{ matrix.database }})
         uses: nick-fields/retry@v4

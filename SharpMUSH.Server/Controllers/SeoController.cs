@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Security;
 using System.Text;
@@ -89,11 +90,7 @@ public class SeoController(
 
 	/// <summary>Maps a wiki page to its public portal path based on its namespace.</summary>
 	private static string PathFor(WikiPage page) =>
-		page.Namespace.ToLowerInvariant() switch
-		{
-			"character" => $"/character/{page.Slug}",
-			var ns => $"/wiki/{ns}/{page.Category ?? "general"}/{page.Slug}",
-		};
+		WikiRoutes.PathFor(page.Namespace, page.Category, page.Slug);
 
 	private static void AppendUrl(StringBuilder sb, string loc, string lastmod)
 	{

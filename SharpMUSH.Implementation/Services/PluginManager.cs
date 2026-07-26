@@ -257,8 +257,8 @@ public sealed class PluginManager(
 
 	private static Error<string> LoadOnceRefusal(string pluginId) =>
 		new($"Plugin '{pluginId}' is load-once: it contributes DI services, database migrations, flags, " +
-		    "or a NATS bridge subscription whose effects are captured by the container, the database, or the " +
-		    "bridge and cannot be undone at runtime. Restart the server to unload or reload it.");
+				"or a NATS bridge subscription whose effects are captured by the container, the database, or the " +
+				"bridge and cannot be undone at runtime. Restart the server to unload or reload it.");
 
 	private int RegisterCommands(IPlugin plugin, TrackedPlugin tracked)
 	{

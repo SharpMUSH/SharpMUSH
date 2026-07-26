@@ -394,7 +394,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	{
 		var key = PoseKey(poseId);
 		var response = await _accessor.ExecuteAsync($"SELECT {ScenePoseFields} FROM $id",
-			new Dictionary<string, object?> { ["id"] = Rid(key) });		var rows = response.GetValue<List<ScenePoseDbRecord>>(0);
+			new Dictionary<string, object?> { ["id"] = Rid(key) }); var rows = response.GetValue<List<ScenePoseDbRecord>>(0);
 		if (rows is null or { Count: 0 })
 			return new NotFound();
 
@@ -888,7 +888,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	{
 		var key = PlotKey(plotId);
 		var response = await _accessor.ExecuteAsync($"SELECT {ScenePlotFields} FROM $id",
-			new Dictionary<string, object?> { ["id"] = Rid(key) });		var rows = response.GetValue<List<ScenePlotDbRecord>>(0);
+			new Dictionary<string, object?> { ["id"] = Rid(key) }); var rows = response.GetValue<List<ScenePlotDbRecord>>(0);
 		if (rows is null or { Count: 0 })
 			return new NotFound();
 
@@ -1469,7 +1469,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	private async Task<ScenePoseEdit?> ReadEditAsync(string editKey, string poseKey)
 	{
 		var response = await _accessor.ExecuteAsync($"SELECT {ScenePoseEditFields} FROM $id",
-			new Dictionary<string, object?> { ["id"] = Rid(editKey) });		var rows = response.GetValue<List<ScenePoseEditDbRecord>>(0);
+			new Dictionary<string, object?> { ["id"] = Rid(editKey) }); var rows = response.GetValue<List<ScenePoseEditDbRecord>>(0);
 		if (rows is null or { Count: 0 })
 			return null;
 		var rec = rows[0];
@@ -1494,14 +1494,14 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	private async Task<Dictionary<string, string>> ReadSceneMetaAsync(string sceneKey)
 	{
 		var response = await _accessor.ExecuteAsync("SELECT meta FROM $id",
-			new Dictionary<string, object?> { ["id"] = Rid(sceneKey) });		var rows = response.GetValue<List<SceneDbRecord>>(0);
+			new Dictionary<string, object?> { ["id"] = Rid(sceneKey) }); var rows = response.GetValue<List<SceneDbRecord>>(0);
 		return rows is { Count: > 0 } ? DeserializeMeta(rows[0].meta) : new Dictionary<string, string>();
 	}
 
 	private async Task UpdatePoseMetaKeyAsync(string poseKey, string key, string value)
 	{
 		var response = await _accessor.ExecuteAsync("SELECT meta FROM $id",
-			new Dictionary<string, object?> { ["id"] = Rid(poseKey) });		var rows = response.GetValue<List<ScenePoseDbRecord>>(0);
+			new Dictionary<string, object?> { ["id"] = Rid(poseKey) }); var rows = response.GetValue<List<ScenePoseDbRecord>>(0);
 		var meta = rows is { Count: > 0 } ? DeserializeMeta(rows[0].meta) : new Dictionary<string, string>();
 		meta[key] = value;
 		await _accessor.ExecuteAsync("UPDATE $id MERGE { meta: $meta }",
