@@ -132,6 +132,13 @@ else
         "<a href=\"/wiki/([^\"#?]+)\">",
         RegexOptions.Compiled);
 
+    // Character biographies render as their /character/{slug} alias. HTML stored before that
+    // change still carries the /wiki/character/... form, which WikiLinkHref above still matches,
+    // so both shapes have to be recognised for redlink marking to survive the transition.
+    private static readonly Regex CharacterLinkHref = new(
+        "<a href=\"/character/([^\"#?/]+)\">",
+        RegexOptions.Compiled);
+
     private List<BodySegment> _segments = [];
     private List<TocEntry> _toc = [];
 
@@ -139,7 +146,7 @@ else
         string.IsNullOrWhiteSpace(Category) ? "General" : char.ToUpper(Category[0]) + Category[1..];
 
     private string HistoryHref =>
-        $"/wiki/{(Namespace ?? "main").ToLowerInvariant()}/{(string.IsNullOrWhiteSpace(Category) ? "general" : Category)}/{Slug}/history";
+        $"{WikiRoutes.WikiPathFor(Namespace, Category, Slug)}/history";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -216,23 +223,36 @@ else
         return s.Trim('-');
     }
 
+    /// <summary>An anchor found in rendered HTML: the href as written, and the wiki page
+    /// reference ("ns/category/slug") whose existence decides whether it is a redlink.</summary>
+    private readonly record struct LinkTarget(string Href, string Reference);
+
+    private static List<LinkTarget> FindLinkTargets(string html) =>
+        WikiLinkHref.Matches(html)
+            .Select(m => new LinkTarget($"/wiki/{m.Groups[1].Value}", m.Groups[1].Value))
+            .Concat(CharacterLinkHref.Matches(html)
+                .Select(m => new LinkTarget(
+                    $"/character/{m.Groups[1].Value}",
+                    $"character/general/{m.Groups[1].Value}")))
+            .DistinctBy(t => t.Href, StringComparer.Ordinal)
+            .ToList();
+
     private async Task<string> MarkRedlinksAsync(string html)
     {
-        var refs = WikiLinkHref.Matches(html)
-            .Select(m => m.Groups[1].Value)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        if (refs.Count == 0) return html;
+        var targets = FindLinkTargets(html);
+        if (targets.Count == 0) return html;
 
-        var exists = await Wiki.CheckExistsAsync(refs.Select(WebUtility.HtmlDecode)!);
-        foreach (var reference in refs)
+        var exists = await Wiki.CheckExistsAsync(
+            targets.Select(t => WebUtility.HtmlDecode(t.Reference)!).Distinct(StringComparer.Ordinal));
+
+        foreach (var target in targets)
         {
-            var decoded = WebUtility.HtmlDecode(reference);
+            var decoded = WebUtility.HtmlDecode(target.Reference);
             if (exists.TryGetValue(decoded, out var found) && !found)
             {
                 html = html.Replace(
-                    $"<a href=\"/wiki/{reference}\">",
-                    $"<a href=\"/wiki/{reference}\" class=\"wiki-redlink\">");
+                    $"<a href=\"{target.Href}\">",
+                    $"<a href=\"{target.Href}\" class=\"wiki-redlink\">");
             }
         }
 

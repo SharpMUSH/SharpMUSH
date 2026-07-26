@@ -153,6 +153,36 @@ public class WikiServiceIntegrationTests
         await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
     }
 
+    /// <summary>
+    /// The page identity is the slugified title, but callers look pages up by the name the user
+    /// sees — "/character/Mercutio" hands the profile widget "Mercutio", not "mercutio". The
+    /// service normalizes the incoming slug so the lookup lands on the stored page.
+    /// </summary>
+    [Test]
+    public async Task GetBySlugAsync_NormalizesTitleCasedLookup()
+    {
+        var uid = Guid.NewGuid().ToString("N")[..8];
+        var title = $"Mercutio {uid}";
+        var created = await CreatePageAsync(title);
+
+        var result = await Wiki.GetBySlugAsync(title, "general", WikiNamespace.Main);
+
+        await Assert.That(result.IsT0).IsTrue();
+        await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+    }
+
+    [Test]
+    public async Task GetBySlugAsync_NormalizesUpperCasedLookup()
+    {
+        var uid = Guid.NewGuid().ToString("N")[..8];
+        var created = await CreatePageAsync($"Mercutio {uid}");
+
+        var result = await Wiki.GetBySlugAsync(created.Slug.ToUpperInvariant(), "general", WikiNamespace.Main);
+
+        await Assert.That(result.IsT0).IsTrue();
+        await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+    }
+
     [Test]
     public async Task GetBySlugAsync_MissingSlug_ReturnsNotFound()
     {

@@ -10,7 +10,7 @@
 <PageTitle>History: @Slug — SharpMUSH</PageTitle>
 
 <div class="wikihist">
-    <a class="wikihist-back" href="@($"/wiki/{Ns}/{Category}/{Slug}")">
+    <a class="wikihist-back" href="@WikiRoutes.PathFor(Ns, Category, Slug)">
         <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @_displayTitle
     </a>
     <div class="wikihist-head">
@@ -206,7 +206,7 @@
             _ =>
             {
                 Snackbar.Add($"Restored to revision {rev.RevisionNumber}.", Severity.Success);
-                Nav.NavigateTo($"/wiki/{Ns}/{Category}/{Slug}");
+                Nav.NavigateTo(WikiRoutes.PathFor(Ns, Category, Slug));
             },
             err => Snackbar.Add($"Restore failed: {err}", Severity.Error)
         );

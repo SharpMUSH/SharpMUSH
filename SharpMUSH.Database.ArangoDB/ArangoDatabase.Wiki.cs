@@ -19,6 +19,7 @@ public partial class ArangoDatabase : IWikiService
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var cat = WikiHelpers.NormalizeCategory(category);
+		var normalizedSlug = Slugify(slug);
 		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
 			"FOR p IN @@c FILTER p.Namespace == @ns AND p.Category == @cat AND p.Slug == @slug RETURN p",
 			bindVars: new Dictionary<string, object>
@@ -26,7 +27,7 @@ public partial class ArangoDatabase : IWikiService
 				{ "@c", DatabaseConstants.WikiPages },
 				{ "ns", nsStr },
 				{ "cat", cat },
-				{ "slug", slug }
+				{ "slug", normalizedSlug }
 			});
 
 		return result.FirstOrDefault() is { ValueKind: not JsonValueKind.Undefined } elem

@@ -17,10 +17,11 @@ public partial class MemgraphDatabase : IWikiService
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var cat = WikiHelpers.NormalizeCategory(category);
+		var normalizedSlug = Slugify(slug);
 		await using var session = driver.AsyncSession();
 		var result = await session.RunAsync(
 			"MATCH (p:WikiPage {namespace: $ns, category: $cat, slug: $slug}) RETURN p",
-			new { ns = nsStr, cat, slug });
+			new { ns = nsStr, cat, slug = normalizedSlug });
 
 		var records = await result.ToListAsync();
 		if (records.Count == 0) return new NotFound();
