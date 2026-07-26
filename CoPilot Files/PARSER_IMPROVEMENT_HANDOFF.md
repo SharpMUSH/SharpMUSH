@@ -4,7 +4,33 @@
 **For:** any worker (human or Claude session) picking up parser correctness/performance work with no prior context.
 **Evidence base:** `CoPilot Files/PARSER_PENNMUSH_VS_ANTLR4_DEEP_ANALYSIS.md` (same directory) — the full comparative analysis with all file:line citations, PennMUSH ground truth, and ANTLR4 source URLs. Read its §1 (architectures) and skim §4 (divergence catalog) before starting. This handoff is the *actionable layer*: what to change, where, how to prove it.
 
-**State as of this writing: everything below is analyzed but NOT fixed. No code changes have been made.**
+## Status
+
+**P0 is complete** on branch `fix/parser-pennmush-parity` (4 commits off `main`). P1–P3 are untouched.
+
+| Item | Commit | Outcome |
+|---|---|---|
+| P0.1 lock precedence | `045c25d1` | Fixed. Grammar gained precedence layers; all three visitors fold left. 4 of the new cases fail without it. |
+| P0.2 arg parity | `763f1382` | Fixed, **but the analysis was partly wrong** — see correction below. |
+| P0.3 unknown function | `0a9c2c38` | Fixed, plus error wording aligned to PennMUSH. 9 of 10 new cases fail without it. |
+| P0.4 hygiene | `5cac02e2` | All five sub-items done; `Validate` now also rejects malformed locks. |
+
+Full suite after each: **4954 tests, 0 failures**; solution builds clean. Every fix was verified by reverting it and confirming the new tests fail (details in the commit messages).
+
+### Corrections to the analysis, found while implementing
+
+1. **P0.2 was not entirely dead code.** `FunctionFlags.Regular == 0`, so `Regular | EvenArgsOnly == EvenArgsOnly` and `setr` *did* validate under the old `switch (attribute.Flags)`. Only flags combined with a non-zero flag (the three `NoParse | UnEvenArgsOnly` functions) were skipped. Verified: with the fix reverted, the `letq` cases fail and the `setr` case passes.
+2. **`case`/`caseall` should never have carried `UnEvenArgsOnly`.** PennMUSH backs CASE/CASEALL/SWITCH with `fun_switch`, which checks only `minargs`; the canonical `case(str,pat,res,default)` is even-numbered. Making the parity check live without removing that flag breaks the common form — confirmed by re-adding the flag and watching those cases fail. Penn enforces parity only in `fun_letq` and `fun_setq` (src/funmisc.c:329,365).
+3. **The unknown-function error wording also diverged.** `ErrorMessages.Returns.NoSuchFunction` was `#-1 COULD NOT FIND FUNCTION: {0}` while `fn()` emitted Penn's `#-1 FUNCTION (NAME) NOT FOUND` inline. Unified on Penn's wording; the six `@function` test assertions that encoded the old wording called their deleted functions *unbracketed*, which is no longer an error at all, so they now bracket the call.
+4. **`Validate` accepted malformed locks.** Once the lock parser had a collecting error listener it became clear the validation visitor was walking ANTLR's recovery tree and reporting survivors as valid. `LockService.Set` gates on `Validate`, so this was the gate that let unparseable locks be stored.
+
+### Known remaining gap (introduced boundary, worth a follow-up)
+
+The literal path for a non-call reuses `_suppressFunctionEval`, whose existing early-return hands back raw source text for a nested call. So `foo(add(1,2))` is right, and `foo([add(1,2)])` is right, but `foo(add(%0,2))` leaves `%0` unsubstituted where PennMUSH substitutes it (braces keep `PE_EVALUATE` on while clearing `PE_FUNCTION_CHECK`). Fixing it means routing the *suppressed* branch of `VisitFunction` through `LiteralFunctionCall` too, which also changes `{...}` function-arg brace behaviour — worth doing deliberately, with brace tests in front of it.
+
+---
+
+**Everything below P0 is analyzed but NOT fixed.**
 
 ---
 

@@ -85,7 +85,8 @@ SharpMUSH's `FUNCHAR` commits the callee lexically. Two `[Skip]`ped tests exist 
 ### 4.2 Unknown function at top level (confirmed divergence)
 
 Penn: unknown `name(` **outside** `[]` → literal text (`foo(bar)` stays `foo(bar)`, `src/parse.c:2807–2823`); only inside `[]` (`PE_FUNCTION_MANDATORY`) does it become `#-1 FUNCTION (FOO) NOT FOUND` (+ `DID YOU MEAN` suggestion, `:2788–2806`).
-SharpMUSH: `CallFunction` returns `#-1 FUNCTION ({name}) NOT FOUND` **unconditionally** (`SharpMUSHParserVisitor.cs:431`).
+SharpMUSH: `CallFunction` returned an error **unconditionally** (`SharpMUSHParserVisitor.cs:431`) — and with non-Penn wording (`#-1 COULD NOT FIND FUNCTION: {0}`), while `fn()` emitted Penn's wording inline.
+**FIXED** (commit `0a9c2c38`): literal outside brackets, Penn's wording inside. The bracket test walks outward from the call and stops at whichever comes first — a `bracketPattern` (mandatory) or an enclosing `function` (its argument list, not mandatory), which is exactly Penn's rule that argument evaluation strips `PE_FUNCTION_MANDATORY`.
 Witness: `think hello(world)` → Penn `hello(world)`; Sharp `#-1 FUNCTION (HELLO) NOT FOUND`. Everyday-visible; softcode writes prose with parens.
 Fix: in `VisitFunction`, when lookup misses **and** the context is not inside a `bracketPattern`, fall back to literal text (the parse tree makes the "inside brackets" test trivial). Also consider Penn's suggestion string for the bracket case.
 
@@ -94,7 +95,7 @@ Fix: in `VisitFunction`, when lookup misses **and** the context is not inside a 
 Penn: `E→T|E`, `T→F&T` — AND binds tighter (`src/boolexp.c:1378–1430`). `a&b|c` ≡ `(a&b)|c`.
 SharpMUSH: `lockExprList: lockAndExpr | lockOrExpr | lockExpr;` with `lockAndExpr: lockExpr AND lockExprList` — equal precedence, right-fold: `a&b|c` ≡ `a&(b|c)` (`SharpMUSHBoolExpParser.g4:16–20`), and the eval visitor faithfully compiles that shape (`Expression.AndAlso(lockExpr, lockExprList)`).
 **Witness:** lock `#FALSE & #FALSE | #TRUE` — passes in Penn, **fails** in SharpMUSH. Inverse (over-permissive) witnesses exist too: any lock of shape `a & b | c` where a is false and c true. This silently changes who passes locks.
-Fix: restructure to `lockExprList: lockOrExpr; lockOrExpr: lockAndExpr (OR lockAndExpr)*; lockAndExpr: lockExpr (AND lockExpr)*;` and fold left in the three visitors (eval, normalization, validation). Normalization output stays textually compatible.
+**FIXED** (commit `045c25d1`): grammar restructured into precedence layers, all three visitors fold left. Normalized text is unchanged (same operators, same spacing), so stored locks need no migration — only their grouping is reinterpreted. The compiled-expression FusionCache is in-process, so a restart clears anything compiled under the old grouping.
 
 ### 4.4 Even/odd argument validation never fires (confirmed bug)
 
@@ -107,7 +108,9 @@ switch (attribute.Flags) {
 }
 ```
 
-Every real declaration combines flags (`letq`: `NoParse | UnEvenArgsOnly`; `setr`: `Regular | EvenArgsOnly`; `case`/`switch` families), so no case ever matches; wrong-arity calls proceed silently where Penn errors. Fix: `if (attribute.Flags.HasFlag(FunctionFlags.UnEvenArgsOnly) && …)`.
+**Correction after implementing:** `FunctionFlags.Regular == 0`, so `Regular | EvenArgsOnly == EvenArgsOnly` and `setr` *did* match and validate. Only declarations combining the parity flag with a non-zero flag were skipped — the three `NoParse | UnEvenArgsOnly` functions (`letq`, `case`, `caseall`). Unchecked, `letq` with an even argument count runs its pair loop one step too far and binds its own body as a register value.
+
+**FIXED** (commit `763f1382`) with `HasFlag`. Implementing it also revealed that `case`/`caseall` should never have carried the flag: PennMUSH backs CASE/CASEALL/SWITCH with `fun_switch`, which validates only `minargs` (`src/function.c:387,388,777`), and the canonical `case(str,pat,res,default)` form is even-numbered. Penn checks parity only in `fun_setq` (`nargs % 2 != 0`) and `fun_letq` (`nargs % 2 != 1`), at `src/funmisc.c:327,364`. Only `letq` and `setr` keep parity flags now.
 
 ### 4.5 Command word is not evaluated (confirmed divergence)
 
@@ -224,11 +227,13 @@ The community record vindicates the two *load-bearing* SharpMUSH choices: single
 
 ## 7. Prioritized roadmap
 
-**P0 — correctness, small diffs**
-1. Lock precedence fix (§4.3) + oracle tests for `a&b|c` shapes across all three boolexp visitors.
-2. `FunctionFlags` even/odd validation via `HasFlag` (§4.4) + tests (`letq` with even args must error).
-3. Unknown-function-at-top-level → literal text outside brackets (§4.2).
-4. Boolexp + lexer error-listener hygiene (§5.2.3); `commaCommandArgs` EOF entry (§5.2.4); `lit()` markup slice (§4.13).
+**P0 — correctness, small diffs — DONE** (branch `fix/parser-pennmush-parity`, 4 commits; 4954 tests green)
+1. ~~Lock precedence fix (§4.3)~~ — `045c25d1`.
+2. ~~`FunctionFlags` even/odd validation via `HasFlag` (§4.4)~~ — `763f1382`, plus removing the flag from `case`/`caseall`.
+3. ~~Unknown-function-at-top-level → literal text outside brackets (§4.2)~~ — `0a9c2c38`, plus Penn error wording.
+4. ~~Boolexp + lexer error-listener hygiene (§5.2.3); `commaCommandArgs` EOF entry (§5.2.4); `lit()` markup slice (§4.13)~~ — `5cac02e2`, plus `Validate` rejecting malformed locks.
+
+See `PARSER_IMPROVEMENT_HANDOFF.md` §Status for outcomes, the corrections implementation forced on this analysis, and one remaining fidelity gap.
 
 **P1 — the two big levers**
 5. Two-stage SLL+Bail with LL-fallback counter (§5.2.1). Flip `DebugOptions` default; correct the enum doc-comment.
