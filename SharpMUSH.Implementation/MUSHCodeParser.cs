@@ -126,6 +126,77 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		=> State = [state];
 
 	/// <summary>
+	/// Deepest nesting of <c>[]</c>, <c>{}</c>, and function-call <c>()</c> the parser will
+	/// attempt. The generated parser is recursive descent, so each level becomes a native stack
+	/// frame with no depth check of its own; a deeply enough nested input overflows the stack and
+	/// takes the whole process down with an uncatchable <see cref="StackOverflowException"/> —
+	/// during parsing, before any evaluation-time limit (CallLimit, FunctionInvocationLimit) can
+	/// act. Direct player input is not length-capped (the telnet line buffer is megabytes), so a
+	/// single line of brackets is a remote denial of service against every connected player.
+	/// <para>
+	/// Refusing to parse past this depth is the structural analogue of PennMUSH's call_limit,
+	/// which likewise stops descending into <c>{</c>/<c>[</c>/<c>(</c> to protect the C stack
+	/// (src/parse.c). Fixed rather than configurable so an operator cannot raise it back into the
+	/// crash range. Wide margin: the observed overflow is above ~11000 levels, real softcode nests
+	/// a few dozen deep, and PennMUSH ships call_limit at 100.
+	/// </para>
+	/// </summary>
+	private const int MaxParseNestingDepth = 1000;
+
+	/// <summary>
+	/// Whether the token stream nests recursion-causing delimiters — <c>[</c>, <c>{</c>, and a
+	/// function-call <c>name(</c> — deeper than <paramref name="limit"/>. These are exactly the
+	/// three constructs whose parser rules recurse (<c>bracketPattern</c>, <c>bracePattern</c>,
+	/// <c>function</c>); a bare <c>(</c> is plain text and does not open a rule, so it is tracked
+	/// only to match its closing <c>)</c> and never counts toward the depth. Escaped delimiters
+	/// never reach here as openers — the lexer emits <c>ESCAPE</c> + <c>ANY</c> for <c>\[</c> — so
+	/// they add no depth, matching what the parser would have done.
+	/// </summary>
+	internal static bool ExceedsNestingLimit(BufferedTokenSpanStream tokenStream, int limit)
+	{
+		var tokens = tokenStream.tokens;
+		var open = new Stack<char>();
+		var depth = 0;
+
+		foreach (var token in tokens)
+		{
+			switch (token.Type)
+			{
+				case SharpMUSHLexer.OBRACK:
+					open.Push('[');
+					if (++depth > limit) return true;
+					break;
+				case SharpMUSHLexer.OBRACE:
+					open.Push('{');
+					if (++depth > limit) return true;
+					break;
+				case SharpMUSHLexer.FUNCHAR:
+					open.Push('(');
+					if (++depth > limit) return true;
+					break;
+				case SharpMUSHLexer.OPAREN:
+					open.Push('o');
+					break;
+				case SharpMUSHLexer.CBRACK:
+					if (open.TryPeek(out var b) && b == '[') { open.Pop(); depth--; }
+					break;
+				case SharpMUSHLexer.CBRACE:
+					if (open.TryPeek(out var c) && c == '{') { open.Pop(); depth--; }
+					break;
+				case SharpMUSHLexer.CPAREN:
+					if (open.TryPeek(out var p) && p is '(' or 'o')
+					{
+						if (p == '(') depth--;
+						open.Pop();
+					}
+					break;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
 	/// Gets the configured ANTLR prediction mode based on configuration.
 	/// </summary>
 	private PredictionMode GetPredictionMode()
@@ -183,6 +254,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
 		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
+
+		// Refuse pathologically nested input before the recursive-descent parser overflows the
+		// stack (see MaxParseNestingDepth). Reported as the call-limit error, matching PennMUSH's
+		// call_limit, which is the same guard against the same crash.
+		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth))
+		{
+			return (new CallState(MModule.single(ErrorMessages.Returns.Call)), false);
+		}
 
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
@@ -377,6 +456,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
 		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
+
+		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth))
+		{
+			return () => ValueTask.FromResult<CallState?>(new CallState(MModule.single(ErrorMessages.Returns.Call)));
+		}
+
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
@@ -555,6 +640,22 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
 		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
 
+		// Report over-deep nesting as a diagnostic rather than parsing it and overflowing the
+		// stack — this path feeds the LSP/MCP analyzer, which must survive hostile documents.
+		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth))
+		{
+			return
+			[
+				new ParseError
+				{
+					Line = 1,
+					Column = 0,
+					Message = $"Expression nests brackets, braces or function calls more than {MaxParseNestingDepth} levels deep.",
+					InputText = plaintext.ToString(),
+				}
+			];
+		}
+
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
@@ -641,6 +742,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
 		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
+
+		// Too deep to parse safely: fall back to the flat lexer-token classification, the same
+		// degraded result the catch below produces for a syntax error.
+		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth))
+		{
+			return ConvertSyntacticToSemanticTokens(Tokenize(text));
+		}
 
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
