@@ -1,9 +1,10 @@
 @inject IHttpClientFactory HttpClientFactory
+@inject IStringLocalizer<SharedResource> Loc
 
 <div class="wiki-directive-block">
     @if (!_loaded)
     {
-        <p class="wiki-directive-loading"><em>Loading…</em></p>
+        <p class="wiki-directive-loading"><em>@Loc["Loading"]</em></p>
     }
     else
     {
@@ -13,7 +14,7 @@
         }
         @if (_pages.Count == 0)
         {
-            <p class="wiki-directive-empty"><em>No pages yet.</em></p>
+            <p class="wiki-directive-empty"><em>@Loc["WkDirectiveNoPages"]</em></p>
         }
         else
         {
@@ -82,9 +83,9 @@
 
     private string? Header => Directive switch
     {
-        "category" => $"Category: {Arg}",
-        "tag" => $"Tag: {Arg}",
-        "recent" => "Recent changes",
+        "category" => Loc["WkDirectiveCategoryHeader", Arg].Value,
+        "tag" => Loc["WkDirectiveTagHeader", Arg].Value,
+        "recent" => Loc["WikiRecentChanges"].Value,
         _ => null
     };
 

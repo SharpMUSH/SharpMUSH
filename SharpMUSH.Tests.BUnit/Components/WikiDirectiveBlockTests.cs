@@ -1,12 +1,22 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Resources;
 using System.Net;
 using System.Text;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+/// <summary>Null-stub localizer that echoes the resource key as its value.</summary>
+file sealed class DirectiveStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// HttpMessageHandler that returns a canned response for every request,
@@ -38,7 +48,9 @@ public class WikiDirectiveBlockTests : BunitContext
 {
 	public WikiDirectiveBlockTests()
 	{
-		Services.AddMudServices();
+		Services
+			.AddMudServices()
+			.AddSingleton<IStringLocalizer<SharedResource>, DirectiveStubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -77,7 +89,7 @@ public class WikiDirectiveBlockTests : BunitContext
 		await Assert.That(handler.LastRequestPath).IsEqualTo("/api/wiki/category/lore");
 
 		await Assert.That(cut.Markup).Contains("wiki-directive-block");
-		await Assert.That(cut.Markup).Contains("Category: lore");
+		await Assert.That(cut.Markup).Contains("WkDirectiveCategoryHeader");
 		await Assert.That(cut.Markup).Contains("wiki-directive-list");
 
 		// Canonical link form: /wiki/{ns}/{category}/{slug} (category defaults to general).
@@ -98,11 +110,11 @@ public class WikiDirectiveBlockTests : BunitContext
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("No pages yet."))
+			if (!cut.Markup.Contains("WkDirectiveNoPages"))
 				throw new InvalidOperationException("Empty state not rendered yet.");
 		});
 
-		await Assert.That(cut.Markup).Contains("No pages yet.");
+		await Assert.That(cut.Markup).Contains("WkDirectiveNoPages");
 		await Assert.That(cut.Markup).DoesNotContain("wiki-directive-list");
 	}
 }

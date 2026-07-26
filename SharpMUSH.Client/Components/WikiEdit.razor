@@ -2,47 +2,48 @@
 @using SharpMUSH.Library.Services
 @inject IJSRuntime JsRuntime
 @inject WikiMarkdigPipeline Pipeline
+@inject IStringLocalizer<SharedResource> Loc
 
 @if (Article is not null)
 {
     <div class="wiki-edit">
         <div class="wiki-edit-header">
             <button type="button" class="wiki-edit-cancel" @onclick="OnCancel">
-                <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.9375rem;" /> Cancel
+                <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.9375rem;" /> @Loc["Cancel"]
             </button>
             <div style="flex:1;"></div>
             <span class="wiki-edit-mode">
-                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;color:var(--accent);" /> editing · live preview
+                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;color:var(--accent);" /> @Loc["WkEditLivePreview"]
             </span>
         </div>
 
         <div class="wiki-edit-titlerow">
             <input class="wiki-edit-title" value="@Article.Title"
                    @oninput="@(e => Article.Title = e.Value?.ToString() ?? string.Empty)"
-                   placeholder="Page title" />
+                   placeholder="@Loc["WkPageTitlePlaceholder"]" />
             <div class="wiki-edit-cat">
                 <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:0.875rem;color:var(--text-faint);" />
                 <input value="@Article.Category"
                        @oninput="@(e => Article.Category = e.Value?.ToString())"
-                       placeholder="category" />
+                       placeholder="@Loc["WikiCategory"]" />
             </div>
         </div>
 
         <div class="wiki-edit-toolbar">
-            <button type="button" title="Bold" @onclick="@(() => Wrap("**", "**", false))"><b>B</b></button>
-            <button type="button" title="Italic" @onclick="@(() => Wrap("*", "*", false))"><i>I</i></button>
-            <button type="button" title="Heading" @onclick="@(() => Wrap("## ", "", true))"><b>H</b></button>
-            <button type="button" title="List item" @onclick="@(() => Wrap("- ", "", true))">
+            <button type="button" title="@Loc["WkBold"]" @onclick="@(() => Wrap("**", "**", false))"><b>B</b></button>
+            <button type="button" title="@Loc["WkItalic"]" @onclick="@(() => Wrap("*", "*", false))"><i>I</i></button>
+            <button type="button" title="@Loc["WkHeading"]" @onclick="@(() => Wrap("## ", "", true))"><b>H</b></button>
+            <button type="button" title="@Loc["WkListItem"]" @onclick="@(() => Wrap("- ", "", true))">
                 <MudIcon Icon="@Icons.Material.Filled.FormatListBulleted" Style="font-size:0.9375rem;" />
             </button>
-            <button type="button" title="Quote" @onclick="@(() => Wrap("> ", "", true))">
+            <button type="button" title="@Loc["WkQuote"]" @onclick="@(() => Wrap("> ", "", true))">
                 <MudIcon Icon="@Icons.Material.Filled.FormatQuote" Style="font-size:0.9375rem;" />
             </button>
-            <button type="button" title="Link" @onclick="@(() => Wrap("[", "](https://)", false))">
+            <button type="button" title="@Loc["WkLink"]" @onclick="@(() => Wrap("[", "](https://)", false))">
                 <MudIcon Icon="@Icons.Material.Filled.Link" Style="font-size:0.9375rem;" />
             </button>
             <div class="wiki-edit-tooldiv"></div>
-            <button type="button" title="Insert image" @onclick="@(() => _showAssetPicker = !_showAssetPicker)">
+            <button type="button" title="@Loc["WkInsertImage"]" @onclick="@(() => _showAssetPicker = !_showAssetPicker)">
                 <MudIcon Icon="@Icons.Material.Filled.Image" Style="font-size:0.9375rem;" />
             </button>
             <div style="flex:1;"></div>
@@ -68,7 +69,7 @@
         </div>
 
         <div class="wiki-edit-tags">
-            <span class="wiki-edit-taglabel">Tags</span>
+            <span class="wiki-edit-taglabel">@Loc["WikiTags"]</span>
             @foreach (var tag in Article.Tags)
             {
                 var t = tag;
@@ -78,12 +79,12 @@
             }
             <input class="wiki-edit-taginput" value="@_tagEntry"
                    @oninput="@(e => _tagEntry = e.Value?.ToString() ?? string.Empty)"
-                   @onkeydown="OnTagKeyDown" placeholder="add tag…" />
+                   @onkeydown="OnTagKeyDown" placeholder="@Loc["WkAddTagPlaceholder"]" />
             <div style="flex:1;"></div>
             <label class="wiki-edit-pub">
                 <input type="checkbox" checked="@Article.Published"
                        @onchange="@(e => Article.Published = (bool)(e.Value ?? false))" />
-                Published
+                @Loc["WikiPublished"]
             </label>
         </div>
 
@@ -91,22 +92,22 @@
             <div class="wiki-edit-summary">
                 <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:0.875rem;color:var(--text-faint);" />
                 <input value="@_summary" @oninput="@(e => _summary = e.Value?.ToString() ?? string.Empty)"
-                       placeholder="Summarize your change (e.g. 'fixed a typo')…" />
+                       placeholder="@Loc["WkSummaryPlaceholder"]" />
             </div>
             <button type="button" class="wiki-edit-minor" @onclick="@(() => _minor = !_minor)">
                 <span class="wiki-edit-check @(_minor ? "on" : "")">
                     @if (_minor) { <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:0.6875rem;color:var(--accent-on);" /> }
                 </span>
-                Minor edit
+                @Loc["WkMinorEdit"]
             </button>
             <span class="wiki-edit-delta" style="@(ByteDelta >= 0 ? "color:var(--accent);" : "color:#e57373;")">
-                @(ByteDelta >= 0 ? "+" : "")@ByteDelta bytes
+                @Loc["WkBytesDelta", SignedByteDelta]
             </span>
             <div class="wiki-edit-savediv"></div>
-            <button type="button" class="wiki-btn" @onclick="OnCancel" disabled="@_saving">Discard</button>
+            <button type="button" class="wiki-btn" @onclick="OnCancel" disabled="@_saving">@Loc["WkDiscard"]</button>
             <button type="button" class="wiki-edit-publish" @onclick="HandleSave" disabled="@_saving">
                 <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:0.875rem;" />
-                @(_saving ? "Saving…" : "Publish changes")
+                @(_saving ? Loc["Saving"] : Loc["WkPublishChanges"])
             </button>
         </div>
 
@@ -116,8 +117,8 @@
         }
 
         <div class="wiki-edit-foot">
-            <span>Changes publish immediately and appear for everyone.</span>
-            <a href="/wiki/help/general/markdown_guide" target="_blank">Formatting help</a>
+            <span>@Loc["WkPublishNotice"]</span>
+            <a href="/wiki/help/general/markdown_guide" target="_blank">@Loc["WkFormattingHelp"]</a>
         </div>
     </div>
 }
@@ -146,6 +147,10 @@
     private int ByteDelta => Article is null
         ? 0
         : System.Text.Encoding.UTF8.GetByteCount(Article.Content) - _initialBytes;
+
+    private string SignedByteDelta => ByteDelta >= 0
+        ? $"+{ByteDelta}"
+        : ByteDelta.ToString(System.Globalization.CultureInfo.CurrentCulture);
 
     private async Task Wrap(string before, string after, bool block)
         => await JsRuntime.InvokeVoidAsync("SharpMUSH.Wiki.wrap", _taId, before, after, block);

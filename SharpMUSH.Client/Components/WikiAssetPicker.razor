@@ -1,5 +1,6 @@
 @using SharpMUSH.Client.Services
 @inject WikiAssetService AssetService
+@inject IStringLocalizer<SharedResource> Loc
 
 @if (_isLoading)
 {
@@ -7,7 +8,7 @@
 }
 else if (_assets.Count == 0)
 {
-    <MudText Typo="Typo.body2" Color="Color.Secondary">No assets uploaded yet.</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">@Loc["WkNoAssets"]</MudText>
 }
 else
 {

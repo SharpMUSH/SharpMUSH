@@ -4,14 +4,15 @@
 @inject WikiAssetService AssetService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Wiki Assets — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["WkWikiAssets"] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
 <div style="padding:var(--cpad);">
     <div class="assets-head">
         <div>
-            <div class="assets-kicker">Staff · Media</div>
-            <h1 class="assets-title">Wiki Assets</h1>
+            <div class="assets-kicker">@Loc["WkStaffMedia"]</div>
+            <h1 class="assets-title">@Loc["WkWikiAssets"]</h1>
         </div>
     </div>
 
@@ -25,9 +26,9 @@
         @if (_isUploading)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
-            <span class="assets-upload-status">Uploading…</span>
+            <span class="assets-upload-status">@Loc["Uploading"]</span>
         }
-        <span class="assets-upload-hint">PNG, JPEG, GIF, WebP or SVG — 10 MB max.</span>
+        <span class="assets-upload-hint">@Loc["WkAssetUploadHint"]</span>
     </div>
 
     @if (_isLoading)
@@ -36,7 +37,7 @@
     }
     else if (_assets.Count == 0)
     {
-        <div class="assets-empty">No assets uploaded yet.</div>
+        <div class="assets-empty">@Loc["WkNoAssets"]</div>
     }
     else
     {
@@ -59,10 +60,10 @@
                         </div>
                         <div class="assets-card-actions">
                             <button type="button" class="assets-btn" @onclick="@(() => CopyMarkdown(asset))">
-                                <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Style="font-size:0.875rem;" /> Copy Markdown
+                                <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Style="font-size:0.875rem;" /> @Loc["WkCopyMarkdown"]
                             </button>
                             <button type="button" class="assets-icon-btn assets-icon-btn--danger"
-                                    title="Delete" @onclick="@(() => DeleteAsset(asset))">
+                                    title="@Loc["Delete"]" @onclick="@(() => DeleteAsset(asset))">
                                 <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:0.875rem;" />
                             </button>
                         </div>
@@ -101,7 +102,7 @@
 
         if (file.Size > MaxUploadBytes)
         {
-            Snackbar.Add("File exceeds the 10 MB limit.", Severity.Error);
+            Snackbar.Add(Loc["WkFileTooLarge"], Severity.Error);
             return;
         }
 
@@ -111,7 +112,7 @@
             await using var stream = file.OpenReadStream(maxAllowedSize: MaxUploadBytes);
             var result = await AssetService.UploadAsync(stream, file.Name, file.ContentType);
             result.Switch(
-                uploaded => Snackbar.Add($"Uploaded {uploaded.FileName}.", Severity.Success),
+                uploaded => Snackbar.Add(Loc["WkAssetUploaded", uploaded.FileName], Severity.Success),
                 error => Snackbar.Add(error, Severity.Error));
         }
         finally
@@ -125,14 +126,14 @@
     private async Task CopyMarkdown(WikiAssetInfo asset)
     {
         await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", $"![]({asset.Url})");
-        Snackbar.Add("Markdown copied to clipboard.", Severity.Info);
+        Snackbar.Add(Loc["WkMarkdownCopied"], Severity.Info);
     }
 
     private async Task DeleteAsset(WikiAssetInfo asset)
     {
         var confirmed = await JSRuntime.InvokeAsync<bool>(
             "confirm",
-            $"Delete '{asset.FileName}'? Pages embedding it will show a broken image.");
+            Loc["WkDeleteAssetPrompt", asset.FileName].Value);
 
         if (!confirmed)
         {
@@ -141,12 +142,12 @@
 
         if (await AssetService.DeleteAsync(asset.Id))
         {
-            Snackbar.Add($"Deleted {asset.FileName}.", Severity.Success);
+            Snackbar.Add(Loc["WkAssetDeleted", asset.FileName], Severity.Success);
             await RefreshAsync();
         }
         else
         {
-            Snackbar.Add("Delete failed.", Severity.Error);
+            Snackbar.Add(Loc["WkDeleteFailed"], Severity.Error);
         }
     }
 

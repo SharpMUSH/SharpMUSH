@@ -5,22 +5,23 @@
 @inject WikiAssetService AssetService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JsRuntime
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Image Library — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["WkImageLibrary"] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
 <div style="padding:var(--cpad);">
-    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:0.25rem;">Image Library</MudText>
-    <MudText Style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.5rem;">Manage uploaded media assets used across the wiki and portal.</MudText>
+    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:0.25rem;">@Loc["WkImageLibrary"]</MudText>
+    <MudText Style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.5rem;">@Loc["WkImageLibraryDescription"]</MudText>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.75rem;margin-bottom:1.25rem;">
         @foreach (var tile in new[] {
-            (_assets.Count.ToString(),                             "Total Assets",        Icons.Material.Filled.Image,        "var(--accent)"),
-            (FormatBytes(TotalSizeBytes),                          "Storage Used",        Icons.Material.Filled.Storage,      "#5aa9ff"),
-            (_assets.Count(a => AssetKind(a.ContentType) == "image").ToString(), "Images", Icons.Material.Filled.PhotoLibrary, "#6cde9a"),
-            (_assets.Count(a => AssetKind(a.ContentType) != "image").ToString(), "Other",  Icons.Material.Filled.Attachment,  "#b39cff"),
+            (_assets.Count.ToString(),                             "WkTotalAssets",           Icons.Material.Filled.Image,        "var(--accent)"),
+            (FormatBytes(TotalSizeBytes),                          "WkStorageUsed",           Icons.Material.Filled.Storage,      "#5aa9ff"),
+            (_assets.Count(a => AssetKind(a.ContentType) == "image").ToString(), "WkKindImagePlural", Icons.Material.Filled.PhotoLibrary, "#6cde9a"),
+            (_assets.Count(a => AssetKind(a.ContentType) != "image").ToString(), "WkKindOther", Icons.Material.Filled.Attachment,  "#b39cff"),
         })
         {
-            var (val, label, icon, color) = tile;
+            var (val, labelKey, icon, color) = tile;
             <MudPaper Elevation="0" Style="@($"padding:1rem 1.125rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);")">
                 <div style="display:flex;align-items:center;gap:0.75rem;">
                     <MudIcon Icon="@icon" Style="@($"color:{color};font-size:1.375rem;")" />
@@ -28,7 +29,7 @@
                         <MudText Style="@($"font-size:1.375rem;font-weight:700;color:{color};line-height:1.1;")">
                             @(_isLoading ? "—" : val)
                         </MudText>
-                        <MudText Class="section-kicker" Style="opacity:0.7;">@label</MudText>
+                        <MudText Class="section-kicker" Style="opacity:0.7;">@Loc[labelKey]</MudText>
                     </div>
                 </div>
             </MudPaper>
@@ -44,15 +45,15 @@
                 <MudChip T="string" Value="@kind"
                          Size="Size.Small"
                          Style="@(_kindFilter == kind ? "border:1px solid var(--accent);color:var(--accent);background:rgba(var(--glow),0.08);" : "border:1px solid var(--border);")">
-                    @(char.ToUpper(kind[0]) + kind[1..])
+                    @Loc[KindLabelKey(kind)]
                 </MudChip>
             }
         </MudChipSet>
         <MudSpacer />
         <MudToggleGroup T="string" Value="_viewMode" ValueChanged="@(v => _viewMode = v ?? "grid")"
                         Color="Color.Primary" Style="gap:0;">
-            <MudToggleItem Value="@("grid")" Text="Grid" />
-            <MudToggleItem Value="@("list")" Text="List" />
+            <MudToggleItem Value="@("grid")" Text="@Loc["WkViewGrid"]" />
+            <MudToggleItem Value="@("list")" Text="@Loc["WkViewList"]" />
         </MudToggleGroup>
         <MudFileUpload T="IBrowserFile"
                        Accept=".png,.jpg,.jpeg,.gif,.webp,.svg,.mp4,.webm,.pdf,.txt"
@@ -73,7 +74,7 @@
     }
     else if (FilteredAssets.Count == 0)
     {
-        <EmptyState>No assets found.</EmptyState>
+        <EmptyState>@Loc["WkNoAssetsFound"]</EmptyState>
     }
     else if (_viewMode == "grid")
     {
@@ -102,12 +103,12 @@
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.25rem;">
                             <MudText Style="font-size:0.6875rem;color:var(--text-faint);">@FormatBytes(a.SizeBytes)</MudText>
                             <div style="display:flex;gap:0.125rem;">
-                                <MudTooltip Text="Copy URL">
+                                <MudTooltip Text="@Loc["WkCopyUrl"]">
                                     <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
                                                    Style="padding:0.125rem;min-width:0;"
                                                    OnClick="@(() => CopyUrlAsync(a.Url))" />
                                 </MudTooltip>
-                                <MudTooltip Text="Delete">
+                                <MudTooltip Text="@Loc["Delete"]">
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                                    Color="Color.Error"
                                                    Style="padding:0.125rem;min-width:0;"
@@ -128,7 +129,7 @@
                      Class="mush-dark-grid"
                      Elevation="0">
             <Columns>
-                <TemplateColumn Title="Preview" Sortable="false" CellStyle="width:48px;">
+                <TemplateColumn Title="@Loc["WkColPreview"]" Sortable="false" CellStyle="width:48px;">
                     <CellTemplate>
                         @if (AssetKind(context.Item.ContentType) == "image")
                         {
@@ -141,34 +142,34 @@
                         }
                     </CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="File Name" Sortable="false">
+                <TemplateColumn Title="@Loc["WkColFileName"]" Sortable="false">
                     <CellTemplate>
                         <MudText Style="font-size:0.8125rem;">@context.Item.FileName</MudText>
                     </CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="Kind" Sortable="false" CellStyle="width:80px;">
+                <TemplateColumn Title="@Loc["WkColKind"]" Sortable="false" CellStyle="width:80px;">
                     <CellTemplate>
                         <MudChip T="string" Size="Size.Small"
                                  Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">
-                            @AssetKind(context.Item.ContentType)
+                            @Loc[KindLabelKey(AssetKind(context.Item.ContentType))]
                         </MudChip>
                     </CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="Size" Sortable="false" CellStyle="width:80px;">
+                <TemplateColumn Title="@Loc["WkColSize"]" Sortable="false" CellStyle="width:80px;">
                     <CellTemplate>
                         <MudText Style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:var(--text-faint);">
                             @FormatBytes(context.Item.SizeBytes)
                         </MudText>
                     </CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="Uploaded" Sortable="false" CellStyle="width:130px;">
+                <TemplateColumn Title="@Loc["WkColUploaded"]" Sortable="false" CellStyle="width:130px;">
                     <CellTemplate>
                         <MudText Style="font-size:0.75rem;color:var(--text-dim);">
                             @context.Item.UploadedAt.ToLocalTime().ToString("MMM d, yyyy")
                         </MudText>
                     </CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="Uploader" Sortable="false">
+                <TemplateColumn Title="@Loc["WkColUploader"]" Sortable="false">
                     <CellTemplate>
                         <MudText Style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:var(--text-dim);">
                             @context.Item.UploaderDbref
@@ -179,16 +180,16 @@
                     <CellTemplate>
                         <div style="display:flex;gap:0.125rem;">
                             <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
-                                           title="Copy URL" OnClick="@(() => CopyUrlAsync(context.Item.Url))" />
+                                           title="@Loc["WkCopyUrl"]" OnClick="@(() => CopyUrlAsync(context.Item.Url))" />
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                           Color="Color.Error" title="Delete"
+                                           Color="Color.Error" title="@Loc["Delete"]"
                                            OnClick="@(() => ConfirmDeleteAsync(context.Item))" />
                         </div>
                     </CellTemplate>
                 </TemplateColumn>
             </Columns>
             <NoRecordsContent>
-                <MudText Color="Color.Secondary">No assets found.</MudText>
+                <MudText Color="Color.Secondary">@Loc["WkNoAssetsFound"]</MudText>
             </NoRecordsContent>
         </MudDataGrid>
         </div>
@@ -197,14 +198,14 @@
 
 <MudDialog @bind-Visible="_showDeleteConfirm">
     <TitleContent>
-        <MudText Typo="Typo.h6">Delete asset?</MudText>
+        <MudText Typo="Typo.h6">@Loc["WkDeleteAssetTitle"]</MudText>
     </TitleContent>
     <DialogContent>
-        <MudText>This will permanently delete <strong>@_deleteTarget?.FileName</strong>. Links to this asset will break.</MudText>
+        <MudText>@Loc["WkDeleteAssetConfirm", _deleteTarget?.FileName ?? string.Empty]</MudText>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="@(() => _showDeleteConfirm = false)">Cancel</MudButton>
-        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="ExecuteDeleteAsync">Delete</MudButton>
+        <MudButton OnClick="@(() => _showDeleteConfirm = false)">@Loc["Cancel"]</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="ExecuteDeleteAsync">@Loc["Delete"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -241,14 +242,14 @@
                 {
                     _assets.Insert(0, new WikiAssetInfo(info.Id, info.FileName, info.Url,
                         info.ContentType, info.SizeBytes, string.Empty, "me", DateTimeOffset.UtcNow));
-                    Snackbar.Add($"Uploaded {info.FileName}.", Severity.Success);
+                    Snackbar.Add(Loc["WkAssetUploaded", info.FileName], Severity.Success);
                 },
-                err => Snackbar.Add($"Upload failed: {err}", Severity.Error)
+                err => Snackbar.Add(Loc["WkUploadFailed", err], Severity.Error)
             );
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Upload error: {ex.Message}", Severity.Error);
+            Snackbar.Add(Loc["WkUploadError", ex.Message], Severity.Error);
         }
         finally
         {
@@ -272,18 +273,18 @@
         if (ok)
         {
             _assets.RemoveAll(a => a.Id == target.Id);
-            Snackbar.Add($"Deleted {target.FileName}.", Severity.Success);
+            Snackbar.Add(Loc["WkAssetDeleted", target.FileName], Severity.Success);
         }
         else
         {
-            Snackbar.Add($"Could not delete {target.FileName}.", Severity.Error);
+            Snackbar.Add(Loc["WkAssetDeleteFailed", target.FileName], Severity.Error);
         }
     }
 
     private async Task CopyUrlAsync(string url)
     {
         await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", url);
-        Snackbar.Add("URL copied.", Severity.Info);
+        Snackbar.Add(Loc["WkUrlCopied"], Severity.Info);
     }
 
     private static string AssetKind(string contentType) => contentType switch
@@ -291,6 +292,14 @@
         var t when t.StartsWith("image/", StringComparison.OrdinalIgnoreCase) => "image",
         var t when t.StartsWith("video/", StringComparison.OrdinalIgnoreCase) => "video",
         _ => "document",
+    };
+
+    private static string KindLabelKey(string kind) => kind switch
+    {
+        "image"    => "WkKindImage",
+        "video"    => "WkKindVideo",
+        "document" => "WkKindDocument",
+        _          => "All",
     };
 
     private static string KindIcon(string kind) => kind switch
