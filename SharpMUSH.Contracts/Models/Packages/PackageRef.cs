@@ -58,6 +58,7 @@ public static class WellKnownRefs
 	public const string God = "god";
 	public const string PackageManager = "package_manager";
 	public const string HttpHandler = "http_handler";
+	public const string EventHandler = "event_handler";
 
 	/// <summary>All built-in well-known ref names (lowercase).</summary>
 	public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
@@ -67,6 +68,7 @@ public static class WellKnownRefs
 		PlayerStart,
 		God,
 		PackageManager,
-		HttpHandler
+		HttpHandler,
+		EventHandler
 	};
 }

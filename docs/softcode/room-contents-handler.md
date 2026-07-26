@@ -1,18 +1,18 @@
-# WebSocket Support Package — Reference `ROOM`CONTENTS` Handler
+# WebSocket Support Package — the `ROOM`CONTENTS` Handler
 
-This document is part of the **WebSocket Support Package**. It provides a
-reference implementation of the `ROOM`CONTENTS` event handler that fans out
-structured OOB pushes to a room's connected occupants whenever the room's
-population changes (player movement, connect, or disconnect).
+This document is part of the **WebSocket Support Package**. It describes the
+`ROOM`CONTENTS` event handler that fans out structured OOB pushes to a room's
+connected occupants whenever the room's population changes (player movement,
+connect, or disconnect) — the data source behind the portal's Play sidebar.
 
-The handler below was verified end-to-end against a live server: installed on
-`#9`, fired by the real event path, and confirmed to populate the portal's
-Play sidebar.
-
-> **Packaging note:** The eventual home for this softcode is a SharpMUSH
-> package loadable via the `@package` command. Until the package-manager
-> integration ships as a follow-up, install the handler manually as shown
-> below.
+> **It ships installed.** The handler is the bundled **`room-contents`**
+> package (`examples/packages/room-contents/`), installed at first boot by
+> `DefaultPackagesBootstrapService` onto the configured `event_handler` object
+> (`{{$event_handler}}`, `#9` by default). Nothing below needs typing on a
+> stock game — it is here to explain what is installed and how to change it.
+> Manage it like any other package: `@package list`, `@package uninstall
+> room-contents`, or edit the attributes directly (the package's three-way
+> merge keeps local edits on the next upgrade).
 
 ---
 
@@ -85,22 +85,23 @@ These were learned the hard way; the reference handler relies on all of them:
 
 ---
 
-## Reference handler
+## The handler
 
-Install on the configured event handler object (default `#9`), one attribute
-at a time. The helper attributes keep the main handler readable.
+These are the attributes the `room-contents` package installs on the event
+handler object. The helpers keep the main handler readable; `me` is the event
+handler itself, since a handler runs with the handler object as its executor.
 
 ```mushcode
 &FN`WHOVIS #9=cand(not(hastype(%0,exit)),cor(not(isplayer(%0)),hasflag(%0,CONNECTED)))
 &FN`WHOROW #9=json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))
 &FN`EXITROW #9=json(object,name,json(string,name(%0)),cmd,json(string,goto [num(%0)]))
-&ROOM`CONTENTS #9=think oob(lcon(%0),room.contents,json(object,who,json_array(iter(filter(#9/FN`WHOVIS,lcon(%0)),u(#9/FN`WHOROW,itext(0)),%b,|),|)));think oob(lcon(%0),room.exits,json(object,exits,json_array(iter(lexits(%0),u(#9/FN`EXITROW,itext(0)),%b,|),|)))
+&ROOM`CONTENTS #9=think oob(lcon(%0),room.contents,json(object,who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0)),u(me/FN`WHOROW,itext(0)),%b,|),|)));think oob(lcon(%0),room.exits,json(object,exits,json_array(iter(lexits(%0),u(me/FN`EXITROW,itext(0)),%b,|),|)))
 ```
 
 Reading the main handler:
 
-- `filter(#9/FN`WHOVIS,lcon(%0))` — the *who* set: non-exit occupants, players only when `CONNECTED` (disconnected / portal-only players are omitted, like PennMUSH); objects always show.
-- `iter(<set>, u(#9/FN`WHOROW,itext(0)), %b, |)` — build one JSON object per
+- `filter(me/FN`WHOVIS,lcon(%0))` — the *who* set: non-exit occupants, players only when `CONNECTED` (disconnected / portal-only players are omitted, like PennMUSH); objects always show.
+- `iter(<set>, u(me/FN`WHOROW,itext(0)), %b, |)` — build one JSON object per
   occupant (via the `FN`WHOROW` helper, `%0` = the occupant), joined with `|`.
 - `json_array(<that>, |)` — assemble those JSON objects into a JSON array.
 - `json(object, who, <array>)` — wrap as `{"who": [...]}`.
@@ -116,30 +117,39 @@ Verify it is set:
 
 ---
 
-## Removing the handler
+## Silencing the handler
 
 ```
 &ROOM`CONTENTS #9=
 ```
 
 An empty `&` sets the attribute to an empty string, which silences the handler
-(the engine still fires the event, but the attribute executes nothing).
+(the engine still fires the event, but the attribute executes nothing). To
+remove it properly — attributes and registry records together — uninstall the
+package instead:
+
+```
+> @package uninstall room-contents
+```
 
 ---
 
 ## Testing the handler
 
 `SharpMUSH.Tests/Services/RoomContentsHandlerReferenceTests.cs` installs the
-reference helpers + handler and triggers `ROOM`CONTENTS` via the **real event
-path** — `EventService.TriggerEventAsync(parser, SharpEvents.RoomContents, enactor, room, cause)` — not `@trigger`. The real path runs the handler with
-God (`#1`) as the executor — the elevated context the handler needs — whereas
-`@trigger` would run it as `#9` and the introspection calls would silently
-return nothing.
+helpers + handler and triggers `ROOM`CONTENTS` via the **real event path** —
+`EventService.TriggerEventAsync(parser, SharpEvents.RoomContents, enactor, room, cause)` —
+not `@trigger`. The event path runs the attribute with the event handler object
+as its executor (`me`, `%!`, `%@`) and the causing object as `%#`; seeded `#9`
+is a WIZARD, which is what lets the handler's introspection calls see the room.
 
 The test asserts the handler emits a **valid JSON `room.contents` payload**
 with the room's occupants — exercising `oob()`, `json_array()`, `iter()`,
-`filter()`, and the helper attributes together (the gap the previous,
-simplified test left open).
+`filter()`, and the helper attributes together.
+
+`SharpMUSH.Tests.Integration/Packages/RoomContentsPackageTests.cs` covers the
+delivery side: that the bundled `room-contents` package is installed at boot and
+that its attributes land on the configured event handler.
 
 ---
 

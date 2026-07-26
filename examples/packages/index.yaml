@@ -27,6 +27,10 @@ packages:
     package: profile-handler
     version: 1.1.0
     description: Read-only character directory, online list + profile API (requires http-handler)
+  - path: room-contents/
+    package: room-contents
+    version: 1.0.0
+    description: room.contents/room.exits OOB pushes for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
     version: 1.0.0

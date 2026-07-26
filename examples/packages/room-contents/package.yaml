@@ -1,0 +1,45 @@
+format: 1
+package: room-contents
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Pushes room.contents / room.exits OOB updates to a room's connected occupants, driving the portal's Play sidebar."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [oob, websocket, portal, play, events]
+requires_server: ">=0.1"
+
+# Attach mode (decision 20.3): manages the ROOM`CONTENTS event handler and its
+# helpers on the existing event_handler object ({{$event_handler}}, #9 by
+# default). The engine fires ROOM`CONTENTS on movement, connect and disconnect;
+# without a handler attribute nothing is emitted and the Play sidebar has no
+# data source.
+objects:
+  - ref: handler
+    target: "{{$event_handler}}"
+    attributes:
+      # ── Helpers (me-relative; redefinable per game) ───────────────────────
+      # The "who" predicate (%0 = a room occupant). lcon() includes exits on this
+      # engine, so exits are filtered out here. Players are listed only while
+      # CONNECTED — a disconnected or portal-only (background) player is not
+      # present in the room for display purposes, matching PennMUSH; non-players
+      # always show.
+      FN`WHOVIS: |-
+        cand(not(hastype(%0,exit)),cor(not(isplayer(%0)),hasflag(%0,CONNECTED)))
+      # One occupant row (%0 = the occupant). cmd is what a client issues on click.
+      FN`WHOROW: |-
+        json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))
+      # One exit row (%0 = the exit).
+      FN`EXITROW: |-
+        json(object,name,json(string,name(%0)),cmd,json(string,goto [num(%0)]))
+
+      # ── The handler ──────────────────────────────────────────────────────
+      # %0 = the affected room, %1 = cause (move-in / move-out / connect / disconnect).
+      #
+      # oob(<targets>, <package>, <json>) takes a target LIST and delivers only to
+      # those that are players holding a live WebSocket/GMCP connection, so passing
+      # lcon(%0) (the whole room) needs no manual connected/player filtering.
+      #
+      # iter()/json_array() use "|" as their separator: a row like {"cmd":"look #1"}
+      # contains a space, and the default space separator would split it apart.
+      ROOM`CONTENTS: |-
+        think oob(lcon(%0),room.contents,json(object,who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0)),u(me/FN`WHOROW,itext(0)),%b,|),|)));think oob(lcon(%0),room.exits,json(object,exits,json_array(iter(lexits(%0),u(me/FN`EXITROW,itext(0)),%b,|),|)))
