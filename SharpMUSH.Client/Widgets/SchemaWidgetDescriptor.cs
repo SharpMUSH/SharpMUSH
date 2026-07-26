@@ -13,7 +13,6 @@ public sealed class SchemaWidgetDescriptor : IPortalWidget
 {
 	public string Name => "SchemaWidget";
 	public string DisplayName => "LayWidgetSchemaApplication";
-	public string Description => "Renders a softcode-defined form or view from a schema endpoint.";
 	public WidgetSize DefaultSize => WidgetSize.Medium;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent, WidgetZone.LeftSidebar, WidgetZone.RightSidebar];
 	public Type ComponentType => typeof(SchemaWidget);

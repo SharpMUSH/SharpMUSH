@@ -8,15 +8,9 @@ using SharpMUSH.Client.Components.Schema;
 using SharpMUSH.Client.Models.Applications;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class SchemaFormStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// Verifies the form renderer's advisory required-field check blocks a final submit and surfaces the
@@ -36,7 +30,7 @@ public class SchemaFormRendererTests : BunitContext
 			.AddSingleton(factory)
 			.AddSingleton(sp => new SchemaAppService(
 				sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
-			.AddSingleton<IStringLocalizer<SharedResource>, SchemaFormStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}

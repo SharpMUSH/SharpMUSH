@@ -11,7 +11,6 @@ public sealed class WelcomeTextWidgetDescriptor : IPortalWidget
 {
 	public string Name => "WelcomeText";
 	public string DisplayName => "LayWidgetWelcomeText";
-	public string Description => "Displays a markdown welcome message.";
 	public WidgetSize DefaultSize => WidgetSize.Large;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent];
 	public Type ComponentType => typeof(WelcomeTextWidget);

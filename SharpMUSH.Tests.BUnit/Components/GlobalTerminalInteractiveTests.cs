@@ -9,15 +9,9 @@ using NSubstitute;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class InteractiveStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// Covers the <see cref="GlobalTerminal.Interactive"/> gate: the /play terminal keeps its command
@@ -43,7 +37,7 @@ public class GlobalTerminalInteractiveTests : BunitContext
 			sp.GetRequiredService<IJSRuntime>(),
 			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 
-		Services.AddSingleton<IStringLocalizer<SharedResource>, InteractiveStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 	}
 
 	private static ITerminalService AnonymousTerminal()

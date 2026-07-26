@@ -9,15 +9,9 @@ using NSubstitute;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class GuestStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// Covers the guest entry into <see cref="GlobalTerminal"/>: an anonymous visitor on a terminal that
@@ -43,7 +37,7 @@ public class GlobalTerminalGuestTests : BunitContext
 			sp.GetRequiredService<IJSRuntime>(),
 			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 
-		Services.AddSingleton<IStringLocalizer<SharedResource>, GuestStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 	}
 
 	private static ITerminalService AnonymousTerminal()

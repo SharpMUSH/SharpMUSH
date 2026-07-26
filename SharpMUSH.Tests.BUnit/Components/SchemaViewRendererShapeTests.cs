@@ -6,15 +6,9 @@ using MudBlazor.Services;
 using SharpMUSH.Client.Components.Schema;
 using SharpMUSH.Client.Models.Applications;
 using SharpMUSH.Client.Resources;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class SchemaViewShapeStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// Shape tests for <see cref="SchemaViewRenderer"/>: each JSON schema shape (sections, the display
@@ -25,7 +19,7 @@ public class SchemaViewRendererShapeTests : BunitContext
 	public SchemaViewRendererShapeTests()
 	{
 		Services.AddMudServices();
-		Services.AddSingleton<IStringLocalizer<SharedResource>, SchemaViewShapeStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 

@@ -9,6 +9,7 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
@@ -16,13 +17,6 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// Null-stub localizer that returns the key as the string value.
 /// Avoids requiring .resx resource files in the test project.
 /// </summary>
-file sealed class AdminAccountsStubLocalizer<T> : IStringLocalizer<T>
-{
-    public LocalizedString this[string name] => new(name, name);
-    public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-    public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
-
 /// <summary>
 /// HttpMessageHandler faking the admin-accounts API surface: GET api/admin/accounts (with
 /// optional ?search=), and the per-account POST/DELETE mutation routes. The fixed row set is
@@ -127,7 +121,7 @@ file static class AdminAccountsTestServices
             .AddSingleton(sp => new AdminAccountsService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 sp.GetRequiredService<AccountAuthService>()))
-            .AddSingleton<IStringLocalizer<SharedResource>, AdminAccountsStubLocalizer<SharedResource>>();
+            .AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         return apiClient;

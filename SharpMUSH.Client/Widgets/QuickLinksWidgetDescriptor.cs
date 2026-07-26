@@ -11,7 +11,6 @@ public sealed class QuickLinksWidgetDescriptor : IPortalWidget
 {
 	public string Name => "QuickLinks";
 	public string DisplayName => "LayWidgetQuickLinks";
-	public string Description => "Shows a configurable list of links.";
 	public WidgetSize DefaultSize => WidgetSize.Small;
 	public WidgetZone[] AllowedZones =>
 	[

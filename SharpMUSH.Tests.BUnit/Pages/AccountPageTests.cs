@@ -9,15 +9,9 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
-
-file sealed class AccountPageStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// Fakes the tiny slice of the account API that /account touches when it refreshes the
@@ -78,7 +72,7 @@ public class AccountPageTests : BunitContext, IAsyncDisposable
 		Services
 			.AddMudServices()
 			.AddSingleton(factory)
-			.AddSingleton<IStringLocalizer<SharedResource>, AccountPageStubLocalizer<SharedResource>>()
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),

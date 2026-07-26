@@ -9,15 +9,9 @@ using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using System.Net;
 using System.Net.Http.Json;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class StubLocalizer<T> : IStringLocalizer<T>
-{
-    public LocalizedString this[string name] => new(name, name);
-    public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-    public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => Enumerable.Empty<LocalizedString>();
-}
 
 /// <summary>Serves a fixed character roster on GET http/characters, mirroring GET`CHARACTERS rows.</summary>
 file sealed class RosterHandler : HttpMessageHandler
@@ -58,7 +52,7 @@ public class CharacterDirectoryWidgetTests : BunitContext
             .AddSingleton(sp => new CharacterDirectoryService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 NullLogger<CharacterDirectoryService>.Instance))
-            .AddSingleton<IStringLocalizer<SharedResource>, StubLocalizer<SharedResource>>();
+            .AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
         JSInterop.Mode = JSRuntimeMode.Loose;
     }

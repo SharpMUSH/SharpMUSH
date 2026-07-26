@@ -11,7 +11,6 @@ public sealed class WikiBodyWidgetDescriptor : IPortalWidget
 {
 	public string Name => "WikiBody";
 	public string DisplayName => "LayWidgetWikiBody";
-	public string Description => "A character's free-form wiki biography.";
 	public WidgetSize DefaultSize => WidgetSize.Large;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent];
 	public Type ComponentType => typeof(WikiBodyWidget);

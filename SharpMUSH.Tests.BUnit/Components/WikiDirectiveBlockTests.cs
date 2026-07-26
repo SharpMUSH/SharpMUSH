@@ -7,17 +7,11 @@ using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Resources;
 using System.Net;
 using System.Text;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>Null-stub localizer that echoes the resource key as its value.</summary>
-file sealed class DirectiveStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
-
 /// <summary>
 /// HttpMessageHandler that returns a canned response for every request,
 /// recording the last request path for assertions.
@@ -50,7 +44,7 @@ public class WikiDirectiveBlockTests : BunitContext
 	{
 		Services
 			.AddMudServices()
-			.AddSingleton<IStringLocalizer<SharedResource>, DirectiveStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 

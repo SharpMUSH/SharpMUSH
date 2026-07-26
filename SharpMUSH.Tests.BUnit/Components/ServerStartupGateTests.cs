@@ -7,15 +7,9 @@ using NSubstitute;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Resources;
 using System.Net;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class StartupGateStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// A GET handler that fails (simulating an unreachable/not-yet-up server) for its first
@@ -62,7 +56,7 @@ public class ServerStartupGateTests : BunitContext
 	public ServerStartupGateTests()
 	{
 		Services.AddMudServices();
-		Services.AddSingleton<IStringLocalizer<SharedResource>, StartupGateStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 

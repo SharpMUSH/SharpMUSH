@@ -1,6 +1,10 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Resources;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Models.Portal.Widgets;
 
 namespace SharpMUSH.Tests.BUnit.Resources;
@@ -84,5 +88,33 @@ public class SharedResourceLocalizationTests
 			.ToList();
 
 		await Assert.That(raw).IsEmpty();
+	}
+
+	[Test]
+	public async Task Every_portal_permission_has_a_label_group_and_description_in_the_resx()
+	{
+		var loc = PortalLocalizer.Create();
+
+		var missing = PortalPermission.All
+			.SelectMany(d => new[] { d.LabelKey, d.GroupKey, d.DescriptionKey })
+			.Distinct()
+			.Where(k => loc[k].ResourceNotFound)
+			.ToList();
+
+		await Assert.That(missing).IsEmpty();
+	}
+
+	[Test]
+	public async Task Every_displayed_enum_member_has_a_label_in_the_resx()
+	{
+		var loc = PortalLocalizer.Create();
+
+		var keys = Enum.GetValues<MushObjectType>().Select(v => v.ResourceKey())
+			.Concat(Enum.GetValues<ApplicationKind>().Select(v => v.ResourceKey()))
+			.Concat(Enum.GetValues<PackageRevisionKind>().Select(v => v.ResourceKey()));
+
+		var missing = keys.Where(k => loc[k].ResourceNotFound).ToList();
+
+		await Assert.That(missing).IsEmpty();
 	}
 }

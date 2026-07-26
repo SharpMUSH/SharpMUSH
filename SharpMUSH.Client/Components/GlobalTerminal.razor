@@ -327,7 +327,7 @@
     /// Records the connected player's name on the underlying terminal service. <c>_playerName</c>
     /// reads this back directly, preferring it over <c>AccountAuth.ActiveCharacter</c>, and
     /// Play.razor's page header reads it off the play terminal instance the same way
-    /// (<c>PlayTerminal.ConnectedPlayerName ?? "Play Terminal"</c>). Direct/manual "Character" tab
+    /// (<c>PlayTerminal.ConnectedPlayerName ?? Loc["NavPlayTerminal"]</c>). Direct/manual "Character" tab
     /// and typed-<c>connect</c> flows depend on this write — they never touch <c>AccountAuth</c> at
     /// all. The single-character auto-login and dev-debug OTT paths call this too (matching the
     /// character they just resolved), but that is redundant rather than load-bearing: those paths

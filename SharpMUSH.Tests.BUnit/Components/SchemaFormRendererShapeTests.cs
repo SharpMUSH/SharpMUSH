@@ -11,15 +11,9 @@ using SharpMUSH.Client.Components.Schema;
 using SharpMUSH.Client.Models.Applications;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class SchemaFormShapeStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>Hosts a component alongside a MudPopoverProvider (required by MudSelect/MudDatePicker).</summary>
 internal sealed class MudHarness : ComponentBase
@@ -54,7 +48,7 @@ public class SchemaFormRendererShapeTests : BunitContext
 			.AddSingleton(factory)
 			.AddSingleton(sp => new SchemaAppService(
 				sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
-			.AddSingleton<IStringLocalizer<SharedResource>, SchemaFormShapeStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}

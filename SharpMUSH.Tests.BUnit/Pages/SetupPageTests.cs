@@ -11,6 +11,7 @@ using NSubstitute;
 using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
@@ -20,16 +21,6 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// the real resource, so a key-only echo would drop it and silently void the assertion that the
 /// claimed username is shown back to the claimer.
 /// </summary>
-file sealed class SetupStubLocalizer<T> : IStringLocalizer<T>
-{
-    public LocalizedString this[string name] => new(name, name);
-
-    public LocalizedString this[string name, params object[] arguments]
-        => new(name, $"{name}({string.Join(", ", arguments)})");
-
-    public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
-
 /// <summary>
 /// HttpMessageHandler faking the setup-wizard API surface: GET api/setup/status and
 /// POST api/setup/complete. The complete response is configurable per test so tests can
@@ -114,7 +105,7 @@ file static class SetupTestServices
 
         ctx.Services
             .AddSingleton(factory)
-            .AddSingleton<IStringLocalizer<SharedResource>, SetupStubLocalizer<SharedResource>>()
+            .AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
             .AddSingleton(sp => new AccountAuthService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),

@@ -12,15 +12,9 @@ using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class IdentityStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// Fakes the two endpoints this flow touches: <c>api/auth/account-login</c> (seeds a real
@@ -100,7 +94,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		hostEnv.Environment.Returns("Production");
 		Services.AddSingleton(hostEnv);
 
-		Services.AddSingleton<IStringLocalizer<SharedResource>, IdentityStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 	}
 
 	/// <summary>

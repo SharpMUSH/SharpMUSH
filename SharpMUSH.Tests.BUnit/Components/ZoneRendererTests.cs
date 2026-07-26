@@ -10,15 +10,9 @@ using SharpMUSH.Client.Components.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal.Widgets;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class ZoneRendererStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// BUnit component tests for <see cref="ZoneRenderer"/>.
@@ -28,7 +22,7 @@ public abstract class ZoneRendererTestBase : BunitContext
 	protected ZoneRendererTestBase()
 	{
 		Services.AddMudServices();
-		Services.AddSingleton<IStringLocalizer<SharedResource>, ZoneRendererStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 

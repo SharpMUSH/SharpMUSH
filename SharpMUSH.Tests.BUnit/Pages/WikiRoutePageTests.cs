@@ -15,6 +15,7 @@ using SharpMUSH.Server.Controllers;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
@@ -22,13 +23,6 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// Null-stub localizer that returns the key as the string value.
 /// Avoids requiring .resx resource files in the test project.
 /// </summary>
-file sealed class StubLocalizer<T> : IStringLocalizer<T>
-{
-    public LocalizedString this[string name] => new(name, name);
-    public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-    public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => Enumerable.Empty<LocalizedString>();
-}
-
 /// <summary>
 /// HttpMessageHandler that routes wiki API calls directly to an InMemoryWikiService.
 /// This gives tests a fully working WikiService without a real server or stub 404s.
@@ -170,7 +164,7 @@ file static class WikiServiceSetup
             .AddSingleton(sp => new ApplicationRegistryClient(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 NullLogger<ApplicationRegistryClient>.Instance))
-            .AddSingleton<IStringLocalizer<SharedResource>, StubLocalizer<SharedResource>>();
+            .AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
         // The example pages compose from scoped layouts. Register the widget registry and a real
         // (HTTP-backed) layout service; the in-memory handler 404s /api/layouts/* so each scope falls

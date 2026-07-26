@@ -11,15 +11,9 @@ using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class QuickstartStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// Fakes the two endpoints the widget's seed path touches: <c>api/auth/account-login</c> (used to
@@ -69,7 +63,7 @@ public class QuickstartWidgetTests : BunitContext, IAsyncDisposable
 	public QuickstartWidgetTests()
 	{
 		Services.AddMudServices();
-		Services.AddSingleton<IStringLocalizer<SharedResource>, QuickstartStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 

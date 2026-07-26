@@ -10,15 +10,9 @@ using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Models.Portal.Widgets;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
-
-file sealed class EditorStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>Returns an empty JSON array for any request (the live preview's widgets degrade gracefully).</summary>
 file sealed class EmptyArrayHandler : HttpMessageHandler
@@ -67,7 +61,7 @@ public class LayoutEditorTests : BunitContext
 			.AddSingleton(_layout)
 			.AddSingleton(factory)
 			.AddSingleton(sp => new WikiService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance))
-			.AddSingleton<IStringLocalizer<SharedResource>, EditorStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}

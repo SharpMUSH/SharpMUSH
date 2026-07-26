@@ -8,15 +8,9 @@ using MudBlazor.Services;
 using SharpMUSH.Client.Components.Widgets;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Library.Models.Portal.Widgets;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class QuickLinksStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// BUnit component tests for <see cref="QuickLinksWidget"/>.
@@ -29,7 +23,7 @@ public abstract class QuickLinksWidgetTestBase : BunitContext
 	protected QuickLinksWidgetTestBase()
 	{
 		Services.AddMudServices();
-		Services.AddSingleton<IStringLocalizer<SharedResource>, QuickLinksStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		Auth = AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}

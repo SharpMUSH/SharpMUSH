@@ -12,7 +12,6 @@ public sealed class WikiIndexWidgetDescriptor : IPortalWidget
 {
 	public string Name => "WikiIndex";
 	public string DisplayName => "LayWidgetWikiIndex";
-	public string Description => "Searchable category grid of all wiki pages.";
 	public WidgetSize DefaultSize => WidgetSize.Large;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent];
 	public Type ComponentType => typeof(WikiIndexWidget);

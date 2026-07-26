@@ -19,13 +19,6 @@ public interface IPortalWidget
 	/// </summary>
 	string DisplayName { get; }
 
-	/// <summary>
-	/// Short description of what the widget shows. Unlike <see cref="DisplayName"/> this is plain
-	/// English prose, not a resource key — nothing renders it today, so there is no display site to
-	/// localize it at. Convert it the same way as <see cref="DisplayName"/> if it ever reaches the UI.
-	/// </summary>
-	string Description { get; }
-
 	/// <summary>Preferred size hint used by the layout engine.</summary>
 	WidgetSize DefaultSize { get; }
 

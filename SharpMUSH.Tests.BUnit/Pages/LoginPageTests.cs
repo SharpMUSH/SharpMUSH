@@ -9,6 +9,7 @@ using NSubstitute;
 using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
@@ -33,13 +34,6 @@ public class LoginPageTests
 	}
 }
 
-file sealed class LoginPageStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
-
 /// <summary>
 /// Regression coverage for the login-page redesign (maintainer feedback: "Why even show the
 /// Players / Scenes / Wiki Pages there. It should just be a login page."). The old two-column
@@ -59,7 +53,7 @@ public class LoginPageRenderTests : BunitContext
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
 			.AddSingleton(Substitute.For<ITerminalService>())
-			.AddSingleton<IStringLocalizer<SharedResource>, LoginPageStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}

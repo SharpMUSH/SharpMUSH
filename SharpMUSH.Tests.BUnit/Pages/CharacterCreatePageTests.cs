@@ -10,17 +10,11 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>Echoes the resource key back, so assertions here pin keys rather than English copy.</summary>
-file sealed class CharacterCreateStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
-
 /// <summary>Fakes the character-create endpoint (<c>POST api/account/characters</c>).</summary>
 file sealed class CharacterCreateApiHandler(bool succeed) : HttpMessageHandler
 {
@@ -57,7 +51,7 @@ public class CharacterCreatePageTests : BunitContext, IAsyncDisposable
 
 		Services
 			.AddMudServices()
-			.AddSingleton<IStringLocalizer<SharedResource>, CharacterCreateStubLocalizer<SharedResource>>()
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton(factory)
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),

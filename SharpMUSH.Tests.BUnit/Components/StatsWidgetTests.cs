@@ -10,15 +10,9 @@ using SharpMUSH.Client.Services;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class StatsStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// Serves three characters but only one connection, so "Players Online" and "Characters" must
@@ -79,7 +73,7 @@ public class StatsWidgetTests : BunitContext
 			.AddSingleton(sp => new SceneService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				NullLogger<SceneService>.Instance))
-			.AddSingleton<IStringLocalizer<SharedResource>, StatsStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}

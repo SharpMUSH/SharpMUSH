@@ -13,7 +13,6 @@ public sealed class SpacerWidgetDescriptor : IPortalWidget
 {
 	public string Name => "Spacer";
 	public string DisplayName => "LayWidgetSpacer";
-	public string Description => "Empty space to push widgets apart or pad a zone (width = column span, height configurable).";
 	public WidgetSize DefaultSize => WidgetSize.Small;
 
 	// Vertical/content zones only — a height-based spacer is meaningless in the horizontal top bar.

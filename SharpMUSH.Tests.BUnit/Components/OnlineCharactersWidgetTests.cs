@@ -9,15 +9,9 @@ using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using System.Net;
 using System.Net.Http.Json;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class PresenceStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>
 /// Serves a roster on http/characters and a *different*, smaller connection list on http/online,
@@ -121,7 +115,7 @@ public class OnlineCharactersWidgetTests : BunitContext
 			.AddSingleton(sp => new CharacterDirectoryService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				NullLogger<CharacterDirectoryService>.Instance))
-			.AddSingleton<IStringLocalizer<SharedResource>, PresenceStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 	}
