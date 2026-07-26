@@ -2,19 +2,19 @@
 @attribute [Authorize(Policy = "server.admin")]
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Server Settings — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["ServerSettings"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="adminsrv-page">
     <header class="adminsrv-header">
-        <div class="adminsrv-kicker">Admin · Server</div>
-        <h1 class="adminsrv-title">Server Settings</h1>
+        <div class="adminsrv-kicker">@Loc["AdmServerKicker"]</div>
+        <h1 class="adminsrv-title">@Loc["ServerSettings"]</h1>
     </header>
 
     <div class="adminsrv-card">
         <MudIcon Icon="@Icons.Material.Filled.Dns" Class="adminsrv-card-icon" />
         <div class="adminsrv-card-body">
-            <span class="adminsrv-card-label">God-only server settings</span>
-            <span class="adminsrv-card-desc">Server configuration and live metrics are coming soon.</span>
+            <span class="adminsrv-card-label">@Loc["AdmServerGodOnly"]</span>
+            <span class="adminsrv-card-desc">@Loc["AdmServerComingSoon"]</span>
         </div>
     </div>
 </div>

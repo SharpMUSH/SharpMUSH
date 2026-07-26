@@ -3,12 +3,25 @@ using System.Net.Http.Json;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
+
+/// <summary>
+/// Null-stub localizer that returns the key as the string value.
+/// Avoids requiring .resx resource files in the test project.
+/// </summary>
+file sealed class AdminAccountsStubLocalizer<T> : IStringLocalizer<T>
+{
+    public LocalizedString this[string name] => new(name, name);
+    public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+    public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// HttpMessageHandler faking the admin-accounts API surface: GET api/admin/accounts (with
@@ -113,7 +126,8 @@ file static class AdminAccountsTestServices
                 NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
             .AddSingleton(sp => new AdminAccountsService(
                 sp.GetRequiredService<IHttpClientFactory>(),
-                sp.GetRequiredService<AccountAuthService>()));
+                sp.GetRequiredService<AccountAuthService>()))
+            .AddSingleton<IStringLocalizer<SharedResource>, AdminAccountsStubLocalizer<SharedResource>>();
 
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         return apiClient;
@@ -144,12 +158,12 @@ public class AdminAccountsPageTests : BunitContext, IAsyncDisposable
 
         cut.WaitForAssertion(() =>
         {
-            if (!cut.Markup.Contains("headwiz-target") || !cut.Markup.Contains("DISABLED"))
+            if (!cut.Markup.Contains("headwiz-target") || !cut.Markup.Contains("AdmAccountDisabledChip"))
                 throw new InvalidOperationException("account rows not rendered yet");
         });
 
         await Assert.That(cut.Markup).Contains("headwiz-target");
-        await Assert.That(cut.Markup).Contains("DISABLED");
+        await Assert.That(cut.Markup).Contains("AdmAccountDisabledChip");
     }
 
     [TUnit.Core.Test]
