@@ -62,7 +62,10 @@ there is nowhere for a translation to store a conflicting category.
 
 Two properties of this shape matter:
 
-- **No data migration.** Existing pages already are their source-locale rows.
+- **No schema migration and no content rewrite.** Existing pages already *are* their
+  source-locale rows; nothing is restructured or re-rendered. There is one
+  additive-column backfill (`SourceLocale`, `WikiRevision.Locale`) stamped once — see
+  "`SourceLocale` is materialised once" for why re-deriving it on read is unsafe.
 - **Additive service contract.** `GetBySlugAsync` and friends keep their
   signatures, so `WikiController`, `SeoController`, `BotPrerenderMiddleware`,
   `WikiCommands` and `WikiFunctions` compile untouched and adopt localization
@@ -89,20 +92,51 @@ Gains one init-only property:
 
 ```csharp
 /// <summary>
-/// Locale the page was authored in. Empty on documents predating this field;
-/// readers must treat empty as Wiki.DefaultLocale.
+/// Canonical BCP-47 locale the page was authored in. Never empty on a page read back
+/// from storage: Migration_AddWikiTranslations stamps every pre-existing page once.
 /// </summary>
 public string SourceLocale { get; init; } = string.Empty;
 ```
 
 This follows the convention the record's own comment already establishes for
 `Category`/`Tags`/`Published`: init-only rather than positional, so existing
-construction sites and stored documents keep working.
+construction sites keep working.
 
-The default is `string.Empty`, not `"en"` — a property initializer cannot read
-configuration, and hardcoding `"en"` would silently mislabel every pre-existing
-page on a non-English game. `IWikiLocalizationService` normalises empty to
-`Wiki.DefaultLocale` on read, which is what keeps "no data migration" true.
+#### `SourceLocale` is materialised once, never re-derived
+
+An earlier draft of this design had readers treat an empty `SourceLocale` as
+"whatever `Wiki.DefaultLocale` currently is". **That was a data-integrity bug.**
+Under that rule, an admin changing `wiki_default_locale` silently changes the
+authored locale of every page that predates the field: an English page starts
+claiming to be French, `UpsertTranslationAsync` begins rejecting `fr` as
+"shadowing the source" while accepting `en`, and existing revision history changes
+meaning — all with no migration, no audit trail, and nothing to alert on.
+
+Instead, `Migration_AddWikiTranslations` performs a one-time idempotent backfill,
+stamping `SourceLocale = Wiki.DefaultLocale` on every row where it is absent or
+empty. After that migration the field is authoritative and immutable per page, and
+the configured default only affects *new* pages and fallback resolution — never the
+interpretation of existing ones.
+
+This costs the design its "no data migration" property, which was worth less than
+it sounded: it is a single `UPDATE`-shaped pass over one collection, run once, and
+it is the only way the field can mean anything stable. The claim is now narrower
+and true: **no schema migration and no rewrite of page content** — one additive
+column stamped once.
+
+The backfill cannot infer the authored language of pre-existing prose — it can only
+stamp the configured default. **SharpMUSH is pre-production, so that is not a
+problem worth engineering around:** a game whose existing content is not in the
+configured default can set `wiki_default_locale` first, or simply wipe and reseed.
+The migration therefore stays deliberately simple — stamp the default, log the value
+and the row count — with no attempt at language detection, no interactive prompt and
+no per-page override. Revisit only if this ships to a live game with content that
+predates it.
+
+Note that materialising `SourceLocale` is *not* itself a legacy-data concern and does
+not become unnecessary pre-production. The bug it fixes is an admin changing
+`wiki_default_locale` at any point after pages exist, which happens just as readily
+in development.
 
 ### `WikiTranslation` (new)
 
@@ -172,10 +206,13 @@ served, the page's when the source is served.
 `IsFallback` compares *languages*, not tags: serving `fr` to an `fr-CA` reader
 must not raise "showing English", which would banner every Canadian visit.
 
-Both `Locale` and `RequestedLocale` are already-normalised, parseable tags. That
-is guaranteed rather than defended: `IWikiLocalizationService` is the only thing
-that constructs this record and it normalises first, so the `GetCultureInfo`
-calls in `IsFallback` cannot throw.
+Both `Locale` and `RequestedLocale` are already-normalised, parseable tags, so the
+`GetCultureInfo` calls in `IsFallback` cannot throw. That rests on two things, not
+one: `IWikiLocalizationService` is the only thing that constructs this record and it
+normalises the *requested* tag first, **and** no unparseable locale can be in the
+store to begin with because every write boundary rejects one. The second half is
+what makes this an invariant rather than a convention a future caller can break —
+see "canonicalised and validated at the write boundary".
 
 ## Storage
 
@@ -184,10 +221,38 @@ calls in `IsFallback` cannot throw.
   `SharpMUSH.Database.ArangoDB/Migrations/Migration_AddWiki.cs`: create the
   collection, unique persistent index on `(PageId, Locale)`, non-unique index on
   `Locale` for listings.
-- `WikiRevisions` gains a `(PageId, Locale, RevisionNumber)` index. The existing
-  `(PageId, RevisionNumber)` index stays so pre-existing reads keep working.
-- Equivalent collections and constraints in SurrealDB and Memgraph.
 - `InMemoryWikiService` uses `Dictionary<(string PageId, string Locale), WikiTranslation>`.
+
+### The revision index must be corrected, and the three backends disagree today
+
+Translation revisions share a `PageId` with the source page and restart numbering at
+1, so `(PageId, RevisionNumber)` is no longer unique. That collides with what is
+already deployed — differently in each store:
+
+| Backend | Current revision index | Effect of the first translation revision |
+|---|---|---|
+| SurrealDB | `wiki_revision_page_rev ON wiki_revision FIELDS pageId, revisionNumber UNIQUE` (`SurrealDatabase.Migration.cs:97`) | **Rejected.** Translation revision 1 collides with the source's revision 1. |
+| ArangoDB | `Fields = ["PageId", "RevisionNumber"]`, `Persistent`, no `Unique` (`Migration_AddWiki.cs:101`) | Accepted; no constraint. |
+| Memgraph | two *separate* non-unique indexes, on `pageId` and on `revisionNumber` (`MemgraphDatabase.Migration.cs:124`) | Accepted; no constraint. |
+
+This is worse than a single store needing a fix. A numbering bug would fail loudly
+on SurrealDB, pass on ArangoDB and pass silently on Memgraph — and since CI runs a
+three-backend matrix, the symptom is a baffling one-of-three red that looks like
+flakiness.
+
+So the requirement is not "fix SurrealDB" but **make all three agree**:
+
+- Every backend defines a unique constraint on `(PageId, Locale, RevisionNumber)`.
+  SurrealDB must *drop* `wiki_revision_page_rev` before redefining it; ArangoDB's
+  index becomes `Unique = true` over the three fields; Memgraph gains a real
+  composite uniqueness constraint rather than two independent indexes.
+- Pre-existing revision rows have no `Locale`, so the backfill that stamps
+  `WikiPage.SourceLocale` must stamp `WikiRevision.Locale` in the same migration —
+  before the new unique constraint is created, or creation fails on the null column.
+- The cross-backend integration test asserts the constraint *rejects* a duplicate
+  `(PageId, Locale, RevisionNumber)` on all three, not merely that the happy path
+  works. A test that only writes valid data cannot tell a real constraint from a
+  missing one, which is precisely how these three drifted apart.
 
 ## Configuration
 
@@ -201,12 +266,27 @@ public record WikiOptions(
         Category = "Content",
         Description = "Locale wiki pages fall back to when a reader's locale has no translation",
         Group = "Wiki",
-        Order = 1)]
-    string DefaultLocale);
+        Order = 1,
+        ValidationPattern = @"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")]
+    string DefaultLocale = "en");
 ```
 
 Because the admin config pages are schema-driven off `[SharpConfig]`, this
 appears in `/admin/config` with no UI work.
+
+**The default is a real default, not a `required` member.** `DefaultLocale = "en"`
+is supplied on the parameter, so a configuration file that omits
+`wiki_default_locale` binds to `en` rather than to null or empty. Every other
+`SharpMUSHOptions` member is `required`; this one deliberately is not, because
+resolution's terminal step depends on it always having a usable value.
+
+**It is validated at startup, not at first use.** `ValidateSharpOptions` rejects a
+`DefaultLocale` that `CultureInfo.GetCultureInfo` cannot parse, failing startup with
+the offending value named. The `ValidationPattern` above gives the admin UI a
+client-side check; the startup validation is the authority, because the pattern
+cannot know which tags actually exist. Deferring this to first use would surface a
+typo as a `CultureNotFoundException` inside a page render, long after the admin who
+made it has moved on.
 
 **Which locales may a translation use?** Any tag `CultureInfo.GetCultureInfo`
 accepts — *not* only `ILocalizationService.AvailableLocales`. A game should be
@@ -214,6 +294,42 @@ able to translate its wiki into Spanish even though the portal chrome has no
 Spanish resx: the chrome falls back to English, the content does not. The
 editor's locale dropdown offers `AvailableLocales` ∪ locales that already have
 translations, plus a free-text field for anything else.
+
+### Locales are canonicalised and validated at the write boundary
+
+That free-text field is why this matters. "Any parseable tag" is a permissive
+*input* rule, not a licence to persist whatever arrives.
+
+```csharp
+// SharpMUSH.Library/Services/WikiHelpers.cs, beside the existing NormalizeCategory
+/// <summary>
+/// Canonical form of a locale tag, or Error when it is not a locale at all.
+/// Canonical means CultureInfo's own casing — "pt-br" and "PT-BR" both become "pt-BR" —
+/// so the unique (PageId, Locale) index cannot be defeated by casing.
+/// </summary>
+public static OneOf<string, Error<string>> NormalizeLocale(string? locale);
+```
+
+Applied at every point a locale enters storage or configuration:
+
+| Entry point | Behaviour on an invalid tag |
+|---|---|
+| `UpsertTranslationAsync(locale)` | `Error<string>`; nothing written |
+| `CreateAsync(sourceLocale)` | `Error<string>`; no page created |
+| `Migration_AddWikiTranslations` backfill | fails the migration loudly |
+| `WikiOptions.DefaultLocale` | fails startup validation |
+| `?lang=` on a read | **not** an error — treated as absent, per Error handling |
+
+The read path is deliberately the odd one out: a reader typing a bad `?lang=`
+should get the default page, not a 400. A *writer* persisting a bad locale is a
+different thing entirely, because it corrupts the store for every later read.
+
+This is what actually makes `LocalizedWikiPage.IsFallback`'s no-throw claim true.
+Without it, the invariant rested on "the only construction point normalises first",
+which is a convention a future caller can break; with it, an unparseable locale
+cannot be in the database to begin with. Case canonicalisation also closes a
+quieter hole: without it `pt-BR` and `pt-br` are two rows that the unique index
+happily accepts and the resolver treats as unrelated.
 
 ## Resolution
 
@@ -275,7 +391,8 @@ Task<IReadOnlyList<WikiTranslationSummary>>  GetTranslationsAsync(string pageId)
 Task<OneOf<WikiTranslation, NotFound>>       GetTranslationAsync(string pageId, string locale);
 Task<OneOf<WikiTranslation, Error<string>>>  UpsertTranslationAsync(
     string pageId, string locale, string title, string markdown,
-    string editorDbref, string? editSummary, bool published);
+    string editorDbref, string? editSummary, bool published,
+    int? expectedRevisionNumber);
 Task<OneOf<None, NotFound>>                  DeleteTranslationAsync(string pageId, string locale, string editorDbref);
 Task<IReadOnlyList<WikiRevision>>            GetRevisionsForLocaleAsync(string pageId, string locale, int skip, int take);
 ```
@@ -285,8 +402,32 @@ existing `GetRevisionsAsync(pageId, skip, take)`. An overload differing only by 
 inserted `string?` invites a silent mis-bind at a call site that passes positional
 ints, and the compiler would not complain.
 
-`UpsertTranslationAsync` mirrors `UpdateAsync`: bump `RevisionNumber`, write a
-`WikiRevision` carrying the `Locale`, re-render HTML and plain text through the
+### `UpsertTranslationAsync` needs optimistic concurrency
+
+The unique `(PageId, Locale)` index protects concurrent *inserts* and nothing else.
+Two translators editing the same French page both read `RevisionNumber = 4`, both
+compute 5, and both write it: one translator's prose is silently lost and the
+revision stream now has two different revision 5s — or one, depending on which
+write landed last. The index is perfectly happy; it is the same row either way.
+
+So the write is a compare-and-swap:
+
+- **`expectedRevisionNumber` is the revision the editor loaded.** The update applies
+  only if the stored `RevisionNumber` still matches, and the revision append happens
+  in the same transaction as the row update. Backends that cannot span both in one
+  transaction must instead make the update conditional on the expected value and
+  treat "zero rows affected" as the conflict signal.
+- **`null` means "create only".** If a translation already exists, that is an
+  `Error<string>` rather than a blind overwrite, which is what a caller who believed
+  it was creating a new translation should get.
+- **A detected conflict returns `Error<string>` and is not retried automatically.**
+  Retrying would re-apply the loser's stale markdown on top of the winner's, which is
+  exactly the data loss this exists to prevent. The editor reloads and the human
+  decides. (The single automatic retry mentioned under Error handling applies only to
+  the insert race, where no content can be lost.)
+
+Otherwise `UpsertTranslationAsync` mirrors `UpdateAsync`: bump `RevisionNumber`, write
+a `WikiRevision` carrying the `Locale`, re-render HTML and plain text through the
 same `WikiMarkdigPipeline`. `DeleteAsync` on the source page extends its existing
 revision cleanup to cascade over translations and their revisions.
 
@@ -321,10 +462,20 @@ translations; clicking one sets `?lang=`.
 
 **Authoring.** `WikiEdit.razor` gains a locale selector: source locale, each
 existing translation, and "Add a translation…". On a non-source locale the
-category/tags/protection fields render **visible but disabled** with an
-"inherited from source" hint — decision 4 made legible rather than mysterious.
-`/wiki/{slug}/edit?lang=fr` is the deep link. `WikiPageHistory` and
-`WikiPageDiff` take `?lang=` and show that locale's stream.
+category and tags fields render **visible but disabled** with an "inherited from
+source" hint — decision 4 made legible rather than mysterious. `Published` stays
+editable, because a translation owns its own flag; that is the whole mechanism
+behind drafting French while English stays live. (There is no protection control on
+this page to disable — `IsProtected` is page-level and surfaced only through
+`/admin/wiki`'s batch actions.)
+
+`/wiki/{slug}/edit?lang=fr` is the deep link. `WikiPageHistory` and `WikiPageDiff`
+take `?lang=` and show that locale's stream.
+
+The editor holds the loaded `RevisionNumber` and passes it as
+`expectedRevisionNumber` on save. On a conflict it surfaces "this translation
+changed while you were editing" and offers a reload — it must not silently retry,
+for the reason given under `UpsertTranslationAsync`.
 
 **Staff.** `/admin/wiki` gains a translations-coverage column (`en · fr`) and a
 locale filter. This is what makes untranslated Help pages findable, and is the
@@ -360,11 +511,15 @@ review, tracked separately from this change.
 
 | Case | Behaviour |
 |---|---|
-| Malformed or unknown `lang` tag | treated as absent; falls to configured default. Never a 400. Logged at Debug. |
+| Malformed `lang` on a **read** | treated as absent; falls to configured default. Never a 400. Logged at Debug. |
+| Malformed locale on a **write** | `Error<string>`; nothing persisted. See "canonicalised and validated at the write boundary". |
+| Invalid `Wiki.DefaultLocale` | startup fails, naming the value |
 | Upsert on a nonexistent page | `Error<string>` |
 | Upsert where `locale == page.SourceLocale` | `Error<string>` — no row may shadow the source; edit the page itself |
 | Protected source page, non-admin editor | 403, same gate as page edit |
-| Concurrent upsert on same `(PageId, Locale)` | unique index rejects; surfaced as `Error<string>`, retried once |
+| Concurrent **insert** race on `(PageId, Locale)` | unique index rejects; `Error<string>`, retried once — no content can be lost |
+| Concurrent **update** (stale `expectedRevisionNumber`) | `Error<string>`, **never** retried; the editor reloads and the human decides |
+| `expectedRevisionNumber` null and a translation exists | `Error<string>` — create-only was requested |
 | Deleting the last translation | allowed |
 | Deleting the source page | cascades to translations and their revisions |
 
@@ -376,9 +531,22 @@ review, tracked separately from this change.
   `fr` is not a fallback; `fr-CA` served `en` is). No DB, no HTTP.
 - **`InMemoryWikiServiceTests`** — translation CRUD, per-locale revision
   streams, cascade delete, source-shadow rejection.
-- **`WikiServiceIntegrationTests`** — the same CRUD and index-uniqueness
-  behaviour parameterised across all three real backends, matching the
-  cross-backend shape the slug-normalisation fix used.
+- **`WikiServiceIntegrationTests`** — the same CRUD parameterised across all three
+  real backends, and critically the *negative* cases: a duplicate
+  `(PageId, Locale, RevisionNumber)` must be **rejected** on all three, and a
+  translation revision numbered 1 must be **accepted** alongside a source revision
+  1. Only the negative assertion distinguishes a real constraint from a missing
+  one, which is how the three backends drifted apart in the first place.
+- **Concurrency** — two upserts with the same `expectedRevisionNumber` produce one
+  success and one `Error<string>`, and the losing markdown does not appear in any
+  revision. Needs a real backend, so it lives here rather than in the in-memory
+  tests, whose dictionary cannot reproduce the race.
+- **`NormalizeLocale`** — `pt-br`, `PT-BR` and `pt-BR` all canonicalise to `pt-BR`
+  and therefore collide on the unique index; `not-a-locale` is rejected at every
+  write entry point.
+- **Backfill migration** — running it twice is a no-op, it stamps both
+  `WikiPage.SourceLocale` and `WikiRevision.Locale`, and it runs before the new
+  unique constraint is created.
 - **Draft visibility** — an unpublished `fr` translation is invisible to an
   anonymous reader (who gets the fallback plus banner) and visible to an editor
   at `?lang=fr`. This is the test most likely to catch a regression that leaks
@@ -390,9 +558,20 @@ review, tracked separately from this change.
 
 ## Risks
 
-- **Three hand-written backends.** The five new CRUD methods are mechanical, but
-  index semantics differ per store. The cross-backend integration test is the
-  mitigation and should be written before the backend implementations.
+- **Three hand-written backends, already disagreeing.** The five new CRUD methods
+  are mechanical, but the existing revision indexes differ across the three stores
+  today — unique on SurrealDB, non-unique on ArangoDB, absent on Memgraph — so a
+  numbering bug fails on one and passes on two. The cross-backend integration test,
+  including its negative cases, is the mitigation and must be written **before** the
+  backend implementations.
+- **The backfill is the only step that writes to existing rows** — but it is not a
+  one-way door while SharpMUSH is pre-production, because wiping and reseeding the
+  database is an acceptable recovery. That is the reason this design does not carry
+  a rollback path, a language-detection heuristic or a per-page override for it: all
+  three would be speculative complexity for a scenario the project does not have
+  yet. The migration logs the locale it stamped and the row count, which is enough
+  to notice a wrong default. **This bullet is the one to revisit first if a live
+  game ever adopts SharpMUSH with existing wiki content.**
 - **Listing performance.** Localized listings need the translation title per
   page. For Arango this is a single `LET` subquery per row; measure before
   adding a denormalized title cache, and do not add one pre-emptively.
