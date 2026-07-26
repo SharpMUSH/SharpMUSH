@@ -3,35 +3,36 @@
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Authorization
+@inject IStringLocalizer<SharedResource> Loc
 @inject ApplicationRegistryClient Registry
 @inject SchemaAppService Schema
 @inject PluginComponentLoader ComponentLoader
 
-<PageTitle>@(_app?.DisplayName ?? "Application")</PageTitle>
+<PageTitle>@(_app?.DisplayName ?? Loc["NavApplication"])</PageTitle>
 
 <div class="app-page">
     <header class="app-header">
-        <div class="app-kicker">Application</div>
-        <h1 class="app-title">@(_app?.DisplayName ?? "Application")</h1>
+        <div class="app-kicker">@Loc["NavApplication"]</div>
+        <h1 class="app-title">@(_app?.DisplayName ?? Loc["NavApplication"])</h1>
     </header>
 
     @if (_loading)
     {
         <div class="app-card app-loading">
             <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
-            <span class="app-loading-text">Loading application…</span>
+            <span class="app-loading-text">@Loc["NavLoadingApplication"]</span>
         </div>
     }
     else if (_app is null)
     {
         <div class="app-alert app-alert-warning">
-            No application is registered at <code>/apps/@Slug</code>.
+            @Loc["NavNoApplicationRegistered", $"/apps/{Slug}"]
         </div>
     }
     else if (!_authorized)
     {
         <div class="app-alert app-alert-error">
-            You do not have access to this application.
+            @Loc["NavNoApplicationAccess"]
         </div>
     }
     else if (_app.IsComponent)
@@ -43,16 +44,14 @@
         else
         {
             <div class="app-alert app-alert-error">
-                This application's compiled component could not be loaded. Browser code may be disabled
-                (<code>allow_browser_code</code>), or the assembly failed verification.
+                @Loc["NavApplicationComponentLoadFailed"]
             </div>
         }
     }
     else if (_schema is null)
     {
         <div class="app-alert app-alert-error">
-            The application's schema could not be loaded. The softcode handler at
-            <code>@_app.SchemaUrl</code> may be missing or returning invalid JSON.
+            @Loc["NavApplicationSchemaLoadFailed", _app.SchemaUrl]
         </div>
     }
     else if (_schema.IsForm)

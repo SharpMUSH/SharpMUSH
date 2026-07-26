@@ -4,12 +4,22 @@ using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
+
+/// <summary>Echoes the resource key back, so assertions here pin keys rather than English copy.</summary>
+file sealed class CharacterCreateStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>Fakes the character-create endpoint (<c>POST api/account/characters</c>).</summary>
 file sealed class CharacterCreateApiHandler(bool succeed) : HttpMessageHandler
@@ -47,6 +57,7 @@ public class CharacterCreatePageTests : BunitContext, IAsyncDisposable
 
 		Services
 			.AddMudServices()
+			.AddSingleton<IStringLocalizer<SharedResource>, CharacterCreateStubLocalizer<SharedResource>>()
 			.AddSingleton(factory)
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
@@ -67,7 +78,7 @@ public class CharacterCreatePageTests : BunitContext, IAsyncDisposable
 	}
 
 	private static void ClickCreate(IRenderedComponent<SharpMUSH.Client.Pages.CharacterCreate> cut)
-		=> cut.FindAll("button").First(b => b.TextContent.Trim() == "Create character").Click();
+		=> cut.FindAll("button").First(b => b.TextContent.Trim() == "NavCreateCharacter").Click();
 
 	[TUnit.Core.Test]
 	public async Task Renders_the_create_character_form()
@@ -76,8 +87,8 @@ public class CharacterCreatePageTests : BunitContext, IAsyncDisposable
 
 		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
 
-		await Assert.That(cut.Markup).Contains("Create a character");
-		await Assert.That(cut.FindAll("button").Any(b => b.TextContent.Trim() == "Create character")).IsTrue();
+		await Assert.That(cut.Markup).Contains("NavCreateACharacter");
+		await Assert.That(cut.FindAll("button").Any(b => b.TextContent.Trim() == "NavCreateCharacter")).IsTrue();
 	}
 
 	[TUnit.Core.Test]

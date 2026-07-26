@@ -223,7 +223,7 @@ public class AccountPanelTests : BunitContext
 
 		var link = cut.Find("a.phosphor-profile-card");
 		await Assert.That(link.GetAttribute("href")).IsEqualTo("/login");
-		await Assert.That(cut.Markup).Contains("Sign in");
+		await Assert.That(cut.Markup).Contains("AuthSignIn");
 
 		// No account chip/panel affordance at all — not just closed, but structurally absent.
 		await Assert.That(cut.FindAll("button.phosphor-profile-card").Count).IsEqualTo(0);

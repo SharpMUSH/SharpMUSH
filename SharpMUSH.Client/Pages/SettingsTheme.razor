@@ -2,16 +2,16 @@
 @attribute [Authorize]
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Theme — Settings — SharpMUSH</PageTitle>
+<PageTitle>@Loc["NavTheme"] — @Loc["Settings"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="settings-page">
     <header class="settings-header">
-        <div class="settings-kicker">@Loc["AppTitle"] · Settings</div>
-        <h1 class="settings-title">Theme</h1>
+        <div class="settings-kicker">@Loc["AppTitle"] · @Loc["Settings"]</div>
+        <h1 class="settings-title">@Loc["NavTheme"]</h1>
     </header>
 
     <section class="settings-card">
-        <div class="settings-card-section-label">Coming soon</div>
-        <p class="settings-card-text">Theme preferences are on the way.</p>
+        <div class="settings-card-section-label">@Loc["ComingSoon"]</div>
+        <p class="settings-card-text">@Loc["NavThemeComingSoon"]</p>
     </section>
 </div>
