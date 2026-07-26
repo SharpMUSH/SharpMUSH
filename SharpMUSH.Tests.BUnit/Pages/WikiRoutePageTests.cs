@@ -1,7 +1,10 @@
 using Bunit;
+using Bunit.TestDoubles;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
+using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
@@ -57,6 +60,15 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
             return result.Match(
                 page => Json(ToDto(page)),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+
+        // The wiki admin grid's server-side data source.
+        if (request.Method == HttpMethod.Get && path == "api/wiki/pages")
+        {
+            var pages = await wikiService.GetAllPagesAsync(skip: 0, take: 2000);
+            var response = Json(pages.Select(ToDto).ToList());
+            response.Headers.Add("X-Total-Count", pages.Count.ToString());
+            return response;
         }
 
         // Refs use URL-path form: "ns/category/slug".
@@ -251,6 +263,62 @@ public class WikiPageRouteTests : BunitContext
         await Assert.That(wikiView.Instance.Slug).IsEqualTo("magic_system");
         await Assert.That(wikiView.Instance.Mode).IsEqualTo(WikiView.WikiMode.Edit);
     }
+
+    /// <summary>
+    /// The client-side half of the character alias. CanonicalUrlMiddleware 301s cold loads, but
+    /// never sees a client-side navigation, so the route page has to catch those itself.
+    /// </summary>
+    [TUnit.Core.Test]
+    public async Task WikiPage_CharacterNamespace_RedirectsToProfileAlias()
+    {
+        var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+
+        var cut = Render<SharpMUSH.Client.Pages.WikiPage>(p => p
+            .Add(c => c.Slug, "mercutio")
+            .Add(c => c.Ns, "character")
+            .Add(c => c.Category, "general"));
+
+        await Assert.That(nav.Uri).IsEqualTo(nav.BaseUri + "character/mercutio");
+
+        // The wiki view must not render behind the redirect — a flash of the wrong page.
+        await Assert.That(cut.FindComponents<WikiView>().Count).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// replace: true keeps the wiki URL out of the history stack. Without it, Back returns to
+    /// the wiki route and is bounced forward again, trapping the user on the profile.
+    /// </summary>
+    [TUnit.Core.Test]
+    public async Task WikiPage_CharacterRedirect_ReplacesHistoryEntry()
+    {
+        var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+
+        Render<SharpMUSH.Client.Pages.WikiPage>(p => p
+            .Add(c => c.Slug, "mercutio")
+            .Add(c => c.Ns, "character")
+            .Add(c => c.Category, "general"));
+
+        await Assert.That(nav.History.Single().Options.ReplaceHistoryEntry).IsTrue();
+    }
+
+    /// <summary>
+    /// /character/{slug} has no category segment, so a character page filed elsewhere cannot
+    /// round-trip through it. It renders as an ordinary wiki page instead of redirecting.
+    /// </summary>
+    [TUnit.Core.Test]
+    public async Task WikiPage_CharacterNamespaceOtherCategory_RendersNormally()
+    {
+        var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+        var startingUri = nav.Uri;
+
+        var cut = Render<SharpMUSH.Client.Pages.WikiPage>(p => p
+            .Add(c => c.Slug, "mercutio")
+            .Add(c => c.Ns, "character")
+            .Add(c => c.Category, "npcs"));
+
+        await Assert.That(nav.Uri).IsEqualTo(startingUri);
+        await Assert.That(cut.FindComponent<WikiView>().Instance.Slug).IsEqualTo("mercutio");
+    }
 }
 
 /// <summary>
@@ -315,6 +383,10 @@ public class CharacterRouteTests : BunitContext
         await Assert.That(wikiView).IsNotNull();
         await Assert.That(wikiView.Instance.Slug).IsEqualTo("Gandalf");
         await Assert.That(wikiView.Instance.Mode).IsEqualTo(WikiView.WikiMode.View);
+
+        // Biographies live in the Character namespace — that is what SeoController and
+        // BotPrerenderMiddleware read, and what makes the wiki-route alias identifiable.
+        await Assert.That(wikiView.Instance.Namespace).IsEqualTo(WikiRoutes.CharacterNamespace);
     }
 }
 
@@ -344,5 +416,48 @@ public class HelpRouteTests : BunitContext
         var wikiView = cut.FindComponent<WikiView>();
         await Assert.That(wikiView).IsNotNull();
         await Assert.That(wikiView.Instance.Slug).IsEqualTo("commands");
+    }
+}
+
+/// <summary>
+/// The wiki admin grid offers three links per row: the title (where the page is read) and the
+/// edit / history management actions. Character biographies read from /character/{slug} but are
+/// still edited and audited through their wiki route, so the two must be built from different
+/// bases — appending "/edit" to the profile alias yields a URL that does not resolve.
+/// </summary>
+public class AdminWikiLinkTests : BunitContext
+{
+    public AdminWikiLinkTests()
+    {
+        this.AddWikiTestServices();
+        Services.AddSingleton<ISnackbar>(Substitute.For<ISnackbar>());
+        AddAuthorization().SetAuthorized("admin").SetPolicies("wiki.admin");
+    }
+
+    [TUnit.Core.Test]
+    public async Task AdminWiki_CharacterPage_ReadsFromAliasButManagesThroughWikiRoute()
+    {
+        var wikiSvc = Services.GetRequiredService<IWikiService>();
+        await wikiSvc.CreateAsync("Mercutio", "A bio.", "#1", WikiNamespace.Character);
+
+        // MudDataGrid's column menus need a popover host present in the render tree.
+        Render<MudPopoverProvider>();
+
+        var cut = Render<SharpMUSH.Client.Pages.Admin.AdminWiki>();
+
+        cut.WaitForAssertion(() =>
+        {
+            if (!cut.Markup.Contains("/character/mercutio"))
+                throw new InvalidOperationException("grid rows not loaded yet");
+        }, TimeSpan.FromSeconds(5));
+
+        // Title link: the canonical reading path.
+        await Assert.That(cut.Markup).Contains("href=\"/character/mercutio\"");
+
+        // Management actions: real routes, not aliases with a suffix bolted on.
+        await Assert.That(cut.Markup).Contains("/wiki/character/general/mercutio/edit");
+        await Assert.That(cut.Markup).Contains("/wiki/character/general/mercutio/history");
+        await Assert.That(cut.Markup).DoesNotContain("/character/mercutio/edit");
+        await Assert.That(cut.Markup).DoesNotContain("/character/mercutio/history");
     }
 }

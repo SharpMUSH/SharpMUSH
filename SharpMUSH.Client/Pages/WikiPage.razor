@@ -1,12 +1,34 @@
 @page "/wiki/{Ns}/{Category}/{Slug}"
 @using SharpMUSH.Client.Components
+@inject NavigationManager Nav
 
-<PageTitle>@Slug — Wiki — SharpMUSH</PageTitle>
+@if (!_redirecting)
+{
+    <PageTitle>@Slug — Wiki — SharpMUSH</PageTitle>
 
-<WikiView @key="@($"{Ns}:{Category}:{Slug}")" Slug="@Slug" Namespace="@Ns" Category="@Category" Mode="WikiView.WikiMode.View" />
+    <WikiView @key="@($"{Ns}:{Category}:{Slug}")" Slug="@Slug" Namespace="@Ns" Category="@Category" Mode="WikiView.WikiMode.View" />
+}
 
 @code {
     [Parameter] public required string Slug { get; set; }
     [Parameter] public required string Ns { get; set; }
     [Parameter] public required string Category { get; set; }
+
+    private bool _redirecting;
+
+    // Backstop for links this app no longer produces: bookmarks, external links, hand-typed URLs,
+    // and wiki markup rendered before character links became aliases. Cold loads are caught
+    // earlier by CanonicalUrlMiddleware's 301, but that never sees a client-side navigation, so
+    // the check has to exist here as well.
+    //
+    // replace: true keeps the wiki URL out of the history stack — otherwise Back lands on it and
+    // is bounced straight forward again, trapping the user on the profile.
+    protected override void OnParametersSet()
+    {
+        _redirecting = WikiRoutes.IsCharacterProfile(Ns, Category);
+        if (_redirecting)
+        {
+            Nav.NavigateTo(WikiRoutes.PathFor(Ns, Category, Slug), replace: true);
+        }
+    }
 }

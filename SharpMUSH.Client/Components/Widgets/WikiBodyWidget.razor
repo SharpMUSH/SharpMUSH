@@ -2,14 +2,14 @@
 @using SharpMUSH.Client.Components
 @using SharpMUSH.Client.Models.Widgets
 
-@* Renders a character's free-form wiki biography (the page whose slug is the character name). The
-   character comes from the cascading ProfilePageContext when placed on the profile page; it falls
-   back to a "character" key in the widget config for standalone placements. *@
+@* Renders a character's free-form wiki biography: the Character-namespace page whose slug is the
+   character name. The character comes from the cascading ProfilePageContext when placed on the
+   profile page; it falls back to a "character" key in the widget config for standalone placements. *@
 
 @if (!string.IsNullOrWhiteSpace(_name))
 {
     <MudPaper Class="wiki-body-widget" Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
-        <WikiView Slug="@_name" Mode="WikiView.WikiMode.View" />
+        <WikiView Slug="@_name" Namespace="@WikiRoutes.CharacterNamespace" Mode="WikiView.WikiMode.View" />
     </MudPaper>
 }
 

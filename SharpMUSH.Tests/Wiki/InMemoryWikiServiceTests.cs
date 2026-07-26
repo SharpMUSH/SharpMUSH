@@ -174,6 +174,35 @@ public class InMemoryWikiServiceTests
 	}
 
 	[Test]
+	[Arguments("Mercutio")]
+	[Arguments("MERCUTIO")]
+	[Arguments("mercutio")]
+	public async Task GetBySlugAsync_NormalizesSlugCase(string lookup)
+	{
+		var svc = BuildService();
+		var created = await CreatePageAsync(svc, title: "Mercutio");
+
+		var result = await svc.GetBySlugAsync(lookup, "general", WikiNamespace.Main);
+
+		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+	}
+
+	[Test]
+	[Arguments("Mannaz Byron")]
+	[Arguments("mannaz_byron")]
+	public async Task GetBySlugAsync_NormalizesSpacesToUnderscores(string lookup)
+	{
+		var svc = BuildService();
+		var created = await CreatePageAsync(svc, title: "Mannaz Byron");
+
+		var result = await svc.GetBySlugAsync(lookup, "general", WikiNamespace.Main);
+
+		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+	}
+
+	[Test]
 	public async Task GetBySlugAsync_MissingSlug_ReturnsNotFound()
 	{
 		var svc = BuildService();
