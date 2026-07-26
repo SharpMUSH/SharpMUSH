@@ -1,14 +1,23 @@
 using Bunit;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.JSInterop;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+file sealed class InteractiveStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// Covers the <see cref="GlobalTerminal.Interactive"/> gate: the /play terminal keeps its command
@@ -33,6 +42,8 @@ public class GlobalTerminalInteractiveTests : BunitContext
 			sp.GetRequiredService<IHttpClientFactory>(),
 			sp.GetRequiredService<IJSRuntime>(),
 			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
+
+		Services.AddSingleton<IStringLocalizer<SharedResource>, InteractiveStubLocalizer<SharedResource>>();
 	}
 
 	private static ITerminalService AnonymousTerminal()

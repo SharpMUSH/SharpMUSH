@@ -2,21 +2,22 @@
 @using SharpMUSH.Client.Services
 @inject MushQueryService QueryService
 @inject ITerminalService Terminal
+@inject IStringLocalizer<SharedResource> Loc
 
 <div style="display:flex;flex-direction:column;height:100%;min-height:0;">
 
     <div class="ob-modes">
         <button type="button" class="ob-mode @(_activeTab == 0 ? "ob-mode--on" : "")"
                 @onclick="LoadMyObjectsAsync" disabled="@_loading">
-            <MudIcon Icon="@Icons.Material.Filled.Person" Style="font-size:0.875rem;" /> Mine
+            <MudIcon Icon="@Icons.Material.Filled.Person" Style="font-size:0.875rem;" /> @Loc["TermBrowserMine"]
         </button>
         <button type="button" class="ob-mode @(_activeTab == 1 ? "ob-mode--on" : "")"
                 @onclick="@(() => _activeTab = 1)">
-            <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;" /> Search
+            <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;" /> @Loc["TermBrowserSearch"]
         </button>
         <button type="button" class="ob-mode @(_activeTab == 2 ? "ob-mode--on" : "")"
                 @onclick="LoadHereAsync" disabled="@_loading">
-            <MudIcon Icon="@Icons.Material.Filled.Home" Style="font-size:0.875rem;" /> Here
+            <MudIcon Icon="@Icons.Material.Filled.Home" Style="font-size:0.875rem;" /> @Loc["TermBrowserHere"]
         </button>
     </div>
 
@@ -28,9 +29,9 @@
                 <input value="@_searchExpr" @oninput="@(e => _searchExpr = e.Value?.ToString() ?? string.Empty)"
                        @onkeydown="OnSearchExprKeyDown"
                        placeholder="lsearch(me, type, thing)" class="ob-search-input" />
-                <button type="button" class="ob-go" @onclick="SearchAsync" disabled="@_loading">Go</button>
+                <button type="button" class="ob-go" @onclick="SearchAsync" disabled="@_loading">@Loc["TermBrowserGo"]</button>
             </div>
-            <span class="ob-hint">e.g. <code>lsearch(me)</code> · <code>lsearch(me, type, room)</code> · <code>lcon(loc(me))</code></span>
+            <span class="ob-hint">@Loc["TermBrowserExampleLabel"] <code>lsearch(me)</code> · <code>lsearch(me, type, room)</code> · <code>lcon(loc(me))</code></span>
         </div>
     }
 
@@ -46,7 +47,7 @@
         }
         else if (_groups.Count == 0)
         {
-            <div class="ob-empty">No objects found.</div>
+            <div class="ob-empty">@Loc["TermBrowserNoObjects"]</div>
         }
         else
         {
@@ -144,7 +145,7 @@
         }
         catch (Exception ex)
         {
-            _error = $"Error: {ex.Message}";
+            _error = Loc["TermBrowserError", ex.Message];
         }
         finally
         {

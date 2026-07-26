@@ -3,15 +3,24 @@ using System.Net.Http.Json;
 using Bunit;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.JSInterop;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+file sealed class IdentityStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// Fakes the two endpoints this flow touches: <c>api/auth/account-login</c> (seeds a real
@@ -90,6 +99,8 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		var hostEnv = Substitute.For<IWebAssemblyHostEnvironment>();
 		hostEnv.Environment.Returns("Production");
 		Services.AddSingleton(hostEnv);
+
+		Services.AddSingleton<IStringLocalizer<SharedResource>, IdentityStubLocalizer<SharedResource>>();
 	}
 
 	/// <summary>
@@ -145,7 +156,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		await cut.InvokeAsync(() => first.ConnectionStateChanged += Raise.Event<Action<bool>>(true));
 
 		await Assert.That(cut.Markup).Contains("Alpha");
-		await Assert.That(cut.Markup).DoesNotContain("not logged in");
+		await Assert.That(cut.Markup).DoesNotContain("TermNotLoggedIn");
 	}
 
 	[Test]
@@ -207,7 +218,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		await cut.InvokeAsync(() => second.ConnectionStateChanged += Raise.Event<Action<bool>>(true));
 
 		await Assert.That(cut.Markup).Contains("Beta");
-		await Assert.That(cut.Markup).DoesNotContain("not logged in");
+		await Assert.That(cut.Markup).DoesNotContain("TermNotLoggedIn");
 	}
 
 	/// <summary>
@@ -278,7 +289,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		});
 
 		await Assert.That(cut.Markup).Contains("DirectChar");
-		await Assert.That(cut.Markup).DoesNotContain("not logged in");
+		await Assert.That(cut.Markup).DoesNotContain("TermNotLoggedIn");
 	}
 
 	public new async ValueTask DisposeAsync()
