@@ -76,6 +76,31 @@ non-API routes (standard WASM hosting pattern).
 - Character profiles get the alias `/character/Name` → resolves to
   `Character:Name` wiki page internally
 
+### Character Biographies
+
+A character's biography is the Character-namespace page whose slug is the
+character name, and `/character/{name}` is its **only** canonical URL. The
+wiki route it is stored under is an implementation detail:
+
+- Nothing in the portal links to `/wiki/character/general/{slug}`. Every link
+  producer — the wiki index, recent-changes, directive blocks, the wiki admin
+  grid, `[[wiki links]]` in markup, and the sitemap — goes through
+  `WikiRoutes.PathFor`, which returns the alias for these pages.
+- `CanonicalUrlMiddleware` 301s the wiki route to the alias, catching
+  bookmarks, external links, and markup rendered before that change.
+- `WikiPage.razor` performs the same redirect for client-side navigations,
+  which never reach the server. It replaces the history entry rather than
+  pushing one, so Back does not land on a URL that immediately bounces.
+
+Two deliberate limits on the alias:
+
+- **View route only.** `/history`, `/diff` and `/edit` have no equivalent under
+  `/character` and keep working where they are. This is also what stops the
+  profile page's own history link from bouncing.
+- **Default category only.** `/character/{name}` carries no category segment,
+  so a Character-namespace page filed under any other category cannot round-trip
+  through the alias and keeps its wiki path.
+
 ### Scene Permalinks
 
 - `/scenes/42` — numeric ID, never changes
@@ -158,4 +183,6 @@ Bots get a 403 or a generic "Login required" page. No content leak.
   - `/wiki/Page Name` (space) → `/wiki/Page_Name` (301 redirect)
   - `/Wiki/Page_Name` (capital W) → `/wiki/Page_Name` (301 redirect)
   - `/character/Name/` (trailing slash) → `/character/Name` (301 redirect)
+  - `/wiki/character/general/Name` → `/character/Name` (301 redirect;
+    see "Character Biographies" above)
 - `<link rel="canonical">` included in pre-rendered pages
