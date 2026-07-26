@@ -268,12 +268,18 @@ public class PackageInstallService(
 		await AddAsync(WellKnownRefs.PlayerStart, options.PlayerStart, 0);
 		await AddAsync(WellKnownRefs.PackageManager, options.PackageManager, 3);
 
-		// http_handler is optional (nullable, no fixed fallback) — only mapped
-		// when configured, so a package targeting {{$http_handler}} on a game
-		// without one fails to resolve rather than guessing a dbref.
+		// http_handler and event_handler are optional (nullable, no fixed fallback) — only
+		// mapped when configured, so a package targeting {{$http_handler}} or
+		// {{$event_handler}} on a game without one fails to resolve rather than guessing a
+		// dbref.
 		if (options.HttpHandler is > 0)
 		{
 			await AddAsync(WellKnownRefs.HttpHandler, options.HttpHandler, options.HttpHandler.Value);
+		}
+
+		if (options.EventHandler is > 0)
+		{
+			await AddAsync(WellKnownRefs.EventHandler, options.EventHandler, options.EventHandler.Value);
 		}
 
 		return map;
@@ -1435,5 +1441,5 @@ public class PackageInstallService(
 		name.Split(';', 2, StringSplitOptions.TrimEntries)[0];
 
 	private static string DecisionKey(string targetRef, string attribute) =>
-		$"{targetRef} {attribute.ToUpperInvariant()}";
+		$"{targetRef}\0{attribute.ToUpperInvariant()}";
 }

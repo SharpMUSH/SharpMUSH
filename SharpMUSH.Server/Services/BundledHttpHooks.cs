@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using System.Reflection;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Server.Services;
@@ -25,14 +24,7 @@ public static class BundledHttpHooks
 	public static string Attribute(string name) => Attributes[name];
 
 	/// <summary>The raw YAML of one bundled package manifest.</summary>
-	public static string ManifestYaml(string packageId)
-	{
-		var resource = $"SharpMUSH.Server.BundledPackages.{packageId}.package.yaml";
-		using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource)
-			?? throw new InvalidOperationException($"Bundled resource '{resource}' not found.");
-		using var reader = new StreamReader(stream);
-		return reader.ReadToEnd();
-	}
+	public static string ManifestYaml(string packageId) => BundledPackages.ManifestYaml(packageId);
 
 	private static FrozenDictionary<string, string> LoadAll()
 	{

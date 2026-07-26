@@ -114,6 +114,10 @@
       <Link>BundledPackages\profile-handler.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.profile-handler.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\room-contents\package.yaml">
+      <Link>BundledPackages\room-contents.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.room-contents.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\common-functions\package.yaml">
       <Link>BundledPackages\common-functions.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.common-functions.package.yaml</LogicalName>
