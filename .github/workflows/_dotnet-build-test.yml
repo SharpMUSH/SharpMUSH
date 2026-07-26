@@ -29,8 +29,7 @@ jobs:
         run: |
           dotnet format whitespace --folder . \
             --exclude '**/bin/**' --exclude '**/obj/**' --exclude '**/TestResults/**' \
-            --verify-no-changes \
-            --report format-report.json || {
+            --verify-no-changes || {
               echo "::error::Formatting does not match .editorconfig. Run: dotnet format whitespace --folder . --exclude '**/bin/**' --exclude '**/obj/**' --exclude '**/TestResults/**'"
               exit 1
             }

@@ -32,18 +32,35 @@
           Inputs="@(FormatVerificationInput)"
           Outputs="$(FormatVerificationStamp)">
 
+    <!--
+      Exit codes are distinct and must stay distinguished: 0 clean, 2 formatting differs,
+      anything else the tool itself failed. Conflating them reports a formatting problem that
+      does not exist and sends you looking for it — with the tool's own explanation swallowed.
+      `dotnet format` genuinely does fail on this repo in solution mode, so this is not
+      hypothetical. Output importance is normal so a tool failure explains itself.
+    -->
     <Exec Command="dotnet format whitespace --folder &quot;$(MSBuildProjectDirectory)&quot; --exclude &quot;**/bin/**&quot; --exclude &quot;**/obj/**&quot; --verify-no-changes"
           ContinueOnError="true"
-          StandardOutputImportance="low"
-          StandardErrorImportance="low">
+          IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="FormatVerificationExitCode" />
     </Exec>
 
-    <Error Condition="'$(FormatVerificationExitCode)' != '0'"
+    <Error Condition="'$(FormatVerificationExitCode)' == '2'"
            Code="FORMAT001"
            Text="Formatting in $(MSBuildProjectName) does not match .editorconfig. Fix it with: dotnet format whitespace --folder &quot;$(MSBuildProjectDirectory)&quot; --exclude &quot;**/bin/**&quot; --exclude &quot;**/obj/**&quot;  (run until it reports no changes — the formatter needs two passes to converge)" />
 
-    <Touch Files="$(FormatVerificationStamp)" AlwaysCreate="true" />
+    <!--
+      A broken formatter must not block the build: the CI `format` job is authoritative and
+      will fail loudly with the real output. Warn so the local gate cannot degrade silently.
+    -->
+    <Warning Condition="'$(FormatVerificationExitCode)' != '0' AND '$(FormatVerificationExitCode)' != '2'"
+             Code="FORMAT002"
+             Text="Could not verify formatting for $(MSBuildProjectName): `dotnet format` exited $(FormatVerificationExitCode) (see its output above). Formatting was NOT checked for this project; CI still enforces it." />
+
+    <!-- Only a verified-clean project is stamped, so a failure of either kind re-checks next build. -->
+    <Touch Condition="'$(FormatVerificationExitCode)' == '0'"
+           Files="$(FormatVerificationStamp)"
+           AlwaysCreate="true" />
   </Target>
 
   <!--
@@ -51,7 +68,7 @@
     timestamps. Deliberately not @(Compile): that pulls in source-generated files under obj/,
     which are rewritten on every build and would defeat the incremental check.
   -->
-  <ItemGroup>
+  <ItemGroup Condition="'$(SkipFormatVerification)' != 'true'">
     <FormatVerificationInput Include="$(MSBuildProjectDirectory)/**/*.cs"
                              Exclude="$(MSBuildProjectDirectory)/bin/**/*.cs;$(MSBuildProjectDirectory)/obj/**/*.cs" />
   </ItemGroup>
