@@ -1,5 +1,6 @@
 ﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Atn;
+using Antlr4.Runtime.Misc;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -215,16 +216,97 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	/// <summary>
-	/// Gets the configured ANTLR prediction mode based on configuration.
+	/// The single ANTLR prediction mode to use where two-stage parsing is not applied — the
+	/// tooling paths (validation, semantic tokens). TwoStage resolves to LL here so those paths
+	/// always produce the authoritative result; the two-stage speedup is applied only on the hot
+	/// evaluation path via <see cref="ParseTwoStage{TContext}"/>.
 	/// </summary>
 	private PredictionMode GetPredictionMode()
 	{
 		return Configuration.CurrentValue.Debug.ParserPredictionMode switch
 		{
 			ParserPredictionMode.SLL => PredictionMode.SLL,
-			ParserPredictionMode.LL => PredictionMode.LL,
-			_ => PredictionMode.LL // Default to LL for correct predicate evaluation
+			_ => PredictionMode.LL
 		};
+	}
+
+	/// <summary>
+	/// Parses <paramref name="entryPoint"/> over an already-lexed token stream, applying the
+	/// configured prediction strategy.
+	/// <para>
+	/// Under <see cref="ParserPredictionMode.TwoStage"/> (the default) it first parses with SLL and
+	/// a <see cref="BailErrorStrategy"/> that aborts on the first error instead of recovering. If
+	/// that succeeds with no syntax error the result stands — ANTLR guarantees SLL then matches LL.
+	/// Only if SLL errors is the token stream rewound and re-parsed with LL, which is authoritative;
+	/// its result and its (strict- or lenient-) recovered tree are what the caller sees. On
+	/// error-free input, the common case, this is a single SLL pass. The SLL and LL settings force
+	/// one mode for diagnostics.
+	/// </para>
+	/// A fresh parser is built per attempt so the grammar's mutable member state starts clean, and
+	/// the token stream is sought back to the start between attempts.
+	/// </summary>
+	private (TContext Context, ParserErrorListener Errors) ParseTwoStage<TContext>(
+		BufferedTokenSpanStream tokens,
+		Func<SharpMUSHParser, TContext> entryPoint,
+		string inputText,
+		bool lenient)
+		where TContext : ParserRuleContext
+	{
+		var debug = Configuration.CurrentValue.Debug.DebugSharpParser;
+
+		(SharpMUSHParser Parser, ParserErrorListener Errors) Build(PredictionMode mode, IAntlrErrorStrategy strategy)
+		{
+			tokens.Seek(0);
+			var parser = new SharpMUSHParser(tokens)
+			{
+				Interpreter = { PredictionMode = mode },
+				Trace = debug,
+				ErrorHandler = strategy,
+			};
+			parser.RemoveErrorListeners();
+			var errors = new ParserErrorListener(inputText);
+			parser.AddErrorListener(errors);
+			if (debug)
+			{
+				parser.AddErrorListener(new DiagnosticErrorListener(false));
+			}
+
+			return (parser, errors);
+		}
+
+		// The strategy the authoritative pass uses: recover-and-report for command arguments
+		// (lenient), plain recovery whose errors the caller turns into a failure string otherwise.
+		IAntlrErrorStrategy AuthoritativeStrategy() =>
+			lenient ? new LenientErrorStrategy() : new DefaultErrorStrategy();
+
+		if (Configuration.CurrentValue.Debug.ParserPredictionMode == ParserPredictionMode.TwoStage)
+		{
+			var (sllParser, sllErrors) = Build(PredictionMode.SLL, new BailErrorStrategy());
+			try
+			{
+				var sllContext = entryPoint(sllParser);
+				if (!sllErrors.HasErrors)
+				{
+					return (sllContext, sllErrors);
+				}
+			}
+			catch (ParseCanceledException)
+			{
+				// SLL could not parse this input; the LL pass below decides whether that is a real
+				// syntax error or only SLL's weaker analysis giving up.
+			}
+
+			if (debug)
+			{
+				Logger.LogDebug("SLL parse fell back to LL for input of length {Length}", inputText.Length);
+			}
+
+			var (llParser, llErrors) = Build(PredictionMode.LL, AuthoritativeStrategy());
+			return (entryPoint(llParser), llErrors);
+		}
+
+		var (singleParser, singleErrors) = Build(GetPredictionMode(), AuthoritativeStrategy());
+		return (entryPoint(singleParser), singleErrors);
 	}
 
 	/// <summary>
@@ -278,32 +360,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			return (new CallState(MModule.single(ErrorMessages.Returns.Call)), false);
 		}
 
-		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
-		{
-			Interpreter = { PredictionMode = GetPredictionMode() },
-			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
-		};
-
-		// Always collect syntax errors. Remove the default ConsoleErrorListener so ANTLR
-		// does not print noise to stdout, then add our collecting listener.
-		sharpParser.RemoveErrorListeners();
-		var errorListener = new ParserErrorListener(MModule.plainText(text).ToString());
-		sharpParser.AddErrorListener(errorListener);
-
-		if (Configuration.CurrentValue.Debug.DebugSharpParser)
-		{
-			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		}
-
-		// In lenient mode, swap to LenientErrorStrategy so that synthetic recovery
-		// tokens have empty text and sit at the real input boundary. This prevents
-		// ANTLR's "<missing X>" annotations from polluting the stored attribute value.
-		if (lenient)
-		{
-			sharpParser.ErrorHandler = new LenientErrorStrategy();
-		}
-
-		var context = entryPoint(sharpParser);
+		// Two-stage SLL/LL prediction with strict/lenient recovery. The error listener is the one
+		// from whichever pass produced the returned tree, and lenient parses run LenientErrorStrategy
+		// so recovery tokens carry empty text at the real input boundary rather than "<missing X>".
+		var (context, errorListener) = ParseTwoStage(
+			bufferedTokenSpanStream, entryPoint, MModule.plainText(text).ToString(), lenient);
 
 		// In strict mode (default for function evaluation), surface any syntax error
 		// immediately as a MUSH failure string without visiting the recovery tree.
@@ -474,25 +535,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			return () => ValueTask.FromResult<CallState?>(new CallState(MModule.single(ErrorMessages.Returns.Call)));
 		}
 
-		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
-		{
-			Interpreter =
-			{
-				PredictionMode = GetPredictionMode()
-			},
-			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
-		};
-
-		sharpParser.RemoveErrorListeners();
-		var errorListener = new ParserErrorListener(plaintext.ToString());
-		sharpParser.AddErrorListener(errorListener);
-
-		if (Configuration.CurrentValue.Debug.DebugSharpParser)
-		{
-			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		}
-
-		var chatContext = sharpParser.startCommandString();
+		var (chatContext, errorListener) = ParseTwoStage(
+			bufferedTokenSpanStream, p => p.startCommandString(), plaintext.ToString(), lenient: false);
 
 		if (errorListener.HasErrors)
 		{
