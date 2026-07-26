@@ -1,0 +1,59 @@
+<Project>
+
+  <!--
+    Fails the build when a project's C# no longer matches .editorconfig.
+
+    Why not IDE0055: `EnforceCodeStyleInBuild` plus `dotnet_diagnostic.IDE0055.severity =
+    error` produces no diagnostic for indentation on this SDK — verified against a file with
+    93 space-indented lines, which built clean. Roslyn's formatting analyzer does not report
+    these at build time, so relying on it would have looked like a gate while enforcing
+    nothing. `dotnet format` is the tool that actually applies these rules, so the check
+    shells out to it.
+
+    Cost: ~0.8s for one project. Inputs/Outputs keep it incremental, so it runs only for
+    projects whose .cs files changed since the last build — usually one, often none. CI's
+    build job opts out entirely because the dedicated `format` job already covers the repo
+    in a single ~2s pass.
+
+    Opt out with -p:SkipFormatVerification=true.
+  -->
+
+  <PropertyGroup>
+    <SkipFormatVerification Condition="'$(SkipFormatVerification)' == ''">false</SkipFormatVerification>
+    <FormatVerificationStamp>$(IntermediateOutputPath)format-verified.stamp</FormatVerificationStamp>
+  </PropertyGroup>
+
+  <Target Name="VerifyEditorConfigFormatting"
+          AfterTargets="Build"
+          Condition="'$(SkipFormatVerification)' != 'true'
+                     AND '$(DesignTimeBuild)' != 'true'
+                     AND '$(MSBuildProjectExtension)' == '.csproj'
+                     AND Exists('$(MSBuildProjectDirectory)')"
+          Inputs="@(FormatVerificationInput)"
+          Outputs="$(FormatVerificationStamp)">
+
+    <Exec Command="dotnet format whitespace --folder &quot;$(MSBuildProjectDirectory)&quot; --exclude &quot;**/bin/**&quot; --exclude &quot;**/obj/**&quot; --verify-no-changes"
+          ContinueOnError="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="FormatVerificationExitCode" />
+    </Exec>
+
+    <Error Condition="'$(FormatVerificationExitCode)' != '0'"
+           Code="FORMAT001"
+           Text="Formatting in $(MSBuildProjectName) does not match .editorconfig. Fix it with: dotnet format whitespace --folder &quot;$(MSBuildProjectDirectory)&quot; --exclude &quot;**/bin/**&quot; --exclude &quot;**/obj/**&quot;  (run until it reports no changes — the formatter needs two passes to converge)" />
+
+    <Touch Files="$(FormatVerificationStamp)" AlwaysCreate="true" />
+  </Target>
+
+  <!--
+    The project's own sources, resolved before the target so Inputs/Outputs can compare
+    timestamps. Deliberately not @(Compile): that pulls in source-generated files under obj/,
+    which are rewritten on every build and would defeat the incremental check.
+  -->
+  <ItemGroup>
+    <FormatVerificationInput Include="$(MSBuildProjectDirectory)/**/*.cs"
+                             Exclude="$(MSBuildProjectDirectory)/bin/**/*.cs;$(MSBuildProjectDirectory)/obj/**/*.cs" />
+  </ItemGroup>
+
+</Project>
