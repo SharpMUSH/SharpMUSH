@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-07-26-wiki-localization-design.md` — approved and settled. Do not revisit its decisions.
 
+> **Revised against the corrected spec (`b235648a`).** That commit fixed five design flaws, four of them real corrections rather than clarifications, and this plan has been updated to match: `SourceLocale` is **materialised once by the migration, never re-derived on read**; `Wiki.DefaultLocale` is a real parameter default with startup validation; `WikiHelpers.NormalizeLocale` validates and canonicalises at every write boundary while the read path stays permissive; `UpsertTranslationAsync` takes `expectedRevisionNumber` and never retries a conflict; and the unique revision constraint is corrected on **all three** backends, which disagree today. If a task below seems to contradict any of those, the spec wins — but say so rather than quietly resolving it, because that would mean this revision missed a spot.
+
 ## Global Constraints
 
 - **C# files:** tabs, indent size 2. **Razor files:** spaces, indent size 4. **Line endings:** LF.
@@ -29,8 +31,12 @@
 - **Baseline that must stay green:** `SharpMUSH.Tests` = 4927 total / 4729 passed / 198 skipped / **0 failed**. `SharpMUSH.Tests.BUnit` = **271 passed**. `dotnet build` = 0 errors.
 - **Docker is NOT available in the development environment.** `SharpMUSH.Tests.Integration` requires it unconditionally (a Docker network + NATS + MySQL container start even for the embedded SurrealDB provider). Every task that adds an integration test states its verification as *"compiles locally; asserted by CI"* and names the CI job. Never claim an integration test passed locally.
 - **CI integration matrix:** `.github/workflows/_dotnet-build-test.yml`, job `test-integration`, `strategy.matrix.database: [arangodb, memgraph, surrealdb]`, command `dotnet run --project SharpMUSH.Tests.Integration --no-build --verbosity normal -- --output Detailed`. This job running green on all three backends is the acceptance gate for Tasks 6–9.
-- **Configured default locale is `Wiki.DefaultLocale`, default value `"en"`.** Read it only through `IOptionsMonitor<SharpMUSHOptions>`; never hardcode `"en"` in a property initializer.
-- **`WikiPage.SourceLocale` defaults to `string.Empty`, not `"en"`.** Empty means "unlabelled" and is normalised to `Wiki.DefaultLocale` on read by `IWikiLocalizationService`. This is what makes "no data migration" true.
+- **Configured default locale is `Wiki.DefaultLocale`, a real parameter default of `"en"` (`WikiOptions.DefaultLocaleFallback`) rather than a `required` member**, validated at startup by `ValidateSharpOptions`. At runtime read it only through `IOptionsMonitor<SharpMUSHOptions>`; the one literal lives on `WikiOptions.DefaultLocaleFallback` and nothing else hardcodes `"en"`.
+- **`WikiPage.SourceLocale` is materialised once, never re-derived on read.** The property initializer default is `string.Empty` (an initializer cannot read configuration), but that is a *transient* state: `Migration_AddWikiTranslations` stamps every unstamped row once, and every create path stamps new pages. A page read back from storage always has a non-empty, canonical `SourceLocale`, and **nothing normalises empty → `Wiki.DefaultLocale` on read.** Re-deriving would mean an admin changing `wiki_default_locale` silently reinterprets the authored locale of every pre-existing page. The design's claim is therefore **"no schema migration and no content rewrite"**, *not* "no data migration" — there is one additive-column backfill.
+- **The backfill has no rollback path, no language detection and no per-page override.** SharpMUSH is pre-production, so wiping and reseeding the database is acceptable recovery; all three would be speculative complexity for a scenario the project does not have. The migration logs the locale it stamped and the row count, which is enough to notice a wrong default. This is the first thing to revisit if a live game ever adopts SharpMUSH with existing wiki content.
+- **Locales are canonicalised and validated at every write boundary, and the read path stays permissive.** `WikiHelpers.NormalizeLocale` returns `OneOf<string, Error<string>>` and gates `UpsertTranslationAsync`, `CreateAsync`'s `sourceLocale`, the migration backfill and options validation. `WikiHelpers.NormalizeLocaleOrEmpty` is the permissive read form: a bad `?lang=` is treated as absent and **never** a 400.
+- **`UpsertTranslationAsync` ends with `int? expectedRevisionNumber` — a compare-and-swap.** `null` means create-only (an existing translation is an `Error<string>`). A stale value is a conflict returning `Error<string>` that is **never** retried automatically: retrying re-applies the loser's stale markdown, which is the loss the parameter exists to prevent. The single automatic retry applies only to the insert race on `(PageId, Locale)`, where no content can be lost.
+- **All three backends must end up with a unique constraint on `(PageId, Locale, RevisionNumber)`, and they disagree today.** Verified in the source: SurrealDB has `wiki_revision_page_rev ON wiki_revision FIELDS pageId, revisionNumber UNIQUE` (`SharpMUSH.Database.SurrealDB/SurrealDatabase.Migration.cs:97`) and would **reject** the first translation revision; ArangoDB has `Fields = ["PageId", "RevisionNumber"]`, `Persistent`, **no** `Unique` (`SharpMUSH.Database.ArangoDB/Migrations/Migration_AddWiki.cs:101-105`); Memgraph has two *separate* non-unique indexes (`SharpMUSH.Database.Memgraph/MemgraphDatabase.Migration.cs:124-125`) and no constraint at all. So a numbering bug fails loudly on one backend and passes silently on two — in CI, a baffling one-of-three red that reads like flakiness. The requirement is not "fix SurrealDB" but **make all three agree**, and Task 6's cross-backend test must assert the constraint *rejects* a duplicate, not merely that the happy path works.
 - **`IWikiService` additions are purely additive.** These five existing call sites must keep compiling with zero edits in Phases 1–3: `SharpMUSH.Server/Controllers/WikiController.cs`, `SharpMUSH.Server/Controllers/SeoController.cs`, `SharpMUSH.Server/Middleware/BotPrerenderMiddleware.cs`, `SharpMUSH.Implementation/Commands/WikiCommands.cs` (+ its `WikiCommand/*.cs` helpers), `SharpMUSH.Implementation/Functions/WikiFunctions.cs`.
 - **Draft translations must never leak.** The caller filters the candidate locale set by visibility *before* calling `IWikiLocaleResolver.Resolve`. The resolver stays permission-blind.
 - **No seeded translations.** `SeedWikiPagesAsync` gains `SourceLocale` on the three English pages it already seeds and nothing else.
@@ -44,7 +50,7 @@
 
 | File | Responsibility |
 |---|---|
-| `SharpMUSH.Configuration/Options/WikiOptions.cs` | `Wiki.DefaultLocale` config record |
+| `SharpMUSH.Configuration/Options/WikiOptions.cs` | `Wiki.DefaultLocale` config record + `DefaultLocaleFallback`, the change's only `"en"` literal |
 | `SharpMUSH.Library/Models/Wiki/WikiTranslation.cs` | Stored translation overlay row |
 | `SharpMUSH.Library/Models/Wiki/WikiTranslationSummary.cs` | Bodyless translation listing row |
 | `SharpMUSH.Library/Models/Wiki/LocalizedWikiPage.cs` | Read model; never stored |
@@ -52,13 +58,14 @@
 | `SharpMUSH.Library/Services/WikiLocaleResolver.cs` | The five-step fallback chain. No DB, no HTTP |
 | `SharpMUSH.Library/Services/Interfaces/IWikiLocalizationService.cs` | Localized-read contract |
 | `SharpMUSH.Library/Services/WikiLocalizationService.cs` | Visibility filtering + the only `LocalizedWikiPage` factory |
-| `SharpMUSH.Database.ArangoDB/Migrations/Migration_AddWikiTranslations.cs` | Collection + indexes |
+| `SharpMUSH.Database.ArangoDB/Migrations/Migration_AddWikiTranslations.cs` | Collection, indexes, the `SourceLocale` / `WikiRevision.Locale` backfill, and the unique `(PageId, Locale, RevisionNumber)` constraint |
 | `SharpMUSH.Client/Models/WikiTranslationInfo.cs` | Client-side translation summary |
+| `SharpMUSH.Client/Models/WikiTranslationSaveError.cs` | Save failure + `NeedsReload`, so a 409 is distinguishable from a 400 |
 | `SharpMUSH.Client/Resources/PortalLocales.cs` | Shared portal locale list + display names |
 | `SharpMUSH.Tests/Wiki/WikiLocaleResolverTests.cs` | Table-driven chain tests |
-| `SharpMUSH.Tests/Wiki/WikiLocalizationServiceTests.cs` | Draft visibility, fallback banner, source normalisation |
-| `SharpMUSH.Tests/Wiki/WikiHelpersLocaleTests.cs` | `NormalizeLocale` |
-| `SharpMUSH.Tests.Integration/Wiki/WikiTranslationIntegrationTests.cs` | Cross-backend CRUD + index uniqueness |
+| `SharpMUSH.Tests/Wiki/WikiLocalizationServiceTests.cs` | Draft visibility, fallback banner, and that a stamped `SourceLocale` survives a change to `wiki_default_locale` |
+| `SharpMUSH.Tests/Wiki/WikiHelpersLocaleTests.cs` | `NormalizeLocale` / `NormalizeLocaleOrEmpty`, casing collapse, agreement with startup validation |
+| `SharpMUSH.Tests.Integration/Wiki/WikiTranslationIntegrationTests.cs` | Cross-backend CRUD, plus the **negative** constraint cases and the concurrency case |
 | `SharpMUSH.Tests.BUnit/Components/WikiDisplayFallbackTests.cs` | Banner renders iff `IsFallback` |
 | `SharpMUSH.Tests.BUnit/Components/WikiEditLocaleTests.cs` | Inherited metadata disabled off-source |
 
@@ -69,7 +76,7 @@
 | Phase | Tasks | Deliverable | Verifiable locally? |
 |---|---|---|---|
 | 1 — Config + pure core | 1–4 | `Wiki.DefaultLocale`, models, resolver | Yes |
-| 2 — Storage | 5–9 | 5 CRUD methods across 4 backends. **Cross-backend test written before the three hand-written backends** (spec Risks) | Task 5 yes; 6–9 CI only |
+| 2 — Storage | 5–9 | 5 CRUD methods across 4 backends, optimistic concurrency, and a unique `(PageId, Locale, RevisionNumber)` constraint the three stores do **not** currently agree on. **Cross-backend test — negative cases included — written before the three hand-written backends** (spec Risks) | Task 5 yes; 6–9 CI only |
 | 3 — Resolution | 10 | `IWikiLocalizationService` | Yes |
 | 4 — HTTP | 11–13 | `?lang=`, translation endpoints, localized listings | Yes |
 | 5 — Portal | 14–18 | Reading banner, authoring, history, admin coverage | Yes (bUnit) |
@@ -83,9 +90,17 @@
 
 `SharpMUSHOptions` uses `required` init properties, so adding one breaks compilation at **six** construction sites. All six are listed below — miss one and the build fails.
 
+Three things about `DefaultLocale` specifically:
+
+1. **It is a real parameter default (`= "en"`), not a `required` member.** Every other `SharpMUSHOptions` member is `required`; this one deliberately is not, because resolution's terminal step depends on it always having a usable value. A configuration file that omits `wiki_default_locale` must bind to `en`, not to null or empty. The `SharpMUSHOptions.Wiki` *property* stays `required` — the distinction is between the container and the field.
+2. **It is validated at startup, not at first use.** `ValidateSharpOptions` rejects a value `CultureInfo.GetCultureInfo` cannot parse, failing startup with the offending value named. Deferring this to first use would surface a typo as a `CultureNotFoundException` inside a page render, long after the admin who made it has moved on.
+3. **`ValidationPattern` gives the admin UI a client-side check.** The startup validation is the authority, because a regex cannot know which tags actually exist.
+
 **Files:**
 - Create: `SharpMUSH.Configuration/Options/WikiOptions.cs`
 - Modify: `SharpMUSH.Configuration/Options/SharpMUSHOptions.cs:26` (add property after `TextFile`)
+- Modify: `SharpMUSH.Configuration/ValidateSharpOptions.cs` (append the locale check to the generated validator's result)
+- Modify: `SharpMUSH.Server/Startup.cs:388` (register `ValidateSharpOptions` instead of the generated validator directly, so the new check actually runs at boot)
 - Modify: `SharpMUSH.Configuration/ReadPennMUSHConfig.cs:307-311` (add `Wiki` block after the `TextFile` block)
 - Modify: `SharpMUSH.Library/Services/OptionsService.cs:297-301` (same block in `Default()`)
 - Modify: `SharpMUSH.Server/Controllers/ConfigurationController.cs:292` (add line to `CloneRecordWithProperty`)
@@ -98,9 +113,11 @@
 **Interfaces:**
 - Consumes: nothing.
 - Produces:
-  - `SharpMUSH.Configuration.Options.WikiOptions(string DefaultLocale)`
+  - `SharpMUSH.Configuration.Options.WikiOptions(string DefaultLocale = WikiOptions.DefaultLocaleFallback)`
+  - `WikiOptions.DefaultLocaleFallback` → `const string` = `"en"`. **The only `"en"` literal in the whole change.** Task 4's resolver and Tasks 7–9's backfills all reference it.
   - `SharpMUSHOptions.Wiki` → `WikiOptions` (required init)
-  - `TestSharpMushOptions.Create(bool allowBrowserCode = false, string wikiDefaultLocale = "en")` — the second parameter is new and every later test task uses it.
+  - `TestSharpMushOptions.Create(bool allowBrowserCode = false, string wikiDefaultLocale = WikiOptions.DefaultLocaleFallback)` — the second parameter is new and every later test task uses it.
+  - `ValidateSharpOptions` now fails when `Wiki.DefaultLocale` is not a real culture, and `Startup` registers *it* rather than the generated validator.
   - Config attribute name `"wiki_default_locale"` (must be globally unique across all 200+ `SharpConfig.Name` values; `ConfigMetadata_AttributeToPropertyName_IsReverseMapping` enforces bijectivity).
 
 - [ ] **Step 1: Write the failing test**
@@ -128,9 +145,39 @@ Append to `SharpMUSH.Tests/Configuration/ConfigurationTests.cs` (it already has 
 		await Assert.That(value).IsEqualTo("en");
 		await Assert.That(ConfigAccessor.GetCategoryForProperty(nameof(WikiOptions.DefaultLocale))).IsEqualTo("Wiki");
 	}
+
+	[Test]
+	public async Task WikiDefaultLocale_IsARealParameterDefaultNotARequiredMember()
+	{
+		// Constructing WikiOptions with no argument must compile and must yield the documented default.
+		// If someone later makes DefaultLocale `required`, this line stops compiling — which is the point.
+		await Assert.That(new WikiOptions().DefaultLocale).IsEqualTo(WikiOptions.DefaultLocaleFallback);
+		await Assert.That(WikiOptions.DefaultLocaleFallback).IsEqualTo("en");
+	}
+
+	[Test]
+	public async Task ValidateSharpOptions_RejectsAnUnparseableWikiDefaultLocale()
+	{
+		var options = TestSharpMushOptions.Create(wikiDefaultLocale: "not a locale");
+
+		var result = new ValidateSharpOptions().Validate(null, options);
+
+		await Assert.That(result.Failed).IsTrue();
+		await Assert.That(result.FailureMessage)
+			.Contains("not a locale")
+			.Because("a startup failure that does not name the offending value is a scavenger hunt");
+	}
+
+	[Test]
+	public async Task ValidateSharpOptions_AcceptsARegionalWikiDefaultLocale()
+	{
+		var result = new ValidateSharpOptions().Validate(null, TestSharpMushOptions.Create(wikiDefaultLocale: "pt-BR"));
+
+		await Assert.That(result.Failed).IsFalse();
+	}
 ```
 
-Add `using SharpMUSH.Configuration.Options;` and `using SharpMUSH.Configuration.Generated;` to that file's using block if absent.
+Add `using SharpMUSH.Configuration;`, `using SharpMUSH.Configuration.Options;`, `using SharpMUSH.Configuration.Generated;` and `using SharpMUSH.Tests.Server;` to that file's using block if absent.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -151,10 +198,26 @@ public record WikiOptions(
 		Description = "Locale wiki pages fall back to when a reader's locale has no translation",
 		Group = "Wiki",
 		Order = 1,
-		Tooltip = "A BCP-47 language tag, e.g. 'en', 'fr' or 'pt-BR'")]
-	string DefaultLocale
-);
+		Tooltip = "A BCP-47 language tag, e.g. 'en', 'fr' or 'pt-BR'",
+		ValidationPattern = @"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")]
+	string DefaultLocale = WikiOptions.DefaultLocaleFallback
+)
+{
+	/// <summary>
+	/// The locale used when nothing else supplies one: the parameter default above, the resolver's
+	/// last resort when a configured value is unusable, and what the wiki-translation migration stamps
+	/// on rows that predate <c>WikiPage.SourceLocale</c>.
+	/// </summary>
+	/// <remarks>
+	/// One constant so those three cannot drift. A migration in particular <em>cannot</em> read
+	/// <c>Wiki.DefaultLocale</c> at runtime — see Task 7 — so it needs a compile-time value, and this is it.
+	/// </remarks>
+	public const string DefaultLocaleFallback = "en";
+}
 ```
+
+`ValidationPattern` is a syntactic gate only. It accepts `zz-ZZ`, which is well-formed and not a real
+culture; the startup validation in Step 4a is what rejects that.
 
 - [ ] **Step 4: Wire it into `SharpMUSHOptions`**
 
@@ -164,22 +227,88 @@ In `SharpMUSH.Configuration/Options/SharpMUSHOptions.cs`, after line 26 (`public
 	public required WikiOptions Wiki { get; init; }
 ```
 
+- [ ] **Step 4a: Validate the locale at startup**
+
+`SharpMUSH.Configuration/ValidateSharpOptions.cs` today just delegates to the generated validator. Add
+the locale check alongside it, so a typo fails the boot rather than a page render:
+
+```csharp
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Generated;
+using SharpMUSH.Configuration.Options;
+using System.Globalization;
+
+namespace SharpMUSH.Configuration;
+
+/// <summary>
+/// Validates SharpMUSH configuration options by delegating to the code-generated validator, plus the
+/// hand-written checks the generator cannot express.
+/// </summary>
+public class ValidateSharpOptions : IValidateOptions<SharpMUSHOptions>
+{
+	private readonly ValidateSharpMUSHOptions _generatedValidator = new();
+
+	public ValidateOptionsResult Validate(string? name, SharpMUSHOptions options)
+	{
+		var generated = _generatedValidator.Validate(name, options);
+
+		var failures = new List<string>();
+		if (generated.Failed && generated.Failures is not null) failures.AddRange(generated.Failures);
+
+		// wiki_default_locale is the terminal step of wiki locale resolution, so an unusable value would
+		// otherwise surface as a CultureNotFoundException inside a page render. The ValidationPattern on
+		// the attribute is a client-side syntax check only; a regex cannot know which tags actually exist.
+		if (!IsRealCulture(options.Wiki.DefaultLocale))
+		{
+			failures.Add(
+				$"Wiki.DefaultLocale (wiki_default_locale) is '{options.Wiki.DefaultLocale}', which is not a "
+				+ "recognised BCP-47 locale. Use a tag such as 'en', 'fr' or 'pt-BR'.");
+		}
+
+		return failures.Count > 0 ? ValidateOptionsResult.Fail(failures) : ValidateOptionsResult.Success;
+	}
+
+	/// <summary>
+	/// The same rule as <c>WikiHelpers.NormalizeLocale</c>, restated here because
+	/// <c>SharpMUSH.Contracts</c> (where that helper lives) references <em>this</em> project, so the
+	/// dependency cannot run the other way. Task 2 adds a test asserting the two agree.
+	/// </summary>
+	private static bool IsRealCulture(string? locale)
+	{
+		if (string.IsNullOrWhiteSpace(locale)) return false;
+
+		try
+		{
+			return CultureInfo.GetCultureInfo(locale.Trim(), predefinedOnly: true).Name.Length > 0;
+		}
+		catch (CultureNotFoundException)
+		{
+			return false;
+		}
+	}
+}
+```
+
+`SharpMUSH.Server/Startup.cs:388` registers `Configuration.Generated.ValidateSharpMUSHOptions` directly
+as the `IValidateOptions<SharpMUSHOptions>`, bypassing this wrapper. Change it to
+`services.AddScoped<IValidateOptions<SharpMUSHOptions>, ValidateSharpOptions>();` or the new check never
+runs at boot. `AddOptions<SharpMUSHOptions>().ValidateOnStart()` (line 387) is already in place, so that
+one-line swap is what turns the check into a startup gate.
+
 - [ ] **Step 5: Fill in all six construction sites**
 
 `SharpMUSH.Configuration/ReadPennMUSHConfig.cs` — after the closing `)` of the `TextFile = new TextFileOptions(...)` block, add a comma then:
 
 ```csharp
 			Wiki = new WikiOptions(
-				DefaultLocale: RequiredString(Get(nameof(WikiOptions.DefaultLocale)), "en")
+				DefaultLocale: RequiredString(Get(nameof(WikiOptions.DefaultLocale)), WikiOptions.DefaultLocaleFallback)
 			)
 ```
 
 `SharpMUSH.Library/Services/OptionsService.cs` — inside `Default()`, after the `TextFile` block, add a comma then:
 
 ```csharp
-			Wiki = new WikiOptions(
-				DefaultLocale: "en"
-			)
+			Wiki = new WikiOptions()
 ```
 
 `SharpMUSH.Server/Controllers/ConfigurationController.cs` — in `CloneRecordWithProperty`, after the `TextFile = …` line add a comma then:
@@ -191,7 +320,9 @@ In `SharpMUSH.Configuration/Options/SharpMUSHOptions.cs`, after line 26 (`public
 `SharpMUSH.Tests/Server/TestSharpMushOptions.cs` — change the factory signature and add the block:
 
 ```csharp
-	public static SharpMUSHOptions Create(bool allowBrowserCode = false, string wikiDefaultLocale = "en") => new()
+	public static SharpMUSHOptions Create(
+		bool allowBrowserCode = false,
+		string wikiDefaultLocale = WikiOptions.DefaultLocaleFallback) => new()
 	{
 ```
 
@@ -204,7 +335,7 @@ and after the `TextFile = new TextFileOptions(...)` block add a comma then:
 `SharpMUSH.Tests.BUnit/Controllers/ApplicationsGateTests.cs` and `SharpMUSH.Tests.BUnit/Controllers/ConfigurationControllerTests.cs` — after each file's `TextFile = new TextFileOptions(...)` block add a comma then:
 
 ```csharp
-		Wiki = new WikiOptions(DefaultLocale: "en")
+		Wiki = new WikiOptions()
 ```
 
 Add `using SharpMUSH.Configuration.Options;` where missing.
@@ -231,7 +362,7 @@ Run: `dotnet build`
 Expected: 0 errors.
 
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/ConfigurationTests/*"`
-Expected: PASS.
+Expected: PASS — including the two `ValidateSharpOptions` cases. If `ValidateSharpOptions_RejectsAnUnparseableWikiDefaultLocale` passes but the server still boots with a bad tag, Step 4a's `Startup.cs` registration swap was missed.
 
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/CodeGenerationTests/*"`
 Expected: PASS — the generated metadata/accessor/validator pick the new record up reflectively; this proves the `SharpConfig.Name` is unique and the accessor resolves.
@@ -243,28 +374,41 @@ Expected: 271 passed.
 
 ```bash
 git add SharpMUSH.Configuration SharpMUSH.Library/Services/OptionsService.cs \
-  SharpMUSH.Server/Controllers/ConfigurationController.cs SharpMUSH.Client \
-  SharpMUSH.Tests/Configuration SharpMUSH.Tests/Server/TestSharpMushOptions.cs \
+  SharpMUSH.Server/Controllers/ConfigurationController.cs SharpMUSH.Server/Startup.cs \
+  SharpMUSH.Client SharpMUSH.Tests/Configuration SharpMUSH.Tests/Server/TestSharpMushOptions.cs \
   SharpMUSH.Tests.BUnit/Controllers
-git commit -m "feat(wiki): add Wiki.DefaultLocale configuration option"
+git commit -m "feat(wiki): add validated Wiki.DefaultLocale configuration option"
 ```
 
 ---
 
 ### Task 2: `WikiHelpers.NormalizeLocale`
 
-One place turns arbitrary caller input into a canonical BCP-47 tag or "nothing". `WikiHelpers` lives in `SharpMUSH.Contracts/Services/WikiHelpers.cs` under namespace `SharpMUSH.Library.Services` (surprising, but keep it) and is referenced by both server and client, which is why the normaliser belongs here alongside `NormalizeCategory`.
+One place turns arbitrary caller input into a canonical BCP-47 tag. `WikiHelpers` lives in `SharpMUSH.Contracts/Services/WikiHelpers.cs` under namespace `SharpMUSH.Library.Services` (surprising, but keep it) and is referenced by both server and client, which is why the normaliser belongs here alongside `NormalizeCategory`.
 
-`predefinedOnly: true` is load-bearing: without it, .NET's ICU accepts arbitrary well-formed junk like `"qq"` as a pseudo-culture, and an unparseable tag would silently become a "valid" locale instead of falling to the default.
+**Two entry points, because writes and reads want opposite failure modes.** "Any parseable tag" is a permissive *input* rule, not a licence to persist whatever arrives:
+
+| Helper | Returns | Used by |
+|---|---|---|
+| `NormalizeLocale` | `OneOf<string, Error<string>>` | every **write** boundary — `UpsertTranslationAsync`, `CreateAsync`'s `sourceLocale`, the migration backfill |
+| `NormalizeLocaleOrEmpty` | `string` (empty when unusable) | every **read**/lookup path — the resolver, `?lang=`, `GetTranslationAsync`, `GetRevisionsForLocaleAsync` |
+
+A reader typing a bad `?lang=` must get the default page, not a 400. A *writer* persisting a bad locale is a different thing entirely, because it corrupts the store for every later read. This split is also what upgrades `LocalizedWikiPage.IsFallback`'s no-throw claim from a convention to an invariant: no unparseable locale can be in the database to begin with.
+
+Case canonicalisation closes a quieter hole: without it `pt-BR` and `pt-br` are two rows the unique `(PageId, Locale)` index happily accepts and the resolver treats as unrelated.
+
+`predefinedOnly: true` is load-bearing: without it, .NET's ICU accepts arbitrary well-formed junk like `"qq"` as a pseudo-culture, and an unparseable tag would silently become a "valid" locale instead of being rejected.
 
 **Files:**
+- Modify: `SharpMUSH.Contracts/SharpMUSH.Contracts.csproj` (add the `OneOf` package reference)
 - Modify: `SharpMUSH.Contracts/Services/WikiHelpers.cs` (append after `NormalizeTags`)
 - Test: `SharpMUSH.Tests/Wiki/WikiHelpersLocaleTests.cs` (create)
 
 **Interfaces:**
-- Consumes: nothing.
+- Consumes: `WikiOptions.DefaultLocaleFallback` (Task 1) in the agreement test only.
 - Produces:
-  - `WikiHelpers.NormalizeLocale(string? locale)` → `string` — canonical `CultureInfo.Name` (e.g. `"fr-CA"`), or `string.Empty` for null/blank/unparseable/invariant.
+  - `WikiHelpers.NormalizeLocale(string? locale)` → `OneOf<string, Error<string>>` — canonical `CultureInfo.Name` (e.g. `"fr-CA"`), or `Error<string>` for null/blank/unparseable/invariant. **The write boundary.**
+  - `WikiHelpers.NormalizeLocaleOrEmpty(string? locale)` → `string` — the same canonicalisation, `string.Empty` instead of an error. **The read path.**
   - `WikiHelpers.NeutralLocale(string? locale)` → `string` — two-letter ISO language (e.g. `"fr"` from `"fr-CA"`), or `string.Empty`.
   - `WikiHelpers.SameLanguage(string? a, string? b)` → `bool` — case-insensitive comparison of neutral languages.
 
@@ -273,14 +417,20 @@ One place turns arbitrary caller input into a canonical BCP-47 tag or "nothing".
 Create `SharpMUSH.Tests/Wiki/WikiHelpersLocaleTests.cs` (tabs):
 
 ```csharp
+using OneOf.Types;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Tests.Server;
 
 namespace SharpMUSH.Tests.Wiki;
 
 /// <summary>
 /// <see cref="WikiHelpers.NormalizeLocale"/> is the single gate between caller-supplied locale text and
-/// every stored/compared locale in the wiki. A tag that escapes it unparsed would later throw inside
-/// <c>CultureInfo.GetCultureInfo</c> on a read path that the spec guarantees cannot fail.
+/// every stored locale in the wiki. A tag that escapes it unparsed would later throw inside
+/// <c>CultureInfo.GetCultureInfo</c> on a read path the spec guarantees cannot fail — and casing that
+/// escapes it uncanonicalised would put <c>pt-BR</c> and <c>pt-br</c> in the store as two unrelated rows
+/// the unique index is happy to accept.
 /// </summary>
 public class WikiHelpersLocaleTests
 {
@@ -291,9 +441,27 @@ public class WikiHelpersLocaleTests
 	[Arguments("fr-ca", "fr-CA")]
 	[Arguments("FR-CA", "fr-CA")]
 	[Arguments("pt-br", "pt-BR")]
+	[Arguments("PT-BR", "pt-BR")]
+	[Arguments("pt-BR", "pt-BR")]
 	public async Task NormalizeLocale_CanonicalisesRecognisedTags(string input, string expected)
 	{
-		await Assert.That(WikiHelpers.NormalizeLocale(input)).IsEqualTo(expected);
+		var result = WikiHelpers.NormalizeLocale(input);
+
+		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.AsT0).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task NormalizeLocale_CollapsesEveryCasingOfATagOntoOneStoredValue()
+	{
+		// This is the hole case canonicalisation closes: three spellings, one row, one index entry.
+		string[] spellings = ["pt-br", "PT-BR", "pt-BR"];
+
+		var canonical = spellings.Select(s => WikiHelpers.NormalizeLocale(s).AsT0).Distinct().ToList();
+
+		await Assert.That(canonical)
+			.IsEquivalentTo(new[] { "pt-BR" })
+			.Because("otherwise the unique (PageId, Locale) index accepts all three as different locales");
 	}
 
 	[Test]
@@ -303,9 +471,39 @@ public class WikiHelpersLocaleTests
 	[Arguments("not a locale")]
 	[Arguments("qq")]
 	[Arguments("zz-ZZ")]
-	public async Task NormalizeLocale_RejectsUnusableTagsAsEmpty(string? input)
+	public async Task NormalizeLocale_RejectsUnusableTagsWithAnError(string? input)
 	{
-		await Assert.That(WikiHelpers.NormalizeLocale(input)).IsEqualTo(string.Empty);
+		var result = WikiHelpers.NormalizeLocale(input);
+
+		await Assert.That(result.IsT1)
+			.IsTrue()
+			.Because("a write boundary must refuse a non-locale rather than store an empty string");
+		await Assert.That(result.AsT1).IsTypeOf<Error<string>>();
+	}
+
+	[Test]
+	[Arguments("pt-br", "pt-BR")]
+	[Arguments(null, "")]
+	[Arguments("not a locale", "")]
+	[Arguments("zz-ZZ", "")]
+	public async Task NormalizeLocaleOrEmpty_IsThePermissiveReadPathForm(string? input, string expected)
+	{
+		await Assert.That(WikiHelpers.NormalizeLocaleOrEmpty(input))
+			.IsEqualTo(expected)
+			.Because("a reader typing a bad ?lang= gets the default page, never a 400");
+	}
+
+	[Test]
+	public async Task NormalizeLocale_AgreesWithTheStartupValidationOfWikiDefaultLocale()
+	{
+		// ValidateSharpOptions restates this rule because SharpMUSH.Contracts references
+		// SharpMUSH.Configuration and the dependency cannot run the other way. This is the test that
+		// keeps the restatement honest.
+		await Assert.That(WikiHelpers.NormalizeLocale(WikiOptions.DefaultLocaleFallback).IsT0).IsTrue();
+		await Assert.That(new ValidateSharpOptions()
+				.Validate(null, TestSharpMushOptions.Create(wikiDefaultLocale: "zz-ZZ")).Failed)
+			.IsTrue()
+			.Because("both must reject a well-formed tag that is not a real culture");
 	}
 
 	[Test]
@@ -331,11 +529,31 @@ public class WikiHelpersLocaleTests
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/WikiHelpersLocaleTests/*"`
 Expected: compile error — `'WikiHelpers' does not contain a definition for 'NormalizeLocale'`.
 
-- [ ] **Step 3: Implement the helpers**
+- [ ] **Step 3: Give `SharpMUSH.Contracts` the `OneOf` package**
+
+`NormalizeLocale` returns `OneOf<string, Error<string>>`, and `SharpMUSH.Contracts` does not reference
+`OneOf` today. Add it to `SharpMUSH.Contracts/SharpMUSH.Contracts.csproj`, in the existing
+`PackageReference` group beside `Markdig`, at the version the rest of the solution pins:
+
+```xml
+		<PackageReference Include="OneOf" Version="3.0.271" />
+```
+
+This does not violate the csproj's browser-safety comment: `OneOf` is a pure, dependency-free assembly
+and `SharpMUSH.Client` already references the same version, so the WASM closure is unchanged. Do **not**
+add `OneOf.SourceGenerator` — nothing here declares a custom union.
+
+`WikiHelpers` is a single static class in one assembly, so the OneOf-returning overload cannot live in
+`SharpMUSH.Library` instead: a static class cannot be split across assemblies, and the spec is explicit
+that this helper belongs beside `NormalizeCategory`.
+
+- [ ] **Step 4: Implement the helpers**
 
 At the top of `SharpMUSH.Contracts/Services/WikiHelpers.cs` add:
 
 ```csharp
+using OneOf;
+using OneOf.Types;
 using System.Globalization;
 ```
 
@@ -343,15 +561,37 @@ Append inside the class, after `NormalizeTags`:
 
 ```csharp
 	/// <summary>
-	/// Canonicalises a caller-supplied locale tag for storage and comparison, or returns
-	/// <see cref="string.Empty"/> when the tag is absent or not a real culture.
+	/// Canonical form of a locale tag, or <see cref="Error{T}"/> when it is not a locale at all.
+	/// Canonical means <see cref="CultureInfo"/>'s own casing — <c>pt-br</c> and <c>PT-BR</c> both become
+	/// <c>pt-BR</c> — so the unique (PageId, Locale) index cannot be defeated by casing.
 	/// </summary>
 	/// <remarks>
+	/// This is the <em>write</em> boundary: every point a locale enters storage or configuration goes
+	/// through it, so no unparseable tag can be in the database to begin with. Read paths want
+	/// <see cref="NormalizeLocaleOrEmpty"/> instead, because a reader typing a bad <c>?lang=</c> should get
+	/// the default page rather than an error.
+	/// <para>
 	/// <c>predefinedOnly: true</c> is required. Without it .NET accepts any well-formed tag as a
-	/// pseudo-culture, so unparseable input would become a "valid" locale instead of falling through
-	/// to the configured default.
+	/// pseudo-culture, so junk like <c>qq</c> would become a "valid" locale and get persisted.
+	/// </para>
 	/// </remarks>
-	public static string NormalizeLocale(string? locale)
+	public static OneOf<string, Error<string>> NormalizeLocale(string? locale)
+	{
+		var normalized = NormalizeLocaleOrEmpty(locale);
+		return normalized.Length == 0
+			? new Error<string>($"'{locale}' is not a recognised BCP-47 locale tag.")
+			: normalized;
+	}
+
+	/// <summary>
+	/// The same canonicalisation as <see cref="NormalizeLocale"/>, but returning
+	/// <see cref="string.Empty"/> rather than an error when the tag is absent or not a real culture.
+	/// </summary>
+	/// <remarks>
+	/// For read and lookup paths only. A malformed <c>?lang=</c> is treated as absent — never a 400 —
+	/// so callers can substitute the configured default without branching on an error.
+	/// </remarks>
+	public static string NormalizeLocaleOrEmpty(string? locale)
 	{
 		if (string.IsNullOrWhiteSpace(locale)) return string.Empty;
 
@@ -372,7 +612,7 @@ Append inside the class, after `NormalizeTags`:
 	/// </summary>
 	public static string NeutralLocale(string? locale)
 	{
-		var normalized = NormalizeLocale(locale);
+		var normalized = NormalizeLocaleOrEmpty(locale);
 		return normalized.Length == 0
 			? string.Empty
 			: CultureInfo.GetCultureInfo(normalized).TwoLetterISOLanguageName;
@@ -391,17 +631,18 @@ Append inside the class, after `NormalizeTags`:
 	}
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/WikiHelpersLocaleTests/*"`
 Expected: PASS (all arguments cases).
 
-If `"qq"` or `"zz-ZZ"` unexpectedly resolves, the `predefinedOnly` overload is not being used — re-check Step 3 rather than weakening the test.
+If `"qq"` or `"zz-ZZ"` unexpectedly resolves, the `predefinedOnly` overload is not being used — re-check Step 4 rather than weakening the test.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add SharpMUSH.Contracts/Services/WikiHelpers.cs SharpMUSH.Tests/Wiki/WikiHelpersLocaleTests.cs
+git add SharpMUSH.Contracts/SharpMUSH.Contracts.csproj SharpMUSH.Contracts/Services/WikiHelpers.cs \
+  SharpMUSH.Tests/Wiki/WikiHelpersLocaleTests.cs
 git commit -m "feat(wiki): add locale normalisation helpers to WikiHelpers"
 ```
 
@@ -410,6 +651,8 @@ git commit -m "feat(wiki): add locale normalisation helpers to WikiHelpers"
 ### Task 3: Data model — `SourceLocale`, revision `Locale`, and the three new records
 
 Additive only: `WikiPage` and `WikiRevision` gain **init-only** properties (the convention their own comments establish for `Category`/`Tags`/`Published`), so every existing construction site and every stored document keeps working untouched.
+
+**`SourceLocale` is materialised once, never re-derived.** The property initializer default is `string.Empty` — a property initializer cannot read configuration, and hardcoding `"en"` would mislabel every page on a non-English game. But empty is a *transient* state, not a documented read-time meaning: `Migration_AddWikiTranslations` (Tasks 7–9) stamps every unstamped row once, and every create path stamps new pages, so a page read back from storage always carries a non-empty canonical tag. Nothing normalises empty → `Wiki.DefaultLocale` on read, because that would let an admin changing `wiki_default_locale` silently reinterpret the authored locale of every pre-existing page: an English page starts claiming to be French, `UpsertTranslationAsync` begins rejecting `fr` as "shadowing the source" while accepting `en`, and existing revision history changes meaning — with no migration, no audit trail and nothing to alert on.
 
 `LocalizedWikiPage` deliberately keeps resolved content on the wrapper and never on `Page`. If `Page.Title` stayed authoritative-looking, a caller would eventually render the English title beside French body text.
 
@@ -424,7 +667,7 @@ Additive only: `WikiPage` and `WikiRevision` gain **init-only** properties (the 
 **Interfaces:**
 - Consumes: `WikiHelpers.NormalizeLocale` (Task 2) — used by the *callers* of these records, not by the records themselves.
 - Produces:
-  - `WikiPage.SourceLocale` → `string` (init-only, default `string.Empty`)
+  - `WikiPage.SourceLocale` → `string` (init-only; initializer default `string.Empty`, stamped non-empty by the migration and every create path)
   - `WikiRevision.Locale` → `string` (init-only, default `string.Empty`; empty means "the source-locale stream")
   - `WikiTranslation(string Id, string PageId, string Locale, string Title, string MarkdownSource, string RenderedHtml, string PlainText, string LastEditorDbref, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, bool Published, int RevisionNumber)`
   - `WikiTranslationSummary(string Locale, string Title, bool Published, DateTimeOffset UpdatedAt, int RevisionNumber)`
@@ -489,13 +732,15 @@ public class LocalizedWikiPageTests
 	}
 
 	[Test]
-	public async Task WikiPage_SourceLocaleDefaultsToEmptyNotEnglish()
+	public async Task WikiPage_SourceLocaleInitializerDefaultsToEmptyNotEnglish()
 	{
 		var page = BarePage() with { SourceLocale = string.Empty };
 
 		await Assert.That(page.SourceLocale)
 			.IsEqualTo(string.Empty)
-			.Because("hardcoding 'en' would mislabel every pre-existing page on a non-English game");
+			.Because("a property initializer cannot read configuration, and hardcoding 'en' would mislabel "
+				+ "every page on a non-English game. Empty is a transient pre-backfill state, NOT a "
+				+ "read-time synonym for Wiki.DefaultLocale — see Task 10");
 	}
 
 	[Test]
@@ -522,11 +767,17 @@ In `SharpMUSH.Library/Models/Wiki/WikiPage.cs`, after the `Published` property (
 ```csharp
 
 	/// <summary>
-	/// Locale the page was authored in, as a canonical BCP-47 tag. Empty on documents predating this
-	/// field; readers must treat empty as <c>Wiki.DefaultLocale</c>. The default is deliberately
-	/// <see cref="string.Empty"/> rather than "en" — a property initializer cannot read configuration,
-	/// and hardcoding "en" would silently mislabel every pre-existing page on a non-English game.
+	/// Canonical BCP-47 locale the page was authored in. Never empty on a page read back from storage:
+	/// <c>Migration_AddWikiTranslations</c> stamps every pre-existing page once, and every create path
+	/// stamps new pages.
 	/// </summary>
+	/// <remarks>
+	/// The initializer default is <see cref="string.Empty"/> only because a property initializer cannot
+	/// read configuration. It means "not yet stamped", and it is <em>not</em> a read-time synonym for
+	/// <c>Wiki.DefaultLocale</c>: re-deriving it would let an admin changing <c>wiki_default_locale</c>
+	/// silently change the authored locale of every page that predates the field, with no migration and
+	/// nothing to alert on. Once stamped, this field is authoritative and immutable per page.
+	/// </remarks>
 	public string SourceLocale { get; init; } = string.Empty;
 ```
 
@@ -635,9 +886,12 @@ namespace SharpMUSH.Library.Models.Wiki;
 /// and nobody would notice for months.
 /// <para>
 /// <see cref="Locale"/> and <see cref="RequestedLocale"/> are guaranteed to be already-normalised,
-/// parseable tags: <c>IWikiLocalizationService</c> is the only thing that constructs this record and
-/// it normalises first, so the <see cref="CultureInfo.GetCultureInfo(string)"/> calls in
-/// <see cref="IsFallback"/> cannot throw.
+/// parseable tags, so the <see cref="CultureInfo.GetCultureInfo(string)"/> calls in
+/// <see cref="IsFallback"/> cannot throw. That rests on two things, not one:
+/// <c>IWikiLocalizationService</c> is the only thing that constructs this record and it normalises the
+/// <em>requested</em> tag first, <b>and</b> no unparseable locale can be in the store to begin with
+/// because every write boundary goes through <c>WikiHelpers.NormalizeLocale</c>. The second half is what
+/// makes this an invariant rather than a convention a future caller can break.
 /// </para>
 /// </remarks>
 /// <param name="Page">Identity and inherited metadata ONLY — never a content source.</param>
@@ -706,10 +960,10 @@ Step 5 is the terminal guarantee. The spec names the configured default as the f
 - Test: `SharpMUSH.Tests/Wiki/WikiLocaleResolverTests.cs` (create)
 
 **Interfaces:**
-- Consumes: `WikiHelpers.NormalizeLocale` / `NeutralLocale` / `SameLanguage` (Task 2); `SharpMUSHOptions.Wiki.DefaultLocale` (Task 1); `TestSharpMushOptions.Create(allowBrowserCode, wikiDefaultLocale)` (Task 1) in tests.
+- Consumes: `WikiHelpers.NormalizeLocaleOrEmpty` / `NeutralLocale` / `SameLanguage` (Task 2); `WikiOptions.DefaultLocaleFallback` and `SharpMUSHOptions.Wiki.DefaultLocale` (Task 1); `TestSharpMushOptions.Create(allowBrowserCode, wikiDefaultLocale)` (Task 1) in tests.
 - Produces:
   - `LocaleResolution(string Locale, bool IsFallback)` — record in namespace `SharpMUSH.Library.Services.Interfaces`
-  - `IWikiLocaleResolver.Resolve(string? requested, string sourceLocale, IReadOnlyCollection<string> available)` → `LocaleResolution`
+  - `IWikiLocaleResolver.Resolve(string? requested, string sourceLocale, IReadOnlyCollection<string> available)` → `LocaleResolution`. **`sourceLocale` is a precondition, not an input to normalise:** it must already be a non-empty canonical tag. The resolver never substitutes `DefaultLocale` for it — that substitution is exactly the re-derivation bug the spec removes. `IWikiLocalizationService` (Task 10) is the one place that deals with an unstamped row, and it logs a warning when it has to.
   - `IWikiLocaleResolver.NormalizeRequested(string? requested)` → `string` — the normalised requested tag (falls to `Wiki.DefaultLocale`); `IWikiLocalizationService` needs it to fill `LocalizedWikiPage.RequestedLocale`.
   - `IWikiLocaleResolver.DefaultLocale` → `string` — the normalised configured default.
   - `WikiLocaleResolver(IOptionsMonitor<SharpMUSHOptions> options)` — registered as a singleton in Task 10.
@@ -809,11 +1063,19 @@ public class WikiLocaleResolverTests
 	}
 
 	[Test]
-	public async Task EmptySourceLocaleNormalisesToTheConfiguredDefault()
+	public async Task StampedSourceLocaleIsNotReinterpretedWhenTheConfiguredDefaultChanges()
 	{
-		var result = BuildResolver("fr").Resolve("de", sourceLocale: string.Empty, available: []);
+		// The regression test for the bug the design fixes. Same page, two different configured defaults:
+		// the served locale must be the page's own stamped SourceLocale both times. If the resolver ever
+		// re-derives an "effective" source locale from configuration, this fails.
+		var onEnglishGame = BuildResolver("en").Resolve("de", sourceLocale: "fr", available: []);
+		var onGermanGame = BuildResolver("de").Resolve("es", sourceLocale: "fr", available: []);
 
-		await Assert.That(result.Locale).IsEqualTo("fr");
+		await Assert.That(onEnglishGame.Locale).IsEqualTo("fr");
+		await Assert.That(onGermanGame.Locale)
+			.IsEqualTo("fr")
+			.Because("SourceLocale is materialised per page; changing wiki_default_locale must not "
+				+ "reinterpret what language an existing page was authored in");
 	}
 
 	[Test]
@@ -863,8 +1125,11 @@ public class WikiLocaleResolverTests
 	[Test]
 	public async Task DefaultLocale_FallsBackToEnglishWhenConfigurationIsGarbage()
 	{
+		// Unreachable in production: ValidateSharpOptions (Task 1) fails startup on an unparseable
+		// wiki_default_locale. Kept as belt-and-braces so a bad value from a hand-edited stored config
+		// degrades to a readable page instead of throwing inside a render.
 		await Assert.That(BuildResolver("not a locale").DefaultLocale)
-			.IsEqualTo("en")
+			.IsEqualTo(WikiOptions.DefaultLocaleFallback)
 			.Because("a misconfigured default must not break every wiki read");
 	}
 }
@@ -915,7 +1180,12 @@ public interface IWikiLocaleResolver
 	/// </list>
 	/// </summary>
 	/// <param name="requested">The reader's locale, unvalidated.</param>
-	/// <param name="sourceLocale">The page's <c>SourceLocale</c>. Empty is treated as <see cref="DefaultLocale"/>.</param>
+	/// <param name="sourceLocale">
+	/// The page's stamped <c>SourceLocale</c>: a non-empty canonical tag. This is a precondition, not
+	/// something this method normalises — the configured default must never be substituted for it, or
+	/// changing <c>wiki_default_locale</c> would reinterpret the authored locale of every existing page.
+	/// <c>IWikiLocalizationService</c> is the single place that copes with an unstamped row.
+	/// </param>
 	/// <param name="available">Locales with content the caller has decided this reader may see.</param>
 	LocaleResolution Resolve(string? requested, string sourceLocale, IReadOnlyCollection<string> available);
 }
@@ -935,21 +1205,22 @@ namespace SharpMUSH.Library.Services;
 /// <inheritdoc cref="IWikiLocaleResolver"/>
 public sealed class WikiLocaleResolver(IOptionsMonitor<SharpMUSHOptions> options) : IWikiLocaleResolver
 {
-	/// <summary>Last-resort locale when <c>Wiki.DefaultLocale</c> itself is unparseable.</summary>
-	private const string HardDefault = "en";
-
 	public string DefaultLocale
 	{
 		get
 		{
-			var configured = WikiHelpers.NormalizeLocale(options.CurrentValue.Wiki.DefaultLocale);
-			return configured.Length == 0 ? HardDefault : configured;
+			// Last resort when Wiki.DefaultLocale itself is unparseable. ValidateSharpOptions rejects that
+			// at startup, so this branch exists only so a hand-edited stored config degrades to a readable
+			// page rather than throwing inside a render.
+			var configured = WikiHelpers.NormalizeLocaleOrEmpty(options.CurrentValue.Wiki.DefaultLocale);
+			return configured.Length == 0 ? WikiOptions.DefaultLocaleFallback : configured;
 		}
 	}
 
 	public string NormalizeRequested(string? requested)
 	{
-		var normalized = WikiHelpers.NormalizeLocale(requested);
+		// Deliberately the permissive form: a reader's bad ?lang= becomes the default, never an error.
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(requested);
 		return normalized.Length == 0 ? DefaultLocale : normalized;
 	}
 
@@ -957,9 +1228,11 @@ public sealed class WikiLocaleResolver(IOptionsMonitor<SharpMUSHOptions> options
 	{
 		var want = NormalizeRequested(requested);
 
-		// Empty SourceLocale means "unlabelled" on a document predating the field.
-		var source = WikiHelpers.NormalizeLocale(sourceLocale);
-		if (source.Length == 0) source = DefaultLocale;
+		// sourceLocale is the page's materialised SourceLocale and is authoritative. Canonicalise the
+		// casing, but do NOT substitute DefaultLocale for an empty value: that re-derivation is what let
+		// a change to wiki_default_locale silently relabel every pre-existing page. Task 10 handles the
+		// unstamped-row case once, loudly.
+		var source = WikiHelpers.NormalizeLocaleOrEmpty(sourceLocale);
 
 		// The source row always exists, so prefer it whenever it is the requested language. This also
 		// makes a stale translation row that shadows the source unreachable rather than authoritative.
@@ -984,11 +1257,11 @@ public sealed class WikiLocaleResolver(IOptionsMonitor<SharpMUSHOptions> options
 	/// </summary>
 	private static string? Match(IReadOnlyCollection<string> available, Func<string, bool> predicate) =>
 		available
-			.Where(c => WikiHelpers.NormalizeLocale(c).Length > 0)
+			.Where(c => WikiHelpers.NormalizeLocaleOrEmpty(c).Length > 0)
 			.Where(predicate)
 			.OrderBy(c => c.Length)
 			.ThenBy(c => c, StringComparer.OrdinalIgnoreCase)
-			.Select(WikiHelpers.NormalizeLocale)
+			.Select(WikiHelpers.NormalizeLocaleOrEmpty)
 			.FirstOrDefault();
 }
 ```
@@ -996,7 +1269,7 @@ public sealed class WikiLocaleResolver(IOptionsMonitor<SharpMUSHOptions> options
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/WikiLocaleResolverTests/*"`
-Expected: PASS (all 14 tests).
+Expected: PASS (all 14 tests, including `StampedSourceLocaleIsNotReinterpretedWhenTheConfiguredDefaultChanges`).
 
 Run: `dotnet build`
 Expected: 0 errors.
@@ -1014,7 +1287,7 @@ git commit -m "feat(wiki): add the locale fallback resolver"
 
 # Phase 2 — Storage
 
-**Sequencing note (spec Risks).** The five new CRUD methods are mechanical, but index semantics differ per store, so **the cross-backend integration test is written in Task 6, before the three hand-written backends in Tasks 7–9.** Because C# requires every implementer to satisfy the interface, Task 5 lands `NotSupportedException` stubs in the three DB providers so the solution compiles and the new test can be written and shown red. Tasks 7, 8 and 9 each delete their own stub. **After Task 9 no stub remains** — grep for `WikiTranslationsNotImplemented` to confirm.
+**Sequencing note (spec Risks).** The five new CRUD methods are mechanical, but the three stores' revision indexes disagree *today* — unique on SurrealDB, non-unique on ArangoDB, absent on Memgraph — so a numbering bug fails loudly on one and passes silently on two, surfacing in CI as a one-of-three red that reads like flakiness. **The cross-backend integration test is therefore written in Task 6, before the three hand-written backends in Tasks 7–9, and it asserts the constraint rejects duplicates rather than only exercising the happy path.** A test that only writes valid data cannot tell a real constraint from a missing one, which is precisely how these three drifted apart. Because C# requires every implementer to satisfy the interface, Task 5 lands `NotSupportedException` stubs in the three DB providers so the solution compiles and the new test can be written and shown red. Tasks 7, 8 and 9 each delete their own stub. **After Task 9 no stub remains** — grep for `WikiTranslationsNotImplemented` to confirm.
 
 **Verification reality.** Docker is unavailable locally, so `SharpMUSH.Tests.Integration` cannot run here. Tasks 6–9 are verified by (a) `dotnet build` clean, (b) the mirrored unit tests in `SharpMUSH.Tests` staying green, and (c) the CI `test-integration` job green on **all three** matrix entries. Do not mark 7–9 done on a local build alone.
 
@@ -1022,10 +1295,17 @@ git commit -m "feat(wiki): add the locale fallback resolver"
 
 The five methods are purely additive, so `WikiController`, `SeoController`, `BotPrerenderMiddleware`, `WikiCommands` and `WikiFunctions` keep compiling with zero edits. `CreateAsync` gains one **optional trailing** parameter, which is source-compatible for the same reason — every existing call site keeps working, and seeding needs a way to stamp `SourceLocale`.
 
-Two conventions this task establishes and the three DB backends must copy exactly:
+Four conventions this task establishes and the three DB backends must copy exactly:
 
 1. **Revision streams are keyed by `(PageId, Locale)` with `Locale = ""` meaning the source stream.** `GetRevisionsAsync(pageId, …)` therefore filters to empty-`Locale` rows so its five existing callers see exactly what they see today, and `GetRevisionsForLocaleAsync(pageId, locale, …)` filters on a non-empty locale. A distinct name rather than an overload: an overload differing only by an inserted `string?` invites a silent mis-bind at a call site passing positional ints, and the compiler would not complain.
 2. **Translation revision IDs are `{PageId}:{Locale}:{RevisionNumber}`**, so a translation revision can never collide with a source revision (`{PageId}:{RevisionNumber}`).
+3. **`UpsertTranslationAsync` ends with a required `int? expectedRevisionNumber` — a compare-and-swap.** The unique `(PageId, Locale)` index protects concurrent *inserts* and nothing else: two translators editing the same French page both read `RevisionNumber = 4`, both compute 5, and both write it. One translator's prose is silently lost and the index is perfectly happy, because it is the same row either way. So:
+   - **`expectedRevisionNumber` is the revision the editor loaded.** The update applies only if the stored `RevisionNumber` still matches, and the revision append happens in the same transaction as the row update. A backend that cannot span both in one transaction must instead make the update conditional on the expected value and treat "zero rows affected" as the conflict signal.
+   - **`null` means create-only.** If a translation already exists, that is an `Error<string>` rather than a blind overwrite — which is what a caller who believed it was creating a new translation should get.
+   - **A detected conflict returns `Error<string>` and is never retried automatically.** Retrying re-applies the loser's stale markdown on top of the winner's, which is exactly the data loss this exists to prevent. The editor reloads and the human decides. The single automatic retry belongs to the *insert* race only, where no content can be lost.
+
+   The parameter is deliberately **not** optional. A default of `null` would make every existing-translation update silently become a create-only call, and the compiler would not complain.
+4. **Every locale entering storage goes through `WikiHelpers.NormalizeLocale` (the `OneOf` form).** That means `UpsertTranslationAsync`'s `locale` and `CreateAsync`'s `sourceLocale`: an unparseable tag is an `Error<string>` and nothing is written. Lookups (`GetTranslationAsync`, `GetRevisionsForLocaleAsync`) use `NormalizeLocaleOrEmpty` and treat an unusable tag as "no such locale", never an error.
 
 **Files:**
 - Modify: `SharpMUSH.Library/Services/Interfaces/IWikiService.cs` (add 5 methods; add `sourceLocale` to `CreateAsync`; amend `GetRevisionsAsync` and `DeleteAsync` doc comments)
@@ -1036,14 +1316,14 @@ Two conventions this task establishes and the three DB backends must copy exactl
 - Test: `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs` (append)
 
 **Interfaces:**
-- Consumes: `WikiTranslation`, `WikiTranslationSummary`, `WikiPage.SourceLocale`, `WikiRevision.Locale` (Task 3); `WikiHelpers.NormalizeLocale` (Task 2).
+- Consumes: `WikiTranslation`, `WikiTranslationSummary`, `WikiPage.SourceLocale`, `WikiRevision.Locale` (Task 3); `WikiHelpers.NormalizeLocale` / `NormalizeLocaleOrEmpty` (Task 2).
 - Produces, all on `IWikiService`:
   - `Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId)`
   - `Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)`
-  - `Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(string pageId, string locale, string title, string markdown, string editorDbref, string? editSummary, bool published)`
+  - `Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(string pageId, string locale, string title, string markdown, string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)`
   - `Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)`
   - `Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(string pageId, string locale, int skip, int take)`
-  - `CreateAsync(string title, string markdown, string authorDbref, WikiNamespace ns = WikiNamespace.Main, string? category = null, string? sourceLocale = null)`
+  - `CreateAsync(string title, string markdown, string authorDbref, WikiNamespace ns = WikiNamespace.Main, string? category = null, string? sourceLocale = null)` — an unparseable `sourceLocale` is an `Error<string>` and no page is created. `null` stores `string.Empty`, i.e. "not yet stamped"; Task 12 and Task 20 make the two real create paths pass `IWikiLocalizationService.DefaultLocale`, and the Tasks 7–9 backfill stamps anything that predates them.
 - Also produces the sentinel the later backend tasks delete: `InMemoryWikiService` has no stub; each DB provider gains `private static NotSupportedException WikiTranslationsNotImplemented(string provider)`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -1060,7 +1340,8 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 		var page = await CreatePageAsync(svc, "Dragons");
 
 		var result = await svc.UpsertTranslationAsync(
-			page.Id, "fr", "Dragons (fr)", "corps **fr**", "#2", "première traduction", published: true);
+			page.Id, "fr", "Dragons (fr)", "corps **fr**", "#2", "première traduction",
+			published: true, expectedRevisionNumber: null);
 
 		await Assert.That(result.IsT0).IsTrue();
 		var translation = result.AsT0;
@@ -1078,7 +1359,7 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Dragons");
 
-		var result = await svc.UpsertTranslationAsync(page.Id, "FR-ca", "T", "m", "#2", null, true);
+		var result = await svc.UpsertTranslationAsync(page.Id, "FR-ca", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
 		await Assert.That(result.AsT0.Locale).IsEqualTo("fr-CA");
 	}
@@ -1088,9 +1369,10 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 	{
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Dragons");
-		await svc.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true);
+		await svc.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
 
-		var second = await svc.UpsertTranslationAsync(page.Id, "fr", "v2", "corps v2", "#3", "révision", true);
+		var second = await svc.UpsertTranslationAsync(
+			page.Id, "fr", "v2", "corps v2", "#3", "révision", true, expectedRevisionNumber: 1);
 
 		await Assert.That(second.AsT0.RevisionNumber).IsEqualTo(2);
 		await Assert.That(second.AsT0.MarkdownSource).IsEqualTo("corps v2");
@@ -1101,12 +1383,52 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 	}
 
 	[Test]
+	public async Task UpsertTranslationAsync_NullExpectedRevisionMeansCreateOnly()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+
+		var again = await svc.UpsertTranslationAsync(
+			page.Id, "fr", "écrasé", "corps écrasé", "#3", null, true, expectedRevisionNumber: null);
+
+		await Assert.That(again.IsT1)
+			.IsTrue()
+			.Because("a caller who passed null believed it was creating a translation, not overwriting one");
+		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
+			.IsEqualTo("corps v1");
+	}
+
+	[Test]
+	public async Task UpsertTranslationAsync_RejectsAStaleExpectedRevision()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+		await svc.UpsertTranslationAsync(page.Id, "fr", "v2", "corps v2", "#3", null, true, expectedRevisionNumber: 1);
+
+		// A second translator who loaded revision 1 and is only now saving.
+		var stale = await svc.UpsertTranslationAsync(
+			page.Id, "fr", "perdu", "corps perdu", "#4", null, true, expectedRevisionNumber: 1);
+
+		await Assert.That(stale.IsT1).IsTrue();
+		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
+			.IsEqualTo("corps v2")
+			.Because("the winner's prose must survive; the loser reloads and the human decides");
+		var revisions = await svc.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
+		await Assert.That(revisions.Count).IsEqualTo(2);
+		await Assert.That(revisions.Select(r => r.MarkdownSource))
+			.DoesNotContain("corps perdu")
+			.Because("a rejected write must leave no revision behind");
+	}
+
+	[Test]
 	public async Task UpsertTranslationAsync_RejectsAnUnparseableLocale()
 	{
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Dragons");
 
-		var result = await svc.UpsertTranslationAsync(page.Id, "not a locale", "T", "m", "#2", null, true);
+		var result = await svc.UpsertTranslationAsync(page.Id, "not a locale", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
 		await Assert.That(result.IsT1).IsTrue();
 	}
@@ -1118,7 +1440,7 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 		var createResult = await svc.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en");
 		var page = createResult.AsT0;
 
-		var result = await svc.UpsertTranslationAsync(page.Id, "en", "T", "m", "#2", null, true);
+		var result = await svc.UpsertTranslationAsync(page.Id, "en", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
 		await Assert.That(result.IsT1)
 			.IsTrue()
@@ -1130,7 +1452,7 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 	{
 		var svc = BuildService();
 
-		var result = await svc.UpsertTranslationAsync("ghost", "fr", "T", "m", "#2", null, true);
+		var result = await svc.UpsertTranslationAsync("ghost", "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
 		await Assert.That(result.IsT1).IsTrue();
 	}
@@ -1151,8 +1473,8 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 	{
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Dragons");
-		await svc.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "m", "#2", null, published: true);
-		await svc.UpsertTranslationAsync(page.Id, "de", "Drachen", "m", "#2", null, published: false);
+		await svc.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "m", "#2", null, published: true, expectedRevisionNumber: null);
+		await svc.UpsertTranslationAsync(page.Id, "de", "Drachen", "m", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var summaries = await svc.GetTranslationsAsync(page.Id);
 
@@ -1169,8 +1491,8 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Dragons", markdown: "v1");
 		await svc.UpdateAsync(page.Id, "v2", "#1");
-		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "fr1", "#2", null, true);
-		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "fr2", "#2", null, true);
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "fr1", "#2", null, true, expectedRevisionNumber: null);
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "fr2", "#2", null, true, expectedRevisionNumber: 1);
 
 		var french = await svc.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
 		var source = await svc.GetRevisionsAsync(page.Id);
@@ -1188,7 +1510,7 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 	{
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Dragons");
-		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true);
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
 		var deleted = await svc.DeleteTranslationAsync(page.Id, "fr", "#2");
 
@@ -1202,7 +1524,7 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 	{
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Dragons");
-		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true);
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
 		await svc.DeleteTranslationAsync(page.Id, "fr", "#2");
 
@@ -1226,8 +1548,8 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 	{
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Dragons");
-		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true);
-		await svc.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, true);
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+		await svc.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
 		await svc.DeleteAsync(page.Id, "#1");
 
@@ -1247,7 +1569,29 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 	}
 
 	[Test]
-	public async Task CreateAsync_LeavesSourceLocaleEmptyWhenNotSupplied()
+	public async Task CreateAsync_RejectsAnUnparseableSourceLocale()
+	{
+		var svc = BuildService();
+
+		var result = await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "not a locale");
+
+		await Assert.That(result.IsT1)
+			.IsTrue()
+			.Because("SourceLocale is materialised and authoritative, so a junk tag must not reach storage");
+	}
+
+	[Test]
+	public async Task CreateAsync_CanonicalisesTheSourceLocaleItStores()
+	{
+		var svc = BuildService();
+
+		var result = await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "PT-br");
+
+		await Assert.That(result.AsT0.SourceLocale).IsEqualTo("pt-BR");
+	}
+
+	[Test]
+	public async Task CreateAsync_LeavesSourceLocaleUnstampedWhenNotSupplied()
 	{
 		var svc = BuildService();
 
@@ -1255,7 +1599,9 @@ Append to `SharpMUSH.Tests/Wiki/InMemoryWikiServiceTests.cs`, inside the existin
 
 		await Assert.That(result.AsT0.SourceLocale)
 			.IsEqualTo(string.Empty)
-			.Because("empty is normalised to Wiki.DefaultLocale on read, which is what keeps 'no data migration' true");
+			.Because("null means 'not stamped', a transient state the Tasks 7-9 backfill closes. It is NOT a "
+				+ "read-time synonym for Wiki.DefaultLocale — the two real create paths (Tasks 12 and 20) "
+				+ "pass IWikiLocalizationService.DefaultLocale so this branch is only reached by tests");
 	}
 ```
 
@@ -1276,9 +1622,13 @@ Change `CreateAsync` (line 74, doc from line 64) to add the trailing parameter a
 	/// <paramref name="category"/> is normalised (null/blank → <c>general</c>) and is part of
 	/// the page's identity, so it is fixed at creation. Renders the Markdown to HTML and extracts
 	/// plain text at creation time.
-	/// <paramref name="sourceLocale"/> records the locale the body is authored in; null or unparseable
-	/// stores <see cref="string.Empty"/>, which readers normalise to <c>Wiki.DefaultLocale</c>.
-	/// Returns <c>Error&lt;string&gt;</c> when a page with the same (namespace, category, slug) already exists.
+	/// <paramref name="sourceLocale"/> records the locale the body is authored in, canonicalised through
+	/// <c>WikiHelpers.NormalizeLocale</c>. It is materialised once here and immutable thereafter — nothing
+	/// re-derives it on read. Null or blank stores <see cref="string.Empty"/>, meaning "not yet stamped";
+	/// the wiki-translations migration backfills those, and both real create paths supply
+	/// <c>IWikiLocalizationService.DefaultLocale</c>.
+	/// Returns <c>Error&lt;string&gt;</c> when a page with the same (namespace, category, slug) already
+	/// exists, or when <paramref name="sourceLocale"/> is non-blank and not a recognised locale tag.
 	/// </summary>
 	Task<OneOf<WikiPage, Error<string>>> CreateAsync(
 		string title,
@@ -1331,8 +1681,24 @@ Append the five new methods at the end of the interface, before the closing brac
 	/// HTML and plain text through the same <c>WikiMarkdigPipeline</c>.
 	/// Returns <c>Error&lt;string&gt;</c> when the page does not exist, when
 	/// <paramref name="locale"/> is unparseable, when it would shadow the page's own
-	/// <c>SourceLocale</c>, or when a concurrent write loses the unique-index race.
+	/// <c>SourceLocale</c>, when a concurrent write loses the unique-index race, or when
+	/// <paramref name="expectedRevisionNumber"/> does not match what is stored.
 	/// </summary>
+	/// <param name="expectedRevisionNumber">
+	/// The <c>RevisionNumber</c> the caller loaded, making this a compare-and-swap. The update applies only
+	/// if the stored value still matches, and the revision append happens in the same transaction as the row
+	/// update (or the update is made conditional and "zero rows affected" is the conflict signal).
+	/// <para>
+	/// <see langword="null"/> means <em>create-only</em>: an existing translation is an
+	/// <c>Error&lt;string&gt;</c> rather than a blind overwrite.
+	/// </para>
+	/// <para>
+	/// A conflict is <b>never</b> retried automatically. Retrying re-applies the loser's stale markdown on
+	/// top of the winner's, which is exactly the data loss this parameter exists to prevent — the editor
+	/// reloads and the human decides. The one automatic retry in this contract belongs to the insert race on
+	/// <c>(pageId, locale)</c>, where no content can be lost.
+	/// </para>
+	/// </param>
 	Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
 		string pageId,
 		string locale,
@@ -1340,7 +1706,8 @@ Append the five new methods at the end of the interface, before the closing brac
 		string markdown,
 		string editorDbref,
 		string? editSummary,
-		bool published);
+		bool published,
+		int? expectedRevisionNumber);
 
 	/// <summary>
 	/// Deletes one translation and its revision stream, leaving the page and every other translation
@@ -1391,12 +1758,30 @@ Change `CreateAsync`'s signature and stamp the locale. Signature (line 122–127
 		string? sourceLocale = null)
 ```
 
+Reject an unparseable `sourceLocale` before anything is written — put this beside the existing
+duplicate-identity check:
+
+```csharp
+		// SourceLocale is materialised once and never re-derived, so a junk tag must not reach storage.
+		// Null or blank is the "not stamped" case, left to the migration backfill rather than an error;
+		// a non-blank tag that is not a locale is an error, because storing it would corrupt every later read.
+		var stampedLocale = string.Empty;
+		if (!string.IsNullOrWhiteSpace(sourceLocale))
+		{
+			var normalizedSource = WikiHelpers.NormalizeLocale(sourceLocale);
+			if (normalizedSource.IsT1)
+				return Task.FromResult<OneOf<WikiPage, Error<string>>>(normalizedSource.AsT1);
+
+			stampedLocale = normalizedSource.AsT0;
+		}
+```
+
 and in the `new WikiPage(...)` initializer (line 152–154):
 
 ```csharp
 		{
 			Category = cat,
-			SourceLocale = WikiHelpers.NormalizeLocale(sourceLocale),
+			SourceLocale = stampedLocale,
 		};
 ```
 
@@ -1452,12 +1837,14 @@ Add a locale-aware overload of `SaveRevisionSnapshot` and the five methods, befo
 		string markdown,
 		string editorDbref,
 		string? editSummary,
-		bool published)
+		bool published,
+		int? expectedRevisionNumber)
 	{
-		var normalized = WikiHelpers.NormalizeLocale(locale);
-		if (normalized.Length == 0)
-			return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
-				new Error<string>($"'{locale}' is not a recognised locale tag."));
+		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
+		if (normalizedLocale.IsT1)
+			return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(normalizedLocale.AsT1);
+
+		var normalized = normalizedLocale.AsT0;
 
 		if (!_pagesById.TryGetValue(pageId, out var page))
 			return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
@@ -1474,9 +1861,12 @@ Add a locale-aware overload of `SaveRevisionSnapshot` and the five methods, befo
 		var html = _renderer.RenderToHtml(markdown);
 		var plain = _renderer.ExtractPlainText(markdown);
 
-		var updated = _translations.AddOrUpdate(
-			key,
-			_ => new WikiTranslation(
+		// Compare-and-swap, not AddOrUpdate. AddOrUpdate would happily fold two writers that both loaded
+		// revision 4 into one revision 5 and lose one translator's prose.
+		WikiTranslation updated;
+		if (expectedRevisionNumber is null)
+		{
+			updated = new WikiTranslation(
 				Id: $"{pageId}:{normalized}",
 				PageId: pageId,
 				Locale: normalized,
@@ -1488,8 +1878,29 @@ Add a locale-aware overload of `SaveRevisionSnapshot` and the five methods, befo
 				CreatedAt: now,
 				UpdatedAt: now,
 				Published: published,
-				RevisionNumber: 1),
-			(_, existing) => existing with
+				RevisionNumber: 1);
+
+			// Create-only: an existing row is a conflict, not something to overwrite.
+			if (!_translations.TryAdd(key, updated))
+				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
+					new Error<string>(
+						$"A '{normalized}' translation already exists for page '{pageId}'. "
+						+ "Pass its current revision number to update it."));
+		}
+		else
+		{
+			if (!_translations.TryGetValue(key, out var existing))
+				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
+					new Error<string>($"No '{normalized}' translation exists for page '{pageId}' to update."));
+
+			if (existing.RevisionNumber != expectedRevisionNumber.Value)
+				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
+					new Error<string>(
+						$"The '{normalized}' translation changed while you were editing "
+						+ $"(expected revision {expectedRevisionNumber.Value}, found {existing.RevisionNumber}). "
+						+ "Reload and re-apply your changes."));
+
+			updated = existing with
 			{
 				Title = title,
 				MarkdownSource = markdown,
@@ -1499,7 +1910,16 @@ Add a locale-aware overload of `SaveRevisionSnapshot` and the five methods, befo
 				UpdatedAt = now,
 				Published = published,
 				RevisionNumber = existing.RevisionNumber + 1,
-			});
+			};
+
+			// TryUpdate's comparison value is the CAS: a writer who won the race between TryGetValue and
+			// here has already replaced `existing`, so this fails and no revision is appended.
+			if (!_translations.TryUpdate(key, updated, existing))
+				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
+					new Error<string>(
+						$"The '{normalized}' translation changed while you were editing. "
+						+ "Reload and re-apply your changes."));
+		}
 
 		SaveTranslationRevisionSnapshot(updated, editorDbref, editSummary);
 
@@ -1528,8 +1948,9 @@ Add a locale-aware overload of `SaveRevisionSnapshot` and the five methods, befo
 		if (!_revisions.TryGetValue(pageId, out var list))
 			return Task.FromResult<IReadOnlyList<WikiRevision>>([]);
 
-		// Empty means the source-locale stream; anything else is matched after normalisation.
-		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocale(locale);
+		// Empty means the source-locale stream; anything else is matched after normalisation. This is a
+		// read, so an unusable tag yields "no such stream" rather than an error.
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
 
 		IReadOnlyList<WikiRevision> result;
 		lock (list)
@@ -1547,7 +1968,7 @@ Add a locale-aware overload of `SaveRevisionSnapshot` and the five methods, befo
 	/// <summary>The dictionary key for a translation, or null when the locale tag is unusable.</summary>
 	private static (string PageId, string Locale)? TranslationKey(string pageId, string locale)
 	{
-		var normalized = WikiHelpers.NormalizeLocale(locale);
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
 		return normalized.Length == 0 ? null : (pageId, normalized);
 	}
 
@@ -1583,7 +2004,7 @@ Add a locale-aware overload of `SaveRevisionSnapshot` and the five methods, befo
 
 These exist solely so the solution compiles and Task 6's test can be written red. Each is deleted by its own backend task.
 
-`SharpMUSH.Database.ArangoDB/ArangoDatabase.Wiki.cs` — change `CreateAsync`'s signature to add `string? sourceLocale = null`, add `SourceLocale = WikiHelpers.NormalizeLocale(sourceLocale)` to the anonymous `doc` (line ~205, after `Published = true`), then append inside the `#region Wiki`, before `#endregion`:
+`SharpMUSH.Database.ArangoDB/ArangoDatabase.Wiki.cs` — change `CreateAsync`'s signature to add `string? sourceLocale = null`, add the same "reject an unparseable tag, then stamp" block as `InMemoryWikiService` and put `SourceLocale = stampedLocale` in the anonymous `doc` (line ~205, after `Published = true`), then append inside the `#region Wiki`, before `#endregion`:
 
 ```csharp
 
@@ -1600,7 +2021,7 @@ These exist solely so the solution compiles and Task 6's test can be written red
 
 	public Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
 		string pageId, string locale, string title, string markdown,
-		string editorDbref, string? editSummary, bool published) =>
+		string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber) =>
 		throw WikiTranslationsNotImplemented("ArangoDB");
 
 	public Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref) =>
@@ -1611,11 +2032,11 @@ These exist solely so the solution compiles and Task 6's test can be written red
 		throw WikiTranslationsNotImplemented("ArangoDB");
 ```
 
-`SharpMUSH.Database.Memgraph/MemgraphDatabase.Wiki.cs` — the same block with `"Memgraph"` in place of `"ArangoDB"`, plus `CreateAsync` gaining `string? sourceLocale = null` and `sourceLocale = WikiHelpers.NormalizeLocale(sourceLocale)` added to the `CREATE (p:WikiPage {...})` property map and its parameter object.
+`SharpMUSH.Database.Memgraph/MemgraphDatabase.Wiki.cs` — the same block with `"Memgraph"` in place of `"ArangoDB"`, plus `CreateAsync` gaining `string? sourceLocale = null`, the same reject-then-stamp block, and `sourceLocale = stampedLocale` added to the `CREATE (p:WikiPage {...})` property map and its parameter object.
 
 `SharpMUSH.Database.SurrealDB/SurrealDatabase.Wiki.cs` — the same block with `"SurrealDB"`, **indented with 4 spaces**, and note this file's `None` alias: the delete stub returns `Task<OneOf<OkNone, NotFound>>`. Also add `sourceLocale` to `WikiPageFields`, to `WikiPageDbRecord` (as `public string? sourceLocale { get; set; }`), to `MapToWikiPage`, and to `CreateAsync`'s `CONTENT { … }`.
 
-For all three: the `WikiPage` deserialisers (`WikiPageFromJson`, `NodeToWikiPage`, `MapToWikiPage`) must read `SourceLocale` defensively — a stored document predating the field yields `string.Empty`, which is exactly the documented default.
+For all three: the `WikiPage` deserialisers (`WikiPageFromJson`, `NodeToWikiPage`, `MapToWikiPage`) must read `SourceLocale` defensively, yielding `string.Empty` for a stored document predating the field. That empty value means "not yet stamped" and is closed by the Tasks 7–9 backfill; **no deserialiser and no reader substitutes `Wiki.DefaultLocale` for it.**
 
 - [ ] **Step 6: Run tests to verify they pass**
 
@@ -1623,7 +2044,7 @@ Run: `dotnet build`
 Expected: 0 errors.
 
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/InMemoryWikiServiceTests/*"`
-Expected: PASS, including all 15 new tests.
+Expected: PASS, including all 19 new tests (15 CRUD + the two compare-and-swap cases + the two `CreateAsync` locale cases).
 
 Run: `dotnet run --project SharpMUSH.Tests`
 Expected: 4927 total / 0 failed. If a Wiki controller or command test now fails, `GetRevisionsAsync`'s new source-stream filter is the first suspect — it must be a no-op today because every existing revision row has `Locale == ""`.
@@ -1643,6 +2064,13 @@ git commit -m "feat(wiki): add translation CRUD to IWikiService with the in-memo
 This is the spec's named mitigation for the three-hand-written-backends risk. It goes red on all three providers (`NotSupportedException` from the Task 5 stubs) and turns green one provider at a time across Tasks 7–9.
 
 There is no per-test parameterisation over backends in this codebase: the provider is chosen by the `SHARPMUSH_DATABASE_PROVIDER` environment variable and CI runs the whole assembly three times. One test class is therefore all three backends' contract.
+
+**The negative cases are the point of this file, not a bonus.** The three stores' revision indexes disagree today — unique on SurrealDB, non-unique on ArangoDB, absent on Memgraph — and *a test that only writes valid data cannot tell a real constraint from a missing one.* That is precisely how they drifted apart. So this class must assert two things no happy-path test can:
+
+- a translation revision numbered 1 is **accepted** alongside a source revision numbered 1 (today's SurrealDB `wiki_revision_page_rev` UNIQUE index rejects this);
+- a duplicate `(PageId, Locale, RevisionNumber)` is **rejected** — exactly one of two writers claiming the same next revision number succeeds, and the loser leaves no revision row behind (a store with no constraint and a read-then-write upsert produces two rows numbered the same and fails here).
+
+Both are expressed through the public `IWikiService` surface rather than raw provider queries, because a cross-backend file cannot hand-write AQL, Cypher and SurrealQL. That is sufficient: whether the loser is stopped by the unique index or by the conditional update's "zero rows affected" is a backend's choice, and the observable outcome is what the spec pins down.
 
 Two conventions this file must follow or it will be flaky: the integration DB is shared across the whole test session and never reset, so **every title is uniquified with `Guid.NewGuid().ToString("N")[..8]`**, and counts use `IsGreaterThanOrEqualTo` unless scoped to a page this test created.
 
@@ -1672,7 +2100,13 @@ namespace SharpMUSH.Tests.Integration.Wiki;
 /// assembly once per provider, so this one class is all three providers' contract.
 ///
 /// Written deliberately before the three hand-written backend implementations: the five CRUD methods are
-/// mechanical, but unique-index semantics differ per store, and this file is what catches that.
+/// mechanical, but the existing revision indexes differ per store — unique on SurrealDB, non-unique on
+/// ArangoDB, absent on Memgraph — and this file is what catches that.
+///
+/// The <b>negative</b> cases at the bottom carry the weight. A suite that only writes valid data cannot
+/// distinguish a real unique constraint from a missing one, which is exactly how these three drifted
+/// apart, so "rejects a duplicate (PageId, Locale, RevisionNumber)" and "accepts a translation revision 1
+/// beside a source revision 1" are asserted explicitly.
 ///
 /// The session database is shared and never reset, so every page title is uniquified.
 /// </summary>
@@ -1714,7 +2148,8 @@ public class WikiTranslationIntegrationTests
         var page = await CreateSourcePageAsync("Upsert");
 
         var created = await Wiki.UpsertTranslationAsync(
-            page.Id, "fr", "Titre fr", "corps **fr**", "#2", "première", published: true);
+            page.Id, "fr", "Titre fr", "corps **fr**", "#2", "première",
+            published: true, expectedRevisionNumber: null);
 
         await Assert.That(created.IsT0).IsTrue();
         var fetched = await Wiki.GetTranslationAsync(page.Id, "fr");
@@ -1733,9 +2168,10 @@ public class WikiTranslationIntegrationTests
         // non-unique will produce two rows here and fail on the count, which is the whole point of
         // running this file against every store.
         var page = await CreateSourcePageAsync("UpsertTwice");
-        await Wiki.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true);
+        await Wiki.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
 
-        var second = await Wiki.UpsertTranslationAsync(page.Id, "fr", "v2", "corps v2", "#3", "révision", true);
+        var second = await Wiki.UpsertTranslationAsync(
+            page.Id, "fr", "v2", "corps v2", "#3", "révision", true, expectedRevisionNumber: 1);
 
         await Assert.That(second.IsT0).IsTrue();
         await Assert.That(second.AsT0.RevisionNumber).IsEqualTo(2);
@@ -1749,8 +2185,8 @@ public class WikiTranslationIntegrationTests
     {
         var page = await CreateSourcePageAsync("TwoLocales");
 
-        await Wiki.UpsertTranslationAsync(page.Id, "fr", "Titre fr", "fr", "#2", null, true);
-        await Wiki.UpsertTranslationAsync(page.Id, "de", "Titel de", "de", "#2", null, true);
+        await Wiki.UpsertTranslationAsync(page.Id, "fr", "Titre fr", "fr", "#2", null, true, expectedRevisionNumber: null);
+        await Wiki.UpsertTranslationAsync(page.Id, "de", "Titel de", "de", "#2", null, true, expectedRevisionNumber: null);
 
         var summaries = await Wiki.GetTranslationsAsync(page.Id);
 
@@ -1764,8 +2200,8 @@ public class WikiTranslationIntegrationTests
         var first = await CreateSourcePageAsync("SameLocaleA");
         var second = await CreateSourcePageAsync("SameLocaleB");
 
-        await Wiki.UpsertTranslationAsync(first.Id, "fr", "A fr", "a", "#2", null, true);
-        await Wiki.UpsertTranslationAsync(second.Id, "fr", "B fr", "b", "#2", null, true);
+        await Wiki.UpsertTranslationAsync(first.Id, "fr", "A fr", "a", "#2", null, true, expectedRevisionNumber: null);
+        await Wiki.UpsertTranslationAsync(second.Id, "fr", "B fr", "b", "#2", null, true, expectedRevisionNumber: null);
 
         await Assert.That((await Wiki.GetTranslationAsync(first.Id, "fr")).AsT0.Title).IsEqualTo("A fr");
         await Assert.That((await Wiki.GetTranslationAsync(second.Id, "fr")).AsT0.Title)
@@ -1778,7 +2214,7 @@ public class WikiTranslationIntegrationTests
     {
         var page = await CreateSourcePageAsync("LocaleCase");
 
-        var created = await Wiki.UpsertTranslationAsync(page.Id, "FR-ca", "T", "m", "#2", null, true);
+        var created = await Wiki.UpsertTranslationAsync(page.Id, "FR-ca", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
         await Assert.That(created.AsT0.Locale).IsEqualTo("fr-CA");
         await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr-ca")).IsT0).IsTrue();
@@ -1790,7 +2226,7 @@ public class WikiTranslationIntegrationTests
     {
         var page = await CreateSourcePageAsync("Shadow", sourceLocale: "en");
 
-        var result = await Wiki.UpsertTranslationAsync(page.Id, "en", "T", "m", "#2", null, true);
+        var result = await Wiki.UpsertTranslationAsync(page.Id, "en", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
         await Assert.That(result.IsT1).IsTrue();
         await Assert.That(result.AsT1).IsTypeOf<Error<string>>();
@@ -1801,7 +2237,7 @@ public class WikiTranslationIntegrationTests
     {
         var ghost = $"node_wiki_pages/ghost_{Guid.NewGuid():N}";
 
-        var result = await Wiki.UpsertTranslationAsync(ghost, "fr", "T", "m", "#2", null, true);
+        var result = await Wiki.UpsertTranslationAsync(ghost, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
         await Assert.That(result.IsT1).IsTrue();
     }
@@ -1818,7 +2254,7 @@ public class WikiTranslationIntegrationTests
     public async Task GetTranslationsAsync_IncludesUnpublishedDrafts()
     {
         var page = await CreateSourcePageAsync("DraftListing");
-        await Wiki.UpsertTranslationAsync(page.Id, "de", "Entwurf", "m", "#2", null, published: false);
+        await Wiki.UpsertTranslationAsync(page.Id, "de", "Entwurf", "m", "#2", null, published: false, expectedRevisionNumber: null);
 
         var summaries = await Wiki.GetTranslationsAsync(page.Id);
 
@@ -1832,8 +2268,8 @@ public class WikiTranslationIntegrationTests
     {
         var page = await CreateSourcePageAsync("RevStreams");
         await Wiki.UpdateAsync(page.Id, "en v2", "#1");
-        await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "fr1", "#2", null, true);
-        await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "fr2", "#2", null, true);
+        await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "fr1", "#2", null, true, expectedRevisionNumber: null);
+        await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "fr2", "#2", null, true, expectedRevisionNumber: 1);
 
         var french = await Wiki.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
         var source = await Wiki.GetRevisionsAsync(page.Id);
@@ -1851,8 +2287,8 @@ public class WikiTranslationIntegrationTests
     public async Task DeleteTranslationAsync_RemovesOnlyThatLocale()
     {
         var page = await CreateSourcePageAsync("DeleteOne");
-        await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true);
-        await Wiki.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, true);
+        await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+        await Wiki.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
         var deleted = await Wiki.DeleteTranslationAsync(page.Id, "fr", "#2");
 
@@ -1875,8 +2311,8 @@ public class WikiTranslationIntegrationTests
     public async Task DeleteAsync_CascadesToTranslationsAndTheirRevisions()
     {
         var page = await CreateSourcePageAsync("Cascade");
-        await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true);
-        await Wiki.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, true);
+        await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+        await Wiki.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
         await Wiki.DeleteAsync(page.Id, "#1");
 
@@ -1886,20 +2322,103 @@ public class WikiTranslationIntegrationTests
         await Assert.That((await Wiki.GetRevisionsAsync(page.Id)).Count).IsEqualTo(0);
     }
 
+    // ---- Negative cases: the revision constraint itself ---------------------
+    //
+    // Everything above would pass on a store with no revision constraint at all. These four will not.
+
     [Test]
-    public async Task ConcurrentUpsertsOnOneLocaleProduceOneRow()
+    public async Task RevisionIndex_AcceptsATranslationRevisionOneBesideASourceRevisionOne()
     {
-        // The spec's concurrency case: the unique index rejects the loser, which surfaces as
-        // Error<string>. Whichever ordering the store picks, exactly one row must exist afterwards.
+        // (PageId, RevisionNumber) is NOT unique any more: a translation's stream restarts at 1 while the
+        // source page already has a revision 1. SurrealDB's pre-existing wiki_revision_page_rev UNIQUE
+        // index rejects this outright, which is the whole reason Task 9 must redefine it.
+        var page = await CreateSourcePageAsync("RevOneTwice");
+
+        var created = await Wiki.UpsertTranslationAsync(
+            page.Id, "fr", "Titre fr", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+
+        await Assert.That(created.IsT0)
+            .IsTrue()
+            .Because("a translation revision 1 must coexist with the source's revision 1");
+        var french = await Wiki.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
+        var source = await Wiki.GetRevisionsAsync(page.Id);
+        await Assert.That(french.Single().RevisionNumber).IsEqualTo(1);
+        await Assert.That(source.Single().RevisionNumber).IsEqualTo(1);
+        await Assert.That(source.Single().Locale)
+            .IsEqualTo(string.Empty)
+            .Because("the two rows are distinguished by Locale, which is why it is in the constraint");
+    }
+
+    [Test]
+    public async Task RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber()
+    {
+        // Two writers both loaded revision 1 and both compute revision 2. Exactly one may land. A store
+        // with no constraint and a read-then-write upsert writes both and fails the count below, which is
+        // the assertion that tells a real constraint from a missing one.
+        var page = await CreateSourcePageAsync("DupRevision");
+        await Wiki.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+
+        var winner = await Wiki.UpsertTranslationAsync(
+            page.Id, "fr", "v2", "corps v2", "#3", null, true, expectedRevisionNumber: 1);
+        var loser = await Wiki.UpsertTranslationAsync(
+            page.Id, "fr", "perdu", "corps perdu", "#4", null, true, expectedRevisionNumber: 1);
+
+        await Assert.That(winner.IsT0).IsTrue();
+        await Assert.That(loser.IsT1)
+            .IsTrue()
+            .Because("a second revision 2 for (PageId, Locale) must be refused, never silently accepted");
+        await Assert.That(loser.AsT1).IsTypeOf<Error<string>>();
+
+        var revisions = await Wiki.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
+        await Assert.That(revisions.Count(r => r.RevisionNumber == 2))
+            .IsEqualTo(1)
+            .Because("two rows numbered 2 is the exact corruption the unique constraint exists to stop");
+        await Assert.That(revisions.Select(r => r.MarkdownSource))
+            .DoesNotContain("corps perdu")
+            .Because("a rejected write must leave no revision behind");
+        await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
+            .IsEqualTo("corps v2");
+    }
+
+    [Test]
+    public async Task UpsertTranslationAsync_CreateOnlyRefusesAnExistingTranslation()
+    {
+        var page = await CreateSourcePageAsync("CreateOnly");
+        await Wiki.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+
+        var again = await Wiki.UpsertTranslationAsync(
+            page.Id, "fr", "écrasé", "corps écrasé", "#3", null, true, expectedRevisionNumber: null);
+
+        await Assert.That(again.IsT1).IsTrue();
+        await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
+            .IsEqualTo("corps v1");
+    }
+
+    [Test]
+    public async Task ConcurrentUpsertsWithTheSameExpectedRevisionLoseNoProse()
+    {
+        // The spec's concurrency case. Needs a real backend: the in-memory dictionary cannot reproduce the
+        // race. Whichever ordering the store picks, exactly one writer wins, the other gets Error<string>,
+        // and the loser's markdown appears in no revision.
         var page = await CreateSourcePageAsync("Concurrent");
+        await Wiki.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
 
         var results = await Task.WhenAll(
-            Wiki.UpsertTranslationAsync(page.Id, "fr", "A", "a", "#2", null, true),
-            Wiki.UpsertTranslationAsync(page.Id, "fr", "B", "b", "#3", null, true));
+            Wiki.UpsertTranslationAsync(page.Id, "fr", "A", "corps a", "#2", null, true, expectedRevisionNumber: 1),
+            Wiki.UpsertTranslationAsync(page.Id, "fr", "B", "corps b", "#3", null, true, expectedRevisionNumber: 1));
 
-        await Assert.That(results.Any(r => r.IsT0))
-            .IsTrue()
-            .Because("at least one writer must succeed");
+        await Assert.That(results.Count(r => r.IsT0))
+            .IsEqualTo(1)
+            .Because("exactly one compare-and-swap on the same expected revision may succeed");
+        await Assert.That(results.Count(r => r.IsT1)).IsEqualTo(1);
+
+        var revisions = await Wiki.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
+        await Assert.That(revisions.Count).IsEqualTo(2);
+        var winnerMarkdown = results.Single(r => r.IsT0).AsT0.MarkdownSource;
+        var loserMarkdown = winnerMarkdown == "corps a" ? "corps b" : "corps a";
+        await Assert.That(revisions.Select(r => r.MarkdownSource))
+            .DoesNotContain(loserMarkdown)
+            .Because("the loser is never retried, so its prose must not reach the store at all");
         await Assert.That((await Wiki.GetTranslationsAsync(page.Id)).Count).IsEqualTo(1);
     }
 }
@@ -1910,7 +2429,7 @@ public class WikiTranslationIntegrationTests
 Run: `dotnet build SharpMUSH.Tests.Integration`
 Expected: 0 errors. The file compiles against the Task 5 stubs.
 
-**Docker is unavailable locally, so do not attempt to run this suite here.** Its red state is the `NotSupportedException` the Task 5 stubs throw. If you want local evidence that the assertions themselves are sound, temporarily point the same assertions at `InMemoryWikiService` in a scratch file, confirm green, and delete the scratch file — do not commit it.
+**Docker is unavailable locally, so do not attempt to run this suite here.** Its red state is the `NotSupportedException` the Task 5 stubs throw. If you want local evidence that the assertions themselves are sound, temporarily point the same assertions at `InMemoryWikiService` in a scratch file, confirm green, and delete the scratch file — do not commit it. `ConcurrentUpsertsWithTheSameExpectedRevisionLoseNoProse` is the one exception: the in-memory dictionary cannot reproduce the race, so it will not tell you anything locally either way.
 
 - [ ] **Step 3: Commit**
 
@@ -1929,16 +2448,23 @@ Note in the PR description that CI job `test-integration` will fail on all three
 
 `Migration_AddWiki.Up` guards its whole index block behind `if (!await …ExistAsync(WikiPages))`, so on any existing database that migration is a no-op — a **new** migration file is mandatory. Migrations are auto-discovered by assembly scan (`migrator.AddMigrations(typeof(ArangoDatabase).Assembly)` in `ArangoDatabase.Migration.cs:83`), ordered by `Id`, and tracked in the `MigrationHistory` collection. The highest existing engine `Id` is `20260714_001` (`add_sessions`), so the new one is `20260726_001`.
 
+This task carries **three** things beyond the new collection, and their order inside `Up` is load-bearing:
+
+1. the idempotent backfill that stamps `WikiPage.SourceLocale` and `WikiRevision.Locale`;
+2. **then** the unique constraint on `(PageId, Locale, RevisionNumber)` — the deployed Arango index is non-unique (`Migration_AddWiki.cs:101-105`), which is why a numbering bug passes silently on this backend while failing loudly on SurrealDB;
+3. the compare-and-swap in `UpsertTranslationAsync`.
+
 **Files:**
 - Modify: `SharpMUSH.Database/DatabaseConstants.cs:25` (add `WikiTranslations` after `WikiRevisions`)
-- Create: `SharpMUSH.Database.ArangoDB/Migrations/Migration_AddWikiTranslations.cs`
+- Create: `SharpMUSH.Database.ArangoDB/Migrations/Migration_AddWikiTranslations.cs` (collection, indexes, **backfill**, unique revision constraint)
 - Modify: `SharpMUSH.Database.ArangoDB/ArangoDatabase.Wiki.cs` (replace the Task 5 stubs; extend `DeleteAsync`; filter `GetRevisionsAsync`; add `WikiTranslationFromJson`)
 
 **Interfaces:**
-- Consumes: the Task 5 contract; `WikiHelpers.NormalizeLocale`; `ExtractKey` (`ArangoDatabase.Accounts.cs:238`).
+- Consumes: the Task 5 contract; `WikiHelpers.NormalizeLocale` / `NormalizeLocaleOrEmpty`; `WikiOptions.DefaultLocaleFallback` (Task 1); `ExtractKey` (`ArangoDatabase.Accounts.cs:238`).
 - Produces:
   - `DatabaseConstants.WikiTranslations` = `"node_wiki_translations"`
   - `Migration_AddWikiTranslations` — `Id => 20260726_001`, `Name => "add_wiki_translations"`
+  - Index `wiki_revision_page_locale_rev` on `node_wiki_revisions`, `UNIQUE (PageId, Locale, RevisionNumber)`
   - `ArangoDatabase.WikiTranslationFromJson(JsonElement)` → `WikiTranslation` (private)
 
 - [ ] **Step 1: Add the collection constant**
@@ -1957,17 +2483,23 @@ Create `SharpMUSH.Database.ArangoDB/Migrations/Migration_AddWikiTranslations.cs`
 using Core.Arango;
 using Core.Arango.Migration;
 using Core.Arango.Protocol;
+using SharpMUSH.Configuration.Options;
 
 namespace SharpMUSH.Database.ArangoDB.Migrations;
 
 /// <summary>
-/// Adds <c>node_wiki_translations</c> — per-locale overlay rows hanging off a wiki page — and the
-/// per-locale revision index on <c>node_wiki_revisions</c>.
+/// Adds <c>node_wiki_translations</c> — per-locale overlay rows hanging off a wiki page — backfills
+/// <c>WikiPage.SourceLocale</c> and <c>WikiRevision.Locale</c>, and replaces the revision index with a
+/// unique one over <c>(PageId, Locale, RevisionNumber)</c>.
 /// </summary>
 /// <remarks>
 /// A separate migration rather than an edit to <see cref="Migration_AddWiki"/>: that migration guards
 /// its entire index block behind a collection-existence check, so on any database created before today
 /// an edit there would silently never run.
+/// <para>
+/// The backfill must run <b>before</b> the unique index is created, or creation fails on rows whose
+/// <c>Locale</c> is null.
+/// </para>
 /// </remarks>
 public class Migration_AddWikiTranslations : IArangoMigration
 {
@@ -2024,20 +2556,88 @@ public class Migration_AddWikiTranslations : IArangoMigration
 			});
 		}
 
-		// Per-locale revision streams. The existing (PageId, RevisionNumber) index stays so that
-		// pre-existing source-locale reads keep using it.
+		// ---- Backfill, BEFORE the unique index ------------------------------
+		//
+		// Order matters: a unique index over (PageId, Locale, RevisionNumber) cannot be created while
+		// pre-existing revision rows have no Locale at all.
+
+		// Every page that predates the field is stamped once. After this the value is authoritative and
+		// immutable per page; nothing re-derives it on read, because an admin later changing
+		// wiki_default_locale must not relabel the authored locale of pages that already exist.
+		var stampedPages = await migrator.Context.Query.ExecuteAsync<string>(handle,
+			"""
+			FOR p IN @@c
+				FILTER p.SourceLocale == null OR p.SourceLocale == ""
+				UPDATE p WITH { SourceLocale: @locale } IN @@c
+				RETURN NEW._key
+			""",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiPages },
+				{ "locale", WikiOptions.DefaultLocaleFallback }
+			});
+
+		// Pre-existing revisions are all source-locale revisions, and the source stream's marker is the
+		// empty string (Task 5, convention 1) — NOT the default locale. Stamping it explicitly rather than
+		// leaving null is what lets the unique index cover the column.
+		var stampedRevisions = await migrator.Context.Query.ExecuteAsync<string>(handle,
+			"""
+			FOR r IN @@c
+				FILTER r.Locale == null
+				UPDATE r WITH { Locale: "" } IN @@c
+				RETURN NEW._key
+			""",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiRevisions }
+			});
+
+		// The migration logs the locale it stamped and the row counts. That is the whole mitigation: there
+		// is deliberately no rollback path, no language detection and no per-page override, because
+		// SharpMUSH is pre-production and wiping + reseeding is acceptable recovery. Revisit only if a live
+		// game with existing wiki content ever adopts SharpMUSH.
+		Console.WriteLine(
+			$"[{Name}] stamped SourceLocale='{WikiOptions.DefaultLocaleFallback}' on "
+			+ $"{stampedPages.Count} page(s); stamped Locale='' on "
+			+ $"{stampedRevisions.Count} revision(s).");
+
+		// ---- Revision constraint --------------------------------------------
+		//
+		// The deployed index is Fields = ["PageId", "RevisionNumber"], Persistent, NOT unique
+		// (Migration_AddWiki.cs:101-105). Translation revisions restart numbering at 1, so that pair is no
+		// longer unique — but a *non*-unique index means a numbering bug passes silently here while failing
+		// loudly on SurrealDB. Both halves matter: add the unique three-field index, then drop the old pair
+		// so nothing keeps writing against a constraint-free lookup.
 		await migrator.Context.Index.CreateAsync(handle, DatabaseConstants.WikiRevisions, new ArangoIndex
 		{
+			Name = "wiki_revision_page_locale_rev",
 			Fields = ["PageId", "Locale", "RevisionNumber"],
+			Unique = true,
 			Type = ArangoIndexType.Persistent
 		});
+
+		// Optional cleanup, not load-bearing: the new unique index is what enforces correctness. Confirm
+		// the shape Core.Arango 3.12's IArangoIndexModule.ListAsync actually returns before relying on the
+		// property names below; if it does not expose Fields/Id conveniently, delete this loop and leave the
+		// old index in place. A redundant non-unique lookup index costs write throughput, not correctness.
+		var existingIndexes = await migrator.Context.Index.ListAsync(handle, DatabaseConstants.WikiRevisions);
+		foreach (var stale in existingIndexes.Where(i =>
+			i.Type == ArangoIndexType.Persistent
+			&& i.Fields is ["PageId", "RevisionNumber"]))
+		{
+			await migrator.Context.Index.DropAsync(handle, stale.Id!);
+		}
 	}
 
 	public Task Down(IArangoMigrator migrator, ArangoHandle handle) => Task.CompletedTask;
 }
 ```
 
-The revision index creation sits **outside** the collection-existence guard on purpose: `node_wiki_revisions` already exists on every deployed database, so a guarded call would never run. `Index.CreateAsync` on an identical existing index is idempotent in Core.Arango.
+The backfill and the revision-index work sit **outside** the collection-existence guard on purpose: `node_wiki_pages` and `node_wiki_revisions` already exist on every deployed database, so a guarded call would never run. `Index.CreateAsync` on an identical existing index is idempotent in Core.Arango, and the backfill's `FILTER` makes it a no-op on a second pass, so the whole migration is safe to re-run.
+
+**Why the backfill hardcodes `WikiOptions.DefaultLocaleFallback` instead of reading `Wiki.DefaultLocale`.** It cannot read it: `OptionsService` is an `IOptionsFactory<SharpMUSHOptions>` over `ISharpDatabase` (`SharpMUSH.Library/Services/OptionsService.cs:7`), so the configured value lives *in* the database this migration is preparing, and Core.Arango instantiates `IArangoMigration` types reflectively with no DI. It does not need to, either: this migration ships in the same release that introduces `wiki_default_locale`, and an admin cannot have changed a setting that did not exist yet — so at the moment the backfill first runs, `Wiki.DefaultLocale` is necessarily its parameter default. A game whose existing content is not English sets `wiki_default_locale` and re-stamps, or wipes and reseeds.
+
+If `Index.CreateAsync` fails with a uniqueness violation, the database already contains duplicate `(PageId, RevisionNumber)` rows that the old non-unique index tolerated. Pre-production: wipe and reseed. Do not weaken the index to make the migration pass.
 
 - [ ] **Step 3: Replace the stubs with real AQL**
 
@@ -2067,7 +2667,7 @@ In `SharpMUSH.Database.ArangoDB/ArangoDatabase.Wiki.cs`, delete the whole `// --
 
 	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
 	{
-		var normalized = WikiHelpers.NormalizeLocale(locale);
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
 		if (normalized.Length == 0) return new NotFound();
 
 		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
@@ -2086,11 +2686,12 @@ In `SharpMUSH.Database.ArangoDB/ArangoDatabase.Wiki.cs`, delete the whole `// --
 
 	public async Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
 		string pageId, string locale, string title, string markdown,
-		string editorDbref, string? editSummary, bool published)
+		string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
 	{
-		var normalized = WikiHelpers.NormalizeLocale(locale);
-		if (normalized.Length == 0)
-			return new Error<string>($"'{locale}' is not a recognised locale tag.");
+		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
+		if (normalizedLocale.IsT1) return normalizedLocale.AsT1;
+
+		var normalized = normalizedLocale.AsT0;
 
 		var pageLookup = await GetByIdAsync(pageId);
 		if (pageLookup.IsT1)
@@ -2106,60 +2707,104 @@ In `SharpMUSH.Database.ArangoDB/ArangoDatabase.Wiki.cs`, delete the whole `// --
 		var html = _wikiRenderer.RenderToHtml(markdown);
 		var plain = _wikiRenderer.ExtractPlainText(markdown);
 
-		// One AQL UPSERT so the (PageId, Locale) unique index arbitrates concurrent writers instead of
-		// a read-then-write race in C#.
+		var bindVars = new Dictionary<string, object>
+		{
+			{ "@c", DatabaseConstants.WikiTranslations },
+			{ "pageId", pageId },
+			{ "locale", normalized },
+			{ "title", title },
+			{ "markdown", markdown },
+			{ "html", html },
+			{ "plain", plain },
+			{ "editor", editorDbref },
+			{ "now", now },
+			{ "published", published }
+		};
+
 		try
 		{
-			var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			if (expectedRevisionNumber is null)
+			{
+				// Create-only. A plain INSERT so the (PageId, Locale) unique index — not a read-then-write
+				// race in C# — arbitrates two writers who both believe they are creating the translation.
+				var inserted = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+					"""
+					INSERT {
+						PageId: @pageId, Locale: @locale, Title: @title,
+						MarkdownSource: @markdown, RenderedHtml: @html, PlainText: @plain,
+						LastEditorDbref: @editor, CreatedAt: @now, UpdatedAt: @now,
+						Published: @published, RevisionNumber: 1
+					}
+					IN @@c
+					RETURN NEW
+					""",
+					bindVars: bindVars);
+
+				if (inserted.FirstOrDefault() is not { ValueKind: not JsonValueKind.Undefined } created)
+					return new Error<string>($"Insert of translation '{normalized}' returned no document.");
+
+				var newTranslation = WikiTranslationFromJson(created);
+				await SaveWikiTranslationRevisionAsync(newTranslation, editorDbref, editSummary);
+				return newTranslation;
+			}
+
+			// Compare-and-swap: the FILTER on RevisionNumber is the condition, and "no document returned"
+			// is the conflict signal. Never fold this back into an UPSERT — an unconditional UPDATE lets two
+			// translators who both loaded revision 4 both write 5, and one loses their prose silently.
+			bindVars["expected"] = expectedRevisionNumber.Value;
+			var updatedRows = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
 				"""
-				UPSERT { PageId: @pageId, Locale: @locale }
-				INSERT {
-					PageId: @pageId, Locale: @locale, Title: @title,
-					MarkdownSource: @markdown, RenderedHtml: @html, PlainText: @plain,
-					LastEditorDbref: @editor, CreatedAt: @now, UpdatedAt: @now,
-					Published: @published, RevisionNumber: 1
-				}
-				UPDATE {
-					Title: @title, MarkdownSource: @markdown, RenderedHtml: @html, PlainText: @plain,
-					LastEditorDbref: @editor, UpdatedAt: @now, Published: @published,
-					RevisionNumber: OLD.RevisionNumber + 1
-				}
-				IN @@c
-				RETURN NEW
+				FOR t IN @@c
+					FILTER t.PageId == @pageId AND t.Locale == @locale AND t.RevisionNumber == @expected
+					UPDATE t WITH {
+						Title: @title, MarkdownSource: @markdown, RenderedHtml: @html, PlainText: @plain,
+						LastEditorDbref: @editor, UpdatedAt: @now, Published: @published,
+						RevisionNumber: t.RevisionNumber + 1
+					}
+					IN @@c
+					RETURN NEW
 				""",
-				bindVars: new Dictionary<string, object>
-				{
-					{ "@c", DatabaseConstants.WikiTranslations },
-					{ "pageId", pageId },
-					{ "locale", normalized },
-					{ "title", title },
-					{ "markdown", markdown },
-					{ "html", html },
-					{ "plain", plain },
-					{ "editor", editorDbref },
-					{ "now", now },
-					{ "published", published }
-				});
+				bindVars: bindVars);
 
-			if (result.FirstOrDefault() is not { ValueKind: not JsonValueKind.Undefined } elem)
-				return new Error<string>($"Upsert of translation '{normalized}' returned no document.");
+			if (updatedRows.FirstOrDefault() is not { ValueKind: not JsonValueKind.Undefined } row)
+			{
+				// Zero rows affected. Either the translation is gone or somebody else already bumped it.
+				// Do NOT retry: re-reading and re-applying would overwrite the winner with stale markdown,
+				// which is precisely the loss expectedRevisionNumber exists to prevent.
+				var current = await GetTranslationAsync(pageId, normalized);
+				return current.IsT0
+					? new Error<string>(
+						$"The '{normalized}' translation changed while you were editing "
+						+ $"(expected revision {expectedRevisionNumber.Value}, found {current.AsT0.RevisionNumber}). "
+						+ "Reload and re-apply your changes.")
+					: new Error<string>($"No '{normalized}' translation exists for page '{pageId}' to update.");
+			}
 
-			var translation = WikiTranslationFromJson(elem);
+			var translation = WikiTranslationFromJson(row);
 			await SaveWikiTranslationRevisionAsync(translation, editorDbref, editSummary);
 			return translation;
 		}
 		catch (Exception ex)
 		{
-			// A lost unique-index race surfaces as a driver conflict; retry once, then report it.
-			var retry = await GetTranslationAsync(pageId, normalized);
-			if (retry.IsT0) return retry.AsT0;
+			// A lost unique-index race on the create path surfaces as a driver conflict. Reading the winner
+			// back is safe there because nothing of this caller's content was meant to land. It is NOT safe
+			// on the update path, which is why that branch returns above without touching this handler.
+			if (expectedRevisionNumber is null)
+			{
+				var retry = await GetTranslationAsync(pageId, normalized);
+				if (retry.IsT0)
+					return new Error<string>(
+						$"A '{normalized}' translation already exists for page '{pageId}'. "
+						+ "Pass its current revision number to update it.");
+			}
+
 			return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");
 		}
 	}
 
 	public async Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
 	{
-		var normalized = WikiHelpers.NormalizeLocale(locale);
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
 		if (normalized.Length == 0) return new NotFound();
 
 		var lookup = await GetTranslationAsync(pageId, normalized);
@@ -2183,7 +2828,7 @@ In `SharpMUSH.Database.ArangoDB/ArangoDatabase.Wiki.cs`, delete the whole `// --
 	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(
 		string pageId, string locale, int skip, int take)
 	{
-		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocale(locale);
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
 
 		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
 			"""
@@ -2249,6 +2894,8 @@ In `SharpMUSH.Database.ArangoDB/ArangoDatabase.Wiki.cs`, delete the whole `// --
 			? revNum : 1);
 ```
 
+**On the transaction boundary.** The row update and the revision append are two AQL statements here, not one transaction — `IArangoQueryModule` has no ambient transaction in this codebase. The spec allows exactly that, provided the update is conditional and "zero rows affected" is the conflict signal, which is what the `FILTER … t.RevisionNumber == @expected` above gives. The residual window is narrow and benign: if the process dies between the two statements the translation row is at revision *n+1* with no matching revision row, so history has a gap. It cannot silently overwrite a winner's prose, which is the failure mode that matters. If Core.Arango's stream-transaction API is later wired into this provider, wrap both statements and delete this note.
+
 - [ ] **Step 4: Extend `DeleteAsync`, filter `GetRevisionsAsync`, and read `SourceLocale`**
 
 In the same file:
@@ -2271,7 +2918,7 @@ In the same file:
 			"FOR r IN @@c FILTER r.PageId == @pageId AND (r.Locale == null OR r.Locale == \"\") SORT r.RevisionNumber DESC LIMIT @skip, @take RETURN r",
 ```
 
-`WikiPageFromJson` — add the `SourceLocale` init-property to the returned object, defensively so pre-existing documents yield empty:
+`WikiPageFromJson` — add the `SourceLocale` init-property to the returned object, defensively so a document the backfill has not reached yields empty. Read it straight through; do **not** substitute the configured default here or anywhere else on the read path:
 
 ```csharp
 			SourceLocale = elem.TryGetProperty("SourceLocale", out var srcLoc) ? srcLoc.GetString() ?? "" : "",
@@ -2294,7 +2941,7 @@ Expected: 4927 total / 0 failed.
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/SurrealMigrationIdempotencyTests/*"`
 Expected: PASS — confirms nothing asserts an exact index count.
 
-**Docker is unavailable locally.** The acceptance gate is CI job `test-integration` with `SHARPMUSH_DATABASE_PROVIDER=arangodb` green, which is also what proves the migration applies to a fresh database and that `WikiTranslationIntegrationTests` passes on Arango.
+**Docker is unavailable locally.** The acceptance gate is CI job `test-integration` with `SHARPMUSH_DATABASE_PROVIDER=arangodb` green, which is also what proves the migration applies to a fresh database, that the backfill runs before the unique index, and that `WikiTranslationIntegrationTests` — including `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber` — passes on Arango. Never mark this task done on a local build alone. In the CI log, look for the migration's `stamped SourceLocale=…` line: absent means the migration did not run, and the negative revision test will then be passing for the wrong reason on a fresh database with nothing to stamp.
 
 - [ ] **Step 6: Commit**
 
@@ -2309,24 +2956,45 @@ git commit -m "feat(wiki): implement translation storage for ArangoDB"
 
 Memgraph has no migration-id bookkeeping — schema is a list of idempotent statements in `MemgraphDatabase.Migration.cs`, each wrapped in a try/catch that swallows "already exists". DDL must run auto-commit on the shared `indexSession`, never inside a managed transaction. Property names in this provider are **camelCase**; node labels are PascalCase. IDs are client-assigned `Guid.NewGuid().ToString("N")`.
 
+**Memgraph is the backend with no revision constraint at all today.** `MemgraphDatabase.Migration.cs:124-125` declares two *separate* non-unique indexes, on `:WikiRevision(pageId)` and `:WikiRevision(revisionNumber)`. Two independent indexes are not a composite constraint, so a duplicate `(pageId, locale, revisionNumber)` is accepted silently — the same numbering bug that SurrealDB rejects outright. This task is where Memgraph gains a real one, and the statement list's ordering is load-bearing: the backfill statements must precede the constraint, because `ASSERT … IS UNIQUE` cannot be created over a property that does not exist on the existing nodes.
+
 **Files:**
-- Modify: `SharpMUSH.Database.Memgraph/MemgraphDatabase.Migration.cs:113-135` (extend `wikiIndexQueries`)
+- Modify: `SharpMUSH.Database.Memgraph/MemgraphDatabase.Migration.cs:113-135` (extend `wikiIndexQueries` — backfill, then constraints)
 - Modify: `SharpMUSH.Database.Memgraph/MemgraphDatabase.Wiki.cs` (replace stubs; extend `DeleteAsync`; filter `GetRevisionsAsync`; add `NodeToWikiTranslation`)
 
 **Interfaces:**
-- Consumes: the Task 5 contract; `WikiHelpers.NormalizeLocale`.
-- Produces: `:WikiTranslation` node label with camelCase properties `translationId, pageId, locale, title, markdownSource, renderedHtml, plainText, lastEditorDbref, createdAt, updatedAt, published, revisionNumber`; `MemgraphDatabase.NodeToWikiTranslation(INode)` → `WikiTranslation` (private static).
+- Consumes: the Task 5 contract; `WikiHelpers.NormalizeLocale` / `NormalizeLocaleOrEmpty`; `WikiOptions.DefaultLocaleFallback` (Task 1).
+- Produces: `:WikiTranslation` node label with camelCase properties `translationId, pageId, locale, title, markdownSource, renderedHtml, plainText, lastEditorDbref, createdAt, updatedAt, published, revisionNumber`; a uniqueness constraint on `(:WikiRevision pageId, locale, revisionNumber)`; `MemgraphDatabase.NodeToWikiTranslation(INode)` → `WikiTranslation` (private static).
 
 - [ ] **Step 1: Extend the schema statement list**
 
-`SharpMUSH.Database.Memgraph/MemgraphDatabase.Migration.cs` — append to the `wikiIndexQueries` array (keep the file's existing indentation inside that array):
+`SharpMUSH.Database.Memgraph/MemgraphDatabase.Migration.cs` — append to the `wikiIndexQueries` array **in this order** (keep the file's existing indentation inside that array). The array is executed sequentially on the auto-commit `indexSession`, so ordering here *is* the ordering guarantee the spec asks for:
 
 ```csharp
+					// Backfill FIRST. A composite uniqueness constraint cannot be created over a property the
+					// existing nodes do not carry, and pre-existing revisions have no locale at all.
+					// Pages get the configured default; revisions get the empty source-stream marker, because
+					// every pre-existing revision belongs to the page's own locale stream.
+					"MATCH (p:WikiPage) WHERE p.sourceLocale IS NULL OR p.sourceLocale = '' SET p.sourceLocale = 'en'",
+					"MATCH (r:WikiRevision) WHERE r.locale IS NULL SET r.locale = ''",
+
 					"CREATE INDEX ON :WikiTranslation(pageId)",
 					"CREATE INDEX ON :WikiTranslation(locale)",
 					"CREATE CONSTRAINT ON (t:WikiTranslation) ASSERT t.pageId, t.locale IS UNIQUE",
-					"CREATE INDEX ON :WikiRevision(locale)"
+					"CREATE INDEX ON :WikiRevision(locale)",
+
+					// The real constraint, replacing two independent non-unique indexes that enforced nothing.
+					// Same syntax as the existing (namespace, category, slug) page constraint above.
+					"CREATE CONSTRAINT ON (r:WikiRevision) ASSERT r.pageId, r.locale, r.revisionNumber IS UNIQUE",
+
+					// The standalone revisionNumber index indexed a column nothing queries on its own, and its
+					// presence is part of why this backend looked constrained when it was not.
+					"DROP INDEX ON :WikiRevision(revisionNumber)"
 ```
+
+The `'en'` literal in the backfill is `WikiOptions.DefaultLocaleFallback`. These statements are Cypher string literals in a `string[]`, so use an interpolated string (`$"… SET p.sourceLocale = '{WikiOptions.DefaultLocaleFallback}'"`) rather than retyping it — Task 1 exists so there is one literal. The same reasoning as Task 7 applies to *why* it is a compile-time constant rather than `Wiki.DefaultLocale`: options are stored in the database and read through `ISharpDatabase`, so migration-time access would be circular, and this migration ships in the release that introduces the setting, so the setting cannot yet have been changed.
+
+Both backfill statements are idempotent by their `WHERE` clause, which matters because this array runs on **every** start-up, not once. `DROP INDEX` on an absent index throws "not found" rather than "already exists", so confirm the surrounding try/catch swallows it too — the existing handlers only match `already exists`. If it does not, add a `catch` for it rather than removing the statement.
 
 - [ ] **Step 2: Replace the stubs**
 
@@ -2353,7 +3021,7 @@ In `SharpMUSH.Database.Memgraph/MemgraphDatabase.Wiki.cs`, delete the Task 5 stu
 
 	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
 	{
-		var normalized = WikiHelpers.NormalizeLocale(locale);
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
 		if (normalized.Length == 0) return new NotFound();
 
 		await using var session = driver.AsyncSession();
@@ -2368,11 +3036,12 @@ In `SharpMUSH.Database.Memgraph/MemgraphDatabase.Wiki.cs`, delete the Task 5 stu
 
 	public async Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
 		string pageId, string locale, string title, string markdown,
-		string editorDbref, string? editSummary, bool published)
+		string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
 	{
-		var normalized = WikiHelpers.NormalizeLocale(locale);
-		if (normalized.Length == 0)
-			return new Error<string>($"'{locale}' is not a recognised locale tag.");
+		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
+		if (normalizedLocale.IsT1) return normalizedLocale.AsT1;
+
+		var normalized = normalizedLocale.AsT0;
 
 		var pageLookup = await GetByIdAsync(pageId);
 		if (pageLookup.IsT1)
@@ -2391,38 +3060,62 @@ In `SharpMUSH.Database.Memgraph/MemgraphDatabase.Wiki.cs`, delete the Task 5 stu
 		try
 		{
 			await using var session = driver.AsyncSession();
-			// ExecuteWriteAsync retries transient conflicts; MERGE + ON CREATE/ON MATCH is the single
-			// statement the (pageId, locale) uniqueness constraint arbitrates.
+			// ExecuteWriteAsync gives one managed transaction, so here the row write and the revision append
+			// really are atomic — the spec's preferred shape rather than the conditional-update fallback.
 			return await session.ExecuteWriteAsync<OneOf<WikiTranslation, Error<string>>>(async tx =>
 			{
-				var result = await tx.RunAsync("""
-					MERGE (t:WikiTranslation {pageId: $pageId, locale: $locale})
-					ON CREATE SET
-						t.translationId = $translationId,
-						t.createdAt = $now,
-						t.revisionNumber = 1
-					ON MATCH SET
-						t.revisionNumber = t.revisionNumber + 1
-					SET t.title = $title,
-					    t.markdownSource = $markdown,
-					    t.renderedHtml = $html,
-					    t.plainText = $plain,
-					    t.lastEditorDbref = $editorDbref,
-					    t.updatedAt = $now,
-					    t.published = $published
-					RETURN t
-					""",
+				// No MERGE. MERGE + ON MATCH SET revisionNumber = revisionNumber + 1 is an unconditional
+				// bump: two translators who both loaded revision 4 both produce a 5 and one loses their
+				// prose. The compare-and-swap has to be expressed as a MATCH on the expected value.
+				var cypher = expectedRevisionNumber is null
+					? """
+						CREATE (t:WikiTranslation {
+							translationId: $translationId, pageId: $pageId, locale: $locale,
+							title: $title, markdownSource: $markdown, renderedHtml: $html, plainText: $plain,
+							lastEditorDbref: $editorDbref, createdAt: $now, updatedAt: $now,
+							published: $published, revisionNumber: 1
+						})
+						RETURN t
+						"""
+					: """
+						MATCH (t:WikiTranslation {pageId: $pageId, locale: $locale})
+						WHERE t.revisionNumber = $expected
+						SET t.title = $title,
+						    t.markdownSource = $markdown,
+						    t.renderedHtml = $html,
+						    t.plainText = $plain,
+						    t.lastEditorDbref = $editorDbref,
+						    t.updatedAt = $now,
+						    t.published = $published,
+						    t.revisionNumber = t.revisionNumber + 1
+						RETURN t
+						""";
+
+				var result = await tx.RunAsync(cypher,
 					new
 					{
 						pageId,
 						locale = normalized,
 						translationId = Guid.NewGuid().ToString("N"),
-						title, markdown, html, plain, editorDbref,
+						title,
+						markdown,
+						html,
+						plain,
+						editorDbref,
 						now = now.ToString("O"),
-						published
+						published,
+						expected = expectedRevisionNumber ?? 0
 					});
 
 				var records = await result.ToListAsync();
+				if (records.Count == 0)
+				{
+					// Zero rows matched: somebody else already bumped it, or it does not exist. Not retried.
+					return new Error<string>(
+						$"The '{normalized}' translation changed while you were editing, or does not exist "
+						+ $"(expected revision {expectedRevisionNumber}). Reload and re-apply your changes.");
+				}
+
 				var translation = NodeToWikiTranslation(records[0]["t"].As<INode>());
 
 				await SaveMemgraphTranslationRevisionAsync(tx, translation, editorDbref, editSummary, now);
@@ -2431,15 +3124,26 @@ In `SharpMUSH.Database.Memgraph/MemgraphDatabase.Wiki.cs`, delete the Task 5 stu
 		}
 		catch (Exception ex)
 		{
-			var retry = await GetTranslationAsync(pageId, normalized);
-			if (retry.IsT0) return retry.AsT0;
+			// On the create path a lost race against the (pageId, locale) uniqueness constraint lands here,
+			// and there is nothing of this caller's to preserve. On the update path a conflict has already
+			// returned above, so reaching this handler with a non-null expected revision is a real fault —
+			// report it, never re-read and re-apply, which would overwrite the winner with stale markdown.
+			if (expectedRevisionNumber is null)
+			{
+				var existing = await GetTranslationAsync(pageId, normalized);
+				if (existing.IsT0)
+					return new Error<string>(
+						$"A '{normalized}' translation already exists for page '{pageId}'. "
+						+ "Pass its current revision number to update it.");
+			}
+
 			return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");
 		}
 	}
 
 	public async Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
 	{
-		var normalized = WikiHelpers.NormalizeLocale(locale);
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
 		if (normalized.Length == 0) return new NotFound();
 
 		var lookup = await GetTranslationAsync(pageId, normalized);
@@ -2463,7 +3167,7 @@ In `SharpMUSH.Database.Memgraph/MemgraphDatabase.Wiki.cs`, delete the Task 5 stu
 	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(
 		string pageId, string locale, int skip, int take)
 	{
-		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocale(locale);
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
 
 		await using var session = driver.AsyncSession();
 		var result = await session.RunAsync("""
@@ -2552,7 +3256,7 @@ In `SharpMUSH.Database.Memgraph/MemgraphDatabase.Wiki.cs`, delete the Task 5 stu
 			new { pageId, skip, take });
 ```
 
-`NodeToWikiPage` — add `SourceLocale = node.Properties.TryGetValue("sourceLocale", out var srcLoc) ? srcLoc?.ToString() ?? "" : ""` to the init block; `NodeToWikiRevision` — add `Locale` the same way.
+`NodeToWikiPage` — add `SourceLocale = node.Properties.TryGetValue("sourceLocale", out var srcLoc) ? srcLoc?.ToString() ?? "" : ""` to the init block, read straight through with no substitution of the configured default; `NodeToWikiRevision` — add `Locale` the same way.
 
 - [ ] **Step 4: Verify locally as far as possible**
 
@@ -2562,7 +3266,7 @@ Expected: 0 errors, and `grep -n WikiTranslationsNotImplemented SharpMUSH.Databa
 Run: `dotnet run --project SharpMUSH.Tests`
 Expected: 4927 total / 0 failed.
 
-**Docker is unavailable locally.** Acceptance gate: CI `test-integration` with `SHARPMUSH_DATABASE_PROVIDER=memgraph` green. Watch specifically for a constraint-creation failure at startup — Memgraph rejects DDL inside managed transactions, so the new statements must be in `wikiIndexQueries` (auto-commit `indexSession`) and nowhere else.
+**Docker is unavailable locally.** Acceptance gate: CI `test-integration` with `SHARPMUSH_DATABASE_PROVIDER=memgraph` green, including `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber` — which is *the* test for this backend, since it is the one that had no revision constraint at all. Watch specifically for a constraint-creation failure at startup: Memgraph rejects DDL inside managed transactions, so the new statements must be in `wikiIndexQueries` (auto-commit `indexSession`) and nowhere else, and `ASSERT … IS UNIQUE` fails if the backfill statements were placed after it rather than before.
 
 - [ ] **Step 5: Commit**
 
@@ -2578,31 +3282,41 @@ git commit -m "feat(wiki): implement translation storage for Memgraph"
 **This file uses 4-space indentation.** Two more traps specific to this provider: the CBOR serializer ignores `[JsonPropertyName]`, so DB-record property names must match SurrealDB field names **exactly** (lower camelCase); and `None` is aliased as `OkNone` at the top of the file. Pagination is `LIMIT $take START $skip`, not `SKIP`/`LIMIT`. Index DDL lives in an always-run `indexQueries` array guarded only by `IF NOT EXISTS`, so no new migration id is needed.
 
 **Files:**
-- Modify: `SharpMUSH.Database.SurrealDB/SurrealDatabase.Migration.cs:90-97` (extend `indexQueries`)
+- Modify: `SharpMUSH.Database.SurrealDB/SurrealDatabase.Migration.cs:90-97` (extend `indexQueries`: backfill, drop the offending unique index, redefine it over three fields)
 - Modify: `SharpMUSH.Database.SurrealDB/SurrealDatabase.Wiki.cs` (add `WikiTranslationDbRecord`; replace stubs; extend `DeleteAsync`; filter `GetRevisionsAsync`)
 
 **Interfaces:**
-- Consumes: the Task 5 contract; `NormalizeSurrealId` (`SurrealDatabase.Accounts.cs:223`); `ExecuteAsync` (`SurrealDatabase.cs:142`).
-- Produces: table `wiki_translation`; `WikiTranslationDbRecord`; `SurrealDatabase.WikiTranslationFields` const; `MapToWikiTranslation`; `NormalizeWikiTranslationId`.
+- Consumes: the Task 5 contract; `WikiOptions.DefaultLocaleFallback` (Task 1); `NormalizeSurrealId` (`SurrealDatabase.Accounts.cs:223`); `ExecuteAsync` (`SurrealDatabase.cs:142`).
+- Produces: table `wiki_translation`; index `wiki_revision_page_locale_rev` `UNIQUE (pageId, locale, revisionNumber)` replacing `wiki_revision_page_rev`; `WikiTranslationDbRecord`; `SurrealDatabase.WikiTranslationFields` const; `MapToWikiTranslation`; `NormalizeWikiTranslationId`.
 
-- [ ] **Step 1: Extend the index list**
+- [ ] **Step 1: Extend the index list — backfill, then replace the revision index**
 
-`SharpMUSH.Database.SurrealDB/SurrealDatabase.Migration.cs` — append inside `indexQueries`, after the existing `wiki_revision_page_rev` line:
+SurrealDB is the backend whose *current* index actively breaks translations: `SurrealDatabase.Migration.cs:97` declares `wiki_revision_page_rev ON wiki_revision FIELDS pageId, revisionNumber UNIQUE`. **Translation revisions share `pageId` with source revisions and restart numbering at 1, so that index rejects the very first translation revision.** The array is executed in order, so the statements go in this order and no other: backfill, drop, redefine.
 
-```csharp
-				"DEFINE INDEX IF NOT EXISTS wiki_translation_page_locale ON wiki_translation FIELDS pageId, locale UNIQUE",
-				"DEFINE INDEX IF NOT EXISTS wiki_translation_locale ON wiki_translation FIELDS locale",
-				"DEFINE INDEX IF NOT EXISTS wiki_revision_locale ON wiki_revision FIELDS pageId, locale, revisionNumber",
-```
-
-Note the existing `wiki_revision_page_rev` index is `UNIQUE` on `(pageId, revisionNumber)`. **Translation revisions share `pageId` with source revisions and restart numbering at 1, so that unique index would reject the first translation revision.** Replace it in the same array (the `IF NOT EXISTS` form will not alter an existing index, so also add an explicit drop before it):
+`SharpMUSH.Database.SurrealDB/SurrealDatabase.Migration.cs` — **delete** the existing `"DEFINE INDEX IF NOT EXISTS wiki_revision_page_rev …"` line at 97 and put this in its place (the surrounding array already uses this shape for the `wiki_page` category backfill at line 91, so it is a familiar idiom in this file):
 
 ```csharp
+				// Backfill BEFORE the new unique index, or the DEFINE fails on rows with no locale.
+				// Pages get the configured default; revisions get the empty source-stream marker, because
+				// every pre-existing revision belongs to its page's own locale stream.
+				$"UPDATE wiki_page SET sourceLocale = '{WikiOptions.DefaultLocaleFallback}' WHERE sourceLocale = NONE OR sourceLocale = ''",
+				"UPDATE wiki_revision SET locale = '' WHERE locale = NONE",
+
+				// The old index is UNIQUE on (pageId, revisionNumber) and would reject a translation's
+				// revision 1 outright. DEFINE INDEX IF NOT EXISTS will not alter an existing index, so the
+				// drop is mandatory rather than tidiness.
 				"REMOVE INDEX IF EXISTS wiki_revision_page_rev ON wiki_revision",
 				"DEFINE INDEX IF NOT EXISTS wiki_revision_page_locale_rev ON wiki_revision FIELDS pageId, locale, revisionNumber UNIQUE",
+
+				"DEFINE INDEX IF NOT EXISTS wiki_translation_page_locale ON wiki_translation FIELDS pageId, locale UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS wiki_translation_locale ON wiki_translation FIELDS locale",
 ```
 
-and delete the old `wiki_revision_page_rev` `DEFINE INDEX` line. This is the single most likely cross-backend failure the Task 6 test catches, and it is exactly the "index semantics differ per store" risk the spec names.
+`WikiOptions.DefaultLocaleFallback` rather than a bare `'en'` for the reason Task 1 gives: one literal. And as in Tasks 7 and 8, the backfill uses that compile-time constant rather than `Wiki.DefaultLocale` because options are stored in the database and read through `ISharpDatabase`, so migration-time access would be circular — and this migration ships in the release that introduces the setting, so it cannot yet have been changed.
+
+There is no separate `(pageId, locale, revisionNumber)` non-unique index: the unique one above serves the same lookups. Both `UPDATE` statements are idempotent by their `WHERE` clause, which matters because this array runs on every start-up rather than once; `SurrealMigrationIdempotencyTests` is what holds that.
+
+If the `DEFINE … UNIQUE` fails on an existing database, it has duplicate `(pageId, locale, revisionNumber)` rows. Pre-production: wipe and reseed. Do not drop the `UNIQUE` keyword to make the migration pass — that is exactly how ArangoDB and Memgraph ended up unconstrained.
 
 - [ ] **Step 2: Add the DB record and field list**
 
@@ -2657,7 +3371,7 @@ Delete the Task 5 stub block and add (4 spaces):
 
     public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
     {
-        var normalized = WikiHelpers.NormalizeLocale(locale);
+        var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
         if (normalized.Length == 0) return new NotFound();
 
         var parameters = new Dictionary<string, object?> { ["pageId"] = pageId, ["locale"] = normalized };
@@ -2671,11 +3385,12 @@ Delete the Task 5 stub block and add (4 spaces):
 
     public async Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
         string pageId, string locale, string title, string markdown,
-        string editorDbref, string? editSummary, bool published)
+        string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
     {
-        var normalized = WikiHelpers.NormalizeLocale(locale);
-        if (normalized.Length == 0)
-            return new Error<string>($"'{locale}' is not a recognised locale tag.");
+        var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
+        if (normalizedLocale.IsT1) return normalizedLocale.AsT1;
+
+        var normalized = normalizedLocale.AsT0;
 
         var pageLookup = await GetByIdAsync(pageId);
         if (pageLookup.IsT1)
@@ -2691,9 +3406,6 @@ Delete the Task 5 stub block and add (4 spaces):
         var html = _wikiRenderer.RenderToHtml(markdown);
         var plain = _wikiRenderer.ExtractPlainText(markdown);
 
-        var existing = await GetTranslationAsync(pageId, normalized);
-        var nextRevision = existing.IsT0 ? existing.AsT0.RevisionNumber + 1 : 1;
-
         var parameters = new Dictionary<string, object?>
         {
             ["pageId"] = pageId,
@@ -2704,25 +3416,17 @@ Delete the Task 5 stub block and add (4 spaces):
             ["plain"] = plain,
             ["editorDbref"] = editorDbref,
             ["now"] = now.ToString("O"),
-            ["published"] = published,
-            ["rev"] = nextRevision
+            ["published"] = published
         };
 
         try
         {
-            if (existing.IsT0)
+            if (expectedRevisionNumber is null)
             {
-                var key = NormalizeSurrealId(existing.AsT0.Id, "wiki_translation");
-                parameters["id"] = new StringRecordId(key);
-                await ExecuteAsync(
-                    "UPDATE $id MERGE { title: $title, markdownSource: $markdown, renderedHtml: $html, " +
-                    "plainText: $plain, lastEditorDbref: $editorDbref, updatedAt: $now, " +
-                    "published: $published, revisionNumber: $rev }",
-                    parameters);
-            }
-            else
-            {
+                // Create-only. A bare CREATE so the (pageId, locale) unique index arbitrates two writers who
+                // both believe they are creating the translation, rather than a read-then-write race here.
                 parameters["created"] = now.ToString("O");
+                parameters["rev"] = 1;
                 await ExecuteAsync("""
                     CREATE wiki_translation CONTENT {
                     	pageId: $pageId,
@@ -2740,12 +3444,51 @@ Delete the Task 5 stub block and add (4 spaces):
                     """,
                     parameters);
             }
+            else
+            {
+                // Compare-and-swap. The WHERE clause on revisionNumber is the condition and "no rows
+                // returned" is the conflict signal — this provider has no ambient transaction spanning the
+                // row update and the revision append, which is the fallback the spec permits.
+                //
+                // Never make this an unconditional UPDATE: two translators who both loaded revision 4 would
+                // both write 5 and one would lose their prose with the index none the wiser.
+                parameters["expected"] = expectedRevisionNumber.Value;
+                parameters["rev"] = expectedRevisionNumber.Value + 1;
+                var updateResponse = await ExecuteAsync(
+                    "UPDATE wiki_translation MERGE { title: $title, markdownSource: $markdown, " +
+                    "renderedHtml: $html, plainText: $plain, lastEditorDbref: $editorDbref, " +
+                    "updatedAt: $now, published: $published, revisionNumber: $rev } " +
+                    "WHERE pageId = $pageId AND locale = $locale AND revisionNumber = $expected " +
+                    "RETURN AFTER",
+                    parameters);
+
+                var updated = updateResponse.GetValue<List<WikiTranslationDbRecord>>(0);
+                if (updated is null or { Count: 0 })
+                {
+                    // Zero rows affected. Do NOT re-read and re-apply: that overwrites the winner with this
+                    // caller's stale markdown, which is the loss expectedRevisionNumber exists to prevent.
+                    var current = await GetTranslationAsync(pageId, normalized);
+                    return current.IsT0
+                        ? new Error<string>(
+                            $"The '{normalized}' translation changed while you were editing "
+                            + $"(expected revision {expectedRevisionNumber.Value}, found {current.AsT0.RevisionNumber}). "
+                            + "Reload and re-apply your changes.")
+                        : new Error<string>($"No '{normalized}' translation exists for page '{pageId}' to update.");
+                }
+            }
         }
         catch (Exception ex)
         {
-            // The (pageId, locale) unique index rejected a concurrent writer. Retry the read once.
-            var retry = await GetTranslationAsync(pageId, normalized);
-            if (retry.IsT0) return retry.AsT0;
+            // Only the create path can legitimately land here, via the unique-index rejection.
+            if (expectedRevisionNumber is null)
+            {
+                var existing = await GetTranslationAsync(pageId, normalized);
+                if (existing.IsT0)
+                    return new Error<string>(
+                        $"A '{normalized}' translation already exists for page '{pageId}'. "
+                        + "Pass its current revision number to update it.");
+            }
+
             return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");
         }
 
@@ -2759,7 +3502,7 @@ Delete the Task 5 stub block and add (4 spaces):
 
     public async Task<OneOf<OkNone, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
     {
-        var normalized = WikiHelpers.NormalizeLocale(locale);
+        var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
         if (normalized.Length == 0) return new NotFound();
 
         var lookup = await GetTranslationAsync(pageId, normalized);
@@ -2778,7 +3521,7 @@ Delete the Task 5 stub block and add (4 spaces):
     public async Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(
         string pageId, string locale, int skip, int take)
     {
-        var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocale(locale);
+        var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
 
         var parameters = new Dictionary<string, object?>
         {
@@ -2872,7 +3615,7 @@ Delete the Task 5 stub block and add (4 spaces):
             parameters);
 ```
 
-`WikiPageDbRecord` — add `public string? sourceLocale { get; set; }`; add `sourceLocale` to `WikiPageFields`; set `SourceLocale = record.sourceLocale ?? ""` in `MapToWikiPage`; write it in `CreateAsync`'s `CONTENT`. `WikiRevisionDbRecord` — add `public string? locale { get; set; }`, add `locale` to `WikiRevisionFields`, set `Locale = record.locale ?? ""` in `MapToWikiRevision`.
+`WikiPageDbRecord` — add `public string? sourceLocale { get; set; }`; add `sourceLocale` to `WikiPageFields`; set `SourceLocale = record.sourceLocale ?? ""` in `MapToWikiPage` (straight through — no substitution of the configured default); write it in `CreateAsync`'s `CONTENT`. `WikiRevisionDbRecord` — add `public string? locale { get; set; }`, add `locale` to `WikiRevisionFields`, set `Locale = record.locale ?? ""` in `MapToWikiRevision`.
 
 - [ ] **Step 5: Verify locally as far as possible**
 
@@ -2886,9 +3629,20 @@ Run: `dotnet run --project SharpMUSH.Tests`
 Expected: 4927 total / 0 failed.
 
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/SurrealMigrationIdempotencyTests/*"`
-Expected: PASS — the `REMOVE INDEX IF EXISTS` + re-`DEFINE` pair must stay idempotent across repeated migrations.
+Expected: PASS — the backfill `UPDATE`s and the `REMOVE INDEX IF EXISTS` + re-`DEFINE` pair must all stay idempotent across repeated migrations. This is the closest thing to local evidence that Step 1's ordering is safe; it is not a substitute for the CI run.
 
-**Docker is unavailable locally.** Acceptance gate: CI `test-integration` green on **all three** matrix entries (`arangodb`, `memgraph`, `surrealdb`). Phase 2 is not complete until that is true.
+- [ ] **Step 5a: Confirm all three backends now agree**
+
+```bash
+grep -rn "revisionNumber UNIQUE\|RevisionNumber\"\]\|IS UNIQUE" \
+  SharpMUSH.Database.SurrealDB/SurrealDatabase.Migration.cs \
+  SharpMUSH.Database.ArangoDB/Migrations/ \
+  SharpMUSH.Database.Memgraph/MemgraphDatabase.Migration.cs
+```
+
+Expected: each of the three declares a unique constraint over `(PageId/pageId, Locale/locale, RevisionNumber/revisionNumber)`, and **no** store still has a constraint over the two-field `(pageId, revisionNumber)` pair. If one backend is missing its constraint the Task 6 negative test will simply pass there, silently — that asymmetry is the whole defect this task set exists to close, so check it by reading, not by test colour.
+
+**Docker is unavailable locally.** Acceptance gate: CI `test-integration` green on **all three** matrix entries (`arangodb`, `memgraph`, `surrealdb`). Phase 2 is not complete until that is true, and specifically not until `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber` and `RevisionIndex_AcceptsATranslationRevisionOneBesideASourceRevisionOne` are green on all three rather than one.
 
 - [ ] **Step 6: Commit**
 
@@ -2913,6 +3667,8 @@ Draft visibility is a first-class test case here, not an afterthought: it is the
 
 The service takes `includeDrafts` as a plain `bool` rather than a `ClaimsPrincipal` so that `SharpMUSH.Library` keeps no ASP.NET dependency. The controller computes it in Task 11.
 
+**This is also the one place that copes with an unstamped `SourceLocale`, and it does so as a diagnostic rather than a design.** An earlier draft of this plan had the service normalise empty → `Wiki.DefaultLocale` on every read. That was a data-integrity bug: an admin changing `wiki_default_locale` would silently change the authored locale of every page predating the field. The field is now materialised once by the Tasks 7–9 backfill and by every create path, so `SourceLocaleOf` reads `page.SourceLocale` straight through. If it is nevertheless empty, the backfill has not run — the service **logs a warning naming the page** and uses the configured default *for that single read* so the page still renders, because a read can never fail for locale reasons. That is graceful degradation over a broken row, not a documented meaning for empty, and it is expected never to fire.
+
 **Files:**
 - Create: `SharpMUSH.Library/Services/Interfaces/IWikiLocalizationService.cs`
 - Create: `SharpMUSH.Library/Services/WikiLocalizationService.cs`
@@ -2920,9 +3676,10 @@ The service takes `includeDrafts` as a plain `bool` rather than a `ClaimsPrincip
 - Test: `SharpMUSH.Tests/Wiki/WikiLocalizationServiceTests.cs` (create)
 
 **Interfaces:**
-- Consumes: `IWikiService` (Task 5), `IWikiLocaleResolver` (Task 4), `LocalizedWikiPage` / `WikiTranslationSummary` (Task 3).
+- Consumes: `IWikiService` (Task 5), `IWikiLocaleResolver` (Task 4), `LocalizedWikiPage` / `WikiTranslationSummary` (Task 3), `ILogger<WikiLocalizationService>`.
 - Produces, all on `IWikiLocalizationService`:
   - `string DefaultLocale { get; }`
+  - `string SourceLocaleOf(WikiPage page)` — the page's materialised source locale, canonicalised. The one accessor every caller uses instead of re-deriving it (Task 12's `GetRevisions` in particular).
   - `Task<OneOf<LocalizedWikiPage, NotFound>> GetLocalizedBySlugAsync(string slug, string? category, WikiNamespace ns, string? requestedLocale, bool includeDrafts)`
   - `Task<LocalizedWikiPage> LocalizeAsync(WikiPage page, string? requestedLocale, bool includeDrafts)`
   - `Task<IReadOnlyList<LocalizedWikiPage>> LocalizeAllAsync(IReadOnlyList<WikiPage> pages, string? requestedLocale, bool includeDrafts)`
@@ -2934,6 +3691,7 @@ The service takes `includeDrafts` as a plain `bool` rather than a `ClaimsPrincip
 Create `SharpMUSH.Tests/Wiki/WikiLocalizationServiceTests.cs` (tabs):
 
 ```csharp
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
@@ -2958,10 +3716,11 @@ public class WikiLocalizationServiceTests
 		monitor.CurrentValue.Returns(TestSharpMushOptions.Create(wikiDefaultLocale: defaultLocale));
 		var storage = new InMemoryWikiService(new WikiMarkdigPipeline());
 		var resolver = new WikiLocaleResolver(monitor);
-		return (storage, new WikiLocalizationService(storage, resolver));
+		return (storage, new WikiLocalizationService(
+			storage, resolver, NullLogger<WikiLocalizationService>.Instance));
 	}
 
-	private static async Task<WikiPage> SeedAsync(IWikiService storage, string sourceLocale = "en") =>
+	private static async Task<WikiPage> SeedAsync(IWikiService storage, string? sourceLocale = "en") =>
 		(await storage.CreateAsync("Dragons", "en **body**", "#1", WikiNamespace.Main, "general", sourceLocale)).AsT0;
 
 	[Test]
@@ -2985,7 +3744,7 @@ public class WikiLocalizationServiceTests
 	{
 		var (storage, service) = Build();
 		var page = await SeedAsync(storage);
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, published: true);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, published: true, expectedRevisionNumber: null);
 
 		var result = await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr", false);
 
@@ -3001,7 +3760,7 @@ public class WikiLocalizationServiceTests
 	{
 		var (storage, service) = Build();
 		var page = await SeedAsync(storage);
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await service.GetLocalizedBySlugAsync(
 			"dragons", "general", WikiNamespace.Main, "fr", includeDrafts: false);
@@ -3022,7 +3781,7 @@ public class WikiLocalizationServiceTests
 	{
 		var (storage, service) = Build();
 		var page = await SeedAsync(storage);
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await service.GetLocalizedBySlugAsync(
 			"dragons", "general", WikiNamespace.Main, "fr", includeDrafts: true);
@@ -3041,8 +3800,8 @@ public class WikiLocalizationServiceTests
 	{
 		var (storage, service) = Build();
 		var page = await SeedAsync(storage);
-		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, published: true);
-		await storage.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, published: false);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, published: true, expectedRevisionNumber: null);
+		await storage.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var forReader = await service.GetVisibleTranslationsAsync(page.Id, includeDrafts: false);
 		var forEditor = await service.GetVisibleTranslationsAsync(page.Id, includeDrafts: true);
@@ -3056,8 +3815,8 @@ public class WikiLocalizationServiceTests
 	{
 		var (storage, service) = Build();
 		var page = await SeedAsync(storage);
-		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, published: true);
-		await storage.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, published: false);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, published: true, expectedRevisionNumber: null);
+		await storage.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var locales = await service.GetVisibleLocalesAsync(page, includeDrafts: false);
 
@@ -3065,18 +3824,43 @@ public class WikiLocalizationServiceTests
 	}
 
 	[Test]
-	public async Task EmptySourceLocale_IsNormalisedToTheConfiguredDefault()
+	public async Task StampedSourceLocale_IsNotReinterpretedWhenTheConfiguredDefaultChanges()
 	{
+		// The regression test for the bug the design fixes. A page authored in French keeps being a French
+		// page whatever wiki_default_locale later says, so an admin flipping that setting cannot silently
+		// relabel existing content, start rejecting `fr` as "shadowing the source", or change what the
+		// revision history means.
+		var (storageA, serviceA) = Build("en");
+		await SeedAsync(storageA, sourceLocale: "fr");
+		var (storageB, serviceB) = Build("de");
+		await SeedAsync(storageB, sourceLocale: "fr");
+
+		var onEnglishGame = await serviceA.GetLocalizedBySlugAsync(
+			"dragons", "general", WikiNamespace.Main, "es", false);
+		var onGermanGame = await serviceB.GetLocalizedBySlugAsync(
+			"dragons", "general", WikiNamespace.Main, "es", false);
+
+		await Assert.That(onEnglishGame.AsT0.Locale).IsEqualTo("fr");
+		await Assert.That(onGermanGame.AsT0.Locale)
+			.IsEqualTo("fr")
+			.Because("SourceLocale is materialised once by the migration, never re-derived from configuration");
+	}
+
+	[Test]
+	public async Task UnstampedSourceLocale_StillRendersAndIsTreatedAsABrokenRow()
+	{
+		// Reachable only if the Tasks 7-9 backfill has not run. A read can never fail for locale reasons, so
+		// the page still renders using the configured default — but this is graceful degradation over a
+		// broken row, logged at Warning, NOT a documented meaning for empty. Nothing may depend on it.
 		var (storage, service) = Build("fr");
-		await SeedAsync(storage, sourceLocale: string.Empty);
+		await SeedAsync(storage, sourceLocale: null);
 
 		var result = await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr", false);
 
-		var localized = result.AsT0;
-		await Assert.That(localized.Locale)
-			.IsEqualTo("fr")
-			.Because("empty SourceLocale means Wiki.DefaultLocale, which is what makes 'no data migration' true");
-		await Assert.That(localized.IsFallback).IsFalse();
+		await Assert.That(result.IsT0)
+			.IsTrue()
+			.Because("an unmigrated row must not turn every read of that page into an error");
+		await Assert.That(result.AsT0.Locale).IsEqualTo("fr");
 	}
 
 	[Test]
@@ -3084,7 +3868,7 @@ public class WikiLocalizationServiceTests
 	{
 		var (storage, service) = Build();
 		var page = await SeedAsync(storage);
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, true);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, true, expectedRevisionNumber: null);
 
 		var result = await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr-CA", false);
 
@@ -3128,7 +3912,7 @@ public class WikiLocalizationServiceTests
 		var (storage, service) = Build();
 		var first = (await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "general", "en")).AsT0;
 		var second = (await storage.CreateAsync("Beta", "b", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(first.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, true);
+		await storage.UpsertTranslationAsync(first.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, true, expectedRevisionNumber: null);
 
 		var localized = await service.LocalizeAllAsync([first, second], "fr", includeDrafts: false);
 
@@ -3145,7 +3929,7 @@ public class WikiLocalizationServiceTests
 	{
 		var (storage, service) = Build();
 		var page = await SeedAsync(storage);
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, true);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, true, expectedRevisionNumber: null);
 
 		var localized = (await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr", false)).AsT0;
 
@@ -3191,6 +3975,18 @@ public interface IWikiLocalizationService
 	string DefaultLocale { get; }
 
 	/// <summary>
+	/// The locale a page was authored in: its materialised <see cref="WikiPage.SourceLocale"/>, canonicalised.
+	/// </summary>
+	/// <remarks>
+	/// Exists so no caller re-derives this. The field is stamped once by <c>Migration_AddWikiTranslations</c>
+	/// and by every create path, and is immutable thereafter — the configured default affects new pages and
+	/// fallback resolution, never the interpretation of an existing one. An empty value means the backfill has
+	/// not run: this method logs a warning and returns <see cref="DefaultLocale"/> so the page still renders,
+	/// which is degradation over a broken row rather than a meaning callers may rely on.
+	/// </remarks>
+	string SourceLocaleOf(WikiPage page);
+
+	/// <summary>
 	/// Looks a page up by identity and resolves it into <paramref name="requestedLocale"/>.
 	/// Returns <c>NotFound</c> only when the page itself does not exist — never for locale reasons.
 	/// </summary>
@@ -3213,8 +4009,8 @@ public interface IWikiLocalizationService
 	Task<IReadOnlyList<WikiTranslationSummary>> GetVisibleTranslationsAsync(string pageId, bool includeDrafts);
 
 	/// <summary>
-	/// Every locale this reader can actually read the page in: the page's effective source locale first,
-	/// then each visible translation's locale. Drives the language chip row and <c>hreflang</c>.
+	/// Every locale this reader can actually read the page in: the page's source locale first, then each
+	/// visible translation's locale. Drives the language chip row and <c>hreflang</c>.
 	/// </summary>
 	Task<IReadOnlyList<string>> GetVisibleLocalesAsync(WikiPage page, bool includeDrafts);
 }
@@ -3225,6 +4021,7 @@ public interface IWikiLocalizationService
 Create `SharpMUSH.Library/Services/WikiLocalizationService.cs` (tabs):
 
 ```csharp
+using Microsoft.Extensions.Logging;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Models.Wiki;
@@ -3235,7 +4032,8 @@ namespace SharpMUSH.Library.Services;
 /// <inheritdoc cref="IWikiLocalizationService"/>
 public sealed class WikiLocalizationService(
 	IWikiService wikiService,
-	IWikiLocaleResolver resolver) : IWikiLocalizationService
+	IWikiLocaleResolver resolver,
+	ILogger<WikiLocalizationService> logger) : IWikiLocalizationService
 {
 	public string DefaultLocale => resolver.DefaultLocale;
 
@@ -3280,7 +4078,7 @@ public sealed class WikiLocalizationService(
 	public async Task<IReadOnlyList<string>> GetVisibleLocalesAsync(WikiPage page, bool includeDrafts)
 	{
 		var visible = await GetVisibleTranslationsAsync(page.Id, includeDrafts);
-		var source = EffectiveSourceLocale(page);
+		var source = SourceLocaleOf(page);
 
 		return new[] { source }
 			.Concat(visible.Select(t => t.Locale))
@@ -3290,14 +4088,27 @@ public sealed class WikiLocalizationService(
 			.AsReadOnly();
 	}
 
-	/// <summary>
-	/// The page's source locale, with the documented empty → <c>Wiki.DefaultLocale</c> normalisation that
-	/// lets pre-existing documents keep working without a data migration.
-	/// </summary>
-	private string EffectiveSourceLocale(WikiPage page)
+	/// <inheritdoc/>
+	public string SourceLocaleOf(WikiPage page)
 	{
-		var normalized = WikiHelpers.NormalizeLocale(page.SourceLocale);
-		return normalized.Length == 0 ? resolver.DefaultLocale : normalized;
+		// Read the materialised value straight through. Substituting the configured default for a stamped
+		// value would mean an admin changing wiki_default_locale silently relabels the authored locale of
+		// every existing page — an English page starts claiming to be French, UpsertTranslationAsync begins
+		// rejecting `fr` as "shadowing the source", and revision history changes meaning, with no migration
+		// and nothing to alert on.
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(page.SourceLocale);
+		if (normalized.Length > 0) return normalized;
+
+		// Unreachable once Migration_AddWikiTranslations has run, which is why it is a Warning rather than a
+		// branch anything is allowed to depend on. A read can never fail for locale reasons, so the page
+		// still renders — but the row is broken, and pre-production the fix is to re-run migrations or wipe
+		// and reseed, not to make this substitution part of the design.
+		logger.LogWarning(
+			"Wiki page {PageId} ({Slug}) has no SourceLocale. The Migration_AddWikiTranslations backfill has "
+			+ "not run on this database; serving it as '{DefaultLocale}' for this read only.",
+			page.Id, page.Slug, resolver.DefaultLocale);
+
+		return resolver.DefaultLocale;
 	}
 
 	/// <summary>The translations this reader may see, as full rows so the body is available if one wins.</summary>
@@ -3317,13 +4128,15 @@ public sealed class WikiLocalizationService(
 	}
 
 	/// <summary>
-	/// The single construction site for <see cref="LocalizedWikiPage"/>. Both locale fields are normalised
-	/// here, which is what guarantees the <c>CultureInfo</c> calls in <c>IsFallback</c> cannot throw.
+	/// The single construction site for <see cref="LocalizedWikiPage"/>. The requested tag is normalised
+	/// here and the source tag comes from <see cref="SourceLocaleOf"/>; together with every write boundary
+	/// rejecting an unparseable locale, that is what guarantees the <c>CultureInfo</c> calls in
+	/// <c>IsFallback</c> cannot throw.
 	/// </summary>
 	private LocalizedWikiPage Build(
 		WikiPage page, string? requestedLocale, IReadOnlyList<WikiTranslation> visible)
 	{
-		var source = EffectiveSourceLocale(page);
+		var source = SourceLocaleOf(page);
 		var requested = resolver.NormalizeRequested(requestedLocale);
 		var resolution = resolver.Resolve(requested, source, visible.Select(t => t.Locale).ToList());
 
@@ -3374,7 +4187,10 @@ public sealed class WikiLocalizationService(
 - [ ] **Step 6: Run tests to verify they pass**
 
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/WikiLocalizationServiceTests/*"`
-Expected: PASS — all 14 tests, including both draft-visibility cases.
+Expected: PASS — all 15 tests, including both draft-visibility cases and `StampedSourceLocale_IsNotReinterpretedWhenTheConfiguredDefaultChanges`.
+
+Run: `grep -rn "EffectiveSourceLocale" SharpMUSH.Library SharpMUSH.Server`
+Expected: **no output**. The re-derive-on-read helper must be gone, not merely unused — `SourceLocaleOf` replaces it and Task 12 consumes it.
 
 Run: `dotnet build && dotnet run --project SharpMUSH.Tests`
 Expected: 0 errors; 4927 total / 0 failed.
@@ -3433,7 +4249,7 @@ Create `SharpMUSH.Tests/Server/Controllers/WikiControllerLocaleTests.cs` (tabs).
 	{
 		var (controller, storage) = BuildAnonymous();
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, published: true);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, published: true, expectedRevisionNumber: null);
 
 		var result = await controller.GetPage("main", "general", "dragons", lang: "fr");
 
@@ -3450,7 +4266,7 @@ Create `SharpMUSH.Tests/Server/Controllers/WikiControllerLocaleTests.cs` (tabs).
 	{
 		var (controller, storage) = BuildAnonymous();
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.GetPage("main", "general", "dragons", lang: "fr");
 
@@ -3468,7 +4284,7 @@ Create `SharpMUSH.Tests/Server/Controllers/WikiControllerLocaleTests.cs` (tabs).
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.GetPage("main", "general", "dragons", lang: "fr");
 
@@ -3644,7 +4460,9 @@ and add the shared helper near the other private helpers:
 		var localized = await localization.LocalizeAsync(page, lang, includeDrafts);
 		var available = await localization.GetVisibleLocalesAsync(page, includeDrafts);
 
-		if (!string.IsNullOrWhiteSpace(lang) && WikiHelpers.NormalizeLocale(lang).Length == 0)
+		// Read path: a bad tag is a client-side hint, never a 400. NormalizeLocaleOrEmpty is the permissive
+		// form for exactly this reason — the OneOf-returning NormalizeLocale belongs at write boundaries.
+		if (!string.IsNullOrWhiteSpace(lang) && WikiHelpers.NormalizeLocaleOrEmpty(lang).Length == 0)
 			logger.LogDebug("Unrecognised wiki lang tag ignored: {Lang}", LogSanitizer.Sanitize(lang));
 
 		return ToDto(localized, available);
@@ -3665,7 +4483,7 @@ For each hit, construct as:
 		var resolver = new WikiLocaleResolver(optionsMonitor);
 		var controller = new WikiController(
 			storage,
-			new WikiLocalizationService(storage, resolver),
+			new WikiLocalizationService(storage, resolver, NullLogger<WikiLocalizationService>.Instance),
 			Substitute.For<IPrerenderCacheService>(),
 			Substitute.For<ILogger<WikiController>>());
 ```
@@ -3693,19 +4511,23 @@ git commit -m "feat(wiki): serve localized page reads through ?lang="
 
 Writes are gated on the same permission as editing the page (`PortalPermission.WikiEdit`) **and** on the *source* page's `IsProtected`, mirroring `UpdatePage` exactly. Deleting a translation is an edit, not a page deletion, so it is `WikiEdit` rather than `WikiDelete`.
 
+The upsert request carries the client's **`ExpectedRevisionNumber`** and the controller passes it straight through. A stale value comes back as an `Error<string>` that this endpoint surfaces as **409 Conflict**, not 400: the request was well-formed and the client's correct response is to reload, which is a different instruction from "you sent something invalid". Nothing here retries.
+
+This task also gives `WikiController.CreatePage` its `sourceLocale`, so pages created through the API are stamped at birth rather than waiting for the next migration pass.
+
 **Files:**
-- Modify: `SharpMUSH.Server/Controllers/WikiController.cs` (four new actions; `?lang=` on `GetRevisions`; new DTO + request records; update the routes doc block at lines 21–41)
+- Modify: `SharpMUSH.Server/Controllers/WikiController.cs` (four new actions; `sourceLocale` on `CreatePage`; `?lang=` on `GetRevisions`; new DTO + request records; update the routes doc block at lines 21–41)
 - Test: `SharpMUSH.Tests/Server/Controllers/WikiControllerTranslationTests.cs` (create)
 
 **Interfaces:**
-- Consumes: `IWikiLocalizationService`, `IWikiService` translation methods, `IncludeDrafts` (Task 11).
+- Consumes: `IWikiLocalizationService` (including `SourceLocaleOf` and `DefaultLocale`), `IWikiService` translation methods, `IncludeDrafts` (Task 11).
 - Produces:
   - `GET /api/wiki/{slug}/translations?ns=&category=` → `WikiTranslationSummaryDto[]`
-  - `PUT /api/wiki/{slug}/translations/{locale}?ns=&category=` → `WikiTranslationSummaryDto`
+  - `PUT /api/wiki/{slug}/translations/{locale}?ns=&category=` → `WikiTranslationSummaryDto`, or **409** on a revision conflict
   - `DELETE /api/wiki/{slug}/translations/{locale}?ns=&category=` → 204
   - `GET /api/wiki/{slug}/revisions?lang=` → that locale's stream
   - `WikiController.WikiTranslationSummaryDto(string Locale, string Title, bool Published, DateTimeOffset UpdatedAt, int RevisionNumber)`
-  - `WikiController.UpsertTranslationRequest(string Title, string Markdown, string? EditSummary, bool Published)`
+  - `WikiController.UpsertTranslationRequest(string Title, string Markdown, string? EditSummary, bool Published, int? ExpectedRevisionNumber)`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -3720,7 +4542,8 @@ Create `SharpMUSH.Tests/Server/Controllers/WikiControllerTranslationTests.cs` (t
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
-			new WikiController.UpsertTranslationRequest("Dragons (fr)", "corps fr", "première", Published: true),
+			new WikiController.UpsertTranslationRequest(
+				"Dragons (fr)", "corps fr", "première", Published: true, ExpectedRevisionNumber: null),
 			ns: "main", category: "general");
 
 		var dto = (WikiController.WikiTranslationSummaryDto)((OkObjectResult)result).Value!;
@@ -3737,7 +4560,7 @@ Create `SharpMUSH.Tests/Server/Controllers/WikiControllerTranslationTests.cs` (t
 
 		var result = await controller.PutTranslation(
 			"dragons", "en",
-			new WikiController.UpsertTranslationRequest("T", "m", null, true),
+			new WikiController.UpsertTranslationRequest("T", "m", null, true, null),
 			ns: "main", category: "general");
 
 		await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
@@ -3752,7 +4575,7 @@ Create `SharpMUSH.Tests/Server/Controllers/WikiControllerTranslationTests.cs` (t
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
-			new WikiController.UpsertTranslationRequest("T", "m", null, true),
+			new WikiController.UpsertTranslationRequest("T", "m", null, true, null),
 			ns: "main", category: "general");
 
 		await Assert.That(result).IsTypeOf<ForbidResult>()
@@ -3766,10 +4589,60 @@ Create `SharpMUSH.Tests/Server/Controllers/WikiControllerTranslationTests.cs` (t
 
 		var result = await controller.PutTranslation(
 			"ghost", "fr",
-			new WikiController.UpsertTranslationRequest("T", "m", null, true),
+			new WikiController.UpsertTranslationRequest("T", "m", null, true, null),
 			ns: "main", category: "general");
 
 		await Assert.That(result).IsTypeOf<NotFoundResult>();
+	}
+
+	[Test]
+	public async Task PutTranslation_ReturnsConflictOnAStaleExpectedRevision()
+	{
+		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		await storage.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "v2", "corps v2", "#2", null, true, expectedRevisionNumber: 1);
+
+		var result = await controller.PutTranslation(
+			"dragons", "fr",
+			new WikiController.UpsertTranslationRequest("perdu", "corps perdu", null, true, ExpectedRevisionNumber: 1),
+			ns: "main", category: "general");
+
+		await Assert.That(result)
+			.IsTypeOf<ConflictObjectResult>()
+			.Because("the request was well-formed; the client's correct response is to reload, not to fix its body");
+		await Assert.That((await storage.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
+			.IsEqualTo("corps v2")
+			.Because("the endpoint must never retry a conflict — that re-applies the loser's stale markdown");
+	}
+
+	[Test]
+	public async Task PutTranslation_ReturnsConflictWhenCreateOnlyHitsAnExistingTranslation()
+	{
+		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		await storage.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+
+		var result = await controller.PutTranslation(
+			"dragons", "fr",
+			new WikiController.UpsertTranslationRequest("écrasé", "corps écrasé", null, true, ExpectedRevisionNumber: null),
+			ns: "main", category: "general");
+
+		await Assert.That(result).IsTypeOf<ConflictObjectResult>();
+	}
+
+	[Test]
+	public async Task CreatePage_StampsTheConfiguredDefaultAsTheSourceLocale()
+	{
+		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
+
+		await controller.CreatePage(
+			new WikiController.CreatePageRequest("Dragons", "en body", Namespace: "main", Category: "general"));
+
+		var created = await storage.GetBySlugAsync("dragons", "general", WikiNamespace.Main);
+		await Assert.That(created.AsT0.SourceLocale)
+			.IsEqualTo("en")
+			.Because("SourceLocale is materialised at creation, not re-derived on every later read");
 	}
 
 	[Test]
@@ -3777,8 +4650,8 @@ Create `SharpMUSH.Tests/Server/Controllers/WikiControllerTranslationTests.cs` (t
 	{
 		var (controller, storage) = BuildAnonymous();
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, published: true);
-		await storage.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, published: false);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, published: true, expectedRevisionNumber: null);
+		await storage.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.GetTranslations("dragons", ns: "main", category: "general");
 
@@ -3791,7 +4664,7 @@ Create `SharpMUSH.Tests/Server/Controllers/WikiControllerTranslationTests.cs` (t
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
 		var result = await controller.DeleteTranslation("dragons", "fr", ns: "main", category: "general");
 
@@ -3805,8 +4678,8 @@ Create `SharpMUSH.Tests/Server/Controllers/WikiControllerTranslationTests.cs` (t
 		var (controller, storage) = BuildAnonymous();
 		var page = (await storage.CreateAsync("Dragons", "v1", "#1", WikiNamespace.Main, "general", "en")).AsT0;
 		await storage.UpdateAsync(page.Id, "v2", "#1");
-		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "fr1", "#2", null, true);
-		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "fr2", "#2", null, true);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "fr1", "#2", null, true, expectedRevisionNumber: null);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "fr2", "#2", null, true, expectedRevisionNumber: 1);
 
 		var french = await controller.GetRevisions("dragons", 0, 20, "main", "general", lang: "fr");
 		var source = await controller.GetRevisions("dragons", 0, 20, "main", "general", lang: null);
@@ -3840,7 +4713,16 @@ In `WikiController`, next to the other nested records:
 		int RevisionNumber);
 
 	/// <summary>Request body for creating or updating one locale's translation of a page.</summary>
-	public record UpsertTranslationRequest(string Title, string Markdown, string? EditSummary, bool Published);
+	/// <param name="ExpectedRevisionNumber">
+	/// The <c>RevisionNumber</c> the editor loaded, for optimistic concurrency. Null means create-only.
+	/// A stale value is answered with 409 and must not be retried — see <see cref="PutTranslation"/>.
+	/// </param>
+	public record UpsertTranslationRequest(
+		string Title,
+		string Markdown,
+		string? EditSummary,
+		bool Published,
+		int? ExpectedRevisionNumber);
 ```
 
 and the mapper next to the other `ToDto` methods:
@@ -3894,7 +4776,7 @@ Append to `WikiController` (before the static prerender generators):
 
 		var result = await wikiService.UpsertTranslationAsync(
 			lookup.AsT0.Id, locale, request.Title, request.Markdown,
-			editorDbref, request.EditSummary, request.Published);
+			editorDbref, request.EditSummary, request.Published, request.ExpectedRevisionNumber);
 
 		return result.Match<IActionResult>(
 			translation =>
@@ -3908,8 +4790,26 @@ Append to `WikiController` (before the static prerender generators):
 					translation.Locale, translation.Title, translation.Published,
 					translation.UpdatedAt, translation.RevisionNumber));
 			},
-			err => BadRequest(new { error = err.Value }));
+			// A revision conflict is 409, not 400: the request was well-formed and the client's correct
+			// response is to reload, which is a different instruction from "your body was invalid". The
+			// endpoint does not retry — retrying would re-apply this caller's stale markdown over the
+			// winner's, which is the loss expectedRevisionNumber exists to prevent.
+			err => IsRevisionConflict(err.Value)
+				? Conflict(new { error = err.Value, reload = true })
+				: BadRequest(new { error = err.Value }));
 	}
+
+	/// <summary>
+	/// True when an upsert error is an optimistic-concurrency conflict rather than a bad request.
+	/// </summary>
+	/// <remarks>
+	/// Matched on the storage layer's wording because <c>OneOf&lt;T, Error&lt;string&gt;&gt;</c> carries no
+	/// error code. If a third conflict phrasing is ever added, promote this to a typed error rather than
+	/// growing the string list — this is the one place that would silently start answering 400.
+	/// </remarks>
+	private static bool IsRevisionConflict(string error) =>
+		error.Contains("changed while you were editing", StringComparison.OrdinalIgnoreCase)
+		|| error.Contains("already exists for page", StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// DELETE /api/wiki/{slug}/translations/{locale}?ns=&amp;category=
@@ -3970,16 +4870,28 @@ Replace `GetRevisions` (lines 225–235). The existing signature's trailing opti
 		var localized = await localization.LocalizeAsync(page, lang, IncludeDrafts);
 
 		// The source page's revisions are stored with an empty Locale; a translation's carry its tag.
-		var effectiveSource = WikiHelpers.NormalizeLocale(page.SourceLocale) is { Length: > 0 } src
-			? src
-			: localization.DefaultLocale;
-		var stream = string.Equals(localized.Locale, effectiveSource, StringComparison.OrdinalIgnoreCase)
+		// SourceLocaleOf, not a local re-derivation: SourceLocale is materialised once and there is exactly
+		// one accessor for it, so a controller cannot start disagreeing with the resolver about what
+		// language a page was authored in.
+		var stream = string.Equals(
+			localized.Locale, localization.SourceLocaleOf(page), StringComparison.OrdinalIgnoreCase)
 			? string.Empty
 			: localized.Locale;
 
 		var revisions = await wikiService.GetRevisionsForLocaleAsync(page.Id, stream, skip, take);
 		return Ok(revisions.Select(ToDto));
 	}
+```
+
+- [ ] **Step 5a: Stamp `SourceLocale` on API-created pages**
+
+`CreatePage` (line 276) creates a page without a source locale today, which would leave it unstamped until the next migration pass. Pass the configured default — the one place that legitimately turns "no locale supplied" into a concrete one, at **write** time:
+
+```csharp
+		// SourceLocale is materialised at creation. The configured default affects new pages and fallback
+		// resolution only; it never reinterprets a page that already exists.
+		var result = await wikiService.CreateAsync(
+			request.Title, request.Markdown, authorDbref, ns, request.Category, localization.DefaultLocale);
 ```
 
 - [ ] **Step 6: Update the routes doc block**
@@ -3995,7 +4907,7 @@ In the `<summary>` at lines 21–41, add after the `{slug}/revisions/{n}` line:
 - [ ] **Step 7: Run tests to verify they pass**
 
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/WikiControllerTranslationTests/*"`
-Expected: PASS.
+Expected: PASS, including both 409 cases and `CreatePage_StampsTheConfiguredDefaultAsTheSourceLocale`.
 
 Run: `dotnet build && dotnet run --project SharpMUSH.Tests`
 Expected: 0 errors; 4927 total / 0 failed.
@@ -4004,7 +4916,7 @@ Expected: 0 errors; 4927 total / 0 failed.
 
 ```bash
 git add SharpMUSH.Server/Controllers/WikiController.cs SharpMUSH.Tests/Server/Controllers
-git commit -m "feat(wiki): add translation CRUD endpoints and per-locale revision reads"
+git commit -m "feat(wiki): add translation CRUD endpoints with optimistic concurrency"
 ```
 
 ---
@@ -4034,7 +4946,7 @@ Append to `SharpMUSH.Tests/Server/Controllers/WikiControllerLocaleTests.cs`:
 		var (controller, storage) = BuildAnonymous();
 		var alpha = (await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "general", "en")).AsT0;
 		await storage.CreateAsync("Beta", "b", "#1", WikiNamespace.Main, "general", "en");
-		await storage.UpsertTranslationAsync(alpha.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, published: true);
+		await storage.UpsertTranslationAsync(alpha.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, published: true, expectedRevisionNumber: null);
 
 		var result = await controller.GetRecentChanges(count: 20, lang: "fr");
 
@@ -4067,7 +4979,7 @@ Append to `SharpMUSH.Tests/Server/Controllers/WikiControllerLocaleTests.cs`:
 	{
 		var (controller, storage) = BuildAnonymous();
 		var page = (await storage.CreateAsync("Help Intro", "h", "#1", WikiNamespace.Help, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Intro (brouillon)", "h-fr", "#2", null, published: false);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Intro (brouillon)", "h-fr", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.ListNamespacePages("help", skip: 0, take: 50, lang: "fr");
 
@@ -4201,9 +5113,10 @@ git commit -m "feat(wiki): localize the listing endpoints without multiplying ro
 - Create: `SharpMUSH.Client/Models/WikiTranslationInfo.cs`
 - Create: `SharpMUSH.Client/Resources/PortalLocales.cs`
 - Modify: `SharpMUSH.Client/Components/LanguagePicker.razor` (consume `PortalLocales`)
-- Modify: `SharpMUSH.Client/Models/WikiArticle.cs` (four locale properties)
+- Modify: `SharpMUSH.Client/Models/WikiArticle.cs` (four locale properties + `RevisionNumber`)
+- Create: `SharpMUSH.Client/Models/WikiTranslationSaveError.cs` (message + `NeedsReload`, so a 409 is distinguishable from a 400)
 - Modify: `SharpMUSH.Client/Models/WikiPageSummary.cs` (`Locale`, `IsFallback`)
-- Modify: `SharpMUSH.Client/Services/WikiService.cs` (DTO mirror, `lang` params, three new methods, `LangQuery` helper)
+- Modify: `SharpMUSH.Client/Services/WikiService.cs` (DTO mirror, `lang` params, three new methods, `LangQuery` helper, 409 handling on the upsert)
 - Modify: `SharpMUSH.Client/Resources/SharedResource.resx`, `SharedResource.fr.resx`
 - Test: `SharpMUSH.Tests.BUnit/Resources/PortalLocalesTests.cs` (create)
 - Test: `SharpMUSH.Tests.BUnit/Resources/SharedResourceLocalizationTests.cs` (append a guard)
@@ -4215,14 +5128,15 @@ git commit -m "feat(wiki): localize the listing endpoints without multiplying ro
   - `PortalLocales.Codes` → `IReadOnlyList<string>`
   - `PortalLocales.DisplayName(string code)` → `string` (native name, first letter upper-cased)
   - `SharpMUSH.Client.Models.WikiTranslationInfo(string Locale, string Title, bool Published, DateTimeOffset UpdatedAt, int RevisionNumber)`
-  - `WikiArticle.Locale` / `.RequestedLocale` / `.IsFallback` / `.AvailableLocales` (`List<string>`)
+  - `WikiArticle.Locale` / `.RequestedLocale` / `.IsFallback` / `.AvailableLocales` (`List<string>`) / `.RevisionNumber` (`int`) — the **served** row's revision number, which Task 16 passes back as `expectedRevisionNumber`
   - `WikiPageSummary.Locale` / `.IsFallback` (init-only)
   - `WikiService.GetWikiArticle(string slug, string? category = null, string? ns = null, string? lang = null)`
   - `WikiService.GetTranslationsAsync(string slug, string? ns = null, string? category = null)` → `ValueTask<IReadOnlyList<WikiTranslationInfo>>`
-  - `WikiService.UpsertTranslationAsync(string slug, string locale, string title, string markdown, bool published, string? editSummary = null, string? ns = null, string? category = null)` → `ValueTask<OneOf<WikiTranslationInfo, string>>`
+  - `WikiService.UpsertTranslationAsync(string slug, string locale, string title, string markdown, bool published, int? expectedRevisionNumber, string? editSummary = null, string? ns = null, string? category = null)` → `ValueTask<OneOf<WikiTranslationInfo, WikiTranslationSaveError>>`
+  - `SharpMUSH.Client.Models.WikiTranslationSaveError(string Message, bool NeedsReload)` — `NeedsReload` is set from a 409 so `WikiEdit` can offer a reload instead of showing a plain failure toast
   - `WikiService.DeleteTranslationAsync(string slug, string locale, string? ns = null, string? category = null)` → `ValueTask<OneOf<None, string>>`
   - `lang` as a trailing optional parameter on `GetRecentChangesAsync`, `GetNamespacePagesAsync`, `GetAllPagesAsync`, `GetByCategoryAsync`, `GetByTagAsync`, `GetRevisionsAsync`
-- New resx keys produced here (both files): `WikiFallbackNotice`, `WikiFallbackCreateTranslation`, `WikiAvailableTranslations`, `WkLocaleSelector`, `WkAddTranslation`, `WkSourceLocaleLabel`, `WkInheritedFromSource`, `WkTranslationSaved`, `WkTranslationSaveFailed`, `WkDeleteTranslation`, `WkTranslationDeleteConfirmTitle`, `WkTranslationDeleteConfirmText`, `WkCustomLocalePlaceholder`, `WkHistoryLocale`, `WikiTranslations`, `WikiLocaleFilter`, `WikiAllLocales`, `WikiUntranslatedOnly`, `ResWikiStatTranslations`.
+- New resx keys produced here (both files): `WikiFallbackNotice`, `WikiFallbackCreateTranslation`, `WikiAvailableTranslations`, `WkLocaleSelector`, `WkAddTranslation`, `WkSourceLocaleLabel`, `WkInheritedFromSource`, `WkTranslationSaved`, `WkTranslationSaveFailed`, `WkDeleteTranslation`, `WkTranslationDeleteConfirmTitle`, `WkTranslationDeleteConfirmText`, `WkCustomLocalePlaceholder`, `WkHistoryLocale`, `WkTranslationConflict`, `WkTranslationReload`, `WikiTranslations`, `WikiLocaleFilter`, `WikiAllLocales`, `WikiUntranslatedOnly`, `ResWikiStatTranslations`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -4296,6 +5210,7 @@ Append to `SharpMUSH.Tests.BUnit/Resources/SharedResourceLocalizationTests.cs` (
 			"WkTranslationSaved", "WkTranslationSaveFailed", "WkDeleteTranslation",
 			"WkTranslationDeleteConfirmTitle", "WkTranslationDeleteConfirmText",
 			"WkCustomLocalePlaceholder", "WkHistoryLocale",
+			"WkTranslationConflict", "WkTranslationReload",
 			"WikiTranslations", "WikiLocaleFilter", "WikiAllLocales", "WikiUntranslatedOnly",
 			"ResWikiStatTranslations",
 		];
@@ -4421,6 +5336,27 @@ public record WikiTranslationInfo(
 
 	/// <summary>Locales this reader can read the page in, source locale first.</summary>
 	public List<string> AvailableLocales { get; set; } = [];
+
+	/// <summary>
+	/// Revision number of the row that was actually served — the translation's when a translation was
+	/// served, the page's otherwise. <c>WikiView</c> passes it back as <c>expectedRevisionNumber</c> so a
+	/// concurrent save is detected instead of silently overwritten.
+	/// </summary>
+	public int RevisionNumber { get; set; }
+```
+
+Create `SharpMUSH.Client/Models/WikiTranslationSaveError.cs` (tabs):
+
+```csharp
+namespace SharpMUSH.Client.Models;
+
+/// <summary>Why a translation save failed, and whether the fix is a reload rather than a correction.</summary>
+/// <param name="Message">Server-supplied text, safe to show.</param>
+/// <param name="NeedsReload">
+/// True when the server answered 409: somebody else saved first. The editor must offer to reload and must
+/// **not** retry — a retry re-sends this editor's stale markdown over the winner's.
+/// </param>
+public record WikiTranslationSaveError(string Message, bool NeedsReload);
 ```
 
 `SharpMUSH.Client/Models/WikiPageSummary.cs` — append two init-only properties inside the record body:
@@ -4468,7 +5404,8 @@ Add the translation DTO and request records next to the existing private records
 	private record WikiTranslationSummaryDto(
 		string Locale, string Title, bool Published, DateTimeOffset UpdatedAt, int RevisionNumber);
 
-	private record UpsertTranslationRequest(string Title, string Markdown, string? EditSummary, bool Published);
+	private record UpsertTranslationRequest(
+		string Title, string Markdown, string? EditSummary, bool Published, int? ExpectedRevisionNumber);
 ```
 
 Add the query helper next to `NsQuery` and `KeyQuery`:
@@ -4532,6 +5469,10 @@ Extend the two mappers so the new fields reach the models:
 			RequestedLocale = dto.RequestedLocale ?? string.Empty,
 			IsFallback = dto.IsFallback,
 			AvailableLocales = dto.AvailableLocales?.ToList() ?? [],
+			// The SERVED row's revision number — the translation's when a translation was served, the page's
+			// otherwise. Task 16 passes it back as expectedRevisionNumber, which is why it must come from the
+			// same DTO field the server resolved rather than from a separate page lookup.
+			RevisionNumber = dto.RevisionNumber,
 		};
 ```
 
@@ -4565,30 +5506,41 @@ Add the three translation methods (place them after `GetRevisionAsync`, matching
 		}
 	}
 
-	/// <summary>Creates or updates one locale's translation. Returns the server's error text on failure.</summary>
-	public async ValueTask<OneOf<WikiTranslationInfo, string>> UpsertTranslationAsync(
+	/// <summary>
+	/// Creates or updates one locale's translation. <paramref name="expectedRevisionNumber"/> is the revision
+	/// the editor loaded; null means create-only.
+	/// </summary>
+	/// <remarks>
+	/// A 409 from the server means somebody else saved first. It comes back as a
+	/// <see cref="WikiTranslationSaveError"/> with <c>NeedsReload</c> set, and the caller must offer a reload
+	/// rather than retrying — a retry re-sends this editor's stale markdown over the winner's, which is the
+	/// data loss the whole compare-and-swap exists to prevent.
+	/// </remarks>
+	public async ValueTask<OneOf<WikiTranslationInfo, WikiTranslationSaveError>> UpsertTranslationAsync(
 		string slug, string locale, string title, string markdown, bool published,
-		string? editSummary = null, string? ns = null, string? category = null)
+		int? expectedRevisionNumber, string? editSummary = null, string? ns = null, string? category = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var response = await http.PutAsJsonAsync(
 				$"api/wiki/{Uri.EscapeDataString(slug)}/translations/{Uri.EscapeDataString(locale)}{KeyQuery(ns, category)}",
-				new UpsertTranslationRequest(title, markdown, editSummary, published));
+				new UpsertTranslationRequest(title, markdown, editSummary, published, expectedRevisionNumber));
 
 			if (!response.IsSuccessStatusCode)
-				return await response.Content.ReadAsStringAsync();
+				return new WikiTranslationSaveError(
+					await response.Content.ReadAsStringAsync(),
+					NeedsReload: response.StatusCode == System.Net.HttpStatusCode.Conflict);
 
 			var dto = await response.Content.ReadFromJsonAsync<WikiTranslationSummaryDto>();
 			return dto is null
-				? "The server returned no translation."
+				? new WikiTranslationSaveError("The server returned no translation.", NeedsReload: false)
 				: new WikiTranslationInfo(dto.Locale, dto.Title, dto.Published, dto.UpdatedAt, dto.RevisionNumber);
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "UpsertTranslationAsync failed for slug={Slug} locale={Locale}", slug, locale);
-			return ex.Message;
+			return new WikiTranslationSaveError(ex.Message, NeedsReload: false);
 		}
 	}
 
@@ -4614,7 +5566,7 @@ Add the three translation methods (place them after `GetRevisionAsync`, matching
 	}
 ```
 
-- [ ] **Step 6: Add the 19 resx keys to both files**
+- [ ] **Step 6: Add the 21 resx keys to both files**
 
 In `SharpMUSH.Client/Resources/SharedResource.resx`, append a new banner-delimited section at the end (matching the file's 3-line `====` banner style, 2-space `<data>`, 4-space `<value>`):
 
@@ -4665,6 +5617,12 @@ In `SharpMUSH.Client/Resources/SharedResource.resx`, append a new banner-delimit
   <data name="WkHistoryLocale" xml:space="preserve">
     <value>Language</value>
   </data>
+  <data name="WkTranslationConflict" xml:space="preserve">
+    <value>This translation changed while you were editing. Reload it to see the current version — your unsaved text is still in the editor.</value>
+  </data>
+  <data name="WkTranslationReload" xml:space="preserve">
+    <value>Reload the translation</value>
+  </data>
   <data name="WikiTranslations" xml:space="preserve">
     <value>Translations</value>
   </data>
@@ -4682,7 +5640,7 @@ In `SharpMUSH.Client/Resources/SharedResource.resx`, append a new banner-delimit
   </data>
 ```
 
-In `SharpMUSH.Client/Resources/SharedResource.fr.resx`, append the same 19 keys under that file's short one-line banner style:
+In `SharpMUSH.Client/Resources/SharedResource.fr.resx`, append the same 21 keys under that file's short one-line banner style:
 
 ```xml
 
@@ -4728,6 +5686,12 @@ In `SharpMUSH.Client/Resources/SharedResource.fr.resx`, append the same 19 keys 
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
     <value>Langue</value>
+  </data>
+  <data name="WkTranslationConflict" xml:space="preserve">
+    <value>Cette traduction a été modifiée pendant votre édition. Rechargez-la pour voir la version actuelle — votre texte non enregistré reste dans l'éditeur.</value>
+  </data>
+  <data name="WkTranslationReload" xml:space="preserve">
+    <value>Recharger la traduction</value>
   </data>
   <data name="WikiTranslations" xml:space="preserve">
     <value>Traductions</value>
@@ -5094,19 +6058,22 @@ Decision 4 made legible rather than mysterious: on a non-source locale, Category
 **Files:**
 - Modify: `SharpMUSH.Client/Components/WikiEdit.razor` (locale selector; disable inherited fields; `SelectedLocale` + `AvailableLocales` + `SourceLocale` parameters)
 - Modify: `SharpMUSH.Client/Components/WikiEdit.razor.css` (selector row + disabled hint)
-- Modify: `SharpMUSH.Client/Components/WikiView.razor` (route the save through the translation endpoint on a non-source locale; load the translation for editing)
+- Modify: `SharpMUSH.Client/Components/WikiView.razor` (route the save through the translation endpoint on a non-source locale; load the translation for editing; hold the loaded revision number; conflict banner + reload action; gains `@inject IStringLocalizer<SharedResource> Loc`, which it does not have today)
 - Modify: `SharpMUSH.Client/Pages/WikiPageEdit.razor` (`?lang=` → `WikiView.Locale`)
 - Test: `SharpMUSH.Tests.BUnit/Components/WikiEditLocaleTests.cs` (create)
 
 **Interfaces:**
-- Consumes: `WikiService.GetTranslationsAsync` / `.UpsertTranslationAsync` / `.DeleteTranslationAsync` (Task 14); `PortalLocales` (Task 14).
+- Consumes: `WikiService.GetTranslationsAsync` / `.UpsertTranslationAsync` / `.DeleteTranslationAsync` (Task 14); `PortalLocales` (Task 14); `WikiArticle.RevisionNumber` and `WikiTranslationSaveError` (Task 14).
 - Produces:
   - `WikiEdit.SourceLocale` → `string` parameter
   - `WikiEdit.SelectedLocale` → `string` parameter (the locale being edited; equals `SourceLocale` for the source page)
   - `WikiEdit.AvailableLocales` → `IReadOnlyList<string>` parameter
   - `WikiEdit.OnLocaleChanged` → `EventCallback<string>` parameter
   - `WikiEdit.IsTranslation` → `bool` (private computed: `!SameLanguage(SelectedLocale, SourceLocale)`)
+  - `WikiView.ExpectedTranslationRevision` → `int?` (private computed) and a conflict banner offering a reload
   - CSS classes `wiki-edit-localerow`, `wiki-edit-inherited`
+
+**Optimistic concurrency lands here on the client side.** The editor holds the `RevisionNumber` of the row it loaded and passes it on save. On a conflict it shows `WkTranslationConflict` with a `WkTranslationReload` action and **does not retry** — a retry re-applies this editor's stale markdown over whatever the other translator just saved, which is exactly the loss the parameter prevents. The unsaved text stays in the textarea so the human can copy from it before reloading.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -5223,8 +6190,25 @@ public class WikiEditLocaleTests : BunitContext
 
 		await Assert.That(raised).IsEquivalentTo(new[] { "fr" });
 	}
+
+	[Test]
+	public async Task Source_locale_edit_does_not_send_a_translation_expected_revision()
+	{
+		// Editing the source locale goes through UpdatePageAsync, not the translation endpoint, so there is
+		// no translation revision to compare against. Asserted here because getting it wrong the other way —
+		// sending the page's revision number as a translation's — would make every first save look stale.
+		var cut = Render("en");
+
+		await Assert.That(cut.Instance.IsTranslationEdit).IsFalse();
+	}
 }
 ```
+
+`WikiView`'s conflict handling has no bUnit test in this task: the component owns the HTTP call, and the
+existing `WikiView` tests do not stub `WikiService`. The behaviour is covered where it is actually
+decidable — `PutTranslation_ReturnsConflictOnAStaleExpectedRevision` (Task 12) for the 409, and
+`ConcurrentUpsertsWithTheSameExpectedRevisionLoseNoProse` (Task 6) for the storage guarantee. Do **not**
+add a `WikiService` mock here just to assert a banner; state that in the PR instead of leaving it silent.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -5236,7 +6220,7 @@ Expected: compile error — `WikiEdit` has no `SourceLocale` parameter.
 In `SharpMUSH.Client/Components/WikiEdit.razor`, add `@using SharpMUSH.Client.Resources` at the top, then extend the `@code` parameter block:
 
 ```csharp
-    /// <summary>The page's effective source locale. Editing this locale edits the page itself.</summary>
+    /// <summary>The page's stamped source locale. Editing this locale edits the page itself.</summary>
     [Parameter] public string SourceLocale { get; set; } = "en";
 
     /// <summary>The locale currently being edited. Equal to <see cref="SourceLocale"/> for the source page.</summary>
@@ -5259,6 +6243,13 @@ In `SharpMUSH.Client/Components/WikiEdit.razor`, add `@using SharpMUSH.Client.Re
     /// </summary>
     private bool IsTranslation => !WikiHelpers.SameLanguage(SelectedLocale, SourceLocale);
 
+    /// <summary>
+    /// Public mirror of <see cref="IsTranslation"/> so the host and component tests can tell whether a save
+    /// goes to the translation endpoint (and therefore carries an expected revision number) or to the
+    /// page-update endpoint.
+    /// </summary>
+    public bool IsTranslationEdit => IsTranslation;
+
     /// <summary>Switches the editor to another locale. Public so component tests can drive it directly.</summary>
     public async Task SelectLocaleAsync(string locale)
     {
@@ -5269,10 +6260,14 @@ In `SharpMUSH.Client/Components/WikiEdit.razor`, add `@using SharpMUSH.Client.Re
 
     private async Task AddCustomLocaleAsync()
     {
+        // The free-text field is a write path in spirit: whatever is typed here ends up as a stored Locale,
+        // so it is canonicalised and rejected here rather than being sent for the server to refuse.
+        // NormalizeLocale's Error case is silently ignored rather than surfaced, because the field is
+        // validated as-you-type by the same rule and an empty selection is the visible feedback.
         var normalized = WikiHelpers.NormalizeLocale(_customLocale);
-        if (normalized.Length == 0) return;
+        if (normalized.IsT1) return;
         _customLocale = string.Empty;
-        await SelectLocaleAsync(normalized);
+        await SelectLocaleAsync(normalized.AsT0);
     }
 
     private string LocaleLabel(string locale) =>
@@ -5408,6 +6403,14 @@ Append to `SharpMUSH.Client/Components/WikiEdit.razor.css`:
     private string _sourceLocale = "en";
     private string _selectedLocale = "en";
     private IReadOnlyList<string> _availableLocales = [];
+
+    /// <summary>
+    /// Revision number of the row currently loaded, held for optimistic concurrency on save.
+    /// </summary>
+    private int _loadedRevision;
+
+    /// <summary>Set when the server answered 409; drives the reload prompt instead of a plain error toast.</summary>
+    private bool _saveConflict;
 ```
 
 In `OnInitializedAsync`, after the existing fetch, record what came back and load the locale list:
@@ -5426,6 +6429,7 @@ In `OnInitializedAsync`, after the existing fetch, record what came back and loa
             _availableLocales = _article.AvailableLocales;
             _sourceLocale = _article.AvailableLocales.FirstOrDefault() ?? _article.Locale;
             _selectedLocale = _article.Locale;
+            _loadedRevision = _article.RevisionNumber;
         }
 
         _loading = false;
@@ -5463,9 +6467,23 @@ Add the locale-switch handler — it navigates rather than mutating in place, so
 Rewrite `HandleSave` so a non-source locale writes a translation. Keep the existing create/update/metadata path untouched for the source locale:
 
 ```csharp
+    /// <summary>
+    /// The revision number to compare against on a translation save, or null for create-only.
+    /// </summary>
+    /// <remarks>
+    /// Null when the loaded article is not this locale's own row — the reader was served a fallback because
+    /// no translation exists yet, so its <c>RevisionNumber</c> belongs to a different stream and passing it
+    /// would make the very first save look stale.
+    /// </remarks>
+    private int? ExpectedTranslationRevision =>
+        _article is not null && WikiHelpers.SameLanguage(_article.Locale, _selectedLocale)
+            ? _loadedRevision
+            : null;
+
     private async Task HandleSave(WikiArticle draft)
     {
         _saveError = null;
+        _saveConflict = false;
 
         if (!WikiHelpers.SameLanguage(_selectedLocale, _sourceLocale))
         {
@@ -5473,7 +6491,7 @@ Rewrite `HandleSave` so a non-source locale writes a translation. Keep the exist
             // structurally, so there is no metadata call to make here.
             var translationResult = await Wiki.UpsertTranslationAsync(
                 draft.Slug, _selectedLocale, draft.Title, draft.Content, draft.Published,
-                editSummary: null, ns: Namespace, category: Category);
+                ExpectedTranslationRevision, editSummary: null, ns: Namespace, category: Category);
 
             translationResult.Switch(
                 _ =>
@@ -5484,7 +6502,15 @@ Rewrite `HandleSave` so a non-source locale writes a translation. Keep the exist
                         $"/wiki/{Namespace ?? "main"}/{Category ?? "general"}/{Slug}?lang={Uri.EscapeDataString(_selectedLocale)}",
                         forceLoad: true);
                 },
-                err => _saveError = err);
+                err =>
+                {
+                    // On a conflict, prompt for a reload and STOP. Retrying — or silently re-reading the
+                    // current revision and saving again — would re-apply this editor's stale markdown over
+                    // the other translator's, which is precisely the loss expectedRevisionNumber prevents.
+                    // The draft stays in the editor so its text can be copied out first.
+                    _saveConflict = err.NeedsReload;
+                    _saveError = err.NeedsReload ? Loc["WkTranslationConflict"] : err.Message;
+                });
 
             StateHasChanged();
             return;
@@ -5528,7 +6554,30 @@ Rewrite `HandleSave` so a non-source locale writes a translation. Keep the exist
     }
 ```
 
-Add `@using SharpMUSH.Library.Services` to `WikiView.razor` for `WikiHelpers`.
+Render the reload prompt wherever `_saveError` is already shown, adding the action only for a conflict —
+a reload button next to "you typed something invalid" would be nonsense:
+
+```razor
+    @if (_saveError is not null)
+    {
+        <MudAlert Severity="@(_saveConflict ? Severity.Warning : Severity.Error)" Dense="true">
+            @_saveError
+            @if (_saveConflict)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small"
+                           OnClick="@(() => Nav.NavigateTo(Nav.Uri, forceLoad: true))">
+                    @Loc["WkTranslationReload"]
+                </MudButton>
+            }
+        </MudAlert>
+    }
+```
+
+Reloading is a `forceLoad` navigation to the same URL rather than a re-fetch into the existing draft: it
+brings back the winner's text *and* resets `_loadedRevision`, so the next save compares against the right
+revision. A partial refresh that updated the body but not the revision number would conflict forever.
+
+Add `@using SharpMUSH.Library.Services` to `WikiView.razor` for `WikiHelpers`, and — this one is easy to miss — `@inject IStringLocalizer<SharedResource> Loc` (plus `@using Microsoft.Extensions.Localization` and `@using SharpMUSH.Client.Resources`). `WikiView.razor` currently injects only `WikiService` and `NavigationManager` (lines 3–4); `WikiEdit.razor:5` is the pattern to copy. Without it the conflict banner's `Loc[...]` does not compile.
 
 **Note the pre-existing bug you will see while editing `HandleSave`:** the editor collects `_summary` and `_minor` in `WikiEdit.razor` (lines 94, 97) and never sends them — `UpdatePageAsync` is called without `editSummary`. That is out of scope here (it predates this work and touching it would widen the diff into the page-edit path this plan must not disturb). Open a follow-up issue titled "WikiEdit collects an edit summary and discards it" and reference it in the PR rather than fixing it inline.
 
@@ -5547,7 +6596,7 @@ Add `@using SharpMUSH.Library.Services` to `WikiView.razor` for `WikiHelpers`.
 - [ ] **Step 7: Run tests to verify they pass**
 
 Run: `dotnet run --project SharpMUSH.Tests.BUnit -- --treenode-filter "/*/*/WikiEditLocaleTests/*"`
-Expected: PASS (6 tests).
+Expected: PASS (7 tests).
 
 Run: `dotnet build && dotnet run --project SharpMUSH.Tests.BUnit`
 Expected: 0 errors; every previously-passing test still green.
@@ -6193,8 +7242,9 @@ Read `?lang=` from the query and fold it into the cache key. Replace the `preren
 ```csharp
 		// A bot may request any locale, so the locale is part of the cache identity. Keying on path alone
 		// would let the first French crawler poison the entry every other reader gets.
+		// Read path, so the permissive form: an unparseable ?lang= keys the default entry rather than a 400.
 		var requestedLang = context.Request.Query["lang"].FirstOrDefault();
-		var normalizedLang = WikiHelpers.NormalizeLocale(requestedLang);
+		var normalizedLang = WikiHelpers.NormalizeLocaleOrEmpty(requestedLang);
 		var cacheKey = normalizedLang.Length == 0 ? path : $"{path}#{normalizedLang}";
 
 		if (prerenderCache.Get(cacheKey) is { } cached)
@@ -6322,6 +7372,7 @@ git commit -m "feat(wiki): emit hreflang alternates and the served locale in bot
 - Modify: `SharpMUSH.Implementation/Commands/WikiCommand/WikiCommandHelper.cs` (add `ResolveExecutorLocaleAsync`)
 - Modify: `SharpMUSH.Implementation/Commands/WikiCommand/ViewWiki.cs` (`Handle` and `History` take a locale)
 - Modify: `SharpMUSH.Implementation/Commands/WikiCommand/ListWiki.cs` (`List` and `Recent` take a locale)
+- Modify: `SharpMUSH.Implementation/Commands/WikiCommand/EditWiki.cs:45` (`CreateAsync` gains `sourceLocale`, so an in-game page is stamped at creation — the second and last create path in the codebase)
 - Modify: `SharpMUSH.Implementation/Functions/WikiFunctions.cs` (`wiki()` `MaxArgs` 2 → 3; `locale` field; `wikilist()` / `wikirecent()` localized titles)
 - Modify: `SharpMUSH.Documentation/Helpfiles/SharpMUSH/sharpwiki.md` (document `/SOURCE` and the third `wiki()` argument)
 - Test: `SharpMUSH.Tests/Commands/WikiCommandTests.cs` (append)
@@ -6417,6 +7468,20 @@ Append to `SharpMUSH.Tests/Commands/WikiCommandTests.cs` (follow the file's exis
 ```
 
 Add the three helpers (`SetExecutorLocaleAsync`, `CreateWikiPageAsync`, `UpsertTranslationAsync`) to the same class if it does not already have equivalents, resolving `IWikiService` from the test harness's service provider the way the file's existing tests do.
+
+Two things the helpers must get right, both from Task 5's contract:
+
+- `CreateWikiPageAsync` passes an explicit `sourceLocale` (`"en"` for these fixtures), so the pages under test are stamped rather than relying on a migration these tests never run.
+- the test-local `UpsertTranslationAsync(pageId, locale, title, markdown, published)` wrapper forwards `expectedRevisionNumber: null` — every call above is a first write for its locale, so create-only is correct and there is no revision to compare. If a later test needs a second write to the same locale, that call passes the loaded number explicitly rather than the helper defaulting it.
+
+Also give `EditWiki.cs`'s `CreateAsync` call (`SharpMUSH.Implementation/Commands/WikiCommand/EditWiki.cs:45`) a source locale, so a page created in-game is stamped at birth exactly as the API path is (Task 12, Step 5a):
+
+```csharp
+		var result = await wikiService.CreateAsync(
+			title, markdown, executor.Object().DBRef.ToString(), ns, category, localization.DefaultLocale);
+```
+
+That is the second and last create path in the codebase; after it, nothing writes an unstamped `WikiPage`. Match the file's existing argument names and dbref expression rather than copying the placeholders above verbatim.
 
 Append to `SharpMUSH.Tests/Functions/WikiFunctionUnitTests.cs`:
 
@@ -6603,7 +7668,8 @@ Splice `localeMarker` into the existing header block next to the revision/date i
 ```csharp
 		var revisions = forceSource || locale is null
 			? await wikiService.GetRevisionsAsync(page.Id)
-			: await wikiService.GetRevisionsForLocaleAsync(page.Id, WikiHelpers.NormalizeLocale(locale), 0, 20);
+			: await wikiService.GetRevisionsForLocaleAsync(
+				page.Id, WikiHelpers.NormalizeLocaleOrEmpty(locale), 0, 20);
 ```
 
 `ListWiki.List` and `ListWiki.Recent` — after fetching pages, localize and format:
@@ -6725,16 +7791,16 @@ git commit -m "feat(wiki): read the executor's locale in @wiki and the wiki() fa
 
 ### Task 21: Seeded pages get a `SourceLocale`
 
-The three seeded pages are English, so stamping `"en"` on them is correct and is not the same as defaulting the property to `"en"` — a non-English game's *own* pages stay unlabelled and normalise to that game's default.
+The three seeded pages are English, so stamping `"en"` on them is correct and is not the same as defaulting the property to `"en"`. Stamping the *seeds* records a fact about their content; a game's own pages are stamped with that game's configured default by the create paths in Tasks 12 and 20, and anything predating all of that is stamped once by the Tasks 7–9 backfill. In no case is the value re-derived on read.
 
 **No translations are seeded.** Machine-quality French help is worse than a visible gap, and the fallback notice makes the gap actionable. Translating the seeded Help pages is content work with native review, tracked separately.
 
 **Files:**
 - Modify: `SharpMUSH.Server/StartupHandler.cs:493-548` (three `CreateAsync` calls gain `sourceLocale: "en"`)
-- Test: `SharpMUSH.Tests.Integration/Wiki/WikiStartupSeedingTests.cs` (append)
+- Test: `SharpMUSH.Tests.Integration/Wiki/WikiStartupSeedingTests.cs` (append — including the backfill assertions, which need a real migrated database and so belong here rather than in the unit suite)
 
 **Interfaces:**
-- Consumes: `CreateAsync(..., string? sourceLocale = null)` (Task 5).
+- Consumes: `CreateAsync(..., string? sourceLocale = null)` (Task 5); the Tasks 7–9 backfill.
 - Produces: nothing new.
 
 - [ ] **Step 1: Write the failing test**
@@ -6790,6 +7856,29 @@ Append to `SharpMUSH.Tests.Integration/Wiki/WikiStartupSeedingTests.cs` (tabs, m
 		var after = (await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main)).AsT0;
 		await Assert.That(after.SourceLocale).IsEqualTo(before.SourceLocale);
 		await Assert.That(after.MarkdownSource).IsEqualTo(before.MarkdownSource);
+	}
+
+	[Test]
+	public async Task BackfillIsANoOpOnASecondPassAndLeavesNoUnstampedRow()
+	{
+		// The migration ran during harness startup and runs again on every start, so "idempotent" has to be
+		// true rather than assumed. Two assertions: nothing on this database is unstamped, and no revision
+		// row lacks the Locale the new unique constraint covers.
+		var pages = await Wiki.GetAllPagesAsync(0, 200);
+
+		await Assert.That(pages.All(p => p.SourceLocale.Length > 0))
+			.IsTrue()
+			.Because("Migration_AddWikiTranslations stamps every page once; a read-time default would hide "
+				+ "an unstamped row instead of the migration fixing it");
+
+		foreach (var page in pages)
+		{
+			var revisions = await Wiki.GetRevisionsAsync(page.Id, 0, 50);
+			await Assert.That(revisions.All(r => r.Locale.Length == 0))
+				.IsTrue()
+				.Because("source-locale revisions carry the empty stream marker, stamped by the backfill "
+					+ "before the unique (PageId, Locale, RevisionNumber) constraint was created");
+		}
 	}
 ```
 
@@ -6941,7 +8030,10 @@ Portal chrome and engine notifications are localized through resx files. Wiki
 ### Shape
 
 A `WikiPage` keeps identity, metadata and the body in the locale it was authored
-in (`SourceLocale`). Each translation is an overlay row, `WikiTranslation`, keyed
+in (`SourceLocale`), which is stamped once — at creation for new pages, by
+`Migration_AddWikiTranslations` for pages predating the field — and never
+re-derived on read, so changing `wiki_default_locale` cannot relabel existing
+content. Each translation is an overlay row, `WikiTranslation`, keyed
 by `(PageId, Locale)`. A translation owns its `Title`, `MarkdownSource`,
 `Published` flag and revision history, and **inherits** `Category`, `Tags` and
 `IsProtected` from the source page — structurally, because `WikiTranslation` has
@@ -6952,8 +8044,9 @@ no field for them.
 `?lang=<tag>` selects a locale; absent it, the portal sends the `locale`
 localStorage key the language picker writes. Resolution order:
 
-1. Requested locale, normalised; unparseable becomes `Wiki.DefaultLocale`
-2. The page's own source locale, if it is the requested language
+1. Requested locale, normalised; unparseable becomes `Wiki.DefaultLocale` — a bad
+   `?lang=` is never an error, only a write of a bad locale is
+2. The page's own stamped source locale, if it is the requested language
 3. Exact match against the visible translations
 4. Neutral-language match (`fr-CA` finds `fr`, and vice versa)
 5. `Wiki.DefaultLocale`, if a translation exists for it
@@ -6980,7 +8073,10 @@ design, which is what keeps the fallback rules unit-testable with no auth graph.
 ### Adding a translation
 
 - Portal: `/wiki/{ns}/{category}/{slug}/edit?lang=fr`
-- API: `PUT /api/wiki/{slug}/translations/{locale}?ns=&category=`
+- API: `PUT /api/wiki/{slug}/translations/{locale}?ns=&category=`, carrying the
+  `expectedRevisionNumber` the editor loaded. A concurrent save answers **409**;
+  the editor offers a reload and never retries, because retrying would re-apply
+  the loser's stale markdown over the winner's.
 - In-game: read with `@wiki` in your `@locale`; `@wiki/view/source` reads the
   source. `wiki(<page>, <field>, [<locale>])` takes an explicit locale, and its
   `locale` field returns what was actually served.
@@ -7004,7 +8100,11 @@ Add to `## File Reference`:
 - `SharpMUSH.Library/Services/WikiLocalizationService.cs` — visibility filtering; the only
   `LocalizedWikiPage` factory
 - `SharpMUSH.Library/Models/Wiki/WikiTranslation.cs` — the overlay row
-- `SharpMUSH.Contracts/Services/WikiHelpers.cs` — `NormalizeLocale` / `NeutralLocale` / `SameLanguage`
+- `SharpMUSH.Contracts/Services/WikiHelpers.cs` — `NormalizeLocale` (write boundary, returns `OneOf`) /
+  `NormalizeLocaleOrEmpty` (permissive read path) / `NeutralLocale` / `SameLanguage`
+- `SharpMUSH.Database.ArangoDB/Migrations/Migration_AddWikiTranslations.cs` — the `SourceLocale` /
+  `WikiRevision.Locale` backfill and the unique revision constraint (equivalents in the SurrealDB and
+  Memgraph migration statement lists)
 - `SharpMUSH.Client/Resources/PortalLocales.cs` — the portal's locale list, shared by the language
   picker and the wiki editor
 - `SharpMUSH.Configuration/Options/WikiOptions.cs` — `wiki_default_locale`
@@ -7016,18 +8116,19 @@ Add a block before `## Testing`:
 
 ```markdown
 ## Localization
-- [x] Per-locale content via `WikiTranslation` overlay rows keyed `(PageId, Locale)` — a translation owns Title / MarkdownSource / Published / revisions and inherits Category / Tags / IsProtected structurally; no data migration
-- [x] `Wiki.DefaultLocale` (`wiki_default_locale`) in `/admin/config/wiki`; `WikiPage.SourceLocale` empty means "use the default"
+- [x] Per-locale content via `WikiTranslation` overlay rows keyed `(PageId, Locale)` — a translation owns Title / MarkdownSource / Published / revisions and inherits Category / Tags / IsProtected structurally; no schema migration and no content rewrite (one additive-column backfill)
+- [x] `Wiki.DefaultLocale` (`wiki_default_locale`, default `en`, validated at startup) in `/admin/config/wiki`; `WikiPage.SourceLocale` is materialised once by the migration and never re-derived, so changing the default cannot relabel existing pages
 - [x] Fallback, never 404 — `IWikiLocaleResolver` (pure, 5-step chain) + `IWikiLocalizationService` (visibility filtering, the only `LocalizedWikiPage` factory)
 - [x] Drafts do not leak — the candidate set is filtered before resolution; an unpublished translation is unreachable for readers without edit permission
-- [x] `?lang=` on the page read, all five listings and `{slug}/revisions`; translation CRUD at `/api/wiki/{slug}/translations[/{locale}]`
+- [x] `?lang=` on the page read, all five listings and `{slug}/revisions`; translation CRUD at `/api/wiki/{slug}/translations[/{locale}]`, with `expectedRevisionNumber` optimistic concurrency answering 409 on a conflict (never retried)
+- [x] Unique `(PageId, Locale, RevisionNumber)` constraint on all three DB backends, which disagreed before this change; asserted by a cross-backend test that checks the constraint *rejects* duplicates
 - [x] Reader UI — dismissible fallback notice (per-session) + language chip row in `WikiDisplay.razor`
 - [x] Authoring — locale selector in `WikiEdit.razor` with inherited Category/Tags visibly disabled; `/wiki/{ns}/{cat}/{slug}/edit?lang=`
 - [x] Per-locale history and diff (`?lang=` on `WikiPageHistory` / `WikiPageDiff`)
 - [x] Staff — translation-coverage column and locale filter (incl. "missing only") on `/admin/wiki`
 - [x] SEO — `hreflang` alternates + `x-default` + `<html lang>` in the bot prerender, `xhtml:link` in the sitemap; canonical unchanged
 - [x] In-game — `@wiki` reads the executor's `LOCALE`, `/SOURCE` forces the source; `wiki()` takes an optional third locale argument and a `locale` field
-- [x] Tests — `WikiLocaleResolverTests`, `WikiLocalizationServiceTests` (draft visibility first-class), `WikiHelpersLocaleTests`, `WikiTranslationIntegrationTests` (cross-backend), `WikiDisplayFallbackTests` / `WikiEditLocaleTests` (bUnit), seeding idempotency
+- [x] Tests — `WikiLocaleResolverTests`, `WikiLocalizationServiceTests` (draft visibility first-class), `WikiHelpersLocaleTests`, `WikiTranslationIntegrationTests` (cross-backend, including the negative constraint and concurrency cases), `WikiDisplayFallbackTests` / `WikiEditLocaleTests` (bUnit), seeding and backfill idempotency
 ```
 
 and add to `## Remaining (out of portal scope or follow-up)`:
@@ -7038,6 +8139,7 @@ and add to `## Remaining (out of portal scope or follow-up)`:
 - Localized category *display* names — Category is part of page identity, so it cannot be translated through the overlay
 - Listing performance: localized listings resolve per row. Measure before adding a denormalized title cache
 - `WikiEdit` collects an edit summary and a minor-edit flag and discards both (predates localization)
+- The `SourceLocale` backfill carries no rollback path, no language detection and no per-page override. That is deliberate while SharpMUSH is pre-production, because wiping and reseeding is acceptable recovery; the migration logs the locale it stamped and the row count, which is enough to notice a wrong default. **Revisit this first if a live game with existing wiki content ever adopts SharpMUSH.**
 ```
 
 - [ ] **Step 4: Verify**
@@ -7063,11 +8165,14 @@ git commit -m "docs(wiki): record the localization mechanism, ?lang= URL policy 
 - [ ] `dotnet run --project SharpMUSH.Tests` — 0 failed, total ≥ 4927 (new tests added, none removed).
 - [ ] `dotnet run --project SharpMUSH.Tests.BUnit` — 0 failed, total ≥ 271.
 - [ ] `grep -rn "WikiTranslationsNotImplemented" SharpMUSH.Database.*/` — no output.
-- [ ] CI `test-integration` green on **all three** matrix entries (`arangodb`, `memgraph`, `surrealdb`). This is the only verification for `WikiTranslationIntegrationTests`, `WikiStartupSeedingTests` and `SeoEndpointTests`; Docker is unavailable locally, so never claim these passed without the CI run.
+- [ ] `grep -rn "EffectiveSourceLocale" SharpMUSH.Library SharpMUSH.Server` — no output. Nothing re-derives `SourceLocale` on read; `IWikiLocalizationService.SourceLocaleOf` is the only accessor.
+- [ ] All three backends declare a unique constraint over `(PageId, Locale, RevisionNumber)` and none still constrains the two-field `(pageId, revisionNumber)` pair. Verified by reading the three migration files, not by test colour — a backend missing its constraint makes the negative test pass silently, which is how the three drifted apart in the first place.
+- [ ] CI `test-integration` green on **all three** matrix entries (`arangodb`, `memgraph`, `surrealdb`), specifically including `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber`, `RevisionIndex_AcceptsATranslationRevisionOneBesideASourceRevisionOne` and `ConcurrentUpsertsWithTheSameExpectedRevisionLoseNoProse`. This is the only verification for `WikiTranslationIntegrationTests`, `WikiStartupSeedingTests` and `SeoEndpointTests`; Docker is unavailable locally, so never claim these passed without the CI run.
 - [ ] CI `format` job green.
 - [ ] The five pre-existing `IWikiService` call sites still compile without behavioural change: `WikiController`, `SeoController`, `BotPrerenderMiddleware`, `WikiCommands`, `WikiFunctions`. (`WikiController` and `BotPrerenderMiddleware` gain the localization service by design; `SeoController` gains it for sitemap alternates; `WikiCommands` and `WikiFunctions` gain it for reads. What must not change is any *existing* method's behaviour when no locale is requested.)
 - [ ] No seeded translations exist: `WikiStartupSeedingTests.NoTranslationsAreSeeded` passes.
-- [ ] Follow-up issues opened for the four items added to `area-05-wiki.md`'s Remaining list.
+- [ ] A bad `wiki_default_locale` fails startup naming the value, and `Startup.cs` registers `ValidateSharpOptions` rather than the generated validator directly (otherwise the check never runs).
+- [ ] Follow-up issues opened for the five items added to `area-05-wiki.md`'s Remaining list.
 
 ## Self-Review Notes
 
@@ -7076,13 +8181,17 @@ Checked against the spec section by section:
 | Spec section | Covered by |
 |---|---|
 | Data model — `WikiPage.SourceLocale`, `WikiTranslation`, `WikiRevision.Locale`, `WikiTranslationSummary`, `LocalizedWikiPage` | Task 3 |
+| `SourceLocale` is materialised once, never re-derived | Tasks 3 (doc + initializer), 7–9 (backfill), 10 (`SourceLocaleOf`, and the removal of read-time normalisation), 12 + 20 (both create paths stamp it), 21 (seeds + backfill assertions) |
 | Storage — `DatabaseConstants.WikiTranslations`, `Migration_AddWikiTranslations`, revision index, per-backend equivalents, in-memory dictionary | Tasks 5, 7, 8, 9 |
-| Configuration — `WikiOptions`, schema-driven admin page | Task 1 |
+| The revision index must be corrected across all three backends | Task 6 (negative tests first), 7 (Arango: non-unique → unique 3-field), 8 (Memgraph: two loose indexes → a real composite constraint), 9 (SurrealDB: drop the 2-field UNIQUE, redefine over 3) |
+| Configuration — `WikiOptions`, real `"en"` default, `ValidationPattern`, startup validation, schema-driven admin page | Task 1 |
 | Which locales are allowed | Tasks 2 (`NormalizeLocale`), 14 (`PortalLocales`), 16 (free-text field) |
+| Locales canonicalised and validated at the write boundary | Task 2 (`NormalizeLocale` / `NormalizeLocaleOrEmpty`), 5 (upsert + `CreateAsync`), 7–9 (backfill + per-backend upserts), 1 (options validation); read paths stay permissive in Tasks 11, 19, 20 |
 | Resolution — `LocaleResolution`, `IWikiLocaleResolver`, the 5-step chain | Task 4 |
 | Draft translations must not leak | Task 10 (service), 11 (controller `IncludeDrafts`), 19 (prerender always false), 20 (in-game gate) |
 | `IWikiLocalizationService` | Task 10 |
 | `IWikiService` additions (all five, `GetRevisionsForLocaleAsync` named not overloaded, upsert mirrors `UpdateAsync`, delete cascade) | Task 5 |
+| `UpsertTranslationAsync` optimistic concurrency (`expectedRevisionNumber`, create-only on null, conflicts never retried) | Task 5 (contract + in-memory CAS), 7–9 (per-backend CAS), 12 (409, no retry), 14 (client), 16 (editor holds the revision, offers a reload) |
 | HTTP surface — all five rows of the spec's table, plus `?lang=` on the five listings | Tasks 11, 12, 13 |
 | Portal reading — `lang` from localStorage, `?lang=` override, `MudAlert` iff fallback, per-session dismissal, edit link, language chips | Tasks 14, 15 |
 | Portal authoring — locale selector, inherited metadata disabled with hint, `?lang=` deep link, history/diff | Tasks 16, 17 |
@@ -7090,11 +8199,16 @@ Checked against the spec section by section:
 | SEO — `IWikiLocalizationService`, `hreflang` + `x-default`, canonical unchanged, `url-strategy.md` Locale subsection | Tasks 19, 22 |
 | In-game — `LOCALE` attribute, `/SOURCE`, `wiki()` MaxArgs 3, `wikilist()`/`wikirecent()` | Task 20 |
 | Seeding — `SourceLocale` on seeded pages, no seeded translations | Task 21 |
-| Error handling — all seven rows of the spec's table | Malformed lang: Tasks 11, 20. Upsert on nonexistent page / source shadow / concurrent upsert: Tasks 5–9, 12. Protected source page: Task 12. Delete last translation: Tasks 5, 6. Delete source page cascade: Tasks 5, 7, 8, 9 |
-| Testing — all six named suites | `WikiLocaleResolverTests` (4), `InMemoryWikiServiceTests` (5), `WikiServiceIntegrationTests` equivalent as `WikiTranslationIntegrationTests` (6), draft visibility (10, 11), bUnit (15, 16), `WikiStartupSeedingTests` (21) |
-| Risks — cross-backend test before backends; no pre-emptive title cache; category out of scope | Phase 2 ordering; Tasks 10/13/18 comments; Task 22 Remaining list |
+| Error handling — all ten rows of the spec's table | Malformed lang on a read: Tasks 11, 19, 20. Malformed locale on a write: Tasks 2, 5–9. Invalid `Wiki.DefaultLocale`: Task 1. Upsert on nonexistent page / source shadow: Tasks 5–9. Concurrent **insert** race (retried once): Tasks 7–9. Concurrent **update** (never retried): Tasks 5–9, 12, 16. Null expected revision with an existing translation: Tasks 5–9, 12. Protected source page: Task 12. Delete last translation: Tasks 5, 6. Delete source page cascade: Tasks 5, 7, 8, 9 |
+| Testing — all nine named suites | `WikiLocaleResolverTests` (4), `InMemoryWikiServiceTests` (5), `WikiServiceIntegrationTests` equivalent as `WikiTranslationIntegrationTests` including the negative constraint cases (6), concurrency (6), `NormalizeLocale` (2), backfill migration (7–9 + 21), draft visibility (10, 11), bUnit (15, 16), `WikiStartupSeedingTests` (21) |
+| Risks — cross-backend test before backends and the three backends already disagreeing; backfill is pre-production-only and carries no rollback path; no pre-emptive title cache; category out of scope | Phase 2 ordering + Task 6's negative cases; Global Constraints + Tasks 7–9 + Task 22's Remaining list; Tasks 10/13/18 comments; Task 22 Remaining list |
 
-**Two deliberate readings of the spec, both flagged in-place rather than silently applied:**
+**Deliberate readings of the spec, all flagged in-place rather than silently applied:**
 
 1. **`CreateAsync` gains an optional trailing `sourceLocale`** (Task 5). The spec calls the `IWikiService` additions "purely additive" and lists five methods, but also says seeding "gains `SourceLocale`". An optional trailing parameter is source-compatible — every existing call site keeps compiling untouched, which is the constraint that actually matters — and it avoids a sixth method that exists only to set one field.
 2. **`WikiEdit.razor` has no protection control to disable** (Phase 5 preamble). The spec says "category/tags/protection fields render visible but disabled"; protection is page-level and lives only in `AdminWiki`'s batch actions. Category and Tags are disabled; Published stays editable because a translation owns it, which is what makes "draft French while English stays live" work.
+3. **`NormalizeLocale` is split in two** (Task 2). The spec gives one signature returning `OneOf<string, Error<string>>` and separately requires the read path to treat a bad `?lang=` as absent rather than a 400. One function cannot be both without every read site unwrapping an error it is contractually required to ignore, so `NormalizeLocale` is the spec's write-boundary signature verbatim and `NormalizeLocaleOrEmpty` is the permissive read form. The spec's table of entry points maps onto the two exactly.
+4. **The migration backfill stamps `WikiOptions.DefaultLocaleFallback`, not `Wiki.DefaultLocale`** (Task 7). It cannot read the configured value: `OptionsService` is an `IOptionsFactory<SharpMUSHOptions>` over `ISharpDatabase`, so options live *in* the database the migration is preparing, and Core.Arango instantiates migrations reflectively with no DI. It does not need to — the migration ships in the same release that introduces `wiki_default_locale`, and an admin cannot have changed a setting that did not exist, so the configured value at backfill time is necessarily the parameter default. Task 1 makes that a single named constant so the two cannot drift.
+5. **The startup locale check is restated in `ValidateSharpOptions` rather than calling `WikiHelpers.NormalizeLocale`** (Task 1). `SharpMUSH.Contracts`, where that helper lives, references `SharpMUSH.Configuration`; the dependency cannot run the other way. Task 2 adds a test asserting the two rules agree, so the duplication is held honest rather than merely noted.
+6. **A translation-conflict response is 409, not 400** (Task 12). The spec says `Error<string>`; at the HTTP boundary that has to become a status code, and a well-formed request that lost a race is not a malformed one. The client distinguishes the two so the editor can offer a reload rather than a generic failure.
+7. **`WikiLocalizationService` keeps one diagnostic path for an unstamped `SourceLocale`** (Task 10). The spec removes read-time normalisation, and this plan removes it from the resolver entirely. But a read can never fail for locale reasons, so a row the backfill has not reached still has to render: the service logs a Warning naming the page and uses the configured default for that one read. That is degradation over a broken row, expected never to fire, and nothing is allowed to depend on it — as distinct from the old design, where empty was normal, expected, and produced by `CreateAsync` on purpose.
