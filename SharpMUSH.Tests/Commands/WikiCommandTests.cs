@@ -13,7 +13,7 @@ namespace SharpMUSH.Tests.Commands;
 /// search, history, append, and the wizard-only protection rules. Pages are
 /// stored through the same IWikiService the web portal uses.
 /// </summary>
-[NotInParallel] // shared NotifyService substitute + ClearReceivedCalls must not race
+[NotInParallel] // integration test over shared services + the session-shared Notify substitute
 public class WikiCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -45,7 +45,6 @@ public class WikiCommandTests
 			MModule.single("@wiki/create Cmd Test Page=# Cmd Heading\n\nSome **bold** body."));
 		await ExpectNotify(player.DbRef, "WIKI: Created page 'Cmd Test Page'");
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki cmd test page"));
 		await ExpectNotify(player.DbRef, "Wiki: Cmd Test Page [main]");
@@ -82,10 +81,11 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/create Search Fodder=The xyzzy-marker phrase lives here."));
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/search xyzzy-marker"));
-		await ExpectNotify(player.DbRef, "search_fodder");
+		// The slug alone also appears in the create confirmation; the search header ("N page(s)
+		// matching '<needle>'") is unique to the search reply and confirms the page was found.
+		await ExpectNotify(player.DbRef, "1 page(s) matching 'xyzzy-marker'");
 	}
 
 	[Test]
@@ -97,12 +97,10 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/create Append Target=First paragraph."));
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/append append_target=Second paragraph."));
 		await ExpectNotify(player.DbRef, "now rev 2");
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/history append_target"));
 		await ExpectNotify(player.DbRef, "Revision history for Append Target");
@@ -117,7 +115,6 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/create Mortal Page=content"));
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/protect mortal_page"));
 		await ExpectNotify(player.DbRef, "wizard-only");
@@ -133,12 +130,10 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/create Locked Page=original content"));
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@wiki/protect locked_page"));
 		await ExpectNotify(god, "now protected");
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/edit locked_page=replacement content"));
 		await ExpectNotify(player.DbRef, "protected. Only wizards may edit it");
@@ -155,12 +150,10 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/edit rollback_target=changed body"));
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/rollback rollback_target=1"));
 		await ExpectNotify(player.DbRef, "Restored 'Rollback Target' to r1 (now rev 3)");
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki rollback_target"));
 		await ExpectNotify(player.DbRef, "original body");
@@ -175,7 +168,6 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/create Rollback Missing=body"));
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/rollback rollback_missing=42"));
 		await ExpectNotify(player.DbRef, "has no revision r42");
@@ -226,7 +218,6 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/create Tagged Page=content"));
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/tag tagged_page=Magic FIRE magic"));
 		await ExpectNotify(player.DbRef, "set to: fire, magic");

@@ -738,7 +738,7 @@ public partial class Commands
 
 			if (visibleContents.Count > 0)
 			{
-				var contentDbrefs = string.Join(" ", visibleContents.Select(x => x.Object().DBRef.ToString()));
+				var contentDbrefs = string.Join(" ", visibleContents.Select(x => $"#{x.Object().DBRef.Number}"));
 				var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
 				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
 
@@ -770,7 +770,7 @@ public partial class Commands
 
 			if (visibleExits.Count > 0 && realViewing.IsRoom)
 			{
-				var exitDbrefs = string.Join(" ", visibleExits.Select(x => x.Object().DBRef.ToString()));
+				var exitDbrefs = string.Join(" ", visibleExits.Select(x => $"#{x.Object().DBRef.Number}"));
 				var exitFormatArgs = new Dictionary<string, CallState>
 				{
 					["0"] = new CallState(exitDbrefs)

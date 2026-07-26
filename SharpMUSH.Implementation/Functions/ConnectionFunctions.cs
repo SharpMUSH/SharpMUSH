@@ -135,9 +135,7 @@ public partial class Functions
 			return new CallState("-1");
 		}
 
-		var data = await ConnectionService!.Get(located.Object.DBRef)
-			.Where(c => c.PresenceClass != PresenceClasses.Portal)
-			.FirstOrDefaultAsync();
+		var data = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
 		return new CallState(data?.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
@@ -460,9 +458,7 @@ public partial class Functions
 			return new CallState("-1");
 		}
 
-		var connectionData = await ConnectionService!.Get(locate.Object.DBRef)
-			.Where(c => c.PresenceClass != PresenceClasses.Portal)
-			.FirstOrDefaultAsync();
+		var connectionData = await ConnectionService!.Get(locate.Object.DBRef).FirstOrDefaultAsync();
 		return new CallState(connectionData?.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 

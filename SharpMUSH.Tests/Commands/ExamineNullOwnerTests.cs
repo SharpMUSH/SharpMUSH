@@ -37,7 +37,6 @@ public class ExamineNullOwnerTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BRANCHY`CHILD {objDbRef}=child"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LEAFZ {objDbRef}=leafz"));
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"examine {objDbRef}"));
 
 		// Every top-level attribute must render — including the owner-less BRANCHY parent and LEAFZ

@@ -102,7 +102,7 @@ public class PortalPresenceTests
 	}
 
 	[Test, NotInParallel(nameof(PortalPresenceTests))]
-	public async Task PortalConnection_IsOffline_ForConnAndConnectedFlag()
+	public async Task PortalConnection_ReportedByConnAndIdle_ButOfflineForConnectedFlag()
 	{
 		var services = WebAppFactoryArg.Services;
 		var mediator = services.GetRequiredService<IMediator>();
@@ -113,7 +113,10 @@ public class PortalPresenceTests
 
 		try
 		{
-			await Assert.That(await FnAsync($"conn(#{portalRef.Number})")).IsEqualTo("-1");
+			// conn()/idle() are technical (any live socket), so they report the portal connection...
+			await Assert.That(await FnAsync($"conn(#{portalRef.Number})")).IsNotEqualTo("-1");
+			await Assert.That(await FnAsync($"idle(#{portalRef.Number})")).IsNotEqualTo("-1");
+			// ...but presence (CONNECTED) treats a portal-only connection as offline.
 			await Assert.That(await FnAsync($"hasflag(#{portalRef.Number},CONNECTED)")).IsEqualTo("0");
 		}
 		finally
