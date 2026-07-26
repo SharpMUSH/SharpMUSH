@@ -542,6 +542,11 @@ public partial class Functions
 
 		async ValueTask<CallState> HasObjectFlag(AnySharpObject realLocated)
 		{
+			// CONNECTED is a runtime pseudo-flag (a live play session), not a stored flag; portal-only
+			// background connections don't count. See IConnectionService.IsOnline.
+			if (string.Equals(flagNameOrSymbol, "CONNECTED", StringComparison.OrdinalIgnoreCase))
+				return await ConnectionService!.IsOnline(realLocated);
+
 			return await realLocated.Object().Flags.Value.AnyAsync(f =>
 				string.Equals(f.Name, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase) ||
 				string.Equals(f.Symbol, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase));

@@ -53,6 +53,9 @@ public class PortalPresenceTests
 		return result.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 	}
 
+	private async Task<string> FnAsync(string function) =>
+		(await Parser.FunctionParse(MModule.single(function)))!.Message!.ToPlainText();
+
 	[Test, NotInParallel(nameof(PortalPresenceTests))]
 	public async Task PortalConnection_ExcludedFromMwho_ButListedByLwho()
 	{
@@ -91,6 +94,48 @@ public class PortalPresenceTests
 		{
 			var mortalWho = await WhoAsync("mwho()");
 			await Assert.That(mortalWho).Contains($"#{playRef.Number}");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
+	[Test, NotInParallel(nameof(PortalPresenceTests))]
+	public async Task PortalConnection_IsOffline_ForConnAndConnectedFlag()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var portalRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "PortalOffline");
+		var handle = await ConnectAsAsync(portalRef, PresenceClasses.Portal);
+
+		try
+		{
+			await Assert.That(await FnAsync($"conn(#{portalRef.Number})")).IsEqualTo("-1");
+			await Assert.That(await FnAsync($"hasflag(#{portalRef.Number},CONNECTED)")).IsEqualTo("0");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
+	[Test, NotInParallel(nameof(PortalPresenceTests))]
+	public async Task PlayConnection_IsOnline_ForConnAndConnectedFlag()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "PlayOnline");
+		var handle = await ConnectAsAsync(playRef, PresenceClasses.Play);
+
+		try
+		{
+			await Assert.That(await FnAsync($"conn(#{playRef.Number})")).IsNotEqualTo("-1");
+			await Assert.That(await FnAsync($"hasflag(#{playRef.Number},CONNECTED)")).IsEqualTo("1");
 		}
 		finally
 		{

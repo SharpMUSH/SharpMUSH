@@ -726,7 +726,12 @@ public partial class Commands
 					}
 					else
 					{
-						visibleContents.Add(item);
+						// Disconnected / portal-only players are "asleep" — omitted from contents (PennMUSH).
+						// Objects always show.
+						if (!item.IsPlayer || await ConnectionService!.IsOnline(itemObj))
+						{
+							visibleContents.Add(item);
+						}
 					}
 				}
 			}

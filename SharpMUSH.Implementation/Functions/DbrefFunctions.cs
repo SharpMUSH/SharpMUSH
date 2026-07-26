@@ -2264,10 +2264,11 @@ public partial class Functions
 				continue;
 			}
 
-			// Special pseudo-flag: 'c' = CONNECTED (runtime state, not stored flag)
+			// Special pseudo-flag: 'c' = CONNECTED (runtime state, not stored flag; portal-only sessions
+			// don't count — see IConnectionService.IsOnline)
 			if (c == 'c')
 			{
-				bool connected = await ConnectionService!.IsConnected(obj);
+				bool connected = await ConnectionService!.IsOnline(obj);
 				bool effectiveConn = negate ? !connected : connected;
 				if (orMode)
 				{
@@ -2337,7 +2338,7 @@ public partial class Functions
 				case "ROOM":      hasIt = obj.IsRoom; break;
 				case "THING":     hasIt = obj.IsThing; break;
 				case "EXIT":      hasIt = obj.IsExit; break;
-				case "CONNECTED": hasIt = await ConnectionService!.IsConnected(obj); break;
+				case "CONNECTED": hasIt = await ConnectionService!.IsOnline(obj); break;
 				default:          hasIt = await obj.HasFlag(flagName); break;
 			}
 
