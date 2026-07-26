@@ -121,5 +121,5 @@
         => s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..];
 
     private static string PageHref(WikiPageSummary page) =>
-        $"/wiki/{page.Namespace.ToLowerInvariant()}/{(page.Category ?? "general")}/{page.Slug}";
+        WikiRoutes.PathFor(page.Namespace, page.Category, page.Slug);
 }
