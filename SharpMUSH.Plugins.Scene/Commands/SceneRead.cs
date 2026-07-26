@@ -105,8 +105,8 @@ public static class SceneRead
 
 	private static string FormatSummary(Contracts.Scene scene)
 		=> $"SCENE #{scene.Id} [{scene.Status}] {(scene.Meta.TryGetValue("title", out var t) ? t : "(untitled)")}" +
-		   $" — owner {scene.OwnerName}, room {(string.IsNullOrEmpty(scene.RoomName) ? "(roomless)" : scene.RoomName)}," +
-		   $" {scene.PoseCount} pose(s)";
+			 $" — owner {scene.OwnerName}, room {(string.IsNullOrEmpty(scene.RoomName) ? "(roomless)" : scene.RoomName)}," +
+			 $" {scene.PoseCount} pose(s)";
 
 	private static string ReadKey(Contracts.Scene scene, string key)
 		=> key.ToLowerInvariant() switch

@@ -192,54 +192,54 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 		switch (f)
 		{
 			case "scheduled":
-			{
-				var from = fromUtcMillis ?? long.MinValue;
-				var to = toUtcMillis ?? long.MaxValue;
-				cypher = $$"""
+				{
+					var from = fromUtcMillis ?? long.MinValue;
+					var to = toUtcMillis ?? long.MaxValue;
+					cypher = $$"""
 					MATCH (s:{{SceneLabel}})
 					WHERE s.scheduledFor <> $noMillis AND s.scheduledFor >= $from AND s.scheduledFor <= $to
 					RETURN s ORDER BY s.scheduledFor ASC LIMIT $count
 					""";
-				parameters = new { noMillis = NoMillis, from, to, count };
-				break;
-			}
+					parameters = new { noMillis = NoMillis, from, to, count };
+					break;
+				}
 			case "mine":
-			{
-				var key = ResolveKey(viewerDbref);
-				cypher = $$"""
+				{
+					var key = ResolveKey(viewerDbref);
+					cypher = $$"""
 					MATCH (o:Object {key: $key})-[:{{RelMember}}]->(s:{{SceneLabel}})
 					RETURN DISTINCT s ORDER BY s.lastActivityAt DESC LIMIT $count
 					""";
-				parameters = new { key = key ?? int.MinValue, count };
-				break;
-			}
+					parameters = new { key = key ?? int.MinValue, count };
+					break;
+				}
 			case "active":
-			{
-				cypher = $$"""
+				{
+					cypher = $$"""
 					MATCH (s:{{SceneLabel}}) WHERE s.status = 'active'
 					RETURN s ORDER BY s.lastActivityAt DESC LIMIT $count
 					""";
-				parameters = new { count };
-				break;
-			}
+					parameters = new { count };
+					break;
+				}
 			case "finished":
-			{
-				cypher = $$"""
+				{
+					cypher = $$"""
 					MATCH (s:{{SceneLabel}}) WHERE s.status = 'finished'
 					RETURN s ORDER BY s.lastActivityAt DESC LIMIT $count
 					""";
-				parameters = new { count };
-				break;
-			}
+					parameters = new { count };
+					break;
+				}
 			default: // "recent" and anything else
-			{
-				cypher = $$"""
+				{
+					cypher = $$"""
 					MATCH (s:{{SceneLabel}})
 					RETURN s ORDER BY s.lastActivityAt DESC LIMIT $count
 					""";
-				parameters = new { count };
-				break;
-			}
+					parameters = new { count };
+					break;
+				}
 		}
 
 		var result = await session.RunAsync(cypher, parameters);

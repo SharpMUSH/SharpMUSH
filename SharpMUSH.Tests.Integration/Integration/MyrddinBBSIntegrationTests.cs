@@ -163,7 +163,7 @@ public class MyrddinBBSIntegrationTests
 				var parseErrors = Parser.ValidateAndGetErrors(MModule.single(line), ParseType.CommandList);
 				if (parseErrors.Count > 0)
 				{
-					antlrErrorsByLine[i + 1] = [..parseErrors.Select(e => $"col {e.Column}: {e.Message}")];
+					antlrErrorsByLine[i + 1] = [.. parseErrors.Select(e => $"col {e.Column}: {e.Message}")];
 				}
 
 				await Parser.CommandParse(1, ConnectionService, MModule.single(line));

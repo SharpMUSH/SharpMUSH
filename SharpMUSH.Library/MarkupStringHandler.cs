@@ -203,10 +203,10 @@ public ref struct MarkupStringHandler
 
 		return op.ToLowerInvariant() switch
 		{
-			"trim"  => ApplyTrim(value, rest),
+			"trim" => ApplyTrim(value, rest),
 			"align" => ApplyAlign(value, rest),
 			"color" => ApplyColor(value, rest),
-			_       => value, // unknown specifiers are silently ignored
+			_ => value, // unknown specifiers are silently ignored
 		};
 	}
 
@@ -230,9 +230,9 @@ public ref struct MarkupStringHandler
 
 		TrimType trimType = dir.ToLowerInvariant() switch
 		{
-			"left"  or "start" => TrimType.TrimStart,
-			"right" or "end"   => TrimType.TrimEnd,
-			_                  => TrimType.TrimBoth, // includes "both" and empty
+			"left" or "start" => TrimType.TrimStart,
+			"right" or "end" => TrimType.TrimEnd,
+			_ => TrimType.TrimBoth, // includes "both" and empty
 		};
 
 		return MModule.Trim(value, chars, trimType);
@@ -261,11 +261,11 @@ public ref struct MarkupStringHandler
 
 		PadType padType = dir switch
 		{
-			"left"   => PadType.Right,
-			"right"  => PadType.Left,
+			"left" => PadType.Right,
+			"right" => PadType.Left,
 			"center" => PadType.Center,
-			"full"   => PadType.Full,
-			_        => PadType.Right, // default to left-justify
+			"full" => PadType.Full,
+			_ => PadType.Right, // default to left-justify
 		};
 
 		return MModule.Pad(value, fill, width, padType, TruncationType.Truncate);
@@ -307,12 +307,12 @@ public ref struct MarkupStringHandler
 /// </summary>
 public static class MStringInterpolation
 {
-    /// <summary>
-    /// Builds a markup-preserving <see cref="MString"/> from an interpolated string.
-    /// The compiler routes the <c>$"..."</c> expression through
-    /// <see cref="MarkupStringHandler"/>, calling <c>AppendLiteral</c> /
-    /// <c>AppendFormatted</c> for each segment before passing the completed handler here.
-    /// </summary>
-    public static MString Format(MarkupStringHandler handler)
-        => handler.ToMarkupString();
+	/// <summary>
+	/// Builds a markup-preserving <see cref="MString"/> from an interpolated string.
+	/// The compiler routes the <c>$"..."</c> expression through
+	/// <see cref="MarkupStringHandler"/>, calling <c>AppendLiteral</c> /
+	/// <c>AppendFormatted</c> for each segment before passing the completed handler here.
+	/// </summary>
+	public static MString Format(MarkupStringHandler handler)
+			=> handler.ToMarkupString();
 }

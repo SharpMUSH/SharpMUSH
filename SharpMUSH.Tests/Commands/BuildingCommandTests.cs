@@ -713,13 +713,13 @@ public class BuildingCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DescribeCommand");
 		var testParser = WebAppFactoryArg.CommandParserFor(testPlayer.DbRef, testPlayer.Handle);
-		
+
 		await testParser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@desc #99999=test description"));
-	
+
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(testPlayer.DbRef), 
+				TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(testPlayer.DbRef),
 				INotifyService.NotificationType.Announce);
 	}
 

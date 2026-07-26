@@ -212,19 +212,19 @@ public partial class Commands
 			var setResult =
 				await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(attribute), content);
 
-		if (setResult.IsT0)
-		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-				realLocated.Object().Name, MModule.plainText(attribute));
-		}
-		else
-		{
-			await NotifyService!.Notify(executor, setResult.AsT1.Value, executor);
-		}
+			if (setResult.IsT0)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
+					realLocated.Object().Name, MModule.plainText(attribute));
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, setResult.AsT1.Value, executor);
+			}
 
-		return new CallState(setResult.Match(
-			_ => $"{realLocated.Object().Name}/{args["0"].Message}",
-			failure => failure.Value));
+			return new CallState(setResult.Match(
+				_ => $"{realLocated.Object().Name}/{args["0"].Message}",
+				failure => failure.Value));
 		}
 
 		foreach (var flag in MModule.splitList(MModule.single(" "), args["1"].Message!))
@@ -658,11 +658,11 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-						return await NotifyService!.NotifyAndReturn(
-								executor.Object().DBRef,
-								errorReturn: ErrorMessages.Returns.InvalidDestination,
-								notifyMessage: ErrorMessages.Notifications.InvalidDestinationExit,
-								shouldNotify: true);
+								return await NotifyService!.NotifyAndReturn(
+										executor.Object().DBRef,
+										errorReturn: ErrorMessages.Returns.InvalidDestination,
+										notifyMessage: ErrorMessages.Notifications.InvalidDestinationExit,
+										shouldNotify: true);
 							}
 
 							var destinationRoom = destObj.AsRoom;
@@ -676,11 +676,11 @@ public partial class Commands
 
 								if (!hasLinkOk)
 								{
-								return await NotifyService!.NotifyAndReturn(
-									executor.Object().DBRef,
-									errorReturn: ErrorMessages.Returns.PermissionDenied,
-									notifyMessage: ErrorMessages.Notifications.CantLinkToThat,
-									shouldNotify: true);
+									return await NotifyService!.NotifyAndReturn(
+										executor.Object().DBRef,
+										errorReturn: ErrorMessages.Returns.PermissionDenied,
+										notifyMessage: ErrorMessages.Notifications.CantLinkToThat,
+										shouldNotify: true);
 								}
 							}
 
@@ -698,11 +698,11 @@ public partial class Commands
 								var linkLockPasses = LockService!.Evaluate(LockType.Link, exitObj, executor);
 								if (!linkLockPasses)
 								{
-								return await NotifyService!.NotifyAndReturn(
-									executor.Object().DBRef,
-									errorReturn: ErrorMessages.Returns.PermissionDenied,
-									notifyMessage: ErrorMessages.Notifications.DontPassLinkLock,
-									shouldNotify: true);
+									return await NotifyService!.NotifyAndReturn(
+										executor.Object().DBRef,
+										errorReturn: ErrorMessages.Returns.PermissionDenied,
+										notifyMessage: ErrorMessages.Notifications.DontPassLinkLock,
+										shouldNotify: true);
 								}
 
 								if (executor.IsPlayer)
@@ -713,11 +713,11 @@ public partial class Commands
 									}
 									catch (Exception)
 									{
-									return await NotifyService!.NotifyAndReturn(
-										executor.Object().DBRef,
-										errorReturn: ErrorMessages.Returns.PermissionDenied,
-										notifyMessage: ErrorMessages.Notifications.FailedToTransferOwnership,
-										shouldNotify: true);
+										return await NotifyService!.NotifyAndReturn(
+											executor.Object().DBRef,
+											errorReturn: ErrorMessages.Returns.PermissionDenied,
+											notifyMessage: ErrorMessages.Notifications.FailedToTransferOwnership,
+											shouldNotify: true);
 									}
 								}
 
@@ -742,11 +742,11 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-						return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
-							errorReturn: ErrorMessages.Returns.InvalidDestination,
-							notifyMessage: ErrorMessages.Notifications.HomeMustBeRoom,
-							shouldNotify: true);
+								return await NotifyService!.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.InvalidDestination,
+									notifyMessage: ErrorMessages.Notifications.HomeMustBeRoom,
+									shouldNotify: true);
 							}
 
 							// Convert to AnySharpContent for SetObjectHomeCommand
@@ -765,11 +765,11 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-						return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
-							errorReturn: ErrorMessages.Returns.InvalidDestination,
-							notifyMessage: ErrorMessages.Notifications.DropToMustBeRoom,
-							shouldNotify: true);
+								return await NotifyService!.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.InvalidDestination,
+									notifyMessage: ErrorMessages.Notifications.DropToMustBeRoom,
+									shouldNotify: true);
 							}
 
 							await Mediator!.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
@@ -779,11 +779,11 @@ public partial class Commands
 					);
 				}
 
-			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.InvalidObjectType,
-				notifyMessage: ErrorMessages.Notifications.InvalidObjectTypeForLinking,
-				shouldNotify: true);
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.InvalidObjectType,
+					notifyMessage: ErrorMessages.Notifications.InvalidObjectTypeForLinking,
+					shouldNotify: true);
 			}
 		);
 	}
@@ -824,11 +824,11 @@ public partial class Commands
 
 				if (!await obj.HasFlag("GOING"))
 				{
-				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.NotGoing,
-					notifyMessage: ErrorMessages.Notifications.NotMarkedForDestruction,
-					shouldNotify: true);
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.NotGoing,
+						notifyMessage: ErrorMessages.Notifications.NotMarkedForDestruction,
+						shouldNotify: true);
 				}
 
 				if (await obj.HasFlag("GOING"))
@@ -895,11 +895,11 @@ public partial class Commands
 
 						if (!canZone && !LockService!.Evaluate(LockType.ChZone, zoneObj, executor))
 						{
-					return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
-							errorReturn: ErrorMessages.Returns.PermissionDenied,
-							notifyMessage: ErrorMessages.Notifications.PermissionDeniedCannotZoneTo,
-							shouldNotify: true);
+							return await NotifyService!.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.PermissionDenied,
+									notifyMessage: ErrorMessages.Notifications.PermissionDeniedCannotZoneTo,
+									shouldNotify: true);
 						}
 
 						// Check for cycles before setting the zone
@@ -1002,10 +1002,10 @@ public partial class Commands
 				exitToName.Skip(1).ToArray(), await executorBase.Where(),
 				await executor.Owner.WithCancellation(CancellationToken.None)));
 			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{toExitResponse.Number}");
-		await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
+			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
 
-		var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
-		var newExitObject = await Mediator.Send(new GetObjectNodeQuery(toExitResponse));
+			var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
+			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(toExitResponse));
 
 			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
 
@@ -1026,9 +1026,9 @@ public partial class Commands
 			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(fromExitResponse));
 
 			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{fromExitResponse.Number}");
-		await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
+			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
 
-		var where = await executorBase.Where();
+			var where = await executorBase.Where();
 			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
 
 			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, fromExitResponse.Number, where.Object().DBRef.Number);
@@ -1250,11 +1250,11 @@ public partial class Commands
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor, executor, sourceRoomName, LocateFlags.All);
 
-		if (locateResult.IsError || !locateResult.AsSharpObject.IsRoom)
-		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SourceMustBeARoom), executor);
-			return new CallState(ErrorMessages.Returns.NotARoom);
-		}
+			if (locateResult.IsError || !locateResult.AsSharpObject.IsRoom)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SourceMustBeARoom), executor);
+				return new CallState(ErrorMessages.Returns.NotARoom);
+			}
 			sourceRoom = locateResult.AsSharpObject.AsRoom;
 		}
 
@@ -1344,11 +1344,11 @@ public partial class Commands
 
 				if (obj.IsPlayer)
 				{
-			return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.InvalidObjectType,
-					notifyMessage: ErrorMessages.Notifications.CannotClonePlayers,
-					shouldNotify: true);
+					return await NotifyService!.NotifyAndReturn(
+							executor.Object().DBRef,
+							errorReturn: ErrorMessages.Returns.InvalidObjectType,
+							notifyMessage: ErrorMessages.Notifications.CannotClonePlayers,
+							shouldNotify: true);
 				}
 
 				var newName = obj.Object().Name;
@@ -1388,11 +1388,11 @@ public partial class Commands
 				}
 				else
 				{
-				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.InvalidObjectType,
-					notifyMessage: ErrorMessages.Notifications.CannotCloneThisObjectType,
-					shouldNotify: true);
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.InvalidObjectType,
+						notifyMessage: ErrorMessages.Notifications.CannotCloneThisObjectType,
+						shouldNotify: true);
 				}
 
 				var clonedObjOptional = await Mediator!.Send(new GetObjectNodeQuery(cloneDbRef));
@@ -1530,11 +1530,11 @@ public partial class Commands
 					return CallState.Empty;
 				}
 
-			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.InvalidObjectType,
-				notifyMessage: ErrorMessages.Notifications.InvalidObjectTypeGeneric,
-				shouldNotify: true);
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.InvalidObjectType,
+					notifyMessage: ErrorMessages.Notifications.InvalidObjectTypeGeneric,
+					shouldNotify: true);
 			}
 		);
 	}

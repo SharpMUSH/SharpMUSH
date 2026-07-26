@@ -37,10 +37,10 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 				.WithCommand("-c", NatsConfigPath)
 				.WithLabel("reuse-id", "SharpMUSH-NATS")
 				.WithReuse(true)   // shared across Server and ConnectionServer processes
-				// Port-based readiness instead of the image default's log-message wait. A reused
-				// container's startup log has already scrolled past, so replaying a log wait hangs
-				// forever (notably under rootless podman); checking the client port is open succeeds
-				// immediately whether the container is fresh or reused.
+													 // Port-based readiness instead of the image default's log-message wait. A reused
+													 // container's startup log has already scrolled past, so replaying a log wait hangs
+													 // forever (notably under rootless podman); checking the client port is open succeeds
+													 // immediately whether the container is fresh or reused.
 				.WithWaitStrategy(Wait.ForUnixContainer().UntilInternalTcpPortIsAvailable(4222))
 				.Build();
 

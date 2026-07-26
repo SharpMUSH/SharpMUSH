@@ -72,61 +72,61 @@ public static class ManageWiki
 				return MModule.single(page.Slug);
 
 			case Operation.Protect or Operation.Unprotect:
-			{
-				var protect = op == Operation.Protect;
-				await wikiService.SetProtectionAsync(page.Id, protect);
-				await notifyService.Notify(executor,
-					$"WIKI: '{page.Title}' is now {(protect ? "protected (wizard-only edits)" : "unprotected")}.", executor);
-				return MModule.single(page.Slug);
-			}
+				{
+					var protect = op == Operation.Protect;
+					await wikiService.SetProtectionAsync(page.Id, protect);
+					await notifyService.Notify(executor,
+						$"WIKI: '{page.Title}' is now {(protect ? "protected (wizard-only edits)" : "unprotected")}.", executor);
+					return MModule.single(page.Slug);
+				}
 
 			case Operation.Publish or Operation.Unpublish:
-			{
-				var publish = op == Operation.Publish;
-				var publishResult = await wikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, publish);
-				if (publishResult.IsT1)
 				{
-					await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
-					return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+					var publish = op == Operation.Publish;
+					var publishResult = await wikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, publish);
+					if (publishResult.IsT1)
+					{
+						await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
+						return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+					}
+					await notifyService.Notify(executor,
+						$"WIKI: '{page.Title}' is now {(publish ? "published" : "an unpublished draft")}.", executor);
+					return MModule.single(page.Slug);
 				}
-				await notifyService.Notify(executor,
-					$"WIKI: '{page.Title}' is now {(publish ? "published" : "an unpublished draft")}.", executor);
-				return MModule.single(page.Slug);
-			}
 
 			case Operation.Category:
-			{
-				var category = valueArg?.ToPlainText().Trim();
-				var categoryResult = await wikiService.SetMetadataAsync(page.Id, category, page.Tags, page.Published);
-				if (categoryResult.IsT1)
 				{
-					await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
-					return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+					var category = valueArg?.ToPlainText().Trim();
+					var categoryResult = await wikiService.SetMetadataAsync(page.Id, category, page.Tags, page.Published);
+					if (categoryResult.IsT1)
+					{
+						await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
+						return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+					}
+					await notifyService.Notify(executor,
+						string.IsNullOrWhiteSpace(category)
+							? $"WIKI: Cleared the category on '{page.Title}'."
+							: $"WIKI: '{page.Title}' is now in category '{category.ToLowerInvariant()}'.", executor);
+					return MModule.single(page.Slug);
 				}
-				await notifyService.Notify(executor,
-					string.IsNullOrWhiteSpace(category)
-						? $"WIKI: Cleared the category on '{page.Title}'."
-						: $"WIKI: '{page.Title}' is now in category '{category.ToLowerInvariant()}'.", executor);
-				return MModule.single(page.Slug);
-			}
 
 			case Operation.Tag:
-			{
-				// Tags are supplied as a space-separated list; the service normalises them.
-				var tags = (valueArg?.ToPlainText() ?? string.Empty)
-					.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-				var result = await wikiService.SetMetadataAsync(page.Id, page.Category, tags, page.Published);
-				if (result.IsT1)
 				{
-					await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
-					return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+					// Tags are supplied as a space-separated list; the service normalises them.
+					var tags = (valueArg?.ToPlainText() ?? string.Empty)
+						.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+					var result = await wikiService.SetMetadataAsync(page.Id, page.Category, tags, page.Published);
+					if (result.IsT1)
+					{
+						await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
+						return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+					}
+					var stored = result.AsT0.Tags.Count > 0
+						? string.Join(", ", result.AsT0.Tags)
+						: "(none)";
+					await notifyService.Notify(executor, $"WIKI: Tags on '{page.Title}' set to: {stored}.", executor);
+					return MModule.single(page.Slug);
 				}
-				var stored = result.AsT0.Tags.Count > 0
-					? string.Join(", ", result.AsT0.Tags)
-					: "(none)";
-				await notifyService.Notify(executor, $"WIKI: Tags on '{page.Title}' set to: {stored}.", executor);
-				return MModule.single(page.Slug);
-			}
 
 			default:
 				return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);

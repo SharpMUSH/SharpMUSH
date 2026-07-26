@@ -182,7 +182,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single( 
+			MModule.single(
 				"@dolist/inline a b={@dolist/inline 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
 
 		// outer 2 elements (a,b) × inner 3 elements (1,2,3) → each distinct inner msg fires 2×
@@ -574,7 +574,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "DoListBatchesToOtherPlayers: Message to other player")), 
+				TestHelpers.MessagePlainTextEquals(msg, "DoListBatchesToOtherPlayers: Message to other player")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 

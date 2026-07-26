@@ -99,22 +99,22 @@ public partial class MemgraphDatabase
 };
 
 			// DDL (CREATE INDEX) must run as auto-commit in Memgraph — explicit/managed
-				// transactions are not allowed for index manipulation. Use session.RunAsync() directly.
-				await using var indexSession = driver.AsyncSession();
-				foreach (var q in indexQueries)
-				{
-					try { await indexSession.RunAsync(q); }
-					catch (ClientException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
-					{ /* Index already exists — safe to ignore */ }
-					catch (DatabaseException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
-					{ /* Index already exists — safe to ignore */ }
-				}
+			// transactions are not allowed for index manipulation. Use session.RunAsync() directly.
+			await using var indexSession = driver.AsyncSession();
+			foreach (var q in indexQueries)
+			{
+				try { await indexSession.RunAsync(q); }
+				catch (ClientException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+				{ /* Index already exists — safe to ignore */ }
+				catch (DatabaseException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+				{ /* Index already exists — safe to ignore */ }
+			}
 
-				// Wiki indexes — same auto-commit requirement.
-				// Category is part of page identity: backfill legacy null categories first, then enforce
-				// uniqueness on (namespace, category, slug) so the same slug may live in different categories.
-				var wikiIndexQueries = new[]
-				{
+			// Wiki indexes — same auto-commit requirement.
+			// Category is part of page identity: backfill legacy null categories first, then enforce
+			// uniqueness on (namespace, category, slug) so the same slug may live in different categories.
+			var wikiIndexQueries = new[]
+			{
 					"MATCH (p:WikiPage) WHERE p.category IS NULL SET p.category = 'general'",
 					"CREATE INDEX ON :WikiPage(namespace)",
 					"CREATE INDEX ON :WikiPage(slug)",
@@ -125,14 +125,14 @@ public partial class MemgraphDatabase
 					"CREATE INDEX ON :WikiRevision(revisionNumber)"
 				};
 
-				foreach (var wq in wikiIndexQueries)
-				{
-					try { await indexSession.RunAsync(wq); }
-					catch (ClientException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
-					{ /* Index already exists — safe to ignore */ }
-					catch (DatabaseException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
-					{ /* Index already exists — safe to ignore */ }
-				}
+			foreach (var wq in wikiIndexQueries)
+			{
+				try { await indexSession.RunAsync(wq); }
+				catch (ClientException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+				{ /* Index already exists — safe to ignore */ }
+				catch (DatabaseException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+				{ /* Index already exists — safe to ignore */ }
+			}
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 

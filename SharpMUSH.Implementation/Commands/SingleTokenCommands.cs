@@ -95,10 +95,10 @@ public partial class Commands
 						executor, realLocated, attrName,
 						IAttributeService.AttributePatternMode.Exact,
 						IAttributeService.AttributeClearMode.Safe);
-				await NotifyService!.Notify(executor,
-					clearResult.Match(
-						_ => string.Format(ErrorMessages.Notifications.AttributeCleared, realLocated.Object().Name, attrName),
-						failure => failure.Value), executor);
+					await NotifyService!.Notify(executor,
+						clearResult.Match(
+							_ => string.Format(ErrorMessages.Notifications.AttributeCleared, realLocated.Object().Name, attrName),
+							failure => failure.Value), executor);
 					return new CallState(clearResult.Match(
 						_ => $"{realLocated.Object().Name}/{attrNameParsed}",
 						_ => string.Empty));
@@ -120,10 +120,10 @@ public partial class Commands
 				// Notifications go to executor so softcoded WIZARD objects don't leak confirmations to players.
 				var setResult =
 					await AttributeService!.SetAttributeAsync(executor, realLocated, attrName, contents);
-			await NotifyService!.Notify(executor,
-				setResult.Match(
-					_ => string.Format(ErrorMessages.Notifications.AttributeSet, realLocated.Object().Name, attrNameParsed),
-					failure => failure.Value), executor);
+				await NotifyService!.Notify(executor,
+					setResult.Match(
+						_ => string.Format(ErrorMessages.Notifications.AttributeSet, realLocated.Object().Name, attrNameParsed),
+						failure => failure.Value), executor);
 
 				return new CallState(setResult.Match(
 					_ => $"{realLocated.Object().Name}/{attrNameParsed}",

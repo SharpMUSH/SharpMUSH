@@ -133,7 +133,7 @@ public class UtilityCommandTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.IsT0 &&
 				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1") &&
-				msg.AsT0.Render("ansi").Contains("\x1b[")), 
+				msg.AsT0.Render("ansi").Contains("\x1b[")),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 

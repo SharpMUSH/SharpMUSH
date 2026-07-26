@@ -80,7 +80,7 @@ public class AccountAuthService(
 	public void SetActiveCharacter(CharacterSummary? character)
 	{
 		if (ActiveCharacter?.DbrefNumber == character?.DbrefNumber
-		    && ActiveCharacter?.CreationTime == character?.CreationTime)
+				&& ActiveCharacter?.CreationTime == character?.CreationTime)
 			return;
 
 		ActiveCharacter = character;

@@ -82,7 +82,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		{
 			MushObjectType.Room => $"before(dig({name}),:)",
 			MushObjectType.Exit => $"before(open({name}),:)",
-			_                   => $"create({name})",   // create() already returns #N cleanly
+			_ => $"create({name})",   // create() already returns #N cleanly
 		};
 
 		var lines = await terminal.SendCommandAsync(expr);

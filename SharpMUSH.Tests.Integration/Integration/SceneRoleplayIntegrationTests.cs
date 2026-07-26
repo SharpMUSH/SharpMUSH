@@ -466,7 +466,7 @@ public class SceneRoleplayIntegrationTests
 
 		await RunAndCollectAs(22L, $"+scene/join {sceneId}");
 		await RunAndCollectAs(21L, "pose stretches and yawns by the fire.");   // captured for Pat
-		// Quinn deliberately never poses → oldest (never) → up next.
+																																					 // Quinn deliberately never poses → oldest (never) → up next.
 
 		var potMsgs = await RunAndCollectAs(21L, "+pot");
 		var lines = potMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()).ToList();

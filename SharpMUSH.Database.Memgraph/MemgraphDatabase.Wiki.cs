@@ -168,8 +168,16 @@ public partial class MemgraphDatabase : IWikiService
 				""",
 				new
 				{
-					pageId, slug, title, ns = nsStr, cat, markdown, html, plain,
-					authorDbref, now = now.ToString("O")
+					pageId,
+					slug,
+					title,
+					ns = nsStr,
+					cat,
+					markdown,
+					html,
+					plain,
+					authorDbref,
+					now = now.ToString("O")
 				});
 
 			var records = await result.ToListAsync();
@@ -211,8 +219,13 @@ public partial class MemgraphDatabase : IWikiService
 				""",
 				new
 				{
-					id, markdown, html, plain, editorDbref,
-					now = now.ToString("O"), rev = newRevision
+					id,
+					markdown,
+					html,
+					plain,
+					editorDbref,
+					now = now.ToString("O"),
+					rev = newRevision
 				});
 
 			var records = await result.ToListAsync();

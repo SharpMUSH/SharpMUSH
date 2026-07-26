@@ -306,7 +306,7 @@ public class CommunicationCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AddComChannelNotFound");
 		var testParser = WebAppFactoryArg.CommandParserFor(testPlayer.DbRef, testPlayer.Handle);
-		
+
 		await testParser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("addcom test_alias_ADDCOM3=NonExistentChannel"));
 		await NotifyService
 			.Received(1)

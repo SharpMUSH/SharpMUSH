@@ -31,7 +31,7 @@ public class DefaultPackagesBootstrapService(
 		// a package's server-global @hook/override capture (e.g. scene's @EMIT hook). Unset/anything-else
 		// installs as normal, so production is unaffected; package- and plugin-dependent tests opt back in.
 		if (string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES"), "false",
-			    StringComparison.OrdinalIgnoreCase))
+					StringComparison.OrdinalIgnoreCase))
 		{
 			logger.LogInformation("Bundled package bootstrap disabled via SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES=false.");
 			return;

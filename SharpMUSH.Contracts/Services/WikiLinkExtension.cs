@@ -191,7 +191,7 @@ public sealed class WikiLinkExtension : Markdig.IMarkdownExtension
 	public void Setup(MarkdownPipeline pipeline, IMarkdownRenderer renderer)
 	{
 		if (renderer is HtmlRenderer htmlRenderer
-		    && !htmlRenderer.ObjectRenderers.Contains<WikiLinkHtmlRenderer>())
+				&& !htmlRenderer.ObjectRenderers.Contains<WikiLinkHtmlRenderer>())
 		{
 			htmlRenderer.ObjectRenderers.Insert(0, new WikiLinkHtmlRenderer());
 		}

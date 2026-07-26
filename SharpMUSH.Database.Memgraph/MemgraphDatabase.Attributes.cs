@@ -74,13 +74,13 @@ public partial class MemgraphDatabase
 		if (typedResult.Result.Count == 0) yield break;
 		var tkey = typedResult.Result[0]["tkey"].As<int>();
 
-	var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
-		{
-			"**" => ".*",
-			"*" => "[^`]*",
-			"?" => ".",
-			_ => $"\\{m.Value}"
-		});
+		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
+			{
+				"**" => ".*",
+				"*" => "[^`]*",
+				"?" => ".",
+				_ => $"\\{m.Value}"
+			});
 
 		// Trailing backtick means "direct children only" — e.g. FOO` → FOO`[^`]+
 		if (pattern.EndsWith("`"))
@@ -170,13 +170,13 @@ RETURN child ORDER BY child.longName
 		if (typedResult.Result.Count == 0) yield break;
 		var tkey = typedResult.Result[0]["tkey"].As<int>();
 
-	var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
-		{
-			"**" => ".*",
-			"*" => "[^`]*",
-			"?" => ".",
-			_ => $"\\{m.Value}"
-		});
+		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
+			{
+				"**" => ".*",
+				"*" => "[^`]*",
+				"?" => ".",
+				_ => $"\\{m.Value}"
+			});
 
 		// Trailing backtick means "direct children only" — e.g. FOO` → FOO`[^`]+
 		if (pattern.EndsWith("`"))
@@ -293,7 +293,7 @@ RETURN child ORDER BY child.longName
 		var result = await ExecuteWithRetryAsync(sb.ToString(), parameters, cancellationToken);
 		if (result.Result.Count == 0) return false;
 
-	// Set branch flag on parent attribute nodes (not the root typed node)
+		// Set branch flag on parent attribute nodes (not the root typed node)
 		for (var i = 0; i < attribute.Length - 1; i++)
 		{
 			var longName = string.Join('`', attribute.Take(i + 1));
@@ -376,7 +376,7 @@ DELETE r
 			yield return MapNodeToAttributeFlag(record["f"].As<INode>());
 	}
 
-public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+	public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
 	{
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var attrPath = await GetAttributeAsync(dbref, attribute, cancellationToken).ToListAsync(cancellationToken);
@@ -410,7 +410,7 @@ RETURN count(child) AS cnt
 		return true;
 	}
 
-public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+	public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
 	{
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var attrPath = await GetAttributeAsync(dbref, attribute, cancellationToken).ToListAsync(cancellationToken);
@@ -501,7 +501,7 @@ SET e.defaultFlags = $defaultFlags, e.lim = $lim, e.enumValues = $enumValues
 		var objKey = dbref.Number;
 		var parentResult = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..100]->(parent:Object) RETURN parent", new { key = objKey }, cancellationToken);
 
-	foreach (var parentNode in parentResult.Result.Select(r => r["parent"].As<INode>()))
+		foreach (var parentNode in parentResult.Result.Select(r => r["parent"].As<INode>()))
 		{
 			var parentKey = parentNode["key"].As<int>();
 			var parentDbRef = new DBRef(parentKey);
@@ -526,7 +526,7 @@ MATCH (chainObj)-[:HAS_ZONE]->(zone:Object)
 RETURN zone
 """, new { key = objKey }, cancellationToken);
 
-	foreach (var zoneNode in chainResult.Result.Select(r => r["zone"].As<INode>()))
+		foreach (var zoneNode in chainResult.Result.Select(r => r["zone"].As<INode>()))
 		{
 			var zoneKey = zoneNode["key"].As<int>();
 			var zoneDbRef = new DBRef(zoneKey);
@@ -541,7 +541,7 @@ RETURN zone
 				yield return new AttributeWithInheritance(zoneAttrs, zoneDbRef, AttributeSource.Zone, flags);
 				yield break;
 			}
-	}
+		}
 	}
 
 	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
@@ -568,7 +568,7 @@ RETURN zone
 			var parentKey = parentNode["key"].As<int>();
 			var parentDbRef = new DBRef(parentKey);
 			var parentAttrs = await GetLazyAttributeAsync(parentDbRef, attribute, cancellationToken).ToArrayAsync(cancellationToken);
-		if (parentAttrs.Length == attribute.Length)
+			if (parentAttrs.Length == attribute.Length)
 			{
 				var lastAttr = parentAttrs.Last();
 				// no_inherit flag prevents attribute from being visible to children

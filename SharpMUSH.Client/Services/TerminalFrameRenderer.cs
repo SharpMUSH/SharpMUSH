@@ -50,25 +50,25 @@ public static class TerminalFrameRenderer
 			switch (typeEl.GetString())
 			{
 				case "markup":
-				{
-					var data = GetStringProperty(root, "data");
-					var ms = MModule.deserialize(data);
-					return new TerminalFrame(TerminalFrameKind.Markup, ms.ToPlainText(), ms.Render("html"), string.Empty, string.Empty);
-				}
+					{
+						var data = GetStringProperty(root, "data");
+						var ms = MModule.deserialize(data);
+						return new TerminalFrame(TerminalFrameKind.Markup, ms.ToPlainText(), ms.Render("html"), string.Empty, string.Empty);
+					}
 				case "html":
-				{
-					var data = GetStringProperty(root, "data");
-					return new TerminalFrame(TerminalFrameKind.Html, data, data, string.Empty, string.Empty);
-				}
+					{
+						var data = GetStringProperty(root, "data");
+						return new TerminalFrame(TerminalFrameKind.Html, data, data, string.Empty, string.Empty);
+					}
 				case "oob":
 				case "json":
-				{
-					var package = GetStringProperty(root, "package");
-					var dataJson = root.TryGetProperty("data", out var dataEl)
-						? dataEl.GetRawText()
-						: string.Empty;
-					return new TerminalFrame(TerminalFrameKind.Oob, string.Empty, string.Empty, package, dataJson);
-				}
+					{
+						var package = GetStringProperty(root, "package");
+						var dataJson = root.TryGetProperty("data", out var dataEl)
+							? dataEl.GetRawText()
+							: string.Empty;
+						return new TerminalFrame(TerminalFrameKind.Oob, string.Empty, string.Empty, package, dataJson);
+					}
 				default:
 					// Unknown envelope type: do not assume it was meant for us — show it as text.
 					return new TerminalFrame(TerminalFrameKind.PlainText, frame, string.Empty, string.Empty, string.Empty);

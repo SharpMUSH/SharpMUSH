@@ -160,7 +160,7 @@ public partial class RecursiveMarkdownRenderer
 		for (var i = 1; i < items.Count; i++)
 		{
 			var blankLines = (items[i - 1].block.LinesAfter?.Count ?? 0)
-			               + (items[i].block.LinesBefore?.Count ?? 0);
+										 + (items[i].block.LinesBefore?.Count ?? 0);
 			var delimiter = "\n" + new string('\n', blankLines);
 			result.Add(MModule.single(delimiter));
 			result.Add(items[i].rendered);

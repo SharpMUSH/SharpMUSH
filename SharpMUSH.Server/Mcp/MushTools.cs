@@ -22,13 +22,13 @@ public class MushTools(IMushCodeAnalyzer analyzer, McpDocumentStore documents)
 {
 	[McpServerTool(Name = "validate", UseStructuredContent = true)]
 	[Description("Validate SharpMUSH softcode against the live parser and return any " +
-	             "syntax errors, warnings, or hints. Ranges are 0-based (line, character).")]
+							 "syntax errors, warnings, or hints. Ranges are 0-based (line, character).")]
 	public IReadOnlyList<McpDiagnostic> Validate(
 		[Description("The MUSH softcode to validate. Omit if 'documentId' is given.")]
 		string? code = null,
 		[Description("How to parse the code: 'function' (default); 'commandsperline' (each line is " +
-		             "its own command, i.e. a real-world .mush upload file); 'commandlist' (one " +
-		             ";-separated command list); or 'command' (a single command).")]
+								 "its own command, i.e. a real-world .mush upload file); 'commandlist' (one " +
+								 ";-separated command list); or 'command' (a single command).")]
 		string parseType = "function",
 		[Description("Id from open_document to validate instead of inline 'code'.")]
 		string? documentId = null)
@@ -38,8 +38,8 @@ public class MushTools(IMushCodeAnalyzer analyzer, McpDocumentStore documents)
 
 	[McpServerTool(Name = "format")]
 	[Description("Format SharpMUSH softcode with a consistent style: trims whitespace, " +
-	             "inserts a space after commas, and a space between an @command and its first " +
-	             "argument. Returns the formatted code. Line count is preserved.")]
+							 "inserts a space after commas, and a space between an @command and its first " +
+							 "argument. Returns the formatted code. Line count is preserved.")]
 	public string Format(
 		[Description("The MUSH softcode to format. Omit if 'documentId' is given.")]
 		string? code = null,
@@ -49,7 +49,7 @@ public class MushTools(IMushCodeAnalyzer analyzer, McpDocumentStore documents)
 
 	[McpServerTool(Name = "hover", UseStructuredContent = true)]
 	[Description("Return hover documentation (function/command signature, or a built-in " +
-	             "substitution explanation) for the word at a 0-based line/character, or null.")]
+							 "substitution explanation) for the word at a 0-based line/character, or null.")]
 	public McpHover? Hover(
 		[Description("Line (0-based).")] int line,
 		[Description("Character (0-based).")] int character,
@@ -64,7 +64,7 @@ public class MushTools(IMushCodeAnalyzer analyzer, McpDocumentStore documents)
 
 	[McpServerTool(Name = "complete", UseStructuredContent = true)]
 	[Description("Return completion suggestions (functions, commands, and common " +
-	             "substitutions) for the word prefix at a 0-based line/character.")]
+							 "substitutions) for the word prefix at a 0-based line/character.")]
 	public IReadOnlyList<McpCompletion> Complete(
 		[Description("Line (0-based).")] int line,
 		[Description("Character (0-based).")] int character,
@@ -78,7 +78,7 @@ public class MushTools(IMushCodeAnalyzer analyzer, McpDocumentStore documents)
 
 	[McpServerTool(Name = "signature_help", UseStructuredContent = true)]
 	[Description("Return signature help for the function call surrounding a 0-based " +
-	             "line/character, or null if the position is not inside a known function call.")]
+							 "line/character, or null if the position is not inside a known function call.")]
 	public McpSignature? SignatureHelp(
 		[Description("Line (0-based).")] int line,
 		[Description("Character (0-based).")] int character,
@@ -93,7 +93,7 @@ public class MushTools(IMushCodeAnalyzer analyzer, McpDocumentStore documents)
 
 	[McpServerTool(Name = "document_symbols", UseStructuredContent = true)]
 	[Description("Return an outline of the softcode: attribute definitions, @set attributes, " +
-	             "function calls, and commands.")]
+							 "function calls, and commands.")]
 	public IReadOnlyList<McpSymbol> DocumentSymbols(
 		[Description("The MUSH softcode. Omit if 'documentId' is given.")]
 		string? code = null,
@@ -105,14 +105,14 @@ public class MushTools(IMushCodeAnalyzer analyzer, McpDocumentStore documents)
 
 	[McpServerTool(Name = "open_document")]
 	[Description("Store softcode server-side and return a documentId so subsequent tool calls " +
-	             "can reference it via 'documentId' instead of resending the text.")]
+							 "can reference it via 'documentId' instead of resending the text.")]
 	public string OpenDocument(
 		[Description("The MUSH softcode to store.")] string code)
 		=> documents.Open(code);
 
 	[McpServerTool(Name = "close_document")]
 	[Description("Release a documentId previously returned by open_document. Returns true if it " +
-	             "existed.")]
+							 "existed.")]
 	public bool CloseDocument(
 		[Description("The documentId to release.")] string documentId)
 		=> documents.Close(documentId);

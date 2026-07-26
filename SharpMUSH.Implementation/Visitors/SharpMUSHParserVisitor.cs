@@ -132,9 +132,9 @@ public class SharpMUSHParserVisitor(
 		{
 			var targets = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 			await foreach (var locateResult in targets.ToAsyncEnumerable()
-				               .Select((string targetStr, CancellationToken _) => LocateService.Locate(
-					               parser, executor, executor, targetStr, LocateFlags.AbsoluteMatch))
-				               .Where(result => result.IsValid()))
+											 .Select((string targetStr, CancellationToken _) => LocateService.Locate(
+												 parser, executor, executor, targetStr, LocateFlags.AbsoluteMatch))
+											 .Where(result => result.IsValid()))
 			{
 				var forwardTarget = locateResult.WithoutError().WithoutNone();
 				await NotifyService.Notify(forwardTarget, MModule.single(message));
@@ -153,10 +153,10 @@ public class SharpMUSHParserVisitor(
 			case 0:
 				return null;
 			case 1:
-			{
-				var only = node.GetChild(0);
-				return only is null ? null : await only.Accept(this);
-			}
+				{
+					var only = node.GetChild(0);
+					return only is null ? null : await only.Accept(this);
+				}
 		}
 
 		var results = new List<CallState>(childCount);
@@ -321,7 +321,7 @@ public class SharpMUSHParserVisitor(
 			for (var i = 0; i < argCount; i++)
 			{
 				if (evalIdx < evalStrings.Length
-				    && (i >= commas.Length || evalStrings[evalIdx].Start.StartIndex < commas[i].Symbol.StartIndex))
+						&& (i >= commas.Length || evalStrings[evalIdx].Start.StartIndex < commas[i].Symbol.StartIndex))
 				{
 					arguments[i] = evalStrings[evalIdx++];
 				}
@@ -510,7 +510,7 @@ public class SharpMUSHParserVisitor(
 				.GetService<IUserDefinedFunctionService>()?.GetBuiltinRestriction(name);
 
 			if ((functionRestriction is not null && !await executor.SatisfiesFunctionRestriction(functionRestriction))
-			    || (builtinRestriction is not null && !await executor.SatisfiesFunctionRestriction(builtinRestriction)))
+					|| (builtinRestriction is not null && !await executor.SatisfiesFunctionRestriction(builtinRestriction)))
 			{
 				success = false;
 				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
@@ -828,9 +828,9 @@ public class SharpMUSHParserVisitor(
 			// Use AlternativeLookup for zero-allocation case-insensitive lookup
 			var socketCommandPattern = parser.CommandLibrary.Where(x
 				=> parser.CurrentState.Handle is not null
-				   && x.Value.IsSystem
-				   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
-				   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET)).ToList();
+					 && x.Value.IsSystem
+					 && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
+					 && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET)).ToList();
 
 			if (socketCommandPattern.Any())
 			{
@@ -852,8 +852,8 @@ public class SharpMUSHParserVisitor(
 			{
 				var socketPrefixMatches = parser.CommandLibrary.Where(x
 					=> x.Value.IsSystem
-					   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET)
-					   && x.Key.StartsWith(command, StringComparison.CurrentCultureIgnoreCase)).ToList();
+						 && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET)
+						 && x.Key.StartsWith(command, StringComparison.CurrentCultureIgnoreCase)).ToList();
 
 				if (socketPrefixMatches.Count == 1)
 				{
@@ -929,8 +929,8 @@ public class SharpMUSHParserVisitor(
 
 			var singleTokenCommandPattern = parser.CommandLibrary.Where(x
 				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase)
-				   && x.Value.IsSystem
-				   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken)).ToList();
+					 && x.Value.IsSystem
+					 && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken)).ToList();
 
 			if (singleTokenCommandPattern.Count != 0)
 			{
@@ -1845,7 +1845,7 @@ public class SharpMUSHParserVisitor(
 		//   naturally survive. In SharpMUSH, the ANTLR walk still processes them, so we
 		//   preserve braces via the flag to match PennMUSH behavior.
 		var preserveBraces = behavior.HasFlag(CommandBehavior.RSBrace)
-		                     || behavior.HasFlag(CommandBehavior.NoParse);
+												 || behavior.HasFlag(CommandBehavior.NoParse);
 		var newFlags = preserveBraces
 			? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
 			: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces;
@@ -1892,7 +1892,7 @@ public class SharpMUSHParserVisitor(
 			var realSubtextStr = MModule.plainText(realSubtext);
 			var argsStr = realSubtextStr;
 			if (!string.IsNullOrEmpty(rootCommand)
-			    && realSubtextStr.StartsWith(rootCommand, StringComparison.OrdinalIgnoreCase))
+					&& realSubtextStr.StartsWith(rootCommand, StringComparison.OrdinalIgnoreCase))
 			{
 				argsStr = realSubtextStr[rootCommand.Length..];
 			}
@@ -2029,7 +2029,7 @@ public class SharpMUSHParserVisitor(
 		[NotNull] ExplicitEvaluationStringContext context)
 	{
 		var result = await VisitChildren(context)
-		             ?? new CallState(GetContextText(context), context.Depth());
+								 ?? new CallState(GetContextText(context), context.Depth());
 
 		// PE_COMPRESS_SPACES: strip trailing literal-text spaces at evaluation boundary.
 		// Only fires when the last child is literal text (genericText/beginGenericText).
@@ -2073,7 +2073,7 @@ public class SharpMUSHParserVisitor(
 		var vc = await VisitChildren(context);
 
 		if (_braceDepthCounter <= 1
-		    && !parser.CurrentState.Flags.HasFlag(ParserStateFlags.PreserveBraces))
+				&& !parser.CurrentState.Flags.HasFlag(ParserStateFlags.PreserveBraces))
 		{
 			// Normal evaluation: strip the outermost braces.
 			// PennMUSH equivalent: PE_STRIP_BRACES strips all brace levels during evaluation.
@@ -2121,7 +2121,7 @@ public class SharpMUSHParserVisitor(
 		if (parser.CurrentState.ParseMode is not ParseMode.NoParse and not ParseMode.NoEval)
 		{
 			var resultQ = await VisitChildren(context)
-			              ?? new CallState(GetContextText(context), context.Depth());
+										?? new CallState(GetContextText(context), context.Depth());
 
 			_suppressFunctionEval = savedSuppress;
 			return resultQ;
@@ -2147,13 +2147,13 @@ public class SharpMUSHParserVisitor(
 	public override async ValueTask<CallState?> VisitGenericText([NotNull] GenericTextContext context)
 	{
 		var result = await VisitChildren(context)
-		             ?? new CallState(GetContextText(context), context.Depth());
+								 ?? new CallState(GetContextText(context), context.Depth());
 		// PE_COMPRESS_SPACES: only compress here for the FUNCHAR alternative
 		// (terminal token — VisitChildren returns null, so GetContextText has raw text).
 		// The beginGenericText alternative is already compressed by VisitBeginGenericText.
 		if (context.beginGenericText() is null
-		    && parser.CurrentState.ParseMode is ParseMode.Default
-		    && result.Message is not null)
+				&& parser.CurrentState.ParseMode is ParseMode.Default
+				&& result.Message is not null)
 			return result with { Message = MModule.compressSpaces(result.Message) };
 		return result;
 	}
@@ -2162,7 +2162,7 @@ public class SharpMUSHParserVisitor(
 		[NotNull] BeginGenericTextContext context)
 	{
 		var result = await VisitChildren(context)
-		             ?? new CallState(GetContextText(context), context.Depth());
+								 ?? new CallState(GetContextText(context), context.Depth());
 		// PE_COMPRESS_SPACES: compress literal space runs to single space.
 		// The lexer already eats leading spaces on function args (FUNCHAR WS, COMMAWS WS),
 		// but internal runs within OTHER tokens and top-level/command-arg leading spaces remain.
@@ -2277,11 +2277,11 @@ public class SharpMUSHParserVisitor(
 
 	public override async ValueTask<CallState?> VisitEscapedText([NotNull] EscapedTextContext context)
 		=> await VisitChildren(context)
-		   ?? new CallState(
-			   MModule.substring(
-				   context.Start.StartIndex + 1,
-				   context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
-				   source), context.Depth());
+			 ?? new CallState(
+				 MModule.substring(
+					 context.Start.StartIndex + 1,
+					 context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
+					 source), context.Depth());
 
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startPlainSingleCommandArg"/>.
@@ -2376,7 +2376,7 @@ public class SharpMUSHParserVisitor(
 		for (var i = 0; i < argCount; i++)
 		{
 			if (evalIdx < evalStrings.Length
-			    && (i >= commas.Length || evalStrings[evalIdx].Start.StartIndex < commas[i].Symbol.StartIndex))
+					&& (i >= commas.Length || evalStrings[evalIdx].Start.StartIndex < commas[i].Symbol.StartIndex))
 			{
 				var result = await Visit(evalStrings[evalIdx++]);
 				arguments[i] = result?.Message ?? GetContextText(evalStrings[evalIdx - 1]);
@@ -2397,9 +2397,9 @@ public class SharpMUSHParserVisitor(
 			return await VisitChildren(context);
 
 		if (context.REG_NUM() is not null
-		    || context.REG_ALPHA() is not null
-		    || context.ITEXT_NUM() is not null
-		    || context.STEXT_NUM() is not null)
+				|| context.REG_ALPHA() is not null
+				|| context.ITEXT_NUM() is not null
+				|| context.STEXT_NUM() is not null)
 		{
 			return new CallState(
 				MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,

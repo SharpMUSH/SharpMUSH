@@ -164,8 +164,8 @@ public class AnsiStringUnitTests
 	public async Task Simple()
 	{
 		var simpleString = A.single("red");
-	var redString = A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "red");
-	var redAnsiString = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiByte(31)), "red");
+		var redString = A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "red");
+		var redAnsiString = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiByte(31)), "red");
 
 		await Assert.That(simpleString.ToString()).IsEqualTo("red");
 		await Assert.That(redString.ToString()).IsEqualTo("\e[38;2;255;0;0mred\e[0m");
@@ -177,8 +177,8 @@ public class AnsiStringUnitTests
 	{
 		var simpleString = A.single("ab de ef de");
 
-	var overflow = A.pad(simpleString, A.single(" "), 15, global::MarkupString.PadType.Full, global::MarkupString.TruncationType.Overflow);
-	var truncated = A.pad(simpleString, A.single(" "), 15, global::MarkupString.PadType.Full, global::MarkupString.TruncationType.Truncate);
+		var overflow = A.pad(simpleString, A.single(" "), 15, global::MarkupString.PadType.Full, global::MarkupString.TruncationType.Overflow);
+		var truncated = A.pad(simpleString, A.single(" "), 15, global::MarkupString.PadType.Full, global::MarkupString.TruncationType.Truncate);
 
 		await Assert.That(overflow.ToString()).IsEqualTo("ab   de  ef  de");
 		await Assert.That(truncated.ToString()).IsEqualTo("ab   de  ef  de");
@@ -192,27 +192,27 @@ public class AnsiStringUnitTests
 			A.MarkupSingle(
 				M.Create(background: StringExtensions.Rgb(Color.Yellow)), "red"));
 
-	var result = redString.EvaluateWith((x, y) => x switch
-	{
-		M { Details: var structure } =>
-			$"ansi({ItemName(structure)},{y})",
-		_ => y
-	});
+		var result = redString.EvaluateWith((x, y) => x switch
+		{
+			M { Details: var structure } =>
+				$"ansi({ItemName(structure)},{y})",
+			_ => y
+		});
 
-	await Assert.That(result).IsEqualTo("ansi(Red,ansi(/Yellow,red))");
-	return;
+		await Assert.That(result).IsEqualTo("ansi(Red,ansi(/Yellow,red))");
+		return;
 
-	string ItemName(AnsiStructure structure)
-	{
-		var sb = new StringBuilder();
+		string ItemName(AnsiStructure structure)
+		{
+			var sb = new StringBuilder();
 
-		if (structure.Foreground is AnsiColor.RGB rgb)
-			sb.Append(rgb.Value.Name);
-		if (structure.Background is AnsiColor.RGB rgb2)
-			sb.Append($"/{rgb2.Value.Name}");
+			if (structure.Foreground is AnsiColor.RGB rgb)
+				sb.Append(rgb.Value.Name);
+			if (structure.Background is AnsiColor.RGB rgb2)
+				sb.Append($"/{rgb2.Value.Name}");
 
-		return sb.ToString();
-	}
+			return sb.ToString();
+		}
 	}
 
 	[Test]
@@ -288,9 +288,9 @@ public class AnsiStringUnitTests
 	public async Task SequentialAnsiOptimization()
 	{
 		// This is Phase 2 TODO #3: Sequential ANSI Initialization Optimization
-	var red1 = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiBytes([0, 31])), "a");
-	var red2 = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiBytes([0, 31])), "b");
-	var red3 = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiBytes([0, 31])), "c");
+		var red1 = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiBytes([0, 31])), "a");
+		var red2 = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiBytes([0, 31])), "b");
+		var red3 = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiBytes([0, 31])), "c");
 
 		var combined = A.concat(red1, A.concat(red2, red3));
 		var result = combined.ToString();

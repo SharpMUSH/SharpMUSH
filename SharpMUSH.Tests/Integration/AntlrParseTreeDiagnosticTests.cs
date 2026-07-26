@@ -29,9 +29,9 @@ public class AntlrParseTreeDiagnosticTests
 			TextWriter output, IRecognizer recognizer, IToken offendingSymbol,
 			int line, int charPositionInLine, string msg, RecognitionException e)
 		{
-// DiagnosticErrorListener reports through SyntaxError with messages like
-// "reportAttemptingFullContext" and "reportAmbiguity" - these are NOT real errors.
-// Filter them out.
+			// DiagnosticErrorListener reports through SyntaxError with messages like
+			// "reportAttemptingFullContext" and "reportAmbiguity" - these are NOT real errors.
+			// Filter them out.
 			if (msg.StartsWith("report", StringComparison.Ordinal))
 				return;
 
@@ -163,7 +163,7 @@ public class AntlrParseTreeDiagnosticTests
 		var traceCapture = new TraceCapture(parser);
 		parser.AddParseListener(traceCapture);
 
-// Parse as function (startPlainString entry point, same as FunctionParse)
+		// Parse as function (startPlainString entry point, same as FunctionParse)
 		var context = parser.startPlainString();
 
 		var parseTree = context.ToStringTree(parser);
@@ -351,11 +351,11 @@ public class AntlrParseTreeDiagnosticTests
 		var result = ParseAndDiagnose(input, PredictionMode.LL);
 		Console.WriteLine(result.FullOutput);
 
-// With PennMUSH-compatible behavior:
-// The ) after "text" closes lit(), the final ) is extra generic text.
-// This may produce a parser error (extraneous input) since the first ) closes
-// the function leaving text behind, but it should not produce a syntax error
-// in the parse itself since the trailing ) becomes generic text.
+		// With PennMUSH-compatible behavior:
+		// The ) after "text" closes lit(), the final ) is extra generic text.
+		// This may produce a parser error (extraneous input) since the first ) closes
+		// the function leaving text behind, but it should not produce a syntax error
+		// in the parse itself since the trailing ) becomes generic text.
 		await Assert.That(result.RealSyntaxErrorCount).IsEqualTo(0)
 			.Because(
 				"Bare parens inside functions should parse without syntax errors - ) closes the function, extra ) is generic text");
@@ -517,7 +517,7 @@ public class AntlrParseTreeDiagnosticTests
 	[Test]
 	public async Task Line57_BareParensBeforeBrackets_Analysis()
 	{
-// Minimal reproduction patterns — from simplest to line 57 fragment
+		// Minimal reproduction patterns — from simplest to line 57 fragment
 		var testCases = new[]
 		{
 			("(x [name(%0)])", "Bare paren before bracket function"),
@@ -572,9 +572,9 @@ public class AntlrParseTreeDiagnosticTests
 		Console.WriteLine($"Patterns with errors: {failingCount}/{results.Count}");
 		Console.WriteLine();
 
-// Without inParenDepth, there's no scope leakage possible.
-// The { inFunction == 0 }? predicate is purely based on function nesting,
-// which is correctly tracked by the parser.
+		// Without inParenDepth, there's no scope leakage possible.
+		// The { inFunction == 0 }? predicate is purely based on function nesting,
+		// which is correctly tracked by the parser.
 		await Assert.That(failingCount).IsEqualTo(0)
 			.Because("Without inParenDepth, bare parens don't affect CPAREN predicate - no scope leakage possible");
 	}
