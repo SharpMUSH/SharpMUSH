@@ -29,6 +29,27 @@ public class ParserBehaviorUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// lit() returns its argument untouched, and "untouched" includes markup. The content used
+	/// to be rebuilt from GetText(), which concatenates token text and therefore returns the
+	/// characters without the colour runs the source carried — so colour applied to text stored
+	/// in an attribute was lost the moment it passed through lit().
+	/// </summary>
+	[Test]
+	public async Task LitPreservesMarkup()
+	{
+		var coloured = (await Parser.FunctionParse(MModule.single("ansi(+red,test)")))?.Message!;
+		await Assert.That(coloured.ToString()).Contains("[");
+
+		// Equivalent to lit(<coloured text>) arriving from a stored attribute value.
+		var source = MModule.multiple([MModule.single("lit("), coloured, MModule.single(")")]);
+
+		var result = (await Parser.FunctionParse(source))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("test");
+		await Assert.That(result.ToString()).Contains("[");
+	}
+
 	// Penn fn.1-fn.3: fn() calls functions by name
 	[Test]
 	[Arguments("fn(add,1,2)", "3")]

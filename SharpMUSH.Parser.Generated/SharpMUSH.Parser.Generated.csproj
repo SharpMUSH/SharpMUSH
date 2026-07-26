@@ -12,12 +12,6 @@
 		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
 	</PropertyGroup>
 
-	<ItemGroup>
-	  <Compile Remove="gen\**" />
-	  <EmbeddedResource Remove="gen\**" />
-	  <None Remove="gen\**" />
-	</ItemGroup>
-	
   <ItemGroup>
     <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
 		<PackageReference Include="Antlr4BuildTasks" Version="12.14.0" PrivateAssets="all" IncludeAssets="build">

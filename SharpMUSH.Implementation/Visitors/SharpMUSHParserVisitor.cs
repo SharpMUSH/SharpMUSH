@@ -171,6 +171,37 @@ public class SharpMUSHParserVisitor(
 	}
 
 	/// <summary>
+	/// Everything between a call's parentheses, taken verbatim from the source so that markup
+	/// survives. Used for <c>FunctionFlags.Literal</c> (PennMUSH's <c>lit()</c>), where the
+	/// content is one raw argument: no comma splitting, no substitution.
+	/// <para>
+	/// The opening parenthesis lives inside the FUNCHAR token along with the name and any
+	/// whitespace the lexer folded in after it, so the content starts just past that parenthesis
+	/// — not at the end of the token, which would swallow spaces the caller wrote.
+	/// </para>
+	/// </summary>
+	private MString LiteralArgumentText(FunctionContext context)
+	{
+		var funChar = context.FUNCHAR()?.Symbol;
+		var closeParen = context.CPAREN()?.Symbol;
+		if (funChar is null || closeParen is null)
+		{
+			return MModule.empty();
+		}
+
+		var openParenOffset = funChar.Text.IndexOf('(');
+		if (openParenOffset < 0)
+		{
+			return MModule.empty();
+		}
+
+		var start = funChar.StartIndex + openParenOffset + 1;
+		var length = closeParen.StartIndex - start;
+
+		return length > 0 ? MModule.substring(start, length, source) : MModule.empty();
+	}
+
+	/// <summary>
 	/// Extracts a token's own text from the original markup-carrying source. Recovery tokens
 	/// synthesised by the error strategy have no extent and yield an empty string.
 	/// </summary>
@@ -654,19 +685,9 @@ public class SharpMUSHParserVisitor(
 				// FunctionFlags.Literal: treat the entire content between parens as a single
 				// raw unevaluated string. Do NOT split on commas, do NOT evaluate substitutions.
 				// This is how PennMUSH's lit() works — lit(a,b,%q0) returns "a,b,%q0" verbatim.
-				// We reconstruct the raw text from the parse tree using GetText() on the FunctionContext.
-				var funcText = context.GetText();
-				// funcText is e.g. "lit(a,b,%q0)" — strip "lit(" prefix and ")" suffix
-				var openParen = funcText.IndexOf('(');
-				if (openParen >= 0 && funcText.EndsWith(')'))
-				{
-					var rawContent = funcText[(openParen + 1)..^1];
-					refinedArguments = [new CallState(MModule.single(rawContent), contextDepth)];
-				}
-				else
-				{
-					refinedArguments = [CallState.Empty];
-				}
+				// Slice it out of the source rather than rebuilding it from GetText(), which
+				// concatenates token text and so returns the content stripped of its markup.
+				refinedArguments = [new CallState(LiteralArgumentText(context), contextDepth)];
 			}
 			else if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
 			{

@@ -226,6 +226,25 @@ public class BooleanExpressionUnitTests
 	}
 
 	/// <summary>
+	/// Malformed lock expressions must not validate. ANTLR's error recovery produces a partial
+	/// tree that the validation visitor was happy to walk, so LockService.Set — which gates on
+	/// Validate — accepted locks whose text could never mean what was typed.
+	/// </summary>
+	[Arguments("#TRUE &")]
+	[Arguments("& #TRUE")]
+	[Arguments("#TRUE | | #FALSE")]
+	[Arguments("(#TRUE")]
+	[Arguments("#TRUE)")]
+	[Test]
+	public async Task MalformedExpressionsAreInvalid(string input)
+	{
+		var bep = BooleanParser;
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+
+		await Assert.That(bep.Validate(input, dbn)).IsFalse();
+	}
+
+	/// <summary>
 	/// PennMUSH binds <c>&amp;</c> tighter than <c>|</c> (src/boolexp.c: <c>E -&gt; T | E</c>,
 	/// <c>T -&gt; F &amp; T</c>), so <c>a &amp; b | c</c> groups as <c>(a &amp; b) | c</c>.
 	/// The first four cases are false under the equal-precedence reading <c>a &amp; (b | c)</c>,
