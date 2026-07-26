@@ -65,7 +65,7 @@ public partial class SurrealDatabase : IWikiService
     {
         var nsStr = ns.ToString().ToLowerInvariant();
         var cat = WikiHelpers.NormalizeCategory(category);
-        var parameters = new Dictionary<string, object?> { ["ns"] = nsStr, ["cat"] = cat, ["slug"] = slug };
+        var parameters = new Dictionary<string, object?> { ["ns"] = nsStr, ["cat"] = cat, ["slug"] = Slugify(slug) };
         var response = await ExecuteAsync(
             $"SELECT {WikiPageFields} FROM wiki_page WHERE namespace = $ns AND category = $cat AND slug = $slug",
             parameters);
