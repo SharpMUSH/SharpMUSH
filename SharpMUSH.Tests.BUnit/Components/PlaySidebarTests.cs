@@ -14,63 +14,63 @@ namespace SharpMUSH.Tests.BUnit.Components;
 
 public class PlaySidebarTests : BunitContext
 {
-    public PlaySidebarTests()
-    {
-        Services.AddMudServices();
-        Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
-        Services.AddLocalization();
-        JSInterop.Mode = JSRuntimeMode.Loose;
+	public PlaySidebarTests()
+	{
+		Services.AddMudServices();
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
+		Services.AddLocalization();
+		JSInterop.Mode = JSRuntimeMode.Loose;
 
-        // ── IPlayTerminalService (wired to a real OobChannelStore) ──────────────
-        // Store is created here so tests can push payloads into it.
-        // Registered first so the field is accessible; actual store set per-test.
+		// ── IPlayTerminalService (wired to a real OobChannelStore) ──────────────
+		// Store is created here so tests can push payloads into it.
+		// Registered first so the field is accessible; actual store set per-test.
 
-        // ── Services injected by GlobalTerminal (child component) ───────────────
-        // ITerminalService (the command/default terminal, injected as DefaultTerminal)
-        var defaultTerminal = Substitute.For<ITerminalService>();
-        defaultTerminal.OobChannels.Returns(new OobChannelStore());
-        defaultTerminal.Lines.Returns(Array.Empty<SharpMUSH.Client.Models.TerminalLine>());
-        Services.AddSingleton(defaultTerminal);
+		// ── Services injected by GlobalTerminal (child component) ───────────────
+		// ITerminalService (the command/default terminal, injected as DefaultTerminal)
+		var defaultTerminal = Substitute.For<ITerminalService>();
+		defaultTerminal.OobChannels.Returns(new OobChannelStore());
+		defaultTerminal.Lines.Returns(Array.Empty<SharpMUSH.Client.Models.TerminalLine>());
+		Services.AddSingleton(defaultTerminal);
 
-        var httpFactory = Substitute.For<IHttpClientFactory>();
-        Services.AddSingleton(httpFactory);
+		var httpFactory = Substitute.For<IHttpClientFactory>();
+		Services.AddSingleton(httpFactory);
 
-        // AccountAuthService depends on IHttpClientFactory + IJSRuntime + ILogger
-        Services.AddSingleton(sp =>
-            new AccountAuthService(
-                sp.GetRequiredService<IHttpClientFactory>(),
-                sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-                NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
+		// AccountAuthService depends on IHttpClientFactory + IJSRuntime + ILogger
+		Services.AddSingleton(sp =>
+				new AccountAuthService(
+						sp.GetRequiredService<IHttpClientFactory>(),
+						sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
+						NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 
-        // IWebAssemblyHostEnvironment (needed by GlobalTerminal for IsDevelopment())
-        var hostEnv = Substitute.For<IWebAssemblyHostEnvironment>();
-        hostEnv.Environment.Returns("Production");
-        Services.AddSingleton(hostEnv);
+		// IWebAssemblyHostEnvironment (needed by GlobalTerminal for IsDevelopment())
+		var hostEnv = Substitute.For<IWebAssemblyHostEnvironment>();
+		hostEnv.Environment.Returns("Production");
+		Services.AddSingleton(hostEnv);
 
-        // IStringLocalizer<SharedResource> (injected by Play.razor)
-        Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
-    }
+		// IStringLocalizer<SharedResource> (injected by Play.razor)
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
+	}
 
-    [TUnit.Core.Test]
-    public async Task Sidebar_RendersPushedRoomContents()
-    {
-        var store = new OobChannelStore();
-        var play = Substitute.For<IPlayTerminalService>();
-        play.OobChannels.Returns(store);
-        play.Lines.Returns(Array.Empty<SharpMUSH.Client.Models.TerminalLine>());
-        Services.AddSingleton<IPlayTerminalService>(play);
+	[TUnit.Core.Test]
+	public async Task Sidebar_RendersPushedRoomContents()
+	{
+		var store = new OobChannelStore();
+		var play = Substitute.For<IPlayTerminalService>();
+		play.OobChannels.Returns(store);
+		play.Lines.Returns(Array.Empty<SharpMUSH.Client.Models.TerminalLine>());
+		Services.AddSingleton<IPlayTerminalService>(play);
 
-        // Play now hosts a MudMenu (terminal settings) which requires a MudPopoverProvider in
-        // the render tree, so host it inside MudHarness (provider contributes only an empty
-        // container, so the sidebar assertion is unaffected).
-        var cut = Render<MudHarness>(p => p.AddChildContent<Play>());
+		// Play now hosts a MudMenu (terminal settings) which requires a MudPopoverProvider in
+		// the render tree, so host it inside MudHarness (provider contributes only an empty
+		// container, so the sidebar assertion is unaffected).
+		var cut = Render<MudHarness>(p => p.AddChildContent<Play>());
 
-        store.Set("room.contents", "{\"who\":[{\"dbref\":\"#5\",\"name\":\"Bob\",\"cmd\":\"look #5\"}]}");
+		store.Set("room.contents", "{\"who\":[{\"dbref\":\"#5\",\"name\":\"Bob\",\"cmd\":\"look #5\"}]}");
 
-        cut.WaitForAssertion(() =>
-        {
-            if (!cut.Markup.Contains("Bob"))
-                throw new InvalidOperationException("contents not rendered yet");
-        }, TimeSpan.FromSeconds(5));
-    }
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("Bob"))
+				throw new InvalidOperationException("contents not rendered yet");
+		}, TimeSpan.FromSeconds(5));
+	}
 }
