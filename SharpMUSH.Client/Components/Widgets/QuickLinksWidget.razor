@@ -1,5 +1,6 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Models.Widgets
+@inject IStringLocalizer<SharedResource> Loc
 
 @if (_links.Count > 0)
 {
@@ -43,7 +44,7 @@ else
             <MudChip T="string" Href="/admin/layout"
                      Icon="@Icons.Material.Filled.Settings" Color="Color.Default"
                      Size="Size.Small" Variant="Variant.Text">
-                Configure Quick Links
+                @Loc["WidConfigureQuickLinks"]
             </MudChip>
         </Authorized>
     </AuthorizeView>

@@ -1,12 +1,21 @@
 using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using SharpMUSH.Client.Components.Layout;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Models.Portal.Widgets;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+file sealed class ZoneGridStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// Confirms <see cref="ZoneRenderer"/> grid mode lays widgets out in a 12-column grid honoring each
@@ -19,6 +28,7 @@ public class ZoneRendererGridTests : BunitContext
 		var registry = new WidgetRegistry();
 		registry.Register(new WelcomeTextWidgetDescriptor());
 		Services.AddSingleton<IWidgetRegistry>(registry);
+		Services.AddSingleton<IStringLocalizer<SharedResource>, ZoneGridStubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 

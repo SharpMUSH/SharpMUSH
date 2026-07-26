@@ -2,12 +2,21 @@ using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+file sealed class PluginReloadStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>A test double for the connection that lets the test raise OnPluginsChanged on demand.</summary>
 file sealed class FakeConnectionStateService : IConnectionStateService
@@ -47,6 +56,7 @@ public class PluginChangeReloaderTests : BunitContext
 	public async Task PluginsChanged_ForcesHardReload()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, PluginReloadStubLocalizer<SharedResource>>();
 		var connection = new FakeConnectionStateService();
 		Services.AddSingleton<IConnectionStateService>(connection);
 

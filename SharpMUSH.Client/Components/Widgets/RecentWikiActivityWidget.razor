@@ -2,9 +2,10 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject WikiService WikiService
+@inject IStringLocalizer<SharedResource> Loc
 
 <MudPaper Class="recent-wiki-widget" Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
-    <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:0.75rem;">Recent Wiki Activity</MudText>
+    <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:0.75rem;">@Loc["WidRecentWikiActivity"]</MudText>
     @if (_loading)
     {
         @for (var i = 0; i < 4; i++)
@@ -29,7 +30,7 @@
     }
     else
     {
-        <MudText Style="color:var(--text-faint);font-size:0.8125rem;">No recent wiki activity.</MudText>
+        <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Loc["WidNoRecentWikiActivity"]</MudText>
     }
 </MudPaper>
 

@@ -1,11 +1,20 @@
 using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using SharpMUSH.Client.Components.Schema;
 using SharpMUSH.Client.Models.Applications;
+using SharpMUSH.Client.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+file sealed class SchemaViewShapeStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// Shape tests for <see cref="SchemaViewRenderer"/>: each JSON schema shape (sections, the display
@@ -16,6 +25,7 @@ public class SchemaViewRendererShapeTests : BunitContext
 	public SchemaViewRendererShapeTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, SchemaViewShapeStubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -43,7 +53,7 @@ public class SchemaViewRendererShapeTests : BunitContext
 	public async Task NullDocument_RendersNothingToDisplay()
 	{
 		var cut = Render<SchemaViewRenderer>(p => p.Add(x => x.Document, (PortalSchemaDocument?)null));
-		await Assert.That(cut.Markup).Contains("Nothing to display");
+		await Assert.That(cut.Markup).Contains("WidNothingToDisplay");
 	}
 
 	[TUnit.Core.Test]

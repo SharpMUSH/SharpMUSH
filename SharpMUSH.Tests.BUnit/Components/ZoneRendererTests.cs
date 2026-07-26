@@ -2,14 +2,23 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components.Layout;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal.Widgets;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+file sealed class ZoneRendererStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// BUnit component tests for <see cref="ZoneRenderer"/>.
@@ -19,6 +28,7 @@ public abstract class ZoneRendererTestBase : BunitContext
 	protected ZoneRendererTestBase()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, ZoneRendererStubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -133,7 +143,7 @@ public class ZoneRendererErrorBoundaryTests : ZoneRendererTestBase
 			.Add(c => c.Layout, LayoutWith("Thrower", "Healthy")));
 
 		await Assert.That(cut.Markup).Contains("healthy-widget-content");
-		await Assert.That(cut.Markup).Contains("failed to render");
+		await Assert.That(cut.Markup).Contains("WidWidgetRenderFailed");
 		await Assert.That(cut.Markup).Contains("Thrower");
 	}
 
@@ -146,7 +156,7 @@ public class ZoneRendererErrorBoundaryTests : ZoneRendererTestBase
 			.Add(c => c.Zone, WidgetZone.TopBar)
 			.Add(c => c.Layout, LayoutWith("Thrower")));
 
-		await Assert.That(cut.Markup).Contains("failed to render");
+		await Assert.That(cut.Markup).Contains("WidWidgetRenderFailed");
 	}
 }
 

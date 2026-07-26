@@ -2,15 +2,24 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components.Schema;
 using SharpMUSH.Client.Models.Applications;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+file sealed class SchemaFormShapeStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>Hosts a component alongside a MudPopoverProvider (required by MudSelect/MudDatePicker).</summary>
 internal sealed class MudHarness : ComponentBase
@@ -44,7 +53,8 @@ public class SchemaFormRendererShapeTests : BunitContext
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(sp => new SchemaAppService(
-				sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance));
+				sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
+			.AddSingleton<IStringLocalizer<SharedResource>, SchemaFormShapeStubLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -171,9 +181,9 @@ public class SchemaFormRendererShapeTests : BunitContext
 	{
 		var cut = RenderForm(Form(null, SubmitOnly, Page(1, null, Field("n", "Name", "text"))));
 		var buttons = cut.FindAll("button").Select(b => b.TextContent).ToList();
-		await Assert.That(buttons.Any(t => t.Contains("Submit"))).IsTrue();
-		await Assert.That(buttons.Any(t => t.Contains("Next"))).IsFalse();
-		await Assert.That(buttons.Any(t => t.Contains("Back"))).IsFalse();
+		await Assert.That(buttons.Any(t => t.Contains("WidSubmit"))).IsTrue();
+		await Assert.That(buttons.Any(t => t.Contains("WidNext"))).IsFalse();
+		await Assert.That(buttons.Any(t => t.Contains("WidBack"))).IsFalse();
 	}
 
 	[TUnit.Core.Test]
@@ -183,10 +193,10 @@ public class SchemaFormRendererShapeTests : BunitContext
 			Page(1, "Basics", Field("n", "Name", "text")),
 			Page(2, "Stats", Field("s", "Str", "number"))));
 
-		await Assert.That(cut.Markup).Contains("Step 1 of 2");
+		await Assert.That(cut.Markup).Contains("WidFormStep 1/2");
 		var buttons = cut.FindAll("button").Select(b => b.TextContent).ToList();
-		await Assert.That(buttons.Any(t => t.Contains("Next"))).IsTrue();
-		await Assert.That(buttons.Any(t => t.Contains("Back"))).IsFalse();
+		await Assert.That(buttons.Any(t => t.Contains("WidNext"))).IsTrue();
+		await Assert.That(buttons.Any(t => t.Contains("WidBack"))).IsFalse();
 		// First page fields visible; second page fields not yet.
 		await Assert.That(cut.Markup).Contains("Name");
 		await Assert.That(cut.Markup).DoesNotContain("Str");
@@ -199,13 +209,13 @@ public class SchemaFormRendererShapeTests : BunitContext
 			Page(1, "Basics", Field("n", "Name", "text")),
 			Page(2, "Stats", Field("s", "Strength", "number"))));
 
-		cut.FindAll("button").First(b => b.TextContent.Contains("Next")).Click();
+		cut.FindAll("button").First(b => b.TextContent.Contains("WidNext")).Click();
 
-		await Assert.That(cut.Markup).Contains("Step 2 of 2");
+		await Assert.That(cut.Markup).Contains("WidFormStep 2/2");
 		await Assert.That(cut.Markup).Contains("Strength");
 		var buttons = cut.FindAll("button").Select(b => b.TextContent).ToList();
-		await Assert.That(buttons.Any(t => t.Contains("Back"))).IsTrue();
-		await Assert.That(buttons.Any(t => t.Contains("Submit"))).IsTrue();
+		await Assert.That(buttons.Any(t => t.Contains("WidBack"))).IsTrue();
+		await Assert.That(buttons.Any(t => t.Contains("WidSubmit"))).IsTrue();
 	}
 
 	[TUnit.Core.Test]
@@ -256,7 +266,7 @@ public class SchemaFormRendererShapeTests : BunitContext
 	public async Task NoPages_ShowsEmptyMessage()
 	{
 		var cut = RenderForm(Form("Empty", null));
-		await Assert.That(cut.Markup).Contains("no pages");
+		await Assert.That(cut.Markup).Contains("WidFormNoPages");
 	}
 
 	[TUnit.Core.Test]

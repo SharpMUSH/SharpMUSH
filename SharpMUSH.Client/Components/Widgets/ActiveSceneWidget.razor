@@ -2,6 +2,7 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject SceneService SceneService
+@inject IStringLocalizer<SharedResource> Loc
 
 @if (_loading)
 {
@@ -13,24 +14,24 @@ else if (_activeScenes is { Count: > 0 })
     <MudPaper Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);position:relative;overflow:hidden;height:100%;box-sizing:border-box;">
         <div style="position:absolute;top:0;right:0;bottom:0;width:4px;background:var(--accent);border-radius:0 var(--radius) var(--radius) 0;"></div>
         <div style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:0.5rem;">
-            <MudChip T="string" Color="Color.Success" Size="Size.Small" Style="font-size:0.625rem;letter-spacing:0.08em;height:20px;">LIVE</MudChip>
+            <MudChip T="string" Color="Color.Success" Size="Size.Small" Style="font-size:0.625rem;letter-spacing:0.08em;height:20px;">@Loc["WidSceneLive"]</MudChip>
             <MudText Typo="Typo.h6" Style="font-weight:600;line-height:1.2;">@SceneTitle(scene)</MudText>
         </div>
         <MudText Style="color:var(--text-dim);font-size:0.8125rem;margin-bottom:0.75rem;">
             <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:0.25rem;" />
-            @scene.RoomName — @scene.PoseCount pose(s)
+            @scene.RoomName — @Loc["WidScenePoseCount", scene.PoseCount]
         </MudText>
         <MudButton Variant="Variant.Outlined" Size="Size.Small" Href="@($"/scenes/{scene.Id}/live")"
                    Style="border-color:var(--accent);color:var(--accent);">
-            Join Scene
+            @Loc["WidJoinScene"]
         </MudButton>
     </MudPaper>
 }
 else
 {
     <MudPaper Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
-        <MudText Style="color:var(--text-dim);">No active scenes right now.</MudText>
-        <MudButton Variant="Variant.Text" Href="/scenes" Color="Color.Primary" Size="Size.Small" Class="mt-1">Browse archive</MudButton>
+        <MudText Style="color:var(--text-dim);">@Loc["WidNoActiveScenes"]</MudText>
+        <MudButton Variant="Variant.Text" Href="/scenes" Color="Color.Primary" Size="Size.Small" Class="mt-1">@Loc["WidBrowseArchive"]</MudButton>
     </MudPaper>
 }
 
@@ -47,8 +48,8 @@ else
         _loading = false;
     }
 
-    private static string SceneTitle(SceneSummary s) =>
+    private string SceneTitle(SceneSummary s) =>
         s.Meta.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)
             ? t
-            : $"Scene in {s.RoomName}";
+            : Loc["WidSceneIn", s.RoomName];
 }

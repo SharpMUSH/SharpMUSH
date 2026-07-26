@@ -1,14 +1,23 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components.Widgets;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using System.Net;
 using System.Net.Http.Json;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+file sealed class PresenceStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// Serves a roster on http/characters and a *different*, smaller connection list on http/online,
@@ -111,7 +120,8 @@ public class OnlineCharactersWidgetTests : BunitContext
 			.AddSingleton(factory)
 			.AddSingleton(sp => new CharacterDirectoryService(
 				sp.GetRequiredService<IHttpClientFactory>(),
-				NullLogger<CharacterDirectoryService>.Instance));
+				NullLogger<CharacterDirectoryService>.Instance))
+			.AddSingleton<IStringLocalizer<SharedResource>, PresenceStubLocalizer<SharedResource>>();
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -148,7 +158,7 @@ public class OnlineCharactersWidgetTests : BunitContext
 			if (cut.Markup.Contains("mud-skeleton")) throw new InvalidOperationException("still loading");
 		}, TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Markup).Contains("No one is connected");
+		await Assert.That(cut.Markup).Contains("WidNobodyConnected");
 	}
 
 	// An unrecognised charset makes reading the body throw InvalidOperationException before the
@@ -165,7 +175,7 @@ public class OnlineCharactersWidgetTests : BunitContext
 			if (cut.Markup.Contains("mud-skeleton")) throw new InvalidOperationException("still loading");
 		}, TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Markup).Contains("No one is connected");
+		await Assert.That(cut.Markup).Contains("WidNobodyConnected");
 	}
 
 	[TUnit.Core.Test]
@@ -179,6 +189,6 @@ public class OnlineCharactersWidgetTests : BunitContext
 			if (cut.Markup.Contains("mud-skeleton")) throw new InvalidOperationException("still loading");
 		}, TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Markup).Contains("No one is connected");
+		await Assert.That(cut.Markup).Contains("WidNobodyConnected");
 	}
 }

@@ -1,11 +1,20 @@
 using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using SharpMUSH.Client.Components.Schema;
 using SharpMUSH.Client.Models.Applications;
+using SharpMUSH.Client.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+file sealed class SchemaViewStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// Verifies the read-only schema renderer shows field values from the data payload and honors the
@@ -17,6 +26,7 @@ public class SchemaViewRendererTests : BunitContext
 	public SchemaViewRendererTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, SchemaViewStubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 

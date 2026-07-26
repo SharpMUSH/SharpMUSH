@@ -5,6 +5,7 @@
 @inject SchemaAppService Schema
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
 
 @* Renders an editable Portal Schema Document (kind:"form"). Collects field values, POSTs actions to
    the in-game handler, and binds the structured response back. All branching/progression is
@@ -12,7 +13,7 @@
 
 @if (_document?.Pages is null || _document.Pages.Count == 0)
 {
-    <MudText Typo="Typo.body2" Class="mud-text-secondary">This form has no pages.</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WidFormNoPages"]</MudText>
 }
 else
 {
@@ -25,7 +26,7 @@ else
     @if (_document.Pages.Count > 1)
     {
         <MudText Typo="Typo.caption" Class="mud-text-secondary">
-            Step @(_pageIndex + 1) of @_document.Pages.Count@(string.IsNullOrWhiteSpace(page.Title) ? "" : $" — {page.Title}")
+            @Loc["WidFormStep"] @(_pageIndex + 1)/@_document.Pages.Count@(string.IsNullOrWhiteSpace(page.Title) ? "" : $" — {page.Title}")
         </MudText>
     }
 
@@ -71,14 +72,14 @@ else
             @if (_pageIndex > 0)
             {
                 <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ChevronLeft"
-                           OnClick="PrevPage" Disabled="_busy">Back</MudButton>
+                           OnClick="PrevPage" Disabled="_busy">@Loc["WidBack"]</MudButton>
             }
         </div>
         <div class="d-flex gap-2">
             @if (_pageIndex < _document.Pages.Count - 1)
             {
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight"
-                           OnClick="NextPage" Disabled="_busy">Next</MudButton>
+                           OnClick="NextPage" Disabled="_busy">@Loc["WidNext"]</MudButton>
             }
             else if (HasAction("submit"))
             {
@@ -88,7 +89,7 @@ else
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                     }
-                    Submit
+                    @Loc["WidSubmit"]
                 </MudButton>
             }
         </div>
@@ -240,13 +241,13 @@ else
         {
             if (field.Validation?.Required == true && field.Key is not null && string.IsNullOrWhiteSpace(GetString(field.Key)))
             {
-                _errors[field.Key] = $"{field.Label ?? field.Key} is required.";
+                _errors[field.Key] = Loc["WidFieldRequired", field.Label ?? field.Key];
             }
         }
 
         if (_errors.Count > 0)
         {
-            _globalError = "Please fill in the highlighted required fields.";
+            _globalError = Loc["WidFillRequiredFields"];
             return false;
         }
 
@@ -257,7 +258,7 @@ else
     {
         if (errors is null)
         {
-            _globalError = "The action failed.";
+            _globalError = Loc["WidActionFailed"];
             return;
         }
 
@@ -304,7 +305,7 @@ else
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mb-2"
                            OnClick="@(() => Dispatch(element.Action ?? string.Empty))"
                            Disabled="@(_busy || string.IsNullOrWhiteSpace(element.Action) || !HasAction(element.Action!))">
-                    @(element.Label ?? "Action")
+                    @(element.Label ?? Loc["WidAction"].Value)
                 </MudButton>
                 break;
             case "field":

@@ -1,13 +1,22 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components.Schema;
 using SharpMUSH.Client.Models.Applications;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+file sealed class SchemaFormStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// Verifies the form renderer's advisory required-field check blocks a final submit and surfaces the
@@ -26,7 +35,8 @@ public class SchemaFormRendererTests : BunitContext
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(sp => new SchemaAppService(
-				sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance));
+				sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
+			.AddSingleton<IStringLocalizer<SharedResource>, SchemaFormStubLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -58,17 +68,17 @@ public class SchemaFormRendererTests : BunitContext
 	{
 		var cut = Render<SchemaFormRenderer>(parameters => parameters.Add(p => p.Document, RequiredNameForm()));
 
-		var submit = cut.FindAll("button").First(b => b.TextContent.Contains("Submit"));
+		var submit = cut.FindAll("button").First(b => b.TextContent.Contains("WidSubmit"));
 		submit.Click();
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("required", StringComparison.OrdinalIgnoreCase))
+			if (!cut.Markup.Contains("WidFieldRequired", StringComparison.Ordinal))
 			{
 				throw new InvalidOperationException("required-field error not shown yet");
 			}
 		}, TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Markup).Contains("required");
+		await Assert.That(cut.Markup).Contains("WidFieldRequired");
 	}
 }

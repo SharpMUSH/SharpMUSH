@@ -1,14 +1,23 @@
 using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components.Layout;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Models.Portal.Widgets;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+file sealed class ScopedZoneStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// Confirms <see cref="ScopedZone"/> loads a scope's layout from <see cref="ILayoutService"/> and
@@ -36,7 +45,8 @@ public class ScopedZoneTests : BunitContext
 		Services
 			.AddMudServices()
 			.AddSingleton<IWidgetRegistry>(registry)
-			.AddSingleton(layoutService);
+			.AddSingleton(layoutService)
+			.AddSingleton<IStringLocalizer<SharedResource>, ScopedZoneStubLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}

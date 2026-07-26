@@ -3,6 +3,7 @@
 @inject IConnectionStateService Connection
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
 
 @* Renders nothing. Subscribes to the generic "plugins changed" signal the GameHub broadcasts after the
    server unloads/reloads a plugin DLL, and forces a hard browser reload — the only way to reclaim a
@@ -22,7 +23,7 @@
         {
             // A brief toast before the runtime tears down; the forceLoad reload re-fetches the app, the
             // /api/applications catalog, and rebuilds the WASM runtime from scratch.
-            Snackbar.Add("A plugin changed — reloading…", Severity.Info);
+            Snackbar.Add(Loc["WidPluginChangedReloading"], Severity.Info);
             Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
         });
     }
