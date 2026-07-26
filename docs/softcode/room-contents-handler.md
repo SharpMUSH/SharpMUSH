@@ -91,6 +91,10 @@ These are the attributes the `room-contents` package installs on the event
 handler object. The helpers keep the main handler readable; `me` is the event
 handler itself, since a handler runs with the handler object as its executor.
 
+Every example below targets `#9`, the default `event_handler`. The package
+resolves `{{$event_handler}}` from config at install time, so on a game that
+configures a different handler object, substitute its dbref throughout.
+
 ```mushcode
 &FN`WHOVIS #9=cand(not(hastype(%0,exit)),cor(not(isplayer(%0)),hasflag(%0,CONNECTED)))
 &FN`WHOROW #9=json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))
