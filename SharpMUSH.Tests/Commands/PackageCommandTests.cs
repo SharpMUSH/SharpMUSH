@@ -18,7 +18,7 @@ namespace SharpMUSH.Tests.Commands;
 /// wizard-only command lock. The manifest is produced through the same
 /// IPackageAuthoringService the /admin/packages/author panel uses.
 /// </summary>
-[NotInParallel] // shared NotifyService substitute + ClearReceivedCalls must not race
+[NotInParallel] // integration test over shared services + the session-shared Notify substitute
 public class PackageCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -37,6 +37,16 @@ public class PackageCommandTests
 			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
 				(msg.IsT1 && msg.AsT1.Contains(contains))), TestHelpers.MatchingObject(player),
+				INotifyService.NotificationType.Announce);
+
+	/// <summary>Asserts a single notify whose message contains every fragment. The manifest / scan
+	/// report is one pemit, so matching all fragments — including one unique to this test — isolates
+	/// the assertion against the session-shared substitute without resetting it.</summary>
+	private async Task ExpectNotifyAll(DBRef player, params string[] contains)
+		=> await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
+				contains.All(c => MessageContains(msg, c))), TestHelpers.MatchingObject(player),
 				INotifyService.NotificationType.Announce);
 
 	/// <summary>Creates a Thing owned by, and located in, the PM wizard (#7) — mirrors the authoring service tests.</summary>
@@ -66,16 +76,13 @@ public class PackageCommandTests
 		await SetAttrAsync(core, "FN_FMT", "formatted output");
 		await SetAttrAsync(global, "CMD_SELF", $"$+self:@pemit %#=[u(#{core.Number}/FN_FMT)]");
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@package #{core.Number} #{global.Number}=test-pkg,2.0.0,A self-contained test"));
 
 		// The whole manifest comes back in one pemit: header markers, metadata, and
 		// the cross-reference rewritten to a symbolic {{ref}} (no raw dbref survives).
-		await ExpectNotify(god, "----- BEGIN package.yaml -----");
-		await ExpectNotify(god, "package: test-pkg");
-		await ExpectNotify(god, "version: \"2.0.0\"");
-		await ExpectNotify(god, "{{pkgselfcore}}");
+		await ExpectNotifyAll(god,
+			"----- BEGIN package.yaml -----", "package: test-pkg", "version: \"2.0.0\"", "{{pkgselfcore}}");
 	}
 
 	[Test]
@@ -86,13 +93,10 @@ public class PackageCommandTests
 		var thing = await CreateThingAsync("PkgScanThing");
 		await SetAttrAsync(thing, "FN_GREET", $"Hello from here, near #0");
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@package/scan #{thing.Number}"));
 
-		await ExpectNotify(god, "PACKAGE SCAN: 1 object(s) selected");
-		await ExpectNotify(god, "pkgscanthing");
-		await ExpectNotify(god, "#0");
+		await ExpectNotifyAll(god, "PACKAGE SCAN: 1 object(s) selected", "pkgscanthing", "#0");
 	}
 
 	[Test]
@@ -103,13 +107,11 @@ public class PackageCommandTests
 		var thing = await CreateThingAsync("PkgExternalThing");
 		await SetAttrAsync(thing, "FN_GREET", $"References the outside world: #0");
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@package #{thing.Number}=ext-pkg"));
 
 		// No manifest — the external dbref must be classified in the web panel.
-		await ExpectNotify(god, "Unclassified");
-		await ExpectNotify(god, "/admin/packages/author");
+		await ExpectNotifyAll(god, "Unclassified", "/admin/packages/author");
 	}
 
 	[Test]
@@ -126,7 +128,6 @@ public class PackageCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set #{thing.Number}/SECRETATTR=VEILED"));
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@package #{thing.Number}=veil-pkg"));
 
@@ -154,7 +155,6 @@ public class PackageCommandTests
 		var thing = await CreateThingAsync("PkgBadIdThing");
 		await SetAttrAsync(thing, "FN_X", "self-contained value");
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@package #{thing.Number}=Not A Valid Id"));
 

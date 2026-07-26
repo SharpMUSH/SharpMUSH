@@ -25,6 +25,7 @@ public static class PortalPermission
 	public const string MediaUpload = "media.upload";
 	public const string MediaAdmin = "media.admin";
 
+	public const string SoftcodeUse = "softcode.use";
 	public const string ApplicationsAdmin = "applications.admin";
 	public const string PackagesAdmin = "packages.admin";
 
@@ -48,6 +49,7 @@ public static class PortalPermission
 		new(WikiAdmin, "Wiki · Moderate", "Content", "Protect/unprotect, edit protected pages, batch operations, and the wiki admin dashboard."),
 		new(MediaUpload, "Image Library · Upload", "Content", "Upload image assets for use in wiki pages."),
 		new(MediaAdmin, "Image Library · Manage", "Content", "Browse and delete the shared media library."),
+		new(SoftcodeUse, "Softcode Editor", "Build", "Open the softcode editor to view and edit object attributes."),
 		new(ApplicationsAdmin, "Applications", "Build", "Register and manage schema-driven applications."),
 		new(PackagesAdmin, "Packages", "Build", "Install, update, and manage softcode packages."),
 		new(ConfigAdmin, "Server Config", "Manage", "Edit server configuration, sitelock, banned names, restrictions."),

@@ -107,11 +107,28 @@ public class PermissionResolverTests
 		await Assert.That(granted.Contains(PortalPermission.WikiCreate)).IsTrue();
 		await Assert.That(granted.Contains(PortalPermission.WikiEdit)).IsTrue();
 		await Assert.That(granted.Contains(PortalPermission.MediaUpload)).IsTrue();
+		await Assert.That(granted.Contains(PortalPermission.SoftcodeUse)).IsTrue();
 
 		await Assert.That(granted.Contains(PortalPermission.WikiDelete)).IsFalse();
 		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsFalse();
 		await Assert.That(granted.Contains(PortalPermission.PlayersView)).IsFalse();
 		await Assert.That(granted.Contains(PortalPermission.MediaAdmin)).IsFalse();
+	}
+
+	[Test]
+	public async ValueTask BuiltInSoftcodeUse_GrantedToPlayerAndUp_NotGuest()
+	{
+		// softcode.use defaults to Player and every higher tier, but never to Guest/anonymous.
+		foreach (var slug in new[] { "player", "builder", "royalty", "wizard", "god" })
+		{
+			var role = BuiltInRoles.All.Single(r => r.Slug == slug);
+			var granted = Resolver.Resolve([role]);
+			await Assert.That(granted.Contains(PortalPermission.SoftcodeUse)).IsTrue();
+		}
+
+		var guest = BuiltInRoles.All.Single(r => r.Slug == "guest");
+		await Assert.That(Resolver.Resolve([guest]).Contains(PortalPermission.SoftcodeUse)).IsFalse();
+		await Assert.That(Resolver.Resolve([]).Contains(PortalPermission.SoftcodeUse)).IsFalse();
 	}
 
 	[Test]

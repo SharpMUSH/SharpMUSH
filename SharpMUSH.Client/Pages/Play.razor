@@ -1,5 +1,4 @@
 @page "/play"
-@attribute [Authorize]
 @using SharpMUSH.Client.Components
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
@@ -50,8 +49,8 @@
             </MudMenu>
         </div>
         <div style="flex:1;min-height:0;min-width:0;">
-            <GlobalTerminal @ref="_playTerm" TerminalOverride="PlayTerminal" ShowDiagnostics="false"
-                            TargetColumns="_targetCols" ShowClearButton="false" />
+            <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
+                            TargetColumns="_targetCols" ShowClearButton="false" AllowGuest="true" />
         </div>
     </div>
 

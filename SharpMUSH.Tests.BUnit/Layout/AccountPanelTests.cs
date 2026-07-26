@@ -92,6 +92,7 @@ public class AccountPanelTests : BunitContext
 	public AccountPanelTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		Services.AddSingleton<IStringLocalizer<SharedResource>, StubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		Auth = this.AddAuthorization();
@@ -160,6 +161,7 @@ public class AccountPanelTests : BunitContext
 		Services.AddSingleton(playTerminalHost);
 		Services.AddSingleton<IPlayTerminalService>(playTerminalHost);
 
+		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 
 		var apiClient = new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
@@ -170,7 +172,7 @@ public class AccountPanelTests : BunitContext
 			sp.GetRequiredService<IHttpClientFactory>(),
 			NullLogger<ApplicationRegistryClient>.Instance));
 		Services.AddSingleton(sp => new AccountAuthService(
-			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance));
+			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 
 		return Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm => nm.Add(c => c.IsCollapsed, isCollapsed)));
 	}
@@ -196,6 +198,7 @@ public class AccountPanelTests : BunitContext
 		Services.AddSingleton(playTerminalHost);
 		Services.AddSingleton<IPlayTerminalService>(playTerminalHost);
 
+		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 
 		var apiClient = new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
@@ -206,7 +209,7 @@ public class AccountPanelTests : BunitContext
 			sp.GetRequiredService<IHttpClientFactory>(),
 			NullLogger<ApplicationRegistryClient>.Instance));
 		Services.AddSingleton(sp => new AccountAuthService(
-			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance));
+			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 
 		return Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm => nm.Add(c => c.IsCollapsed, isCollapsed)));
 	}

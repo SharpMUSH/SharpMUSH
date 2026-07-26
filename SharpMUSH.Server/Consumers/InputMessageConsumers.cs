@@ -224,7 +224,8 @@ public class ConnectionEstablishedConsumer(
 				{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
 				{ "InternetProtocolAddress", message.IpAddress },
 				{ "HostName", message.Hostname },
-				{ "ConnectionType", message.ConnectionType }
+				{ "ConnectionType", message.ConnectionType },
+				{ "PresenceClass", message.PresenceClass }
 			}));
 	}
 }

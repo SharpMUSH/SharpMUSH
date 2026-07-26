@@ -12,7 +12,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Helpers;
 using MarkupString;
-using System.Security.Claims;
+using SharpMUSH.Server.Authentication;
 using System.Text.Json;
 
 namespace SharpMUSH.Server.Controllers;
@@ -83,7 +83,7 @@ public class GalleryController(
 
 		// Never default a missing identity to God (#1): reject so uploads cannot be
 		// misattributed or bypass identity-based controls downstream.
-		var uploaderDbref = User.FindFirstValue(ClaimTypes.NameIdentifier);
+		var uploaderDbref = User.GetActingCharacterDbref();
 		if (string.IsNullOrEmpty(uploaderDbref))
 			return Unauthorized("Missing character identity.");
 		await using var content = file.OpenReadStream();
@@ -188,7 +188,7 @@ public class GalleryController(
 
 	private async Task<AnySharpObject?> ResolveViewerAsync(CancellationToken ct)
 	{
-		var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
+		var raw = User.GetActingCharacterDbref();
 		if (string.IsNullOrWhiteSpace(raw)) return null;
 
 		var numberPart = raw.TrimStart('#').Split(':', 2)[0];

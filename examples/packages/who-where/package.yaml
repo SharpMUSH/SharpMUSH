@@ -16,9 +16,9 @@ objects:
     parent: "{{ww_functions}}"
     attributes:
       CMD_+WHO: |-
-        $+who:@pemit %#=[u({{ww_functions}}/WW_FN_HEADER,Who)][iter(lwho(),%r[ljust(name(%i0),20)][conn(%i0)],,)]
+        $+who:@pemit %#=[u({{ww_functions}}/WW_FN_HEADER,Who)][iter(mwho(),%r[ljust(name(%i0),20)][conn(%i0)],,)]
       CMD_+WHERE: |-
-        $+where:@pemit %#=[u({{ww_functions}}/WW_FN_HEADER,Where)][iter(lwho(),%r[ljust(name(%i0),20)][name(loc(%i0))],,)]
+        $+where:@pemit %#=[u({{ww_functions}}/WW_FN_HEADER,Where)][iter(mwho(),%r[ljust(name(%i0),20)][name(loc(%i0))],,)]
 
   - ref: ww_functions
     type: thing

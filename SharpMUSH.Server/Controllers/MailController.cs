@@ -9,7 +9,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using MarkupString;
-using System.Security.Claims;
+using SharpMUSH.Server.Authentication;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -156,10 +156,10 @@ public class MailController(IMediator mediator, ILogger<MailController> logger) 
 	private static async Task<string> FromNameAsync(SharpMail mail)
 		=> (await mail.From.WithCancellation(CancellationToken.None)).Object()?.Name ?? "(unknown)";
 
-	/// <summary>Resolves the authenticated character (JWT dbref) to a player, or null.</summary>
+	/// <summary>Resolves the character this request acts as (the primary character's dbref) to a player, or null.</summary>
 	private async Task<SharpPlayer?> ResolvePlayerAsync(CancellationToken ct)
 	{
-		var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
+		var raw = User.GetActingCharacterDbref();
 		if (string.IsNullOrWhiteSpace(raw)) return null;
 
 		var numberPart = raw.TrimStart('#').Split(':', 2)[0];

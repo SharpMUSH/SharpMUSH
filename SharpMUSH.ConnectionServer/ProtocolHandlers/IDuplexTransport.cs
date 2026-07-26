@@ -1,14 +1,13 @@
 namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 
 /// <summary>
-/// Transport-agnostic duplex byte pipe for a single terminal-play connection.
-/// Implemented by WebSocket and WebTransport adapters so <see cref="ConnectionPump"/>
-/// is unaware of the underlying protocol. A migrated QUIC connection is transparent
-/// here: <see cref="ReceiveTextAsync"/> simply keeps returning frames.
+/// Transport-agnostic duplex byte pipe for a single terminal-play connection. Implemented today by
+/// the WebSocket adapter; the abstraction keeps <see cref="ConnectionPump"/> unaware of the
+/// underlying protocol so another transport could be slotted in without touching it.
 /// </summary>
 public interface IDuplexTransport
 {
-	/// <summary>Transport identifier used as the connection type ("websocket" | "webtransport").</summary>
+	/// <summary>Transport identifier used as the connection type (currently "websocket").</summary>
 	string Kind { get; }
 
 	string RemoteIp { get; }

@@ -39,6 +39,7 @@ builder.Services.AddSingleton<SceneService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();
+builder.Services.AddSingleton<ServerInfoService>();
 builder.Services.AddSingleton<PackagesAdminService>();
 builder.Services.AddSingleton<BannedNamesService>();
 builder.Services.AddSingleton<SitelockService>();
@@ -55,8 +56,6 @@ builder.Services.AddSingleton<HelpService>(sp =>
 	var factory = sp.GetRequiredService<IHttpClientFactory>();
 	return new HelpService(factory.CreateClient("help"));
 });
-builder.Services.AddScoped<CredentialService>();
-builder.Services.AddSingleton<OttAuthService>();
 builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());
 builder.Services.AddSingleton<DatabaseConversionService>();
@@ -109,7 +108,11 @@ builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredServi
 // Same singleton, exposed for scene group join/leave (client-only control surface).
 builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<ConnectionStateService>());
 
-builder.Services.AddHttpClient("api", c => c.BaseAddress = apiBaseAddress);
+builder.Services.AddTransient<AccountSessionBearerHandler>();
+builder.Services.AddTransient<ActingCharacterHeaderHandler>();
+builder.Services.AddHttpClient("api", c => c.BaseAddress = apiBaseAddress)
+	.AddHttpMessageHandler<AccountSessionBearerHandler>()
+	.AddHttpMessageHandler<ActingCharacterHeaderHandler>();
 
 if (builder.HostEnvironment.IsDevelopment())
 {

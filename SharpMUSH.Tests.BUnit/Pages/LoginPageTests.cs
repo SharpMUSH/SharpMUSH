@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -56,7 +57,7 @@ public class LoginPageRenderTests : BunitContext
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-				NullLogger<AccountAuthService>.Instance))
+				NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
 			.AddSingleton(Substitute.For<ITerminalService>())
 			.AddSingleton<IStringLocalizer<SharedResource>, LoginPageStubLocalizer<SharedResource>>();
 
@@ -105,5 +106,30 @@ public class LoginPageRenderTests : BunitContext
 		// Terminal link line preserved.
 		await Assert.That(cut.Markup.Contains("terminal")).IsTrue();
 		await Assert.That(cut.Find("a[href='/play']")).IsNotNull();
+	}
+
+	[TUnit.Core.Test]
+	public async Task Login_DefaultsToSignInTab()
+	{
+		SeedServices();
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+
+		// Sign In panel active: its fields render, the Register panel's submit does not.
+		await Assert.That(cut.FindAll("#login-username").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("button.register-submit").Count).IsEqualTo(0);
+	}
+
+	[TUnit.Core.Test]
+	public async Task Login_TabRegisterQuery_OpensRegisterTab()
+	{
+		SeedServices();
+		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+		nav.NavigateTo("/login?tab=register");
+
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+
+		// Register panel active: its submit renders, the Sign In panel's fields do not.
+		await Assert.That(cut.FindAll("button.register-submit").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("#login-username").Count).IsEqualTo(0);
 	}
 }

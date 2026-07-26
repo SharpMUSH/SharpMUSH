@@ -23,6 +23,7 @@ public class PlaySidebarTests : BunitContext
     public PlaySidebarTests()
     {
         Services.AddMudServices();
+        Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
         Services.AddLocalization();
         JSInterop.Mode = JSRuntimeMode.Loose;
 
@@ -37,24 +38,15 @@ public class PlaySidebarTests : BunitContext
         defaultTerminal.Lines.Returns(Array.Empty<SharpMUSH.Client.Models.TerminalLine>());
         Services.AddSingleton(defaultTerminal);
 
-        // CredentialService depends only on IJSRuntime (already provided by bUnit JSInterop)
-        Services.AddSingleton(sp =>
-            new CredentialService(sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
-
-        // OttAuthService depends on IHttpClientFactory + ILogger
         var httpFactory = Substitute.For<IHttpClientFactory>();
         Services.AddSingleton(httpFactory);
-        Services.AddSingleton(sp =>
-            new OttAuthService(
-                sp.GetRequiredService<IHttpClientFactory>(),
-                NullLogger<OttAuthService>.Instance));
 
         // AccountAuthService depends on IHttpClientFactory + IJSRuntime + ILogger
         Services.AddSingleton(sp =>
             new AccountAuthService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-                NullLogger<AccountAuthService>.Instance));
+                NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
 
         // IWebAssemblyHostEnvironment (needed by GlobalTerminal for IsDevelopment())
         var hostEnv = Substitute.For<IWebAssemblyHostEnvironment>();

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Hubs;
 
@@ -51,12 +52,37 @@ public class AccountSessionAuthenticationHandler(
 		claims.AddRange(scopes.Select(s => new Claim(PortalPermission.ClaimType, s)));
 
 		var characters = await accountService.GetCharactersAsync(accountId);
-		var primary = characters.FirstOrDefault();
-		if (primary is not null)
-			claims.Add(new Claim(GameHub.CharacterDbrefClaim, $"#{primary.Object.Key}"));
+		var acting = ResolveActingCharacter(characters);
+		if (acting is not null)
+		{
+			claims.Add(new Claim(GameHub.CharacterDbrefClaim, $"#{acting.Object.Key}"));
+			claims.Add(new Claim("character_key", acting.Object.Key.ToString()));
+			claims.Add(new Claim("character_creation_time", acting.Object.CreationTime.ToString()));
+			claims.Add(new Claim("character_name", acting.Object.Name));
+		}
 
 		var identity = new ClaimsIdentity(claims, SchemeName);
 		return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));
+	}
+
+	/// <summary>
+	/// The character this request acts as: the client-supplied hint (<c>X-Acting-Character</c> header
+	/// for REST, <c>character</c> query for the SignalR connection) when it names a character the account
+	/// owns, otherwise the primary. Only owned characters are honoured — an unknown or unowned hint
+	/// silently falls back to the primary.
+	/// </summary>
+	private SharpPlayer? ResolveActingCharacter(IReadOnlyList<SharpPlayer> characters)
+	{
+		var hint = Request.Headers["X-Acting-Character"].FirstOrDefault()
+			?? Request.Query["character"].FirstOrDefault();
+		if (!string.IsNullOrWhiteSpace(hint))
+		{
+			var key = hint.TrimStart('#');
+			var match = characters.FirstOrDefault(c => c.Object.Key.ToString() == key);
+			if (match is not null)
+				return match;
+		}
+		return characters.FirstOrDefault();
 	}
 
 	private string? ExtractToken()

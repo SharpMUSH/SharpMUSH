@@ -80,6 +80,7 @@ public class NavMenuActiveCharacterTests : BunitContext, IAsyncDisposable
 	public NavMenuActiveCharacterTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		Services.AddSingleton<IStringLocalizer<SharedResource>, NavMenuStubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 
@@ -98,6 +99,7 @@ public class NavMenuActiveCharacterTests : BunitContext, IAsyncDisposable
 		Services.AddSingleton(playTerminalHost);
 		Services.AddSingleton<IPlayTerminalService>(playTerminalHost);
 
+		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 
 		Auth = this.AddAuthorization();
@@ -129,7 +131,7 @@ public class NavMenuActiveCharacterTests : BunitContext, IAsyncDisposable
 			sp.GetRequiredService<IHttpClientFactory>(),
 			NullLogger<ApplicationRegistryClient>.Instance));
 
-		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance);
+		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 		var (success, error, _) = await auth.LoginAsync("headwiz", "password");
 		if (!success)
 			throw new InvalidOperationException($"Test setup login failed: {error}");
@@ -165,9 +167,9 @@ public class NavMenuActiveCharacterTests : BunitContext, IAsyncDisposable
 
 		// No parameter change, no parent render — exactly the sibling-component situation
 		// that left the card stale.
-		cut.InvokeAsync(() => auth.SetActiveCharacter(new CharacterSummary(2, 2L, "Beta", "")));
+		await cut.InvokeAsync(() => auth.SetActiveCharacter(new CharacterSummary(2, 2L, "Beta", "")));
 
-		cut.WaitForAssertion(() =>
+		await cut.WaitForAssertionAsync(() =>
 		{
 			if (cut.Find(".phosphor-profile-name").TextContent != "Beta")
 				throw new InvalidOperationException("card not updated yet");

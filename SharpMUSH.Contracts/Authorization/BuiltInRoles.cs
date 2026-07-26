@@ -17,8 +17,9 @@ public static class BuiltInRoles
 {
 	/// <summary>
 	/// Baseline scopes every authenticated member tier may exercise: read drafts, create/edit wiki
-	/// pages, and upload images. Deliberately excludes delete and any moderation/admin scope.
-	/// Declared before <see cref="All"/> so it is initialized before <see cref="Build"/> reads it.
+	/// pages, upload images, and use the softcode editor. Deliberately excludes delete and any
+	/// moderation/admin scope. Declared before <see cref="All"/> so it is initialized before
+	/// <see cref="Build"/> reads it.
 	/// </summary>
 	private static readonly string[] Contributor =
 	[
@@ -26,6 +27,7 @@ public static class BuiltInRoles
 		PortalPermission.WikiCreate,
 		PortalPermission.WikiEdit,
 		PortalPermission.MediaUpload,
+		PortalPermission.SoftcodeUse,
 	];
 
 	/// <summary>Seed templates for every built-in role (timestamps stamped at insert time).</summary>

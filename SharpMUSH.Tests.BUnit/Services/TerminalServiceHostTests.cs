@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Client.Services;
@@ -213,5 +214,45 @@ public class TerminalServiceHostTests
 		await Assert.That(ReferenceEquals(commandConcrete, commandViaInterface)).IsTrue();
 		await Assert.That(ReferenceEquals(playConcrete, playViaInterface)).IsTrue();
 		await Assert.That(ReferenceEquals(commandConcrete, playConcrete)).IsFalse();
+	}
+
+	/// <summary>
+	/// Pins the presence-class wiring the real <see cref="TerminalServiceCollectionExtensions.AddTerminalServices"/>
+	/// establishes: the command terminal is the portal's background query connection, so its websocket client
+	/// declares presence class "portal" (its OOB lookups must not count a player as online); the play terminal
+	/// is the real interactive session and keeps the default "play".
+	/// </summary>
+	[Test]
+	public async Task AddTerminalServices_wires_the_command_terminal_as_portal_and_the_play_terminal_as_play()
+	{
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddTerminalServices();
+
+		await using var provider = services.BuildServiceProvider();
+
+		var commandWs = FindWebSocketClient(provider.GetRequiredService<TerminalServiceHost>());
+		var playWs = FindWebSocketClient(provider.GetRequiredService<PlayTerminalServiceHost>());
+
+		await Assert.That(commandWs.PresenceClass).IsEqualTo("portal");
+		await Assert.That(playWs.PresenceClass).IsEqualTo("play");
+	}
+
+	private static WebSocketClientService FindWebSocketClient(TerminalServiceHost host)
+	{
+		var inner = typeof(TerminalServiceHost)
+			.GetField("_inner", BindingFlags.NonPublic | BindingFlags.Instance)!
+			.GetValue(host)!;
+
+		for (var type = inner.GetType(); type is not null; type = type.BaseType)
+		{
+			foreach (var field in type.GetFields(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+			{
+				if (field.GetValue(inner) is WebSocketClientService ws)
+					return ws;
+			}
+		}
+
+		throw new InvalidOperationException("No WebSocketClientService found on the inner terminal.");
 	}
 }

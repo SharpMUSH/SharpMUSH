@@ -2794,6 +2794,11 @@ public partial class Commands
 		var playerList = new List<string>();
 		await foreach (var connection in everyone.Where(player => player.Ref.HasValue))
 		{
+			if (!isAdmin && connection.PresenceClass == PresenceClasses.Portal)
+			{
+				continue;
+			}
+
 			var obj = await Mediator!.Send(new GetObjectNodeQuery(connection.Ref!.Value));
 			var playerName = obj.Known.Object().Name;
 

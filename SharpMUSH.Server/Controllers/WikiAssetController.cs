@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Helpers;
-using System.Security.Claims;
+using SharpMUSH.Server.Authentication;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Server.Controllers;
@@ -86,7 +86,9 @@ public partial class WikiAssetController(
 			}
 		}
 
-		var uploaderDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var uploaderDbref = User.GetActingCharacterDbref();
+		if (string.IsNullOrEmpty(uploaderDbref))
+			return Unauthorized(new { error = "No character on this session." });
 
 		await using var content = file.OpenReadStream();
 		var result = await assetService.SaveAsync(file.FileName, contentType, content, uploaderDbref, ct);

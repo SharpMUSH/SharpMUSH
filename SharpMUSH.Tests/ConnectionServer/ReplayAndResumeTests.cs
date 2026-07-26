@@ -10,13 +10,14 @@ public class ReplayAndResumeTests
 	{
 		var frame = SeqEnvelope.Wrap(5, "hello\nworld");
 		await Assert.That(SeqEnvelope.ReadSeq(frame)).IsEqualTo(5L);
+		await Assert.That(Encoding.UTF8.GetString(frame)).Contains("\"type\":\"seq\"");
 		await Assert.That(Encoding.UTF8.GetString(frame)).Contains("\"seq\":5");
 	}
 
 	[Test]
 	public async Task SeqEnvelope_parses_resume_frame_camelCase()
 	{
-		var ok = SeqEnvelope.TryReadResume("{\"resume\":\"tok123\",\"lastSeq\":7}", out var token, out var last);
+		var ok = SeqEnvelope.TryReadResume("{\"type\":\"resume\",\"token\":\"tok123\",\"lastSeq\":7}", out var token, out var last);
 		await Assert.That(ok).IsTrue();
 		await Assert.That(token).IsEqualTo("tok123");
 		await Assert.That(last).IsEqualTo(7L);
@@ -32,11 +33,11 @@ public class ReplayAndResumeTests
 	[Test]
 	public async Task SeqEnvelope_IsHello_matches_only_the_structured_handshake()
 	{
-		await Assert.That(SeqEnvelope.IsHello("{\"hello\":1}")).IsTrue();
+		await Assert.That(SeqEnvelope.IsHello("{\"type\":\"hello\"}")).IsTrue();
 		// A real command that merely contains the substring must NOT be read as the handshake.
 		await Assert.That(SeqEnvelope.IsHello("say \"hello\"")).IsFalse();
 		await Assert.That(SeqEnvelope.IsHello("look north")).IsFalse();
-		await Assert.That(SeqEnvelope.IsHello("{\"resume\":\"tok\",\"lastSeq\":0}")).IsFalse();
+		await Assert.That(SeqEnvelope.IsHello("{\"type\":\"resume\",\"token\":\"tok\",\"lastSeq\":0}")).IsFalse();
 	}
 
 	[Test]

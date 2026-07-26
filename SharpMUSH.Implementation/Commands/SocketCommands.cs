@@ -30,71 +30,70 @@ public partial class Commands
 
 		var everyone = ConnectionService!.GetAll();
 
-		// PennMUSH wizard format: Player Name (18), Loc # (7), On For (7), Idle (5), Cmds (4), Des (3), Host
-		const string wizFmt = "{0,-18} {1,7} {2,7} {3,5} {4,4} {5,3} {6}";
-		// PennMUSH mortal format: Player Name (21), On For (9), Idle (6), Doing (text)
-		const string mortFmt = "{0,-21} {1,9} {2,6}  {3}";
-
-		string header;
-		if (isWizard)
-		{
-			header = string.Format(wizFmt, "Player Name", "Loc #", "On For", "Idle", "Cmds", "Des", "Host");
-		}
-		else
-		{
-			header = string.Format(mortFmt, "Player Name", "On For", "Idle", "Doing");
-		}
+		// PennMUSH dump_users formats (src/bsd.c): header widths and per-row layout are replicated verbatim.
+		string header = isWizard
+			? string.Format("{0,-16} {1,6} {2,9} {3,5} {4,5} {5,-4} {6}",
+				"Player Name", "Loc #", "On For", "Idle", "Cmds", "Des", "Host")
+			: string.Format("{0,-16} {1,10} {2,6}  {3}", "Player Name", "On For", "Idle", "Doing");
 
 		var filteredPlayers = await everyone
-			.Where(player => player.Ref.HasValue)
+			.Where(player => player.Ref.HasValue && (isWizard || player.PresenceClass != PresenceClasses.Portal))
 			.Select(async (player, i, ct) =>
 			{
 				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value), ct);
-				var doingText = await Commands.GetDoingText(executor, obj.Known);
+				var known = obj.Known;
+				var name = known.Object().Name;
+				var namePadded = name.Length < 16 ? name.PadRight(16) : name;
+				var onFor = TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3);
+				var idle = TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero);
+				var isDark = await known.HasFlag("DARK");
 
 				string line;
 				if (isWizard)
 				{
-					var location = obj.Known.IsContent
-						? (await obj.Known.AsContent.Location())?.Object().DBRef.ToString() ?? "*NOWHERE*"
-						: "*NOWHERE*";
-					var doing = await AttributeService!.GetAttributeAsync(executor, obj.Known, "DOING",
-						IAttributeService.AttributeMode.Read, false);
-					var doingLength = doing.IsAttribute ? MModule.getLength(doing.AsAttribute.Last().Value) : 0;
-					line = string.Format(wizFmt,
-						obj.Known.Object().Name,
-						location,
-						TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
-						TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
-						player.CommandCount,
-						doingLength,
-						player.HostName);
+					var location = known.IsContent
+						? "#" + ((await known.AsContent.Location())?.Object().DBRef.Number.ToString() ?? "-1")
+						: "#-1";
+					// Host truncated + " (Dark)" for dark players, else truncated to 27 (PennMUSH).
+					var host = isDark
+						? (player.HostName.Length > 20 ? player.HostName[..20] : player.HostName) + " (Dark)"
+						: (player.HostName.Length > 27 ? player.HostName[..27] : player.HostName);
+					// "Des" is the descriptor (handle) plus connection-type flags: S=SSL, L=local, W=WebSocket.
+					line = $"{namePadded} {location,6} {onFor,9} {idle,5}  {player.CommandCount,4} {player.Handle,3}{ConnType(player)} {host}";
 				}
 				else
 				{
-					line = string.Format(mortFmt,
-						obj.Known.Object().Name,
-						TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
-						TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
-						doingText);
+					var doingText = await Commands.GetDoingText(executor, known);
+					line = $"{namePadded} {onFor,10}   {idle,4}{(isDark ? 'D' : ' ')} {doingText}";
 				}
 
-				return (line, obj.Known);
+				return (Line: line, Known: known);
 			})
 			.Where(async (player, _) => await PermissionService!.CanSee(executor, player.Known))
 			.ToListAsync();
 
-		var sortedPlayers = filteredPlayers.Select(x => x.Item1).ToArray();
-		var count = sortedPlayers.Length;
-		var footer = count == 1
-			? "There is 1 player connected."
-			: $"There are {count} players connected.";
+		var count = filteredPlayers.Count;
+		var footer = count switch
+		{
+			0 => "There are no players connected.",
+			1 => "There is one player connected.",
+			_ => $"There are {count} players connected."
+		};
 
-		var message = $"{header}\n{string.Join('\n', sortedPlayers)}\n{footer}";
+		var message = $"{header}\n{string.Join('\n', filteredPlayers.Select(x => x.Line))}\n{footer}";
 
 		await NotifyService!.Notify(handle: parser.CurrentState.Handle!.Value, what: message);
 
 		return new None();
+
+		// PennMUSH conntype: S (SSL) or L (local, non-SSL), optionally followed by W (WebSocket).
+		static string ConnType(IConnectionService.ConnectionData c)
+		{
+			var flags = c.Metadata.GetValueOrDefault("SSL", "0") == "1"
+				? "S"
+				: c.InternetProtocolAddress is "127.0.0.1" or "::1" or "localhost" ? "L" : "";
+			return c.ConnectionType == "websocket" ? flags + "W" : flags;
+		}
 	}
 
 	/// <example>

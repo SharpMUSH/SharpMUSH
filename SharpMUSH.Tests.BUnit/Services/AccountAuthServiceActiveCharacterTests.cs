@@ -66,7 +66,9 @@ public class AccountAuthServiceActiveCharacterTests
 	private static AccountAuthService MakeService() =>
 		new(Substitute.For<IHttpClientFactory>(),
 			Substitute.For<IJSRuntime>(),
-			Substitute.For<ILogger<AccountAuthService>>());
+			Substitute.For<ILogger<AccountAuthService>>(),
+			Substitute.For<ITerminalService>(),
+			Substitute.For<IPlayTerminalService>());
 
 	private static HttpClient MakeLoginHttpClient(IReadOnlyList<CharacterSummary> characters) =>
 		new(new FakeLoginHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") };
@@ -96,7 +98,7 @@ public class AccountAuthServiceActiveCharacterTests
 		var http = new HttpClient(new FakeAccountHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") };
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>());
+		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>(), Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 		await sut.InitAsync();
 		await sut.LoginAsync("headwiz", "password-one");
 		return sut;
@@ -176,7 +178,7 @@ public class AccountAuthServiceActiveCharacterTests
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>());
+		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>(), Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 
 		var (success, _, characters) = await sut.LoginAsync("headwiz", "password-one");
 
@@ -217,7 +219,7 @@ public class AccountAuthServiceActiveCharacterTests
 		using var firstHttp = MakeLoginHttpClient([a, b]);
 		httpClientFactory.CreateClient("api").Returns(firstHttp);
 
-		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>());
+		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>(), Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 		await sut.LoginAsync("headwiz", "password-one");
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(a.DbrefNumber);
 

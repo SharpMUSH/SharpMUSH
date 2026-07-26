@@ -35,9 +35,17 @@ public static class TerminalServiceCollectionExtensions
 		// facade drops its reference.
 		services.AddTransient<IWebSocketClientService, WebSocketClientService>();
 		services.AddSingleton(sp => new TerminalServiceHost(
-			() => new TerminalService(
-				ActivatorUtilities.CreateInstance<WebSocketClientService>(sp),
-				sp.GetRequiredService<ILogger<TerminalService>>())));
+			() =>
+			{
+				// The command terminal is the portal's background query connection — its OOB lookups must not
+				// register a player as online, so it declares presence class "portal". The play terminal below
+				// keeps the default "play".
+				var ws = ActivatorUtilities.CreateInstance<WebSocketClientService>(sp);
+				// Literal "portal" (not PresenceClasses.Portal): the browser bundle does not reference
+				// SharpMUSH.Library — see the ProjectReference note in SharpMUSH.Client.csproj.
+				ws.PresenceClass = "portal";
+				return new TerminalService(ws, sp.GetRequiredService<ILogger<TerminalService>>());
+			}));
 		services.AddSingleton<ITerminalService>(sp => sp.GetRequiredService<TerminalServiceHost>());
 
 		// Second, independent connection for the /play page (player interactions), separate from the
@@ -48,10 +56,9 @@ public static class TerminalServiceCollectionExtensions
 				sp.GetRequiredService<ILogger<TerminalService>>())));
 		services.AddSingleton<IPlayTerminalService>(sp => sp.GetRequiredService<PlayTerminalServiceHost>());
 
-		// Shared character-switch flow (mint OTT -> recreate both terminal facades -> reconnect the
-		// command terminal) — see CharacterSwitchService for why every switch surface must go through
-		// this one place. Depends on the concrete facades above, so it belongs in this registration.
 		services.AddSingleton<CharacterSwitchService>();
+		services.AddSingleton<TerminalLoginService>();
+		services.AddSingleton<ICharacterUpgradeService, CharacterUpgradeService>();
 
 		return services;
 	}

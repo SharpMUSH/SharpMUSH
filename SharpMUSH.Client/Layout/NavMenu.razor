@@ -10,6 +10,7 @@
 @inject AccountAuthService AccountAuth
 @inject CharacterSwitchService CharacterSwitch
 @inject ApplicationRegistryClient Registry
+@inject ServerInfoService ServerInfo
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 @implements IDisposable
@@ -27,8 +28,7 @@
         @if (!IsCollapsed)
         {
             <div style="line-height:1.1;overflow:hidden;">
-                <div class="phosphor-brand">@Loc["AppTitle"]</div>
-                <div class="phosphor-brand-tag">GAME&nbsp;NAME</div>
+                <div class="phosphor-brand">@_gameName</div>
             </div>
         }
     </a>
@@ -38,7 +38,8 @@
         <div class="nav-group">
             <div class="nav-group-label">Play</div>
             @NavItem("/", Icons.Material.Filled.Home, Loc["Home"], NavLinkMatch.All)
-            @if (_characterActive)
+            @* Logged-in users Play as their character; guests Play only when the server allows it. *@
+            @if (_showPlay)
             {
                 <NavLink class="phosphor-nav-link" href="/play" Match="NavLinkMatch.Prefix">
                     <MudIcon Icon="@Icons.Material.Filled.SportsEsports" Class="phosphor-nav-icon" />
@@ -70,7 +71,9 @@
 
         <div class="nav-group">
             <div class="nav-group-label">Build</div>
-            @NavItem("/softcode", Icons.Material.Filled.Code, Loc["SoftcodeEditor"])
+            <AuthorizeView Policy="softcode.use">
+                <Authorized>@NavItem("/softcode", Icons.Material.Filled.Code, Loc["SoftcodeEditor"])</Authorized>
+            </AuthorizeView>
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Build" Applications="_apps" />
             <AuthorizeView Policy="applications.admin">
                 <Authorized>@NavItem("/admin/applications", Icons.Material.Filled.Apps, "Applications")</Authorized>
@@ -188,6 +191,15 @@
     private IReadOnlyList<string> _novelSections = [];
 
     private bool _characterActive;
+
+    // Anyone logged in can Play as their character; an anonymous visitor can Play only when the
+    // server accepts guest logins. Defaults to the config default (true) until the fetch settles.
+    private bool _guestsEnabled = true;
+    private bool _showPlay => AccountAuth.IsLoggedIn || _guestsEnabled;
+
+    // The configured game name shown as the sidebar brand. Defaults to the config default until the
+    // ServerInfo fetch settles.
+    private string _gameName = "SharpMUSH";
     private bool _panelOpen;
 
     // Play-session terminal status, surfaced as a dot on the Play nav item.
@@ -258,6 +270,10 @@
 
         _apps = await Registry.ListAsync();
         _novelSections = PortalNavSections.NovelSections(_apps, role);
+
+        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
+        _gameName = await ServerInfo.GameNameAsync();
+        StateHasChanged();
     }
 
     private void OnConnectionChanged(bool connected)
@@ -309,34 +325,9 @@
 
     private void TogglePanel() => _panelOpen = !_panelOpen;
 
-    /// <summary>
-    /// Full switch flow via the shared <see cref="CharacterSwitchService"/> — the same one
-    /// <c>MainLayout</c> and <c>CharacterPicker</c> use. Mints a fresh OTT (commits
-    /// <see cref="AccountAuthService.ActiveCharacter"/>, so every surface reading it — this card, the
-    /// topbar chip, etc. — updates at once), recreates both terminal facades, and reconnects the
-    /// command terminal. An earlier version of this panel was identity-only (commits the name change
-    /// but never reconnects the terminal, leaving it authenticated as the old character) — fixed by
-    /// routing through the same service every other switch surface uses.
-    ///
-    /// <see cref="CharacterSwitchService.SwitchAsync"/> returns <c>false</c> when minting the OTT fails
-    /// (e.g. an expired account session) — nothing else in that method ran, so the panel would
-    /// otherwise close on its own (<c>AccountPanel.SelectCharacterAsync</c>) with no feedback at all.
-    /// Now that this panel is the only switcher (post-<c>AccountChrome</c> removal), that silent no-op
-    /// would leave the user with a dead button and no explanation, so surface it via the same
-    /// <c>ISnackbar</c> pattern used elsewhere in the client (e.g. <c>Sitelock.razor</c>) — an inline
-    /// message inside the panel would flash and vanish, since the panel closes right after this method
-    /// returns regardless of outcome.
-    /// </summary>
-    private async Task HandleSwitchCharacterAsync(AccountAuthService.CharacterSummary character)
-    {
-        var switched = await CharacterSwitch.SwitchAsync(character);
-        if (!switched)
-        {
-            Snackbar.Add(
-                $"Couldn't switch to {character.Name}. The account session may have expired — please log in again.",
-                Severity.Error);
-        }
-    }
+    /// <summary>Switches the portal's active character (SignalR + REST); does not touch the terminal.</summary>
+    private Task HandleSwitchCharacterAsync(AccountAuthService.CharacterSummary character)
+        => CharacterSwitch.SwitchAsync(character);
 
     /// <summary>
     /// Opens a new browser tab already acting as <paramref name="character"/>. A tab opened via
@@ -352,9 +343,9 @@
 
     private async Task HandleLogoutAsync()
     {
+        // AccountAuth.LogoutAsync is the single chokepoint that ends both game terminals (guarded on
+        // IsConnected), so this handler only has to navigate away afterwards.
         await AccountAuth.LogoutAsync();
-        await Terminal.DisconnectAsync();
-        await PlayTerminal.DisconnectAsync();
         Nav.NavigateTo("/", forceLoad: false);
     }
 

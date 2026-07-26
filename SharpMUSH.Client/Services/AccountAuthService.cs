@@ -13,7 +13,9 @@ namespace SharpMUSH.Client.Services;
 public class AccountAuthService(
 	IHttpClientFactory httpClientFactory,
 	IJSRuntime js,
-	ILogger<AccountAuthService> logger) : IAccountAuthState
+	ILogger<AccountAuthService> logger,
+	ITerminalService terminal,
+	IPlayTerminalService playTerminal) : IAccountAuthState
 {
 	private const string SessionTokenKey = "sharpmush.account.sessionToken";
 	private const string UsernameKey = "sharpmush.account.username";
@@ -597,6 +599,30 @@ public class AccountAuthService(
 				await http.PostAsync("api/account/logout", null);
 			}
 			catch { /* best-effort */ }
+		}
+
+		// End the game-side session too. While a character session is active the terminals are
+		// auto-connected to the ConnectionServer, and leaving them up keeps the character in lwho()
+		// (shown as "online") after the portal session is gone. A bare socket close is NOT enough: the
+		// ConnectionServer treats a client-side close as a DROP and holds the session for a ~120s grace
+		// window (ConnectionPump: sink.Detach() + detachedTracker.Detach(handle, grace)), during which
+		// the character is still in lwho(). Sending the game "QUIT" command instead routes to
+		// ConnectionService.Disconnect + a DisconnectConnectionMessage whose consumer calls the FORCED
+		// DisconnectAsync(handle) — removing the handle from the live registry immediately (lwho() drops
+		// it at once) and emitting a {"type":"bye"} frame so the client will not auto-reconnect. The
+		// follow-up DisconnectAsync is a safety net that closes the client socket and latches the
+		// intentional-disconnect flag; SendAsync awaits the flush, so QUIT is already on the wire first.
+		// Guard on IsConnected so tearing down an idle terminal is a no-op. This is the single chokepoint
+		// every logout entry point routes through, so no caller can forget to end the terminals.
+		if (terminal.IsConnected)
+		{
+			await terminal.SendAsync("QUIT");
+			await terminal.DisconnectAsync();
+		}
+		if (playTerminal.IsConnected)
+		{
+			await playTerminal.SendAsync("QUIT");
+			await playTerminal.DisconnectAsync();
 		}
 
 		AccountSessionToken = null;

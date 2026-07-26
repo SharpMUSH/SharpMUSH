@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using System.Collections.Concurrent;
 
@@ -8,6 +10,7 @@ namespace SharpMUSH.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = PortalPermission.ServerAdmin)]
 public class DatabaseConversionController(
 	IPennMUSHDatabaseConverter converter,
 	ILogger<DatabaseConversionController> logger)

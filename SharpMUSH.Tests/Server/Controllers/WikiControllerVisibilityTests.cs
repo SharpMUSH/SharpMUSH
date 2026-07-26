@@ -5,6 +5,7 @@ using NSubstitute;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Controllers;
+using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Services;
 using System.Security.Claims;
 
@@ -40,7 +41,7 @@ public class WikiControllerVisibilityTests
 		}
 		else
 		{
-			var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, callerDbref) };
+			var claims = new List<Claim> { new(GameHub.CharacterDbrefClaim, callerDbref) };
 			if (canReadDrafts)
 				claims.Add(new Claim(PortalPermission.ClaimType, PortalPermission.WikiRead));
 			identity = new ClaimsIdentity(claims, "test");

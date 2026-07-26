@@ -75,10 +75,10 @@ These were learned the hard way; the reference handler relies on all of them:
    list with a `not(hastype(%0,exit))` predicate so exits don't appear as
    occupants.
 
-7. **Connected detection.** `hasflag(%0,connected)` returns `0` here — use
-   `conn(%0)` (seconds, `-1` if not connected) or membership in `lwho()`.
-   (The reference handler doesn't need an explicit connected filter because
-   `oob()` already skips non-connected targets, per point 2.)
+7. **Connected detection.** `hasflag(%0,CONNECTED)` reflects presence: true for a
+   player with a live *play* session, false for a disconnected or portal-only
+   (background) connection. `FN`WHOVIS` uses it to keep asleep/portal players out
+   of the *who* list. (`oob()`'s target filter independently governs *delivery*.)
 
 8. **`num(%0)` returns the `#N` dbref form** (e.g. `#76`), so don't prepend an
    extra `#`.
@@ -91,15 +91,15 @@ Install on the configured event handler object (default `#9`), one attribute
 at a time. The helper attributes keep the main handler readable.
 
 ```mushcode
-&FN`NOTEXIT #9=not(hastype(%0,exit))
+&FN`WHOVIS #9=cand(not(hastype(%0,exit)),cor(not(isplayer(%0)),hasflag(%0,CONNECTED)))
 &FN`WHOROW #9=json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))
 &FN`EXITROW #9=json(object,name,json(string,name(%0)),cmd,json(string,goto [num(%0)]))
-&ROOM`CONTENTS #9=think oob(lcon(%0),room.contents,json(object,who,json_array(iter(filter(#9/FN`NOTEXIT,lcon(%0)),u(#9/FN`WHOROW,itext(0)),%b,|),|)));think oob(lcon(%0),room.exits,json(object,exits,json_array(iter(lexits(%0),u(#9/FN`EXITROW,itext(0)),%b,|),|)))
+&ROOM`CONTENTS #9=think oob(lcon(%0),room.contents,json(object,who,json_array(iter(filter(#9/FN`WHOVIS,lcon(%0)),u(#9/FN`WHOROW,itext(0)),%b,|),|)));think oob(lcon(%0),room.exits,json(object,exits,json_array(iter(lexits(%0),u(#9/FN`EXITROW,itext(0)),%b,|),|)))
 ```
 
 Reading the main handler:
 
-- `filter(#9/FN`NOTEXIT,lcon(%0))` — room contents minus exits (the *who* set).
+- `filter(#9/FN`WHOVIS,lcon(%0))` — the *who* set: non-exit occupants, players only when `CONNECTED` (disconnected / portal-only players are omitted, like PennMUSH); objects always show.
 - `iter(<set>, u(#9/FN`WHOROW,itext(0)), %b, |)` — build one JSON object per
   occupant (via the `FN`WHOROW` helper, `%0` = the occupant), joined with `|`.
 - `json_array(<that>, |)` — assemble those JSON objects into a JSON array.

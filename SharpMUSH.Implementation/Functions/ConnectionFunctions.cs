@@ -135,8 +135,8 @@ public partial class Functions
 			return new CallState("-1");
 		}
 
-		var data = await ConnectionService!.Get(located.Object.DBRef).FirstAsync();
-		return new CallState(data.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
+		var data = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		return new CallState(data?.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
 	[SharpFunction(Name = "connlog", MinArgs = 3, MaxArgs = int.MaxValue,
@@ -735,15 +735,13 @@ public partial class Functions
 	[SharpFunction(Name = "mwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public static async ValueTask<CallState> MortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Mortal viewer context - can't see hidden (DARK) players unless executor is a wizard
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var isWizard = await executor.IsWizard();
-
+		// The mortal (public) view: never lists DARK players or portal-class connections, independent of caller.
 		var nonHiddenConnections = ConnectionService!
 			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
+				&& x.PresenceClass != PresenceClasses.Portal)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => isWizard || !await x.HasFlag("DARK"))
+			.Where(async (x, _) => !await x.HasFlag("DARK"))
 			.Select(player => $"#{player.Object().DBRef.Number}");
 
 		return new CallState(string.Join(" ", await nonHiddenConnections.ToArrayAsync()));
@@ -752,15 +750,13 @@ public partial class Functions
 	[SharpFunction(Name = "mwhoid", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public static async ValueTask<CallState> MortalWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Mortal viewer context - can't see hidden (DARK) players unless executor is a wizard
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var isWizard = await executor.IsWizard();
-
+		// The mortal (public) view: never lists DARK players or portal-class connections, independent of caller.
 		var nonHiddenConnectionsObjIds = ConnectionService!
 			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
+				&& x.PresenceClass != PresenceClasses.Portal)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => isWizard || !await x.HasFlag("DARK"))
+			.Where(async (x, _) => !await x.HasFlag("DARK"))
 			.Select(x => x.Object().DBRef);
 
 		return new CallState(string.Join(" ", await nonHiddenConnectionsObjIds.ToArrayAsync()));
@@ -771,7 +767,8 @@ public partial class Functions
 	{
 		var count = await ConnectionService!
 			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
+				&& x.PresenceClass != PresenceClasses.Portal)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => !await x.HasFlag("DARK"))
 			.CountAsync();
@@ -1043,7 +1040,8 @@ public partial class Functions
 
 		var allDbrefs = ConnectionService!
 			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
+				&& x.PresenceClass != PresenceClasses.Portal)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => !await x.HasFlag("DARK"))
 			.Select(x => $"#{x.Object().DBRef.Number}");
@@ -1071,7 +1069,8 @@ public partial class Functions
 
 		var allObjIds = ConnectionService!
 			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
+				&& x.PresenceClass != PresenceClasses.Portal)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => !await x.HasFlag("DARK"))
 			.Select(x => x.Object().DBRef);
@@ -1539,6 +1538,16 @@ public partial class Functions
 		if (metadata.GetValueOrDefault("SSL", "0") == "1")
 		{
 			terminfo.Add("ssl");
+		}
+
+		if (metadata.GetValueOrDefault("ConnectionType", "") == "websocket")
+		{
+			terminfo.Add("websocket");
+		}
+
+		if (metadata.GetValueOrDefault("PresenceClass", PresenceClasses.Play) == PresenceClasses.Portal)
+		{
+			terminfo.Add(PresenceClasses.Portal);
 		}
 
 		if (metadata.GetValueOrDefault("PROMPT_NEWLINES", "0") == "1")

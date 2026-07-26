@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Server.Controllers;
+using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Services;
 using System.Security.Claims;
 using System.Text;
@@ -22,7 +23,7 @@ public class WikiAssetControllerTests
 			new FileSystemWikiAssetService(root.FullName),
 			NullLogger<WikiAssetController>.Instance);
 
-		var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "#42") };
+		var claims = new List<Claim> { new(GameHub.CharacterDbrefClaim, "#42") };
 		controller.ControllerContext = new ControllerContext
 		{
 			HttpContext = new DefaultHttpContext

@@ -1,0 +1,68 @@
+@page "/characters/new"
+@attribute [Authorize]
+@using SharpMUSH.Client.Services
+@inject AccountAuthService AccountAuth
+@inject ICharacterUpgradeService Upgrade
+@inject NavigationManager Nav
+
+<PageTitle>Create character — SharpMUSH</PageTitle>
+
+<div style="padding:var(--cpad);">
+    <MudPaper Elevation="0" Class="pa-6"
+              Style="max-width:560px;margin:0 auto;background:var(--surface);border:1px solid var(--border-soft);">
+        <MudText Typo="Typo.h5" GutterBottom="true">Create a character</MudText>
+        <MudText Typo="Typo.body2" Style="color:var(--text-faint);">
+            A character is a persona you play in the game. It's linked to your account; you can create more later.
+        </MudText>
+
+        <MudTextField @bind-Value="_name" Label="Character name"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-4" />
+        <MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-3" />
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
+        }
+
+        <div style="display:flex;gap:0.5rem;margin-top:1.25rem;">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy"
+                       OnClick="CreateAsync">Create character</MudButton>
+            <MudButton Variant="Variant.Text" Href="/account">Cancel</MudButton>
+        </div>
+    </MudPaper>
+</div>
+
+@code {
+    private string _name = string.Empty;
+    private string _password = string.Empty;
+    private string? _error;
+    private bool _busy;
+
+    private async Task CreateAsync()
+    {
+        _error = null;
+        _busy = true;
+
+        var (success, error, character) = await AccountAuth.CreateCharacterAsync(_name, _password);
+
+        _busy = false;
+        if (!success)
+        {
+            _error = error;
+            return;
+        }
+
+        // A first character becomes the active one (a guest, or a fresh account) — start playing it
+        // everywhere. Creating an additional character just adds it to the roster.
+        if (character is not null && AccountAuth.Characters.Count == 1)
+        {
+            await Upgrade.PlayAsAsync(character);
+            Nav.NavigateTo("/play");
+        }
+        else
+        {
+            Nav.NavigateTo("/account");
+        }
+    }
+}

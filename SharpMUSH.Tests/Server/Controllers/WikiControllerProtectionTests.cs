@@ -5,6 +5,7 @@ using NSubstitute;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Controllers;
+using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Services;
 using System.Security.Claims;
 
@@ -26,7 +27,7 @@ public class WikiControllerProtectionTests
 			Substitute.For<IPrerenderCacheService>(),
 			NullLogger<WikiController>.Instance);
 
-		var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "#42") };
+		var claims = new List<Claim> { new(GameHub.CharacterDbrefClaim, "#42") };
 		claims.AddRange(scopes.Select(s => new Claim(PortalPermission.ClaimType, s)));
 
 		controller.ControllerContext = new ControllerContext

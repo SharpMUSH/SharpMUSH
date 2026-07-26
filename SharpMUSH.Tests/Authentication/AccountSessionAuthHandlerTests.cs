@@ -36,12 +36,12 @@ public class AccountSessionAuthHandlerTests
 			IsDisabled = isDisabled,
 		};
 
-	private static SharpPlayer MakePlayer(int key, string name)
+	private static SharpPlayer MakePlayer(int key, string name, long creationTime = 0L)
 	{
 		var obj = new SharpObject
 		{
 			Key = key,
-			CreationTime = 0L,
+			CreationTime = creationTime,
 			Name = name,
 			Type = "Player",
 			Locks = ImmutableDictionary<string, SharpLockData>.Empty,
@@ -98,7 +98,9 @@ public class AccountSessionAuthHandlerTests
 		IAccountService accountService,
 		AccountClaimsService accountClaims,
 		string? authorizationHeader = null,
-		string? accessTokenQuery = null)
+		string? accessTokenQuery = null,
+		string? actingCharacterHeader = null,
+		string? actingCharacterQuery = null)
 	{
 		var optionsMonitor = Substitute.For<IOptionsMonitor<AuthenticationSchemeOptions>>();
 		optionsMonitor.Get(Arg.Any<string>()).Returns(new AuthenticationSchemeOptions());
@@ -118,8 +120,13 @@ public class AccountSessionAuthHandlerTests
 		};
 		if (authorizationHeader is not null)
 			httpContext.Request.Headers.Authorization = authorizationHeader;
-		if (accessTokenQuery is not null)
-			httpContext.Request.QueryString = new QueryString($"?access_token={accessTokenQuery}");
+		if (actingCharacterHeader is not null)
+			httpContext.Request.Headers["X-Acting-Character"] = actingCharacterHeader;
+		var query = accessTokenQuery is not null ? $"access_token={accessTokenQuery}" : null;
+		if (actingCharacterQuery is not null)
+			query = query is null ? $"character={actingCharacterQuery}" : $"{query}&character={actingCharacterQuery}";
+		if (query is not null)
+			httpContext.Request.QueryString = new QueryString($"?{query}");
 
 		var scheme = new AuthenticationScheme(
 			AccountSessionAuthenticationHandler.SchemeName,
@@ -162,6 +169,100 @@ public class AccountSessionAuthHandlerTests
 			.Contains("players.view");
 		await Assert.That(result.Principal!.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value)
 			.IsEqualTo("node_accounts/1");
+	}
+
+	/// <summary>
+	/// Regression pin (post-#691): the AccountSession scheme must emit the SAME character claim set as
+	/// <c>DebugAuthenticationHandler</c> — <c>character_key</c>, <c>character_creation_time</c>,
+	/// <c>character_name</c>, and <c>character_dbref</c> for the primary character. Before this, only
+	/// <c>character_dbref</c> was emitted, so <c>ApiControllerBase.CurrentCharacterKey</c> was populated
+	/// under DebugAuth (dev) but null under AccountSession (production), silently diverging per environment.
+	/// </summary>
+	[Test]
+	public async Task ValidToken_EmitsFullCharacterClaimSet_ForPrimaryCharacter()
+	{
+		var sessionStore = Substitute.For<IAccountSessionStore>();
+		var accountService = Substitute.For<IAccountService>();
+		var accountServiceForClaims = Substitute.For<IAccountService>();
+
+		sessionStore.ValidateAsync("good").Returns(Task.FromResult<string?>("node_accounts/1"));
+		accountService.GetByIdAsync("node_accounts/1")
+			.Returns(new ValueTask<SharpAccount?>(MakeAccount()));
+		accountService.GetCharactersAsync("node_accounts/1")
+			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[MakePlayer(42, "Alice", 987654321L)]));
+		accountServiceForClaims.GetCharactersAsync("node_accounts/1")
+			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[MakePlayer(42, "Alice", 987654321L)]));
+
+		var accountClaims = MakeAccountClaims(accountServiceForClaims, PortalRole.Wizard, "players.view");
+
+		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
+			authorizationHeader: "Bearer good");
+
+		var result = await handler.AuthenticateAsync();
+
+		await Assert.That(result.Succeeded).IsTrue();
+		await Assert.That(result.Principal!.FindFirst("character_key")!.Value).IsEqualTo("42");
+		await Assert.That(result.Principal!.FindFirst("character_creation_time")!.Value).IsEqualTo("987654321");
+		await Assert.That(result.Principal!.FindFirst("character_name")!.Value).IsEqualTo("Alice");
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#42");
+	}
+
+	private static (IAccountSessionStore, IAccountService, AccountClaimsService) TwoCharacterAccount()
+	{
+		var sessionStore = Substitute.For<IAccountSessionStore>();
+		var accountService = Substitute.For<IAccountService>();
+		var accountServiceForClaims = Substitute.For<IAccountService>();
+
+		IReadOnlyList<SharpPlayer> roster = [MakePlayer(1, "Alice", 111L), MakePlayer(7, "Bob", 777L)];
+		sessionStore.ValidateAsync("good").Returns(Task.FromResult<string?>("node_accounts/1"));
+		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
+		accountService.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+		accountServiceForClaims.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+
+		return (sessionStore, accountService, MakeAccountClaims(accountServiceForClaims, PortalRole.Wizard, "players.view"));
+	}
+
+	[Test]
+	public async Task ActingCharacterHint_OwnedCharacter_OverridesPrimary()
+	{
+		var (sessionStore, accountService, accountClaims) = TwoCharacterAccount();
+
+		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
+			authorizationHeader: "Bearer good", actingCharacterHeader: "#7");
+
+		var result = await handler.AuthenticateAsync();
+
+		await Assert.That(result.Succeeded).IsTrue();
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#7");
+		await Assert.That(result.Principal!.FindFirst("character_key")!.Value).IsEqualTo("7");
+		await Assert.That(result.Principal!.FindFirst("character_name")!.Value).IsEqualTo("Bob");
+	}
+
+	[Test]
+	public async Task ActingCharacterHint_ViaQueryParam_OverridesPrimary()
+	{
+		var (sessionStore, accountService, accountClaims) = TwoCharacterAccount();
+
+		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
+			authorizationHeader: "Bearer good", actingCharacterQuery: "7");
+
+		var result = await handler.AuthenticateAsync();
+
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#7");
+	}
+
+	[Test]
+	public async Task ActingCharacterHint_NotOwned_FallsBackToPrimary()
+	{
+		var (sessionStore, accountService, accountClaims) = TwoCharacterAccount();
+
+		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
+			authorizationHeader: "Bearer good", actingCharacterHeader: "#999");
+
+		var result = await handler.AuthenticateAsync();
+
+		await Assert.That(result.Succeeded).IsTrue();
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#1");
 	}
 
 	[Test]

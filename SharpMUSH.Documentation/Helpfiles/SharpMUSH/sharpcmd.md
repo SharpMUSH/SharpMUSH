@@ -4885,7 +4885,7 @@ The `/list` switch lets you whisper to multiple people at once. In this case, `<
 
 For mortals, the WHO command displays a list of players currently connected to the MUSH, the amount of time they've been connected, their idle time, and their @doing. Hidden players are not shown.
 
-For admin, WHO shows the names of online players, their location, connection/idle times, the number of commands typed through the connection, the descriptor/port number, and the host the player is connected from. It also includes hidden players, and connections which are at the login screen, but have not yet connected to a player.
+For admin, WHO shows the names of online players, their location, connection/idle times, the number of commands typed through the connection, the descriptor/port number, and the host the player is connected from. A letter after the descriptor marks the connection type: `S` (SSL), `L` (local), or `W` (WebSocket). It also includes hidden players, and connections which are at the login screen, but have not yet connected to a player.
 
 Admin can use the DOING command to see the same output mortals see with WHO, with the exception that dark/hidden players are included.
 

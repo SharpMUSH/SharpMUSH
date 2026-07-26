@@ -96,7 +96,7 @@ public class AccountAuthServiceDebugOttTests : BunitContext
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult(null);
 
 		var handler = new SingleSuccessHandler();
-		var service = new AccountAuthService(FactoryFor(handler), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance);
+		var service = new AccountAuthService(FactoryFor(handler), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 
 		// Two callers racing before either has completed — same as the boot-time race between
 		// MainLayout, GlobalTerminal, Account.razor, and DebugAuthStateProvider.
@@ -120,7 +120,7 @@ public class AccountAuthServiceDebugOttTests : BunitContext
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult(null);
 
 		var handler = new FailThenSucceedHandler();
-		var service = new AccountAuthService(FactoryFor(handler), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance);
+		var service = new AccountAuthService(FactoryFor(handler), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 
 		var firstResult = await service.GetDebugOttAsync();
 		await Assert.That(firstResult).IsNull();
@@ -144,7 +144,7 @@ public class AccountAuthServiceDebugOttTests : BunitContext
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult(null);
 
 		var handler = new NeverExpectedHandler();
-		var service = new AccountAuthService(FactoryFor(handler), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance);
+		var service = new AccountAuthService(FactoryFor(handler), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 
 		await service.LogoutAsync();
 		await Assert.That(service.ExplicitlyLoggedOut).IsTrue();

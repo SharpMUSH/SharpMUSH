@@ -63,6 +63,20 @@ public sealed class GameHubConnectionFactory : IGameHubConnectionFactory
 	/// </summary>
 	public Task<string?> ResolveAccessTokenAsync() => Task.FromResult(_accountAuth.AccountSessionToken);
 
+	/// <summary>
+	/// Appends the active character as a <c>character</c> query param (numeric key — '#' is a URL
+	/// fragment delimiter) so the server binds this connection to the switched-to character. Read at
+	/// build time: switching reconnects, so a fresh connection picks up the new character.
+	/// </summary>
+	public string ResolveHubUrl(string baseUrl)
+	{
+		if (_accountAuth.ActiveCharacter is not { } character)
+			return baseUrl;
+
+		var separator = baseUrl.Contains('?') ? '&' : '?';
+		return $"{baseUrl}{separator}character={character.DbrefNumber}";
+	}
+
 	/// <inheritdoc/>
 	public IGameHubConnection Create() => Build(_hubUrl);
 
@@ -73,7 +87,7 @@ public sealed class GameHubConnectionFactory : IGameHubConnectionFactory
 	private IGameHubConnection Build(string url)
 	{
 		var connection = new HubConnectionBuilder()
-			.WithUrl(url, opts =>
+			.WithUrl(ResolveHubUrl(url), opts =>
 			{
 				opts.AccessTokenProvider = ResolveAccessTokenAsync;
 			})

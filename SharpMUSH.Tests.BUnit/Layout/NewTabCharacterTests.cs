@@ -109,6 +109,7 @@ public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 	public NewTabCharacterTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		Services.AddSingleton<IStringLocalizer<SharedResource>, NewTabStubLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 
@@ -125,6 +126,12 @@ public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 
 		Services.AddSingleton(Substitute.For<IConnectionStateService>());
 		Services.AddSingleton(Substitute.For<ILayoutService>());
+
+		// MainLayout always mounts GlobalTerminal, so its dependencies must resolve here.
+		// "Production" keeps it out of the dev debug-OTT auto-connect branch.
+		var hostEnv = Substitute.For<Microsoft.AspNetCore.Components.WebAssembly.Hosting.IWebAssemblyHostEnvironment>();
+		hostEnv.Environment.Returns("Production");
+		Services.AddSingleton(hostEnv);
 
 		Auth = this.AddAuthorization();
 		Auth.SetAuthorized("headwiz");
@@ -157,13 +164,15 @@ public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 			sp.GetRequiredService<IHttpClientFactory>(),
 			NullLogger<ApplicationRegistryClient>.Instance));
 
-		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance);
+		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 		var (success, error, _) = await auth.LoginAsync("headwiz", "password");
 		if (!success)
 			throw new InvalidOperationException($"Test setup login failed: {error}");
 
 		Services.AddSingleton(auth);
+		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddSingleton<TerminalLoginService>();
 		return auth;
 	}
 
@@ -230,11 +239,10 @@ public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 		});
 		await Assert.That(auth.ActiveCharacter?.Name).IsEqualTo("Beta");
 
-		// MainLayout.SwitchCharacterAsync deliberately does NOT open the terminal drawer on a
-		// background/new-tab switch — the toolbar toggle opens it when the player wants it.
-		// phosphor-terminal-header appears in exactly one place repo-wide (MainLayout.razor, inside
-		// the `@if (_terminalOpen)` block), so its absence here is the pin for that contract.
-		await Assert.That(cut.Markup).DoesNotContain("phosphor-terminal-header");
+		// The drawer is always MOUNTED (so GlobalTerminal auto-logs in on load) but stays hidden
+		// until the player opens it — a new-tab entry must not pop it up.
+		await Assert.That(cut.Markup).Contains("phosphor-terminal-header");
+		await Assert.That(cut.Find(".phosphor-terminal").GetAttribute("style")).Contains("display:none");
 	}
 
 	[Test]

@@ -78,22 +78,18 @@ public class TerminalServiceHost : ITerminalService
 	}
 
 	public string? ServerUri => _inner.ServerUri;
-	public long? MyPort => _inner.MyPort;
 	public IReadOnlyList<TerminalLine> Lines => _inner.Lines;
 	public IOobChannelStore OobChannels => _oob;
 
 	public Task ConnectAsync(string serverUri) => _inner.ConnectAsync(serverUri);
 
-	public Task ConnectAndLoginAsync(string serverUri, string playerName, string password, OttAuthService ottAuth)
-		=> _inner.ConnectAndLoginAsync(serverUri, playerName, password, ottAuth);
-
 	public Task ConnectWithOttAsync(string serverUri, string ott) => _inner.ConnectWithOttAsync(serverUri, ott);
+	public Task ConnectAsGuestAsync(string serverUri) => _inner.ConnectAsGuestAsync(serverUri);
 	public Task DisconnectAsync() => _inner.DisconnectAsync();
 	public Task SendAsync(string command) => _inner.SendAsync(command);
 	public Task SendControlAsync(string controlJson) => _inner.SendControlAsync(controlJson);
-	public Task InitializePortAsync() => _inner.InitializePortAsync();
-	public Task<string[]> SendCommandAsync(string command, int timeoutMs = 5000)
-		=> _inner.SendCommandAsync(command, timeoutMs);
+	public Task<string[]> SendCommandAsync(string expression, int timeoutMs = 5000)
+		=> _inner.SendCommandAsync(expression, timeoutMs);
 
 	public async ValueTask DisposeAsync()
 	{
