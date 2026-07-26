@@ -3,17 +3,22 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Client.Services;
 using System.Net;
+using System.Net.Http.Headers;
 
 namespace SharpMUSH.Tests.BUnit.Services;
 
-/// <summary>Captures the outgoing request so a test can assert what the handler forwarded.</summary>
+/// <summary>
+/// Captures what the handler forwarded. Records the header value rather than keeping the
+/// <see cref="HttpRequestMessage"/> alive, so the request can be disposed the moment the send
+/// completes and no assertion ever reads a disposed object.
+/// </summary>
 file sealed class CapturingHandler : HttpMessageHandler
 {
-	public HttpRequestMessage? LastRequest { get; private set; }
+	public AuthenticationHeaderValue? LastAuthorization { get; private set; }
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
-		LastRequest = request;
+		LastAuthorization = request.Headers.Authorization;
 		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
 	}
 }
@@ -44,14 +49,14 @@ public class AccountSessionBearerHandlerHydrationTests : BunitContext
 			Substitute.For<IPlayTerminalService>());
 	}
 
-	private static async Task<HttpRequestMessage?> SendAsync(IAccountAuthState auth, string url)
+	private static async Task<AuthenticationHeaderValue?> SendAsync(IAccountAuthState auth, string url)
 	{
 		var inner = new CapturingHandler();
 		using var handler = new AccountSessionBearerHandler(auth) { InnerHandler = inner };
 		using var invoker = new HttpMessageInvoker(handler);
 		using var request = new HttpRequestMessage(HttpMethod.Get, url);
 		using var response = await invoker.SendAsync(request, CancellationToken.None);
-		return inner.LastRequest;
+		return inner.LastAuthorization;
 	}
 
 	[Test]
@@ -62,8 +67,8 @@ public class AccountSessionBearerHandlerHydrationTests : BunitContext
 		// Nobody has awaited InitAsync — this is a request racing a page refresh's hydration.
 		var sent = await SendAsync(auth, "https://localhost/api/mail");
 
-		await Assert.That(sent!.Headers.Authorization?.Scheme).IsEqualTo("Bearer");
-		await Assert.That(sent.Headers.Authorization?.Parameter).IsEqualTo("stored-session-token");
+		await Assert.That(sent?.Scheme).IsEqualTo("Bearer");
+		await Assert.That(sent?.Parameter).IsEqualTo("stored-session-token");
 	}
 
 	[Test]
@@ -76,7 +81,7 @@ public class AccountSessionBearerHandlerHydrationTests : BunitContext
 		_ = auth.InitAsync();
 		var sent = await SendAsync(auth, "https://localhost/api/mail");
 
-		await Assert.That(sent!.Headers.Authorization?.Parameter).IsEqualTo("stored-session-token");
+		await Assert.That(sent?.Parameter).IsEqualTo("stored-session-token");
 	}
 
 	[Test]
@@ -87,6 +92,6 @@ public class AccountSessionBearerHandlerHydrationTests : BunitContext
 		var sent = await SendAsync(auth, "https://localhost/api/wiki");
 
 		// Hydrating must not invent a credential for an anonymous visitor.
-		await Assert.That(sent!.Headers.Authorization).IsNull();
+		await Assert.That(sent).IsNull();
 	}
 }

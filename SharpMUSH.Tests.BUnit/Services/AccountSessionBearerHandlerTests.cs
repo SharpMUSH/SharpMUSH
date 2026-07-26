@@ -31,14 +31,18 @@ file sealed class FakeAccountAuthState : IAccountAuthState
 	}
 }
 
-/// <summary>Captures the outgoing request so a test can assert what the handler forwarded.</summary>
+/// <summary>
+/// Captures what the handler forwarded. Records the header value rather than keeping the
+/// <see cref="HttpRequestMessage"/> alive, so the request can be disposed the moment the send
+/// completes and no assertion ever reads a disposed object.
+/// </summary>
 file sealed class CapturingInnerHandler : HttpMessageHandler
 {
-	public HttpRequestMessage? LastRequest { get; private set; }
+	public AuthenticationHeaderValue? LastAuthorization { get; private set; }
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
-		LastRequest = request;
+		LastAuthorization = request.Headers.Authorization;
 		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
 	}
 }
@@ -52,14 +56,17 @@ file sealed class CapturingInnerHandler : HttpMessageHandler
 /// </summary>
 public class AccountSessionBearerHandlerTests
 {
-	private static async Task<HttpRequestMessage?> SendAsync(
+	private static async Task<AuthenticationHeaderValue?> SendAsync(
 		IAccountAuthState auth, HttpRequestMessage request)
 	{
-		var inner = new CapturingInnerHandler();
-		using var handler = new AccountSessionBearerHandler(auth) { InnerHandler = inner };
-		using var invoker = new HttpMessageInvoker(handler);
-		using var response = await invoker.SendAsync(request, CancellationToken.None);
-		return inner.LastRequest;
+		using (request)
+		{
+			var inner = new CapturingInnerHandler();
+			using var handler = new AccountSessionBearerHandler(auth) { InnerHandler = inner };
+			using var invoker = new HttpMessageInvoker(handler);
+			using var response = await invoker.SendAsync(request, CancellationToken.None);
+			return inner.LastAuthorization;
+		}
 	}
 
 	[Test]
@@ -69,8 +76,8 @@ public class AccountSessionBearerHandlerTests
 
 		var sent = await SendAsync(auth, new HttpRequestMessage(HttpMethod.Get, "https://localhost/api/mail"));
 
-		await Assert.That(sent!.Headers.Authorization?.Scheme).IsEqualTo("Bearer");
-		await Assert.That(sent.Headers.Authorization?.Parameter).IsEqualTo("session-token-1");
+		await Assert.That(sent?.Scheme).IsEqualTo("Bearer");
+		await Assert.That(sent?.Parameter).IsEqualTo("session-token-1");
 	}
 
 	[Test]
@@ -81,7 +88,7 @@ public class AccountSessionBearerHandlerTests
 		var sent = await SendAsync(auth, new HttpRequestMessage(HttpMethod.Get, "https://localhost/api/wiki"));
 
 		// Anonymous browsing (public wiki, character directory) must keep working — no header added.
-		await Assert.That(sent!.Headers.Authorization).IsNull();
+		await Assert.That(sent).IsNull();
 	}
 
 	[Test]
@@ -96,7 +103,7 @@ public class AccountSessionBearerHandlerTests
 		var sent = await SendAsync(auth, request);
 
 		// A call that set its own header on purpose wins; the handler must not clobber it.
-		await Assert.That(sent!.Headers.Authorization?.Parameter).IsEqualTo("explicit-token");
+		await Assert.That(sent?.Parameter).IsEqualTo("explicit-token");
 	}
 
 	[Test]
@@ -109,8 +116,9 @@ public class AccountSessionBearerHandlerTests
 
 		// Log in AFTER the handler exists (it is a long-lived singleton built once at startup).
 		auth.AccountSessionToken = "logged-in-later";
-		using var response = await invoker.SendAsync(new HttpRequestMessage(HttpMethod.Get, "https://localhost/api/mail"), CancellationToken.None);
+		using var request = new HttpRequestMessage(HttpMethod.Get, "https://localhost/api/mail");
+		using var response = await invoker.SendAsync(request, CancellationToken.None);
 
-		await Assert.That(inner.LastRequest!.Headers.Authorization?.Parameter).IsEqualTo("logged-in-later");
+		await Assert.That(inner.LastAuthorization?.Parameter).IsEqualTo("logged-in-later");
 	}
 }
