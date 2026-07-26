@@ -3017,4 +3017,406 @@
   <data name="WidLoadingWikiPage" xml:space="preserve">
     <value>Loading wiki page</value>
   </data>
+  <data name="ResAnyoneCanEdit" xml:space="preserve">
+    <value>anyone can edit</value>
+  </data>
+  <data name="ResHistory" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="ResOnThisPage" xml:space="preserve">
+    <value>On this page</value>
+  </data>
+  <data name="ResCategoryGeneral" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="ResScenesSubtitle" xml:space="preserve">
+    <value>Browse and watch roleplay sessions.</value>
+  </data>
+  <data name="ResTabRecent" xml:space="preserve">
+    <value>Recent</value>
+  </data>
+  <data name="ResTabLive" xml:space="preserve">
+    <value>Live</value>
+  </data>
+  <data name="ResNoScenesFound" xml:space="preserve">
+    <value>No scenes found.</value>
+  </data>
+  <data name="ResRead" xml:space="preserve">
+    <value>Read</value>
+  </data>
+  <data name="ResJoin" xml:space="preserve">
+    <value>Join</value>
+  </data>
+  <data name="ResActiveScenesSubtitle" xml:space="preserve">
+    <value>Sessions running right now.</value>
+  </data>
+  <data name="ResStartedAt" xml:space="preserve">
+    <value>Started {0}</value>
+  </data>
+  <data name="ResViewLog" xml:space="preserve">
+    <value>View Log</value>
+  </data>
+  <data name="ResAdminWikiKicker" xml:space="preserve">
+    <value>Staff · Wiki</value>
+  </data>
+  <data name="ResWikiStatTotalPages" xml:space="preserve">
+    <value>Total pages</value>
+  </data>
+  <data name="ResWikiStatDrafts" xml:space="preserve">
+    <value>Drafts</value>
+  </data>
+  <data name="ResSearchTitlesPlaceholder" xml:space="preserve">
+    <value>Search titles…</value>
+  </data>
+  <data name="ResDraft" xml:space="preserve">
+    <value>Draft</value>
+  </data>
+  <data name="ResConfigSectionKicker" xml:space="preserve">
+    <value>Admin · server settings</value>
+  </data>
+  <data name="ResConfigHomeKicker" xml:space="preserve">
+    <value>Admin · server configuration</value>
+  </data>
+  <data name="ResRoutingErrorHint" xml:space="preserve">
+    <value>This message means the custom page is NOT being matched by the router.</value>
+  </data>
+  <data name="ResChangeCountOne" xml:space="preserve">
+    <value>{0} change</value>
+  </data>
+  <data name="ResChangeCountMany" xml:space="preserve">
+    <value>{0} changes</value>
+  </data>
+  <data name="ResDefaultValueTooltip" xml:space="preserve">
+    <value>Default: {0}</value>
+  </data>
+  <data name="ResChangedBadge" xml:space="preserve">
+    <value>changed</value>
+  </data>
+  <data name="ResValidationFailed" xml:space="preserve">
+    <value>Validation failed</value>
+  </data>
+  <data name="ResInvalid" xml:space="preserve">
+    <value>Invalid</value>
+  </data>
+  <data name="ResSaveFailedShort" xml:space="preserve">
+    <value>Save failed</value>
+  </data>
+  <data name="ResWsConnectedTo" xml:space="preserve">
+    <value>[System] Connected to {0}</value>
+  </data>
+  <data name="ResWsConnectFailed" xml:space="preserve">
+    <value>[Error] Failed to connect: {0}</value>
+  </data>
+  <data name="ResWsDisconnected" xml:space="preserve">
+    <value>[System] Disconnected</value>
+  </data>
+  <data name="ResWsDisconnectFailed" xml:space="preserve">
+    <value>[Error] Failed to disconnect: {0}</value>
+  </data>
+  <data name="ResWsSent" xml:space="preserve">
+    <value>[Sent] {0}</value>
+  </data>
+  <data name="ResWsSendFailed" xml:space="preserve">
+    <value>[Error] Failed to send: {0}</value>
+  </data>
+  <data name="ResWsReceived" xml:space="preserve">
+    <value>[Received] {0}</value>
+  </data>
+  <data name="EnumPermGroupBuild" xml:space="preserve">
+    <value>Build</value>
+  </data>
+  <data name="EnumPermGroupManage" xml:space="preserve">
+    <value>Manage</value>
+  </data>
+  <data name="EnumPermWikiRead" xml:space="preserve">
+    <value>Wiki · Read</value>
+  </data>
+  <data name="EnumPermWikiReadDesc" xml:space="preserve">
+    <value>View unpublished/draft wiki pages (published pages are public to everyone).</value>
+  </data>
+  <data name="EnumPermWikiCreate" xml:space="preserve">
+    <value>Wiki · Create</value>
+  </data>
+  <data name="EnumPermWikiCreateDesc" xml:space="preserve">
+    <value>Create new wiki pages.</value>
+  </data>
+  <data name="EnumPermWikiEdit" xml:space="preserve">
+    <value>Wiki · Edit</value>
+  </data>
+  <data name="EnumPermWikiEditDesc" xml:space="preserve">
+    <value>Edit, rollback, and retag existing (unprotected) wiki pages.</value>
+  </data>
+  <data name="EnumPermWikiDelete" xml:space="preserve">
+    <value>Wiki · Delete</value>
+  </data>
+  <data name="EnumPermWikiDeleteDesc" xml:space="preserve">
+    <value>Delete wiki pages and their revision history.</value>
+  </data>
+  <data name="EnumPermWikiAdmin" xml:space="preserve">
+    <value>Wiki · Moderate</value>
+  </data>
+  <data name="EnumPermWikiAdminDesc" xml:space="preserve">
+    <value>Protect/unprotect, edit protected pages, batch operations, and the wiki admin dashboard.</value>
+  </data>
+  <data name="EnumPermMediaUpload" xml:space="preserve">
+    <value>Image Library · Upload</value>
+  </data>
+  <data name="EnumPermMediaUploadDesc" xml:space="preserve">
+    <value>Upload image assets for use in wiki pages.</value>
+  </data>
+  <data name="EnumPermMediaAdmin" xml:space="preserve">
+    <value>Image Library · Manage</value>
+  </data>
+  <data name="EnumPermMediaAdminDesc" xml:space="preserve">
+    <value>Browse and delete the shared media library.</value>
+  </data>
+  <data name="EnumPermSoftcodeUse" xml:space="preserve">
+    <value>Softcode Editor</value>
+  </data>
+  <data name="EnumPermSoftcodeUseDesc" xml:space="preserve">
+    <value>Open the softcode editor to view and edit object attributes.</value>
+  </data>
+  <data name="EnumPermApplicationsAdmin" xml:space="preserve">
+    <value>Applications</value>
+  </data>
+  <data name="EnumPermApplicationsAdminDesc" xml:space="preserve">
+    <value>Register and manage schema-driven applications.</value>
+  </data>
+  <data name="EnumPermPackagesAdmin" xml:space="preserve">
+    <value>Packages</value>
+  </data>
+  <data name="EnumPermPackagesAdminDesc" xml:space="preserve">
+    <value>Install, update, and manage softcode packages.</value>
+  </data>
+  <data name="EnumPermConfigAdmin" xml:space="preserve">
+    <value>Server Config</value>
+  </data>
+  <data name="EnumPermConfigAdminDesc" xml:space="preserve">
+    <value>Edit server configuration, sitelock, banned names, restrictions.</value>
+  </data>
+  <data name="EnumPermRolesAdmin" xml:space="preserve">
+    <value>Roles &amp; Permissions</value>
+  </data>
+  <data name="EnumPermRolesAdminDesc" xml:space="preserve">
+    <value>Create roles, edit permissions, and assign roles to accounts.</value>
+  </data>
+  <data name="EnumPermPlayersView" xml:space="preserve">
+    <value>Players · View</value>
+  </data>
+  <data name="EnumPermPlayersViewDesc" xml:space="preserve">
+    <value>Browse player accounts, characters, and profiles (read-only).</value>
+  </data>
+  <data name="EnumPermPlayersModerate" xml:space="preserve">
+    <value>Players · Moderate</value>
+  </data>
+  <data name="EnumPermPlayersModerateDesc" xml:space="preserve">
+    <value>Disable, ban, warn, and edit player accounts, characters, and profiles.</value>
+  </data>
+  <data name="EnumPermLayoutAdmin" xml:space="preserve">
+    <value>Layout Editor</value>
+  </data>
+  <data name="EnumPermLayoutAdminDesc" xml:space="preserve">
+    <value>Edit the portal widget layout.</value>
+  </data>
+  <data name="EnumPermServerAdmin" xml:space="preserve">
+    <value>Server (God)</value>
+  </data>
+  <data name="EnumPermServerAdminDesc" xml:space="preserve">
+    <value>Server-level operations and database import. God-only by default.</value>
+  </data>
+  <data name="EnumObjectTypeThing" xml:space="preserve">
+    <value>Thing</value>
+  </data>
+  <data name="EnumObjectTypeRoom" xml:space="preserve">
+    <value>Room</value>
+  </data>
+  <data name="EnumObjectTypeExit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="EnumObjectTypePlayer" xml:space="preserve">
+    <value>Player</value>
+  </data>
+  <data name="EnumObjectTypeUnknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="EnumApplicationKindPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="EnumApplicationKindWidget" xml:space="preserve">
+    <value>Widget</value>
+  </data>
+  <data name="EnumRevisionKindInstall" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="EnumRevisionKindUpgrade" xml:space="preserve">
+    <value>Upgrade</value>
+  </data>
+  <data name="EnumRevisionKindRollback" xml:space="preserve">
+    <value>Rollback</value>
+  </data>
+  <data name="EnumUnitBytes" xml:space="preserve">
+    <value>{0} B</value>
+  </data>
+  <data name="EnumUnitKilobytes" xml:space="preserve">
+    <value>{0} KB</value>
+  </data>
+  <data name="EnumUnitMegabytes" xml:space="preserve">
+    <value>{0} MB</value>
+  </data>
+  <data name="EnumUnitGigabytes" xml:space="preserve">
+    <value>{0} GB</value>
+  </data>
+  <data name="NavToggleNavigation" xml:space="preserve">
+    <value>Toggle navigation</value>
+  </data>
+  <data name="NavSearchPlaceholder" xml:space="preserve">
+    <value>Search…</value>
+  </data>
+  <data name="NavOpenTerminal" xml:space="preserve">
+    <value>Open Terminal</value>
+  </data>
+  <data name="NavCloseTerminal" xml:space="preserve">
+    <value>Close Terminal</value>
+  </data>
+  <data name="NavCommandTerminal" xml:space="preserve">
+    <value>command terminal</value>
+  </data>
+  <data name="NavCharsShort" xml:space="preserve">
+    <value>Chars</value>
+  </data>
+  <data name="NavMenuLabel" xml:space="preserve">
+    <value>Menu</value>
+  </data>
+  <data name="NavSectionWorld" xml:space="preserve">
+    <value>World</value>
+  </data>
+  <data name="NavSectionBuild" xml:space="preserve">
+    <value>Build</value>
+  </data>
+  <data name="NavSectionManage" xml:space="preserve">
+    <value>Manage</value>
+  </data>
+  <data name="NavPlayUnreadActivity" xml:space="preserve">
+    <value>Unread play activity</value>
+  </data>
+  <data name="NavPlaySessionActive" xml:space="preserve">
+    <value>Play session active</value>
+  </data>
+  <data name="NavOnline" xml:space="preserve">
+    <value>online</value>
+  </data>
+  <data name="NavOffline" xml:space="preserve">
+    <value>offline</value>
+  </data>
+  <data name="NavAccountTag" xml:space="preserve">
+    <value>account</value>
+  </data>
+  <data name="NavGuestTag" xml:space="preserve">
+    <value>guest</value>
+  </data>
+  <data name="NavPlayTerminal" xml:space="preserve">
+    <value>Play Terminal</value>
+  </data>
+  <data name="NavInPlay" xml:space="preserve">
+    <value>in play</value>
+  </data>
+  <data name="NavNotConnected" xml:space="preserve">
+    <value>not connected</value>
+  </data>
+  <data name="NavTerminalSettings" xml:space="preserve">
+    <value>Terminal settings</value>
+  </data>
+  <data name="NavTerminalWidthTooltip" xml:space="preserve">
+    <value>Preferred terminal width in columns (min 78). The font autoscales to fill it — more room means a bigger font — and it's reported to the server as your screen width.</value>
+  </data>
+  <data name="NavTerminalWidthCols" xml:space="preserve">
+    <value>Width (cols)</value>
+  </data>
+  <data name="NavFocusMode" xml:space="preserve">
+    <value>Focus mode</value>
+  </data>
+  <data name="NavExitFocusMode" xml:space="preserve">
+    <value>Exit focus mode</value>
+  </data>
+  <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
+    <value>— Connect to see who's here —</value>
+  </data>
+  <data name="NavExits" xml:space="preserve">
+    <value>Exits</value>
+  </data>
+  <data name="NavNoExitsAvailable" xml:space="preserve">
+    <value>— No exits available —</value>
+  </data>
+  <data name="NavSettingsAccountDescription" xml:space="preserve">
+    <value>Email, password, and login security</value>
+  </data>
+  <data name="NavSettingsCharactersDescription" xml:space="preserve">
+    <value>Manage characters linked to your account</value>
+  </data>
+  <data name="NavTheme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="NavSettingsThemeDescription" xml:space="preserve">
+    <value>Appearance and accent preferences</value>
+  </data>
+  <data name="NavThemeComingSoon" xml:space="preserve">
+    <value>Theme preferences are on the way.</value>
+  </data>
+  <data name="NavCharacterManagement" xml:space="preserve">
+    <value>Character Management</value>
+  </data>
+  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
+    <value>Character management is on the way.</value>
+  </data>
+  <data name="NavGoToAccountPage" xml:space="preserve">
+    <value>Go to your account page</value>
+  </data>
+  <data name="NavMailFolders" xml:space="preserve">
+    <value>Folders</value>
+  </data>
+  <data name="NavMailSelectMessage" xml:space="preserve">
+    <value>Select a message to read</value>
+  </data>
+  <data name="NavMailReadFullMessage" xml:space="preserve">
+    <value>Read full message →</value>
+  </data>
+  <data name="NavMailForward" xml:space="preserve">
+    <value>Forward</value>
+  </data>
+  <data name="NavCharactersRegistered" xml:space="preserve">
+    <value>{0} characters registered</value>
+  </data>
+  <data name="NavCharacterRegistered" xml:space="preserve">
+    <value>{0} character registered</value>
+  </data>
+  <data name="NavCreateCharacter" xml:space="preserve">
+    <value>Create character</value>
+  </data>
+  <data name="NavCreateACharacter" xml:space="preserve">
+    <value>Create a character</value>
+  </data>
+  <data name="NavCreateCharacterBlurb" xml:space="preserve">
+    <value>A character is a persona you play in the game. It's linked to your account; you can create more later.</value>
+  </data>
+  <data name="NavCharacterName" xml:space="preserve">
+    <value>Character name</value>
+  </data>
+  <data name="NavApplication" xml:space="preserve">
+    <value>Application</value>
+  </data>
+  <data name="NavLoadingApplication" xml:space="preserve">
+    <value>Loading application…</value>
+  </data>
+  <data name="NavNoApplicationRegistered" xml:space="preserve">
+    <value>No application is registered at {0}.</value>
+  </data>
+  <data name="NavNoApplicationAccess" xml:space="preserve">
+    <value>You do not have access to this application.</value>
+  </data>
+  <data name="NavApplicationComponentLoadFailed" xml:space="preserve">
+    <value>This application's compiled component could not be loaded. Browser code may be disabled (allow_browser_code), or the assembly failed verification.</value>
+  </data>
+  <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
+    <value>The application's schema could not be loaded. The softcode handler at {0} may be missing or returning invalid JSON.</value>
+  </data>
 </root>
