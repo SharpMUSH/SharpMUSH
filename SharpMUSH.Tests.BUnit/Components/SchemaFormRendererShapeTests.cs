@@ -187,7 +187,7 @@ public class SchemaFormRendererShapeTests : BunitContext
 			Page(1, "Basics", Field("n", "Name", "text")),
 			Page(2, "Stats", Field("s", "Str", "number"))));
 
-		await Assert.That(cut.Markup).Contains("WidFormStep 1/2");
+		await Assert.That(cut.Markup).Contains("WidFormStepOf(1, 2)");
 		var buttons = cut.FindAll("button").Select(b => b.TextContent).ToList();
 		await Assert.That(buttons.Any(t => t.Contains("WidNext"))).IsTrue();
 		await Assert.That(buttons.Any(t => t.Contains("WidBack"))).IsFalse();
@@ -205,7 +205,7 @@ public class SchemaFormRendererShapeTests : BunitContext
 
 		cut.FindAll("button").First(b => b.TextContent.Contains("WidNext")).Click();
 
-		await Assert.That(cut.Markup).Contains("WidFormStep 2/2");
+		await Assert.That(cut.Markup).Contains("WidFormStepOf(2, 2)");
 		await Assert.That(cut.Markup).Contains("Strength");
 		var buttons = cut.FindAll("button").Select(b => b.TextContent).ToList();
 		await Assert.That(buttons.Any(t => t.Contains("WidBack"))).IsTrue();

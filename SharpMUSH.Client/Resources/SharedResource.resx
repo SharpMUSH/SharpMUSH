@@ -2957,8 +2957,9 @@
   <data name="WidFormNoPages" xml:space="preserve">
     <value>This form has no pages.</value>
   </data>
-  <data name="WidFormStep" xml:space="preserve">
-    <value>Step</value>
+  <data name="WidFormStepOf" xml:space="preserve">
+    <value>Step {0} of {1}</value>
+    <comment>Wizard progress. {0} = current page number, {1} = total pages.</comment>
   </data>
   <data name="WidBack" xml:space="preserve">
     <value>Back</value>
