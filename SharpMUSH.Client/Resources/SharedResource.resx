@@ -1172,4 +1172,1849 @@
   <data name="MailSendFailed" xml:space="preserve">
     <value>Could not send mail. Check the recipient name.</value>
   </data>
+  <data name="AuthSignIn" xml:space="preserve">
+    <value>Sign In</value>
+  </data>
+  <data name="AuthRegister" xml:space="preserve">
+    <value>Register</value>
+  </data>
+  <data name="AuthUsername" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="AuthUsernameOrEmail" xml:space="preserve">
+    <value>Username or email</value>
+  </data>
+  <data name="AuthPassword" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="AuthEmailOptional" xml:space="preserve">
+    <value>Email (optional)</value>
+  </data>
+  <data name="AuthCreateAccount" xml:space="preserve">
+    <value>Create Account</value>
+  </data>
+  <data name="AuthConnectDirectly" xml:space="preserve">
+    <value>Or connect directly via the</value>
+  </data>
+  <data name="AuthTerminalLink" xml:space="preserve">
+    <value>terminal</value>
+  </data>
+  <data name="AuthEnterCredentials" xml:space="preserve">
+    <value>Please enter your credentials.</value>
+  </data>
+  <data name="AuthLoginFailed" xml:space="preserve">
+    <value>Login failed.</value>
+  </data>
+  <data name="AuthUsernamePasswordRequired" xml:space="preserve">
+    <value>Username and password are required.</value>
+  </data>
+  <data name="AuthRegistrationFailed" xml:space="preserve">
+    <value>Registration failed.</value>
+  </data>
+  <data name="AuthFirstRunSetup" xml:space="preserve">
+    <value>First-Run Setup</value>
+  </data>
+  <data name="AuthSetupWelcome" xml:space="preserve">
+    <value>Welcome to {0}</value>
+  </data>
+  <data name="AuthSetupComplete" xml:space="preserve">
+    <value>Setup complete. You are the administrator.</value>
+  </data>
+  <data name="AuthSetupAdminLinked" xml:space="preserve">
+    <value>The administrator account {0} is now linked to the pre-generated player #1, God.</value>
+  </data>
+  <data name="AuthSetupSignedInAs" xml:space="preserve">
+    <value>You are signed in as {0}.</value>
+  </data>
+  <data name="AuthSetupSignInToManage" xml:space="preserve">
+    <value>Sign in to start managing your game.</value>
+  </data>
+  <data name="AuthEnterPortal" xml:space="preserve">
+    <value>Enter the portal</value>
+  </data>
+  <data name="AuthClaimAdminTitle" xml:space="preserve">
+    <value>Claim the administrator account</value>
+  </data>
+  <data name="AuthClaimAdminLead" xml:space="preserve">
+    <value>This game hasn't been claimed yet. Choose a username and password for the pre-generated administrator account (linked to player #1, God). The first person to complete this form becomes the administrator.</value>
+  </data>
+  <data name="AuthConfirmPassword" xml:space="preserve">
+    <value>Confirm Password</value>
+  </data>
+  <data name="AuthSettingUp" xml:space="preserve">
+    <value>Setting up…</value>
+  </data>
+  <data name="AuthCreateAdminAccount" xml:space="preserve">
+    <value>Create Admin Account</value>
+  </data>
+  <data name="AuthUsernameRequired" xml:space="preserve">
+    <value>Username is required.</value>
+  </data>
+  <data name="AuthPasswordRequired" xml:space="preserve">
+    <value>Password is required.</value>
+  </data>
+  <data name="AuthPasswordsDoNotMatch" xml:space="preserve">
+    <value>Passwords do not match.</value>
+  </data>
+  <data name="AuthPasswordTooShort" xml:space="preserve">
+    <value>Password must be at least 8 characters.</value>
+  </data>
+  <data name="AuthSetupAlreadyCompleted" xml:space="preserve">
+    <value>Setup was just completed by someone else. If that wasn't you, contact the server operator immediately.</value>
+  </data>
+  <data name="AuthUsernameTaken" xml:space="preserve">
+    <value>That username is already taken — choose another.</value>
+  </data>
+  <data name="AuthSetupFailed" xml:space="preserve">
+    <value>Setup failed.</value>
+  </data>
+  <data name="AuthAccount" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="AuthDebugMode" xml:space="preserve">
+    <value>Debug Mode</value>
+  </data>
+  <data name="AuthDebugModeBody" xml:space="preserve">
+    <value>You are authenticated as {0} (development environment). No account session is associated; account management features require a real account login.</value>
+  </data>
+  <data name="AuthNotLoggedInAccount" xml:space="preserve">
+    <value>You are not logged in to an account. Use the terminal login panel to log in.</value>
+  </data>
+  <data name="AuthGoToHome" xml:space="preserve">
+    <value>Go to Home</value>
+  </data>
+  <data name="AuthPasswordChangeRequired" xml:space="preserve">
+    <value>Password change required.</value>
+  </data>
+  <data name="AuthPasswordChangeRequiredBody" xml:space="preserve">
+    <value>You must change your password before using the rest of the portal.</value>
+  </data>
+  <data name="AuthProfile" xml:space="preserve">
+    <value>Profile</value>
+  </data>
+  <data name="AuthEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="AuthChange" xml:space="preserve">
+    <value>Change</value>
+  </data>
+  <data name="AuthCurrentPassword" xml:space="preserve">
+    <value>Current password</value>
+  </data>
+  <data name="AuthNewPassword" xml:space="preserve">
+    <value>New password</value>
+  </data>
+  <data name="AuthNoCharactersLinked" xml:space="preserve">
+    <value>No characters linked to this account.</value>
+  </data>
+  <data name="AuthColumnName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="AuthColumnDbref" xml:space="preserve">
+    <value>Dbref</value>
+  </data>
+  <data name="AuthColumnActions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="AuthUnlinkCharacter" xml:space="preserve">
+    <value>Unlink character</value>
+  </data>
+  <data name="AuthCreateNewCharacter" xml:space="preserve">
+    <value>+ Create new character</value>
+  </data>
+  <data name="AuthLogOutOfAccount" xml:space="preserve">
+    <value>Log out of account</value>
+  </data>
+  <data name="AuthUsernameUpdated" xml:space="preserve">
+    <value>Username updated.</value>
+  </data>
+  <data name="AuthPasswordUpdated" xml:space="preserve">
+    <value>Password updated.</value>
+  </data>
+  <data name="AuthSwitchCharacter" xml:space="preserve">
+    <value>Switch Character</value>
+  </data>
+  <data name="AuthNoCharacter" xml:space="preserve">
+    <value>No character</value>
+  </data>
+  <data name="AuthAccountManagement" xml:space="preserve">
+    <value>Account Management</value>
+  </data>
+  <data name="AuthLogout" xml:space="preserve">
+    <value>Logout</value>
+  </data>
+  <data name="AuthOpenInNewTab" xml:space="preserve">
+    <value>Open {0} in a new tab</value>
+  </data>
+  <data name="PkgAdminSection" xml:space="preserve">
+    <value>Admin</value>
+  </data>
+  <data name="PkgClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="PkgNoReadme" xml:space="preserve">
+    <value>No README available.</value>
+  </data>
+  <data name="PkgName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="PkgVersionLabel" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="PkgBrowse" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="PkgRemotes" xml:space="preserve">
+    <value>Remotes</value>
+  </data>
+  <data name="PkgAuthor" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="PkgPackages" xml:space="preserve">
+    <value>Packages</value>
+  </data>
+  <data name="PkgSoftcodePackages" xml:space="preserve">
+    <value>Softcode Packages</value>
+  </data>
+  <data name="PkgInstalledDescription" xml:space="preserve">
+    <value>Installed softcode packages. Upgrades always go through a reviewed plan — nothing applies automatically.</value>
+  </data>
+  <data name="PkgInstalled" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="PkgUpdatesAvailable" xml:space="preserve">
+    <value>Updates Available</value>
+  </data>
+  <data name="PkgObjects" xml:space="preserve">
+    <value>Objects</value>
+  </data>
+  <data name="PkgUpdates" xml:space="preserve">
+    <value>Updates</value>
+  </data>
+  <data name="PkgSearchPlaceholder" xml:space="preserve">
+    <value>Search packages…</value>
+  </data>
+  <data name="PkgNoneInstalled" xml:space="preserve">
+    <value>No packages installed yet. Configure a remote, then browse it to install your first package.</value>
+  </data>
+  <data name="PkgNoUpdatesAvailable" xml:space="preserve">
+    <value>No packages have an update available.</value>
+  </data>
+  <data name="PkgNoSearchMatch" xml:space="preserve">
+    <value>No packages match your search.</value>
+  </data>
+  <data name="PkgTagMoved" xml:space="preserve">
+    <value>tag moved!</value>
+  </data>
+  <data name="PkgVersionAvailable" xml:space="preserve">
+    <value>{0} available</value>
+  </data>
+  <data name="PkgCurrent" xml:space="preserve">
+    <value>current</value>
+  </data>
+  <data name="PkgDevDrift" xml:space="preserve">
+    <value>dev drift</value>
+  </data>
+  <data name="PkgInstalledOn" xml:space="preserve">
+    <value>installed {0}</value>
+  </data>
+  <data name="PkgObjAttrCounts" xml:space="preserve">
+    <value>{0} obj / {1} attr</value>
+  </data>
+  <data name="PkgRequiredBy" xml:space="preserve">
+    <value>required by {0}</value>
+  </data>
+  <data name="PkgCheck" xml:space="preserve">
+    <value>Check</value>
+  </data>
+  <data name="PkgRevisionHistory" xml:space="preserve">
+    <value>Revision history</value>
+  </data>
+  <data name="PkgUninstall" xml:space="preserve">
+    <value>Uninstall</value>
+  </data>
+  <data name="PkgRevisionsOf" xml:space="preserve">
+    <value>{0} — revisions</value>
+  </data>
+  <data name="PkgRevisionLine" xml:space="preserve">
+    <value>rev {0} — {1} {2}</value>
+  </data>
+  <data name="PkgRollBack" xml:space="preserve">
+    <value>Roll back</value>
+  </data>
+  <data name="PkgUninstallConfirmTitle" xml:space="preserve">
+    <value>Uninstall {0}?</value>
+  </data>
+  <data name="PkgUninstallConfirmBody" xml:space="preserve">
+    <value>{0} object(s) will be marked for destruction and {1} managed attribute record(s) removed.</value>
+  </data>
+  <data name="PkgDependedOnBy" xml:space="preserve">
+    <value>Depended on by: {0}</value>
+  </data>
+  <data name="PkgForceRemoval" xml:space="preserve">
+    <value>Force removal anyway</value>
+  </data>
+  <data name="PkgUpdateCheckFailed" xml:space="preserve">
+    <value>Update check failed — is the source repo reachable?</value>
+  </data>
+  <data name="PkgTrustWarningTagMoved" xml:space="preserve">
+    <value>TRUST WARNING: the release tag for {0} {1} no longer points at the installed commit.</value>
+  </data>
+  <data name="PkgRolledBack" xml:space="preserve">
+    <value>Rolled back to revision {0} (new revision {1}).</value>
+  </data>
+  <data name="PkgUninstalled" xml:space="preserve">
+    <value>Uninstalled {0}.</value>
+  </data>
+  <data name="PkgKickerAuthoring" xml:space="preserve">
+    <value>Build · Package authoring</value>
+  </data>
+  <data name="PkgAuthorHeading" xml:space="preserve">
+    <value>Author a Package</value>
+  </data>
+  <data name="PkgAuthorDescription" xml:space="preserve">
+    <value>Turn live objects into a package.yaml. Every dbref in the selection must end up symbolic: in-selection references resolve automatically; the rest you classify below.</value>
+  </data>
+  <data name="PkgStepSelectObjects" xml:space="preserve">
+    <value>Select objects</value>
+  </data>
+  <data name="PkgObjectIdsLabel" xml:space="preserve">
+    <value>Object ids (one per line, e.g. #847:1778518155494)</value>
+  </data>
+  <data name="PkgScanSelection" xml:space="preserve">
+    <value>Scan selection</value>
+  </data>
+  <data name="PkgStepRefsAttributes" xml:space="preserve">
+    <value>Refs &amp; attributes</value>
+  </data>
+  <data name="PkgManifestRefLabel" xml:space="preserve">
+    <value>Manifest ref (lowercase, underscores)</value>
+  </data>
+  <data name="PkgAttributesToInclude" xml:space="preserve">
+    <value>Attributes to include:</value>
+  </data>
+  <data name="PkgStepClassifyExternal" xml:space="preserve">
+    <value>Classify external references ({0})</value>
+  </data>
+  <data name="PkgOccurrences" xml:space="preserve">
+    <value>{0} occurrence(s), e.g. in {1}</value>
+  </data>
+  <data name="PkgResolutionLabel" xml:space="preserve">
+    <value>Resolution</value>
+  </data>
+  <data name="PkgModeWellKnown" xml:space="preserve">
+    <value>well-known</value>
+  </data>
+  <data name="PkgModeConfigure" xml:space="preserve">
+    <value>configure</value>
+  </data>
+  <data name="PkgWellKnownRefLabel" xml:space="preserve">
+    <value>Well-known ref</value>
+  </data>
+  <data name="PkgConfigureKeyLabel" xml:space="preserve">
+    <value>Configure key</value>
+  </data>
+  <data name="PkgConfigurePromptLabel" xml:space="preserve">
+    <value>Prompt shown to installers</value>
+  </data>
+  <data name="PkgStepMetadataExport" xml:space="preserve">
+    <value>Metadata &amp; export</value>
+  </data>
+  <data name="PkgPackageIdLabel" xml:space="preserve">
+    <value>Package id (lowercase, hyphens)</value>
+  </data>
+  <data name="PkgLicenseLabel" xml:space="preserve">
+    <value>License (optional)</value>
+  </data>
+  <data name="PkgAuthorsLabel" xml:space="preserve">
+    <value>Authors (comma-separated)</value>
+  </data>
+  <data name="PkgDescriptionLabel" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="PkgExportYaml" xml:space="preserve">
+    <value>Export package.yaml</value>
+  </data>
+  <data name="PkgExportHint" xml:space="preserve">
+    <value>Commit this to a package repo (one directory per package), list it in index.yaml, and tag releases as</value>
+  </data>
+  <data name="PkgDownload" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="PkgEnterObjectId" xml:space="preserve">
+    <value>Enter at least one object id.</value>
+  </data>
+  <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
+    <value>Classify {0}: configure refs need a key and a label.</value>
+  </data>
+  <data name="PkgKickerRegistry" xml:space="preserve">
+    <value>Build · Package registry</value>
+  </data>
+  <data name="PkgBrowseHeading" xml:space="preserve">
+    <value>Browse Packages</value>
+  </data>
+  <data name="PkgBrowseDescription" xml:space="preserve">
+    <value>Refreshes the remote's repo cache and lists its packages. Versions come from release tags; the branch tip is the dev channel.</value>
+  </data>
+  <data name="PkgRemoteLabel" xml:space="preserve">
+    <value>Remote</value>
+  </data>
+  <data name="PkgRefreshAndBrowse" xml:space="preserve">
+    <value>Refresh &amp; browse</value>
+  </data>
+  <data name="PkgUnreviewedSource" xml:space="preserve">
+    <value>This source has not been reviewed. Inspect all code on the review screen before applying.</value>
+  </data>
+  <data name="PkgSnapshotAt" xml:space="preserve">
+    <value>{0} at {1}</value>
+  </data>
+  <data name="PkgNoDescription" xml:space="preserve">
+    <value>(no description)</value>
+  </data>
+  <data name="PkgManifestParseFailed" xml:space="preserve">
+    <value>Manifest at the tip did not parse.</value>
+  </data>
+  <data name="PkgDevChannelOption" xml:space="preserve">
+    <value>dev channel ({0})</value>
+  </data>
+  <data name="PkgReviewInstall" xml:space="preserve">
+    <value>Review install</value>
+  </data>
+  <data name="PkgNoReleaseTags" xml:space="preserve">
+    <value>No release tags — only the dev channel is available.</value>
+  </data>
+  <data name="PkgKickerSources" xml:space="preserve">
+    <value>Build · Package sources</value>
+  </data>
+  <data name="PkgRemotesHeading" xml:space="preserve">
+    <value>Package Remotes</value>
+  </data>
+  <data name="PkgRemotesDescription" xml:space="preserve">
+    <value>Git repos this game installs packages from. Trust levels are your call — community listings below are curated in the official repo, never self-declared.</value>
+  </data>
+  <data name="PkgConfiguredRemotes" xml:space="preserve">
+    <value>Configured remotes</value>
+  </data>
+  <data name="PkgUrl" xml:space="preserve">
+    <value>URL</value>
+  </data>
+  <data name="PkgTrust" xml:space="preserve">
+    <value>Trust</value>
+  </data>
+  <data name="PkgBranch" xml:space="preserve">
+    <value>Branch</value>
+  </data>
+  <data name="PkgDefaultBranch" xml:space="preserve">
+    <value>default</value>
+  </data>
+  <data name="PkgAddRemoteHeading" xml:space="preserve">
+    <value>Add a remote</value>
+  </data>
+  <data name="PkgGitUrlLabel" xml:space="preserve">
+    <value>Git URL</value>
+  </data>
+  <data name="PkgTrustOfficial" xml:space="preserve">
+    <value>official</value>
+  </data>
+  <data name="PkgTrustCommunity" xml:space="preserve">
+    <value>community</value>
+  </data>
+  <data name="PkgTrustUnknown" xml:space="preserve">
+    <value>unknown</value>
+  </data>
+  <data name="PkgBranchOptionalLabel" xml:space="preserve">
+    <value>Branch (optional)</value>
+  </data>
+  <data name="PkgAddRemote" xml:space="preserve">
+    <value>Add remote</value>
+  </data>
+  <data name="PkgCommunityDirectory" xml:space="preserve">
+    <value>Community directory</value>
+  </data>
+  <data name="PkgCommunityDirectoryHint" xml:space="preserve">
+    <value>Accepted community repos, curated in the official packages repo.</value>
+  </data>
+  <data name="PkgConfigured" xml:space="preserve">
+    <value>configured</value>
+  </data>
+  <data name="PkgNoCommunityRepos" xml:space="preserve">
+    <value>No community repos accepted yet.</value>
+  </data>
+  <data name="PkgRemoteSaved" xml:space="preserve">
+    <value>Remote '{0}' saved.</value>
+  </data>
+  <data name="PkgCommunityRemoteAdded" xml:space="preserve">
+    <value>Added '{0}' as a community remote.</value>
+  </data>
+  <data name="PkgRemoteRemoved" xml:space="preserve">
+    <value>Removed remote '{0}'.</value>
+  </data>
+  <data name="PkgReview" xml:space="preserve">
+    <value>Review</value>
+  </data>
+  <data name="PkgInstallHeading" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="PkgUpgradeHeading" xml:space="preserve">
+    <value>Upgrade</value>
+  </data>
+  <data name="PkgApply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="PkgPlanLocation" xml:space="preserve">
+    <value>{0} / {1} at {2}</value>
+  </data>
+  <data name="PkgUpgradingFrom" xml:space="preserve">
+    <value>— upgrading from {0}</value>
+  </data>
+  <data name="PkgConflictsWithInstalled" xml:space="preserve">
+    <value>Conflicts with installed</value>
+  </data>
+  <data name="PkgRequires" xml:space="preserve">
+    <value>Requires</value>
+  </data>
+  <data name="PkgNotInstalledSuffix" xml:space="preserve">
+    <value> — not installed.</value>
+  </data>
+  <data name="PkgInstalledSuffix" xml:space="preserve">
+    <value> — installed: {0}.</value>
+  </data>
+  <data name="PkgAvailableFrom" xml:space="preserve">
+    <value>Available from {0}{1}.</value>
+  </data>
+  <data name="PkgCommandCollision" xml:space="preserve">
+    <value>$-command "{0}" is already defined by package {1} ({2}/{3}).</value>
+  </data>
+  <data name="PkgDbrefHelper" xml:space="preserve">
+    <value>Object id, e.g. #123:456</value>
+  </data>
+  <data name="PkgReplan" xml:space="preserve">
+    <value>Re-plan with these answers</value>
+  </data>
+  <data name="PkgObjectsCount" xml:space="preserve">
+    <value>Objects ({0})</value>
+  </data>
+  <data name="PkgRef" xml:space="preserve">
+    <value>Ref</value>
+  </data>
+  <data name="PkgAction" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="PkgType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="PkgDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="PkgRenamedFrom" xml:space="preserve">
+    <value>renamed from {0} (keeps {1})</value>
+  </data>
+  <data name="PkgWillBeMarkedGoing" xml:space="preserve">
+    <value>{0} will be marked GOING</value>
+  </data>
+  <data name="PkgAttributesCount" xml:space="preserve">
+    <value>Attributes ({0})</value>
+  </data>
+  <data name="PkgConflictCount" xml:space="preserve">
+    <value>{0} conflict(s)</value>
+  </data>
+  <data name="PkgConflictLabel" xml:space="preserve">
+    <value>conflict: {0}</value>
+  </data>
+  <data name="PkgResolvesAtApplyTooltip" xml:space="preserve">
+    <value>Some refs resolve at apply time (new objects / configure)</value>
+  </data>
+  <data name="PkgResolvesAtApply" xml:space="preserve">
+    <value>resolves at apply</value>
+  </data>
+  <data name="PkgBaseAsInstalled" xml:space="preserve">
+    <value>Base (as installed)</value>
+  </data>
+  <data name="PkgLiveYourVersion" xml:space="preserve">
+    <value>Live (your version)</value>
+  </data>
+  <data name="PkgNewVersion" xml:space="preserve">
+    <value>New ({0})</value>
+  </data>
+  <data name="PkgKeepMine" xml:space="preserve">
+    <value>Keep mine</value>
+  </data>
+  <data name="PkgDeleteTakeTheirs" xml:space="preserve">
+    <value>Delete it (take theirs)</value>
+  </data>
+  <data name="PkgTakeTheirs" xml:space="preserve">
+    <value>Take theirs</value>
+  </data>
+  <data name="PkgEditMergedValue" xml:space="preserve">
+    <value>Edit merged value</value>
+  </data>
+  <data name="PkgMergedValueLabel" xml:space="preserve">
+    <value>Merged value</value>
+  </data>
+  <data name="PkgMissingRemoteParam" xml:space="preserve">
+    <value>Missing 'remote' parameter.</value>
+  </data>
+  <data name="PkgApplied" xml:space="preserve">
+    <value>{0} {1} applied (revision {2}).</value>
+  </data>
+  <data name="TermNotLoggedIn" xml:space="preserve">
+    <value>not logged in</value>
+  </data>
+  <data name="TermInputPlaceholder" xml:space="preserve">
+    <value>say hello   ·   pose waves   ·   look   ·   who</value>
+    <comment>Example commands. The command verbs (say, pose, look, who) are game syntax and must stay in English; only their arguments may be localized.</comment>
+  </data>
+  <data name="TermClearTerminal" xml:space="preserve">
+    <value>Clear terminal</value>
+  </data>
+  <data name="TermBrowserMine" xml:space="preserve">
+    <value>Mine</value>
+  </data>
+  <data name="TermBrowserSearch" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="TermBrowserHere" xml:space="preserve">
+    <value>Here</value>
+  </data>
+  <data name="TermBrowserGo" xml:space="preserve">
+    <value>Go</value>
+  </data>
+  <data name="TermBrowserExampleLabel" xml:space="preserve">
+    <value>e.g.</value>
+    <comment>Precedes inline MUSHcode examples such as lsearch(me).</comment>
+  </data>
+  <data name="TermBrowserNoObjects" xml:space="preserve">
+    <value>No objects found.</value>
+  </data>
+  <data name="TermBrowserError" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="TermMushHelp" xml:space="preserve">
+    <value>MUSH Help</value>
+  </data>
+  <data name="TermHelpBack" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="TermHelpClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="TermHelpSearchPlaceholder" xml:space="preserve">
+    <value>Search functions &amp; commands…</value>
+  </data>
+  <data name="TermHelpEmpty" xml:space="preserve">
+    <value>Search above or click "📖 Show full help" in the editor.</value>
+    <comment>The quoted label is emitted by the Monaco hover provider in wwwroot/js/mush-monaco.js and is not localized — keep it verbatim.</comment>
+  </data>
+  <data name="TermHelpKindCommand" xml:space="preserve">
+    <value>Command</value>
+  </data>
+  <data name="TermHelpKindFunction" xml:space="preserve">
+    <value>Function</value>
+  </data>
+  <data name="TermHelpSwitches" xml:space="preserve">
+    <value>Switches: {0}</value>
+  </data>
+  <data name="TermSoftcodeEditorTitle" xml:space="preserve">
+    <value>Softcode Editor</value>
+  </data>
+  <data name="TermObjects" xml:space="preserve">
+    <value>Objects</value>
+  </data>
+  <data name="TermEditor" xml:space="preserve">
+    <value>Editor</value>
+  </data>
+  <data name="TermCreateThing" xml:space="preserve">
+    <value>Create Thing</value>
+  </data>
+  <data name="TermCreateRoom" xml:space="preserve">
+    <value>Create Room</value>
+  </data>
+  <data name="TermExpandObjects" xml:space="preserve">
+    <value>Expand objects</value>
+  </data>
+  <data name="TermCollapseObjects" xml:space="preserve">
+    <value>Collapse objects</value>
+  </data>
+  <data name="TermExpandAttributes" xml:space="preserve">
+    <value>Expand attributes</value>
+  </data>
+  <data name="TermCollapseAttributes" xml:space="preserve">
+    <value>Collapse attributes</value>
+  </data>
+  <data name="TermAddAttribute" xml:space="preserve">
+    <value>Add attribute</value>
+  </data>
+  <data name="TermObjectNamePlaceholder" xml:space="preserve">
+    <value>name</value>
+  </data>
+  <data name="TermFilterAttributes" xml:space="preserve">
+    <value>Filter attributes…</value>
+  </data>
+  <data name="TermClear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="TermSelectAnObject" xml:space="preserve">
+    <value>Select an object.</value>
+  </data>
+  <data name="TermNoAttributes" xml:space="preserve">
+    <value>No attributes.</value>
+  </data>
+  <data name="TermNoMatch" xml:space="preserve">
+    <value>No match.</value>
+  </data>
+  <data name="TermUnsaved" xml:space="preserve">
+    <value>unsaved</value>
+  </data>
+  <data name="TermNoAttributeSelected" xml:space="preserve">
+    <value>No attribute selected</value>
+  </data>
+  <data name="TermTest" xml:space="preserve">
+    <value>Test</value>
+  </data>
+  <data name="TermTestTooltip" xml:space="preserve">
+    <value>Test — evaluate without saving</value>
+  </data>
+  <data name="TermRefreshAttributes" xml:space="preserve">
+    <value>Refresh attributes</value>
+  </data>
+  <data name="TermEvalResult" xml:space="preserve">
+    <value>Eval result</value>
+  </data>
+  <data name="TermErrorLine" xml:space="preserve">
+    <value>[Error] {0}</value>
+  </data>
+  <data name="TermNoOutput" xml:space="preserve">
+    <value>(no output)</value>
+  </data>
+  <data name="TermAttrEmpty" xml:space="preserve">
+    <value>(empty)</value>
+  </data>
+  <data name="TermAttrKindCommand" xml:space="preserve">
+    <value>Command trigger</value>
+  </data>
+  <data name="TermAttrKindFunction" xml:space="preserve">
+    <value>Function</value>
+  </data>
+  <data name="TermAttrKindListen" xml:space="preserve">
+    <value>Listen trigger</value>
+  </data>
+  <data name="TermAttrKindData" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="TermAttrKindText" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="TermErrorLoadingObject" xml:space="preserve">
+    <value>Error loading object: {0}</value>
+  </data>
+  <data name="TermSavedAttribute" xml:space="preserve">
+    <value>Saved &amp;{0} on #{1}.</value>
+  </data>
+  <data name="TermDeletedAttribute" xml:space="preserve">
+    <value>Deleted &amp;{0}.</value>
+  </data>
+  <data name="LayLayouts" xml:space="preserve">
+    <value>Layout</value>
+  </data>
+  <data name="LayLayoutsKicker" xml:space="preserve">
+    <value>Build · Page layouts</value>
+  </data>
+  <data name="LayLayoutsBlurb" xml:space="preserve">
+    <value>Arrange the widgets on each page by dragging them between zones. Changes publish to every visitor.</value>
+  </data>
+  <data name="LayBadgeCustomized" xml:space="preserve">
+    <value>customized</value>
+  </data>
+  <data name="LayBadgeDefault" xml:space="preserve">
+    <value>default</value>
+  </data>
+  <data name="LayScopeGlobal" xml:space="preserve">
+    <value>Site Chrome</value>
+  </data>
+  <data name="LayScopeGlobalDesc" xml:space="preserve">
+    <value>Top bar, sidebars, and footer shared by every page.</value>
+  </data>
+  <data name="LayScopeHome" xml:space="preserve">
+    <value>Home Page</value>
+  </data>
+  <data name="LayScopeHomeDesc" xml:space="preserve">
+    <value>The main content of the landing page.</value>
+  </data>
+  <data name="LayScopeWikiIndex" xml:space="preserve">
+    <value>Wiki Index</value>
+  </data>
+  <data name="LayScopeWikiIndexDesc" xml:space="preserve">
+    <value>The /wiki landing page.</value>
+  </data>
+  <data name="LayScopeProfile" xml:space="preserve">
+    <value>Character Profile</value>
+  </data>
+  <data name="LayScopeProfileDesc" xml:space="preserve">
+    <value>The /character/{name} page body and right rail.</value>
+  </data>
+  <data name="LayEditorPageTitle" xml:space="preserve">
+    <value>{0} Layout</value>
+  </data>
+  <data name="LayAllLayouts" xml:space="preserve">
+    <value>All layouts</value>
+  </data>
+  <data name="LayPreview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="LayPublish" xml:space="preserve">
+    <value>Publish</value>
+  </data>
+  <data name="LayPublishing" xml:space="preserve">
+    <value>Publishing…</value>
+  </data>
+  <data name="LayUnknownScope" xml:space="preserve">
+    <value>Unknown layout scope “{0}”.</value>
+  </data>
+  <data name="LayWidgetsPanel" xml:space="preserve">
+    <value>Widgets</value>
+  </data>
+  <data name="LayPaletteHint" xml:space="preserve">
+    <value>Drag a widget into a zone. Drag a placed widget back here to remove it.</value>
+  </data>
+  <data name="LaySidebarsAndFooter" xml:space="preserve">
+    <value>Sidebars &amp; footer</value>
+  </data>
+  <data name="LayGridZoneHint" xml:space="preserve">
+    <value>12-column grid</value>
+  </data>
+  <data name="LayFlowZoneHint" xml:space="preserve">
+    <value>horizontal — no width</value>
+  </data>
+  <data name="LayWidthInColumns" xml:space="preserve">
+    <value>Width in columns (1–12)</value>
+  </data>
+  <data name="LayHasConfig" xml:space="preserve">
+    <value>Has config</value>
+  </data>
+  <data name="LayConfigure" xml:space="preserve">
+    <value>Configure</value>
+  </data>
+  <data name="LayRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="LayLivePreview" xml:space="preserve">
+    <value>Live preview</value>
+  </data>
+  <data name="LayPreviewNote" xml:space="preserve">
+    <value>Reflects unsaved changes</value>
+  </data>
+  <data name="LayPreviewNoteProfile" xml:space="preserve">
+    <value> · character widgets show a generic state here</value>
+  </data>
+  <data name="LayConfigureWidget" xml:space="preserve">
+    <value>Configure {0}</value>
+  </data>
+  <data name="LayPublished" xml:space="preserve">
+    <value>Published the {0} layout.</value>
+  </data>
+  <data name="LayPublishFailed" xml:space="preserve">
+    <value>Failed to publish layout.</value>
+  </data>
+  <data name="LayResetLayout" xml:space="preserve">
+    <value>Reset layout</value>
+  </data>
+  <data name="LayResetConfirm" xml:space="preserve">
+    <value>Reset the {0} layout to its default? Any customizations will be discarded.</value>
+  </data>
+  <data name="LayReset" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="LayResetDone" xml:space="preserve">
+    <value>Reset the {0} layout.</value>
+  </data>
+  <data name="LayResetFailed" xml:space="preserve">
+    <value>Failed to reset layout.</value>
+  </data>
+  <data name="LayWidgetCharacterDirectory" xml:space="preserve">
+    <value>Character Directory</value>
+  </data>
+  <data name="LayWidgetWikiIndex" xml:space="preserve">
+    <value>Wiki Index</value>
+  </data>
+  <data name="LayWidgetSchemaApplication" xml:space="preserve">
+    <value>Schema Application</value>
+  </data>
+  <data name="LayWidgetGameStats" xml:space="preserve">
+    <value>Game Stats</value>
+  </data>
+  <data name="LayWidgetActiveScene" xml:space="preserve">
+    <value>Active Scene</value>
+  </data>
+  <data name="LayWidgetRecentWikiActivity" xml:space="preserve">
+    <value>Recent Wiki Activity</value>
+  </data>
+  <data name="LayWidgetOnlineCharacters" xml:space="preserve">
+    <value>Online Characters</value>
+  </data>
+  <data name="LayWidgetQuickstart" xml:space="preserve">
+    <value>Quickstart</value>
+  </data>
+  <data name="LayWidgetQuickLinks" xml:space="preserve">
+    <value>Quick Links</value>
+  </data>
+  <data name="LayWidgetCharacterGallery" xml:space="preserve">
+    <value>Character Gallery</value>
+  </data>
+  <data name="LayWidgetWelcomeText" xml:space="preserve">
+    <value>Welcome Text</value>
+  </data>
+  <data name="LayWidgetSpacer" xml:space="preserve">
+    <value>Spacer</value>
+  </data>
+  <data name="LayWidgetWikiBody" xml:space="preserve">
+    <value>Wiki Body</value>
+  </data>
+  <data name="LaySpacerHelp" xml:space="preserve">
+    <value>Height of the empty space, in pixels. Its width follows the placement's column span.</value>
+  </data>
+  <data name="LaySpacerHeight" xml:space="preserve">
+    <value>Height (px)</value>
+  </data>
+  <data name="LayConfigJsonHelp" xml:space="preserve">
+    <value>Per-instance configuration for {0}, as JSON. Leave empty for no config.</value>
+  </data>
+  <data name="LayConfigJsonLabel" xml:space="preserve">
+    <value>Config JSON</value>
+  </data>
+  <data name="LayApply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="LayInvalidJson" xml:space="preserve">
+    <value>Invalid JSON: {0}</value>
+  </data>
+  <data name="LayApplications" xml:space="preserve">
+    <value>Applications</value>
+  </data>
+  <data name="LayAppsKicker" xml:space="preserve">
+    <value>Build · Custom widgets</value>
+  </data>
+  <data name="LayAppsSchemaRegistry" xml:space="preserve">
+    <value>Schema registry</value>
+  </data>
+  <data name="LayAppsNew" xml:space="preserve">
+    <value>New application</value>
+  </data>
+  <data name="LayAppsPages" xml:space="preserve">
+    <value>Pages</value>
+  </data>
+  <data name="LayAppsWidgets" xml:space="preserve">
+    <value>Widgets</value>
+  </data>
+  <data name="LayAppsSchemas" xml:space="preserve">
+    <value>Schemas</value>
+  </data>
+  <data name="LayAppsStatRegistered" xml:space="preserve">
+    <value>registered</value>
+  </data>
+  <data name="LayAppsStatPages" xml:space="preserve">
+    <value>full-screen apps</value>
+  </data>
+  <data name="LayAppsStatWidgets" xml:space="preserve">
+    <value>dashboard zones</value>
+  </data>
+  <data name="LayAppsStatSchemas" xml:space="preserve">
+    <value>softcode-defined</value>
+  </data>
+  <data name="LayAppsSearchPlaceholder" xml:space="preserve">
+    <value>Search apps or schemas…</value>
+  </data>
+  <data name="LayAppsNoMatch" xml:space="preserve">
+    <value>No applications match.</value>
+  </data>
+  <data name="LayAppsEmptyDetail" xml:space="preserve">
+    <value>Select an application, or register a new one.</value>
+  </data>
+  <data name="LayAppsRegister" xml:space="preserve">
+    <value>Register application</value>
+  </data>
+  <data name="LayEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="LayAppSchemaUrl" xml:space="preserve">
+    <value>Schema URL</value>
+  </data>
+  <data name="LayAppDataUrl" xml:space="preserve">
+    <value>Data URL</value>
+  </data>
+  <data name="LayAppSubmitRoute" xml:space="preserve">
+    <value>Submit Route</value>
+  </data>
+  <data name="LayAppNavPlacement" xml:space="preserve">
+    <value>Nav Placement</value>
+  </data>
+  <data name="LayAppDisplayOrder" xml:space="preserve">
+    <value>Display Order</value>
+  </data>
+  <data name="LayAppMinRole" xml:space="preserve">
+    <value>Min Role</value>
+  </data>
+  <data name="LayAppAllowedZones" xml:space="preserve">
+    <value>Allowed Zones</value>
+  </data>
+  <data name="LayActions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="LayAppOpen" xml:space="preserve">
+    <value>Open app</value>
+  </data>
+  <data name="LayAppEditInSoftcode" xml:space="preserve">
+    <value>Edit in Softcode</value>
+  </data>
+  <data name="LayAppViewSchema" xml:space="preserve">
+    <value>View schema</value>
+  </data>
+  <data name="LayAppEditTitle" xml:space="preserve">
+    <value>Edit {0}</value>
+  </data>
+  <data name="LayAppRemoveTitle" xml:space="preserve">
+    <value>Remove application</value>
+  </data>
+  <data name="LayAppRemoveConfirm" xml:space="preserve">
+    <value>Remove '{0}' ({1})? This only unlinks it from the portal; the softcode is untouched.</value>
+  </data>
+  <data name="LayAppRemoved" xml:space="preserve">
+    <value>Removed {0}.</value>
+  </data>
+  <data name="LayAppRemoveFailed" xml:space="preserve">
+    <value>Failed to remove application.</value>
+  </data>
+  <data name="LayAppSlug" xml:space="preserve">
+    <value>Slug</value>
+  </data>
+  <data name="LayAppSlugHelper" xml:space="preserve">
+    <value>URL key — /apps/{slug}. Cannot change after creation.</value>
+  </data>
+  <data name="LayAppDisplayName" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="LayAppKind" xml:space="preserve">
+    <value>Kind</value>
+  </data>
+  <data name="LayAppKindPage" xml:space="preserve">
+    <value>Page (/apps/{slug})</value>
+  </data>
+  <data name="LayAppKindWidget" xml:space="preserve">
+    <value>Widget (layout zone)</value>
+  </data>
+  <data name="LayAppMinimumRole" xml:space="preserve">
+    <value>Minimum role</value>
+  </data>
+  <data name="LayAppSchemaUrlHelper" xml:space="preserve">
+    <value>HTTP-handler route returning the Portal Schema Document, e.g. http/chargen/schema</value>
+  </data>
+  <data name="LayAppDataUrlOptional" xml:space="preserve">
+    <value>Data URL (optional)</value>
+  </data>
+  <data name="LayAppDataUrlHelper" xml:space="preserve">
+    <value>View display / form prefill data</value>
+  </data>
+  <data name="LayAppSubmitRouteOptional" xml:space="preserve">
+    <value>Submit route (optional)</value>
+  </data>
+  <data name="LayAppIconOptional" xml:space="preserve">
+    <value>Icon (optional)</value>
+  </data>
+  <data name="LayAppIconHelper" xml:space="preserve">
+    <value>MudBlazor Material icon string</value>
+  </data>
+  <data name="LayAppNavPlacementOptional" xml:space="preserve">
+    <value>Nav placement (optional)</value>
+  </data>
+  <data name="LayAppNavPlacementHelper" xml:space="preserve">
+    <value>Set to show a Page app in nav</value>
+  </data>
+  <data name="LayAppOrder" xml:space="preserve">
+    <value>Order</value>
+  </data>
+  <data name="LayAppRequiredFields" xml:space="preserve">
+    <value>Slug, display name, and schema URL are required.</value>
+  </data>
+  <data name="LayAppSaved" xml:space="preserve">
+    <value>Saved {0}.</value>
+  </data>
+  <data name="LayAppSaveFailed" xml:space="preserve">
+    <value>Save failed.</value>
+  </data>
+  <data name="AdmKicker" xml:space="preserve">
+    <value>Administration</value>
+  </data>
+  <data name="AdmBreadcrumb" xml:space="preserve">
+    <value>Admin</value>
+  </data>
+  <data name="AdmDashboardTitle" xml:space="preserve">
+    <value>Admin Dashboard</value>
+  </data>
+  <data name="AdmPlayersTitle" xml:space="preserve">
+    <value>Players</value>
+  </data>
+  <data name="AdmPlayersAction" xml:space="preserve">
+    <value>View Players</value>
+  </data>
+  <data name="AdmPlayersComingSoon" xml:space="preserve">
+    <value>Player administration coming soon.</value>
+  </data>
+  <data name="AdmAccountsTitle" xml:space="preserve">
+    <value>Accounts</value>
+  </data>
+  <data name="AdmAccountsAction" xml:space="preserve">
+    <value>Manage Accounts</value>
+  </data>
+  <data name="AdmCharactersAction" xml:space="preserve">
+    <value>View Characters</value>
+  </data>
+  <data name="AdmCharactersComingSoon" xml:space="preserve">
+    <value>Character administration coming soon.</value>
+  </data>
+  <data name="AdmProfilesTitle" xml:space="preserve">
+    <value>Profiles</value>
+  </data>
+  <data name="AdmProfilesAction" xml:space="preserve">
+    <value>Character Profiles</value>
+  </data>
+  <data name="AdmConfigAction" xml:space="preserve">
+    <value>Site Config</value>
+  </data>
+  <data name="AdmRolesTitle" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="AdmRolesAction" xml:space="preserve">
+    <value>Roles &amp; Permissions</value>
+  </data>
+  <data name="AdmModerationTitle" xml:space="preserve">
+    <value>Moderation</value>
+  </data>
+  <data name="AdmModerationAction" xml:space="preserve">
+    <value>Reports &amp; Bans</value>
+  </data>
+  <data name="AdmModerationComingSoon" xml:space="preserve">
+    <value>Reports, bans, and audit log coming soon.</value>
+  </data>
+  <data name="AdmSuggestionsAction" xml:space="preserve">
+    <value>Word Suggestions</value>
+  </data>
+  <data name="AdmMediaTitle" xml:space="preserve">
+    <value>Image Library</value>
+  </data>
+  <data name="AdmMediaAction" xml:space="preserve">
+    <value>Media Assets</value>
+  </data>
+  <data name="AdmApplicationsTitle" xml:space="preserve">
+    <value>Applications</value>
+  </data>
+  <data name="AdmApplicationsAction" xml:space="preserve">
+    <value>Custom Widgets</value>
+  </data>
+  <data name="AdmPackagesTitle" xml:space="preserve">
+    <value>Packages</value>
+  </data>
+  <data name="AdmPackagesAction" xml:space="preserve">
+    <value>Softcode Packages</value>
+  </data>
+  <data name="AdmLayoutTitle" xml:space="preserve">
+    <value>Layout</value>
+  </data>
+  <data name="AdmLayoutAction" xml:space="preserve">
+    <value>Layout Editor</value>
+  </data>
+  <data name="AdmServerAction" xml:space="preserve">
+    <value>Server Status</value>
+  </data>
+  <data name="AdmDatabaseImportTitle" xml:space="preserve">
+    <value>Database Import</value>
+  </data>
+  <data name="AdmDatabaseImportAction" xml:space="preserve">
+    <value>Import Database</value>
+  </data>
+  <data name="AdmPlayerNumber" xml:space="preserve">
+    <value>Player #{0}</value>
+  </data>
+  <data name="AdmPlayerDetailKicker" xml:space="preserve">
+    <value>Administration · Player</value>
+  </data>
+  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
+    <value>Player detail coming soon.</value>
+  </data>
+  <data name="AdmServerKicker" xml:space="preserve">
+    <value>Admin · Server</value>
+  </data>
+  <data name="AdmServerGodOnly" xml:space="preserve">
+    <value>God-only server settings</value>
+  </data>
+  <data name="AdmServerComingSoon" xml:space="preserve">
+    <value>Server configuration and live metrics are coming soon.</value>
+  </data>
+  <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
+    <value>Search username or email…</value>
+  </data>
+  <data name="AdmUsername" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="AdmEmail" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="AdmStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="AdmAccountDisabledChip" xml:space="preserve">
+    <value>DISABLED</value>
+  </data>
+  <data name="AdmAccountMustChangePasswordChip" xml:space="preserve">
+    <value>must change pw</value>
+  </data>
+  <data name="AdmAccountActiveChip" xml:space="preserve">
+    <value>active</value>
+  </data>
+  <data name="AdmResetPassword" xml:space="preserve">
+    <value>Reset password</value>
+  </data>
+  <data name="AdmEnableAccount" xml:space="preserve">
+    <value>Enable</value>
+  </data>
+  <data name="AdmDisableAccount" xml:space="preserve">
+    <value>Disable</value>
+  </data>
+  <data name="AdmAccountEnabled" xml:space="preserve">
+    <value>Account '{0}' enabled.</value>
+  </data>
+  <data name="AdmAccountDisabled" xml:space="preserve">
+    <value>Account '{0}' disabled.</value>
+  </data>
+  <data name="AdmOperationFailed" xml:space="preserve">
+    <value>Operation failed.</value>
+  </data>
+  <data name="AdmCharacterUnlinked" xml:space="preserve">
+    <value>Unlinked {0} from '{1}'.</value>
+  </data>
+  <data name="AdmUnlinkFailed" xml:space="preserve">
+    <value>Unlink failed.</value>
+  </data>
+  <data name="AdmPasswordReset" xml:space="preserve">
+    <value>Password for '{0}' reset to: {1} — share it securely; they must change it at next login.</value>
+  </data>
+  <data name="AdmResetFailed" xml:space="preserve">
+    <value>Reset failed.</value>
+  </data>
+  <data name="AdmProfilesSubtitle" xml:space="preserve">
+    <value>Character profiles are served by the in-game {0} object via its {1} softcode. Customize it in-game with {2}, or reinstall the stock handler below.</value>
+  </data>
+  <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
+    <value>Could not load handler status.</value>
+  </data>
+  <data name="AdmProfilesConfigured" xml:space="preserve">
+    <value>Configured</value>
+  </data>
+  <data name="AdmYes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="AdmProfilesNotConfiguredValue" xml:space="preserve">
+    <value>No (http_handler unset)</value>
+  </data>
+  <data name="AdmProfilesHandler" xml:space="preserve">
+    <value>Handler</value>
+  </data>
+  <data name="AdmProfilesHandlerNotFound" xml:space="preserve">
+    <value>#{0} — NOT FOUND</value>
+  </data>
+  <data name="AdmAttribute" xml:space="preserve">
+    <value>Attribute</value>
+  </data>
+  <data name="AdmPresent" xml:space="preserve">
+    <value>Present</value>
+  </data>
+  <data name="AdmMissing" xml:space="preserve">
+    <value>Missing</value>
+  </data>
+  <data name="AdmResetting" xml:space="preserve">
+    <value>Resetting…</value>
+  </data>
+  <data name="AdmProfilesResetCaption" xml:space="preserve">
+    <value>Overwrites the stock {0} and {1} attributes with the built-in defaults. Custom attributes you added are left untouched.</value>
+  </data>
+  <data name="AdmProfilesResetComplete" xml:space="preserve">
+    <value>Reset complete: {0} attributes written.</value>
+  </data>
+  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
+    <value>Reset failed ({0}).</value>
+  </data>
+  <data name="AdmProfilesResetFailedError" xml:space="preserve">
+    <value>Reset failed: {0}</value>
+  </data>
+  <data name="AdmHelpKicker" xml:space="preserve">
+    <value>Documentation</value>
+  </data>
+  <data name="AdmHelpSubtitle" xml:space="preserve">
+    <value>Browse topics, search references, and read the manual.</value>
+  </data>
+  <data name="WkEditLivePreview" xml:space="preserve">
+    <value>editing · live preview</value>
+  </data>
+  <data name="WkPageTitlePlaceholder" xml:space="preserve">
+    <value>Page title</value>
+  </data>
+  <data name="WkBold" xml:space="preserve">
+    <value>Bold</value>
+  </data>
+  <data name="WkItalic" xml:space="preserve">
+    <value>Italic</value>
+  </data>
+  <data name="WkHeading" xml:space="preserve">
+    <value>Heading</value>
+  </data>
+  <data name="WkListItem" xml:space="preserve">
+    <value>List item</value>
+  </data>
+  <data name="WkQuote" xml:space="preserve">
+    <value>Quote</value>
+  </data>
+  <data name="WkLink" xml:space="preserve">
+    <value>Link</value>
+  </data>
+  <data name="WkInsertImage" xml:space="preserve">
+    <value>Insert image</value>
+  </data>
+  <data name="WkAddTagPlaceholder" xml:space="preserve">
+    <value>add tag…</value>
+  </data>
+  <data name="WkSummaryPlaceholder" xml:space="preserve">
+    <value>Summarize your change (e.g. 'fixed a typo')…</value>
+  </data>
+  <data name="WkMinorEdit" xml:space="preserve">
+    <value>Minor edit</value>
+  </data>
+  <data name="WkBytesDelta" xml:space="preserve">
+    <value>{0} bytes</value>
+  </data>
+  <data name="WkDiscard" xml:space="preserve">
+    <value>Discard</value>
+  </data>
+  <data name="WkPublishChanges" xml:space="preserve">
+    <value>Publish changes</value>
+  </data>
+  <data name="WkPublishNotice" xml:space="preserve">
+    <value>Changes publish immediately and appear for everyone.</value>
+  </data>
+  <data name="WkFormattingHelp" xml:space="preserve">
+    <value>Formatting help</value>
+  </data>
+  <data name="WkDirectiveNoPages" xml:space="preserve">
+    <value>No pages yet.</value>
+  </data>
+  <data name="WkDirectiveCategoryHeader" xml:space="preserve">
+    <value>Category: {0}</value>
+  </data>
+  <data name="WkDirectiveTagHeader" xml:space="preserve">
+    <value>Tag: {0}</value>
+  </data>
+  <data name="WkNoAssets" xml:space="preserve">
+    <value>No assets uploaded yet.</value>
+  </data>
+  <data name="WkHistoryPageTitle" xml:space="preserve">
+    <value>History: {0}</value>
+  </data>
+  <data name="WkRevisionHistory" xml:space="preserve">
+    <value>Revision history</value>
+  </data>
+  <data name="WkCompareSelected" xml:space="preserve">
+    <value>Compare selected</value>
+  </data>
+  <data name="WkHistoryIntro" xml:space="preserve">
+    <value>Select an older and a newer revision, then compare. {0} revisions in all.</value>
+  </data>
+  <data name="WkNoRevisionHistory" xml:space="preserve">
+    <value>No revision history found.</value>
+  </data>
+  <data name="WkColOld" xml:space="preserve">
+    <value>Old</value>
+  </data>
+  <data name="WkColNew" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="WkColTimestampSummary" xml:space="preserve">
+    <value>Timestamp / Summary</value>
+  </data>
+  <data name="WkColAuthor" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="WkColSize" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="WkColActions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="WkCurrentRevision" xml:space="preserve">
+    <value>current</value>
+  </data>
+  <data name="WkViewRevision" xml:space="preserve">
+    <value>View this revision</value>
+  </data>
+  <data name="WkRestoreRevision" xml:space="preserve">
+    <value>Restore to this revision</value>
+  </data>
+  <data name="WkRestoredToRevision" xml:space="preserve">
+    <value>Restored to revision {0}.</value>
+  </data>
+  <data name="WkRestoreFailed" xml:space="preserve">
+    <value>Restore failed: {0}</value>
+  </data>
+  <data name="WkPageFallbackTitle" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="WkDiffPageTitle" xml:space="preserve">
+    <value>Diff: {0}</value>
+  </data>
+  <data name="WkComparingRevisions" xml:space="preserve">
+    <value>Comparing revisions</value>
+  </data>
+  <data name="WkDiffUnified" xml:space="preserve">
+    <value>Unified</value>
+  </data>
+  <data name="WkDiffSideBySide" xml:space="preserve">
+    <value>Side by side</value>
+  </data>
+  <data name="WkDiffLoadFailed" xml:space="preserve">
+    <value>Could not load one or both revisions. Check your revision numbers.</value>
+  </data>
+  <data name="WkRevisionShort" xml:space="preserve">
+    <value>rev #{0}</value>
+  </data>
+  <data name="WkLinesAdded" xml:space="preserve">
+    <value>+{0} added</value>
+  </data>
+  <data name="WkLinesRemoved" xml:space="preserve">
+    <value>−{0} removed</value>
+  </data>
+  <data name="WkDiffRevOld" xml:space="preserve">
+    <value>Rev {0} — Old</value>
+  </data>
+  <data name="WkDiffRevNew" xml:space="preserve">
+    <value>Rev {0} — New</value>
+  </data>
+  <data name="WkImageLibrary" xml:space="preserve">
+    <value>Image Library</value>
+  </data>
+  <data name="WkImageLibraryDescription" xml:space="preserve">
+    <value>Manage uploaded media assets used across the wiki and portal.</value>
+  </data>
+  <data name="WkTotalAssets" xml:space="preserve">
+    <value>Total Assets</value>
+  </data>
+  <data name="WkStorageUsed" xml:space="preserve">
+    <value>Storage Used</value>
+  </data>
+  <data name="WkKindImagePlural" xml:space="preserve">
+    <value>Images</value>
+  </data>
+  <data name="WkKindOther" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="WkKindImage" xml:space="preserve">
+    <value>Image</value>
+  </data>
+  <data name="WkKindVideo" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="WkKindDocument" xml:space="preserve">
+    <value>Document</value>
+  </data>
+  <data name="WkViewGrid" xml:space="preserve">
+    <value>Grid</value>
+  </data>
+  <data name="WkViewList" xml:space="preserve">
+    <value>List</value>
+  </data>
+  <data name="WkNoAssetsFound" xml:space="preserve">
+    <value>No assets found.</value>
+  </data>
+  <data name="WkCopyUrl" xml:space="preserve">
+    <value>Copy URL</value>
+  </data>
+  <data name="WkColPreview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="WkColFileName" xml:space="preserve">
+    <value>File Name</value>
+  </data>
+  <data name="WkColKind" xml:space="preserve">
+    <value>Kind</value>
+  </data>
+  <data name="WkColUploaded" xml:space="preserve">
+    <value>Uploaded</value>
+  </data>
+  <data name="WkColUploader" xml:space="preserve">
+    <value>Uploader</value>
+  </data>
+  <data name="WkDeleteAssetTitle" xml:space="preserve">
+    <value>Delete asset?</value>
+  </data>
+  <data name="WkDeleteAssetConfirm" xml:space="preserve">
+    <value>This will permanently delete {0}. Links to this asset will break.</value>
+  </data>
+  <data name="WkAssetUploaded" xml:space="preserve">
+    <value>Uploaded {0}.</value>
+  </data>
+  <data name="WkUploadFailed" xml:space="preserve">
+    <value>Upload failed: {0}</value>
+  </data>
+  <data name="WkUploadError" xml:space="preserve">
+    <value>Upload error: {0}</value>
+  </data>
+  <data name="WkAssetDeleted" xml:space="preserve">
+    <value>Deleted {0}.</value>
+  </data>
+  <data name="WkAssetDeleteFailed" xml:space="preserve">
+    <value>Could not delete {0}.</value>
+  </data>
+  <data name="WkUrlCopied" xml:space="preserve">
+    <value>URL copied.</value>
+  </data>
+  <data name="WkWikiAssets" xml:space="preserve">
+    <value>Wiki Assets</value>
+  </data>
+  <data name="WkStaffMedia" xml:space="preserve">
+    <value>Staff · Media</value>
+  </data>
+  <data name="WkAssetUploadHint" xml:space="preserve">
+    <value>PNG, JPEG, GIF, WebP or SVG — 10 MB max.</value>
+  </data>
+  <data name="WkCopyMarkdown" xml:space="preserve">
+    <value>Copy Markdown</value>
+  </data>
+  <data name="WkFileTooLarge" xml:space="preserve">
+    <value>File exceeds the 10 MB limit.</value>
+  </data>
+  <data name="WkMarkdownCopied" xml:space="preserve">
+    <value>Markdown copied to clipboard.</value>
+  </data>
+  <data name="WkDeleteAssetPrompt" xml:space="preserve">
+    <value>Delete '{0}'? Pages embedding it will show a broken image.</value>
+  </data>
+  <data name="WkDeleteFailed" xml:space="preserve">
+    <value>Delete failed.</value>
+  </data>
+  <data name="RolPageTitle" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="RolKicker" xml:space="preserve">
+    <value>Manage · Access control</value>
+  </data>
+  <data name="RolHeading" xml:space="preserve">
+    <value>Roles &amp; Permissions</value>
+  </data>
+  <data name="RolTabRoles" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="RolTabAssignments" xml:space="preserve">
+    <value>Assignments</value>
+  </data>
+  <data name="RolNewRole" xml:space="preserve">
+    <value>New role</value>
+  </data>
+  <data name="RolNoRolesDefined" xml:space="preserve">
+    <value>No roles defined.</value>
+  </data>
+  <data name="RolSystemBadge" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="RolSelectOrCreate" xml:space="preserve">
+    <value>Select a role, or create a new one.</value>
+  </data>
+  <data name="RolUntitled" xml:space="preserve">
+    <value>Untitled</value>
+  </data>
+  <data name="RolNameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="RolColorLabel" xml:space="preserve">
+    <value>Color</value>
+  </data>
+  <data name="RolPriorityLabel" xml:space="preserve">
+    <value>Priority</value>
+  </data>
+  <data name="RolSlugLabel" xml:space="preserve">
+    <value>Slug</value>
+  </data>
+  <data name="RolSlugHelper" xml:space="preserve">
+    <value>Stable machine key. Cannot change after creation.</value>
+  </data>
+  <data name="RolColorHelper" xml:space="preserve">
+    <value>CSS color, e.g. #6cde9a</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Higher wins on conflict</value>
+  </data>
+  <data name="RolInherit" xml:space="preserve">
+    <value>Inherit</value>
+  </data>
+  <data name="RolAllow" xml:space="preserve">
+    <value>Allow</value>
+  </data>
+  <data name="RolDeny" xml:space="preserve">
+    <value>Deny</value>
+  </data>
+  <data name="RolSaveRole" xml:space="preserve">
+    <value>Save role</value>
+  </data>
+  <data name="RolSearchByUsername" xml:space="preserve">
+    <value>Search by username…</value>
+  </data>
+  <data name="RolLookUp" xml:space="preserve">
+    <value>Look up</value>
+  </data>
+  <data name="RolNoAccountFound" xml:space="preserve">
+    <value>No account found for “{0}”.</value>
+  </data>
+  <data name="RolDisabledBadge" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="RolAssignedRoles" xml:space="preserve">
+    <value>Assigned roles</value>
+  </data>
+  <data name="RolNoRolesAssigned" xml:space="preserve">
+    <value>No roles assigned.</value>
+  </data>
+  <data name="RolRemoveRole" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="RolAddRole" xml:space="preserve">
+    <value>Add role</value>
+  </data>
+  <data name="RolSearchAccountPrompt" xml:space="preserve">
+    <value>Search for an account to manage its roles.</value>
+  </data>
+  <data name="RolNameRequired" xml:space="preserve">
+    <value>Name is required.</value>
+  </data>
+  <data name="RolSlugAndNameRequired" xml:space="preserve">
+    <value>Slug and name are required.</value>
+  </data>
+  <data name="RolSaved" xml:space="preserve">
+    <value>Saved {0}.</value>
+  </data>
+  <data name="RolSaveFailed" xml:space="preserve">
+    <value>Save failed.</value>
+  </data>
+  <data name="RolDeleteTitle" xml:space="preserve">
+    <value>Delete role</value>
+  </data>
+  <data name="RolDeleteConfirm" xml:space="preserve">
+    <value>Delete '{0}' ({1})? This removes it from any accounts that hold it.</value>
+  </data>
+  <data name="RolDeleted" xml:space="preserve">
+    <value>Deleted {0}.</value>
+  </data>
+  <data name="RolDeleteFailed" xml:space="preserve">
+    <value>Failed to delete role.</value>
+  </data>
+  <data name="RolEnterUsername" xml:space="preserve">
+    <value>Enter a username to look up.</value>
+  </data>
+  <data name="RolAssigned" xml:space="preserve">
+    <value>Assigned {0}.</value>
+  </data>
+  <data name="RolAssignFailed" xml:space="preserve">
+    <value>Failed to assign role.</value>
+  </data>
+  <data name="RolRemoved" xml:space="preserve">
+    <value>Removed {0}.</value>
+  </data>
+  <data name="RolRemoveFailed" xml:space="preserve">
+    <value>Failed to remove role.</value>
+  </data>
+  <data name="RolScene" xml:space="preserve">
+    <value>Scene</value>
+  </data>
+  <data name="RolLiveScene" xml:space="preserve">
+    <value>Live Scene</value>
+  </data>
+  <data name="RolSceneNotFound" xml:space="preserve">
+    <value>Scene not found.</value>
+  </data>
+  <data name="RolSceneIn" xml:space="preserve">
+    <value>Scene in {0}</value>
+  </data>
+  <data name="RolLiveBadge" xml:space="preserve">
+    <value>LIVE</value>
+  </data>
+  <data name="RolPoseCount" xml:space="preserve">
+    <value>{0} pose(s)</value>
+  </data>
+  <data name="RolNoPoses" xml:space="preserve">
+    <value>No poses in this scene.</value>
+  </data>
+  <data name="RolWatchLive" xml:space="preserve">
+    <value>Watch Live</value>
+  </data>
+  <data name="RolBackToScenes" xml:space="preserve">
+    <value>Back to Scenes</value>
+  </data>
+  <data name="RolBackToActiveScenes" xml:space="preserve">
+    <value>Back to Active Scenes</value>
+  </data>
+  <data name="RolViewArchive" xml:space="preserve">
+    <value>View Archive</value>
+  </data>
+  <data name="RolNotConnected" xml:space="preserve">
+    <value>Not connected to the game — connect to post and receive live poses.</value>
+  </data>
+  <data name="RolWaitingForActivity" xml:space="preserve">
+    <value>Waiting for activity…</value>
+  </data>
+  <data name="RolModePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="RolModeSay" xml:space="preserve">
+    <value>Say</value>
+  </data>
+  <data name="RolModeSemipose" xml:space="preserve">
+    <value>Semipose</value>
+  </data>
+  <data name="RolComposePlaceholder" xml:space="preserve">
+    <value>Pose, say, or narrate…</value>
+  </data>
+  <data name="RolEditedBadge" xml:space="preserve">
+    <value>edited</value>
+  </data>
+  <data name="RolEditedTimes" xml:space="preserve">
+    <value>Edited {0} time(s)</value>
+  </data>
+  <data name="WidSceneLive" xml:space="preserve">
+    <value>LIVE</value>
+  </data>
+  <data name="WidScenePoseCount" xml:space="preserve">
+    <value>{0} pose(s)</value>
+  </data>
+  <data name="WidSceneIn" xml:space="preserve">
+    <value>Scene in {0}</value>
+  </data>
+  <data name="WidJoinScene" xml:space="preserve">
+    <value>Join Scene</value>
+  </data>
+  <data name="WidNoActiveScenes" xml:space="preserve">
+    <value>No active scenes right now.</value>
+  </data>
+  <data name="WidBrowseArchive" xml:space="preserve">
+    <value>Browse archive</value>
+  </data>
+  <data name="WidOnlineNow" xml:space="preserve">
+    <value>Online Now</value>
+  </data>
+  <data name="WidViewAllCount" xml:space="preserve">
+    <value>View all {0} →</value>
+  </data>
+  <data name="WidNobodyConnected" xml:space="preserve">
+    <value>No one is connected right now.</value>
+  </data>
+  <data name="WidConfigureQuickLinks" xml:space="preserve">
+    <value>Configure Quick Links</value>
+  </data>
+  <data name="WidNewHere" xml:space="preserve">
+    <value>New Here?</value>
+  </data>
+  <data name="WidNoCharacterYet" xml:space="preserve">
+    <value>You don't have a character yet</value>
+  </data>
+  <data name="WidCreateFirstCharacter" xml:space="preserve">
+    <value>Create your first character to start playing.</value>
+  </data>
+  <data name="WidCreateYourCharacter" xml:space="preserve">
+    <value>Create your character</value>
+  </data>
+  <data name="WidQuickstartIntro" xml:space="preserve">
+    <value>Get started by reading the wiki, browsing characters, or jumping into a scene.</value>
+  </data>
+  <data name="WidReadTheWiki" xml:space="preserve">
+    <value>Read the Wiki</value>
+  </data>
+  <data name="WidBrowseCharacters" xml:space="preserve">
+    <value>Browse Characters</value>
+  </data>
+  <data name="WidBrowseScenes" xml:space="preserve">
+    <value>Browse Scenes</value>
+  </data>
+  <data name="WidNewCharacter" xml:space="preserve">
+    <value>New character</value>
+  </data>
+  <data name="WidRecentWikiActivity" xml:space="preserve">
+    <value>Recent Wiki Activity</value>
+  </data>
+  <data name="WidNoRecentWikiActivity" xml:space="preserve">
+    <value>No recent wiki activity.</value>
+  </data>
+  <data name="WidSchemaUnavailable" xml:space="preserve">
+    <value>Widget schema unavailable.</value>
+  </data>
+  <data name="WidPlayersOnline" xml:space="preserve">
+    <value>Players Online</value>
+  </data>
+  <data name="WidActiveScenes" xml:space="preserve">
+    <value>Active Scenes</value>
+  </data>
+  <data name="WidFormNoPages" xml:space="preserve">
+    <value>This form has no pages.</value>
+  </data>
+  <data name="WidFormStep" xml:space="preserve">
+    <value>Step</value>
+  </data>
+  <data name="WidBack" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="WidNext" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="WidSubmit" xml:space="preserve">
+    <value>Submit</value>
+  </data>
+  <data name="WidAction" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="WidFieldRequired" xml:space="preserve">
+    <value>{0} is required.</value>
+  </data>
+  <data name="WidFillRequiredFields" xml:space="preserve">
+    <value>Please fill in the highlighted required fields.</value>
+  </data>
+  <data name="WidActionFailed" xml:space="preserve">
+    <value>The action failed.</value>
+  </data>
+  <data name="WidNothingToDisplay" xml:space="preserve">
+    <value>Nothing to display.</value>
+  </data>
+  <data name="WidTrustOfficial" xml:space="preserve">
+    <value>Official</value>
+  </data>
+  <data name="WidTrustCommunity" xml:space="preserve">
+    <value>Community</value>
+  </data>
+  <data name="WidTrustUnknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="WidTrustOfficialTooltip" xml:space="preserve">
+    <value>Maintained by the SharpMUSH organization</value>
+  </data>
+  <data name="WidTrustCommunityTooltip" xml:space="preserve">
+    <value>Known community source — review code before applying</value>
+  </data>
+  <data name="WidTrustUnknownTooltip" xml:space="preserve">
+    <value>Unreviewed source — inspect everything before applying</value>
+  </data>
+  <data name="WidGameStartingUp" xml:space="preserve">
+    <value>Game is starting up…</value>
+  </data>
+  <data name="WidWaitingForServer" xml:space="preserve">
+    <value>Waiting for the server to come online…</value>
+  </data>
+  <data name="WidPluginChangedReloading" xml:space="preserve">
+    <value>A plugin changed — reloading…</value>
+  </data>
+  <data name="WidWidgetRenderFailed" xml:space="preserve">
+    <value>This widget failed to render.</value>
+  </data>
+  <data name="WidLoadingWikiPage" xml:space="preserve">
+    <value>Loading wiki page</value>
+  </data>
 </root>
