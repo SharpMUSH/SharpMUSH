@@ -59,3 +59,15 @@ test('parity.lock_prec_setup2', $god, '@lock me=#TRUE & #FALSE | #FALSE', 'locke
 test('parity.lock_prec_false', $god, 'think elock(me/Basic, me)', '^0$');
 test('parity.lock_prec_setup3', $god, '@lock me=#FALSE & (#FALSE | #TRUE)', 'locked');
 test('parity.lock_prec_paren', $god, 'think elock(me/Basic, me)', '^0$');
+
+# --- HALT flag ------------------------------------------------------------
+# A HALTED object runs none of its softcode: process_expression returns PE_NOTHING for a
+# Halted executor (src/parse.c), so u() of its attribute yields the stored text unevaluated,
+# and clears again when the flag is removed.
+test('parity.halt_mk', $god, 'think create(HaltParity)', '.');
+test('parity.halt_attr', $god, '&C HaltParity=[add(1,2)]', '.');
+test('parity.halt_normal', $god, 'think u(HaltParity/C)', '^3$');
+test('parity.halt_set', $god, '@set HaltParity=HALT', '.');
+test('parity.halt_suppressed', $god, 'think u(HaltParity/C)', '^\[add\(1,2\)\]$');
+test('parity.halt_unset', $god, '@set HaltParity=!HALT', '.');
+test('parity.halt_restored', $god, 'think u(HaltParity/C)', '^3$');
