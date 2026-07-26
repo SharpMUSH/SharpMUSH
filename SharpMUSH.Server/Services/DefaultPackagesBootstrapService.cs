@@ -64,8 +64,19 @@ public class DefaultPackagesBootstrapService(
 
 	private async Task InstallOrUpgradeAsync(string packageId, CancellationToken cancellationToken)
 	{
-		var parsedForVersion = manifests.ParseManifest(BundledPackages.ManifestYaml(packageId));
-		var bundledVersion = parsedForVersion.IsT0 ? parsedForVersion.AsT0.Manifest.Version : null;
+		// Parse first and bail loudly on a bad manifest: an invalid embedded manifest is a build
+		// defect, and it must be reported whether or not the package happens to be installed
+		// already. Deciding the version gate first would swallow it on every game that has the
+		// package, because an unparsed manifest has no version to compare.
+		var parsed = manifests.ParseManifest(BundledPackages.ManifestYaml(packageId));
+		if (parsed.IsT1)
+		{
+			logger.LogError("Bundled {PackageId} manifest is invalid: {Issues}",
+				packageId, string.Join("; ", parsed.AsT1.Issues.Select(i => i.ToString())));
+			return;
+		}
+
+		var manifest = parsed.AsT0.Manifest;
 
 		var already = await registry.GetInstalledPackageAsync(packageId);
 		if (already.IsT0)
@@ -76,7 +87,7 @@ public class DefaultPackagesBootstrapService(
 			// created before GET`ONLINE was added to profile-handler, with no upgrade path short
 			// of a manual reinstall. Same-or-newer installed (an admin upgrade, a local fork) is
 			// left alone, and the apply below still resolves conflicts in favour of local edits.
-			if (!IsNewer(bundledVersion, already.AsT0.Version))
+			if (!IsNewer(manifest.Version, already.AsT0.Version))
 			{
 				logger.LogDebug("Package {PackageId} already installed (v{Version}); leaving it to the package manager.",
 					packageId, already.AsT0.Version);
@@ -84,18 +95,8 @@ public class DefaultPackagesBootstrapService(
 			}
 
 			logger.LogInformation("Upgrading bundled {PackageId} v{Installed} → v{Bundled}.",
-				packageId, already.AsT0.Version, bundledVersion);
+				packageId, already.AsT0.Version, manifest.Version);
 		}
-
-		var parsed = parsedForVersion;
-		if (parsed.IsT1)
-		{
-			logger.LogError("Bundled {PackageId} manifest is invalid: {Issues}",
-				packageId, string.Join("; ", parsed.AsT1.Issues.Select(i => i.ToString())));
-			return;
-		}
-
-		var manifest = parsed.AsT0.Manifest;
 
 		// Resolve any pre-existing conflicts in favor of what is already present (a game migrating
 		// off old hardcoded seeding) so the install never clobbers an admin's customizations.
