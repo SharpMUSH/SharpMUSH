@@ -839,7 +839,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(2); // both partial-matched
 		await Assert.That(exact).IsFalse(); // all were partial matches
-		// With NoTypePreference, right_type is not tracked but still != 1 → ambiguous
+																				// With NoTypePreference, right_type is not tracked but still != 1 → ambiguous
 		await Assert.That(rightType).IsNotEqualTo(1);
 	}
 

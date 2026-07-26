@@ -93,7 +93,7 @@ public class ChannelCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> CemitCommand: Test message")), 
+				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> CemitCommand: Test message")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 

@@ -69,7 +69,7 @@ public static class SceneSystemServiceCollectionExtensions
 	private static string ResolveProviderKey(IConfiguration? configuration)
 	{
 		var provider = configuration?[ProviderConfigKey]
-		               ?? Environment.GetEnvironmentVariable(ProviderConfigKey);
+									 ?? Environment.GetEnvironmentVariable(ProviderConfigKey);
 
 		return provider switch
 		{

@@ -181,12 +181,12 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		switch (frame.Kind)
 		{
 			case TerminalFrameKind.Markup:
-			{
-				var plainTrimmed = frame.Plain.TrimEnd('\r', '\n');
-				if (!string.IsNullOrEmpty(plainTrimmed))
-					AddLine(frame.Plain, frame.Html, TerminalLineSource.Server);
-				return;
-			}
+				{
+					var plainTrimmed = frame.Plain.TrimEnd('\r', '\n');
+					if (!string.IsNullOrEmpty(plainTrimmed))
+						AddLine(frame.Plain, frame.Html, TerminalLineSource.Server);
+					return;
+				}
 
 			case TerminalFrameKind.Html:
 				if (!string.IsNullOrEmpty(frame.Html))

@@ -135,7 +135,7 @@ public class DatabaseCommandTests
 	{
 		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable TestCommand"));
-		
+
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "No configuration option named 'TestCommand'.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);

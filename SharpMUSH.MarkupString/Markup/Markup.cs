@@ -18,20 +18,20 @@ public enum LinkKind { Url = 0, Command = 1 }
 /// </summary>
 public readonly record struct AnsiStructure
 {
-    public AnsiColor Foreground    { get; init; }
-    public AnsiColor Background    { get; init; }
-    public string?  LinkText       { get; init; }
-    public string?  LinkUrl        { get; init; }
-    public LinkKind LinkKind       { get; init; }
-    public bool     Blink          { get; init; }
-    public bool     Bold           { get; init; }
-    public bool     Clear          { get; init; }
-    public bool     Faint          { get; init; }
-    public bool     Inverted       { get; init; }
-    public bool     Italic         { get; init; }
-    public bool     Overlined      { get; init; }
-    public bool     Underlined     { get; init; }
-    public bool     StrikeThrough  { get; init; }
+	public AnsiColor Foreground { get; init; }
+	public AnsiColor Background { get; init; }
+	public string? LinkText { get; init; }
+	public string? LinkUrl { get; init; }
+	public LinkKind LinkKind { get; init; }
+	public bool Blink { get; init; }
+	public bool Bold { get; init; }
+	public bool Clear { get; init; }
+	public bool Faint { get; init; }
+	public bool Inverted { get; init; }
+	public bool Italic { get; init; }
+	public bool Overlined { get; init; }
+	public bool Underlined { get; init; }
+	public bool StrikeThrough { get; init; }
 }
 
 /// <summary>
@@ -39,8 +39,8 @@ public readonly record struct AnsiStructure
 /// </summary>
 public readonly record struct HtmlStructure
 {
-    public string  TagName    { get; init; }
-    public string? Attributes { get; init; }
+	public string TagName { get; init; }
+	public string? Attributes { get; init; }
 }
 
 /// <summary>
@@ -48,353 +48,353 @@ public readonly record struct HtmlStructure
 /// Implemented by NeutralMarkup, AnsiMarkup and HtmlMarkup.
 /// </summary>
 [JsonDerivedType(typeof(NeutralMarkup), "Neutral")]
-[JsonDerivedType(typeof(AnsiMarkup),    "Ansi")]
-[JsonDerivedType(typeof(HtmlMarkup),    "Html")]
+[JsonDerivedType(typeof(AnsiMarkup), "Ansi")]
+[JsonDerivedType(typeof(HtmlMarkup), "Html")]
 public interface IMarkup
 {
-    string Wrap(string text);
-    string WrapAndRestore(string text, IMarkup outerMarkup);
-    string WrapAs(string format, string text);
-    string WrapAndRestoreAs(string format, string text, IMarkup outerMarkup);
-    string Prefix { get; }
-    string Postfix { get; }
-    string Optimize(string text);
+	string Wrap(string text);
+	string WrapAndRestore(string text, IMarkup outerMarkup);
+	string WrapAs(string format, string text);
+	string WrapAndRestoreAs(string format, string text, IMarkup outerMarkup);
+	string Prefix { get; }
+	string Postfix { get; }
+	string Optimize(string text);
 }
 
 public sealed class NeutralMarkup : IMarkup
 {
-    public static readonly NeutralMarkup Instance = new();
+	public static readonly NeutralMarkup Instance = new();
 
-    public string Prefix  => string.Empty;
-    public string Postfix => string.Empty;
-    public string Wrap(string text)                                     => text;
-    public string WrapAndRestore(string text, IMarkup _)                => text;
-    public string WrapAs(string _format, string text)                   => text;
-    public string WrapAndRestoreAs(string _format, string text, IMarkup _) => text;
-    public string Optimize(string text)                                 => text;
+	public string Prefix => string.Empty;
+	public string Postfix => string.Empty;
+	public string Wrap(string text) => text;
+	public string WrapAndRestore(string text, IMarkup _) => text;
+	public string WrapAs(string _format, string text) => text;
+	public string WrapAndRestoreAs(string _format, string text, IMarkup _) => text;
+	public string Optimize(string text) => text;
 }
 
 public sealed class AnsiMarkup : IMarkup
 {
-    public AnsiStructure Details { get; }
+	public AnsiStructure Details { get; }
 
-    public AnsiMarkup(AnsiStructure details) => Details = details;
+	public AnsiMarkup(AnsiStructure details) => Details = details;
 
-    /// <summary>Factory with all optional named parameters matching the F# Create signature.</summary>
-    public static AnsiMarkup Create(
-        AnsiColor? foreground  = null,
-        AnsiColor? background  = null,
-        string?    linkText    = null,
-        string?    linkUrl     = null,
-        LinkKind   linkKind    = LinkKind.Url,
-        bool       blink       = false,
-        bool       bold        = false,
-        bool       clear       = false,
-        bool       faint       = false,
-        bool       inverted    = false,
-        bool       italic      = false,
-        bool       overlined   = false,
-        bool       underlined  = false,
-        bool       strikeThrough = false)
-    {
-        return new AnsiMarkup(new AnsiStructure
-        {
-            Foreground    = foreground  ?? AnsiColor.NoAnsi.Instance,
-            Background    = background  ?? AnsiColor.NoAnsi.Instance,
-            LinkText      = linkText    ?? string.Empty,
-            LinkUrl       = linkUrl     ?? string.Empty,
-            LinkKind      = linkKind,
-            Blink         = blink,
-            Bold          = bold,
-            Clear         = clear,
-            Faint         = faint,
-            Inverted      = inverted,
-            Italic        = italic,
-            Overlined     = overlined,
-            Underlined    = underlined,
-            StrikeThrough = strikeThrough,
-        });
-    }
+	/// <summary>Factory with all optional named parameters matching the F# Create signature.</summary>
+	public static AnsiMarkup Create(
+			AnsiColor? foreground = null,
+			AnsiColor? background = null,
+			string? linkText = null,
+			string? linkUrl = null,
+			LinkKind linkKind = LinkKind.Url,
+			bool blink = false,
+			bool bold = false,
+			bool clear = false,
+			bool faint = false,
+			bool inverted = false,
+			bool italic = false,
+			bool overlined = false,
+			bool underlined = false,
+			bool strikeThrough = false)
+	{
+		return new AnsiMarkup(new AnsiStructure
+		{
+			Foreground = foreground ?? AnsiColor.NoAnsi.Instance,
+			Background = background ?? AnsiColor.NoAnsi.Instance,
+			LinkText = linkText ?? string.Empty,
+			LinkUrl = linkUrl ?? string.Empty,
+			LinkKind = linkKind,
+			Blink = blink,
+			Bold = bold,
+			Clear = clear,
+			Faint = faint,
+			Inverted = inverted,
+			Italic = italic,
+			Overlined = overlined,
+			Underlined = underlined,
+			StrikeThrough = strikeThrough,
+		});
+	}
 
-    /// <summary>Returns CSS class names for non-color formatting attributes.</summary>
-    public static IReadOnlyList<string> HtmlClassNames(AnsiStructure d)
-    {
-        var list = new List<string>();
-        if (d.Bold)          list.Add("ms-bold");
-        if (d.Faint)         list.Add("ms-faint");
-        if (d.Italic)        list.Add("ms-italic");
-        if (d.Underlined)    list.Add("ms-underline");
-        if (d.StrikeThrough) list.Add("ms-strike");
-        if (d.Overlined)     list.Add("ms-overline");
-        if (d.Blink)         list.Add("ms-blink");
-        return list;
-    }
+	/// <summary>Returns CSS class names for non-color formatting attributes.</summary>
+	public static IReadOnlyList<string> HtmlClassNames(AnsiStructure d)
+	{
+		var list = new List<string>();
+		if (d.Bold) list.Add("ms-bold");
+		if (d.Faint) list.Add("ms-faint");
+		if (d.Italic) list.Add("ms-italic");
+		if (d.Underlined) list.Add("ms-underline");
+		if (d.StrikeThrough) list.Add("ms-strike");
+		if (d.Overlined) list.Add("ms-overline");
+		if (d.Blink) list.Add("ms-blink");
+		return list;
+	}
 
-    private static string? ColorToHex(AnsiColor color) => color switch
-    {
-        AnsiColor.NoAnsi          => null,
-        AnsiColor.RGB c           => $"#{c.Value.R:x2}{c.Value.G:x2}{c.Value.B:x2}",
-        AnsiColor.ANSI bytes =>
-            (ANSI.AnsiToRgb(bytes.Value)) is var rgb
-                ? $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}"
-                : null,
-        _ => throw new NotSupportedException()
-    };
+	private static string? ColorToHex(AnsiColor color) => color switch
+	{
+		AnsiColor.NoAnsi => null,
+		AnsiColor.RGB c => $"#{c.Value.R:x2}{c.Value.G:x2}{c.Value.B:x2}",
+		AnsiColor.ANSI bytes =>
+				(ANSI.AnsiToRgb(bytes.Value)) is var rgb
+						? $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}"
+						: null,
+		_ => throw new NotSupportedException()
+	};
 
-    /// <summary>
-    /// Returns true if a URL is safe to render as a navigable hyperlink. Relative URLs
-    /// (no scheme) and a small allow-list of schemes are permitted; dangerous schemes such
-    /// as <c>javascript:</c>, <c>data:</c>, <c>vbscript:</c>, and <c>file:</c> are rejected so
-    /// they render as plain text rather than clickable links. Applies to URL links only —
-    /// command links carry a MUSH command in <c>xch_cmd</c>, never a browser-navigable href.
-    /// </summary>
-    public static bool IsSafeNavigableUrl(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url)) return false;
-        if (!Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var uri)) return false;
-        if (!uri.IsAbsoluteUri) return true; // relative / anchor => safe
-        return uri.Scheme.ToLowerInvariant() is "http" or "https" or "mailto" or "ftp" or "ftps" or "tel";
-    }
+	/// <summary>
+	/// Returns true if a URL is safe to render as a navigable hyperlink. Relative URLs
+	/// (no scheme) and a small allow-list of schemes are permitted; dangerous schemes such
+	/// as <c>javascript:</c>, <c>data:</c>, <c>vbscript:</c>, and <c>file:</c> are rejected so
+	/// they render as plain text rather than clickable links. Applies to URL links only —
+	/// command links carry a MUSH command in <c>xch_cmd</c>, never a browser-navigable href.
+	/// </summary>
+	public static bool IsSafeNavigableUrl(string url)
+	{
+		if (string.IsNullOrWhiteSpace(url)) return false;
+		if (!Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var uri)) return false;
+		if (!uri.IsAbsoluteUri) return true; // relative / anchor => safe
+		return uri.Scheme.ToLowerInvariant() is "http" or "https" or "mailto" or "ftp" or "ftps" or "tel";
+	}
 
-    /// <summary>Renders AnsiStructure as an HTML span with inline style + CSS classes.</summary>
-    public static string WrapAsHtmlClass(AnsiStructure d, string text)
-    {
-        var (fg, bg) = d.Inverted ? (d.Background, d.Foreground) : (d.Foreground, d.Background);
+	/// <summary>Renders AnsiStructure as an HTML span with inline style + CSS classes.</summary>
+	public static string WrapAsHtmlClass(AnsiStructure d, string text)
+	{
+		var (fg, bg) = d.Inverted ? (d.Background, d.Foreground) : (d.Foreground, d.Background);
 
-        var styles = new List<string>();
-        if (ColorToHex(fg) is string fgHex) styles.Add($"color: {fgHex}");
-        if (ColorToHex(bg) is string bgHex) styles.Add($"background-color: {bgHex}");
+		var styles = new List<string>();
+		if (ColorToHex(fg) is string fgHex) styles.Add($"color: {fgHex}");
+		if (ColorToHex(bg) is string bgHex) styles.Add($"background-color: {bgHex}");
 
-        var classes = HtmlClassNames(d);
+		var classes = HtmlClassNames(d);
 
-        // Wrap hyperlink. Command links run a MUSH command (xch_cmd, intercepted by the
-        // WASM terminal); URL links navigate in a new tab. A command link has no href, so it
-        // carries role="button" + tabindex="0" to stay keyboard-focusable/activatable.
-        // URL links with an unsafe scheme (e.g. javascript:) fall back to plain text.
-        string inner = text;
-        if (d.LinkUrl is { Length: > 0 } url)
-        {
-            var title = d.LinkText is { Length: > 0 } hint
-                ? $" title=\"{WebUtility.HtmlEncode(hint)}\""
-                : "";
-            if (d.LinkKind == LinkKind.Command)
-                inner = $"<a class=\"ms-cmd-link\" role=\"button\" tabindex=\"0\" xch_cmd=\"{WebUtility.HtmlEncode(url)}\"{title}>{text}</a>";
-            else if (IsSafeNavigableUrl(url))
-                inner = $"<a href=\"{WebUtility.HtmlEncode(url)}\" target=\"_blank\" rel=\"noopener noreferrer\"{title}>{text}</a>";
-        }
+		// Wrap hyperlink. Command links run a MUSH command (xch_cmd, intercepted by the
+		// WASM terminal); URL links navigate in a new tab. A command link has no href, so it
+		// carries role="button" + tabindex="0" to stay keyboard-focusable/activatable.
+		// URL links with an unsafe scheme (e.g. javascript:) fall back to plain text.
+		string inner = text;
+		if (d.LinkUrl is { Length: > 0 } url)
+		{
+			var title = d.LinkText is { Length: > 0 } hint
+					? $" title=\"{WebUtility.HtmlEncode(hint)}\""
+					: "";
+			if (d.LinkKind == LinkKind.Command)
+				inner = $"<a class=\"ms-cmd-link\" role=\"button\" tabindex=\"0\" xch_cmd=\"{WebUtility.HtmlEncode(url)}\"{title}>{text}</a>";
+			else if (IsSafeNavigableUrl(url))
+				inner = $"<a href=\"{WebUtility.HtmlEncode(url)}\" target=\"_blank\" rel=\"noopener noreferrer\"{title}>{text}</a>";
+		}
 
-        string styleAttr = styles.Count > 0 ? $" style=\"{string.Join("; ", styles)}\"" : "";
-        string classAttr = classes.Count > 0 ? $" class=\"{string.Join(" ", classes)}\"" : "";
+		string styleAttr = styles.Count > 0 ? $" style=\"{string.Join("; ", styles)}\"" : "";
+		string classAttr = classes.Count > 0 ? $" class=\"{string.Join(" ", classes)}\"" : "";
 
-        return (styleAttr.Length == 0 && classAttr.Length == 0)
-            ? inner
-            : $"<span{styleAttr}{classAttr}>{inner}</span>";
-    }
+		return (styleAttr.Length == 0 && classAttr.Length == 0)
+				? inner
+				: $"<span{styleAttr}{classAttr}>{inner}</span>";
+	}
 
-    public static string WrapAsPueblo(AnsiStructure d, string text)
-    {
-        var (fg, bg) = d.Inverted ? (d.Background, d.Foreground) : (d.Foreground, d.Background);
-        string t = text;
-        if (d.StrikeThrough) t = $"<S>{t}</S>";
-        if (d.Overlined)     t = $"<SPAN STYLE=\"text-decoration: overline\">{t}</SPAN>";
-        if (d.Underlined)    t = $"<U>{t}</U>";
-        if (d.Italic)        t = $"<I>{t}</I>";
-        if (d.Bold)          t = $"<B>{t}</B>";
-        if (d.LinkUrl is { Length: > 0 } url)
-        {
-            if (d.LinkKind == LinkKind.Command)
-            {
-                var hint = d.LinkText is { Length: > 0 } h
-                    ? $" XCH_HINT=\"{WebUtility.HtmlEncode(h)}\""
-                    : "";
-                t = $"<A XCH_CMD=\"{WebUtility.HtmlEncode(url)}\"{hint}>{t}</A>";
-            }
-            else if (IsSafeNavigableUrl(url))
-            {
-                t = $"<A HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</A>";
-            }
-        }
-        if (ColorToHex(bg) is string bgHex) t = $"<SPAN STYLE=\"background-color: {bgHex}\">{t}</SPAN>";
-        if (ColorToHex(fg) is string fgHex) t = $"<FONT COLOR=\"{fgHex}\">{t}</FONT>";
-        return t;
-    }
+	public static string WrapAsPueblo(AnsiStructure d, string text)
+	{
+		var (fg, bg) = d.Inverted ? (d.Background, d.Foreground) : (d.Foreground, d.Background);
+		string t = text;
+		if (d.StrikeThrough) t = $"<S>{t}</S>";
+		if (d.Overlined) t = $"<SPAN STYLE=\"text-decoration: overline\">{t}</SPAN>";
+		if (d.Underlined) t = $"<U>{t}</U>";
+		if (d.Italic) t = $"<I>{t}</I>";
+		if (d.Bold) t = $"<B>{t}</B>";
+		if (d.LinkUrl is { Length: > 0 } url)
+		{
+			if (d.LinkKind == LinkKind.Command)
+			{
+				var hint = d.LinkText is { Length: > 0 } h
+						? $" XCH_HINT=\"{WebUtility.HtmlEncode(h)}\""
+						: "";
+				t = $"<A XCH_CMD=\"{WebUtility.HtmlEncode(url)}\"{hint}>{t}</A>";
+			}
+			else if (IsSafeNavigableUrl(url))
+			{
+				t = $"<A HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</A>";
+			}
+		}
+		if (ColorToHex(bg) is string bgHex) t = $"<SPAN STYLE=\"background-color: {bgHex}\">{t}</SPAN>";
+		if (ColorToHex(fg) is string fgHex) t = $"<FONT COLOR=\"{fgHex}\">{t}</FONT>";
+		return t;
+	}
 
-    public static string WrapAsBBCode(AnsiStructure d, string text)
-    {
-        var fg = d.Inverted ? d.Background : d.Foreground;
-        string t = text;
-        if (d.StrikeThrough) t = $"[s]{t}[/s]";
-        if (d.Underlined)    t = $"[u]{t}[/u]";
-        if (d.Italic)        t = $"[i]{t}[/i]";
-        if (d.Bold)          t = $"[b]{t}[/b]";
-        // BBCode has no command-link concept — only safe URL links are wrapped.
-        if (d.LinkUrl is { Length: > 0 } url && d.LinkKind == LinkKind.Url && IsSafeNavigableUrl(url))
-            t = $"[url={url}]{t}[/url]";
-        if (ColorToHex(fg) is string fgHex) t = $"[color={fgHex}]{t}[/color]";
-        return t;
-    }
+	public static string WrapAsBBCode(AnsiStructure d, string text)
+	{
+		var fg = d.Inverted ? d.Background : d.Foreground;
+		string t = text;
+		if (d.StrikeThrough) t = $"[s]{t}[/s]";
+		if (d.Underlined) t = $"[u]{t}[/u]";
+		if (d.Italic) t = $"[i]{t}[/i]";
+		if (d.Bold) t = $"[b]{t}[/b]";
+		// BBCode has no command-link concept — only safe URL links are wrapped.
+		if (d.LinkUrl is { Length: > 0 } url && d.LinkKind == LinkKind.Url && IsSafeNavigableUrl(url))
+			t = $"[url={url}]{t}[/url]";
+		if (ColorToHex(fg) is string fgHex) t = $"[color={fgHex}]{t}[/color]";
+		return t;
+	}
 
-    public static string WrapAsMxp(AnsiStructure d, string text)
-    {
-        var (fg, bg) = d.Inverted ? (d.Background, d.Foreground) : (d.Foreground, d.Background);
-        string t = text;
-        if (d.StrikeThrough) t = $"<S>{t}</S>";
-        if (d.Underlined)    t = $"<U>{t}</U>";
-        if (d.Italic)        t = $"<I>{t}</I>";
-        if (d.Bold)          t = $"<B>{t}</B>";
-        if (d.LinkUrl is { Length: > 0 } url)
-        {
-            if (d.LinkKind == LinkKind.Command)
-            {
-                var hint = d.LinkText is { Length: > 0 } h
-                    ? $" HINT=\"{WebUtility.HtmlEncode(h)}\""
-                    : "";
-                t = $"<SEND HREF=\"{WebUtility.HtmlEncode(url)}\"{hint}>{t}</SEND>";
-            }
-            else if (IsSafeNavigableUrl(url))
-            {
-                t = $"<A HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</A>";
-            }
-        }
-        string? fgHex = ColorToHex(fg);
-        string? bgHex = ColorToHex(bg);
-        t = (fgHex, bgHex) switch
-        {
-            ({ } f, { } b) => $"<COLOR FORE=\"{f}\" BACK=\"{b}\">{t}</COLOR>",
-            ({ } f, null)  => $"<COLOR FORE=\"{f}\">{t}</COLOR>",
-            (null, { } b)  => $"<COLOR BACK=\"{b}\">{t}</COLOR>",
-            _              => t,
-        };
-        return t;
-    }
+	public static string WrapAsMxp(AnsiStructure d, string text)
+	{
+		var (fg, bg) = d.Inverted ? (d.Background, d.Foreground) : (d.Foreground, d.Background);
+		string t = text;
+		if (d.StrikeThrough) t = $"<S>{t}</S>";
+		if (d.Underlined) t = $"<U>{t}</U>";
+		if (d.Italic) t = $"<I>{t}</I>";
+		if (d.Bold) t = $"<B>{t}</B>";
+		if (d.LinkUrl is { Length: > 0 } url)
+		{
+			if (d.LinkKind == LinkKind.Command)
+			{
+				var hint = d.LinkText is { Length: > 0 } h
+						? $" HINT=\"{WebUtility.HtmlEncode(h)}\""
+						: "";
+				t = $"<SEND HREF=\"{WebUtility.HtmlEncode(url)}\"{hint}>{t}</SEND>";
+			}
+			else if (IsSafeNavigableUrl(url))
+			{
+				t = $"<A HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</A>";
+			}
+		}
+		string? fgHex = ColorToHex(fg);
+		string? bgHex = ColorToHex(bg);
+		t = (fgHex, bgHex) switch
+		{
+			({ } f, { } b) => $"<COLOR FORE=\"{f}\" BACK=\"{b}\">{t}</COLOR>",
+			({ } f, null) => $"<COLOR FORE=\"{f}\">{t}</COLOR>",
+			(null, { } b) => $"<COLOR BACK=\"{b}\">{t}</COLOR>",
+			_ => t,
+		};
+		return t;
+	}
 
-    public static ANSIString ApplyDetails(AnsiStructure d, string text)
-    {
-        var s = text.ToANSI();
-        // OSC 8 hyperlinks can only navigate, so command links — and unsafe URL schemes —
-        // render as plain text.
-        if (d.LinkUrl is { Length: > 0 } url && d.LinkKind == LinkKind.Url && IsSafeNavigableUrl(url))
-            s = s.LinkANSI(url);
-        if (d.Foreground is not AnsiColor.NoAnsi) s = s.ColorANSI(d.Foreground);
-        if (d.Background is not AnsiColor.NoAnsi) s = s.BackgroundANSI(d.Background);
-        if (d.Blink)          s = s.BlinkANSI();
-        if (d.Bold)           s = s.BoldANSI();
-        if (d.Faint)          s = s.FaintANSI();
-        if (d.Italic)         s = s.ItalicANSI();
-        if (d.Overlined)      s = s.OverlinedANSI();
-        if (d.Underlined)     s = s.UnderlinedANSI();
-        if (d.StrikeThrough)  s = s.StrikeThroughANSI();
-        if (d.Inverted)       s = s.InvertedANSI();
-        if (d.Clear)          s = s.ClearANSI();
-        return s;
-    }
+	public static ANSIString ApplyDetails(AnsiStructure d, string text)
+	{
+		var s = text.ToANSI();
+		// OSC 8 hyperlinks can only navigate, so command links — and unsafe URL schemes —
+		// render as plain text.
+		if (d.LinkUrl is { Length: > 0 } url && d.LinkKind == LinkKind.Url && IsSafeNavigableUrl(url))
+			s = s.LinkANSI(url);
+		if (d.Foreground is not AnsiColor.NoAnsi) s = s.ColorANSI(d.Foreground);
+		if (d.Background is not AnsiColor.NoAnsi) s = s.BackgroundANSI(d.Background);
+		if (d.Blink) s = s.BlinkANSI();
+		if (d.Bold) s = s.BoldANSI();
+		if (d.Faint) s = s.FaintANSI();
+		if (d.Italic) s = s.ItalicANSI();
+		if (d.Overlined) s = s.OverlinedANSI();
+		if (d.Underlined) s = s.UnderlinedANSI();
+		if (d.StrikeThrough) s = s.StrikeThroughANSI();
+		if (d.Inverted) s = s.InvertedANSI();
+		if (d.Clear) s = s.ClearANSI();
+		return s;
+	}
 
-    public string Prefix  => string.Empty;
-    public string Postfix => string.Empty.EndWithTrueClear().ToString();
+	public string Prefix => string.Empty;
+	public string Postfix => string.Empty.EndWithTrueClear().ToString();
 
-    public string Optimize(string text) => Optimization.Optimize(text);
+	public string Optimize(string text) => Optimization.Optimize(text);
 
-    public string Wrap(string text) =>
-        ApplyDetails(Details, text).ToString().EndWithTrueClear().ToString();
+	public string Wrap(string text) =>
+			ApplyDetails(Details, text).ToString().EndWithTrueClear().ToString();
 
-    public string WrapAndRestore(string text, IMarkup outerMarkup)
-    {
-        var applied = ApplyDetails(Details, text).ToString();
-        string restore = outerMarkup switch
-        {
-            AnsiMarkup am when am.Details.Equals(Details) =>
-                string.Empty.ToANSI().ToString(),
-            AnsiMarkup am =>
-                BuildRestore(am.Details).ToString(),
-            HtmlMarkup => string.Empty,
-            _ => throw new Exception("Unknown markup type")
-        };
-        return applied + restore;
-    }
+	public string WrapAndRestore(string text, IMarkup outerMarkup)
+	{
+		var applied = ApplyDetails(Details, text).ToString();
+		string restore = outerMarkup switch
+		{
+			AnsiMarkup am when am.Details.Equals(Details) =>
+					string.Empty.ToANSI().ToString(),
+			AnsiMarkup am =>
+					BuildRestore(am.Details).ToString(),
+			HtmlMarkup => string.Empty,
+			_ => throw new Exception("Unknown markup type")
+		};
+		return applied + restore;
+	}
 
-    private static ANSIString BuildRestore(AnsiStructure d)
-    {
-        var s = string.Empty.ToANSI();
-        if (d.Foreground is not AnsiColor.NoAnsi) s = s.ColorANSI(d.Foreground);
-        if (d.Background is not AnsiColor.NoAnsi) s = s.BackgroundANSI(d.Background);
-        if (d.Blink)          s = s.BlinkANSI();
-        if (d.Bold)           s = s.BoldANSI();
-        if (d.Faint)          s = s.FaintANSI();
-        if (d.Italic)         s = s.ItalicANSI();
-        if (d.Overlined)      s = s.OverlinedANSI();
-        if (d.Underlined)     s = s.UnderlinedANSI();
-        if (d.StrikeThrough)  s = s.StrikeThroughANSI();
-        if (d.Inverted)       s = s.InvertedANSI();
-        return s;
-    }
+	private static ANSIString BuildRestore(AnsiStructure d)
+	{
+		var s = string.Empty.ToANSI();
+		if (d.Foreground is not AnsiColor.NoAnsi) s = s.ColorANSI(d.Foreground);
+		if (d.Background is not AnsiColor.NoAnsi) s = s.BackgroundANSI(d.Background);
+		if (d.Blink) s = s.BlinkANSI();
+		if (d.Bold) s = s.BoldANSI();
+		if (d.Faint) s = s.FaintANSI();
+		if (d.Italic) s = s.ItalicANSI();
+		if (d.Overlined) s = s.OverlinedANSI();
+		if (d.Underlined) s = s.UnderlinedANSI();
+		if (d.StrikeThrough) s = s.StrikeThroughANSI();
+		if (d.Inverted) s = s.InvertedANSI();
+		return s;
+	}
 
-    public string WrapAs(string format, string text) => format.ToLower() switch
-    {
-        "html"     => WrapAsHtmlClass(Details, text),
-        "pueblo"   => WrapAsPueblo(Details, text),
-        "bbcode"   => WrapAsBBCode(Details, text),
-        "mxp"      => WrapAsMxp(Details, text),
-        _          => Wrap(text),
-    };
+	public string WrapAs(string format, string text) => format.ToLower() switch
+	{
+		"html" => WrapAsHtmlClass(Details, text),
+		"pueblo" => WrapAsPueblo(Details, text),
+		"bbcode" => WrapAsBBCode(Details, text),
+		"mxp" => WrapAsMxp(Details, text),
+		_ => Wrap(text),
+	};
 
-    public string WrapAndRestoreAs(string format, string text, IMarkup outerMarkup) =>
-        format.ToLower() switch
-        {
-            "html"   => WrapAsHtmlClass(Details, text),
-            "pueblo" => WrapAsPueblo(Details, text),
-            "bbcode" => WrapAsBBCode(Details, text),
-            "mxp"    => WrapAsMxp(Details, text),
-            _        => WrapAndRestore(text, outerMarkup),
-        };
+	public string WrapAndRestoreAs(string format, string text, IMarkup outerMarkup) =>
+			format.ToLower() switch
+			{
+				"html" => WrapAsHtmlClass(Details, text),
+				"pueblo" => WrapAsPueblo(Details, text),
+				"bbcode" => WrapAsBBCode(Details, text),
+				"mxp" => WrapAsMxp(Details, text),
+				_ => WrapAndRestore(text, outerMarkup),
+			};
 }
 
 public sealed class HtmlMarkup : IMarkup
 {
-    public HtmlStructure Details { get; }
+	public HtmlStructure Details { get; }
 
-    public HtmlMarkup(HtmlStructure details) => Details = details;
+	public HtmlMarkup(HtmlStructure details) => Details = details;
 
-    public static HtmlMarkup Create(string tagName, string? attributes = null) =>
-        new(new HtmlStructure { TagName = tagName, Attributes = attributes });
+	public static HtmlMarkup Create(string tagName, string? attributes = null) =>
+			new(new HtmlStructure { TagName = tagName, Attributes = attributes });
 
-    public static string WrapAsAnsi(HtmlStructure d, string text)
-    {
-        AnsiStructure? ansiDetails = d.TagName.ToLowerInvariant() switch
-        {
-            "b" or "strong"         => AnsiMarkup.Create(bold: true).Details,
-            "i" or "em"             => AnsiMarkup.Create(italic: true).Details,
-            "u"                     => AnsiMarkup.Create(underlined: true).Details,
-            "s" or "strike" or "del"=> AnsiMarkup.Create(strikeThrough: true).Details,
-            _                       => null,
-        };
-        return ansiDetails.HasValue
-            ? AnsiMarkup.ApplyDetails(ansiDetails.Value, text).ToString().EndWithTrueClear().ToString()
-            : text;
-    }
+	public static string WrapAsAnsi(HtmlStructure d, string text)
+	{
+		AnsiStructure? ansiDetails = d.TagName.ToLowerInvariant() switch
+		{
+			"b" or "strong" => AnsiMarkup.Create(bold: true).Details,
+			"i" or "em" => AnsiMarkup.Create(italic: true).Details,
+			"u" => AnsiMarkup.Create(underlined: true).Details,
+			"s" or "strike" or "del" => AnsiMarkup.Create(strikeThrough: true).Details,
+			_ => null,
+		};
+		return ansiDetails.HasValue
+				? AnsiMarkup.ApplyDetails(ansiDetails.Value, text).ToString().EndWithTrueClear().ToString()
+				: text;
+	}
 
-    public string Prefix  => string.Empty;
-    public string Postfix => string.Empty;
+	public string Prefix => string.Empty;
+	public string Postfix => string.Empty;
 
-    public string Wrap(string text) => Details.Attributes is { } attrs
-        ? $"<{Details.TagName} {attrs}>{text}</{Details.TagName}>"
-        : $"<{Details.TagName}>{text}</{Details.TagName}>";
+	public string Wrap(string text) => Details.Attributes is { } attrs
+			? $"<{Details.TagName} {attrs}>{text}</{Details.TagName}>"
+			: $"<{Details.TagName}>{text}</{Details.TagName}>";
 
-    public string WrapAndRestore(string text, IMarkup _) => Wrap(text);
+	public string WrapAndRestore(string text, IMarkup _) => Wrap(text);
 
-    public string WrapAs(string format, string text) => format.ToLower() switch
-    {
-        "ansi"                          => WrapAsAnsi(Details, text),
-        "bbcode" or "plaintext" or "plain" => text,
-        _                               => Wrap(text),
-    };
+	public string WrapAs(string format, string text) => format.ToLower() switch
+	{
+		"ansi" => WrapAsAnsi(Details, text),
+		"bbcode" or "plaintext" or "plain" => text,
+		_ => Wrap(text),
+	};
 
-    public string WrapAndRestoreAs(string format, string text, IMarkup _) =>
-        format.ToLower() switch
-        {
-            "ansi"                             => WrapAsAnsi(Details, text),
-            "bbcode" or "plaintext" or "plain" => text,
-            _                                  => Wrap(text),
-        };
+	public string WrapAndRestoreAs(string format, string text, IMarkup _) =>
+			format.ToLower() switch
+			{
+				"ansi" => WrapAsAnsi(Details, text),
+				"bbcode" or "plaintext" or "plain" => text,
+				_ => Wrap(text),
+			};
 
-    public string Optimize(string text) => text;
+	public string Optimize(string text) => text;
 }

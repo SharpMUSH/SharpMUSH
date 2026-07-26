@@ -307,15 +307,15 @@ public static class AnsiEscapeParser
 						if (colorType == 5 && i + 2 < codes.Length) // 256-color
 						{
 							var colorIndex = codes[i + 2];
-					newState = newState with { Foreground = new AnsiColor.RGB(GetAnsi256Color(colorIndex)) };
-						i += 2;
-					}
-					else if (colorType == 2 && i + 4 < codes.Length) // RGB
-					{
-						var r = (byte)codes[i + 2];
-						var g = (byte)codes[i + 3];
-						var b = (byte)codes[i + 4];
-						newState = newState with { Foreground = new AnsiColor.RGB(Color.FromArgb(r, g, b)) };
+							newState = newState with { Foreground = new AnsiColor.RGB(GetAnsi256Color(colorIndex)) };
+							i += 2;
+						}
+						else if (colorType == 2 && i + 4 < codes.Length) // RGB
+						{
+							var r = (byte)codes[i + 2];
+							var g = (byte)codes[i + 3];
+							var b = (byte)codes[i + 4];
+							newState = newState with { Foreground = new AnsiColor.RGB(Color.FromArgb(r, g, b)) };
 							i += 4;
 						}
 					}
@@ -328,15 +328,15 @@ public static class AnsiEscapeParser
 						if (colorType == 5 && i + 2 < codes.Length) // 256-color
 						{
 							var colorIndex = codes[i + 2];
-					newState = newState with { Background = new AnsiColor.RGB(GetAnsi256Color(colorIndex)) };
-						i += 2;
-					}
-					else if (colorType == 2 && i + 4 < codes.Length) // RGB
-					{
-						var r = (byte)codes[i + 2];
-						var g = (byte)codes[i + 3];
-						var b = (byte)codes[i + 4];
-						newState = newState with { Background = new AnsiColor.RGB(Color.FromArgb(r, g, b)) };
+							newState = newState with { Background = new AnsiColor.RGB(GetAnsi256Color(colorIndex)) };
+							i += 2;
+						}
+						else if (colorType == 2 && i + 4 < codes.Length) // RGB
+						{
+							var r = (byte)codes[i + 2];
+							var g = (byte)codes[i + 3];
+							var b = (byte)codes[i + 4];
+							newState = newState with { Background = new AnsiColor.RGB(Color.FromArgb(r, g, b)) };
 							i += 4;
 						}
 					}

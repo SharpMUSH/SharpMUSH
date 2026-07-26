@@ -142,12 +142,48 @@ A custom `SharpAccount` model (not ASP.NET Identity) manages web accounts (email
 
 ## Code Style
 
-- **C# files**: tabs, indent size 2
-- **Razor files**: spaces, indent size 4
+- **C# files**: tabs, indent size 2 — **enforced**, see below
+- **Razor files**: spaces, indent size 4 (not enforced; `dotnet format` does not process `.razor`)
+- **Line endings**: LF, pinned by `.gitattributes` (`* text=auto eol=lf`)
 - `TreatWarningsAsErrors` is enabled in most projects, but not all — notably `SharpMUSH.Tests.BUnit` and `SharpMUSH.Tests.ScenePlugin` do not set it (the source-generated projects and `templates/` don't either). `SharpMUSH.Tests`, `SharpMUSH.Tests.Infrastructure`, and `SharpMUSH.Tests.Integration` DO set it. Check the specific `.csproj` before assuming either way.
 - Prefer `var` throughout; no `this.` qualifier
 - Discriminated unions via `OneOf<T1, T2>` (never nullable returns from services)
 - Source-generated `Mediator` (not MediatR) for command/query dispatching
+
+### Formatting is enforced
+
+Two gates, both running `dotnet format whitespace` against `.editorconfig`:
+
+| Gate | Where | Scope | Cost |
+|---|---|---|---|
+| `VerifyEditorConfigFormatting` (`Directory.Build.targets`) | every local build | the project being built | ~0.8s, and only when that project's `.cs` files changed — a no-op rebuild pays nothing |
+| `format` job (`_dotnet-build-test.yml`) | CI | whole repo, one pass | ~2s |
+
+If a build fails with **`FORMAT001`**, fix it with the command in the error text:
+
+```bash
+dotnet format whitespace --folder <project-dir> --exclude "**/bin/**" --exclude "**/obj/**"
+```
+
+Run it until it reports no changes — **the formatter needs two passes to converge**.
+
+Escape hatch: `-p:SkipFormatVerification=true`. CI's build steps set it because the `format`
+job already covers everything.
+
+Two things to know before changing this:
+
+- **`IDE0055` does not work here.** `EnforceCodeStyleInBuild` with
+  `dotnet_diagnostic.IDE0055.severity = error` reports nothing for indentation on this SDK —
+  verified against a file with 93 space-indented lines, which built clean. It looks like a
+  gate and enforces nothing. That is why the check shells out to `dotnet format` instead.
+- **Use `--folder`, not the solution.** `dotnet format` cannot load `SharpMUSH.sln` on the
+  .NET 11 SDK; the MSBuild build host crashes. Whitespace rules are syntactic, so folder mode
+  loses nothing.
+
+`csharp_new_line_before_members_in_object_initializers = false` (`.editorconfig:13`) is **not**
+honoured by folder-mode formatting — it is a semantic option. Compact anonymous-object
+initializers will be expanded to one member per line by the formatter, and re-compacting them
+fails the gate.
 
 ## Design Documents
 

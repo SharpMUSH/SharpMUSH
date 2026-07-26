@@ -55,7 +55,7 @@ public class MessageCommandTests
 	}
 
 	[Test]
-	
+
 	public async ValueTask MessageUsesDefaultWhenAttributeMissing()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;

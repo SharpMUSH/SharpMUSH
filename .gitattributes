@@ -1,0 +1,24 @@
+# Normalize line endings on the way into the repository. Without this, a Windows
+# checkout with core.autocrlf=true commits CRLF, which is how 18 .cs files ended up
+# with CRLF in an otherwise LF tree — and how they would come back.
+* text=auto eol=lf
+
+# Binary assets: never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.dll binary
+*.exe binary
+*.snk binary
+
+# Generated lockfiles keep whatever the tool writes.
+package-lock.json -diff

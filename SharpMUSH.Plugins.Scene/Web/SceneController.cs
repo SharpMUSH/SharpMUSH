@@ -131,7 +131,7 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 
 		// Owner always sees their own scene (resolved from the live owner edge).
 		if (scene.OwnerDbref is { } owner &&
-		    string.Equals(NormalizeDbref(owner), NormalizeDbref(me), StringComparison.Ordinal))
+				string.Equals(NormalizeDbref(owner), NormalizeDbref(me), StringComparison.Ordinal))
 			return true;
 
 		// Otherwise the caller must hold a membership edge on the scene. The service accepts

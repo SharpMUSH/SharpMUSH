@@ -57,12 +57,12 @@ public class ManipulateSharpObjectService(
 				if (tryFindPlayerByName.Any(x =>
 							x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
 				{
-				if (notify)
-				{
-					await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerNameInUse), executor);
-				}
+					if (notify)
+					{
+						await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerNameInUse), executor);
+					}
 
-				return "#-1 PLAYER NAME ALREADY IN USE.";
+					return "#-1 PLAYER NAME ALREADY IN USE.";
 				}
 
 				var playerSplit = MModule.split(";", name);
@@ -81,12 +81,12 @@ public class ManipulateSharpObjectService(
 						.Intersect(aliases, StringComparer.InvariantCultureIgnoreCase)
 						.Any())
 				{
-				if (notify)
-				{
-					await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerAliasInUse), executor);
-				}
+					if (notify)
+					{
+						await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerAliasInUse), executor);
+					}
 
-				return "#-1 PLAYER ALIAS ALREADY IN USE.";
+					return "#-1 PLAYER ALIAS ALREADY IN USE.";
 				}
 
 				await attributeService.SetAttributeAsync(executor, obj, "ALIAS",

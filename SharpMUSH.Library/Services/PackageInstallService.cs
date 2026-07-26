@@ -696,25 +696,25 @@ public class PackageInstallService(
 				createdDbref = await database.CreateRoomAsync(PrimaryName(spec.Name), pmWizard, cancellationToken);
 				break;
 			case PackageObjectType.Thing:
-			{
-				var location = await ResolveContainerAsync(spec.Location, resolve, cancellationToken) ?? pmContainer;
-				createdDbref = await database.CreateThingAsync(
-					PrimaryName(spec.Name), location, pmWizard, location, cancellationToken);
-				break;
-			}
-			case PackageObjectType.Exit:
-			{
-				var location = await ResolveContainerAsync(spec.Location, resolve, cancellationToken);
-				if (location is null)
 				{
-					return new Error<string>($"Exit {{{{{spec.Ref}}}}}: source room is not resolvable.");
+					var location = await ResolveContainerAsync(spec.Location, resolve, cancellationToken) ?? pmContainer;
+					createdDbref = await database.CreateThingAsync(
+						PrimaryName(spec.Name), location, pmWizard, location, cancellationToken);
+					break;
 				}
+			case PackageObjectType.Exit:
+				{
+					var location = await ResolveContainerAsync(spec.Location, resolve, cancellationToken);
+					if (location is null)
+					{
+						return new Error<string>($"Exit {{{{{spec.Ref}}}}}: source room is not resolvable.");
+					}
 
-				var parts = spec.Name.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-				createdDbref = await database.CreateExitAsync(
-					parts[0], parts.Skip(1).ToArray(), location, pmWizard, cancellationToken);
-				break;
-			}
+					var parts = spec.Name.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+					createdDbref = await database.CreateExitAsync(
+						parts[0], parts.Skip(1).ToArray(), location, pmWizard, cancellationToken);
+					break;
+				}
 			default:
 				return new Error<string>($"Object type '{spec.Type}' is not supported by the apply engine.");
 		}
@@ -849,40 +849,40 @@ public class PackageInstallService(
 				return null;
 
 			case PackageAttributeAction.Conflict:
-			{
-				var decision = decisions[DecisionKey(change.TargetRef, change.Attribute)];
-				switch (decision.Resolution)
 				{
-					case PackageConflictResolution.TakeTheirs when change.Conflict == PackageConflictKind.ModifyDelete:
-						// "Theirs" is the deletion.
-						preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue!));
-						await database.ClearAttributeAsync(dbref.Value, path, cancellationToken);
-						await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
-						return null;
-					case PackageConflictResolution.TakeTheirs:
-						await WriteAsync(newValue!);
-						await BaselineAsync(newValue!, newValue!);
-						return null;
-					case PackageConflictResolution.UseCustom when decision.CustomValue is not null:
-						await WriteAsync(decision.CustomValue);
-						await BaselineAsync(newValue ?? decision.CustomValue, decision.CustomValue);
-						return null;
-					case PackageConflictResolution.UseCustom:
-						return $"Conflict {change.TargetRef}/{change.Attribute}: UseCustom requires a value.";
-					default: // KeepMine
-						if (change.Conflict == PackageConflictKind.ModifyDelete)
-						{
-							// Keep the local value; the package no longer manages it.
+					var decision = decisions[DecisionKey(change.TargetRef, change.Attribute)];
+					switch (decision.Resolution)
+					{
+						case PackageConflictResolution.TakeTheirs when change.Conflict == PackageConflictKind.ModifyDelete:
+							// "Theirs" is the deletion.
+							preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue!));
+							await database.ClearAttributeAsync(dbref.Value, path, cancellationToken);
 							await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
-							notes.Add($"{change.TargetRef}/{change.Attribute}: kept local value; no longer package-managed.");
 							return null;
-						}
+						case PackageConflictResolution.TakeTheirs:
+							await WriteAsync(newValue!);
+							await BaselineAsync(newValue!, newValue!);
+							return null;
+						case PackageConflictResolution.UseCustom when decision.CustomValue is not null:
+							await WriteAsync(decision.CustomValue);
+							await BaselineAsync(newValue ?? decision.CustomValue, decision.CustomValue);
+							return null;
+						case PackageConflictResolution.UseCustom:
+							return $"Conflict {change.TargetRef}/{change.Attribute}: UseCustom requires a value.";
+						default: // KeepMine
+							if (change.Conflict == PackageConflictKind.ModifyDelete)
+							{
+								// Keep the local value; the package no longer manages it.
+								await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
+								notes.Add($"{change.TargetRef}/{change.Attribute}: kept local value; no longer package-managed.");
+								return null;
+							}
 
-						// DeleteModify + KeepMine keeps the deletion: baseline advances, nothing live.
-						await BaselineAsync(newValue!, change.LiveValue);
-						return null;
+							// DeleteModify + KeepMine keeps the deletion: baseline advances, nothing live.
+							await BaselineAsync(newValue!, change.LiveValue);
+							return null;
+					}
 				}
-			}
 
 			default:
 				return $"Internal error: unhandled attribute action {change.Action}.";
@@ -1036,25 +1036,25 @@ public class PackageInstallService(
 				return null;
 
 			case PackageStructureAction.Conflict:
-			{
-				var decision = decisions[DecisionKey(change.TargetRef, LockDecisionAttribute(change.Element))];
-				switch (decision.Resolution)
 				{
-					case PackageConflictResolution.TakeTheirs when change.Conflict == PackageConflictKind.ModifyDelete:
-						await database.UnsetLockAsync(node.Object(), change.Element, cancellationToken);
-						return null;
-					case PackageConflictResolution.TakeTheirs:
-						await SetAsync(change.NewValue ?? "");
-						return null;
-					case PackageConflictResolution.UseCustom when decision.CustomValue is not null:
-						await SetAsync(decision.CustomValue);
-						return null;
-					case PackageConflictResolution.UseCustom:
-						return $"Lock conflict {change.TargetRef}/{change.Element}: UseCustom requires a value.";
-					default: // KeepMine — leave the live lock untouched.
-						return null;
+					var decision = decisions[DecisionKey(change.TargetRef, LockDecisionAttribute(change.Element))];
+					switch (decision.Resolution)
+					{
+						case PackageConflictResolution.TakeTheirs when change.Conflict == PackageConflictKind.ModifyDelete:
+							await database.UnsetLockAsync(node.Object(), change.Element, cancellationToken);
+							return null;
+						case PackageConflictResolution.TakeTheirs:
+							await SetAsync(change.NewValue ?? "");
+							return null;
+						case PackageConflictResolution.UseCustom when decision.CustomValue is not null:
+							await SetAsync(decision.CustomValue);
+							return null;
+						case PackageConflictResolution.UseCustom:
+							return $"Lock conflict {change.TargetRef}/{change.Element}: UseCustom requires a value.";
+						default: // KeepMine — leave the live lock untouched.
+							return null;
+					}
 				}
-			}
 
 			default: // Adopt / NoChange / KeepLocal / RemoveBaseline — no write.
 				return null;
