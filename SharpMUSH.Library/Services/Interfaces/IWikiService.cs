@@ -18,7 +18,10 @@ public interface IWikiService
 {
 	/// <summary>
 	/// Retrieves a wiki page by its (namespace, category, slug) identity.
-	/// <paramref name="category"/> is normalised (null/blank → <c>general</c>).
+	/// <paramref name="category"/> is normalised (null/blank → <c>general</c>) and
+	/// <paramref name="slug"/> is normalised the same way <see cref="CreateAsync"/> derives it from
+	/// a title (see <c>WikiHelpers.Slugify</c>), so callers may pass a display name such as
+	/// <c>"Mannaz Byron"</c> and reach the page stored as <c>mannaz_byron</c>.
 	/// Returns <c>NotFound</c> if no matching page exists.
 	/// </summary>
 	Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main);

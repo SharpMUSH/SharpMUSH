@@ -61,8 +61,8 @@ public class Startup(
 	DatabaseProvider databaseProvider = DatabaseProvider.ArangoDB,
 	string? memgraphUri = null)
 {
-// Cache name for the dedicated compiled boolean-lock expression cache.
-// Must match the [FromKeyedServices] key used in BooleanExpressionParser.
+	// Cache name for the dedicated compiled boolean-lock expression cache.
+	// Must match the [FromKeyedServices] key used in BooleanExpressionParser.
 	public const string CompiledExpressionsCacheName = "compiled-expressions";
 
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
@@ -208,27 +208,27 @@ public class Startup(
 		}
 
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
-/*
- * PennMUSH Password Compatibility - IMPLEMENTED
- *
- * SharpMUSH uses PBKDF2 with HMAC-SHA512, 128-bit salt, 256-bit subkey, 100000 iterations
- * for new passwords.
- *
- * PennMUSH uses SHA1 in password_hash, stored as: V:ALGO:HASH:TIMESTAMP
- * - V: Version number (Currently 2)
- * - ALGO: Digest algorithm (Default is SHA1)
- * - HASH: Salted hash (first 2 chars are salt prepended to plaintext before hashing)
- * - TIMESTAMP: Unix timestamp when password was set
- *
- * Salt characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
- *
- * The PasswordService now supports both formats:
- * - Verification: Detects PennMUSH format and uses SHA1/SHA256 verification as needed
- * - New passwords: Always use modern PBKDF2 (more secure)
- *
- * Users with imported PennMUSH passwords should reset their passwords for better security,
- * but can still log in with their old passwords until they do.
- */
+		/*
+		 * PennMUSH Password Compatibility - IMPLEMENTED
+		 *
+		 * SharpMUSH uses PBKDF2 with HMAC-SHA512, 128-bit salt, 256-bit subkey, 100000 iterations
+		 * for new passwords.
+		 *
+		 * PennMUSH uses SHA1 in password_hash, stored as: V:ALGO:HASH:TIMESTAMP
+		 * - V: Version number (Currently 2)
+		 * - ALGO: Digest algorithm (Default is SHA1)
+		 * - HASH: Salted hash (first 2 chars are salt prepended to plaintext before hashing)
+		 * - TIMESTAMP: Unix timestamp when password was set
+		 *
+		 * Salt characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
+		 *
+		 * The PasswordService now supports both formats:
+		 * - Verification: Detects PennMUSH format and uses SHA1/SHA256 verification as needed
+		 * - New passwords: Always use modern PBKDF2 (more secure)
+		 *
+		 * Users with imported PennMUSH passwords should reset their passwords for better security,
+		 * but can still log in with their old passwords until they do.
+		 */
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
@@ -312,25 +312,25 @@ public class Startup(
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
 
-// Wiki subsystem — backed by whichever ISharpDatabase is active (all three DB backends implement IWikiService).
+		// Wiki subsystem — backed by whichever ISharpDatabase is active (all three DB backends implement IWikiService).
 		services.AddSingleton<WikiMarkdigPipeline>();
 		services.AddSingleton<IWikiService>(sp => (IWikiService)sp.GetRequiredService<ISharpDatabase>());
 
-// Package registry — backed by whichever ISharpDatabase is active (all three DB backends implement IPackageRegistryService).
+		// Package registry — backed by whichever ISharpDatabase is active (all three DB backends implement IPackageRegistryService).
 		services.AddSingleton<IPackageRegistryService>(sp => (IPackageRegistryService)sp.GetRequiredService<ISharpDatabase>());
 
-// Dynamic Application registry (Area 21) — same pattern; every DB backend implements IApplicationRegistryService.
-// Wrapped in a read-only overlay decorator so the PluginCatalog's IApplicationSource contributions are unioned
-// into reads while their plugins are loaded (DB/built-in wins on a slug collision; plugin apps are not
-// persisted and not admin-editable). The DB-backed impl is the decorator's inner.
+		// Dynamic Application registry (Area 21) — same pattern; every DB backend implements IApplicationRegistryService.
+		// Wrapped in a read-only overlay decorator so the PluginCatalog's IApplicationSource contributions are unioned
+		// into reads while their plugins are loaded (DB/built-in wins on a slug collision; plugin apps are not
+		// persisted and not admin-editable). The DB-backed impl is the decorator's inner.
 		services.AddSingleton<IApplicationRegistryService>(sp =>
 			new Implementation.Services.PluginApplicationRegistryDecorator(
 				(IApplicationRegistryService)sp.GetRequiredService<ISharpDatabase>(),
 				sp.GetRequiredService<Implementation.Services.PluginCatalog>(),
 				sp.GetRequiredService<ILogger<Implementation.Services.PluginApplicationRegistryDecorator>>()));
-// Admin-customized layout registry — same cast pattern; every DB backend implements ILayoutRegistryService.
+		// Admin-customized layout registry — same cast pattern; every DB backend implements ILayoutRegistryService.
 		services.AddSingleton<ILayoutRegistryService>(sp => (ILayoutRegistryService)sp.GetRequiredService<ISharpDatabase>());
-// Portal RBAC role registry — same cast pattern; every DB backend implements IRoleRegistryService.
+		// Portal RBAC role registry — same cast pattern; every DB backend implements IRoleRegistryService.
 		services.AddSingleton<IRoleRegistryService>(sp => (IRoleRegistryService)sp.GetRequiredService<ISharpDatabase>());
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
@@ -340,7 +340,7 @@ public class Startup(
 		// which keys per-provider storage over the host-shared storage accessors registered above and wraps
 		// it with any registered behaviors. Removing the plugin leaves core with no scene storage.
 
-// Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
+		// Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
 		services.AddMemoryCache();
 		services.AddSingleton<Server.Services.IPrerenderCacheService, Server.Services.PrerenderCacheService>();
 
@@ -394,8 +394,8 @@ public class Startup(
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 			{
 				AutomaticDecompression = System.Net.DecompressionMethods.GZip
-				                         | System.Net.DecompressionMethods.Deflate
-				                         | System.Net.DecompressionMethods.Brotli
+																 | System.Net.DecompressionMethods.Deflate
+																 | System.Net.DecompressionMethods.Brotli
 			});
 		services.AddMediator();
 
@@ -436,9 +436,9 @@ public class Startup(
 
 		services.AddFusionCache().TryWithAutoSetup();
 
-// Dedicated cache for compiled boolean-lock expressions.
-// Uses a size-limited memory cache (max 1024 entries, 25% compaction) so rarely-used
-// entries are evicted first under memory pressure while hot entries stay resident.
+		// Dedicated cache for compiled boolean-lock expressions.
+		// Uses a size-limited memory cache (max 1024 entries, 25% compaction) so rarely-used
+		// entries are evicted first under memory pressure while hot entries stay resident.
 		services.AddFusionCache(CompiledExpressionsCacheName)
 			.WithMemoryCache(_ => new MemoryCache(new MemoryCacheOptions
 			{
@@ -449,8 +449,8 @@ public class Startup(
 		services.AddQuartz(x =>
 		{
 			x.UseInMemoryStore();
-// Serial execution ensures FIFO queue ordering, matching PennMUSH behavior
-// where the command queue processes one entry at a time.
+			// Serial execution ensures FIFO queue ordering, matching PennMUSH behavior
+			// where the command queue processes one entry at a time.
 			x.UseDefaultThreadPool(tp => tp.MaxConcurrency = 1);
 		});
 		// Single web credential: the account-session token. AccountSession is the default
@@ -558,8 +558,8 @@ public class Startup(
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
 
-// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection
-// Prometheus exporter is compatible with both GKE Managed Prometheus and standard Prometheus
+		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection
+		// Prometheus exporter is compatible with both GKE Managed Prometheus and standard Prometheus
 		var isGKE = LoggingConfiguration.IsRunningInGKE();
 		var isK8s = LoggingConfiguration.IsRunningInKubernetes();
 
@@ -576,7 +576,7 @@ public class Startup(
 					resource.AddDetector(new ContainerResourceDetector());
 				}
 
-// Add GKE-specific attributes for Google Cloud Monitoring compatibility
+				// Add GKE-specific attributes for Google Cloud Monitoring compatibility
 				if (isGKE)
 				{
 					var projectId = LoggingConfiguration.GetGoogleCloudProjectId();

@@ -64,13 +64,13 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 						? [
 							new KeyValuePair<string, MString>(x.groupIndex.ToString(), MModule.substring(x.group.Index, x.group.Length, trimmedCommandString)),
 							new KeyValuePair<string, MString>(x.group.Name, MModule.substring(x.group.Index, x.group.Length, trimmedCommandString))
-						  ]
+							]
 						// For wildcard patterns: generate only numeric index key (0-based) to avoid key
 						// collisions between a group's auto-generated name (e.g. "1") and the next
 						// group's 0-based index key (also "1"), which would cause wrong %1, %2 values.
 						: [
 							new KeyValuePair<string, MString>((x.groupIndex - 1).ToString(), MModule.substring(x.group.Index, x.group.Length, trimmedCommandString))
-						  ])
+							])
 				.GroupBy(kv => kv.Key)
 				.ToDictionary(kv => kv.Key, kv => new CallState(kv.First().Value, 0))
 			));

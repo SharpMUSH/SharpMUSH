@@ -94,8 +94,8 @@ public class PluginLoaderIntegrationTests
 
 		var sourceType = catalog.BridgeSources[0].GetType();
 		var ranField = sourceType.DeclaringType?.GetField("BridgeSubscriptionRan",
-			               BindingFlags.Public | BindingFlags.Static)
-		               ?? sourceType.GetField("BridgeSubscriptionRan", BindingFlags.Public | BindingFlags.Static);
+										 BindingFlags.Public | BindingFlags.Static)
+									 ?? sourceType.GetField("BridgeSubscriptionRan", BindingFlags.Public | BindingFlags.Static);
 		await Assert.That(ranField).IsNotNull();
 
 		var ran = false;

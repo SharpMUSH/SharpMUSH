@@ -22,7 +22,7 @@
                     @(wp.Title.Length > 0 ? wp.Title[0].ToString().ToUpper() : "W")
                 </MudAvatar>
                 <div style="flex:1;min-width:0;">
-                    <MudLink Href="@($"/wiki/{wp.Namespace}/{wp.Category}/{wp.Slug}")" Style="color:var(--text);font-size:0.8125rem;font-weight:500;">@wp.Title</MudLink>
+                    <MudLink Href="@WikiRoutes.PathFor(wp.Namespace, wp.Category, wp.Slug)" Style="color:var(--text);font-size:0.8125rem;font-weight:500;">@wp.Title</MudLink>
                     <MudText Style="font-size:0.6875rem;color:var(--text-faint);">@wp.UpdatedAt.ToLocalTime().ToString("MMM d")</MudText>
                 </div>
             </div>

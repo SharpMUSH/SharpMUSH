@@ -225,6 +225,6 @@ public static class TestHelpers
 				 (c.GetArguments()[0] is DBRef d && d == receiverDbRef)) &&
 				(senderDbRef == null ||
 				 (c.GetArguments().Length >= 3 &&
-				  ((c.GetArguments()[2] is AnySharpObject sObj && sObj.Object().DBRef == senderDbRef) ||
-				   (c.GetArguments()[2] is DBRef sd && sd == senderDbRef)))));
+					((c.GetArguments()[2] is AnySharpObject sObj && sObj.Object().DBRef == senderDbRef) ||
+					 (c.GetArguments()[2] is DBRef sd && sd == senderDbRef)))));
 }

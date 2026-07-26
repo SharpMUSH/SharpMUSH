@@ -69,7 +69,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	{
 		// mortal_dark hides from non-privileged viewers regardless of ownership
 		if (attribute.Length > 0 && attribute.Any(attr => attr.IsMortalDark())
-		    && !viewer.IsGod() && !await viewer.IsWizard())
+				&& !viewer.IsGod() && !await viewer.IsWizard())
 			return false;
 
 		if (await CanExamine(viewer, target))
@@ -83,7 +83,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	{
 		// mortal_dark hides from non-privileged viewers regardless of ownership
 		if (attribute.Length > 0 && attribute.Any(attr => attr.IsMortalDark())
-		    && !viewer.IsGod() && !await viewer.IsWizard())
+				&& !viewer.IsGod() && !await viewer.IsWizard())
 			return false;
 
 		if (await CanExamine(viewer, target))

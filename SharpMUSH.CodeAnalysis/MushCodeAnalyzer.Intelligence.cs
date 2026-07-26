@@ -84,7 +84,7 @@ public partial class MushCodeAnalyzer
 
 			// Offer commands at the start of a line/after whitespace, or while typing an @command.
 			if (character == 0 || (character > 0 && char.IsWhiteSpace(text[character - 1])) ||
-			    prefix.StartsWith('@'))
+					prefix.StartsWith('@'))
 			{
 				foreach (var (name, definition) in parser.CommandLibrary)
 				{
@@ -216,7 +216,7 @@ public partial class MushCodeAnalyzer
 		if (minArgs == maxArgs)
 			return string.Join(", ", Enumerable.Range(1, minArgs).Select(i => $"arg{i}"));
 		return string.Join(", ", Enumerable.Range(1, minArgs).Select(i => $"arg{i}")) +
-		       (maxArgs > minArgs ? optionalSuffix : "");
+					 (maxArgs > minArgs ? optionalSuffix : "");
 	}
 
 	private static string BuildFunctionHover(string name, SharpFunctionAttribute attr)

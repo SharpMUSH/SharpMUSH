@@ -133,28 +133,28 @@ public static class ThemePresetExtensions
 
 		var palette = new PaletteDark
 		{
-			Primary          = preset.PrimaryColor,
-			Secondary        = preset.SecondaryColor,
-			Tertiary         = preset.TertiaryColor,
-			Background       = preset.BackgroundColor,
-			Surface          = preset.SurfaceColor,
+			Primary = preset.PrimaryColor,
+			Secondary = preset.SecondaryColor,
+			Tertiary = preset.TertiaryColor,
+			Background = preset.BackgroundColor,
+			Surface = preset.SurfaceColor,
 			AppbarBackground = preset.AppBarColor,
 			DrawerBackground = preset.DrawerBackgroundColor,
-			TextPrimary      = "#e9edf0",
-			TextSecondary    = "#9aa3ab",
-			TextDisabled     = "#5f6870",
-			AppbarText       = preset.PrimaryColor,
-			DrawerText       = "#e9edf0",
-			DrawerIcon       = preset.PrimaryColor,
-			Warning          = "#d9a23a",
-			Error            = "#e57373",
-			Info             = "#5aa9ff",
-			Success          = preset.PrimaryColor,
-			LinesDefault     = "#262a2f",
-			LinesInputs      = "#262a2f",
-			TableLines       = "#262a2f",
-			Divider          = "#1d2024",
-			PrimaryContrastText  = onAccent,
+			TextPrimary = "#e9edf0",
+			TextSecondary = "#9aa3ab",
+			TextDisabled = "#5f6870",
+			AppbarText = preset.PrimaryColor,
+			DrawerText = "#e9edf0",
+			DrawerIcon = preset.PrimaryColor,
+			Warning = "#d9a23a",
+			Error = "#e57373",
+			Info = "#5aa9ff",
+			Success = preset.PrimaryColor,
+			LinesDefault = "#262a2f",
+			LinesInputs = "#262a2f",
+			TableLines = "#262a2f",
+			Divider = "#1d2024",
+			PrimaryContrastText = onAccent,
 			SecondaryContrastText = onAccent,
 		};
 
@@ -163,7 +163,7 @@ public static class ThemePresetExtensions
 			Default = new DefaultTypography
 			{
 				FontFamily = UiFontFamily,
-				FontSize   = "14px",
+				FontSize = "14px",
 				FontWeight = "400",
 				LineHeight = "1.5",
 			},
@@ -181,14 +181,14 @@ public static class ThemePresetExtensions
 		var layout = new LayoutProperties
 		{
 			DefaultBorderRadius = "9px",
-			DrawerWidthLeft     = "250px",
+			DrawerWidthLeft = "250px",
 			DrawerMiniWidthLeft = "60px",
 		};
 
 		return new MudTheme
 		{
-			PaletteDark    = palette,
-			Typography     = typography,
+			PaletteDark = palette,
+			Typography = typography,
 			LayoutProperties = layout,
 		};
 	}

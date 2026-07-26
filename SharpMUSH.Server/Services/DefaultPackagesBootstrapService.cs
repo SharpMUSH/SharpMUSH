@@ -9,12 +9,14 @@ namespace SharpMUSH.Server.Services;
 /// <summary>
 /// Installs every bundled default package (see <see cref="BundledPackages.All"/>) at first boot,
 /// in dependency order, through the package manager — proving the package manager can own a core
-/// system's softcode (decision 20.3). Attach-mode packages (the HTTP verb routers / profile API)
-/// land on the configured <c>http_handler</c> object and are skipped when none is configured;
-/// create-mode packages (e.g. <c>common-functions</c>, <c>scene</c>) always install.
+/// system's softcode (decision 20.3). Attach-mode packages land on a configured handler object —
+/// the HTTP verb routers / profile API on <c>http_handler</c>, the room.contents OOB pushes on
+/// <c>event_handler</c> — and are skipped when that handler is not configured; create-mode
+/// packages (e.g. <c>common-functions</c>, <c>scene</c>) always install.
 ///
 /// Idempotent per package: an already-installed package is left to the package manager (so admins
-/// can upgrade/customize/uninstall independently), and pre-existing differing attributes resolve in
+/// can upgrade/customize/uninstall independently) unless this build ships a strictly newer version,
+/// in which case it is upgraded in place. Either way pre-existing differing attributes resolve in
 /// favor of the existing values (three-way merge protects local edits, nothing is clobbered).
 /// </summary>
 public class DefaultPackagesBootstrapService(
@@ -31,36 +33,41 @@ public class DefaultPackagesBootstrapService(
 		// a package's server-global @hook/override capture (e.g. scene's @EMIT hook). Unset/anything-else
 		// installs as normal, so production is unaffected; package- and plugin-dependent tests opt back in.
 		if (string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES"), "false",
-			    StringComparison.OrdinalIgnoreCase))
+					StringComparison.OrdinalIgnoreCase))
 		{
 			logger.LogInformation("Bundled package bootstrap disabled via SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES=false.");
 			return;
 		}
 
-		var handler = options.CurrentValue.Database.HttpHandler;
+		var database = options.CurrentValue.Database;
 
 		foreach (var package in BundledPackages.All)
 		{
-			if (package.RequiresHttpHandler && handler is null or 0)
+			var handler = package.Requires switch
 			{
-				logger.LogDebug("No http_handler configured; skipping attach-mode package {PackageId}.", package.PackageId);
+				BundledPackageHandler.Http => database.HttpHandler,
+				BundledPackageHandler.Event => database.EventHandler,
+				_ => null
+			};
+
+			if (package.Requires is not BundledPackageHandler.None && handler is null or 0)
+			{
+				logger.LogDebug("No {Handler} configured; skipping attach-mode package {PackageId}.",
+					package.Requires is BundledPackageHandler.Http ? "http_handler" : "event_handler",
+					package.PackageId);
 				continue;
 			}
 
-			await InstallIfAbsentAsync(package.PackageId, cancellationToken);
+			await InstallOrUpgradeAsync(package.PackageId, cancellationToken);
 		}
 	}
 
-	private async Task InstallIfAbsentAsync(string packageId, CancellationToken cancellationToken)
+	private async Task InstallOrUpgradeAsync(string packageId, CancellationToken cancellationToken)
 	{
-		var already = await registry.GetInstalledPackageAsync(packageId);
-		if (already.IsT0)
-		{
-			logger.LogDebug("Package {PackageId} already installed (v{Version}); leaving it to the package manager.",
-				packageId, already.AsT0.Version);
-			return;
-		}
-
+		// Parse first and bail loudly on a bad manifest: an invalid embedded manifest is a build
+		// defect, and it must be reported whether or not the package happens to be installed
+		// already. Deciding the version gate first would swallow it on every game that has the
+		// package, because an unparsed manifest has no version to compare.
 		var parsed = manifests.ParseManifest(BundledPackages.ManifestYaml(packageId));
 		if (parsed.IsT1)
 		{
@@ -70,6 +77,26 @@ public class DefaultPackagesBootstrapService(
 		}
 
 		var manifest = parsed.AsT0.Manifest;
+
+		var already = await registry.GetInstalledPackageAsync(packageId);
+		if (already.IsT0)
+		{
+			// Already installed: only step in when this build ships a NEWER version than the
+			// game has. Without this a game that installed an older bundled package never sees
+			// later additions to it — the portal's "online now" list stayed empty on every game
+			// created before GET`ONLINE was added to profile-handler, with no upgrade path short
+			// of a manual reinstall. Same-or-newer installed (an admin upgrade, a local fork) is
+			// left alone, and the apply below still resolves conflicts in favour of local edits.
+			if (!IsNewer(manifest.Version, already.AsT0.Version))
+			{
+				logger.LogDebug("Package {PackageId} already installed (v{Version}); leaving it to the package manager.",
+					packageId, already.AsT0.Version);
+				return;
+			}
+
+			logger.LogInformation("Upgrading bundled {PackageId} v{Installed} → v{Bundled}.",
+				packageId, already.AsT0.Version, manifest.Version);
+		}
 
 		// Resolve any pre-existing conflicts in favor of what is already present (a game migrating
 		// off old hardcoded seeding) so the install never clobbers an admin's customizations.
@@ -95,6 +122,16 @@ public class DefaultPackagesBootstrapService(
 				packageId, manifest.Version, ok.Revision),
 			error => logger.LogError("Failed to install {PackageId}: {Error}", packageId, error.Value));
 	}
+
+	/// <summary>
+	/// True when the bundled version is strictly newer than the installed one. An absent or
+	/// unparseable version on either side answers false: bootstrap only ever moves a game
+	/// forward on a comparison it is sure of, and leaves anything else to the package manager.
+	/// </summary>
+	public static bool IsNewer(PackageVersion? bundled, string? installed) =>
+		bundled is not null
+		&& PackageVersion.TryParse(installed, out var installedVersion)
+		&& bundled.CompareTo(installedVersion) > 0;
 
 	public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

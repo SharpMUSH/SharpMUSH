@@ -19,98 +19,98 @@ namespace SharpMUSH.Tests.Server.Middleware;
 /// </summary>
 public class RateLimiterSmokeTests
 {
-    private const string PolicyName = "public-api";
+	private const string PolicyName = "public-api";
 
-    private static async Task<TestServer> BuildServerAsync(int permitLimit = 3, int queueLimit = 0)
-    {
-        var builder = WebApplication.CreateBuilder();
-        builder.WebHost.UseTestServer();
+	private static async Task<TestServer> BuildServerAsync(int permitLimit = 3, int queueLimit = 0)
+	{
+		var builder = WebApplication.CreateBuilder();
+		builder.WebHost.UseTestServer();
 
-        builder.Services.AddRateLimiter(opts =>
-        {
-            opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            opts.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
-                context => RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: "global",
-                    factory: _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = permitLimit,
-                        Window = TimeSpan.FromMinutes(1),
-                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                        QueueLimit = queueLimit,
-                    }));
-        });
+		builder.Services.AddRateLimiter(opts =>
+		{
+			opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+			opts.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
+							context => RateLimitPartition.GetFixedWindowLimiter(
+									partitionKey: "global",
+									factory: _ => new FixedWindowRateLimiterOptions
+									{
+										PermitLimit = permitLimit,
+										Window = TimeSpan.FromMinutes(1),
+										QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+										QueueLimit = queueLimit,
+									}));
+		});
 
-        var app = builder.Build();
-        app.UseRateLimiter();
-        app.Run(async ctx =>
-        {
-            ctx.Response.StatusCode = 200;
-            await ctx.Response.WriteAsync("ok");
-        });
+		var app = builder.Build();
+		app.UseRateLimiter();
+		app.Run(async ctx =>
+		{
+			ctx.Response.StatusCode = 200;
+			await ctx.Response.WriteAsync("ok");
+		});
 
-        await app.StartAsync();
-        return app.GetTestServer();
-    }
+		await app.StartAsync();
+		return app.GetTestServer();
+	}
 
-    [Test]
-    public async Task AddRateLimiter_PolicyRegistered_DoesNotThrowOnBuild()
-    {
-        // If rate-limiter configuration is invalid, UseRateLimiter() throws at startup.
-        using var server = await BuildServerAsync();
-        using var client = server.CreateClient();
-        var response = await client.GetAsync("/any");
-        await Assert.That((int)response.StatusCode).IsEqualTo(200);
-    }
+	[Test]
+	public async Task AddRateLimiter_PolicyRegistered_DoesNotThrowOnBuild()
+	{
+		// If rate-limiter configuration is invalid, UseRateLimiter() throws at startup.
+		using var server = await BuildServerAsync();
+		using var client = server.CreateClient();
+		var response = await client.GetAsync("/any");
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+	}
 
-    [Test]
-    public async Task Requests_WithinLimit_AllSucceed()
-    {
-        using var server = await BuildServerAsync(permitLimit: 3, queueLimit: 0);
-        using var client = server.CreateClient();
+	[Test]
+	public async Task Requests_WithinLimit_AllSucceed()
+	{
+		using var server = await BuildServerAsync(permitLimit: 3, queueLimit: 0);
+		using var client = server.CreateClient();
 
-        for (var i = 0; i < 3; i++)
-        {
-            var r = await client.GetAsync($"/test?i={i}");
-            await Assert.That((int)r.StatusCode).IsEqualTo(200);
-        }
-    }
+		for (var i = 0; i < 3; i++)
+		{
+			var r = await client.GetAsync($"/test?i={i}");
+			await Assert.That((int)r.StatusCode).IsEqualTo(200);
+		}
+	}
 
-    [Test]
-    public async Task Request_ExceedingLimit_Returns429()
-    {
-        using var server = await BuildServerAsync(permitLimit: 2, queueLimit: 0);
-        using var client = server.CreateClient();
+	[Test]
+	public async Task Request_ExceedingLimit_Returns429()
+	{
+		using var server = await BuildServerAsync(permitLimit: 2, queueLimit: 0);
+		using var client = server.CreateClient();
 
-        await client.GetAsync("/test");
-        await client.GetAsync("/test");
+		await client.GetAsync("/test");
+		await client.GetAsync("/test");
 
-        var over = await client.GetAsync("/test");
-        await Assert.That((int)over.StatusCode).IsEqualTo(429);
-    }
+		var over = await client.GetAsync("/test");
+		await Assert.That((int)over.StatusCode).IsEqualTo(429);
+	}
 
-    [Test]
-    public async Task RejectedResponse_HasContentType_ProblemDetails()
-    {
-        using var server = await BuildServerAsync(permitLimit: 1, queueLimit: 0);
-        using var client = server.CreateClient();
+	[Test]
+	public async Task RejectedResponse_HasContentType_ProblemDetails()
+	{
+		using var server = await BuildServerAsync(permitLimit: 1, queueLimit: 0);
+		using var client = server.CreateClient();
 
-        await client.GetAsync("/test");
+		await client.GetAsync("/test");
 
-        var rejected = await client.GetAsync("/test");
-        await Assert.That((int)rejected.StatusCode).IsEqualTo(429);
-        // The built-in rate limiter doesn't add a body by default
-        // (AddProblemDetails wires that in the full server Startup.cs).
-        // We verify only the 429 status code here.
-    }
+		var rejected = await client.GetAsync("/test");
+		await Assert.That((int)rejected.StatusCode).IsEqualTo(429);
+		// The built-in rate limiter doesn't add a body by default
+		// (AddProblemDetails wires that in the full server Startup.cs).
+		// We verify only the 429 status code here.
+	}
 
-    [Test]
-    public async Task PolicyName_MustBe_PublicApi_UsedInEnableLimiting()
-    {
-        // Verifies the policy builds without throwing when referenced by name.
-        // If the name were wrong, UseRateLimiter() would throw at startup (tested implicitly
-        // by every test that calls BuildServer above). This assertion documents intent.
-        var name = PolicyName;
-        await Assert.That(name.StartsWith("public", StringComparison.OrdinalIgnoreCase)).IsTrue();
-    }
+	[Test]
+	public async Task PolicyName_MustBe_PublicApi_UsedInEnableLimiting()
+	{
+		// Verifies the policy builds without throwing when referenced by name.
+		// If the name were wrong, UseRateLimiter() would throw at startup (tested implicitly
+		// by every test that calls BuildServer above). This assertion documents intent.
+		var name = PolicyName;
+		await Assert.That(name.StartsWith("public", StringComparison.OrdinalIgnoreCase)).IsTrue();
+	}
 }

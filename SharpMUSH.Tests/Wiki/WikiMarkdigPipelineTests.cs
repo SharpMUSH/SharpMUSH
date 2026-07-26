@@ -219,6 +219,7 @@ public class WikiMarkdigPipelineTests
 		var node = new WikiLinkInline
 		{
 			Slug = "missing_page",
+			Href = "/wiki/missing_page",
 			Title = "Missing Page",
 			IsRedLink = true,
 		};
@@ -245,6 +246,31 @@ public class WikiMarkdigPipelineTests
 		var html = Pipeline().RenderToHtml("[[Help:Getting Started]]");
 
 		await Assert.That(html).Contains("href=\"/wiki/help/general/getting_started\"");
+	}
+
+	/// <summary>
+	/// [[Character:Mercutio]] → href="/character/mercutio". Character biographies are served
+	/// from their alias, so wiki markup links straight there instead of via a redirect.
+	/// </summary>
+	[Test]
+	public async Task WikiLinkExtension_CharacterPage_LinksToProfileAlias()
+	{
+		var html = Pipeline().RenderToHtml("[[Character:Mannaz Byron]]");
+
+		await Assert.That(html).Contains("href=\"/character/mannaz_byron\"");
+		await Assert.That(html).DoesNotContain("/wiki/character/");
+	}
+
+	/// <summary>
+	/// A character-namespace page in a non-default category has no /character URL to round-trip
+	/// through (that route carries no category segment), so it keeps its wiki path.
+	/// </summary>
+	[Test]
+	public async Task WikiLinkExtension_CharacterPageInOtherCategory_KeepsWikiPath()
+	{
+		var html = Pipeline().RenderToHtml("[[Character:NPCs:Mercutio]]");
+
+		await Assert.That(html).Contains("href=\"/wiki/character/npcs/mercutio\"");
 	}
 
 	/// <summary>

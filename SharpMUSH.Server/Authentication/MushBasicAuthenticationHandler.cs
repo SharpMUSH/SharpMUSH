@@ -52,7 +52,7 @@ public class MushBasicAuthenticationHandler(
 
 		var authHeader = authHeaderValues.ToString();
 		if (string.IsNullOrEmpty(authHeader) ||
-		    !authHeader.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+				!authHeader.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
 		{
 			return AuthenticateResult.NoResult();
 		}

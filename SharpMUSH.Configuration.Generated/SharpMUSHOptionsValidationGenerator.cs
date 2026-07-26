@@ -90,9 +90,9 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 
 		// Check if the property type is nullable (reference type or Nullable<T>)
 		var isNullable = prop.Type.NullableAnnotation == NullableAnnotation.Annotated
-		                 || prop.Type.OriginalDefinition.SpecialType == SpecialType.None
-		                    && prop.Type is INamedTypeSymbol { IsGenericType: true } namedType
-		                    && namedType.ConstructedFrom.SpecialType == SpecialType.System_Nullable_T;
+										 || prop.Type.OriginalDefinition.SpecialType == SpecialType.None
+												&& prop.Type is INamedTypeSymbol { IsGenericType: true } namedType
+												&& namedType.ConstructedFrom.SpecialType == SpecialType.System_Nullable_T;
 
 		if (isNullable)
 		{

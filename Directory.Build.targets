@@ -1,0 +1,76 @@
+<Project>
+
+  <!--
+    Fails the build when a project's C# no longer matches .editorconfig.
+
+    Why not IDE0055: `EnforceCodeStyleInBuild` plus `dotnet_diagnostic.IDE0055.severity =
+    error` produces no diagnostic for indentation on this SDK — verified against a file with
+    93 space-indented lines, which built clean. Roslyn's formatting analyzer does not report
+    these at build time, so relying on it would have looked like a gate while enforcing
+    nothing. `dotnet format` is the tool that actually applies these rules, so the check
+    shells out to it.
+
+    Cost: ~0.8s for one project. Inputs/Outputs keep it incremental, so it runs only for
+    projects whose .cs files changed since the last build — usually one, often none. CI's
+    build job opts out entirely because the dedicated `format` job already covers the repo
+    in a single ~2s pass.
+
+    Opt out with -p:SkipFormatVerification=true.
+  -->
+
+  <PropertyGroup>
+    <SkipFormatVerification Condition="'$(SkipFormatVerification)' == ''">false</SkipFormatVerification>
+    <FormatVerificationStamp>$(IntermediateOutputPath)format-verified.stamp</FormatVerificationStamp>
+  </PropertyGroup>
+
+  <Target Name="VerifyEditorConfigFormatting"
+          AfterTargets="Build"
+          Condition="'$(SkipFormatVerification)' != 'true'
+                     AND '$(DesignTimeBuild)' != 'true'
+                     AND '$(MSBuildProjectExtension)' == '.csproj'
+                     AND Exists('$(MSBuildProjectDirectory)')"
+          Inputs="@(FormatVerificationInput)"
+          Outputs="$(FormatVerificationStamp)">
+
+    <!--
+      Exit codes are distinct and must stay distinguished: 0 clean, 2 formatting differs,
+      anything else the tool itself failed. Conflating them reports a formatting problem that
+      does not exist and sends you looking for it — with the tool's own explanation swallowed.
+      `dotnet format` genuinely does fail on this repo in solution mode, so this is not
+      hypothetical. Output importance is normal so a tool failure explains itself.
+    -->
+    <Exec Command="dotnet format whitespace --folder &quot;$(MSBuildProjectDirectory)&quot; --exclude &quot;**/bin/**&quot; --exclude &quot;**/obj/**&quot; --verify-no-changes"
+          ContinueOnError="true"
+          IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="FormatVerificationExitCode" />
+    </Exec>
+
+    <Error Condition="'$(FormatVerificationExitCode)' == '2'"
+           Code="FORMAT001"
+           Text="Formatting in $(MSBuildProjectName) does not match .editorconfig. Fix it with: dotnet format whitespace --folder &quot;$(MSBuildProjectDirectory)&quot; --exclude &quot;**/bin/**&quot; --exclude &quot;**/obj/**&quot;  (run until it reports no changes — the formatter needs two passes to converge)" />
+
+    <!--
+      A broken formatter must not block the build: the CI `format` job is authoritative and
+      will fail loudly with the real output. Warn so the local gate cannot degrade silently.
+    -->
+    <Warning Condition="'$(FormatVerificationExitCode)' != '0' AND '$(FormatVerificationExitCode)' != '2'"
+             Code="FORMAT002"
+             Text="Could not verify formatting for $(MSBuildProjectName): `dotnet format` exited $(FormatVerificationExitCode) (see its output above). Formatting was NOT checked for this project; CI still enforces it." />
+
+    <!-- Only a verified-clean project is stamped, so a failure of either kind re-checks next build. -->
+    <Touch Condition="'$(FormatVerificationExitCode)' == '0'"
+           Files="$(FormatVerificationStamp)"
+           AlwaysCreate="true" />
+  </Target>
+
+  <!--
+    The project's own sources, resolved before the target so Inputs/Outputs can compare
+    timestamps. Deliberately not @(Compile): that pulls in source-generated files under obj/,
+    which are rewritten on every build and would defeat the incremental check.
+  -->
+  <ItemGroup Condition="'$(SkipFormatVerification)' != 'true'">
+    <FormatVerificationInput Include="$(MSBuildProjectDirectory)/**/*.cs"
+                             Exclude="$(MSBuildProjectDirectory)/bin/**/*.cs;$(MSBuildProjectDirectory)/obj/**/*.cs" />
+  </ItemGroup>
+
+</Project>

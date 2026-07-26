@@ -64,7 +64,7 @@ public class TelnetServer : ConnectionHandler
 
 				// Detect Pueblo handshake response only on the first submitted line.
 				if (awaitingInitialPuebloHandshake &&
-				    input.StartsWith("PUEBLOCLIENT", StringComparison.OrdinalIgnoreCase))
+						input.StartsWith("PUEBLOCLIENT", StringComparison.OrdinalIgnoreCase))
 				{
 					awaitingInitialPuebloHandshake = false;
 					_logger.LogInformation("Pueblo handshake detected on handle {Handle}: {Response}",

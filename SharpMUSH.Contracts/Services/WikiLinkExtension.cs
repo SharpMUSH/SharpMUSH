@@ -19,6 +19,13 @@ public sealed class WikiLinkInline : LeafInline
 	public required string Slug { get; init; }
 
 	/// <summary>
+	/// The portal path this link points at. Character biographies resolve to their
+	/// <c>/character/{slug}</c> alias rather than the wiki route they are stored under;
+	/// see <see cref="WikiRoutes.PathFor"/>.
+	/// </summary>
+	public required string Href { get; init; }
+
+	/// <summary>
 	/// The human-readable title of the target page (derived from the slug if not specified).
 	/// </summary>
 	public required string Title { get; init; }
@@ -108,6 +115,7 @@ internal sealed class WikiLinkParser : InlineParser
 		{
 			// Canonical path identity: namespace/category/slug.
 			Slug = $"{ns}/{category}/{slug}",
+			Href = WikiRoutes.PathFor(ns, category, slug),
 			Title = title,
 			DisplayText = displayText,
 		};
@@ -146,16 +154,14 @@ internal sealed class WikiLinkParser : InlineParser
 }
 
 /// <summary>
-/// Markdig HTML renderer that converts <see cref="WikiLinkInline"/> nodes into
-/// HTML anchor tags pointing to <c>/wiki/{ns}/{slug}</c>.
+/// Markdig HTML renderer that converts <see cref="WikiLinkInline"/> nodes into HTML anchor
+/// tags pointing at the node's canonical portal path (see <see cref="WikiLinkInline.Href"/>).
 /// </summary>
 internal sealed class WikiLinkHtmlRenderer : HtmlObjectRenderer<WikiLinkInline>
 {
 	protected override void Write(HtmlRenderer renderer, WikiLinkInline obj)
 	{
-		// Build href from full slug (which already includes namespace prefix if any)
-		// e.g. "main/page_name", "help/getting_started"
-		var href = $"/wiki/{obj.Slug}";
+		var href = obj.Href;
 		var cssClass = obj.IsRedLink ? " class=\"wiki-redlink\"" : string.Empty;
 		var text = obj.DisplayText ?? obj.Title;
 		// C-5: Use WriteEscapeUrl for the href so slug characters like '"' and '>'
@@ -185,7 +191,7 @@ public sealed class WikiLinkExtension : Markdig.IMarkdownExtension
 	public void Setup(MarkdownPipeline pipeline, IMarkdownRenderer renderer)
 	{
 		if (renderer is HtmlRenderer htmlRenderer
-		    && !htmlRenderer.ObjectRenderers.Contains<WikiLinkHtmlRenderer>())
+				&& !htmlRenderer.ObjectRenderers.Contains<WikiLinkHtmlRenderer>())
 		{
 			htmlRenderer.ObjectRenderers.Insert(0, new WikiLinkHtmlRenderer());
 		}

@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Helpers;
 
 namespace SharpMUSH.Server.Middleware;
@@ -11,6 +12,7 @@ namespace SharpMUSH.Server.Middleware;
 /// - Spaces in path segments → underscores  (301)
 /// - Wrong case on known path prefixes → lowercase prefix  (301)
 /// - Trailing slash on non-root paths → stripped  (301)
+/// - Character biographies reached through the wiki → their /character/{slug} alias  (301)
 /// API, hub, and static asset routes are exempted.
 /// </summary>
 public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger<CanonicalUrlMiddleware> logger)
@@ -68,6 +70,7 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 	/// 1. Lowercase the first path segment prefix (e.g. /Wiki → /wiki).
 	/// 2. Percent-decode then replace spaces with underscores in each segment.
 	/// 3. Strip trailing slash (except root "/").
+	/// 4. Rewrite a character biography's wiki route to its /character/{slug} alias.
 	/// </summary>
 	public static string BuildCanonical(string path)
 	{
@@ -93,8 +96,28 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 			segments[i] = noSpaces;
 		}
 
-		return string.Join('/', segments);
+		return CharacterAliasFor(segments) ?? string.Join('/', segments);
 	}
+
+	/// <summary>
+	/// The <c>/character/{slug}</c> alias for <c>/wiki/character/general/{slug}</c>, or
+	/// <c>null</c> when the path is not a character biography's wiki view route.
+	/// <para>
+	/// Deliberately narrow. Only the bare view route is aliased: the <c>/history</c>,
+	/// <c>/diff</c> and <c>/edit</c> siblings have no equivalent under <c>/character</c> and
+	/// keep working where they are — which is also what stops the profile page's own history
+	/// link from bouncing. And only the default category is aliased, because
+	/// <c>/character/{slug}</c> carries no category segment to round-trip a different one
+	/// through.
+	/// </para>
+	/// </summary>
+	private static string? CharacterAliasFor(string[] segments) =>
+		// ["", "wiki", ns, category, slug] — exactly five, so /history and friends do not match.
+		segments is ["", "wiki", var ns, var category, var slug]
+		&& !string.IsNullOrEmpty(slug)
+		&& WikiRoutes.IsCharacterProfile(ns, category)
+			? WikiRoutes.PathFor(ns, category, slug)
+			: null;
 
 	[GeneratedRegex(@"\.[a-zA-Z0-9]+$")]
 	private static partial Regex FileExtensionRegex();

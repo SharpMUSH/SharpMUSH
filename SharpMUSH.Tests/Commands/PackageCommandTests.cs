@@ -145,7 +145,7 @@ public class PackageCommandTests
 
 	private static bool MessageContains(OneOf<MString, string> msg, string contains)
 		=> (msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
-		   (msg.IsT1 && msg.AsT1.Contains(contains));
+			 (msg.IsT1 && msg.AsT1.Contains(contains));
 
 	[Test]
 	public async ValueTask Package_InvalidPackageId_IsRejected()
