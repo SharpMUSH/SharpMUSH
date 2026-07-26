@@ -49,7 +49,7 @@ public class AccountSessionBearerHandlerHydrationTests : BunitContext
 		var inner = new CapturingHandler();
 		using var handler = new AccountSessionBearerHandler(auth) { InnerHandler = inner };
 		using var invoker = new HttpMessageInvoker(handler);
-		await invoker.SendAsync(new HttpRequestMessage(HttpMethod.Get, url), CancellationToken.None);
+		using var response = await invoker.SendAsync(new HttpRequestMessage(HttpMethod.Get, url), CancellationToken.None);
 		return inner.LastRequest;
 	}
 

@@ -58,7 +58,7 @@ public class AccountSessionBearerHandlerTests
 		var inner = new CapturingInnerHandler();
 		using var handler = new AccountSessionBearerHandler(auth) { InnerHandler = inner };
 		using var invoker = new HttpMessageInvoker(handler);
-		await invoker.SendAsync(request, CancellationToken.None);
+		using var response = await invoker.SendAsync(request, CancellationToken.None);
 		return inner.LastRequest;
 	}
 
@@ -109,7 +109,7 @@ public class AccountSessionBearerHandlerTests
 
 		// Log in AFTER the handler exists (it is a long-lived singleton built once at startup).
 		auth.AccountSessionToken = "logged-in-later";
-		await invoker.SendAsync(new HttpRequestMessage(HttpMethod.Get, "https://localhost/api/mail"), CancellationToken.None);
+		using var response = await invoker.SendAsync(new HttpRequestMessage(HttpMethod.Get, "https://localhost/api/mail"), CancellationToken.None);
 
 		await Assert.That(inner.LastRequest!.Headers.Authorization?.Parameter).IsEqualTo("logged-in-later");
 	}
