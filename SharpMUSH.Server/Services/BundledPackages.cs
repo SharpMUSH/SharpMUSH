@@ -2,13 +2,6 @@ using System.Reflection;
 
 namespace SharpMUSH.Server.Services;
 
-/// <summary>
-/// The default packages the server ships and installs at first boot (via
-/// <see cref="DefaultPackagesBootstrapService"/>), plus a loader for their embedded
-/// manifests. The package manager is the delivery mechanism for all default softcode —
-/// each entry here is a bundled <c>examples/packages/&lt;id&gt;/package.yaml</c> embedded as a
-/// resource. Adding a default package is a one-line addition to <see cref="All"/>.
-/// </summary>
 /// <summary>The configured handler object a bundled attach-mode package needs.</summary>
 public enum BundledPackageHandler
 {
@@ -22,6 +15,13 @@ public enum BundledPackageHandler
 	Event
 }
 
+/// <summary>
+/// The default packages the server ships and installs at first boot (via
+/// <see cref="DefaultPackagesBootstrapService"/>), plus a loader for their embedded
+/// manifests. The package manager is the delivery mechanism for all default softcode —
+/// each entry here is a bundled <c>examples/packages/&lt;id&gt;/package.yaml</c> embedded as a
+/// resource. Adding a default package is a one-line addition to <see cref="All"/>.
+/// </summary>
 public static class BundledPackages
 {
 	/// <summary>

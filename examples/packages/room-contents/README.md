@@ -21,8 +21,9 @@ an entry's `cmd` on click. Without a handler attribute the engine emits nothing
 and the sidebar stays empty.
 
 It manages only these attributes on the configured `event_handler` object
-(`{{$event_handler}}`, #9) — it never creates or destroys the object, and
-uninstalling leaves the handler object's other softcode untouched.
+(`{{$event_handler}}`, `#9` by default) — the target is resolved from config at
+install time, never a literal dbref. It never creates or destroys the object,
+and uninstalling leaves the handler object's other softcode untouched.
 
 ## Customising
 

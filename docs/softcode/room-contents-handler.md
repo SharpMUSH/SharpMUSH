@@ -1,7 +1,7 @@
-# WebSocket Support Package — the `ROOM`CONTENTS` Handler
+# WebSocket Support Package — the ``ROOM`CONTENTS`` Handler
 
 This document is part of the **WebSocket Support Package**. It describes the
-`ROOM`CONTENTS` event handler that fans out structured OOB pushes to a room's
+``ROOM`CONTENTS`` event handler that fans out structured OOB pushes to a room's
 connected occupants whenever the room's population changes (player movement,
 connect, or disconnect) — the data source behind the portal's Play sidebar.
 
@@ -18,7 +18,7 @@ connect, or disconnect) — the data source behind the portal's Play sidebar.
 
 ## What the handler does
 
-When `ROOM`CONTENTS` fires the handler receives:
+When ``ROOM`CONTENTS`` fires the handler receives:
 
 | Register | Value |
 |----------|-------|
@@ -66,9 +66,9 @@ These were learned the hard way; the reference handler relies on all of them:
    space delimiter would split it apart. The handler uses `|`:
    `iter(<list>, <expr>, %b, |)` then `json_array(<that>, |)`.
 
-5. **Filter with a stored attribute, not `#lambda`.** `filter(#9/FN`NOTEXIT,
-   lcon(%0))` is clean; the `#lambda/...` inline form mis-splits on commas
-   inside the lambda body (e.g. `hasflag(%0,connected)`) and needs escapes you
+5. **Filter with a stored attribute, not `#lambda`.** ``filter(me/FN`WHOVIS,
+   lcon(%0))`` is clean; the `#lambda/...` inline form mis-splits on commas
+   inside the lambda body (e.g. `hasflag(%0,CONNECTED)`) and needs escapes you
    should not have to think about.
 
 6. **`lcon(%0)` includes exits in this engine.** Filter them out of the *who*
@@ -77,7 +77,7 @@ These were learned the hard way; the reference handler relies on all of them:
 
 7. **Connected detection.** `hasflag(%0,CONNECTED)` reflects presence: true for a
    player with a live *play* session, false for a disconnected or portal-only
-   (background) connection. `FN`WHOVIS` uses it to keep asleep/portal players out
+   (background) connection. ``FN`WHOVIS`` uses it to keep asleep/portal players out
    of the *who* list. (`oob()`'s target filter independently governs *delivery*.)
 
 8. **`num(%0)` returns the `#N` dbref form** (e.g. `#76`), so don't prepend an
@@ -100,14 +100,14 @@ handler itself, since a handler runs with the handler object as its executor.
 
 Reading the main handler:
 
-- `filter(me/FN`WHOVIS,lcon(%0))` — the *who* set: non-exit occupants, players only when `CONNECTED` (disconnected / portal-only players are omitted, like PennMUSH); objects always show.
-- `iter(<set>, u(me/FN`WHOROW,itext(0)), %b, |)` — build one JSON object per
-  occupant (via the `FN`WHOROW` helper, `%0` = the occupant), joined with `|`.
+- ``filter(me/FN`WHOVIS,lcon(%0))`` — the *who* set: non-exit occupants, players only when `CONNECTED` (disconnected / portal-only players are omitted, like PennMUSH); objects always show.
+- ``iter(<set>, u(me/FN`WHOROW,itext(0)), %b, |)`` — build one JSON object per
+  occupant (via the ``FN`WHOROW`` helper, `%0` = the occupant), joined with `|`.
 - `json_array(<that>, |)` — assemble those JSON objects into a JSON array.
 - `json(object, who, <array>)` — wrap as `{"who": [...]}`.
 - `oob(lcon(%0), room.contents, <json>)` — send to every connected occupant of
   the room (non-players / non-connected are skipped automatically).
-- The second statement does the same for `room.exits` via `FN`EXITROW`/`lexits`.
+- The second statement does the same for `room.exits` via ``FN`EXITROW``/`lexits`.
 
 Verify it is set:
 
@@ -137,7 +137,7 @@ package instead:
 ## Testing the handler
 
 `SharpMUSH.Tests/Services/RoomContentsHandlerReferenceTests.cs` installs the
-helpers + handler and triggers `ROOM`CONTENTS` via the **real event path** —
+helpers + handler and triggers ``ROOM`CONTENTS`` via the **real event path** —
 `EventService.TriggerEventAsync(parser, SharpEvents.RoomContents, enactor, room, cause)` —
 not `@trigger`. The event path runs the attribute with the event handler object
 as its executor (`me`, `%!`, `%@`) and the causing object as `%#`; seeded `#9`
