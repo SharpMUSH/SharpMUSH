@@ -24,9 +24,15 @@ Full suite after each: **4954 tests, 0 failures**; solution builds clean. Every 
 3. **The unknown-function error wording also diverged.** `ErrorMessages.Returns.NoSuchFunction` was `#-1 COULD NOT FIND FUNCTION: {0}` while `fn()` emitted Penn's `#-1 FUNCTION (NAME) NOT FOUND` inline. Unified on Penn's wording; the six `@function` test assertions that encoded the old wording called their deleted functions *unbracketed*, which is no longer an error at all, so they now bracket the call.
 4. **`Validate` accepted malformed locks.** Once the lock parser had a collecting error listener it became clear the validation visitor was walking ANTLR's recovery tree and reporting survivors as valid. `LockService.Set` gates on `Validate`, so this was the gate that let unparseable locks be stored.
 
-### Known remaining gap (introduced boundary, worth a follow-up)
+### Oracle verification against a real PennMUSH
 
-The literal path for a non-call reuses `_suppressFunctionEval`, whose existing early-return hands back raw source text for a nested call. So `foo(add(1,2))` is right, and `foo([add(1,2)])` is right, but `foo(add(%0,2))` leaves `%0` unsubstituted where PennMUSH substitutes it (braces keep `PE_EVALUATE` on while clearing `PE_FUNCTION_CHECK`). Fixing it means routing the *suppressed* branch of `VisitFunction` through `LiteralFunctionCall` too, which also changes `{...}` function-arg brace behaviour — worth doing deliberately, with brace tests in front of it.
+Every behaviour changed in P0 is confirmed against a running PennMUSH server, not just source reading: `SharpMUSH.Tests/PennMUSH/test_parser_parity.t` holds 27 cases that pass 27/27 on upstream Penn, and each has a matching SharpMUSH test. That file carries the build and run recipe, including the one non-obvious step — build with `env -i`, because a conda/homebrew ICU on the include path links against a system ICU of a different soversion and the final link fails on `u_isprint_NN`.
+
+Worth reusing for P1–P3: it is far cheaper to settle a "what does Penn do here?" question by adding four lines to that file than by reading `parse.c`. The upstream `test/*.t` suite does **not** cover unknown-function handling, argument parity rejection, or lock precedence, so those questions can only be answered this way.
+
+### Gap found and closed while implementing (commit `383aacf1`)
+
+`VisitFunction`'s `_suppressFunctionEval` branch returned raw source text, so `notafunction(strlen(%#))` kept `%#` literal where Penn yields `notafunction(strlen(#1))` — confirmed by oracle case `parity.demoted_sub_nested`. Routing that branch through the same reconstruction fixed it. The branch was only reachable from the non-call path added in `0a9c2c38`: braces, the other place that clears function recognition, parse a function name as plain text so no call context is ever built inside one — which is why `strcat({strlen(%#)})` was already correct.
 
 ---
 

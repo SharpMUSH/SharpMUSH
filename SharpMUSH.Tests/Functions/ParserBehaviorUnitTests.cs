@@ -83,6 +83,9 @@ public class ParserBehaviorUnitTests
 	[Arguments("Hello there(friend)", "Hello there(friend)")]
 	[Arguments("strcat(notafunction(1))", "notafunction(1)")]
 	[Arguments("strcat(a,notafunction(1),b)", "anotafunction(1)b")]
+	// Still literal when a bracket encloses the whole expression: the argument evaluation
+	// inside strcat is what strips PE_FUNCTION_MANDATORY, and the bracket is outside it.
+	[Arguments("[strcat(notafunction(1))]", "notafunction(1)")]
 	public async Task UnknownFunctionStaysLiteralOutsideBrackets(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
