@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
+using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
@@ -59,6 +60,15 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
             return result.Match(
                 page => Json(ToDto(page)),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+
+        // The wiki admin grid's server-side data source.
+        if (request.Method == HttpMethod.Get && path == "api/wiki/pages")
+        {
+            var pages = await wikiService.GetAllPagesAsync(skip: 0, take: 2000);
+            var response = Json(pages.Select(ToDto).ToList());
+            response.Headers.Add("X-Total-Count", pages.Count.ToString());
+            return response;
         }
 
         // Refs use URL-path form: "ns/category/slug".
@@ -406,5 +416,48 @@ public class HelpRouteTests : BunitContext
         var wikiView = cut.FindComponent<WikiView>();
         await Assert.That(wikiView).IsNotNull();
         await Assert.That(wikiView.Instance.Slug).IsEqualTo("commands");
+    }
+}
+
+/// <summary>
+/// The wiki admin grid offers three links per row: the title (where the page is read) and the
+/// edit / history management actions. Character biographies read from /character/{slug} but are
+/// still edited and audited through their wiki route, so the two must be built from different
+/// bases — appending "/edit" to the profile alias yields a URL that does not resolve.
+/// </summary>
+public class AdminWikiLinkTests : BunitContext
+{
+    public AdminWikiLinkTests()
+    {
+        this.AddWikiTestServices();
+        Services.AddSingleton<ISnackbar>(Substitute.For<ISnackbar>());
+        AddAuthorization().SetAuthorized("admin").SetPolicies("wiki.admin");
+    }
+
+    [TUnit.Core.Test]
+    public async Task AdminWiki_CharacterPage_ReadsFromAliasButManagesThroughWikiRoute()
+    {
+        var wikiSvc = Services.GetRequiredService<IWikiService>();
+        await wikiSvc.CreateAsync("Mercutio", "A bio.", "#1", WikiNamespace.Character);
+
+        // MudDataGrid's column menus need a popover host present in the render tree.
+        Render<MudPopoverProvider>();
+
+        var cut = Render<SharpMUSH.Client.Pages.Admin.AdminWiki>();
+
+        cut.WaitForAssertion(() =>
+        {
+            if (!cut.Markup.Contains("/character/mercutio"))
+                throw new InvalidOperationException("grid rows not loaded yet");
+        }, TimeSpan.FromSeconds(5));
+
+        // Title link: the canonical reading path.
+        await Assert.That(cut.Markup).Contains("href=\"/character/mercutio\"");
+
+        // Management actions: real routes, not aliases with a suffix bolted on.
+        await Assert.That(cut.Markup).Contains("/wiki/character/general/mercutio/edit");
+        await Assert.That(cut.Markup).Contains("/wiki/character/general/mercutio/history");
+        await Assert.That(cut.Markup).DoesNotContain("/character/mercutio/edit");
+        await Assert.That(cut.Markup).DoesNotContain("/character/mercutio/history");
     }
 }

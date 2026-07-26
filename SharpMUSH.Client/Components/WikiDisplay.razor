@@ -146,7 +146,7 @@ else
         string.IsNullOrWhiteSpace(Category) ? "General" : char.ToUpper(Category[0]) + Category[1..];
 
     private string HistoryHref =>
-        $"/wiki/{(Namespace ?? "main").ToLowerInvariant()}/{(string.IsNullOrWhiteSpace(Category) ? "general" : Category)}/{Slug}/history";
+        $"{WikiRoutes.WikiPathFor(Namespace, Category, Slug)}/history";
 
     protected override async Task OnParametersSetAsync()
     {

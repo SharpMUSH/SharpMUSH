@@ -72,4 +72,47 @@ public class WikiRoutesTests
 		await Assert.That(WikiRoutes.PathFor("character", "general", "Mannaz Byron"))
 			.IsEqualTo("/character/mannaz_byron");
 	}
+
+	/// <summary>
+	/// A blank namespace must fall back to main like a null one does. Wiki markup can supply an
+	/// empty prefix (<c>[[ :Page]]</c>), and an empty segment would build <c>/wiki//general/x</c>.
+	/// </summary>
+	[Test]
+	[Arguments(null)]
+	[Arguments("")]
+	[Arguments("   ")]
+	public async Task PathFor_BlankNamespace_FallsBackToMain(string? ns)
+	{
+		await Assert.That(WikiRoutes.PathFor(ns, "general", "page_name"))
+			.IsEqualTo("/wiki/main/general/page_name");
+	}
+
+	// --- WikiPathFor: the storage route, for tooling links ------------------------------
+	// /edit, /history and /diff hang off the wiki route and have no alias equivalent, so
+	// anything appending them must not start from the profile alias.
+
+	[Test]
+	public async Task WikiPathFor_CharacterProfile_KeepsWikiRoute()
+	{
+		await Assert.That(WikiRoutes.WikiPathFor("character", "general", "mercutio"))
+			.IsEqualTo("/wiki/character/general/mercutio");
+	}
+
+	[Test]
+	public async Task WikiPathFor_OrdinaryPage_MatchesPathFor()
+	{
+		await Assert.That(WikiRoutes.WikiPathFor("help", "general", "markdown_guide"))
+			.IsEqualTo(WikiRoutes.PathFor("help", "general", "markdown_guide"));
+	}
+
+	/// <summary>Sub-routes appended to the tooling path must land on real routes.</summary>
+	[Test]
+	[Arguments("edit")]
+	[Arguments("history")]
+	[Arguments("diff")]
+	public async Task WikiPathFor_CharacterProfile_SupportsSubRoutes(string subRoute)
+	{
+		await Assert.That($"{WikiRoutes.WikiPathFor("character", "general", "mercutio")}/{subRoute}")
+			.IsEqualTo($"/wiki/character/general/mercutio/{subRoute}");
+	}
 }
