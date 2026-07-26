@@ -63,15 +63,38 @@ public class BooleanExpressionParser(
 		cache.Remove($"{CacheKeyPrefix}{text}");
 	}
 
-	private Func<AnySharpObject, AnySharpObject, bool> CompileInternal(string text)
+	/// <summary>
+	/// Builds a lock recognizer with ANTLR's default <c>ConsoleErrorListener</c> replaced by a
+	/// collecting one on the parser, and removed outright from the lexer.
+	/// <para>
+	/// Unlike softcode, lock expressions can genuinely fail to parse — a bare <c>^</c> matches no
+	/// lexer rule, and operators with nothing to join are a syntax error — so leaving the default
+	/// listeners attached wrote player-triggered diagnostics to the server's stdout, where nobody
+	/// sees them.
+	/// </para>
+	/// </summary>
+	private static (SharpMUSHBoolExpParser Parser, ParserErrorListener Errors) CreateParser(string text, string origin)
 	{
-		StringSpanInputStream inputStream = new(text, nameof(Compile));
-		SharpMUSHBoolExpLexer sharpLexer = new(inputStream)
+		StringSpanInputStream inputStream = new(text, origin);
+		SharpMUSHBoolExpLexer lexer = new(inputStream)
 		{
 			TokenFactory = OptimizedTokenFactory.Default
 		};
-		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
-		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
+		lexer.RemoveErrorListeners();
+
+		BufferedTokenSpanStream tokenStream = new(lexer);
+		SharpMUSHBoolExpParser parser = new(tokenStream);
+		parser.RemoveErrorListeners();
+
+		var errors = new ParserErrorListener(text);
+		parser.AddErrorListener(errors);
+
+		return (parser, errors);
+	}
+
+	private Func<AnySharpObject, AnySharpObject, bool> CompileInternal(string text)
+	{
+		var (sharpParser, _) = CreateParser(text, nameof(Compile));
 		var chatContext = sharpParser.@lock();
 		var parameter = Expression.Parameter(typeof(AnySharpObject), "gated");
 		var parameter2 = Expression.Parameter(typeof(AnySharpObject), "unlocker");
@@ -89,14 +112,17 @@ public class BooleanExpressionParser(
 	/// <returns>Valid or not.</returns>
 	public bool Validate(string expression, AnySharpObject lockee)
 	{
-		StringSpanInputStream inputStream = new(expression, nameof(Validate));
-		SharpMUSHBoolExpLexer sharpLexer = new(inputStream)
-		{
-			TokenFactory = OptimizedTokenFactory.Default
-		};
-		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
-		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
+		var (sharpParser, errors) = CreateParser(expression, nameof(Validate));
 		var chatContext = sharpParser.@lock();
+
+		// A malformed expression is not a valid lock. Without this the visitor ran over ANTLR's
+		// error-recovery tree and reported whatever survived as valid, so LockService.Set — which
+		// gates on this method — stored locks that could never mean what was typed.
+		if (errors.HasErrors)
+		{
+			return false;
+		}
+
 		SharpMUSHBooleanExpressionValidationVisitor visitor = new(lockee);
 
 		var valid = visitor.Visit(chatContext)!.Value;
@@ -113,13 +139,7 @@ public class BooleanExpressionParser(
 	/// <returns>The normalized lock expression with names resolved to dbrefs</returns>
 	public string Normalize(string text, AnySharpObject? executor = null)
 	{
-		StringSpanInputStream inputStream = new(text, nameof(Normalize));
-		SharpMUSHBoolExpLexer sharpLexer = new(inputStream)
-		{
-			TokenFactory = OptimizedTokenFactory.Default
-		};
-		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
-		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
+		var (sharpParser, _) = CreateParser(text, nameof(Normalize));
 		var chatContext = sharpParser.@lock();
 		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new(mediator, executor);
 

@@ -109,7 +109,7 @@ public class UserDefinedFunctionTests
 	[Test]
 	public async ValueTask UnknownFunctionReturnsNoSuchFunction()
 	{
-		await Assert.That(await Eval($"definitelynotafunction{U()}(1)")).Contains("COULD NOT FIND FUNCTION");
+		await Assert.That(await Eval($"[definitelynotafunction{U()}(1)]")).Contains("NOT FOUND");
 	}
 
 	[Test]
@@ -157,7 +157,7 @@ public class UserDefinedFunctionTests
 
 		await Cmd($"@function/delete {fn}");
 
-		await Assert.That(await Eval($"{fn}()")).Contains("COULD NOT FIND FUNCTION");
+		await Assert.That(await Eval($"[{fn}()]")).Contains("NOT FOUND");
 	}
 
 	[Test]
@@ -169,7 +169,7 @@ public class UserDefinedFunctionTests
 		await Cmd($"@function {fn}=me,{attr}");
 
 		await Cmd($"@function/disable {fn}");
-		await Assert.That(await Eval($"{fn}()")).Contains("COULD NOT FIND FUNCTION");
+		await Assert.That(await Eval($"[{fn}()]")).Contains("NOT FOUND");
 
 		await Cmd($"@function/enable {fn}");
 		await Assert.That(await Eval($"{fn}()")).IsEqualTo("alive");
@@ -267,7 +267,7 @@ public class UserDefinedFunctionTests
 		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("cloned");
 
 		await Cmd($"@function/delete {clone}");
-		await Assert.That(await Eval($"{clone}()")).Contains("COULD NOT FIND FUNCTION");
+		await Assert.That(await Eval($"[{clone}()]")).Contains("NOT FOUND");
 		await Assert.That(await Eval($"{fn}()")).IsEqualTo("cloned");
 	}
 
@@ -312,7 +312,7 @@ public class UserDefinedFunctionTests
 		await Cmd("@function/restore *");
 
 		await Assert.That(await Eval($"{kept}()")).IsEqualTo("here");
-		await Assert.That(await Eval($"{dropped}()")).Contains("COULD NOT FIND FUNCTION");
+		await Assert.That(await Eval($"[{dropped}()]")).Contains("NOT FOUND");
 
 		// Cleanup so the global registry doesn't leak the preserved entry to other tests.
 		Registry.Delete(kept);
@@ -329,6 +329,6 @@ public class UserDefinedFunctionTests
 		await Assert.That(await Eval($"{fn}()")).IsEqualTo("present");
 
 		await Cmd($"@function/restore {fn}");
-		await Assert.That(await Eval($"{fn}()")).Contains("COULD NOT FIND FUNCTION");
+		await Assert.That(await Eval($"[{fn}()]")).Contains("NOT FOUND");
 	}
 }

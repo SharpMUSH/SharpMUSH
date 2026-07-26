@@ -61,8 +61,13 @@ public static class ErrorMessages
 
 		public const string NoSuchAttribute = "#-1 NO SUCH ATTRIBUTE";
 
+		/// <summary>
+		/// Wording matches PennMUSH's <c>#-1 FUNCTION (NAME) NOT FOUND</c> (src/parse.c), which
+		/// <c>fn()</c> already emitted verbatim while the parser used a different phrasing for the
+		/// same condition. Takes the function name, conventionally upper-cased by the caller.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string NoSuchFunction = "#-1 COULD NOT FIND FUNCTION: {0}";
+		public const string NoSuchFunction = "#-1 FUNCTION ({0}) NOT FOUND";
 		public const string NoSuchPower = "#-1 NO SUCH POWER";
 		public const string NoSuchFlag = "#-1 NO SUCH FLAG";
 		public const string NoSuchTimezone = "#-1 NO SUCH TIMEZONE";
