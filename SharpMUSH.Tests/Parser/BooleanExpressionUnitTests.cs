@@ -224,4 +224,69 @@ public class BooleanExpressionUnitTests
 		await Task.WhenAll(compileTask, invalidateTask);
 		await Assert.That(errors).IsEmpty();
 	}
+
+	/// <summary>
+	/// PennMUSH binds <c>&amp;</c> tighter than <c>|</c> (src/boolexp.c: <c>E -&gt; T | E</c>,
+	/// <c>T -&gt; F &amp; T</c>), so <c>a &amp; b | c</c> groups as <c>(a &amp; b) | c</c>.
+	/// The first four cases are false under the equal-precedence reading <c>a &amp; (b | c)</c>,
+	/// which is what SharpMUSH did before the grammar gained precedence layers — an
+	/// over-restrictive lock. The last two are the inverse: true under the old reading only.
+	/// </summary>
+	[Arguments("#FALSE & #FALSE | #TRUE", true)]
+	[Arguments("#FALSE & #TRUE | #TRUE", true)]
+	[Arguments("#FALSE & #FALSE | #FALSE | #TRUE", true)]
+	[Arguments("!#TRUE & #FALSE | !#FALSE", true)]
+	[Arguments("#TRUE & #FALSE | #FALSE", false)]
+	[Arguments("#TRUE & #TRUE & #FALSE | #FALSE", false)]
+	[Test]
+	public async Task AndBindsTighterThanOr(string input, bool expected)
+	{
+		var bep = BooleanParser;
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+
+		await Assert.That(bep.Validate(input, dbn)).IsTrue();
+		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// Explicit parentheses must still override precedence, and chains of a single
+	/// operator must stay associative.
+	/// </summary>
+	[Arguments("#FALSE & (#FALSE | #TRUE)", false)]
+	[Arguments("(#FALSE & #FALSE) | #TRUE", true)]
+	[Arguments("#TRUE & (#TRUE | #FALSE)", true)]
+	[Arguments("#TRUE & #TRUE & #TRUE & #TRUE", true)]
+	[Arguments("#TRUE & #TRUE & #FALSE & #TRUE", false)]
+	[Arguments("#FALSE | #FALSE | #FALSE | #TRUE", true)]
+	[Arguments("#FALSE | #FALSE | #FALSE", false)]
+	[Test]
+	public async Task PrecedenceGroupingAndAssociativity(string input, bool expected)
+	{
+		var bep = BooleanParser;
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+
+		await Assert.That(bep.Validate(input, dbn)).IsTrue();
+		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// Normalization must round-trip: the canonical text a lock is stored as has to
+	/// re-compile to the same truth value, or @lock would silently rewrite semantics.
+	/// </summary>
+	[Arguments("#FALSE & #FALSE | #TRUE")]
+	[Arguments("#TRUE & #FALSE | #FALSE")]
+	[Arguments("#FALSE & (#FALSE | #TRUE)")]
+	[Arguments("#TRUE | #FALSE & #FALSE")]
+	[Test]
+	public async Task NormalizeRoundTripsPrecedence(string input)
+	{
+		var bep = BooleanParser;
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+
+		var normalized = bep.Normalize(input);
+		var before = bep.Compile(input)(dbn, dbn);
+		var after = bep.Compile(normalized)(dbn, dbn);
+
+		await Assert.That(after).IsEqualTo(before);
+	}
 }

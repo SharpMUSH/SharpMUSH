@@ -13,11 +13,13 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 	public override bool? VisitLockExprList(SharpMUSHBoolExpParser.LockExprListContext context)
 		=> VisitChildren(context);
 
+	// Validity of a compound expression is the conjunction of its operands' validity,
+	// regardless of which operator joins them.
 	public override bool? VisitLockAndExpr(SharpMUSHBoolExpParser.LockAndExprContext context)
-		=> Visit(context.lockExpr())!.Value && Visit(context.lockExprList())!.Value;
+		=> context.lockExpr().All(x => Visit(x)!.Value);
 
 	public override bool? VisitLockOrExpr(SharpMUSHBoolExpParser.LockOrExprContext context)
-		=> Visit(context.lockExpr())!.Value && Visit(context.lockExprList())!.Value;
+		=> context.lockAndExpr().All(x => Visit(x)!.Value);
 
 	public override bool? VisitLockExpr(SharpMUSHBoolExpParser.LockExprContext context)
 		=> VisitChildren(context);
