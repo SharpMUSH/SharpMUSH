@@ -1,4 +1,6 @@
 using Bunit;
+using Bunit.TestDoubles;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -251,6 +253,62 @@ public class WikiPageRouteTests : BunitContext
         await Assert.That(wikiView.Instance.Slug).IsEqualTo("magic_system");
         await Assert.That(wikiView.Instance.Mode).IsEqualTo(WikiView.WikiMode.Edit);
     }
+
+    /// <summary>
+    /// The client-side half of the character alias. CanonicalUrlMiddleware 301s cold loads, but
+    /// never sees a client-side navigation, so the route page has to catch those itself.
+    /// </summary>
+    [TUnit.Core.Test]
+    public async Task WikiPage_CharacterNamespace_RedirectsToProfileAlias()
+    {
+        var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+
+        var cut = Render<SharpMUSH.Client.Pages.WikiPage>(p => p
+            .Add(c => c.Slug, "mercutio")
+            .Add(c => c.Ns, "character")
+            .Add(c => c.Category, "general"));
+
+        await Assert.That(nav.Uri).IsEqualTo(nav.BaseUri + "character/mercutio");
+
+        // The wiki view must not render behind the redirect — a flash of the wrong page.
+        await Assert.That(cut.FindComponents<WikiView>().Count).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// replace: true keeps the wiki URL out of the history stack. Without it, Back returns to
+    /// the wiki route and is bounced forward again, trapping the user on the profile.
+    /// </summary>
+    [TUnit.Core.Test]
+    public async Task WikiPage_CharacterRedirect_ReplacesHistoryEntry()
+    {
+        var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+
+        Render<SharpMUSH.Client.Pages.WikiPage>(p => p
+            .Add(c => c.Slug, "mercutio")
+            .Add(c => c.Ns, "character")
+            .Add(c => c.Category, "general"));
+
+        await Assert.That(nav.History.Single().Options.ReplaceHistoryEntry).IsTrue();
+    }
+
+    /// <summary>
+    /// /character/{slug} has no category segment, so a character page filed elsewhere cannot
+    /// round-trip through it. It renders as an ordinary wiki page instead of redirecting.
+    /// </summary>
+    [TUnit.Core.Test]
+    public async Task WikiPage_CharacterNamespaceOtherCategory_RendersNormally()
+    {
+        var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+        var startingUri = nav.Uri;
+
+        var cut = Render<SharpMUSH.Client.Pages.WikiPage>(p => p
+            .Add(c => c.Slug, "mercutio")
+            .Add(c => c.Ns, "character")
+            .Add(c => c.Category, "npcs"));
+
+        await Assert.That(nav.Uri).IsEqualTo(startingUri);
+        await Assert.That(cut.FindComponent<WikiView>().Instance.Slug).IsEqualTo("mercutio");
+    }
 }
 
 /// <summary>
@@ -315,6 +373,10 @@ public class CharacterRouteTests : BunitContext
         await Assert.That(wikiView).IsNotNull();
         await Assert.That(wikiView.Instance.Slug).IsEqualTo("Gandalf");
         await Assert.That(wikiView.Instance.Mode).IsEqualTo(WikiView.WikiMode.View);
+
+        // Biographies live in the Character namespace — that is what SeoController and
+        // BotPrerenderMiddleware read, and what makes the wiki-route alias identifiable.
+        await Assert.That(wikiView.Instance.Namespace).IsEqualTo(WikiRoutes.CharacterNamespace);
     }
 }
 

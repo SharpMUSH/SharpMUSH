@@ -183,4 +183,95 @@ public class CanonicalUrlMiddlewareTests
         await Assert.That((int)response.StatusCode).IsEqualTo(301);
         await Assert.That(response.Headers.Location?.ToString()).IsEqualTo("/wiki/Page_Name?search=foo");
     }
+
+    // --- Character biography aliasing -------------------------------------------------
+    // /wiki/character/general/{slug} is the storage route; /character/{slug} is the one the
+    // portal serves. The middleware aliases the former to the latter so bookmarks and external
+    // links land on the canonical page.
+
+    [Test]
+    public async Task BuildCanonical_CharacterViewRoute_AliasedToProfile()
+    {
+        await Assert.That(CanonicalUrlMiddleware.BuildCanonical("/wiki/character/general/mercutio"))
+            .IsEqualTo("/character/mercutio");
+    }
+
+    [Test]
+    public async Task BuildCanonical_CharacterViewRouteWithSpaces_AliasedAndSlugified()
+    {
+        await Assert.That(CanonicalUrlMiddleware.BuildCanonical("/wiki/character/general/Mannaz Byron"))
+            .IsEqualTo("/character/mannaz_byron");
+    }
+
+    /// <summary>
+    /// History, diff and edit have no equivalent under /character, so they stay on the wiki
+    /// routes. This is also what stops the profile page's own history link from bouncing.
+    /// </summary>
+    [Test]
+    [Arguments("history")]
+    [Arguments("diff")]
+    [Arguments("edit")]
+    public async Task BuildCanonical_CharacterSubRoutes_NotAliased(string subRoute)
+    {
+        var path = $"/wiki/character/general/mercutio/{subRoute}";
+
+        await Assert.That(CanonicalUrlMiddleware.BuildCanonical(path)).IsEqualTo(path);
+    }
+
+    /// <summary>
+    /// /character/{slug} carries no category segment, so a character page filed elsewhere
+    /// cannot round-trip through it and keeps its wiki path.
+    /// </summary>
+    [Test]
+    public async Task BuildCanonical_CharacterPageInOtherCategory_NotAliased()
+    {
+        await Assert.That(CanonicalUrlMiddleware.BuildCanonical("/wiki/character/npcs/mercutio"))
+            .IsEqualTo("/wiki/character/npcs/mercutio");
+    }
+
+    [Test]
+    [Arguments("/wiki/main/general/mercutio")]
+    [Arguments("/wiki/help/general/markdown_guide")]
+    public async Task BuildCanonical_OtherNamespaces_NotAliased(string path)
+    {
+        await Assert.That(CanonicalUrlMiddleware.BuildCanonical(path)).IsEqualTo(path);
+    }
+
+    /// <summary>The alias must not loop: the target is already canonical.</summary>
+    [Test]
+    public async Task BuildCanonical_ProfileAlias_IsAFixedPoint()
+    {
+        var once = CanonicalUrlMiddleware.BuildCanonical("/wiki/character/general/mercutio");
+
+        await Assert.That(CanonicalUrlMiddleware.BuildCanonical(once)).IsEqualTo(once);
+    }
+
+    [Test]
+    public async Task Request_CharacterWikiRoute_Returns301ToProfile()
+    {
+        await using var app = await BuildAndStartAsync();
+        using var client = new HttpClient(app.GetTestServer().CreateHandler())
+        {
+            BaseAddress = new Uri("http://localhost")
+        };
+
+        var response = await client.GetAsync("/wiki/character/general/mercutio");
+
+        await Assert.That((int)response.StatusCode).IsEqualTo(301);
+        await Assert.That(response.Headers.Location?.ToString()).IsEqualTo("/character/mercutio");
+    }
+
+    [Test]
+    public async Task Request_CharacterHistoryRoute_IsNotRedirected()
+    {
+        await using var app = await BuildAndStartAsync();
+        using var client = new HttpClient(app.GetTestServer().CreateHandler())
+        {
+            BaseAddress = new Uri("http://localhost")
+        };
+
+        var response = await client.GetAsync("/wiki/character/general/mercutio/history");
+
+        await Assert.That((int)response.StatusCode).IsEqualTo(200);
+    }
 }

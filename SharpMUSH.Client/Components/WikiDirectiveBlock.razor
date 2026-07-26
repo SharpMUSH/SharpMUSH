@@ -89,5 +89,5 @@
     };
 
     private static string LinkFor(PageDto page) =>
-        $"/wiki/{page.Namespace.ToLowerInvariant()}/{(page.Category ?? "general")}/{page.Slug}";
+        WikiRoutes.PathFor(page.Namespace, page.Category, page.Slug);
 }

@@ -276,7 +276,7 @@
     }
 
     private static string PageHref(WikiPageSummary page) =>
-        $"/wiki/{page.Namespace.ToLowerInvariant()}/{(page.Category ?? "general")}/{page.Slug}";
+        WikiRoutes.PathFor(page.Namespace, page.Category, page.Slug);
 
     private static string RefFor(WikiPageSummary page) =>
         $"{page.Namespace.ToLowerInvariant()}/{page.Category ?? "general"}/{page.Slug}";
