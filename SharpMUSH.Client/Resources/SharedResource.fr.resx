@@ -290,4 +290,22 @@
   <data name="AdvancedCategoryDescription" xml:space="preserve">
     <value>Attributs, drapeaux, coûts et paramètres spécialisés</value>
   </data>
+  <data name="Send" xml:space="preserve">
+    <value>Envoyer</value>
+  </data>
+  <data name="WidgetZoneTopBar" xml:space="preserve">
+    <value>Barre supérieure</value>
+  </data>
+  <data name="WidgetZoneLeftSidebar" xml:space="preserve">
+    <value>Barre latérale gauche</value>
+  </data>
+  <data name="WidgetZoneRightSidebar" xml:space="preserve">
+    <value>Barre latérale droite</value>
+  </data>
+  <data name="WidgetZoneMainContent" xml:space="preserve">
+    <value>Contenu principal</value>
+  </data>
+  <data name="WidgetZoneFooter" xml:space="preserve">
+    <value>Pied de page</value>
+  </data>
 </root>

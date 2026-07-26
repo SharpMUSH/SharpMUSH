@@ -2,6 +2,7 @@
 @using System.Text.Json
 @using SharpMUSH.Library.Authorization
 @attribute [Authorize(Policy = "layout.admin")]
+@inject IStringLocalizer<SharedResource> Loc
 @inject ILayoutService LayoutService
 @inject IWidgetRegistry Registry
 @inject IDialogService DialogService
@@ -64,7 +65,7 @@
                         <div class="le-zone">
                             <div class="le-zone-head">
                                 <MudIcon Icon="@ZoneIcon(zone)" Style="font-size:0.875rem;color:var(--accent);" />
-                                <span>@zone</span>
+                                <span>@Loc[zone.ResourceKey()]</span>
                                 <span class="le-zone-hint">@(IsGridZone(zone) ? "12-column grid" : "horizontal — no width")</span>
                             </div>
                             <MudDropZone T="EditItem" Identifier="@zone.ToString()"

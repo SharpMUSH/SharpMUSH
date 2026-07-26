@@ -1136,6 +1136,24 @@
   <data name="Reply" xml:space="preserve">
     <value>Reply</value>
   </data>
+  <data name="Send" xml:space="preserve">
+    <value>Send</value>
+  </data>
+  <data name="WidgetZoneTopBar" xml:space="preserve">
+    <value>Top Bar</value>
+  </data>
+  <data name="WidgetZoneLeftSidebar" xml:space="preserve">
+    <value>Left Sidebar</value>
+  </data>
+  <data name="WidgetZoneRightSidebar" xml:space="preserve">
+    <value>Right Sidebar</value>
+  </data>
+  <data name="WidgetZoneMainContent" xml:space="preserve">
+    <value>Main Content</value>
+  </data>
+  <data name="WidgetZoneFooter" xml:space="preserve">
+    <value>Footer</value>
+  </data>
   <data name="MailDeleted" xml:space="preserve">
     <value>Message deleted.</value>
   </data>

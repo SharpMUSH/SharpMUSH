@@ -3,6 +3,7 @@
 @using SharpMUSH.Library.Authorization
 @using SharpMUSH.Library.Models.Portal.Applications
 @using SharpMUSH.Library.Models.Portal.Widgets
+@inject IStringLocalizer<SharedResource> Loc
 @inject ApplicationRegistryClient Registry
 @inject ISnackbar Snackbar
 
@@ -56,10 +57,11 @@
             {
                 <MudItem xs="12">
                     <MudSelect T="WidgetZone" @bind-SelectedValues="_zones" MultiSelection="true"
-                               Label="Allowed zones" Variant="Variant.Outlined">
+                               Label="Allowed zones" Variant="Variant.Outlined"
+                               MultiSelectionTextFunc="@(zones => string.Join(", ", zones.Select(z => Loc[Enum.Parse<WidgetZone>(z).ResourceKey()].Value)))">
                         @foreach (var zone in Enum.GetValues<WidgetZone>())
                         {
-                            <MudSelectItem T="WidgetZone" Value="zone">@zone</MudSelectItem>
+                            <MudSelectItem T="WidgetZone" Value="zone">@Loc[zone.ResourceKey()]</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
