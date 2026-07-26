@@ -111,7 +111,7 @@ Reading the main handler:
 
 Verify it is set:
 
-```
+```text
 > get #9/ROOM`CONTENTS
 ```
 
@@ -119,7 +119,7 @@ Verify it is set:
 
 ## Silencing the handler
 
-```
+```text
 &ROOM`CONTENTS #9=
 ```
 
@@ -128,7 +128,7 @@ An empty `&` sets the attribute to an empty string, which silences the handler
 remove it properly — attributes and registry records together — uninstall the
 package instead:
 
-```
+```text
 > @package uninstall room-contents
 ```
 
