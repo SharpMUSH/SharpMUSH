@@ -108,6 +108,79 @@ public class SharpMUSHParserVisitor(
 	}
 
 	/// <summary>
+	/// Whether a name that resolves to no function should be reported as an error rather than
+	/// left as literal text.
+	/// <para>
+	/// PennMUSH reports it only when PE_FUNCTION_MANDATORY is set, which <c>[...]</c> adds
+	/// (src/parse.c) — so <c>think foo(bar)</c> prints <c>foo(bar)</c> while
+	/// <c>think [foo(bar)]</c> errors. Arguments of a real call are evaluated with that flag
+	/// stripped, so an unknown name inside them stays literal too: <c>[strcat(foo(1))]</c>
+	/// yields <c>foo(1)</c>.
+	/// </para>
+	/// Walking outward, whichever context appears first decides: a bracket means the call site
+	/// demands a function, an enclosing call means we are inside its argument list and it does not.
+	/// </summary>
+	private static bool IsUnknownFunctionAnError(ParserRuleContext context)
+	{
+		for (var parent = context.Parent; parent is not null; parent = parent.Parent)
+		{
+			switch (parent)
+			{
+				case BracketPatternContext:
+					return true;
+				case FunctionContext:
+					return false;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Reproduces a <c>name(...)</c> that is not a function call as text, the way PennMUSH does:
+	/// the parentheses and separators are copied through, and the contents are still evaluated
+	/// with function recognition switched off (PE_EVALUATE stays on, PE_FUNCTION_CHECK is cleared).
+	/// So <c>foo(add(1,2))</c> stays <c>foo(add(1,2))</c>, while <c>foo([add(1,2)])</c> becomes
+	/// <c>foo(3)</c> — a bracket re-enables function recognition inside.
+	/// Literal spans are sliced from the source rather than taken from <c>GetText()</c> so that
+	/// markup survives.
+	/// </summary>
+	private async ValueTask<CallState> LiteralFunctionCall(FunctionContext context, SharpMUSHParserVisitor visitor)
+	{
+		var parts = new MString[context.ChildCount];
+
+		visitor._suppressFunctionEval++;
+		try
+		{
+			for (var i = 0; i < context.ChildCount; i++)
+			{
+				parts[i] = context.GetChild(i) switch
+				{
+					EvaluationStringContext argument => (await visitor.Visit(argument))?.Message ?? MModule.empty(),
+					ITerminalNode terminal => SliceSource(terminal.Symbol),
+					_ => MModule.empty()
+				};
+			}
+		}
+		finally
+		{
+			visitor._suppressFunctionEval--;
+		}
+
+		return new CallState(MModule.ConcatMany(parts), context.Depth());
+	}
+
+	/// <summary>
+	/// Extracts a token's own text from the original markup-carrying source. Recovery tokens
+	/// synthesised by the error strategy have no extent and yield an empty string.
+	/// </summary>
+	private MString SliceSource(IToken token)
+	{
+		var length = token.StopIndex - token.StartIndex + 1;
+		return length > 0 ? MModule.substring(token.StartIndex, length, source) : MModule.empty();
+	}
+
+	/// <summary>
 	/// Sends debug or verbose output to owner and DEBUGFORWARDLIST recipients.
 	/// </summary>
 	/// <param name="executor">The executor object</param>
@@ -427,8 +500,15 @@ public class SharpMUSHParserVisitor(
 					var userFunction = ResolveUserDefinedFunction(name);
 					if (userFunction is null)
 					{
+						if (!IsUnknownFunctionAnError(context))
+						{
+							// Not a function and not required to be one: the text is prose, not a call.
+							return await LiteralFunctionCall(context, visitor);
+						}
+
 						success = false;
-						return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name), context.Depth());
+						return new CallState(
+							string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()), context.Depth());
 					}
 
 					libraryMatch = (userFunction.Value, false);

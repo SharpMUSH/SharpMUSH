@@ -52,6 +52,47 @@ public class ParserBehaviorUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// A name that is not a function is only an error where PennMUSH sets
+	/// PE_FUNCTION_MANDATORY, i.e. inside <c>[...]</c> (src/parse.c). Everywhere else the
+	/// text is copied through, so ordinary prose containing parentheses survives evaluation.
+	/// </summary>
+	[Test]
+	[Arguments("notafunction(bar)", "notafunction(bar)")]
+	[Arguments("Hello there(friend)", "Hello there(friend)")]
+	[Arguments("strcat(notafunction(1))", "notafunction(1)")]
+	[Arguments("strcat(a,notafunction(1),b)", "anotafunction(1)b")]
+	public async Task UnknownFunctionStaysLiteralOutsideBrackets(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("[notafunction(bar)]", "#-1 FUNCTION (NOTAFUNCTION) NOT FOUND")]
+	[Arguments("[NotAFunction(bar)]", "#-1 FUNCTION (NOTAFUNCTION) NOT FOUND")]
+	[Arguments("strcat([notafunction(1)])", "#-1 FUNCTION (NOTAFUNCTION) NOT FOUND")]
+	public async Task UnknownFunctionErrorsInsideBrackets(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// The contents of a non-call are still evaluated with function recognition off, exactly
+	/// as PennMUSH clears PE_FUNCTION_CHECK before copying the parenthesised text through —
+	/// so a nested call stays literal, but a bracket inside re-enables evaluation.
+	/// </summary>
+	[Test]
+	[Arguments("notafunction(add(1,2))", "notafunction(add(1,2))")]
+	[Arguments("notafunction([add(1,2)])", "notafunction(3)")]
+	[Arguments("notafunction(a,b)", "notafunction(a,b)")]
+	public async Task NonCallContentsEvaluateWithoutFunctionRecognition(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 	// Penn compress tests: space compression in evaluation
 	[Test]
 	[Arguments("cat(a,  b)", "a b")]
