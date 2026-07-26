@@ -1551,6 +1551,11 @@ public partial class Functions
 			terminfo.Add("websocket");
 		}
 
+		if (metadata.GetValueOrDefault("PresenceClass", PresenceClasses.Play) == PresenceClasses.Portal)
+		{
+			terminfo.Add(PresenceClasses.Portal);
+		}
+
 		if (metadata.GetValueOrDefault("PROMPT_NEWLINES", "0") == "1")
 		{
 			terminfo.Add("prompt_newlines");

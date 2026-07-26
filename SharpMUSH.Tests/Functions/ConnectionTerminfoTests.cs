@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -21,7 +22,7 @@ public class ConnectionTerminfoTests
 
 	private static long _handleSeq = 950_000;
 
-	private async Task<long> ConnectAsAsync(DBRef player, string connectionType)
+	private async Task<long> ConnectAsAsync(DBRef player, string connectionType, string presenceClass = PresenceClasses.Play)
 	{
 		var connectionService = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 		var handle = Interlocked.Increment(ref _handleSeq);
@@ -31,7 +32,8 @@ public class ConnectionTerminfoTests
 			["LastConnectionSignal"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
 			["InternetProtocolAddress"] = "127.0.0.1",
 			["HostName"] = "localhost",
-			["ConnectionType"] = connectionType
+			["ConnectionType"] = connectionType,
+			["PresenceClass"] = presenceClass
 		});
 		await connectionService.Register(handle, "127.0.0.1", "localhost", connectionType,
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, metadata);
@@ -53,7 +55,28 @@ public class ConnectionTerminfoTests
 		var handle = await ConnectAsAsync(playerRef, "websocket");
 		try
 		{
-			await Assert.That(await TerminfoAsync(playerRef)).Contains("websocket");
+			var info = await TerminfoAsync(playerRef);
+			await Assert.That(info).Contains("websocket");
+			await Assert.That(info).DoesNotContain("portal");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_ReportsPortal_ForPortalClassConnection()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "PortalTermClient");
+		var handle = await ConnectAsAsync(playerRef, "websocket", PresenceClasses.Portal);
+		try
+		{
+			await Assert.That(await TerminfoAsync(playerRef)).Contains("portal");
 		}
 		finally
 		{
