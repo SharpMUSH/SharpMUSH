@@ -206,7 +206,8 @@ public class SceneSurfaceTests : BunitContext
 		await Assert.That(markup).Contains("Mysterious Stranger");
 		await Assert.That(markup).Contains("Bartender");
 		// Edited pose (editCount > 1) shows the badge; the unedited one does not add a second.
-		await Assert.That(markup).Contains("edited");
+		// The localizer stub echoes resource keys, so the badge renders as its key.
+		await Assert.That(markup).Contains("RolEditedBadge");
 	}
 
 	[TUnit.Core.Test]

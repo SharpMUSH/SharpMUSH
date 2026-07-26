@@ -6,24 +6,24 @@
 
 @if (_loading)
 {
-    <PageTitle>Scene — SharpMUSH</PageTitle>
+    <PageTitle>@Loc["RolScene"] — @Loc["AppTitle"]</PageTitle>
     <div style="padding:var(--cpad);">
         <MudProgressLinear Indeterminate="true" />
     </div>
 }
 else if (_notFound)
 {
-    <PageTitle>Scene — Not Found</PageTitle>
+    <PageTitle>@Loc["RolScene"] — @Loc["NotFound"]</PageTitle>
     <div style="padding:var(--cpad);">
-        <MudAlert Severity="Severity.Warning">Scene not found.</MudAlert>
+        <MudAlert Severity="Severity.Warning">@Loc["RolSceneNotFound"]</MudAlert>
         <MudButton Href="/scenes" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
-            Back to Scenes
+            @Loc["RolBackToScenes"]
         </MudButton>
     </div>
 }
 else
 {
-    <PageTitle>@SceneTitle(_scene!) — SharpMUSH</PageTitle>
+    <PageTitle>@SceneTitle(_scene!) — @Loc["AppTitle"]</PageTitle>
     <div class="scene-detail-page" style="padding:var(--cpad);">
 
         <div style="margin-bottom:1.25rem;">
@@ -31,7 +31,7 @@ else
                 @if (_scene!.IsLive)
                 {
                     <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                             Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">LIVE</MudChip>
+                             Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">@Loc["RolLiveBadge"]</MudChip>
                 }
                 <MudText Typo="Typo.h4" Style="font-weight:700;line-height:1.2;">@SceneTitle(_scene!)</MudText>
             </div>
@@ -42,7 +42,7 @@ else
                 </span>
                 <span>
                     <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Style="vertical-align:middle;margin-right:0.1875rem;" />
-                    @_scene!.PoseCount pose(s)
+                    @Loc["RolPoseCount", _scene!.PoseCount]
                 </span>
                 <span>@_scene!.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
             </div>
@@ -52,7 +52,7 @@ else
         {
             <div style="display:flex;flex-wrap:wrap;gap:0.375rem;align-items:center;margin-bottom:0.875rem;">
                 <MudChip T="string" Size="Size.Small" Variant="@(_activeTag is null ? Variant.Filled : Variant.Outlined)"
-                         Color="Color.Primary" OnClick="@(() => SetTag(null))">All</MudChip>
+                         Color="Color.Primary" OnClick="@(() => SetTag(null))">@Loc["All"]</MudChip>
                 @foreach (var tag in _allTags)
                 {
                     var thisTag = tag;
@@ -68,7 +68,7 @@ else
         }
         @if (visible.Count == 0)
         {
-            <EmptyState>No poses in this scene.</EmptyState>
+            <EmptyState>@Loc["RolNoPoses"]</EmptyState>
         }
         else
         {
@@ -86,11 +86,11 @@ else
             @if (_scene!.IsLive)
             {
                 <MudButton Href="@($"/scenes/{Id}/live")" Variant="Variant.Filled" Color="Color.Primary">
-                    Watch Live
+                    @Loc["RolWatchLive"]
                 </MudButton>
             }
             <MudButton Href="/scenes" Variant="Variant.Text" Color="Color.Default">
-                Back to Scenes
+                @Loc["RolBackToScenes"]
             </MudButton>
         </div>
     </div>
@@ -144,8 +144,8 @@ else
             ? _poses.ToList()
             : _poses.Where(p => p.Tags.Contains(_activeTag, StringComparer.Ordinal)).ToList();
 
-    private static string SceneTitle(SceneSummary s) =>
+    private string SceneTitle(SceneSummary s) =>
         s.Meta.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)
             ? t
-            : $"Scene in {s.RoomName}";
+            : Loc["RolSceneIn", s.RoomName];
 }
