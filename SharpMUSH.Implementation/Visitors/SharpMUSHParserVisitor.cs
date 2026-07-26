@@ -537,14 +537,18 @@ public class SharpMUSHParserVisitor(
 					contextDepth);
 			}
 
-			switch (attribute.Flags)
+			// Test the individual bits: switching on the whole Flags value only ever matched a
+			// function whose flags were *exactly* the parity flag, so any declaration that
+			// combined it with another flag (letq's NoParse, for instance) skipped the check.
+			if (attribute.Flags.HasFlag(FunctionFlags.UnEvenArgsOnly) && args.Length % 2 == 0)
 			{
-				case FunctionFlags.UnEvenArgsOnly when args.Length % 2 == 0:
-					return new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, name.ToUpperInvariant()), contextDepth);
+				return new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, name.ToUpperInvariant()), contextDepth);
+			}
 
-				case FunctionFlags.EvenArgsOnly when args.Length % 2 != 0:
-					return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, name.ToUpperInvariant()),
-						contextDepth);
+			if (attribute.Flags.HasFlag(FunctionFlags.EvenArgsOnly) && args.Length % 2 != 0)
+			{
+				return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, name.ToUpperInvariant()),
+					contextDepth);
 			}
 
 			// Consider moving after RefinedArguments to avoid extra parsing. However, each
