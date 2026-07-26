@@ -10,10 +10,20 @@ public interface IPortalWidget
 	/// <summary>Unique machine name used in <see cref="WidgetPlacement.WidgetName"/>.</summary>
 	string Name { get; }
 
-	/// <summary>Human-readable display name shown in the admin palette.</summary>
+	/// <summary>
+	/// Label for the admin palette, as a resource key rather than text: built-in descriptors return a
+	/// <c>SharedResource</c> key (<c>"LayWidgetCharacterDirectory"</c>) which the palette resolves
+	/// through its localizer. Descriptors built from a Dynamic Application instead carry the admin's
+	/// own display name, which no lookup can translate; the palette detects the miss
+	/// (<c>ResourceNotFound</c>) and renders that text unchanged.
+	/// </summary>
 	string DisplayName { get; }
 
-	/// <summary>Short description of what the widget shows.</summary>
+	/// <summary>
+	/// Short description of what the widget shows. Unlike <see cref="DisplayName"/> this is plain
+	/// English prose, not a resource key — nothing renders it today, so there is no display site to
+	/// localize it at. Convert it the same way as <see cref="DisplayName"/> if it ever reaches the UI.
+	/// </summary>
 	string Description { get; }
 
 	/// <summary>Preferred size hint used by the layout engine.</summary>

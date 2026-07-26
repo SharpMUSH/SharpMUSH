@@ -52,7 +52,7 @@
                     <div class="assets-card-body">
                         <div class="assets-card-name" title="@asset.FileName">@asset.FileName</div>
                         <div class="assets-card-meta">
-                            <span>@FormatSize(asset.SizeBytes)</span>
+                            <span>@Loc.FormatBytes(asset.SizeBytes)</span>
                             <span>@asset.UploadedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
                         </div>
                         <div class="assets-card-meta">
@@ -150,13 +150,6 @@
             Snackbar.Add(Loc["WkDeleteFailed"], Severity.Error);
         }
     }
-
-    private static string FormatSize(long bytes) => bytes switch
-    {
-        >= 1_048_576 => $"{bytes / 1_048_576.0:F1} MB",
-        >= 1_024 => $"{bytes / 1_024.0:F1} KB",
-        _ => $"{bytes} B",
-    };
 
     private static string ShortType(string contentType)
     {

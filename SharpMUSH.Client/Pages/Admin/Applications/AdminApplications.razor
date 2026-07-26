@@ -80,7 +80,7 @@
                                 <div class="aa-card-name">@a.DisplayName</div>
                                 <div class="aa-card-sub">/apps/@a.Slug</div>
                             </div>
-                            <span class="aa-kind" style="@($"background:{KindBackground(a.Kind)};color:{KindColor(a.Kind)};")">@a.Kind</span>
+                            <span class="aa-kind" style="@($"background:{KindBackground(a.Kind)};color:{KindColor(a.Kind)};")">@KindLabel(a.Kind)</span>
                         </div>
                     </button>
                 }
@@ -106,7 +106,7 @@
                         <div style="flex:1;min-width:0;">
                             <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;">
                                 <h2 class="aa-detail-name">@_selected.DisplayName</h2>
-                                <span class="aa-kind" style="@($"background:{KindBackground(_selected.Kind)};color:{KindColor(_selected.Kind)};")">@_selected.Kind</span>
+                                <span class="aa-kind" style="@($"background:{KindBackground(_selected.Kind)};color:{KindColor(_selected.Kind)};")">@KindLabel(_selected.Kind)</span>
                                 <span class="aa-role">@_selected.MinimumRole</span>
                             </div>
                             <div class="aa-detail-slug">/apps/@_selected.Slug</div>
@@ -235,6 +235,14 @@
             }
         }
     }
+
+    // Kind travels from the API as a string and a registration may carry a value outside
+    // ApplicationKind (the badge palette still styles a legacy "Form"), so an unrecognized kind shows
+    // through verbatim rather than being mislabelled as the parse fallback.
+    private string KindLabel(string kind) =>
+        Enum.TryParse<ApplicationKind>(kind, ignoreCase: true, out var parsed)
+            ? Loc[parsed.ResourceKey()]
+            : kind;
 
     private static string KindBackground(string kind) => kind.ToUpperInvariant() switch
     {

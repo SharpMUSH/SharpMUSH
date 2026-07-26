@@ -108,10 +108,10 @@
                         </div>
                     </div>
 
-                    @foreach (var group in PortalPermission.All.GroupBy(d => d.Group))
+                    @foreach (var group in PortalPermission.All.GroupBy(d => d.GroupKey))
                     {
                         <div class="ra-section">
-                            <div class="ra-section-label">@group.Key</div>
+                            <div class="ra-section-label">@Loc[group.Key]</div>
                             <div class="ra-perm-card">
                                 @foreach (var def in group)
                                 {
@@ -119,8 +119,8 @@
                                     var state = StateFor(d.Scope);
                                     <div class="ra-perm-row">
                                         <div class="ra-perm-label">
-                                            <div class="ra-perm-name">@d.Label</div>
-                                            <div class="ra-perm-desc">@d.Description</div>
+                                            <div class="ra-perm-name">@Loc[d.LabelKey]</div>
+                                            <div class="ra-perm-desc">@Loc[d.DescriptionKey]</div>
                                             <code class="ra-perm-scope">@d.Scope</code>
                                         </div>
                                         <div class="ra-tristate">

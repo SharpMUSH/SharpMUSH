@@ -207,7 +207,7 @@
                     var rev = revision;
                     <MudListItem T="string">
                         <MudStack Row="true" AlignItems="AlignItems.Center">
-                            <MudText Style="font-size:0.8125rem;">@Loc["PkgRevisionLine", rev.Revision, rev.Kind, rev.Version]</MudText>
+                            <MudText Style="font-size:0.8125rem;">@Loc["PkgRevisionLine", rev.Revision, KindLabel(rev.Kind), rev.Version]</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                 @rev.AppliedAt.ToString("yyyy-MM-dd HH:mm")
                             </MudText>
@@ -364,4 +364,11 @@
         }
         finally { _busy = false; }
     }
+
+    // RevisionDto.Kind is the wire string, so a revision written by a newer server may name a kind this
+    // build has no PackageRevisionKind member (and no label) for; show it verbatim rather than guessing.
+    private string KindLabel(string kind) =>
+        Enum.TryParse<PackageRevisionKind>(kind, ignoreCase: true, out var parsed)
+            ? Loc[parsed.ResourceKey()]
+            : kind;
 }

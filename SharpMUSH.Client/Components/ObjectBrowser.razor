@@ -51,15 +51,15 @@
         }
         else
         {
-            @foreach (var (typeName, items) in _groups)
+            @foreach (var (type, items) in _groups)
             {
-                <div class="ob-group-label">@typeName · @items.Count</div>
+                <div class="ob-group-label">@Loc[type.ResourceKey()] · @items.Count</div>
                 @foreach (var item in items)
                 {
                     var it = item;
                     var on = _selectedDbref == it.Dbref;
                     <button type="button" class="ob-item @(on ? "ob-item--on" : "")" @onclick="@(() => SelectObject(it))">
-                        <MudIcon Icon="@GetTypeIcon(typeName)"
+                        <MudIcon Icon="@GetTypeIcon(type)"
                                  Style="@($"font-size:0.9375rem;flex-shrink:0;color:{(on ? "var(--accent)" : "var(--text-faint)")};")" />
                         <span class="ob-item-name">@it.Name</span>
                         <span class="ob-item-ref">#@it.Dbref</span>
@@ -79,7 +79,7 @@
     private string _error = string.Empty;
     private int _selectedDbref = -1;
 
-    private readonly List<(string TypeName, List<MushSearchResult> Items)> _groups = [];
+    private readonly List<(MushObjectType Type, List<MushSearchResult> Items)> _groups = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -156,9 +156,12 @@
 
     private void BuildGroups(List<MushSearchResult> results)
     {
-        var grouped = results.GroupBy(r => r.Type.ToString());
         _groups.Clear();
-        foreach (var g in grouped.OrderBy(g => g.Key))
+        var grouped = results
+            .GroupBy(r => r.Type)
+            .OrderBy(g => Loc[g.Key.ResourceKey()].Value, StringComparer.CurrentCultureIgnoreCase);
+
+        foreach (var g in grouped)
             _groups.Add((g.Key, g.ToList()));
     }
 
@@ -168,12 +171,12 @@
         await OnObjectSelected.InvokeAsync(item.Dbref);
     }
 
-    private static string GetTypeIcon(string typeName) => typeName switch
+    private static string GetTypeIcon(MushObjectType type) => type switch
     {
-        "Thing" => Icons.Material.Filled.Inventory2,
-        "Room" => Icons.Material.Filled.MeetingRoom,
-        "Exit" => Icons.Material.Filled.ExitToApp,
-        "Player" => Icons.Material.Filled.Person,
+        MushObjectType.Thing => Icons.Material.Filled.Inventory2,
+        MushObjectType.Room => Icons.Material.Filled.MeetingRoom,
+        MushObjectType.Exit => Icons.Material.Filled.ExitToApp,
+        MushObjectType.Player => Icons.Material.Filled.Person,
         _ => Icons.Material.Filled.DataObject,
     };
 }
