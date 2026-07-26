@@ -115,13 +115,18 @@ implies the role unambiguously — a page means "created it", a revision means "
 it", an asset means "uploaded it" — so the edge carries no discriminator property.
 This follows the existing `edge_account_has_role` shape.
 
-The edge definition is added to the existing `graph_accounts` graph.
+The edge definition belongs to the `graph_accounts` graph, and is added by amending
+`Migration_AddAccounts` in place rather than by adding a new migration — see
+[No data migration](#no-data-migration).
 
-> **Migration hazard.** The established pattern in this repo guards graph creation
-> with `if (!graphs.Any(g => g.Name == ...))`. Written that way, the new migration
-> would silently no-op on every existing database — the graph exists, so the edge
-> definition never registers. The migration must *add an edge definition to the
-> existing graph*, not conditionally create the graph.
+> **Why in place, not a new migration.** `Migration_AddAccounts` is `20250101_001`,
+> second only to `Migration_CreateDatabase`, so it creates `graph_accounts` near the
+> start of every run. This repo's established idiom guards graph creation with
+> `if (!graphs.Any(g => g.Name == ...))`. A *new* migration written that way would find
+> the graph already present and skip, so the edge definition would never register —
+> and that happens on a **brand-new** database, not just an existing one. It is
+> migration ordering within a single fresh run, which deleting the database does not
+> avoid. Amending the original migration sidesteps the guard entirely.
 
 While in `DatabaseConstants`: the `GraphRoles` doc comment describes
 `verticesAll -> IsObject -> Objects`, but the constant's only use is
@@ -262,16 +267,23 @@ SharpMUSH is pre-production, so there is no legacy attribution to remap: no reso
 ladder, no backfill service, no sidecar import, and no special-casing of the seeded
 pages.
 
-Per-backend migrations add the `node_wiki_assets` collection, the
-`edge_account_contributed` edge collection, and the graph edge definition. The old
-`AuthorDbref`, `LastEditorDbref`, `EditorDbref`, and `UploaderDbref` properties leave
-the models and the Arango schema rule.
+**Existing migrations are amended in place, not superseded.** No database holds state
+worth preserving, so `Migration_AddAccounts` gains the `edge_account_contributed`
+collection and its `graph_accounts` edge definition, and `Migration_AddWiki` gains the
+`node_wiki_assets` collection and its `UploadedAt` index. The old `AuthorDbref` and
+`LastEditorDbref` properties leave `Migration_AddWiki`'s schema rule, and
+`AuthorDbref`, `LastEditorDbref`, `EditorDbref`, and `UploaderDbref` leave the models.
+The Memgraph and Surreal `*.Migration.cs` files get the equivalent edits.
 
-**Existing local dev databases are not migrated.** They hold wiki documents with the
-old fields and no edges, so a page read finds nothing to traverse and cannot populate
-the non-nullable username. Recreate the database, or drop the wiki collections; no
-migration destroys data on its own initiative. Since seeding is idempotent-create, the
-three seeded pages regenerate on the next startup against an empty collection.
+This is the simplest correct option *because* it is pre-production, and it avoids the
+guard problem described above. It stops being available the moment a real deployment
+exists, at which point new collections need new migrations.
+
+**The existing dev database is deleted and SharpMUSH re-set-up**, rather than migrated.
+Old wiki documents carry the removed fields and no edges, so a page read would find
+nothing to traverse and could not populate the non-nullable username. Nothing in the
+codebase destroys data on its own initiative to achieve this — it is a manual step.
+Since seeding is idempotent-create, the three seeded pages regenerate on first startup.
 
 ## API and UI surface
 
