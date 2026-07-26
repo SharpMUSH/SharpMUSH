@@ -404,7 +404,11 @@ public class SharpMUSHParserVisitor(
 		// Functions are not recognized — return literal text of the function call.
 		if (_suppressFunctionEval > 0)
 		{
-			return new CallState(GetContextText(context));
+			// Function recognition is off here, but evaluation is not: PennMUSH clears
+			// PE_FUNCTION_CHECK while PE_EVALUATE stays on, so the call is copied through as text
+			// and its contents are still evaluated. Returning the raw source instead would swallow
+			// substitutions — notafunction(strlen(%#)) has to yield notafunction(strlen(#1)).
+			return await LiteralFunctionCall(context, this);
 		}
 
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];

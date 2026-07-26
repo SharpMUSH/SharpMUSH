@@ -108,7 +108,28 @@ public class ParserBehaviorUnitTests
 	[Arguments("notafunction(add(1,2))", "notafunction(add(1,2))")]
 	[Arguments("notafunction([add(1,2)])", "notafunction(3)")]
 	[Arguments("notafunction(a,b)", "notafunction(a,b)")]
+	// Evaluation reaches into the copied text: a substitution is still substituted, whether it
+	// sits directly in the non-call or inside a call that the non-call demoted to text.
+	[Arguments("notafunction(%#)", "notafunction(#1)")]
+	[Arguments("notafunction(strlen(%#))", "notafunction(strlen(#1))")]
+	[Arguments("notafunction(add(%#,2))", "notafunction(add(#1,2))")]
 	public async Task NonCallContentsEvaluateWithoutFunctionRecognition(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// The same rule reached through function-argument braces, which also clear function
+	/// recognition while leaving evaluation on. These already worked — the brace grammar treats a
+	/// function name as plain text so no call is ever recognised inside — and they guard against
+	/// the non-call path regressing them.
+	/// </summary>
+	[Test]
+	[Arguments("strcat({%#})", "#1")]
+	[Arguments("strcat({strlen(%#)})", "strlen(#1)")]
+	[Arguments("strcat({[strlen(%#)]})", "2")]
+	public async Task FunctionArgumentBracesEvaluateWithoutFunctionRecognition(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
