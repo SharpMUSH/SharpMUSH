@@ -3,12 +3,21 @@ using System.Net.Http.Json;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
+
+file sealed class AccountPageStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// Fakes the tiny slice of the account API that /account touches when it refreshes the
@@ -69,6 +78,7 @@ public class AccountPageTests : BunitContext, IAsyncDisposable
 		Services
 			.AddMudServices()
 			.AddSingleton(factory)
+			.AddSingleton<IStringLocalizer<SharedResource>, AccountPageStubLocalizer<SharedResource>>()
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
@@ -107,7 +117,7 @@ public class AccountPageTests : BunitContext, IAsyncDisposable
 			if (!cut.Markup.Contains("headwiz"))
 				throw new InvalidOperationException("profile not rendered yet");
 		});
-		await Assert.That(cut.Markup).Contains("Profile");
+		await Assert.That(cut.Markup).Contains("AuthProfile");
 	}
 
 	[TUnit.Core.Test]
@@ -119,10 +129,10 @@ public class AccountPageTests : BunitContext, IAsyncDisposable
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("Password change required"))
+			if (!cut.Markup.Contains("AuthPasswordChangeRequired"))
 				throw new InvalidOperationException("must-change-password banner not rendered yet");
 		});
-		await Assert.That(cut.Markup).Contains("Password change required");
+		await Assert.That(cut.Markup).Contains("AuthPasswordChangeRequired");
 		// The Profile/Characters sections are gated off while a password change is pending.
 		await Assert.That(cut.Markup).DoesNotContain("Characters");
 	}
@@ -136,10 +146,10 @@ public class AccountPageTests : BunitContext, IAsyncDisposable
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("not logged in"))
+			if (!cut.Markup.Contains("AuthNotLoggedInAccount"))
 				throw new InvalidOperationException("logged-out card not rendered yet");
 		});
-		await Assert.That(cut.Markup).Contains("not logged in");
+		await Assert.That(cut.Markup).Contains("AuthNotLoggedInAccount");
 	}
 
 	/// <summary>

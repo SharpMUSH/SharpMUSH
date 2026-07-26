@@ -1,8 +1,17 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
+using SharpMUSH.Client.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
+
+file sealed class RegisterStubLocalizer<T> : IStringLocalizer<T>
+{
+	public LocalizedString this[string name] => new(name, name);
+	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// The standalone /register form was folded into Login.razor's Register tab; the /register route
@@ -15,6 +24,7 @@ public class RegisterRedirectTests : BunitContext
 	public async Task Register_RedirectsToLoginRegisterTab()
 	{
 		JSInterop.Mode = JSRuntimeMode.Loose;
+		Services.AddSingleton<IStringLocalizer<SharedResource>, RegisterStubLocalizer<SharedResource>>();
 
 		Render<SharpMUSH.Client.Pages.Register>();
 

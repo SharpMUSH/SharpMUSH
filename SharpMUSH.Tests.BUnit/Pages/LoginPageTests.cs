@@ -78,11 +78,11 @@ public class LoginPageRenderTests : BunitContext
 		await Assert.That(markup.Contains("Scenes")).IsFalse();
 		await Assert.That(markup.Contains("Wiki Pages")).IsFalse();
 
-		// New shape: compact logo + "SharpMUSH" header above a single centered card.
+		// New shape: compact logo + brand header above a single centered card.
 		await Assert.That(cut.Find(".login-page")).IsNotNull();
 		await Assert.That(cut.Find(".login-brand")).IsNotNull();
 		await Assert.That(cut.Find(".login-card")).IsNotNull();
-		await Assert.That(markup.Contains("SharpMUSH")).IsTrue();
+		await Assert.That(markup.Contains("AppTitle")).IsTrue();
 
 		// Only one card-level container — not the old two-panel MudGrid split.
 		await Assert.That(cut.FindAll(".login-card").Count).IsEqualTo(1);
@@ -95,8 +95,8 @@ public class LoginPageRenderTests : BunitContext
 		var cut = Render<SharpMUSH.Client.Pages.Login>();
 
 		// Tab structure preserved.
-		await Assert.That(cut.Markup.Contains("Sign In")).IsTrue();
-		await Assert.That(cut.Markup.Contains("Register")).IsTrue();
+		await Assert.That(cut.Markup.Contains("AuthSignIn")).IsTrue();
+		await Assert.That(cut.Markup.Contains("AuthRegister")).IsTrue();
 
 		// Selectors LoginReturnUrlTests depends on must keep working.
 		await Assert.That(cut.Find("#login-username")).IsNotNull();
@@ -104,7 +104,7 @@ public class LoginPageRenderTests : BunitContext
 		await Assert.That(cut.Find("button.login-submit")).IsNotNull();
 
 		// Terminal link line preserved.
-		await Assert.That(cut.Markup.Contains("terminal")).IsTrue();
+		await Assert.That(cut.Markup.Contains("AuthTerminalLink")).IsTrue();
 		await Assert.That(cut.Find("a[href='/play']")).IsNotNull();
 	}
 

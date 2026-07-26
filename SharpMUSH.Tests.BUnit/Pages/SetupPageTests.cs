@@ -5,12 +5,30 @@ using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Client.Layout;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
+
+/// <summary>
+/// Echoes resource keys like the other bUnit localizer doubles, but appends the format arguments
+/// instead of running them through the key: the success copy's username arrives as <c>{0}</c> in
+/// the real resource, so a key-only echo would drop it and silently void the assertion that the
+/// claimed username is shown back to the claimer.
+/// </summary>
+file sealed class SetupStubLocalizer<T> : IStringLocalizer<T>
+{
+    public LocalizedString this[string name] => new(name, name);
+
+    public LocalizedString this[string name, params object[] arguments]
+        => new(name, $"{name}({string.Join(", ", arguments)})");
+
+    public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+}
 
 /// <summary>
 /// HttpMessageHandler faking the setup-wizard API surface: GET api/setup/status and
@@ -96,6 +114,7 @@ file static class SetupTestServices
 
         ctx.Services
             .AddSingleton(factory)
+            .AddSingleton<IStringLocalizer<SharedResource>, SetupStubLocalizer<SharedResource>>()
             .AddSingleton(sp => new AccountAuthService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
@@ -139,18 +158,18 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 
         cut.WaitForAssertion(() =>
         {
-            if (!cut.Markup.Contains("You are the administrator"))
+            if (!cut.Markup.Contains("AuthSetupComplete"))
                 throw new InvalidOperationException("success view not rendered yet");
         });
 
-        await Assert.That(cut.Markup).Contains("You are the administrator");
+        await Assert.That(cut.Markup).Contains("AuthSetupComplete");
         await Assert.That(cut.Markup).Contains("headwiz");
 
         // Auto-login after first-run setup: the claimer is signed in immediately (no separate
         // "Sign in" step), so the success copy reflects that and offers a portal button instead.
-        await Assert.That(cut.Markup).Contains("You are signed in as");
+        await Assert.That(cut.Markup).Contains("AuthSetupSignedInAs");
         var enterPortalButton = cut.Find("button.setup-signin");
-        await Assert.That(enterPortalButton.TextContent).Contains("Enter the portal");
+        await Assert.That(enterPortalButton.TextContent).Contains("AuthEnterPortal");
 
         var accountAuth = Services.GetRequiredService<AccountAuthService>();
         await Assert.That(accountAuth.IsLoggedIn).IsTrue();
@@ -179,17 +198,17 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 
         cut.WaitForAssertion(() =>
         {
-            if (!cut.Markup.Contains("You are the administrator"))
+            if (!cut.Markup.Contains("AuthSetupComplete"))
                 throw new InvalidOperationException("success view not rendered yet");
         });
 
-        await Assert.That(cut.Markup).Contains("You are the administrator");
-        await Assert.That(cut.Markup).Contains("Sign in to start managing your game");
-        await Assert.That(cut.Markup).DoesNotContain("You are signed in as");
+        await Assert.That(cut.Markup).Contains("AuthSetupComplete");
+        await Assert.That(cut.Markup).Contains("AuthSetupSignInToManage");
+        await Assert.That(cut.Markup).DoesNotContain("AuthSetupSignedInAs");
 
         var signInLink = cut.Find("a.setup-signin");
         await Assert.That(signInLink.GetAttribute("href")).IsEqualTo("/login");
-        await Assert.That(signInLink.TextContent).Contains("Sign in");
+        await Assert.That(signInLink.TextContent).Contains("AuthSignIn");
 
         var accountAuth = Services.GetRequiredService<AccountAuthService>();
         await Assert.That(accountAuth.IsLoggedIn).IsFalse();
@@ -206,7 +225,7 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
         cut.Find("#setup-confirm").Input("password-two");
         cut.Find("button.setup-submit").Click();
 
-        await Assert.That(cut.Find(".setup-error").TextContent).Contains("do not match");
+        await Assert.That(cut.Find(".setup-error").TextContent).Contains("AuthPasswordsDoNotMatch");
     }
 
     [TUnit.Core.Test]
@@ -225,11 +244,11 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 
         cut.WaitForAssertion(() =>
         {
-            if (!cut.Find(".setup-error").TextContent.Contains("completed by someone else"))
+            if (!cut.Find(".setup-error").TextContent.Contains("AuthSetupAlreadyCompleted"))
                 throw new InvalidOperationException("conflict error not mapped yet");
         });
 
-        await Assert.That(cut.Find(".setup-error").TextContent).Contains("completed by someone else");
+        await Assert.That(cut.Find(".setup-error").TextContent).Contains("AuthSetupAlreadyCompleted");
     }
 
     [TUnit.Core.Test]
@@ -248,11 +267,11 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 
         cut.WaitForAssertion(() =>
         {
-            if (!cut.Find(".setup-error").TextContent.Contains("already taken"))
+            if (!cut.Find(".setup-error").TextContent.Contains("AuthUsernameTaken"))
                 throw new InvalidOperationException("conflict error not mapped yet");
         });
 
-        await Assert.That(cut.Find(".setup-error").TextContent).Contains("already taken");
+        await Assert.That(cut.Find(".setup-error").TextContent).Contains("AuthUsernameTaken");
     }
 
     /// <summary>
