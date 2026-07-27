@@ -126,7 +126,7 @@ public class AdminAccountsController(
 		var (adminId, failure) = await RequireWizardAsync();
 		if (failure is not null) return failure;
 
-		if (!Enum.TryParse<AccountStatus>(request.Status, ignoreCase: true, out var status))
+		if (!AccountStatusParser.TryParseName(request.Status, out var status))
 			return BadRequest($"Unknown account status '{request.Status}'.");
 
 		// Resolving the account here separates the two error causes: absent is 404, present but

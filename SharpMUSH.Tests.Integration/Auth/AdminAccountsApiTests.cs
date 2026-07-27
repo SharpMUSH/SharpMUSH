@@ -211,6 +211,32 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
 
+	/// <summary>
+	/// Enum.TryParse succeeds on numeric text, so without an IsDefined check "42" would be
+	/// persisted as an undefined status that no UI label or query understands.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 11)]
+	public async Task SetStatus_NumericStatus_ReturnsBadRequest()
+	{
+		var (http, sessionToken) = await LoginAsGodAccountAsync();
+		var (_, target) = await RegisterAccountAsync();
+
+		using var listRequest = new HttpRequestMessage(HttpMethod.Get, "api/admin/accounts");
+		listRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var listResponse = await http.SendAsync(listRequest);
+		var rows = await listResponse.Content.ReadFromJsonAsync<List<AdminAccountRow>>();
+		var targetRow = rows!.Single(r => r.Username == target.Username);
+
+		using var request = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{targetRow.Id}/status")
+		{
+			Content = JsonContent.Create(new { status = "42" })
+		};
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var response = await http.SendAsync(request);
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+	}
+
 	[Test, NotInParallel("SetupFlow", Order = 8)]
 	public async Task SetStatus_UnknownStatus_ReturnsBadRequest()
 	{
