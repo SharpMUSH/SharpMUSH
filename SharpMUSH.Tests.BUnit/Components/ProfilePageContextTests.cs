@@ -11,15 +11,9 @@ using SharpMUSH.Client.Components.Widgets;
 using SharpMUSH.Client.Models.Widgets;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class CtxStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>Returns an empty gallery for any character.</summary>
 file sealed class EmptyGalleryHandler : HttpMessageHandler
@@ -48,7 +42,7 @@ public class ProfilePageContextTests : BunitContext
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(sp => new GalleryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<GalleryService>.Instance))
-			.AddSingleton<IStringLocalizer<SharedResource>, CtxStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}

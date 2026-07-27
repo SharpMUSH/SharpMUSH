@@ -2,16 +2,16 @@
 @attribute [Authorize(Policy = "players.view")]
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Characters — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["Characters"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
 <div style="padding:var(--cpad);">
     <div class="ph-header">
-        <div class="ph-kicker">Administration</div>
-        <h1 class="ph-title">Characters</h1>
+        <div class="ph-kicker">@Loc["AdmKicker"]</div>
+        <h1 class="ph-title">@Loc["Characters"]</h1>
     </div>
 
     <div class="ph-empty">
         <MudIcon Icon="@Icons.Material.Filled.Person" Class="ph-empty-icon" />
-        <div class="ph-empty-text">Character administration coming soon.</div>
+        <div class="ph-empty-text">@Loc["AdmCharactersComingSoon"]</div>
     </div>
 </div>

@@ -7,27 +7,27 @@
 @inject AccountAuthService AccountAuth
 @inject ITerminalService Terminal
 
-<PageTitle>Sign In — SharpMUSH</PageTitle>
+<PageTitle>@Loc["AuthSignIn"] — @Loc["AppTitle"]</PageTitle>
 
 @* Single centered card — no marketing hero, no scrolling. Mirrors Setup.razor's visual family
    (logo + title above a card) inside OnboardingLayout's shell, which already supplies the
    full-viewport gradient background and glow. *@
 <div class="login-page">
     <div class="login-brand">
-        <img src="assets/Logo.svg" alt="SharpMUSH" class="login-logo" />
-        <h1 class="login-brand-title">SharpMUSH</h1>
+        <img src="assets/Logo.svg" alt="@Loc["AppTitle"]" class="login-logo" />
+        <h1 class="login-brand-title">@Loc["AppTitle"]</h1>
     </div>
 
     <MudPaper Elevation="4" Class="login-card">
 
         <MudTabs @bind-ActivePanelIndex="_tabIndex" Elevation="0" Rounded="true" Centered="true" Class="mb-3">
-            <MudTabPanel Text="Sign In">
+            <MudTabPanel Text="@Loc["AuthSignIn"]">
                 <div class="pa-0 pt-3">
-                    <MudTextField id="login-username" @bind-Value="_loginIdentifier" Label="Username or email"
+                    <MudTextField id="login-username" @bind-Value="_loginIdentifier" Label="@Loc["AuthUsernameOrEmail"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
                                   Disabled="_busy" OnKeyDown="OnKeyDown" />
-                    <MudTextField id="login-password" @bind-Value="_loginPassword" Label="Password"
+                    <MudTextField id="login-password" @bind-Value="_loginPassword" Label="@Loc["AuthPassword"]"
                                   InputType="InputType.Password"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
@@ -42,22 +42,22 @@
                                Disabled="_busy" OnClick="LoginAsync" Class="login-submit"
                                Style="font-weight:600;font-size:0.9375rem;height:42px;">
                         @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                        Connect
+                        @Loc["Connect"]
                     </MudButton>
                 </div>
             </MudTabPanel>
 
-            <MudTabPanel Text="Register">
+            <MudTabPanel Text="@Loc["AuthRegister"]">
                 <div class="pa-0 pt-3">
-                    <MudTextField @bind-Value="_regUsername" Label="Username"
+                    <MudTextField @bind-Value="_regUsername" Label="@Loc["AuthUsername"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
                                   Disabled="_busy" />
-                    <MudTextField @bind-Value="_regEmail" Label="Email (optional)"
+                    <MudTextField @bind-Value="_regEmail" Label="@Loc["AuthEmailOptional"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
                                   Disabled="_busy" />
-                    <MudTextField @bind-Value="_regPassword" Label="Password"
+                    <MudTextField @bind-Value="_regPassword" Label="@Loc["AuthPassword"]"
                                   InputType="InputType.Password"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
@@ -72,7 +72,7 @@
                                Disabled="_busy" OnClick="RegisterAsync" Class="register-submit"
                                Style="font-weight:600;font-size:0.9375rem;height:42px;">
                         @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                        Create Account
+                        @Loc["AuthCreateAccount"]
                     </MudButton>
                 </div>
             </MudTabPanel>
@@ -80,8 +80,8 @@
 
         <MudDivider Class="my-3" />
         <MudText Align="Align.Center" Style="font-size:0.8125rem;color:var(--text-faint);">
-            Or connect directly via the
-            <MudLink Href="/play" Style="color:var(--accent);">terminal</MudLink>
+            @Loc["AuthConnectDirectly"]
+            <MudLink Href="/play" Style="color:var(--accent);">@Loc["AuthTerminalLink"]</MudLink>
         </MudText>
     </MudPaper>
 </div>
@@ -150,7 +150,7 @@
         _error = null;
         if (string.IsNullOrWhiteSpace(_loginIdentifier) || string.IsNullOrWhiteSpace(_loginPassword))
         {
-            _error = "Please enter your credentials.";
+            _error = Loc["AuthEnterCredentials"];
             return;
         }
         _busy = true;
@@ -160,7 +160,7 @@
         if (success)
             Nav.NavigateTo(SuccessUrl());
         else
-            _error = error ?? "Login failed.";
+            _error = error ?? Loc["AuthLoginFailed"];
         StateHasChanged();
     }
 
@@ -169,7 +169,7 @@
         _error = null;
         if (string.IsNullOrWhiteSpace(_regUsername) || string.IsNullOrWhiteSpace(_regPassword))
         {
-            _error = "Username and password are required.";
+            _error = Loc["AuthUsernamePasswordRequired"];
             return;
         }
         _busy = true;
@@ -179,7 +179,7 @@
         if (success)
             Nav.NavigateTo(SuccessUrl());
         else
-            _error = error ?? "Registration failed.";
+            _error = error ?? Loc["AuthRegistrationFailed"];
         StateHasChanged();
     }
 

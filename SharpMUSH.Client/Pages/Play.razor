@@ -7,42 +7,42 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-<PageTitle>Play — SharpMUSH</PageTitle>
+<PageTitle>@Loc["Play"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="play-shell @(_focusMode ? "play-shell--focus" : "")">
 
     <div class="play-term">
         <div class="play-term-header">
             <span class="play-dot @(PlayTerminal.IsConnected ? "play-dot--on" : "")"></span>
-            <span class="play-char">@(PlayTerminal.ConnectedPlayerName ?? "Play Terminal")</span>
-            <span class="play-loc">@(PlayTerminal.IsConnected ? "in play" : "not connected")</span>
+            <span class="play-char">@(PlayTerminal.ConnectedPlayerName ?? Loc["NavPlayTerminal"])</span>
+            <span class="play-loc">@(PlayTerminal.IsConnected ? Loc["NavInPlay"] : Loc["NavNotConnected"])</span>
             <div style="flex:1;"></div>
             <span class="play-conn @(PlayTerminal.IsConnected ? "play-conn--on" : "")">
-                ● @(PlayTerminal.IsConnected ? "connected" : "disconnected")
+                ● @(PlayTerminal.IsConnected ? Loc["Connected"] : Loc["Disconnected"])
             </span>
             <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
                 <ActivatorContent>
                     <button type="button" class="play-focus-btn" @onclick="@context.ToggleAsync"
-                            title="Terminal settings" aria-label="Terminal settings">
+                            title="@Loc["NavTerminalSettings"]" aria-label="@Loc["NavTerminalSettings"]">
                         <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:1.05rem;" />
                     </button>
                 </ActivatorContent>
                 <ChildContent>
                     <div class="play-cfg" @onclick:stopPropagation="true">
-                        <div class="play-cfg-kicker">Terminal</div>
+                        <div class="play-cfg-kicker">@Loc["Terminal"]</div>
                         <label class="play-cfg-row"
-                               title="Preferred terminal width in columns (min 78). The font autoscales to fill it — more room means a bigger font — and it's reported to the server as your screen width.">
-                            <span>Width (cols)</span>
+                               title="@Loc["NavTerminalWidthTooltip"]">
+                            <span>@Loc["NavTerminalWidthCols"]</span>
                             <input class="play-cols-input" type="number" min="78" max="240" step="1"
                                    value="@_targetCols" @onchange="OnColsChanged" />
                         </label>
                         <button type="button" class="play-cfg-item" @onclick="ToggleFocus">
                             <MudIcon Icon="@(_focusMode ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Style="font-size:1rem;" />
-                            <span>@(_focusMode ? "Exit focus mode" : "Focus mode")</span>
+                            <span>@(_focusMode ? Loc["NavExitFocusMode"] : Loc["NavFocusMode"])</span>
                         </button>
                         <button type="button" class="play-cfg-item" @onclick="ClearTerminal">
                             <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:1rem;" />
-                            <span>Clear terminal</span>
+                            <span>@Loc["TermClearTerminal"]</span>
                         </button>
                     </div>
                 </ChildContent>
@@ -56,10 +56,10 @@
 
     <div class="play-side">
         <div class="play-card">
-            <div class="play-fieldlabel">Here</div>
+            <div class="play-fieldlabel">@Loc["TermBrowserHere"]</div>
             @if (_here.Count == 0)
             {
-                <div class="play-empty">— Connect to see who's here —</div>
+                <div class="play-empty">@Loc["NavConnectToSeeWhoIsHere"]</div>
             }
             else
             {
@@ -69,13 +69,13 @@
                     {
                         <div class="play-entry play-clickable"
                              @onclick="@(() => RunEntry(e))">
-                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                            @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
                         </div>
                     }
                     else
                     {
                         <div class="play-entry">
-                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                            @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
                         </div>
                     }
                 }
@@ -83,10 +83,10 @@
         </div>
 
         <div class="play-card">
-            <div class="play-fieldlabel">Exits</div>
+            <div class="play-fieldlabel">@Loc["NavExits"]</div>
             @if (_exits.Count == 0)
             {
-                <div class="play-empty">— No exits available —</div>
+                <div class="play-empty">@Loc["NavNoExitsAvailable"]</div>
             }
             else
             {
@@ -96,13 +96,13 @@
                     {
                         <div class="play-entry play-clickable"
                              @onclick="@(() => RunEntry(e))">
-                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                            @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
                         </div>
                     }
                     else
                     {
                         <div class="play-entry">
-                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                            @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
                         </div>
                     }
                 }
@@ -110,7 +110,7 @@
         </div>
 
         <div class="play-card">
-            <div class="play-fieldlabel">Quick actions</div>
+            <div class="play-fieldlabel">@Loc["QuickActions"]</div>
             <div class="play-actions">
                 <a class="play-action" href="/characters">
                     <MudIcon Icon="@Icons.Material.Filled.People" Class="play-action-icon" /> @Loc["Characters"]

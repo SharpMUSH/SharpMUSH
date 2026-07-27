@@ -2,10 +2,13 @@ using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -47,6 +50,7 @@ public class PluginChangeReloaderTests : BunitContext
 	public async Task PluginsChanged_ForcesHardReload()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		var connection = new FakeConnectionStateService();
 		Services.AddSingleton<IConnectionStateService>(connection);
 

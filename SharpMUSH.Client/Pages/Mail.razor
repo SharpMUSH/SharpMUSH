@@ -7,7 +7,7 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-<PageTitle>Mail — SharpMUSH</PageTitle>
+<PageTitle>@Loc["Mail"] — @Loc["AppTitle"]</PageTitle>
 
 @if (!_characterActive)
 {
@@ -26,7 +26,7 @@ else
 
         <div class="mail-folders" style="width:180px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface-3);display:flex;flex-direction:column;overflow-y:auto;">
             <div style="padding:0.875rem 0.75rem 0.5rem;border-bottom:1px solid var(--border-soft);">
-                <MudText Class="section-kicker">Folders</MudText>
+                <MudText Class="section-kicker">@Loc["NavMailFolders"]</MudText>
             </div>
             <MudNavMenu Dense="true" Style="padding:0.5rem 0.25rem;">
                 @foreach (var f in _folders)
@@ -96,7 +96,7 @@ else
             @if (_selected is null)
             {
                 <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-faint);font-size:0.875rem;">
-                    Select a message to read
+                    @Loc["NavMailSelectMessage"]
                 </div>
             }
             else
@@ -108,7 +108,7 @@ else
                         </MudAvatar>
                         <div style="flex:1;min-width:0;">
                             <MudText Style="font-size:1rem;font-weight:700;margin-bottom:0.125rem;">@_selected.Subject</MudText>
-                            <MudText Style="font-size:0.8125rem;color:var(--text-dim);">From: @_selected.From</MudText>
+                            <MudText Style="font-size:0.8125rem;color:var(--text-dim);">@Loc["From"]: @_selected.From</MudText>
                             <MudText Style="font-size:0.75rem;color:var(--text-faint);">@_selected.DateSent.LocalDateTime.ToString("dddd, MMMM d yyyy, h:mm tt")</MudText>
                         </div>
                     </div>
@@ -116,17 +116,17 @@ else
                 <div style="flex:1;overflow-y:auto;padding:1.25rem var(--cpad);">
                     <MudButton Variant="Variant.Text" Size="Size.Small"
                                Color="Color.Default" OnClick="OpenDetail">
-                        Read full message →
+                        @Loc["NavMailReadFullMessage"]
                     </MudButton>
                 </div>
                 <div style="padding:0.75rem var(--cpad);border-top:1px solid var(--border);display:flex;gap:0.5rem;flex-shrink:0;">
                     <MudButton Variant="Variant.Outlined" Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.Reply">
-                        Reply
+                        @Loc["Reply"]
                     </MudButton>
                     <MudButton Variant="Variant.Outlined" Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.Forward">
-                        Forward
+                        @Loc["NavMailForward"]
                     </MudButton>
                 </div>
             }

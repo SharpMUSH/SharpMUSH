@@ -3,10 +3,13 @@ using System.Net.Http.Json;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
@@ -113,7 +116,8 @@ file static class AdminAccountsTestServices
 						NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
 				.AddSingleton(sp => new AdminAccountsService(
 						sp.GetRequiredService<IHttpClientFactory>(),
-						sp.GetRequiredService<AccountAuthService>()));
+						sp.GetRequiredService<AccountAuthService>()))
+				.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		return apiClient;
@@ -144,12 +148,12 @@ public class AdminAccountsPageTests : BunitContext, IAsyncDisposable
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("headwiz-target") || !cut.Markup.Contains("DISABLED"))
+			if (!cut.Markup.Contains("headwiz-target") || !cut.Markup.Contains("AdmAccountDisabledChip"))
 				throw new InvalidOperationException("account rows not rendered yet");
 		});
 
 		await Assert.That(cut.Markup).Contains("headwiz-target");
-		await Assert.That(cut.Markup).Contains("DISABLED");
+		await Assert.That(cut.Markup).Contains("AdmAccountDisabledChip");
 	}
 
 	[TUnit.Core.Test]

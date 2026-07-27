@@ -3,7 +3,7 @@
 @inject CharacterDirectoryService Directory
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["Characters"] — SharpMUSH</PageTitle>
+<PageTitle>@Loc["Characters"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="char-page">
     <div class="char-header">
@@ -28,7 +28,7 @@
             {
                 var c = cat;
                 <button type="button" class="char-pill @(_selectedCategory == c ? "char-pill--on" : "")"
-                        @onclick="@(() => _selectedCategory = c)">@(c.Length == 0 ? "Other" : c)</button>
+                        @onclick="@(() => _selectedCategory = c)">@(c.Length == 0 ? Loc["WkKindOther"] : c)</button>
             }
         </div>
     }
@@ -91,7 +91,9 @@
     private static readonly int[] AvHues = [168, 28, 264, 210, 340, 130, 50];
 
     private string HeaderKicker =>
-        _loading ? "loading…" : $"{_all.Count} {(_all.Count == 1 ? "character" : "characters")} registered";
+        _loading
+            ? Loc["Loading"]
+            : Loc[_all.Count == 1 ? "NavCharacterRegistered" : "NavCharactersRegistered", _all.Count];
 
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> Filtered
     {

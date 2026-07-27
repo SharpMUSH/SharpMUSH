@@ -1,5 +1,6 @@
 @using SharpMUSH.Client.Models.Roles
 @using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
 @inject RoleRegistryClient Roles
 @inject ISnackbar Snackbar
 
@@ -7,30 +8,30 @@
     <DialogContent>
         <MudGrid>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_slug" Label="Slug" Required="true" Variant="Variant.Outlined"
-                              Disabled="@(!_isNew)" HelperText="Stable machine key. Cannot change after creation." />
+                <MudTextField @bind-Value="_slug" Label="@Loc["RolSlugLabel"]" Required="true" Variant="Variant.Outlined"
+                              Disabled="@(!_isNew)" HelperText="@Loc["RolSlugHelper"]" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_name" Label="Name" Required="true" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_name" Label="@Loc["RolNameLabel"]" Required="true" Variant="Variant.Outlined" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_color" Label="Color" Variant="Variant.Outlined"
-                              HelperText="CSS color, e.g. #6cde9a" />
+                <MudTextField @bind-Value="_color" Label="@Loc["RolColorLabel"]" Variant="Variant.Outlined"
+                              HelperText="@Loc["RolColorHelper"]" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudNumericField @bind-Value="_priority" Label="Priority" Variant="Variant.Outlined"
-                                 HelperText="Higher wins on conflict" />
+                <MudNumericField @bind-Value="_priority" Label="@Loc["RolPriorityLabel"]" Variant="Variant.Outlined"
+                                 HelperText="@Loc["RolPriorityHelper"]" />
             </MudItem>
         </MudGrid>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Disabled="_saving">Cancel</MudButton>
+        <MudButton OnClick="Cancel" Disabled="_saving">@Loc["Cancel"]</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="_saving">
             @if (_saving)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
             }
-            Save
+            @Loc["Save"]
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -65,7 +66,7 @@
     {
         if (string.IsNullOrWhiteSpace(_slug) || string.IsNullOrWhiteSpace(_name))
         {
-            Snackbar.Add("Slug and name are required.", Severity.Warning);
+            Snackbar.Add(Loc["RolSlugAndNameRequired"], Severity.Warning);
             return;
         }
 
@@ -85,12 +86,12 @@
 
         if (ok)
         {
-            Snackbar.Add($"Saved {model.Slug}.", Severity.Success);
+            Snackbar.Add(Loc["RolSaved", model.Slug], Severity.Success);
             MudDialog.Close(DialogResult.Ok(model.Slug));
         }
         else
         {
-            Snackbar.Add(error ?? "Save failed.", Severity.Error);
+            Snackbar.Add(error ?? Loc["RolSaveFailed"], Severity.Error);
         }
     }
 }

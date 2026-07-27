@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components
+@inject IStringLocalizer<SharedResource> Loc
 
 <ErrorBoundary @ref="_boundary">
     <ChildContent>
@@ -6,7 +7,7 @@
     </ChildContent>
     <ErrorContent Context="ex">
         <MudAlert Severity="Severity.Error" Dense="true" Class="ma-1">
-            Widget <strong>@WidgetName</strong> failed to render.
+            <strong>@WidgetName</strong> — @Loc["WidWidgetRenderFailed"]
         </MudAlert>
     </ErrorContent>
 </ErrorBoundary>

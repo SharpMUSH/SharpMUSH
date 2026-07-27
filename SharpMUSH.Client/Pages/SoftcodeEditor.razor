@@ -11,7 +11,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @implements IAsyncDisposable
 
-<PageTitle>Softcode Editor — SharpMUSH</PageTitle>
+<PageTitle>@Loc["TermSoftcodeEditorTitle"] — @Loc["AppTitle"]</PageTitle>
 
 @* Three-pane layout. IMPORTANT: no CSS transition on widths — Chrome freezes when
    transitioning between px and 1fr. Collapse is an instant class swap. *@
@@ -21,15 +21,15 @@
        a time. Selecting an object/attribute drills forward automatically (see handlers). *@
     <div class="sc-mobilebar">
         <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Objects ? "sc-mobiletab--on" : "")"
-                @onclick="@(() => _mobilePane = MobilePane.Objects)">Objects</button>
+                @onclick="@(() => _mobilePane = MobilePane.Objects)">@Loc["TermObjects"]</button>
         <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Attrs ? "sc-mobiletab--on" : "")"
                 @onclick="@(() => _mobilePane = MobilePane.Attrs)">
-            Attributes@(_selectedObject is not null ? $" · #{_selectedObject.Dbref}" : "")
+            @Loc["Attributes"]@(_selectedObject is not null ? $" · #{_selectedObject.Dbref}" : "")
         </button>
         <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Editor ? "sc-mobiletab--on" : "")"
                 @onclick="@(() => _mobilePane = MobilePane.Editor)"
                 disabled="@(ActiveTab is null)">
-            Editor@(ActiveTab is not null ? $" · &{ActiveTab.Attr.Name}" : "")
+            @Loc["TermEditor"]@(ActiveTab is not null ? $" · &{ActiveTab.Attr.Name}" : "")
         </button>
     </div>
 
@@ -37,17 +37,17 @@
         <div style="display:flex;align-items:center;padding:0.5rem 0.5rem 0.375rem;border-bottom:1px solid var(--border-soft);gap:0.375rem;flex-shrink:0;">
             @if (!_objCollapsed)
             {
-                <MudText Class="section-kicker" Style="flex:1;">Objects</MudText>
-                <MudTooltip Text="Create Thing">
+                <MudText Class="section-kicker" Style="flex:1;">@Loc["TermObjects"]</MudText>
+                <MudTooltip Text="@Loc["TermCreateThing"]">
                     <MudIconButton Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Thing))" />
                 </MudTooltip>
-                <MudTooltip Text="Create Room">
+                <MudTooltip Text="@Loc["TermCreateRoom"]">
                     <MudIconButton Icon="@Icons.Material.Filled.MeetingRoom" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Room))" />
                 </MudTooltip>
             }
             <MudIconButton Icon="@(_objCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ChevronLeft)"
                            Size="Size.Small" OnClick="@(() => _objCollapsed = !_objCollapsed)"
-                           title="@(_objCollapsed ? "Expand objects" : "Collapse objects")" />
+                           title="@(_objCollapsed ? Loc["TermExpandObjects"] : Loc["TermCollapseObjects"])" />
         </div>
 
         @if (_objCollapsed)
@@ -74,7 +74,7 @@
                     <MudText Style="font-family:'JetBrains Mono',monospace;font-size:0.6875rem;color:var(--accent);white-space:nowrap;">
                         @(_createObjectType switch { MushObjectType.Room => "@dig", MushObjectType.Exit => "@open", _ => "@create" })
                     </MudText>
-                    <MudTextField @bind-Value="_createObjectName" Placeholder="name"
+                    <MudTextField @bind-Value="_createObjectName" Placeholder="@Loc["TermObjectNamePlaceholder"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Style="flex:1;font-size:0.75rem;" OnKeyDown="OnCreateObjectKeyDown" />
                     <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" OnClick="ExecuteCreateObjectAsync" />
@@ -89,20 +89,20 @@
             @if (!_attrCollapsed)
             {
                 <MudText Class="section-kicker" Style="flex:1;display:flex;align-items:center;gap:0.375rem;">
-                    <span>Attributes</span>
+                    <span>@Loc["Attributes"]</span>
                     @if (_selectedObject is not null)
                     {
                         <span style="color:var(--accent);">· #@(_selectedObject?.Dbref)</span>
                     }
                 </MudText>
                 <button type="button" class="sc-add-btn" @onclick="ShowCreateAttr"
-                        disabled="@(_selectedObject is null)" title="Add attribute">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.8125rem;" /> Add
+                        disabled="@(_selectedObject is null)" title="@Loc["TermAddAttribute"]">
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.8125rem;" /> @Loc["Add"]
                 </button>
             }
             <MudIconButton Icon="@(_attrCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ChevronLeft)"
                            Size="Size.Small" OnClick="@(() => _attrCollapsed = !_attrCollapsed)"
-                           title="@(_attrCollapsed ? "Expand attributes" : "Collapse attributes")" />
+                           title="@(_attrCollapsed ? Loc["TermExpandAttributes"] : Loc["TermCollapseAttributes"])" />
         </div>
 
         @if (_attrCollapsed)
@@ -122,10 +122,10 @@
             <div class="sc-search">
                 <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;color:var(--text-faint);" />
                 <input value="@_attrSearch" @oninput="@(e => _attrSearch = e.Value?.ToString() ?? string.Empty)"
-                       placeholder="Filter attributes…" class="sc-search-input" />
+                       placeholder="@Loc["TermFilterAttributes"]" class="sc-search-input" />
                 @if (!string.IsNullOrEmpty(_attrSearch))
                 {
-                    <button type="button" class="sc-search-clear" @onclick="@(() => _attrSearch = string.Empty)" title="Clear">
+                    <button type="button" class="sc-search-clear" @onclick="@(() => _attrSearch = string.Empty)" title="@Loc["TermClear"]">
                         <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.75rem;" />
                     </button>
                 }
@@ -140,10 +140,10 @@
                                @oninput="@(e => _newAttrName = e.Value?.ToString() ?? string.Empty)"
                                @onkeydown="OnCreateAttrKeyDown"
                                placeholder="ATTR`NAME" class="sc-add-input" />
-                        <button type="button" class="sc-add-icon" @onclick="ExecuteCreateAttrAsync" title="Create">
+                        <button type="button" class="sc-add-icon" @onclick="ExecuteCreateAttrAsync" title="@Loc["Create"]">
                             <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:0.875rem;" />
                         </button>
-                        <button type="button" class="sc-add-icon" @onclick="CancelCreateAttr" title="Cancel">
+                        <button type="button" class="sc-add-icon" @onclick="CancelCreateAttr" title="@Loc["Cancel"]">
                             <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.875rem;" />
                         </button>
                     </div>
@@ -155,7 +155,7 @@
                 }
                 else if (_selectedObject is null)
                 {
-                    <div style="padding:0.875rem;color:var(--text-faint);font-size:0.75rem;">Select an object.</div>
+                    <div style="padding:0.875rem;color:var(--text-faint);font-size:0.75rem;">@Loc["TermSelectAnObject"]</div>
                 }
                 else
                 {
@@ -170,17 +170,17 @@
                         <button type="button" class="sc-attr-item @(isActive ? "sc-attr-item--on" : "")"
                                 @onclick="() => OnAttributeSelected(a)">
                             <span class="sc-attr-row1">
-                                <span class="sc-kind-badge" style="@KindBadgeStyle(a)" title="@AttrKindLabel(a)">@AttrKindBadge(a)</span>
+                                <span class="sc-kind-badge" style="@KindBadgeStyle(a)" title="@Loc[AttrKindLabelKey(a)]">@AttrKindBadge(a)</span>
                                 <span class="sc-attr-name">@a.Name</span>
                             </span>
-                            <span class="sc-attr-desc">@AttrPreview(a)</span>
+                            <span class="sc-attr-desc">@(AttrPreview(a) ?? Loc["TermAttrEmpty"].Value)</span>
                         </button>
                     }
 
                     @if (filteredAttrs.Count == 0 && !_showCreateAttr)
                     {
                         <div style="padding:0.75rem;color:var(--text-faint);font-size:0.75rem;text-align:center;font-family:'JetBrains Mono',monospace;">
-                            @(string.IsNullOrWhiteSpace(_attrSearch) ? "No attributes." : "No match.")
+                            @(string.IsNullOrWhiteSpace(_attrSearch) ? Loc["TermNoAttributes"] : Loc["TermNoMatch"])
                         </div>
                     }
                 }
@@ -193,7 +193,7 @@
         <div class="sc-editor-toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5625rem 0.875rem;border-bottom:1px solid var(--border-soft);background:var(--surface-3);flex-shrink:0;min-height:40px;">
             @if (ActiveTab is not null)
             {
-                <span class="sc-kind-badge" style="@KindBadgeStyle(ActiveTab.Attr)" title="@AttrKindLabel(ActiveTab.Attr)">@AttrKindBadge(ActiveTab.Attr)</span>
+                <span class="sc-kind-badge" style="@KindBadgeStyle(ActiveTab.Attr)" title="@Loc[AttrKindLabelKey(ActiveTab.Attr)]">@AttrKindBadge(ActiveTab.Attr)</span>
                 <MudText Style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:var(--text-dim);">
                     @ActiveTab.Obj.Name
                 </MudText>
@@ -212,41 +212,41 @@
                 @if (ActiveTab.IsDirty)
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Warning"
-                             Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">unsaved</MudChip>
+                             Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">@Loc["TermUnsaved"]</MudChip>
                 }
             }
             else
             {
-                <MudText Style="font-size:0.75rem;color:var(--text-faint);">No attribute selected</MudText>
+                <MudText Style="font-size:0.75rem;color:var(--text-faint);">@Loc["TermNoAttributeSelected"]</MudText>
             }
             <MudSpacer />
-            <MudTooltip Text="Test — evaluate without saving">
+            <MudTooltip Text="@Loc["TermTestTooltip"]">
                 <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
                            StartIcon="@Icons.Material.Filled.PlayArrow"
                            OnClick="EvalAsync"
                            Disabled="@(_evalLoading || ActiveTab is null)">
-                    Test
+                    @Loc["TermTest"]
                 </MudButton>
             </MudTooltip>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Save"
                        OnClick="SaveAsync"
                        Disabled="@(ActiveTab is null)">
-                Save
+                @Loc["Save"]
             </MudButton>
             <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Delete"
                        OnClick="DeleteAsync"
                        Disabled="@(ActiveTab is null)">
-                Delete
+                @Loc["Delete"]
             </MudButton>
-            <MudTooltip Text="MUSH Help">
+            <MudTooltip Text="@Loc["TermMushHelp"]">
                 <MudIconButton Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small"
                                OnClick="@(() => _helpDrawer?.Open())" />
             </MudTooltip>
             @if (_selectedObject is not null)
             {
-                <MudTooltip Text="Refresh attributes">
+                <MudTooltip Text="@Loc["TermRefreshAttributes"]">
                     <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                                    OnClick="RefreshAttributesAsync" />
                 </MudTooltip>
@@ -291,7 +291,7 @@
         {
             <div class="mush-eval-output" style="flex-shrink:0;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.25rem;">
-                    <MudText Typo="Typo.caption" Color="Color.Success">▶ Eval result</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Success">▶ @Loc["TermEvalResult"]</MudText>
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
                                    Style="padding:0;min-width:0;height:16px;" Color="Color.Default"
                                    OnClick="@(() => { _evalOutput = null; StateHasChanged(); })" />
@@ -374,13 +374,13 @@
         _   => "var(--text-faint)",
     };
 
-    private static string AttrKindLabel(MushAttribute attr) => AttrKindBadge(attr) switch
+    private static string AttrKindLabelKey(MushAttribute attr) => AttrKindBadge(attr) switch
     {
-        "$" => "Command trigger",
-        "ƒ" => "Function",
-        "^" => "Listen trigger",
-        "•" => "Data",
-        _   => "Text",
+        "$" => "TermAttrKindCommand",
+        "ƒ" => "TermAttrKindFunction",
+        "^" => "TermAttrKindListen",
+        "•" => "TermAttrKindData",
+        _   => "TermAttrKindText",
     };
 
     private static string AttrKindGlow(MushAttribute attr) => AttrKindBadge(attr) switch
@@ -395,10 +395,12 @@
     private static string KindBadgeStyle(MushAttribute attr)
         => $"background:rgba({AttrKindGlow(attr)},0.14);border:1px solid rgba({AttrKindGlow(attr)},0.3);color:{AttrKindColor(attr)};";
 
-    private static string AttrPreview(MushAttribute attr)
+    /// <summary>One-line preview of an attribute's value, or <c>null</c> when it has none — the
+    /// caller renders the localized empty marker, which a static helper cannot reach.</summary>
+    private static string? AttrPreview(MushAttribute attr)
     {
         var v = (attr.Value ?? string.Empty).Replace('\n', ' ').Replace('\r', ' ').Trim();
-        if (v.Length == 0) return "(empty)";
+        if (v.Length == 0) return null;
         return v.Length > 60 ? v[..60] + "…" : v;
     }
 
@@ -524,7 +526,7 @@
         }
         catch (Exception ex)
         {
-            _saveMessage = $"Error loading object: {ex.Message}";
+            _saveMessage = Loc["TermErrorLoadingObject", ex.Message];
             _saveSeverity = Severity.Error;
         }
         finally
@@ -563,7 +565,7 @@
         await QueryService.SetAttributeAsync($"#{savedDbref}", savedAttrName, value);
         ActiveTab.IsDirty = false;
         await RefreshAttributesAsync();
-        _saveMessage = $"Saved &{savedAttrName} on #{savedDbref}.";
+        _saveMessage = Loc["TermSavedAttribute", savedAttrName, savedDbref];
         _saveSeverity = Severity.Success;
         StateHasChanged();
     }
@@ -574,7 +576,7 @@
         var deletedName = ActiveTab.Attr.Name;
         var deletedDbref = ActiveTab.Obj.Dbref;
         await QueryService.DeleteAttributeAsync($"#{deletedDbref}", deletedName);
-        _saveMessage = $"Deleted &{deletedName}.";
+        _saveMessage = Loc["TermDeletedAttribute", deletedName];
         _saveSeverity = Severity.Info;
         var tabIdx = _openTabs.IndexOf(ActiveTab);
         if (tabIdx >= 0) await CloseTabAsync(tabIdx);
@@ -593,11 +595,11 @@
             var lines = await QueryService.EvalAsync($"#{ActiveTab.Obj.Dbref}", ActiveTab.Attr.Name);
             _evalOutput = lines.Length > 0
                 ? string.Join("\n", lines.Where(l => !string.IsNullOrEmpty(l)))
-                : "(no output)";
+                : Loc["TermNoOutput"];
         }
         catch (Exception ex)
         {
-            _evalOutput = $"[Error] {ex.Message}";
+            _evalOutput = Loc["TermErrorLine", ex.Message];
         }
         finally
         {

@@ -76,7 +76,7 @@ public class DebugAuthenticationHandler(
 					claims.Add(new("character_creation_time", player.Object.CreationTime.ToString()));
 					claims.Add(new("character_name", player.Object.Name));
 					// GameHub uses this claim for SignalR character-group routing.
-					claims.Add(new(GameHub.CharacterDbrefClaim, $"#{player.Object.Key}"));
+					claims.Add(new(GameHub.CharacterDbrefClaim, player.Object.DBRef.ToString()));
 				}
 				else
 				{

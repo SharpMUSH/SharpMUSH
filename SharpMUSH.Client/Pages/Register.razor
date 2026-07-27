@@ -1,7 +1,8 @@
 @page "/register"
 @inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Create Account — SharpMUSH</PageTitle>
+<PageTitle>@Loc["AuthCreateAccount"] — @Loc["AppTitle"]</PageTitle>
 
 @code {
     // Registration now lives solely in Login.razor's Register tab; this route stays for existing

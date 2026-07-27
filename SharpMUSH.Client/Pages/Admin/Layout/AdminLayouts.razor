@@ -1,17 +1,18 @@
 @page "/admin/layout"
 @using SharpMUSH.Library.Authorization
 @attribute [Authorize(Policy = "layout.admin")]
+@inject IStringLocalizer<SharedResource> Loc
 @inject ILayoutService LayoutService
 @inject NavigationManager Nav
 
-<PageTitle>Layout — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["LayLayouts"] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="laybrowse">
     <div class="laybrowse-head">
         <div>
-            <div class="laybrowse-kicker">Build · Page layouts</div>
-            <h1 class="laybrowse-title">Layout</h1>
-            <p class="laybrowse-blurb">Arrange the widgets on each page by dragging them between zones. Changes publish to every visitor.</p>
+            <div class="laybrowse-kicker">@Loc["LayLayoutsKicker"]</div>
+            <h1 class="laybrowse-title">@Loc["LayLayouts"]</h1>
+            <p class="laybrowse-blurb">@Loc["LayLayoutsBlurb"]</p>
         </div>
     </div>
 
@@ -23,16 +24,16 @@
                 <div class="lay-card-top">
                     <span class="lay-card-icon"><MudIcon Icon="@Icons.Material.Filled.Dashboard" Style="font-size:1.125rem;" /></span>
                     <div style="flex:1;min-width:0;">
-                        <div class="lay-card-name">@scope.DisplayName</div>
+                        <div class="lay-card-name">@Loc[scope.DisplayNameKey]</div>
                         <div class="lay-card-sub">@scope.Scope</div>
                     </div>
-                    <span class="lay-badge @(customized ? "lay-badge--on" : "")">@(customized ? "customized" : "default")</span>
+                    <span class="lay-badge @(customized ? "lay-badge--on" : "")">@(customized ? Loc["LayBadgeCustomized"] : Loc["LayBadgeDefault"])</span>
                 </div>
-                <div class="lay-card-desc">@scope.Description</div>
+                <div class="lay-card-desc">@Loc[scope.DescriptionKey]</div>
                 <div class="lay-card-zones">
                     @foreach (var z in scope.Zones)
                     {
-                        <span class="lay-zone">@z</span>
+                        <span class="lay-zone">@Loc[z.ResourceKey()]</span>
                     }
                 </div>
             </button>

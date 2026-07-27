@@ -52,7 +52,6 @@ public sealed class WidgetRegistry : IWidgetRegistry
 	{
 		public string Name => name;
 		public string DisplayName => name;
-		public string Description => "Application widget.";
 		public WidgetSize DefaultSize => WidgetSize.Large;
 		public WidgetZone[] AllowedZones => Enum.GetValues<WidgetZone>();
 		public Type ComponentType => typeof(SchemaWidget);

@@ -10,15 +10,9 @@ using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Models.Portal.Widgets;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
-
-file sealed class EditorStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>Returns an empty JSON array for any request (the live preview's widgets degrade gracefully).</summary>
 file sealed class EmptyArrayHandler : HttpMessageHandler
@@ -67,7 +61,7 @@ public class LayoutEditorTests : BunitContext
 			.AddSingleton(_layout)
 			.AddSingleton(factory)
 			.AddSingleton(sp => new WikiService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance))
-			.AddSingleton<IStringLocalizer<SharedResource>, EditorStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -80,15 +74,16 @@ public class LayoutEditorTests : BunitContext
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("Wiki Index"))
+			if (!cut.Markup.Contains("LayWidgetWikiIndex"))
 				throw new InvalidOperationException("editor not loaded yet");
 		}, TimeSpan.FromSeconds(5));
 
+		// The stubbed localizer echoes keys, so the palette renders each widget's resource key.
 		var markup = cut.Markup;
-		await Assert.That(markup).Contains("Wiki Index");
-		await Assert.That(markup).Contains("Gallery");
+		await Assert.That(markup).Contains("LayWidgetWikiIndex");
+		await Assert.That(markup).Contains("LayWidgetCharacterGallery");
 		// QuickLinks has no MainContent zone, so it is filtered out of this scope's palette.
-		await Assert.That(markup).DoesNotContain("Quick Links");
-		await Assert.That(markup).Contains("MainContent");
+		await Assert.That(markup).DoesNotContain("LayWidgetQuickLinks");
+		await Assert.That(markup).Contains("WidgetZoneMainContent");
 	}
 }
