@@ -10,14 +10,17 @@ public partial class MemgraphDatabase
 	public async ValueTask UpsertSessionAsync(SharpSession session, CancellationToken cancellationToken = default)
 	{
 		await ExecuteWithRetryAsync(
-			"MERGE (s:Session {token: $token}) SET s.accountId = $accountId, s.expiryUnixMs = $expiryUnixMs, s.ttlMs = $ttlMs, s.originIp = $originIp",
+			"MERGE (s:Session {token: $token}) SET s.accountId = $accountId, s.expiryUnixMs = $expiryUnixMs, s.ttlMs = $ttlMs, s.originIp = $originIp, s.characterKey = $characterKey, s.characterCreationTime = $characterCreationTime",
 			new
 			{
 				token = session.Token,
 				accountId = session.AccountId,
 				expiryUnixMs = session.ExpiryUnixMs,
 				ttlMs = session.TtlMs,
-				originIp = session.OriginIp
+				originIp = session.OriginIp,
+				// Setting a property to null removes it, which is exactly the "acts as nobody" state.
+				characterKey = session.CharacterKey,
+				characterCreationTime = session.CharacterCreationTime
 			}, cancellationToken);
 	}
 
@@ -35,7 +38,11 @@ public partial class MemgraphDatabase
 			AccountId = node.Properties["accountId"].As<string>(),
 			ExpiryUnixMs = Convert.ToInt64(node.Properties["expiryUnixMs"]),
 			TtlMs = Convert.ToInt64(node.Properties["ttlMs"]),
-			OriginIp = node.Properties["originIp"].As<string>()
+			OriginIp = node.Properties["originIp"].As<string>(),
+			CharacterKey = node.Properties.TryGetValue("characterKey", out var ck) && ck is not null
+				? Convert.ToInt32(ck) : null,
+			CharacterCreationTime = node.Properties.TryGetValue("characterCreationTime", out var cc) && cc is not null
+				? Convert.ToInt64(cc) : null
 		};
 	}
 

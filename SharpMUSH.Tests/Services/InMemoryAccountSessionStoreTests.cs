@@ -38,8 +38,8 @@ public class InMemoryAccountSessionStoreTests
 		var t1 = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15), "0.0.0.0");
 		var t2 = await store.CreateTokenAsync("acct-2", TimeSpan.FromMinutes(15), "0.0.0.0");
 
-		var id1 = await store.ValidateAsync(t1);
-		var id2 = await store.ValidateAsync(t2);
+		var id1 = (await store.ValidateAsync(t1))?.AccountId;
+		var id2 = (await store.ValidateAsync(t2))?.AccountId;
 
 		await Assert.That(id1).IsEqualTo("acct-1");
 		await Assert.That(id2).IsEqualTo("acct-2");
@@ -51,7 +51,7 @@ public class InMemoryAccountSessionStoreTests
 		var store = CreateStore();
 		var token = await store.CreateTokenAsync("acct-42", TimeSpan.FromMinutes(15), "0.0.0.0");
 
-		var accountId = await store.ValidateAsync(token);
+		var accountId = (await store.ValidateAsync(token))?.AccountId;
 
 		await Assert.That(accountId).IsEqualTo("acct-42");
 	}
@@ -61,7 +61,7 @@ public class InMemoryAccountSessionStoreTests
 	{
 		var store = CreateStore();
 
-		var result = await store.ValidateAsync("not-a-real-token");
+		var result = (await store.ValidateAsync("not-a-real-token"))?.AccountId;
 
 		await Assert.That(result).IsNull();
 	}
@@ -71,7 +71,7 @@ public class InMemoryAccountSessionStoreTests
 	{
 		var store = CreateStore();
 
-		var result = await store.ValidateAsync(string.Empty);
+		var result = (await store.ValidateAsync(string.Empty))?.AccountId;
 
 		await Assert.That(result).IsNull();
 	}
@@ -84,7 +84,7 @@ public class InMemoryAccountSessionStoreTests
 
 		await Task.Delay(50);
 
-		var result = await store.ValidateAsync(token);
+		var result = (await store.ValidateAsync(token))?.AccountId;
 		await Assert.That(result).IsNull();
 	}
 
@@ -95,9 +95,9 @@ public class InMemoryAccountSessionStoreTests
 		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMilliseconds(1), "0.0.0.0");
 
 		await Task.Delay(50);
-		_ = await store.ValidateAsync(token); // triggers removal
+		_ = (await store.ValidateAsync(token))?.AccountId; // triggers removal
 
-		var second = await store.ValidateAsync(token);
+		var second = (await store.ValidateAsync(token))?.AccountId;
 		await Assert.That(second).IsNull();
 	}
 
@@ -110,13 +110,13 @@ public class InMemoryAccountSessionStoreTests
 		var token = await store.CreateTokenAsync("acct-slide", TimeSpan.FromMilliseconds(200), "0.0.0.0");
 
 		await Task.Delay(100);
-		var first = await store.ValidateAsync(token); // slides expiry to now+200 ms
+		var first = (await store.ValidateAsync(token))?.AccountId; // slides expiry to now+200 ms
 		await Assert.That(first).IsEqualTo("acct-slide");
 
 		// If expiry did NOT slide, this 150 ms delay would exceed the original 200 ms window.
 		// Because it DID slide, the token should still be valid.
 		await Task.Delay(150);
-		var second = await store.ValidateAsync(token);
+		var second = (await store.ValidateAsync(token))?.AccountId;
 		await Assert.That(second).IsEqualTo("acct-slide");
 	}
 
@@ -128,7 +128,7 @@ public class InMemoryAccountSessionStoreTests
 
 		for (var i = 0; i < 5; i++)
 		{
-			var result = await store.ValidateAsync(token);
+			var result = (await store.ValidateAsync(token))?.AccountId;
 			await Assert.That(result).IsEqualTo("acct-multi");
 		}
 	}
@@ -140,7 +140,7 @@ public class InMemoryAccountSessionStoreTests
 		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		await store.RevokeAsync(token);
-		var result = await store.ValidateAsync(token);
+		var result = (await store.ValidateAsync(token))?.AccountId;
 
 		await Assert.That(result).IsNull();
 	}
@@ -162,8 +162,8 @@ public class InMemoryAccountSessionStoreTests
 
 		await store.RevokeAsync(t1);
 
-		var r1 = await store.ValidateAsync(t1);
-		var r2 = await store.ValidateAsync(t2);
+		var r1 = (await store.ValidateAsync(t1))?.AccountId;
+		var r2 = (await store.ValidateAsync(t2))?.AccountId;
 
 		await Assert.That(r1).IsNull();
 		await Assert.That(r2).IsEqualTo("acct-2");
@@ -176,7 +176,7 @@ public class InMemoryAccountSessionStoreTests
 		var tasks = Enumerable.Range(0, 50).Select(async i =>
 		{
 			var token = await store.CreateTokenAsync($"acct-{i}", TimeSpan.FromSeconds(30), "0.0.0.0");
-			var result = await store.ValidateAsync(token);
+			var result = (await store.ValidateAsync(token))?.AccountId;
 			await Assert.That(result).IsEqualTo($"acct-{i}");
 		});
 
@@ -193,9 +193,9 @@ public class InMemoryAccountSessionStoreTests
 
 		await store.RevokeAllForAccountAsync("acct-A");
 
-		await Assert.That(await store.ValidateAsync(t1)).IsNull();
-		await Assert.That(await store.ValidateAsync(t2)).IsNull();
-		await Assert.That(await store.ValidateAsync(t3)).IsEqualTo("acct-B");
+		await Assert.That((await store.ValidateAsync(t1))?.AccountId).IsNull();
+		await Assert.That((await store.ValidateAsync(t2))?.AccountId).IsNull();
+		await Assert.That((await store.ValidateAsync(t3))?.AccountId).IsEqualTo("acct-B");
 	}
 
 	[Test]
@@ -208,8 +208,8 @@ public class InMemoryAccountSessionStoreTests
 
 		await store.RevokeAllForIpAsync("203.0.113.7");
 
-		await Assert.That(await store.ValidateAsync(t1)).IsNull();
-		await Assert.That(await store.ValidateAsync(t2)).IsNull();
-		await Assert.That(await store.ValidateAsync(t3)).IsEqualTo("acct-C");
+		await Assert.That((await store.ValidateAsync(t1))?.AccountId).IsNull();
+		await Assert.That((await store.ValidateAsync(t2))?.AccountId).IsNull();
+		await Assert.That((await store.ValidateAsync(t3))?.AccountId).IsEqualTo("acct-C");
 	}
 }

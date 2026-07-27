@@ -31,6 +31,20 @@ public class AccountController(
 	/// accounts flagged MustChangePassword are rejected with 403 — the flag is enforced
 	/// server-side, not advisory: a flagged session may only change its password or log out.
 	/// </summary>
+	/// <summary>
+	/// The session behind this request, or null when there is no usable bearer. Used to mark which
+	/// roster entry the caller is acting as — the session token is opaque to the client, so the roster
+	/// response is where a reloaded tab finds out.
+	/// </summary>
+	private async Task<IAccountSessionStore.SessionIdentity?> ActingCharacterAsync()
+	{
+		var header = Request.Headers.Authorization.FirstOrDefault();
+		if (header is null || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+			return null;
+
+		return await accountSessionStore.ValidateAsync(header["Bearer ".Length..].Trim());
+	}
+
 	private async Task<(string? AccountId, IActionResult? Failure)> GetAccountIdFromBearerAsync(bool allowMustChangePassword = false)
 	{
 		var header = Request.Headers.Authorization.FirstOrDefault();
@@ -38,9 +52,10 @@ public class AccountController(
 			return (null, Unauthorized("Invalid or expired account session."));
 
 		var token = header["Bearer ".Length..].Trim();
-		var accountId = await accountSessionStore.ValidateAsync(token);
-		if (accountId is null)
+		var session = await accountSessionStore.ValidateAsync(token);
+		if (session is null)
 			return (null, Unauthorized("Invalid or expired account session."));
+		var accountId = session.Value.AccountId;
 
 		var account = await accountService.GetByIdAsync(accountId);
 		if (account is null || account.IsDisabled)
@@ -60,7 +75,9 @@ public class AccountController(
 		if (failure is not null) return failure;
 
 		var characters = await accountService.GetCharactersAsync(accountId!);
-		var summaries = await CharacterSummaryMapper.BuildSummariesAsync(characters);
+		var acting = await ActingCharacterAsync();
+		var summaries = await CharacterSummaryMapper.BuildSummariesAsync(characters,
+			actingKey: acting?.CharacterKey, actingCreationTime: acting?.CharacterCreationTime);
 		return Ok(summaries);
 	}
 

@@ -37,10 +37,15 @@ file sealed class TerminalLoginApiHandler : HttpMessageHandler
 				})
 			});
 
-		if (request.Method == HttpMethod.Post && path == "api/auth/mush-token")
+		// ConnectAsCharacterAsync switches the session (binding the token to this character) rather
+		// than minting a bare OTT, so the ?as= new-tab entry rebinds the portal half too.
+		if (request.Method == HttpMethod.Post && path == "api/auth/switch-character")
 			return Task.FromResult(MintOtt is null
 				? new HttpResponseMessage(HttpStatusCode.NotFound)
-				: new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { token = MintOtt, expiresIn = 60 }) });
+				: new HttpResponseMessage(HttpStatusCode.OK)
+				{
+					Content = JsonContent.Create(new { ott = MintOtt, expiresIn = 60, accountSessionToken = "bound-to-target" })
+				});
 
 		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
 	}

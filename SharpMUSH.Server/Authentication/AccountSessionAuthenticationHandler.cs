@@ -32,9 +32,11 @@ public class AccountSessionAuthenticationHandler(
 		if (string.IsNullOrWhiteSpace(token))
 			return AuthenticateResult.NoResult();
 
-		var accountId = await sessionStore.ValidateAsync(token);
-		if (accountId is null)
+		var session = await sessionStore.ValidateAsync(token);
+		if (session is null)
 			return AuthenticateResult.Fail("Invalid or expired account session.");
+
+		var accountId = session.Value.AccountId;
 
 		var account = await accountService.GetByIdAsync(accountId);
 		if (account is null || account.IsDisabled)
@@ -52,7 +54,7 @@ public class AccountSessionAuthenticationHandler(
 		claims.AddRange(scopes.Select(s => new Claim(PortalPermission.ClaimType, s)));
 
 		var characters = await accountService.GetCharactersAsync(accountId);
-		var acting = ResolveActingCharacter(characters);
+		var acting = ResolveActingCharacter(session.Value, characters);
 		if (acting is not null)
 		{
 			claims.Add(new Claim(GameHub.CharacterDbrefClaim, $"#{acting.Object.Key}"));
@@ -66,23 +68,23 @@ public class AccountSessionAuthenticationHandler(
 	}
 
 	/// <summary>
-	/// The character this request acts as: the client-supplied hint (<c>X-Acting-Character</c> header
-	/// for REST, <c>character</c> query for the SignalR connection) when it names a character the account
-	/// owns, otherwise the primary. Only owned characters are honoured — an unknown or unowned hint
-	/// silently falls back to the primary.
+	/// The character this request acts as, taken from the session the token names. The binding is
+	/// established when the token is minted (login binds the primary; switch-character mints a new
+	/// token bound to the target), so nothing the client sends participates in the decision — there is
+	/// no header or query hint to spoof, and no silent fallback to the primary when one doesn't match.
 	/// </summary>
-	private SharpPlayer? ResolveActingCharacter(IReadOnlyList<SharpPlayer> characters)
+	/// <remarks>
+	/// Membership is still re-checked against the live roster on every request: a character unlinked
+	/// from the account after the token was minted must stop being actable immediately, without
+	/// waiting for the session to expire.
+	/// </remarks>
+	private static SharpPlayer? ResolveActingCharacter(
+		IAccountSessionStore.SessionIdentity session, IReadOnlyList<SharpPlayer> characters)
 	{
-		var hint = Request.Headers["X-Acting-Character"].FirstOrDefault()
-			?? Request.Query["character"].FirstOrDefault();
-		if (!string.IsNullOrWhiteSpace(hint))
-		{
-			var key = hint.TrimStart('#');
-			var match = characters.FirstOrDefault(c => c.Object.Key.ToString() == key);
-			if (match is not null)
-				return match;
-		}
-		return characters.FirstOrDefault();
+		if (session.CharacterKey is not { } key || session.CharacterCreationTime is not { } created)
+			return null;
+
+		return characters.FirstOrDefault(c => c.Object.Key == key && c.Object.CreationTime == created);
 	}
 
 	private string? ExtractToken()

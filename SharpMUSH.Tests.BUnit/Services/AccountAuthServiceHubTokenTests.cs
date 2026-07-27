@@ -82,7 +82,7 @@ public class AccountAuthServiceHubTokenTests : BunitContext
 	/// character rather than the primary. Numeric key, not "#N": '#' is a URL fragment delimiter.
 	/// </summary>
 	[Test]
-	public async Task ResolveHubUrl_WithActiveCharacter_AppendsCharacterQueryParam()
+	public async Task ResolveHubUrl_WithActiveCharacter_DoesNotAdvertiseTheCharacter()
 	{
 		var accountAuth = new FakeAccountAuthState
 		{
@@ -91,8 +91,10 @@ public class AccountAuthServiceHubTokenTests : BunitContext
 		};
 		var factory = new GameHubConnectionFactory("https://localhost/hubs/game", accountAuth);
 
+		// The hub binds the connection from the character inside the access token; a query parameter
+		// would be a second, client-supplied answer to a question the credential already settles.
 		await Assert.That(factory.ResolveHubUrl("https://localhost/hubs/game"))
-			.IsEqualTo("https://localhost/hubs/game?character=7");
+			.IsEqualTo("https://localhost/hubs/game");
 	}
 
 	[Test]
@@ -146,7 +148,8 @@ public class AccountAuthServiceHubTokenTests : BunitContext
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session-token-1");
 
-		var handler = new CapturingHandler(HttpStatusCode.OK, new { ott = "one-time-token", expiresIn = 60 });
+		var handler = new CapturingHandler(HttpStatusCode.OK,
+			new { ott = "one-time-token", expiresIn = 60, accountSessionToken = "session-token-2" });
 		using var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		httpClientFactory.CreateClient("api").Returns(http);
@@ -166,6 +169,10 @@ public class AccountAuthServiceHubTokenTests : BunitContext
 		// not a token embedded in the body — unlike the older mush-token request shape.
 		await Assert.That(handler.LastBody).Contains("\"characterKey\":42");
 		await Assert.That(handler.LastBody).Contains("\"characterCreationTime\":12345");
+
+		// The switch is only real once the tab adopts the token the server bound to the target — that
+		// credential is what makes the next request (and the next reload) this character.
+		await Assert.That(service.AccountSessionToken).IsEqualTo("session-token-2");
 	}
 
 	[Test]

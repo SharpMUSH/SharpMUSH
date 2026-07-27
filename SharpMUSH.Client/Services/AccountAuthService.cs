@@ -24,7 +24,9 @@ public class AccountAuthService(
 	private const string PermissionsKey = "sharpmush.account.permissions";
 	private const string LoggedOutKey = "sharpmush.account.loggedOut";
 
-	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
+	/// <summary><paramref name="IsActing"/> is the server's answer to "who is this tab?" — the acting
+	/// character is bound to the session token, which is opaque here, so the roster carries it.</summary>
+	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags, bool IsActing = false);
 
 	private record AccountLoginRequest(string UsernameOrEmail, string Password);
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
@@ -39,7 +41,7 @@ public class AccountAuthService(
 	private record MushTokenWithAccountRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
 	private record MushTokenResponse(string Token, int ExpiresIn);
 	private record SwitchCharacterRequest(int CharacterKey, long CharacterCreationTime);
-	private record SwitchCharacterResponse(string Ott, int ExpiresIn);
+	private record SwitchCharacterResponse(string Ott, int ExpiresIn, string AccountSessionToken);
 	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,
 		string? AccountId, string? AccountUsername, string? AccountSessionToken, bool AccountMustChangePassword);
 	private record CreateCharacterRequest(string Name, string Password);
@@ -120,10 +122,34 @@ public class AccountAuthService(
 	private void SetCharacters(IReadOnlyList<CharacterSummary> characters)
 	{
 		Characters = characters;
-		var activeStillPresent = ActiveCharacter is not null && characters.Any(c =>
+
+		// The server marks which entry this tab's token is bound to; that answer wins over whatever is
+		// in memory, and is how a reloaded tab learns who it is. Only when the roster carries no mark
+		// (an older response, or a session bound to nothing) does the previous local answer stand.
+		var marked = characters.FirstOrDefault(c => c.IsActing);
+		if (marked is not null)
+		{
+			SetActiveCharacter(marked);
+			return;
+		}
+
+		var stillPresent = ActiveCharacter is null ? null : characters.FirstOrDefault(c =>
 			c.DbrefNumber == ActiveCharacter.DbrefNumber && c.CreationTime == ActiveCharacter.CreationTime);
-		if (!activeStillPresent)
+
+		if (stillPresent is null)
+		{
 			SetActiveCharacter(characters.FirstOrDefault());
+			return;
+		}
+
+		// Same character, drifted details (a rename since the roster was last read): rebind to the
+		// roster's copy so nothing renders a stale name. SetActiveCharacter no-ops on identity, so
+		// this assigns directly.
+		if (stillPresent != ActiveCharacter)
+		{
+			ActiveCharacter = stillPresent;
+			RaiseActiveCharacterChanged();
+		}
 	}
 
 	/// <summary>
@@ -463,10 +489,14 @@ public class AccountAuthService(
 			}
 
 			var result = await response.Content.ReadFromJsonAsync<SwitchCharacterResponse>();
-			if (result?.Ott is null) return null;
+			if (result?.Ott is null || string.IsNullOrEmpty(result.AccountSessionToken)) return null;
 
-			// The switch is authoritative for identity: every consumer reads ActiveCharacter
-			// rather than deriving its own answer.
+			// Adopt the freshly minted token: it is bound to the target character server-side, so from
+			// here on every request — including after a reload, since sessionStorage is tab-scoped —
+			// is that character without the client asserting anything. The old token is left to lapse
+			// on its own TTL rather than revoked, because a tab opened from this one may still hold a
+			// copy of it.
+			await AdoptSessionTokenAsync(result.AccountSessionToken);
 			SetActiveCharacter(character);
 			return result.Ott;
 		}
@@ -652,6 +682,16 @@ public class AccountAuthService(
 		// Account.razor etc.), and a subscriber's render exception must never be able to unwind
 		// back through this method and skip the persistence above.
 		RaiseAuthStateChanged();
+	}
+
+	/// <summary>
+	/// Replaces this tab's session token with one the server minted. Only the token changes — the
+	/// account identity behind it is the same, so username/role/permissions are left alone.
+	/// </summary>
+	private async Task AdoptSessionTokenAsync(string token)
+	{
+		AccountSessionToken = token;
+		await js.InvokeVoidAsync("sessionStorage.setItem", SessionTokenKey, token);
 	}
 
 	private async Task PersistSessionAsync(

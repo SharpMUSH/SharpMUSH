@@ -16,6 +16,8 @@ public partial class SurrealDatabase
 		public long expiryUnixMs { get; set; }
 		public long ttlMs { get; set; }
 		public string originIp { get; set; } = "";
+		public int? characterKey { get; set; }
+		public long? characterCreationTime { get; set; }
 	}
 
 	public async ValueTask UpsertSessionAsync(SharpSession session, CancellationToken cancellationToken = default)
@@ -26,10 +28,12 @@ public partial class SurrealDatabase
 			["accountId"] = session.AccountId,
 			["expiryUnixMs"] = session.ExpiryUnixMs,
 			["ttlMs"] = session.TtlMs,
-			["originIp"] = session.OriginIp
+			["originIp"] = session.OriginIp,
+			["characterKey"] = session.CharacterKey,
+			["characterCreationTime"] = session.CharacterCreationTime
 		};
 		await ExecuteAsync(
-			"UPSERT type::thing('session', $token) SET accountId = $accountId, expiryUnixMs = $expiryUnixMs, ttlMs = $ttlMs, originIp = $originIp",
+			"UPSERT type::thing('session', $token) SET accountId = $accountId, expiryUnixMs = $expiryUnixMs, ttlMs = $ttlMs, originIp = $originIp, characterKey = $characterKey, characterCreationTime = $characterCreationTime",
 			parameters, cancellationToken);
 	}
 
@@ -49,7 +53,9 @@ public partial class SurrealDatabase
 			AccountId = row.accountId,
 			ExpiryUnixMs = row.expiryUnixMs,
 			TtlMs = row.ttlMs,
-			OriginIp = row.originIp
+			OriginIp = row.originIp,
+			CharacterKey = row.characterKey,
+			CharacterCreationTime = row.characterCreationTime
 		};
 	}
 
