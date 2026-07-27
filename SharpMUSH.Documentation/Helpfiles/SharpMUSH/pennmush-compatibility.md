@@ -42,6 +42,14 @@ function's name from evaluated output, so `[setq(0,add)]%q0(1,2)` calls `add`.
 SharpMUSH recognizes function names lexically, so a name that only appears after
 substitution is treated as ordinary text, not a call.
 
+**Unescaped commas are never absorbed by a final argument.** PennMUSH lets the
+last argument of functions such as `pemit()`, `emit()`, and `capstr()` swallow
+extra unescaped commas — `capstr(a,b,c)` capitalizes the string `a,b,c` — though
+it now warns that this is deprecated. SharpMUSH does not do this: every comma is
+an argument separator, so `capstr(a,b,c)` is a too-many-arguments error. Escape
+the commas (`\,`) or wrap the text in braces (`capstr({a,b,c})`). This is
+deliberate — it avoids silently changing what counts as an argument.
+
 ## Behaviors that match PennMUSH
 
 These once differed and now match PennMUSH; noted here only because earlier
@@ -68,11 +76,6 @@ Not yet at parity; may change in a future release.
 - **`%u` equals `%c`.** Both currently return the command *before* evaluation.
   In PennMUSH `%c` is the raw command and `%u` is the command after argument
   evaluation.
-- **Some free-text functions reject extra commas.** PennMUSH lets the final
-  argument of functions such as `pemit()`, `emit()`, and `capstr()` contain
-  unescaped commas. SharpMUSH currently splits on every comma, so
-  `capstr(a,b,c)` is a too-many-arguments error rather than capitalizing the
-  string `a,b,c`. Escape the commas (`\,`) or wrap the text in braces for now.
 - **Characters above U+FFFF** (emoji and other supplementary-plane characters)
   are stored as UTF-16 surrogate pairs. This is internally consistent, but a
   substitution or slice that lands between the two halves of a pair could split
