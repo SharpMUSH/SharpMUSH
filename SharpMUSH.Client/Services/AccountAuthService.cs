@@ -550,9 +550,6 @@ public class AccountAuthService(
 		}
 	}
 
-	/// <summary>Re-reads the roster so the server can say which entry the new token is bound to.</summary>
-	private async Task RefreshCharactersAsync() => await GetCharactersAsync();
-
 	public async Task<(bool Success, string? Error)> UnlinkCharacterAsync(int dbrefNumber)
 	{
 		await InitAsync();
@@ -577,7 +574,8 @@ public class AccountAuthService(
 			if (unlinkedTheActing && remaining.FirstOrDefault() is { } replacement)
 			{
 				await SwitchCharacterAsync(replacement);
-				await RefreshCharactersAsync();
+				// Re-read the roster so the server can say which entry the new token is bound to.
+				await GetCharactersAsync();
 				return (true, null);
 			}
 
