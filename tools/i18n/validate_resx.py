@@ -53,10 +53,31 @@ DO_NOT_TRANSLATE_EXACT = {
     "AppTitle",
 }
 
-PLACEHOLDER = re.compile(r"\{(\w+)")
-ICU_PLURAL = re.compile(r"\{\s*(\w+)\s*,\s*plural\s*,(.*)\}\s*$", re.S)
+ICU_ARG = re.compile(r"\{\s*(\w+)\s*,")
+BARE_ARG = re.compile(r"\{\s*(\w+)\s*\}")
+ICU_PLURAL_ARG = re.compile(r"\{\s*(\w+)\s*,\s*plural\s*,")
 ICU_CATEGORY = re.compile(r"(?:^|\s)(zero|one|two|few|many|other|=\d+)\s*\{")
 LEGACY_PLURAL = re.compile(r"\(s\)|\(es\)")
+
+
+def placeholders(value: str) -> set[str]:
+    """Argument names a value substitutes, for both `string.Format` and ICU MessageFormat values.
+
+    A naive `\\{(\\w+)` matches the prose inside an ICU category body — `one {Edited # time}`
+    yields a bogus "Edited" — which then reads as a placeholder mismatch against a translation
+    that legitimately worded that branch differently. Only the argument *names* count: the token
+    before the first comma in `{name, plural, …}`, plus any bare `{name}`.
+    """
+    named = set(ICU_ARG.findall(value))
+    # Bare {name} placeholders, but only outside plural category bodies. Removing every balanced
+    # {…} that follows a category keyword leaves the top-level text, where bare args live.
+    stripped = value
+    for _ in range(10):  # plural constructs nest at most a couple deep in practice
+        new = re.sub(r"(?:zero|one|two|few|many|other|=\d+)\s*\{[^{}]*\}", " ", stripped)
+        if new == stripped:
+            break
+        stripped = new
+    return named | set(BARE_ARG.findall(stripped))
 
 
 def load(path: str) -> dict[str, tuple[str, str | None]]:
@@ -83,11 +104,15 @@ def locale_of(path: str) -> str:
 
 
 def categories(value: str) -> set[str] | None:
-    """Plural categories used by an ICU MessageFormat value, or None if not one."""
-    m = ICU_PLURAL.search(value.strip())
-    if not m:
+    """Plural categories used by an ICU MessageFormat value, or None if it has no plural at all.
+
+    Not anchored to the end of the value: a plural often sits mid-sentence
+    ("Profile updated ({count, plural, …}).") and an anchored match would miss it, silently
+    exempting that value from the category check.
+    """
+    if not ICU_PLURAL_ARG.search(value):
         return None
-    return {c for c in ICU_CATEGORY.findall(m.group(2)) if not c.startswith("=")}
+    return {c for c in ICU_CATEGORY.findall(value) if not c.startswith("=")}
 
 
 def check_locale(neutral: dict, path: str, max_ratio: float) -> tuple[list[str], list[str]]:
@@ -120,8 +145,8 @@ def check_locale(neutral: dict, path: str, max_ratio: float) -> tuple[list[str],
     for k, (value, _) in sorted(tr.items()):
         if k not in neutral:
             continue
-        want = set(PLACEHOLDER.findall(neutral[k][0]))
-        got = set(PLACEHOLDER.findall(value))
+        want = placeholders(neutral[k][0])
+        got = placeholders(value)
         # ICU plural values name their arg and use # inside categories; the
         # category names themselves are not placeholders.
         if categories(value) is not None or categories(neutral[k][0]) is not None:

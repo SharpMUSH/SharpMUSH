@@ -75,18 +75,22 @@ public class BooleanExpressionParser(
 	/// </summary>
 	private static (SharpMUSHBoolExpParser Parser, ParserErrorListener Errors) CreateParser(string text, string origin)
 	{
+		var errors = new ParserErrorListener(text);
+
 		StringSpanInputStream inputStream = new(text, origin);
 		SharpMUSHBoolExpLexer lexer = new(inputStream)
 		{
 			TokenFactory = OptimizedTokenFactory.Default
 		};
 		lexer.RemoveErrorListeners();
+		// The lock lexer is not total (a stray '^' matches no rule), so collect its token-recognition
+		// errors too — otherwise a trailing bad character is dropped silently and the truncated stream
+		// can still parse (e.g. "#TRUE^" -> "#TRUE"), so Validate/Compile would not fail closed.
+		lexer.AddErrorListener(errors);
 
 		BufferedTokenSpanStream tokenStream = new(lexer);
 		SharpMUSHBoolExpParser parser = new(tokenStream);
 		parser.RemoveErrorListeners();
-
-		var errors = new ParserErrorListener(text);
 		parser.AddErrorListener(errors);
 
 		return (parser, errors);
@@ -94,8 +98,19 @@ public class BooleanExpressionParser(
 
 	private Func<AnySharpObject, AnySharpObject, bool> CompileInternal(string text)
 	{
-		var (sharpParser, _) = CreateParser(text, nameof(Compile));
+		var (sharpParser, errors) = CreateParser(text, nameof(Compile));
 		var chatContext = sharpParser.@lock();
+
+		// A malformed lock must never grant access. Validate gates storage at @lock time, but
+		// Compile can still be handed text that never passed through it (a lock written before this
+		// validation existed, or set through another path), and the visitor below assumes a
+		// well-formed tree. Fail closed rather than compiling ANTLR's error-recovery tree into a
+		// delegate that silently means something other than what was typed.
+		if (errors.HasErrors)
+		{
+			return static (_, _) => false;
+		}
+
 		var parameter = Expression.Parameter(typeof(AnySharpObject), "gated");
 		var parameter2 = Expression.Parameter(typeof(AnySharpObject), "unlocker");
 		SharpMUSHBooleanExpressionVisitor visitor = new(mediator, parameter, parameter2);
@@ -139,8 +154,16 @@ public class BooleanExpressionParser(
 	/// <returns>The normalized lock expression with names resolved to dbrefs</returns>
 	public string Normalize(string text, AnySharpObject? executor = null)
 	{
-		var (sharpParser, _) = CreateParser(text, nameof(Normalize));
+		var (sharpParser, errors) = CreateParser(text, nameof(Normalize));
 		var chatContext = sharpParser.@lock();
+
+		// If the expression does not parse there is no canonical form to produce; return it
+		// unchanged rather than serialising an error-recovery tree into a bogus "normalized" lock.
+		if (errors.HasErrors)
+		{
+			return text;
+		}
+
 		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new(mediator, executor);
 
 		var normalized = visitor.Visit(chatContext);
