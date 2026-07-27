@@ -66,6 +66,15 @@ public class SharpMUSHParserVisitor(
 	private int _braceDepthCounter;
 	private int _suppressFunctionEval;
 
+	/// <summary>
+	/// Ceiling on the size (in characters) of a single function's result. SharpMUSH deliberately
+	/// has no fixed evaluation buffer (unlike PennMUSH's 8 KB BUFFER_LEN), so a function that
+	/// produces an enormous string — <c>repeat</c>/<c>lnum</c>/<c>spellnum</c> and the like — would
+	/// otherwise let one evaluation consume unbounded memory. 5 MB (matching the connection server's
+	/// telnet line buffer) is far above any legitimate result while still bounding the damage.
+	/// </summary>
+	private const int MaxFunctionOutputChars = 5 * 1024 * 1024;
+
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult<CallState?>(null);
 
 	public override async ValueTask<CallState?> Visit(IParseTree tree) => await tree.Accept(this);
@@ -768,6 +777,15 @@ public class SharpMUSHParserVisitor(
 			));
 
 			var result = await function(newParser);
+
+			// Output ceiling: stop a single function that generates an enormous string from
+			// propagating it (and halt the rest of the evaluation, as the other limits do). Checked
+			// at the return so it covers every function without each having to guard itself.
+			if (result.Message is not null && MModule.getLength(result.Message) > MaxFunctionOutputChars)
+			{
+				limitExceeded.IsExceeded = true;
+				return new CallState(ErrorMessages.Returns.OutputTooLarge, contextDepth);
+			}
 
 			return result with { Depth = contextDepth };
 		}

@@ -77,6 +77,7 @@ public static class ErrorMessages
 		public const string Invoke = "#-1 FUNCTION INVOCATION LIMIT EXCEEDED";
 		public const string Recursion = "#-1 FUNCTION RECURSION LIMIT EXCEEDED";
 		public const string Call = "#-1 CALL LIMIT EXCEEDED";
+		public const string OutputTooLarge = "#-1 OUTPUT EXCEEDED MAXIMUM SIZE";
 		public const string RegisterRange = "#-1 REGISTER OUT OF RANGE";
 		public const string BadRegName = "#-1 REGISTER NAME INVALID";
 		public const string TooManyRegs = "#-1 TOO MANY REGISTERS";

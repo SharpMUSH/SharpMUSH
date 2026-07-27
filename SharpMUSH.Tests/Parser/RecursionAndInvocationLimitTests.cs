@@ -356,4 +356,29 @@ public class RecursionAndInvocationLimitTests
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "CMDTRACK_A_LIM_UNIQUE_B_OK")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
+
+	/// <summary>
+	/// SharpMUSH has no fixed evaluation buffer, so a single function generating an enormous
+	/// string could consume unbounded memory. A 5 MB output ceiling refuses such a result rather
+	/// than propagating it. FunctionInvocationLimit does not cover this: a huge repeat() is one
+	/// invocation that loops internally, not many calls.
+	/// </summary>
+	[Test]
+	public async Task OutputCeiling_OversizedFunctionResult_IsRefused()
+	{
+		// ~6 million characters, past the 5 MB (5,242,880-char) ceiling.
+		var result = await FunctionParser.FunctionParse(MModule.single("repeat(x,6000000)"));
+
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 OUTPUT EXCEEDED MAXIMUM SIZE");
+	}
+
+	/// <summary>A result comfortably under the ceiling is returned unchanged.</summary>
+	[Test]
+	public async Task OutputCeiling_NormalResult_IsUnaffected()
+	{
+		var result = await FunctionParser.FunctionParse(MModule.single("repeat(ab,5)"));
+
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("ababababab");
+	}
 }
