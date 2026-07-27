@@ -211,10 +211,6 @@ public class GameHubTests
 	}
 
 	/// <summary>
-	/// A claim carrying a bare number rather than a dbref or objid does not resolve, so the
-	/// connection joins no character group. Every handler emits the objid form.
-	/// </summary>
-	/// <summary>
 	/// A bare dbref is refused rather than routed. It parses, so it would have joined
 	/// <c>char:#42</c> while publishers name <c>char:#42:creation</c> — the same silent-drop the
 	/// objid contract exists to prevent, reintroduced by an incomplete reference rather than a
@@ -242,6 +238,10 @@ public class GameHubTests
 			Arg.Any<GameCommandMessage>(), Arg.Any<CancellationToken>());
 	}
 
+	/// <summary>
+	/// A claim carrying a bare number rather than a dbref or objid does not resolve at all, so the
+	/// connection joins no character group. Every handler emits the objid form.
+	/// </summary>
 	[Test]
 	public async Task OnConnectedAsync_WithUnparseableCharacterClaim_DoesNotAddToGroup()
 	{
