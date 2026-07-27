@@ -359,10 +359,17 @@ public partial class MemgraphDatabase : IWikiService
 		string? editSummary,
 		DateTimeOffset timestamp)
 	{
+		// locale is written explicitly as the empty source-stream marker, never left absent. Memgraph's
+		// uniqueness constraints do not apply to nodes missing any constrained property, so a locale-less
+		// revision node would be exempt from (pageId, locale, revisionNumber) altogether — verified by
+		// probe: two nodes with the same (pageId, revisionNumber) and no locale are both accepted, while
+		// the same pair with locale: '' is rejected on the second. Leaving it absent would mean the source
+		// stream, the only stream that existed before this feature, is the one stream with no constraint.
 		await runner.RunAsync("""
 			CREATE (r:WikiRevision {
 				revisionId: $revisionId,
 				pageId: $pageId,
+				locale: '',
 				revisionNumber: $revisionNumber,
 				markdownSource: $markdownSource,
 				editorDbref: $editorDbref,

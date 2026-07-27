@@ -402,9 +402,14 @@ public partial class ArangoDatabase : IWikiService
 
 	private async Task SaveWikiRevisionAsync(WikiPage page, string editorDbref, string? editSummary)
 	{
+		// Locale is written explicitly as the empty source-stream marker rather than left absent, matching
+		// what the migration backfill stamps on pre-existing rows. Storing it keeps every row's shape
+		// identical across the two writers and keeps the (PageId, Locale, RevisionNumber) unique index
+		// covering the source stream on the same terms as translation streams.
 		var doc = new
 		{
 			PageId = page.Id,
+			Locale = string.Empty,
 			RevisionNumber = page.RevisionNumber,
 			MarkdownSource = page.MarkdownSource,
 			EditorDbref = editorDbref,

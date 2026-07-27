@@ -437,9 +437,14 @@ public partial class SurrealDatabase : IWikiService
 			string? editSummary,
 			DateTimeOffset timestamp)
 	{
+		// locale is written explicitly as the empty source-stream marker rather than left absent, matching
+		// what the migration backfill stamps on pre-existing rows. Storing it keeps every row's shape
+		// identical across the two writers and keeps the (pageId, locale, revisionNumber) unique index
+		// covering the source stream on the same terms as translation streams.
 		var parameters = new Dictionary<string, object?>
 		{
 			["pageId"] = page.Id,
+			["locale"] = string.Empty,
 			["rev"] = page.RevisionNumber,
 			["markdown"] = page.MarkdownSource,
 			["editorDbref"] = editorDbref,
@@ -450,6 +455,7 @@ public partial class SurrealDatabase : IWikiService
 		await ExecuteAsync("""
             CREATE wiki_revision CONTENT {
             	pageId: $pageId,
+            	locale: $locale,
             	revisionNumber: $rev,
             	markdownSource: $markdown,
             	editorDbref: $editorDbref,
