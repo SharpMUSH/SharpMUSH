@@ -43,6 +43,7 @@ namespace SharpMUSH.Server.Controllers;
 [Route("api/wiki")]
 public class WikiController(
 	IWikiService wikiService,
+	IWikiLocalizationService localization,
 	IPrerenderCacheService prerenderCache,
 	ILogger<WikiController> logger) : ControllerBase
 {
@@ -61,7 +62,23 @@ public class WikiController(
 		int RevisionNumber,
 		string? Category,
 		IReadOnlyList<string> Tags,
-		bool Published);
+		bool Published)
+	{
+		// Localization fields are init-only with defaults so that ToDto(WikiPage) — used by every
+		// endpoint that has not been localized yet — keeps compiling and keeps its current shape.
+
+		/// <summary>The locale actually served.</summary>
+		public string Locale { get; init; } = string.Empty;
+
+		/// <summary>The normalised locale the reader asked for.</summary>
+		public string RequestedLocale { get; init; } = string.Empty;
+
+		/// <summary>True when a different language was served than requested — drives the reader's notice.</summary>
+		public bool IsFallback { get; init; }
+
+		/// <summary>Locales this reader can actually read the page in, source locale first.</summary>
+		public IReadOnlyList<string> AvailableLocales { get; init; } = [];
+	}
 
 	/// <summary>A single revision snapshot. MarkdownSource is the full page body at that revision.</summary>
 	public record WikiRevisionDto(
@@ -75,6 +92,17 @@ public class WikiController(
 		p.Id, p.Slug, p.Title, p.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
 		p.CreatedAt, p.UpdatedAt, p.IsProtected, p.RevisionNumber,
 		p.Category, p.Tags, p.Published);
+
+	private static WikiPageDto ToDto(LocalizedWikiPage p, IReadOnlyList<string> availableLocales) => new(
+		p.Page.Id, p.Page.Slug, p.Title, p.Page.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
+		p.Page.CreatedAt, p.Page.UpdatedAt, p.Page.IsProtected, p.RevisionNumber,
+		p.Page.Category, p.Page.Tags, p.Published)
+	{
+		Locale = p.Locale,
+		RequestedLocale = p.RequestedLocale,
+		IsFallback = p.IsFallback,
+		AvailableLocales = availableLocales,
+	};
 
 	private static WikiRevisionDto ToDto(WikiRevision r) => new(
 		r.RevisionNumber, r.EditorDbref, r.Timestamp, r.EditSummary, r.MarkdownSource);
@@ -109,6 +137,13 @@ public class WikiController(
 	private bool CanSeeUnpublished => User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiRead);
 
 	/// <summary>
+	/// True when the caller may see unpublished <em>translations</em>: they can already see drafts, or they
+	/// hold the edit scope and so may be previewing their own translation at <c>?lang=</c>.
+	/// </summary>
+	private bool IncludeDrafts =>
+		CanSeeUnpublished || User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiEdit);
+
+	/// <summary>
 	/// The caller's character dbref (the acting/primary character, from the <c>character_dbref</c>
 	/// claim). Never defaults to a privileged dbref: a missing claim means we cannot attribute the
 	/// action, so callers must reject the request rather than silently acting as God (#1).
@@ -129,30 +164,51 @@ public class WikiController(
 	private IEnumerable<WikiPage> FilterVisible(IEnumerable<WikiPage> pages) => pages.Where(CanSee);
 
 	/// <summary>
-	/// GET /api/wiki/ns/{namespace}/{category}/{slug}
-	/// Returns JSON page data for a page identified by (namespace, category, slug),
-	/// or 404 when the page doesn't exist. This is the canonical page route.
+	/// GET /api/wiki/ns/{namespace}/{category}/{slug}?lang=fr
+	/// Returns JSON page data for a page identified by (namespace, category, slug), resolved into the
+	/// reader's locale, or 404 when the page doesn't exist. This is the canonical page route.
+	/// <c>lang</c> is advisory: a malformed or unknown tag is treated as absent and falls to the
+	/// configured default rather than producing a 400.
 	/// </summary>
 	[HttpGet("ns/{ns}/{category}/{slug}")]
-	public async Task<IActionResult> GetPage(string ns, string category, string slug)
+	public async Task<IActionResult> GetPage(string ns, string category, string slug, [FromQuery] string? lang = null)
 	{
 		var result = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		return result.Match<IActionResult>(
-			page => CanSee(page) ? Ok(ToDto(page)) : NotFound(),
-			_ => NotFound());
+		if (result.IsT1 || !CanSee(result.AsT0)) return NotFound();
+
+		return Ok(await LocalizedDtoAsync(result.AsT0, lang));
 	}
 
 	/// <summary>
-	/// GET /api/wiki/character/{name}
-	/// Resolves the /character/{name} alias to the Character namespace wiki page (default category).
+	/// GET /api/wiki/character/{name}?lang=fr
+	/// Resolves the /character/{name} alias to the Character namespace wiki page (default category),
+	/// resolved into the reader's locale.
 	/// </summary>
 	[HttpGet("character/{name}")]
-	public async Task<IActionResult> GetCharacterPage(string name)
+	public async Task<IActionResult> GetCharacterPage(string name, [FromQuery] string? lang = null)
 	{
 		var result = await wikiService.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character);
-		return result.Match<IActionResult>(
-			page => CanSee(page) ? Ok(ToDto(page)) : NotFound(),
-			_ => NotFound());
+		if (result.IsT1 || !CanSee(result.AsT0)) return NotFound();
+
+		return Ok(await LocalizedDtoAsync(result.AsT0, lang));
+	}
+
+	/// <summary>
+	/// Resolves a page into the reader's locale and packages it with the locales that reader may see.
+	/// A requested tag that does not resolve is logged at Debug — it is a client-side hint, not an error.
+	/// </summary>
+	private async Task<WikiPageDto> LocalizedDtoAsync(WikiPage page, string? lang)
+	{
+		var includeDrafts = IncludeDrafts;
+		var localized = await localization.LocalizeAsync(page, lang, includeDrafts);
+		var available = await localization.GetVisibleLocalesAsync(page, includeDrafts);
+
+		// Read path: a bad tag is a client-side hint, never a 400. NormalizeLocaleOrEmpty is the permissive
+		// form for exactly this reason — the OneOf-returning NormalizeLocale belongs at write boundaries.
+		if (!string.IsNullOrWhiteSpace(lang) && WikiHelpers.NormalizeLocaleOrEmpty(lang).Length == 0)
+			logger.LogDebug("Unrecognised wiki lang tag ignored: {Lang}", LogSanitizer.Sanitize(lang));
+
+		return ToDto(localized, available);
 	}
 
 	/// <summary>
