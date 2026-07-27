@@ -223,13 +223,16 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// PennMUSH cmd_think (cmds.c:1769) is an unconditional notify, so a bare `think` prints a
-		// blank line rather than nothing at all.
-		var thought = parser.CurrentState.Arguments.Count <= 0
-			? string.Empty
-			: parser.CurrentState.Arguments["0"].Message!.ToString();
+		// blank line rather than nothing at all. A bare `think` has no "0" argument at all, so the
+		// return has to come off the same check as the notify.
+		if (!parser.CurrentState.Arguments.TryGetValue("0", out var thought))
+		{
+			await NotifyService!.Notify(executor, string.Empty, executor);
+			return CallState.Empty;
+		}
 
-		await NotifyService!.Notify(executor, thought, executor);
-		return parser.CurrentState.Arguments["0"];
+		await NotifyService!.Notify(executor, thought.Message!.ToString(), executor);
+		return thought;
 	}
 
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]

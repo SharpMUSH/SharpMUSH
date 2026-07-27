@@ -740,13 +740,20 @@ public class GeneralCommandTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ThinkEmpty");
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("think"));
+		var result = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("think"));
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessagePlainTextEquals(msg, string.Empty)),
 				TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+
+		// The notify happens before the return, so asserting on it alone would not have caught the
+		// command indexing a "0" argument that a bare `think` does not have. The resulting
+		// KeyNotFoundException is swallowed upstream and surfaces only as a null Message.
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result.Message).IsNotNull();
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(string.Empty);
 	}
 
 	/// <summary>
