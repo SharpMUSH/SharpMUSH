@@ -53,6 +53,21 @@ internal class WikiRevisionDbRecord : Record
 	public string? locale { get; set; }
 }
 
+internal class WikiTranslationDbRecord : Record
+{
+	public string? pageId { get; set; }
+	public string? locale { get; set; }
+	public string? title { get; set; }
+	public string? markdownSource { get; set; }
+	public string? renderedHtml { get; set; }
+	public string? plainText { get; set; }
+	public string? lastEditorDbref { get; set; }
+	public string? createdAt { get; set; }
+	public string? updatedAt { get; set; }
+	public bool? published { get; set; }
+	public int? revisionNumber { get; set; }
+}
+
 public partial class SurrealDatabase : IWikiService
 {
 	#region Wiki
@@ -66,6 +81,10 @@ public partial class SurrealDatabase : IWikiService
 
 	private const string WikiRevisionFields =
 			"id, pageId, revisionNumber, markdownSource, editorDbref, timestamp, editSummary, locale";
+
+	private const string WikiTranslationFields =
+			"id, pageId, locale, title, markdownSource, renderedHtml, plainText, " +
+			"lastEditorDbref, createdAt, updatedAt, published, revisionNumber";
 
 	public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
@@ -313,7 +332,10 @@ public partial class SurrealDatabase : IWikiService
 
 		var parameters = new Dictionary<string, object?> { ["id"] = id };
 
+		// The revision sweep above already covers translation revisions, so only the translation
+		// rows themselves need their own statement.
 		await ExecuteAsync("DELETE wiki_revision WHERE pageId = $id", parameters);
+		await ExecuteAsync("DELETE wiki_translation WHERE pageId = $id", parameters);
 
 		var key = NormalizeSurrealId(id, "wiki_page");
 		var delParams = new Dictionary<string, object?> { ["id"] = new StringRecordId(key) };
@@ -386,7 +408,7 @@ public partial class SurrealDatabase : IWikiService
 			["pageId"] = pageId, ["skip"] = skip, ["take"] = take
 		};
 		var response = await ExecuteAsync(
-				$"SELECT {WikiRevisionFields} FROM wiki_revision WHERE pageId = $pageId " +
+				$"SELECT {WikiRevisionFields} FROM wiki_revision WHERE pageId = $pageId AND (locale ?? '') = '' " +
 				$"ORDER BY revisionNumber DESC LIMIT $take START $skip",
 				parameters);
 		var results = response.GetValue<List<WikiRevisionDbRecord>>(0);
@@ -513,28 +535,277 @@ public partial class SurrealDatabase : IWikiService
 	private static string Slugify(string title) =>
 			WikiHelpers.Slugify(title);
 
-	// ---- Translations (Task 9 replaces these) -------------------------------
+	// ---- Translations -------------------------------------------------------
 
-	private static NotSupportedException WikiTranslationsNotImplemented(string provider) =>
-			new($"Wiki translations are not yet implemented for the {provider} provider.");
+	public async Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId)
+	{
+		var parameters = new Dictionary<string, object?> { ["pageId"] = pageId };
+		var response = await ExecuteAsync(
+				$"SELECT {WikiTranslationFields} FROM wiki_translation WHERE pageId = $pageId ORDER BY locale ASC",
+				parameters);
+		var results = response.GetValue<List<WikiTranslationDbRecord>>(0);
+		return (results?
+				.Select(MapToWikiTranslation)
+				.Select(t => new WikiTranslationSummary(t.Locale, t.Title, t.Published, t.UpdatedAt, t.RevisionNumber))
+				.ToList() ?? [])
+			.AsReadOnly();
+	}
 
-	public Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId) =>
-			throw WikiTranslationsNotImplemented("SurrealDB");
+	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
+	{
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
+		if (normalized.Length == 0) return new NotFound();
 
-	public Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale) =>
-			throw WikiTranslationsNotImplemented("SurrealDB");
+		var parameters = new Dictionary<string, object?> { ["pageId"] = pageId, ["locale"] = normalized };
+		var response = await ExecuteAsync(
+				$"SELECT {WikiTranslationFields} FROM wiki_translation WHERE pageId = $pageId AND locale = $locale",
+				parameters);
+		var results = response.GetValue<List<WikiTranslationDbRecord>>(0);
+		if (results is null or { Count: 0 }) return new NotFound();
+		return MapToWikiTranslation(results[0]);
+	}
 
-	public Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+	public async Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
 			string pageId, string locale, string title, string markdown,
-			string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber) =>
-			throw WikiTranslationsNotImplemented("SurrealDB");
+			string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
+	{
+		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
+		if (normalizedLocale.IsT1) return normalizedLocale.AsT1;
 
-	public Task<OneOf<OkNone, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref) =>
-			throw WikiTranslationsNotImplemented("SurrealDB");
+		var normalized = normalizedLocale.AsT0;
 
-	public Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(
-			string pageId, string locale, int skip, int take) =>
-			throw WikiTranslationsNotImplemented("SurrealDB");
+		var pageLookup = await GetByIdAsync(pageId);
+		if (pageLookup.IsT1)
+			return new Error<string>($"No wiki page with id '{pageId}'.");
+
+		var page = pageLookup.AsT0;
+		if (page.SourceLocale.Length > 0
+				&& string.Equals(page.SourceLocale, normalized, StringComparison.OrdinalIgnoreCase))
+			return new Error<string>(
+					$"'{normalized}' is the page's source locale; edit the page itself rather than adding a translation.");
+
+		var now = DateTimeOffset.UtcNow;
+		var html = _wikiRenderer.RenderToHtml(markdown);
+		var plain = _wikiRenderer.ExtractPlainText(markdown);
+
+		var parameters = new Dictionary<string, object?>
+		{
+			["pageId"] = pageId,
+			["locale"] = normalized,
+			["title"] = title,
+			["markdown"] = markdown,
+			["html"] = html,
+			["plain"] = plain,
+			["editorDbref"] = editorDbref,
+			["now"] = now.ToString("O"),
+			["published"] = published
+		};
+
+		try
+		{
+			if (expectedRevisionNumber is null)
+			{
+				// Create-only. A bare CREATE so the (pageId, locale) unique index arbitrates two writers who
+				// both believe they are creating the translation, rather than a read-then-write race here.
+				parameters["created"] = now.ToString("O");
+				parameters["rev"] = 1;
+				var createResponse = await ExecuteAsync("""
+                    CREATE wiki_translation CONTENT {
+                    	pageId: $pageId,
+                    	locale: $locale,
+                    	title: $title,
+                    	markdownSource: $markdown,
+                    	renderedHtml: $html,
+                    	plainText: $plain,
+                    	lastEditorDbref: $editorDbref,
+                    	createdAt: $created,
+                    	updatedAt: $now,
+                    	published: $published,
+                    	revisionNumber: $rev
+                    }
+                    """,
+						parameters);
+
+				// ExecuteAsync *logs* SurrealQL-level failures and returns the response; it does not throw
+				// (SurrealDatabase.cs:168-174). The unique-index rejection this create path depends on is
+				// exactly such a failure, so it has to be read off the response — the catch block below
+				// never sees it. Without this check the method would fall through to the read-back at the
+				// end, find the winner's row and report the loser's create as a success.
+				if (createResponse.HasErrors)
+				{
+					var winner = await GetTranslationAsync(pageId, normalized);
+					return winner.IsT0
+							? new Error<string>(
+									$"A '{normalized}' translation already exists for page '{pageId}'. "
+									+ "Pass its current revision number to update it.")
+							: new Error<string>($"Could not create translation '{normalized}' for page '{pageId}'.");
+				}
+			}
+			else
+			{
+				// Compare-and-swap. The WHERE clause on revisionNumber is the condition and "no rows
+				// returned" is the conflict signal — this provider has no ambient transaction spanning the
+				// row update and the revision append, which is the fallback the spec permits.
+				//
+				// Never make this an unconditional UPDATE: two translators who both loaded revision 4 would
+				// both write 5 and one would lose their prose with the index none the wiser.
+				parameters["expected"] = expectedRevisionNumber.Value;
+				parameters["rev"] = expectedRevisionNumber.Value + 1;
+				var updateResponse = await ExecuteAsync(
+						"UPDATE wiki_translation MERGE { title: $title, markdownSource: $markdown, " +
+						"renderedHtml: $html, plainText: $plain, lastEditorDbref: $editorDbref, " +
+						"updatedAt: $now, published: $published, revisionNumber: $rev } " +
+						"WHERE pageId = $pageId AND locale = $locale AND revisionNumber = $expected " +
+						"RETURN AFTER",
+						parameters);
+
+				// HasErrors covers a write conflict, which this provider also only logs; either way no row
+				// was updated and the caller must reload rather than have its markdown re-applied.
+				var updated = updateResponse.HasErrors
+						? null
+						: updateResponse.GetValue<List<WikiTranslationDbRecord>>(0);
+				if (updated is null or { Count: 0 })
+				{
+					// Zero rows affected. Do NOT re-read and re-apply: that overwrites the winner with this
+					// caller's stale markdown, which is the loss expectedRevisionNumber exists to prevent.
+					var current = await GetTranslationAsync(pageId, normalized);
+					return current.IsT0
+							? new Error<string>(
+									$"The '{normalized}' translation changed while you were editing "
+									+ $"(expected revision {expectedRevisionNumber.Value}, found {current.AsT0.RevisionNumber}). "
+									+ "Reload and re-apply your changes.")
+							: new Error<string>($"No '{normalized}' translation exists for page '{pageId}' to update.");
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			// Only .NET-level faults reach here — SurrealQL errors, including the unique-index rejection,
+			// are handled off the response above because ExecuteAsync does not throw them.
+			if (expectedRevisionNumber is null)
+			{
+				var existing = await GetTranslationAsync(pageId, normalized);
+				if (existing.IsT0)
+					return new Error<string>(
+							$"A '{normalized}' translation already exists for page '{pageId}'. "
+							+ "Pass its current revision number to update it.");
+			}
+
+			return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");
+		}
+
+		var written = await GetTranslationAsync(pageId, normalized);
+		if (written.IsT1)
+			return new Error<string>($"Upsert of translation '{normalized}' returned no document.");
+
+		await SaveSurrealTranslationRevisionAsync(written.AsT0, editorDbref, editSummary, now);
+		return written.AsT0;
+	}
+
+	public async Task<OneOf<OkNone, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
+	{
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
+		if (normalized.Length == 0) return new NotFound();
+
+		var lookup = await GetTranslationAsync(pageId, normalized);
+		if (lookup.IsT1) return new NotFound();
+
+		var revParams = new Dictionary<string, object?> { ["pageId"] = pageId, ["locale"] = normalized };
+
+		// `(locale ?? '')` rather than a bare `locale = $locale`, and that is load-bearing rather than
+		// defensive symmetry with the reads. `WHERE pageId = .. AND locale = ..` is a two-field *prefix* of
+		// the three-field UNIQUE index wiki_revision_page_locale_rev (pageId, locale, revisionNumber), and
+		// SurrealDB plans it against that index and matches nothing at all — verified directly: the same
+		// filter as a SELECT returns 0 rows while `(locale ?? '') = $locale` and a bare `locale = $locale`
+		// each return 1. It reports no error, so as a DELETE it silently deletes nothing. Wrapping the
+		// column in an expression makes it index-ineligible and forces the scan that actually matches.
+		await ExecuteAsync("DELETE wiki_revision WHERE pageId = $pageId AND (locale ?? '') = $locale", revParams);
+
+		var key = NormalizeSurrealId(lookup.AsT0.Id, "wiki_translation");
+		var delParams = new Dictionary<string, object?> { ["id"] = new StringRecordId(key) };
+		await ExecuteAsync("DELETE $id", delParams);
+
+		return new OkNone();
+	}
+
+	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(
+			string pageId, string locale, int skip, int take)
+	{
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
+
+		var parameters = new Dictionary<string, object?>
+		{
+			["pageId"] = pageId, ["locale"] = wanted, ["skip"] = skip, ["take"] = take
+		};
+		var response = await ExecuteAsync(
+				$"SELECT {WikiRevisionFields} FROM wiki_revision " +
+				"WHERE pageId = $pageId AND (locale ?? '') = $locale " +
+				"ORDER BY revisionNumber DESC LIMIT $take START $skip",
+				parameters);
+		var results = response.GetValue<List<WikiRevisionDbRecord>>(0);
+		return (results?.Select(MapToWikiRevision).ToList() ?? []).AsReadOnly();
+	}
+
+	/// <summary>
+	/// Appends a revision row for a translation, carrying <c>locale</c> so the per-locale stream and the
+	/// (pageId, locale, revisionNumber) unique index both work.
+	/// </summary>
+	private async Task SaveSurrealTranslationRevisionAsync(
+			WikiTranslation translation,
+			string editorDbref,
+			string? editSummary,
+			DateTimeOffset timestamp)
+	{
+		var parameters = new Dictionary<string, object?>
+		{
+			["pageId"] = translation.PageId,
+			["locale"] = translation.Locale,
+			["rev"] = translation.RevisionNumber,
+			["markdown"] = translation.MarkdownSource,
+			["editorDbref"] = editorDbref,
+			["timestamp"] = timestamp.ToString("O"),
+			["editSummary"] = editSummary
+		};
+
+		await ExecuteAsync("""
+            CREATE wiki_revision CONTENT {
+            	pageId: $pageId,
+            	locale: $locale,
+            	revisionNumber: $rev,
+            	markdownSource: $markdown,
+            	editorDbref: $editorDbref,
+            	timestamp: $timestamp,
+            	editSummary: $editSummary
+            }
+            """,
+				parameters);
+	}
+
+	private static WikiTranslation MapToWikiTranslation(WikiTranslationDbRecord record) => new(
+			Id: NormalizeWikiTranslationId(record.Id),
+			PageId: record.pageId ?? "",
+			Locale: record.locale ?? "",
+			Title: record.title ?? "",
+			MarkdownSource: record.markdownSource ?? "",
+			RenderedHtml: record.renderedHtml ?? "",
+			PlainText: record.plainText ?? "",
+			LastEditorDbref: record.lastEditorDbref ?? "",
+			CreatedAt: DateTimeOffset.TryParse(record.createdAt, out var created) ? created : DateTimeOffset.MinValue,
+			UpdatedAt: DateTimeOffset.TryParse(record.updatedAt, out var updated) ? updated : DateTimeOffset.MinValue,
+			Published: record.published ?? true,
+			RevisionNumber: record.revisionNumber ?? 1);
+
+	private static string NormalizeWikiTranslationId(RecordId? id)
+	{
+		ArgumentNullException.ThrowIfNull(id);
+		if (id.TryDeserializeId<string>(out var stringId))
+			return $"wiki_translation/{stringId}";
+		if (id.TryDeserializeId<long>(out var longId))
+			return $"wiki_translation/{longId}";
+		if (id.TryDeserializeId<int>(out var intId))
+			return $"wiki_translation/{intId}";
+		throw new InvalidOperationException($"Unsupported SurrealDB wiki_translation record ID type for table '{id.Table}'.");
+	}
 
 	#endregion
 }

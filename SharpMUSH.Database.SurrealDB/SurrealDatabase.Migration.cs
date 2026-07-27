@@ -2,6 +2,7 @@ using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -94,7 +95,21 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS wiki_page_ns ON wiki_page FIELDS namespace",
 				"DEFINE INDEX IF NOT EXISTS wiki_page_category ON wiki_page FIELDS category",
 				"DEFINE INDEX IF NOT EXISTS wiki_revision_page ON wiki_revision FIELDS pageId",
-				"DEFINE INDEX IF NOT EXISTS wiki_revision_page_rev ON wiki_revision FIELDS pageId, revisionNumber UNIQUE",
+
+				// Backfill BEFORE the new unique index, or the DEFINE fails on rows with no locale.
+				// Pages get the configured default; revisions get the empty source-stream marker, because
+				// every pre-existing revision belongs to its page's own locale stream.
+				$"UPDATE wiki_page SET sourceLocale = '{WikiOptions.DefaultLocaleFallback}' WHERE sourceLocale = NONE OR sourceLocale = ''",
+				"UPDATE wiki_revision SET locale = '' WHERE locale = NONE",
+
+				// The old index is UNIQUE on (pageId, revisionNumber) and would reject a translation's
+				// revision 1 outright. DEFINE INDEX IF NOT EXISTS will not alter an existing index, so the
+				// drop is mandatory rather than tidiness.
+				"REMOVE INDEX IF EXISTS wiki_revision_page_rev ON wiki_revision",
+				"DEFINE INDEX IF NOT EXISTS wiki_revision_page_locale_rev ON wiki_revision FIELDS pageId, locale, revisionNumber UNIQUE",
+
+				"DEFINE INDEX IF NOT EXISTS wiki_translation_page_locale ON wiki_translation FIELDS pageId, locale UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS wiki_translation_locale ON wiki_translation FIELDS locale",
 				// Softcode package manager system data (decisions 20.3, 20.13)
 				"DEFINE INDEX IF NOT EXISTS sys_package_pkgid ON sys_package FIELDS packageId UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS sys_package_object_pkg_ref ON sys_package_object FIELDS packageId, refName UNIQUE",
