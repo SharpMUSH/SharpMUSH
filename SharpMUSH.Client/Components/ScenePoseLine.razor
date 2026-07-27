@@ -11,7 +11,7 @@
         <span style="font-weight:600;color:var(--accent);font-size:0.8125rem;">@Pose.DisplayName</span>
         @if (Pose.WasEdited)
         {
-            <span class="scene-edited-badge" title="@Loc["RolEditedTimes", Pose.EditCount - 1]"
+            <span class="scene-edited-badge" title="@Loc.Plural("RolEditedTimes", "count", Pose.EditCount - 1)"
                   style="font-size:0.625rem;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-faint);border:1px solid var(--border);border-radius:4px;padding:0 0.3125rem;">@Loc["RolEditedBadge"]</span>
         }
         <span style="font-size:0.6875rem;color:var(--text-faint);margin-left:auto;">
