@@ -188,8 +188,11 @@ public class GameHubTests
 	}
 
 	/// <summary>
-	/// A malformed room reference is rejected at the boundary. Previously it was interpolated
-	/// straight into a group name, so the caller silently joined a group nothing ever publishes to.
+	/// A room reference that cannot be routed is rejected at the boundary — unparseable
+	/// (<c>"not-a-dbref"</c>, <c>"5"</c>, empty, null) or parseable but incomplete (<c>"#5"</c>,
+	/// which names <c>room:#5</c> while publishers name <c>room:#5:creation</c>). Previously any of
+	/// them was interpolated straight into a group name, so the caller silently joined a group
+	/// nothing ever publishes to.
 	/// </summary>
 	[Test]
 	[Arguments("5")]

@@ -83,7 +83,8 @@ public class DebugAuthenticationHandler(
 					// Account exists but character list lookup returned nothing (shouldn't happen
 					// after a successful bootstrap, but guard defensively).
 					Logger.LogWarning(
-						"[DebugAuth] Account {AccountId} has no linked character with key 1; omitting character claims",
+						"[DebugAuth] Account {AccountId} has no linked character with key 1; omitting the " +
+						"character_dbref routing claim (character_key is still emitted)",
 						account.Id);
 					// No character_dbref claim: without the object we have no creation time, and a
 					// bare "#1" would route to char:#1 while publishers use char:#1:creation — the

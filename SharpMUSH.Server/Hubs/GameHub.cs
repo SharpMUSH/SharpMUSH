@@ -176,9 +176,10 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 			return room.Value;
 		}
 
+		var shown = roomDbref is null ? "(null)" : $"'{roomDbref}'";
 		logger.LogWarning("[GameHub] Connection {ConnectionId} sent an unroutable room reference {Room}",
-			Context.ConnectionId, roomDbref);
-		throw new HubException($"'{roomDbref}' is not a valid objid; a bare dbref cannot be routed.");
+			Context.ConnectionId, shown);
+		throw new HubException($"{shown} is not a valid objid; a bare dbref cannot be routed.");
 	}
 
 	// These are called by internal services (e.g. NatsBridgeService, REST controllers)
