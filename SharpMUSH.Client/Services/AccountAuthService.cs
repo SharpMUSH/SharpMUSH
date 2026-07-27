@@ -739,10 +739,6 @@ public class AccountAuthService(
 		// or a stale acting character could outlive the logout and be restored by the next login in
 		// this tab.
 		await js.InvokeVoidAsync("sessionStorage.removeItem", ActiveCharacterKey);
-		// Awaited here rather than left to SetActiveCharacter's detached write above: the invariant
-		// below (every storage mutation complete before the event fires) has to hold for this key too,
-		// or a stale acting character could outlive the logout and be restored by the next login in
-		// this tab.
 
 		// Explicit-logout latch: sticks until the next successful login/register/setup in this
 		// tab, so dev-mode debug re-auth (or any other silent re-persist) can't undo the logout.
