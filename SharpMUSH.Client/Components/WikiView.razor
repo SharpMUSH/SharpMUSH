@@ -9,8 +9,8 @@
 }
 else if (Mode == WikiMode.View)
 {
-    <WikiDisplay Slug="@Slug" Namespace="@Namespace" Category="@Category" Article="@_article" ActivateEditMode="ActivateEditMode"
-                 OnArticleRestored="HandleArticleRestored" />
+    <WikiDisplay Slug="@Slug" Namespace="@Namespace" Category="@Category" Locale="@Locale" Article="@_article"
+                 ActivateEditMode="ActivateEditMode" OnArticleRestored="HandleArticleRestored" />
 }
 else
 {
@@ -35,6 +35,9 @@ else
 
     /// <summary>Category segment — part of the page's identity. Null defaults to "general".</summary>
     [Parameter] public string? Category { get; init; }
+
+    /// <summary>The locale requested via <c>?lang=</c>; null means the reader's stored preference.</summary>
+    [Parameter] public string? Locale { get; init; }
 
     private WikiArticle? _article;
 
@@ -128,7 +131,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
-        var result = await Wiki.GetWikiArticle(Slug, Category, Namespace);
+        var result = await Wiki.GetWikiArticle(Slug, Category, Namespace, Locale);
         _article = result.IsT0 ? result.AsT0 : null;
         _loading = false;
         await base.OnInitializedAsync();
