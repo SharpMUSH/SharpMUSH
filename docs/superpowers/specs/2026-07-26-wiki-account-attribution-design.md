@@ -234,13 +234,17 @@ comment true.
 ### Objids over dbrefs
 
 `SharpObject.DBRef` already builds `new(Key, CreationTime)` and its `ToString()`
-already emits `#N:ms`, so this is mostly wiring:
+already emits `#N:ms`. All three handlers already emit `character_creation_time`
+(`MushBasicAuthenticationHandler:119`, `AccountSessionAuthenticationHandler:60`,
+`DebugAuthenticationHandler:76`), so the creation time is already on every principal
+and no new claim is needed. Two changes:
 
-- All three handlers emit `character_dbref` as `player.Object.DBRef.ToString()`.
-- `AccountSessionAuthenticationHandler` gains the `character_creation_time` claim it
-  currently omits; the other two already send it.
 - `CharacterIdentity` returns a `DBRef` carrying both parts, instead of an `int` that
-  deliberately parses the objid suffix off and then discards it.
+  deliberately parses the objid suffix off and then discards it. The timestamp comes
+  from the objid suffix when present, else from the existing `character_creation_time`
+  claim — which `ApiControllerBase.CurrentCharacterCreationTime` already reads.
+- All three handlers emit `character_dbref` as `player.Object.DBRef.ToString()` rather
+  than `$"#{player.Object.Key}"`, so the claim itself carries the objid.
 
 This closes a recycle hole: a stale session pointing at a reused dbref currently
 resolves to whatever object now occupies the slot.
