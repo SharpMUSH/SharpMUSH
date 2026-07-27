@@ -503,4 +503,63 @@ public class MovementCommandTests
 			NotifyService, nameof(ErrorMessages.Notifications.VariableExitDestinationInvalidFormat),
 			player.DbRef, player.DbRef)).IsTrue();
 	}
+
+	/// <summary>
+	/// SharpMUSH lets <c>@teleport</c> target an exit, meaning "go where it leads". That has to agree with
+	/// what walking the exit does, so a variable exit must resolve its DESTINATION here too.
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportToAVariableExitUsesTheDestinationAttribute()
+	{
+		var player = await CreateTestPlayerAsync("TelVarDest");
+
+		var sourceName = TestIsolationHelpers.GenerateUniqueName("TelVarSource");
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+
+		var destName = TestIsolationHelpers.GenerateUniqueName("TelVarTarget");
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
+		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("TelVarExit");
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"&DESTINATION {exitName}={destDbRef}"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@tel {exitName}"));
+
+		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
+
+		await Assert.That(location.WithExitOption().Known().Object().DBRef.ToString()).IsEqualTo(destDbRef);
+	}
+
+	/// <summary>
+	/// A home-linked exit resolves against whoever is moving, not against whoever typed the command — so
+	/// teleporting someone else through one must send them to <em>their</em> home.
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportToAHomeLinkedExitSendsTheTargetToTheirOwnHome()
+	{
+		var player = await CreateTestPlayerAsync("TelHomeTarget");
+
+		var homeName = TestIsolationHelpers.GenerateUniqueName("TelHomeTargetHome");
+		var homeResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {homeName}"));
+		var homeDbRef = homeResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link me={homeDbRef}"));
+
+		// Opened where God stands, so God can see it to teleport the player through it.
+		var exitName = TestIsolationHelpers.GenerateUniqueName("TelHomeExit");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@open {exitName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@link {exitName}=home"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={exitName}"));
+
+		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
+
+		await Assert.That(location.WithExitOption().Known().Object().DBRef.ToString()).IsEqualTo(homeDbRef)
+			.Because("the exit is linked to home, and the mover is the player, not the executor");
+	}
 }
