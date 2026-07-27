@@ -188,15 +188,19 @@ public class GameHubTests
 	}
 
 	/// <summary>
-	/// A malformed room reference is rejected at the boundary. Previously it was interpolated
-	/// straight into a group name, so the caller silently joined a group nothing ever publishes to.
+	/// A room reference that cannot be routed is rejected at the boundary — unparseable
+	/// (<c>"not-a-dbref"</c>, <c>"5"</c>, empty, null) or parseable but incomplete (<c>"#5"</c>,
+	/// which names <c>room:#5</c> while publishers name <c>room:#5:creation</c>). Previously any of
+	/// them was interpolated straight into a group name, so the caller silently joined a group
+	/// nothing ever publishes to.
 	/// </summary>
 	[Test]
 	[Arguments("5")]
 	[Arguments("not-a-dbref")]
 	[Arguments("")]
 	[Arguments(null)]
-	public async Task JoinRoom_WithUnparseableReference_Throws(string? roomDbref)
+	[Arguments("#5")]
+	public async Task JoinRoom_WithUnroutableReference_Throws(string? roomDbref)
 	{
 		var (hub, groups) = BuildHub();
 
@@ -207,7 +211,35 @@ public class GameHubTests
 	}
 
 	/// <summary>
-	/// A claim carrying a bare number rather than a dbref or objid does not resolve, so the
+	/// A bare dbref is refused rather than routed. It parses, so it would have joined
+	/// <c>char:#42</c> while publishers name <c>char:#42:creation</c> — the same silent-drop the
+	/// objid contract exists to prevent, reintroduced by an incomplete reference rather than a
+	/// misspelled one.
+	/// </summary>
+	[Test]
+	public async Task OnConnectedAsync_WithBareDbrefClaim_DoesNotAddToGroup()
+	{
+		var (hub, groups) = BuildHub("#42");
+
+		await hub.OnConnectedAsync();
+
+		await groups.DidNotReceive().AddToGroupAsync(
+			Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task SendCommand_WithBareDbrefClaim_Throws()
+	{
+		var (hub, _, bus) = BuildHubWithBus("#42");
+
+		await Assert.That(async () => await hub.SendCommand("look")).Throws<HubException>();
+
+		await bus.DidNotReceive().Publish(
+			Arg.Any<GameCommandMessage>(), Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// A claim carrying a bare number rather than a dbref or objid does not resolve at all, so the
 	/// connection joins no character group. Every handler emits the objid form.
 	/// </summary>
 	[Test]

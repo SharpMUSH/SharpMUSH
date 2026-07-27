@@ -154,11 +154,12 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 			if (msg.Data is null) continue;
 
 			var dbref = msg.Data.CharacterDbref;
-			if (!DBRef.TryParse(dbref, out var character) || character is null)
+			if (!DBRef.TryParse(dbref, out var character) || character is not { IsObjid: true })
 			{
 				_logger.LogWarning(
-					"[NatsBridge] Dropping GameOutputMessage with unparseable CharacterDbref {Dbref}; " +
-					"the contract is an objid such as #42:1700000000", dbref);
+					"[NatsBridge] Dropping GameOutputMessage whose CharacterDbref {Dbref} is not a " +
+					"routable objid such as #42:1700000000; a bare dbref names a different group than subscribers join",
+					dbref);
 				continue;
 			}
 
@@ -189,11 +190,12 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 			if (msg.Data is null) continue;
 
 			var dbref = msg.Data.RoomDbref;
-			if (!DBRef.TryParse(dbref, out var room) || room is null)
+			if (!DBRef.TryParse(dbref, out var room) || room is not { IsObjid: true })
 			{
 				_logger.LogWarning(
-					"[NatsBridge] Dropping RoomEventMessage with unparseable RoomDbref {Dbref}; " +
-					"the contract is an objid such as #7:1700000000", dbref);
+					"[NatsBridge] Dropping RoomEventMessage whose RoomDbref {Dbref} is not a " +
+					"routable objid such as #7:1700000000; a bare dbref names a different group than subscribers join",
+					dbref);
 				continue;
 			}
 

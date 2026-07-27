@@ -75,7 +75,7 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 			return;
 		}
 
-		if (Context.User?.GetActingCharacter() is { } character)
+		if (Context.User?.GetActingCharacter() is { IsObjid: true } character)
 		{
 			await Groups.AddToGroupAsync(Context.ConnectionId, CharacterGroupName(character));
 			logger.LogInformation("[GameHub] Connection {ConnectionId} joined character group {Group}",
@@ -83,7 +83,11 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 		}
 		else
 		{
-			logger.LogWarning("[GameHub] Connection {ConnectionId} has no usable {Claim} claim; not added to character group",
+			// A bare dbref is refused rather than routed: it would name char:#N while publishers
+			// name char:#N:creation, and the connection would receive nothing with no error anywhere.
+			logger.LogWarning(
+				"[GameHub] Connection {ConnectionId} has no usable {Claim} claim (absent, unparseable, " +
+				"or a bare dbref rather than an objid); not added to character group",
 				Context.ConnectionId, CharacterDbrefClaim);
 		}
 
@@ -110,11 +114,13 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	/// <param name="command">The raw command string typed by the player.</param>
 	public async Task SendCommand(string command)
 	{
-		if (Context.User?.GetActingCharacter() is not { } character)
+		if (Context.User?.GetActingCharacter() is not { IsObjid: true } character)
 		{
-			// No character identity → the command is unroutable; fail at the auth boundary
-			// rather than publishing an empty-dbref message onto the bus.
-			logger.LogWarning("[GameHub] Connection {ConnectionId} sent a command without a usable {Claim} claim; rejecting",
+			// No routable character identity → the command is unroutable; fail at the auth boundary
+			// rather than publishing a reference the engine cannot reply to onto the bus.
+			logger.LogWarning(
+				"[GameHub] Connection {ConnectionId} sent a command without a usable {Claim} claim " +
+				"(absent, unparseable, or a bare dbref rather than an objid); rejecting",
 				Context.ConnectionId, CharacterDbrefClaim);
 			throw new HubException("No character identity on this connection.");
 		}
@@ -165,14 +171,15 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	/// </summary>
 	private DBRef ParseRoomOrThrow(string? roomDbref)
 	{
-		if (DBRef.TryParse(roomDbref, out var room) && room is not null)
+		if (DBRef.TryParse(roomDbref, out var room) && room is { IsObjid: true })
 		{
 			return room.Value;
 		}
 
-		logger.LogWarning("[GameHub] Connection {ConnectionId} sent an unparseable room reference {Room}",
-			Context.ConnectionId, roomDbref);
-		throw new HubException($"'{roomDbref}' is not a valid dbref or objid.");
+		var shown = roomDbref is null ? "(null)" : $"'{roomDbref}'";
+		logger.LogWarning("[GameHub] Connection {ConnectionId} sent an unroutable room reference {Room}",
+			Context.ConnectionId, shown);
+		throw new HubException($"{shown} is not a valid objid; a bare dbref cannot be routed.");
 	}
 
 	// These are called by internal services (e.g. NatsBridgeService, REST controllers)

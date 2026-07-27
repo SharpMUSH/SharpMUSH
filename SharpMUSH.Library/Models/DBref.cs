@@ -13,6 +13,18 @@ public readonly struct DBRef : IEquatable<DBRef>
 	public int Number { get; init; }
 	public long? CreationMilliseconds { get; init; }
 
+	/// <summary>
+	/// Whether this is a full objid (<c>#N:creation</c>) rather than a bare dbref (<c>#N</c>).
+	/// </summary>
+	/// <remarks>
+	/// Required wherever a reference is used as an identity <em>key</em> — a SignalR group name, a
+	/// cache key — because <c>#N</c> and <c>#N:creation</c> are necessarily different keys, so a
+	/// producer and consumer that disagree on completeness miss each other silently. Being a
+	/// <see cref="DBRef"/> stops the two from being spelled differently; it does not stop one side
+	/// from lacking the timestamp, which this exists to catch.
+	/// </remarks>
+	public bool IsObjid => CreationMilliseconds.HasValue;
+
 	public override bool Equals(object? obj) => obj is DBRef @ref && Equals(@ref);
 
 	public bool Equals(DBRef other)
