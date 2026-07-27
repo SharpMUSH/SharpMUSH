@@ -350,9 +350,10 @@ populated — a missing key falls back to the raw key.
   propagates to old revisions; a `Closed` account and a `Deleted` account still resolve
   and render. This is the central requirement, so it gets an explicit test on all three
   backends, not only Arango.
-- **Controller** — `IsAuthor` matching for a portal caller (a regression test for the
-  currently-broken behavior); 403 without an account; asset list ordering from the
-  indexed read.
+- **Controller** — `IsAuthor` matching for a portal caller once the comparison is
+  account-to-account (the character-anchored version already works on `main`, so this is
+  a test that the anchor change does not regress it, not a fix); 403 without an account;
+  asset list ordering from the indexed read.
 - **BUnit** — `AdminAccounts` rendering the four statuses and hiding actions on the
   system row.
 
