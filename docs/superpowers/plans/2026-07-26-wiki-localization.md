@@ -7359,7 +7359,7 @@ Expected: PASS (7 tests).
 Run: `dotnet build && dotnet run --project SharpMUSH.Tests`
 Expected: 0 errors; 4927 total / 0 failed. `SeoControllerTests` and `WikiControllerHtmlTests` must both be green.
 
-`SeoEndpointTests` lives in `SharpMUSH.Tests.Integration` and needs Docker — **CI-verified**, job `test-integration`, all three matrix entries.
+`SeoEndpointTests` lives in `SharpMUSH.Tests.Integration`, so it needs a container runtime — which Podman provides locally (see Global Constraints). Run it here per provider, then let CI job `test-integration` confirm all three matrix entries.
 
 - [ ] **Step 8: Commit**
 
