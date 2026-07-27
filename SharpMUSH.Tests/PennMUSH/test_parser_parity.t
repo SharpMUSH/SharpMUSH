@@ -1,4 +1,4 @@
-# Oracle cases for the parser-parity work (see CoPilot Files/PARSER_IMPROVEMENT_HANDOFF.md).
+# Oracle cases for the parser-parity work (see the sharpmush-parser-internals skill in HarryCordewener/claude-plugins).
 # Every expectation below was produced by a real PennMUSH server, not read off the source.
 #
 # To run against PennMUSH:
@@ -59,3 +59,32 @@ test('parity.lock_prec_setup2', $god, '@lock me=#TRUE & #FALSE | #FALSE', 'locke
 test('parity.lock_prec_false', $god, 'think elock(me/Basic, me)', '^0$');
 test('parity.lock_prec_setup3', $god, '@lock me=#FALSE & (#FALSE | #TRUE)', 'locked');
 test('parity.lock_prec_paren', $god, 'think elock(me/Basic, me)', '^0$');
+
+# --- HALT flag ------------------------------------------------------------
+# A HALTED object runs none of its softcode: process_expression returns PE_NOTHING for a
+# Halted executor (src/parse.c), so u() of its attribute yields the stored text unevaluated,
+# and clears again when the flag is removed.
+test('parity.halt_mk', $god, 'think create(HaltParity)', '.');
+test('parity.halt_attr', $god, '&C HaltParity=[add(1,2)]', '.');
+test('parity.halt_normal', $god, 'think u(HaltParity/C)', '^3$');
+test('parity.halt_set', $god, '@set HaltParity=HALT', '.');
+test('parity.halt_suppressed', $god, 'think u(HaltParity/C)', '^\[add\(1,2\)\]$');
+test('parity.halt_unset', $god, '@set HaltParity=!HALT', '.');
+test('parity.halt_restored', $god, 'think u(HaltParity/C)', '^3$');
+
+# --- Substitutions --------------------------------------------------------
+# An uppercase selector capitalizes the first output character (src/parse.c); digit/symbol
+# selectors are unaffected, and it is a no-op when that character is not a letter.
+test('parity.sub_q_lower', $god, 'think [setq(0,foo)]%q0', '^foo$');
+test('parity.sub_q_upper', $god, 'think [setq(0,foo)]%Q0', '^Foo$');
+test('parity.sub_q_upper_nonletter', $god, 'think [setq(0,42x)]%Q0', '^42x$');
+test('parity.sub_itext_lower', $god, 'think iter(alpha,%i0)', '^alpha$');
+test('parity.sub_itext_upper', $god, 'think iter(alpha,%I0)', '^Alpha$');
+# "% " (percent-space) is emitted literally, unlike other unknown subs where % is dropped.
+test('parity.sub_pct_space', $god, 'think a% b', '^a% b$');
+
+# --- Unknown-function suggestion --------------------------------------------
+# A close typo inside [...] gets "DID YOU MEAN 'X'"; a name with no near match does not.
+test('parity.suggest_close', $god, 'think [ad(1,2)]', "DID YOU MEAN 'ADD'");
+test('parity.suggest_far', $god, 'think [xyzzyplughqq(1)]', 'NOT FOUND$');
+

@@ -66,6 +66,15 @@ public class SharpMUSHParserVisitor(
 	private int _braceDepthCounter;
 	private int _suppressFunctionEval;
 
+	/// <summary>
+	/// Ceiling on the size (in characters) of a single function's result. SharpMUSH deliberately
+	/// has no fixed evaluation buffer (unlike PennMUSH's 8 KB BUFFER_LEN), so a function that
+	/// produces an enormous string — <c>repeat</c>/<c>lnum</c>/<c>spellnum</c> and the like — would
+	/// otherwise let one evaluation consume unbounded memory. 5 MB (matching the connection server's
+	/// telnet line buffer) is far above any legitimate result while still bounding the damage.
+	/// </summary>
+	private const int MaxFunctionOutputChars = 5 * 1024 * 1024;
+
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult<CallState?>(null);
 
 	public override async ValueTask<CallState?> Visit(IParseTree tree) => await tree.Accept(this);
@@ -199,6 +208,86 @@ public class SharpMUSHParserVisitor(
 		var length = closeParen.StartIndex - start;
 
 		return length > 0 ? MModule.substring(start, length, source) : MModule.empty();
+	}
+
+	/// <summary>
+	/// The known function name closest to <paramref name="name"/>, for PennMUSH's
+	/// "DID YOU MEAN 'X'" hint on an unknown function inside <c>[...]</c> (src/parse.c). Returns the
+	/// nearest library name within a small edit distance — <c>min(2, max(1, len/3))</c>: 1 for names
+	/// up to 5 characters, 2 for longer, never more than 2 — so short typos do not match everything,
+	/// or null if nothing is close enough. Only ever suggests names that exist, so at worst a
+	/// suggestion is missed, never wrong.
+	/// </summary>
+	private string? SuggestFunctionName(string name)
+	{
+		var typed = name.ToLowerInvariant();
+		var budget = Math.Min(2, Math.Max(1, typed.Length / 3));
+
+		string? best = null;
+		var bestDistance = int.MaxValue;
+		foreach (var (candidate, _) in parser.FunctionLibrary)
+		{
+			// FunctionLibrary is case-insensitive but does not normalise its stored keys, so a key
+			// can be any case (built-ins are lower-case, but a user-registered alias need not be).
+			// Lower-case it for the otherwise case-sensitive distance comparison. This is the
+			// unknown-function error path, so the per-candidate allocation is not on a hot path.
+			var lower = candidate.ToLowerInvariant();
+			var distance = LevenshteinWithin(typed, lower, budget);
+			if (distance < 0)
+			{
+				continue;
+			}
+
+			// Closest wins; ties break alphabetically for a stable suggestion.
+			if (distance < bestDistance || (distance == bestDistance && (best is null || string.CompareOrdinal(lower, best) < 0)))
+			{
+				best = lower;
+				bestDistance = distance;
+			}
+		}
+
+		return best;
+	}
+
+	/// <summary>
+	/// Levenshtein edit distance between <paramref name="a"/> and <paramref name="b"/>, returning
+	/// -1 as soon as it is known to exceed <paramref name="max"/> (a length gap alone can decide
+	/// this without any work). Bounding the search keeps the per-candidate cost tiny.
+	/// </summary>
+	private static int LevenshteinWithin(string a, string b, int max)
+	{
+		if (Math.Abs(a.Length - b.Length) > max)
+		{
+			return -1;
+		}
+
+		var previous = new int[b.Length + 1];
+		var current = new int[b.Length + 1];
+		for (var j = 0; j <= b.Length; j++)
+		{
+			previous[j] = j;
+		}
+
+		for (var i = 1; i <= a.Length; i++)
+		{
+			current[0] = i;
+			var rowMin = current[0];
+			for (var j = 1; j <= b.Length; j++)
+			{
+				var cost = a[i - 1] == b[j - 1] ? 0 : 1;
+				current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
+				rowMin = Math.Min(rowMin, current[j]);
+			}
+
+			if (rowMin > max)
+			{
+				return -1;
+			}
+
+			(previous, current) = (current, previous);
+		}
+
+		return previous[b.Length] <= max ? previous[b.Length] : -1;
 	}
 
 	/// <summary>
@@ -553,8 +642,14 @@ public class SharpMUSHParserVisitor(
 						}
 
 						success = false;
-						return new CallState(
-							string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()), context.Depth());
+						var notFound = string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant());
+						var suggestion = SuggestFunctionName(name);
+						if (suggestion is not null)
+						{
+							notFound += $" DID YOU MEAN '{suggestion.ToUpperInvariant()}'";
+						}
+
+						return new CallState(notFound, context.Depth());
 					}
 
 					libraryMatch = (userFunction.Value, false);
@@ -582,6 +677,7 @@ public class SharpMUSHParserVisitor(
 			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
 			{
 				limitExceeded.IsExceeded = true;
+				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Invoke;
 				return new CallState(ErrorMessages.Returns.Invoke, contextDepth);
 			}
 
@@ -687,6 +783,7 @@ public class SharpMUSHParserVisitor(
 			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
 				limitExceeded.IsExceeded = true;
+				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Call;
 				return new CallState(ErrorMessages.Returns.Call, contextDepth);
 			}
 
@@ -741,10 +838,13 @@ public class SharpMUSHParserVisitor(
 					.ToList();
 			}
 
-			// If a limit was exceeded during argument evaluation, return immediately
+			// If a limit was exceeded during argument evaluation, return immediately with the error
+			// of whichever limit actually tripped (invocation, recursion/call, or output size) —
+			// not a blanket invocation-limit message, which would mislabel e.g. an oversized nested
+			// result as an invocation-limit error.
 			if (limitExceeded.IsExceeded)
 			{
-				return new CallState(ErrorMessages.Returns.Invoke, contextDepth);
+				return new CallState(limitExceeded.ErrorMessage ?? ErrorMessages.Returns.Invoke, contextDepth);
 			}
 
 			// TODO: Pass ParserContexts directly as arguments instead of creating
@@ -780,6 +880,16 @@ public class SharpMUSHParserVisitor(
 
 			var result = await function(newParser);
 
+			// Output ceiling: stop a single function that generates an enormous string from
+			// propagating it (and halt the rest of the evaluation, as the other limits do). Checked
+			// at the return so it covers every function without each having to guard itself.
+			if (result.Message is not null && MModule.getLength(result.Message) > MaxFunctionOutputChars)
+			{
+				limitExceeded.IsExceeded = true;
+				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.OutputTooLarge;
+				return new CallState(ErrorMessages.Returns.OutputTooLarge, contextDepth);
+			}
+
 			return result with { Depth = contextDepth };
 		}
 		catch (Exception ex)
@@ -812,7 +922,10 @@ public class SharpMUSHParserVisitor(
 			}
 
 			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-			GetTelemetryService(parser)?.RecordFunctionInvocation(name, elapsedMs, success);
+			// A limit hit (invocation, recursion/call, or output size) aborts the invocation, so it is
+			// not a successful call even though it returned a value rather than throwing.
+			var limitHit = limitExceeded is { IsExceeded: true };
+			GetTelemetryService(parser)?.RecordFunctionInvocation(name, elapsedMs, success && !limitHit);
 		}
 	}
 
@@ -864,7 +977,7 @@ public class SharpMUSHParserVisitor(
 			var targetObject = await Mediator.Send(new GetObjectNodeQuery(target));
 			if (targetObject.IsNone)
 			{
-				return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name));
+				return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
 			}
 
 			// The arguments pushed for this call become %0, %1, … inside the attribute.
@@ -1136,12 +1249,19 @@ public class SharpMUSHParserVisitor(
 			// Optimistic that the command still exists, until we try and it no longer does?
 			// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
 			// It needs to take an area to search in. So this is definitely its own service.
+			// PennMUSH matches $-commands against the command line AFTER evaluation (game.c tests the
+			// evaluated cptr), so substitutions and functions in the typed line are applied before the
+			// pattern is checked and before its wildcards capture %0... This mirrors what the hook
+			// OVERRIDE/EXTEND path already does. It is only reached once no built-in command matched
+			// (Steps 1-8 above), so a built-in never pays for this evaluation.
+			var evaluatedCommandText = (await parser.FunctionParse(commandText))?.Message ?? commandText;
+
 			var nearbyObjects = Mediator.CreateStream(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
 
 			var userDefinedCommandMatches = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
 				nearbyObjects,
-				commandText);
+				evaluatedCommandText);
 
 			if (userDefinedCommandMatches.IsSome())
 			{
@@ -1167,7 +1287,7 @@ public class SharpMUSHParserVisitor(
 					var userDefinedCommandMatchesOnZMR = await CommandDiscoveryService.MatchUserDefinedCommand(
 						parser,
 						zmrContents,
-						commandText);
+						evaluatedCommandText);
 
 					if (userDefinedCommandMatchesOnZMR.IsSome())
 					{
@@ -1183,7 +1303,7 @@ public class SharpMUSHParserVisitor(
 				var userDefinedCommandMatchesOnLocation = await CommandDiscoveryService.MatchUserDefinedCommand(
 					parser,
 					item.ToAsyncEnumerable(),
-					commandText);
+					evaluatedCommandText);
 
 				if (userDefinedCommandMatchesOnLocation.IsSome())
 				{
@@ -1204,7 +1324,7 @@ public class SharpMUSHParserVisitor(
 				var userDefinedCommandMatchesOnPersonalZMR = await CommandDiscoveryService.MatchUserDefinedCommand(
 					parser,
 					personalZMRContents,
-					commandText);
+					evaluatedCommandText);
 
 				if (userDefinedCommandMatchesOnPersonalZMR.IsSome())
 				{
@@ -1225,7 +1345,7 @@ public class SharpMUSHParserVisitor(
 			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
 				globalObjects.ToAsyncEnumerable().Union(globalObjectContent),
-				commandText);
+				evaluatedCommandText);
 
 			if (userDefinedCommandMatchesOnGlobal.IsSome())
 			{
@@ -1293,6 +1413,14 @@ public class SharpMUSHParserVisitor(
 		// Step 1: Validate if the command can be evaluated (locks)
 		foreach (var (obj, attr, arguments) in matches)
 		{
+			// A HALTED object runs no softcode (PennMUSH PE_NOTHING for a Halted executor), so its
+			// $-commands do not fire — the same rule enforced for u()/ufun in AttributeService. This
+			// is what makes @chown's loop-break (which halts the object) actually stop the loop.
+			if (await obj.HasFlag("HALT"))
+			{
+				continue;
+			}
+
 			var newParser = prs.Push(prs.CurrentState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
@@ -1874,6 +2002,12 @@ public class SharpMUSHParserVisitor(
 	{
 		foreach (var (obj, attr, arguments) in matches)
 		{
+			// See HandleUserDefinedCommand: a HALTED object's $-commands do not run.
+			if (await obj.HasFlag("HALT"))
+			{
+				continue;
+			}
+
 			var newParser = prs.Push(prs.CurrentState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
@@ -2318,16 +2452,16 @@ public class SharpMUSHParserVisitor(
 		var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
 		var simpleSubstitutionSymbol = context.substitutionSymbol();
 
+		CallState? result;
 		if (complexSubstitutionSymbol is not null)
 		{
 			var state = await VisitChildren(context);
-			return await Substitutions.Substitutions.ParseComplexSubstitution(state, parser, AttributeService, Mediator,
+			result = await Substitutions.Substitutions.ParseComplexSubstitution(state, parser, AttributeService, Mediator,
 				complexSubstitutionSymbol);
 		}
-
-		if (simpleSubstitutionSymbol is not null)
+		else if (simpleSubstitutionSymbol is not null)
 		{
-			return await Substitutions.Substitutions.ParseSimpleSubstitution(
+			result = await Substitutions.Substitutions.ParseSimpleSubstitution(
 				simpleSubstitutionSymbol.GetText(),
 				parser,
 				Mediator,
@@ -2335,8 +2469,38 @@ public class SharpMUSHParserVisitor(
 				Configuration,
 				simpleSubstitutionSymbol);
 		}
+		else
+		{
+			result = await VisitChildren(context) ?? new CallState(textContents, context.Depth());
+		}
 
-		return await VisitChildren(context) ?? new CallState(textContents, context.Depth());
+		return CapitalizeForUpperSelector(context, result);
+	}
+
+	/// <summary>
+	/// PennMUSH capitalizes the first character of a substitution's output when the selector letter
+	/// is uppercase — <c>%Q0</c> vs <c>%q0</c>, <c>%N</c> vs <c>%n</c>, <c>%I0</c> vs <c>%i0</c>, and
+	/// so on (src/parse.c). The rule keys on the character immediately after <c>%</c>, so digit and
+	/// symbol substitutions (<c>%0</c>, <c>%#</c>, <c>%!</c>) are never affected, and it is a no-op
+	/// when the first output character is not a letter. Applying it here, once, covers every
+	/// substitution kind; it is idempotent for any output that is already capitalized.
+	/// </summary>
+	private static CallState? CapitalizeForUpperSelector(ValidSubstitutionContext context, CallState? result)
+	{
+		if (result?.Message is null || result.Message.Length < 1)
+		{
+			return result;
+		}
+
+		var selector = context.GetText();
+		if (selector.Length == 0 || !char.IsAsciiLetterUpper(selector[0]))
+		{
+			return result;
+		}
+
+		var firstChar = MModule.apply(MModule.substring(0, 1, result.Message), x => x.ToUpperInvariant());
+		var rest = MModule.substring(1, result.Message.Length - 1, result.Message);
+		return result with { Message = MModule.concat(firstChar, rest) };
 	}
 
 	public override async ValueTask<CallState?> VisitCommand([NotNull] CommandContext context)

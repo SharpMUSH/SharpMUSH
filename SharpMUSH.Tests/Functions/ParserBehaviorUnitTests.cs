@@ -103,6 +103,20 @@ public class ParserBehaviorUnitTests
 	}
 
 	/// <summary>
+	/// A close typo of a real function name gets PennMUSH's "DID YOU MEAN 'X'" hint on the
+	/// bracket-mandatory error (src/parse.c); a name with no near match gets none. Format and
+	/// threshold confirmed against a live PennMUSH server (e.g. <c>[ad(1,2)]</c> → suggests ADD).
+	/// </summary>
+	[Test]
+	[Arguments("[ad(1,2)]", "#-1 FUNCTION (AD) NOT FOUND DID YOU MEAN 'ADD'")]
+	[Arguments("[xyzzyplughqq(1)]", "#-1 FUNCTION (XYZZYPLUGHQQ) NOT FOUND")]
+	public async Task UnknownFunctionSuggestsClosestName(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
 	/// The contents of a non-call are still evaluated with function recognition off, exactly
 	/// as PennMUSH clears PE_FUNCTION_CHECK before copying the parenthesised text through —
 	/// so a nested call stays literal, but a bracket inside re-enables evaluation.

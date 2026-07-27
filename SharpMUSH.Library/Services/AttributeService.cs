@@ -243,6 +243,17 @@ public class AttributeService(
 			return MModule.empty();
 		}
 
+		// PennMUSH: a HALTED object runs none of its softcode. process_expression returns
+		// PE_NOTHING for a Halted executor (src/parse.c), so u()/ufun and any attribute evaluated
+		// as that object yield the stored text unevaluated rather than its result. The HALT flag is
+		// set by @halt and by @chown (to break ownership loops); until now nothing enforced it, so a
+		// halted object kept running. The attribute runs as obj (Executor = obj below), so obj's
+		// flag is the one that matters.
+		if (await obj.HasFlag("HALT"))
+		{
+			return attr.AsAttribute.Last().Value;
+		}
+
 		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
 
 		// Use shared tracking collections from parser state.
@@ -264,6 +275,7 @@ public class AttributeService(
 		if (depth > configuration.CurrentValue.Limit.FunctionRecursionLimit)
 		{
 			limitExceeded.IsExceeded = true;
+			limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Recursion;
 			return MModule.single(ErrorMessages.Returns.Recursion);
 		}
 
