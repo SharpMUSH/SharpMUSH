@@ -582,7 +582,7 @@
     <value>Désinstaller {0} ?</value>
   </data>
   <data name="PkgUninstallConfirmBody" xml:space="preserve">
-    <value>{0} objet(s) seront marqués pour destruction et {1} enregistrement(s) d'attributs gérés seront supprimés.</value>
+    <value>{objects, plural, one {# objet sera marqué} other {# objets seront marqués}} pour destruction et {attributes, plural, one {# enregistrement d'attributs gérés sera supprimé} other {# enregistrements d'attributs gérés seront supprimés}}.</value>
   </data>
   <data name="PkgDependedOnBy" xml:space="preserve">
     <value>Utilisé comme dépendance par : {0}</value>
@@ -633,7 +633,7 @@
     <value>Classer les références externes ({0})</value>
   </data>
   <data name="PkgOccurrences" xml:space="preserve">
-    <value>{0} occurrence(s), ex. dans {1}</value>
+    <value>{count, plural, one {# occurrence} other {# occurrences}}, ex. dans {location}</value>
   </data>
   <data name="PkgResolutionLabel" xml:space="preserve">
     <value>Résolution</value>
@@ -852,7 +852,7 @@
     <value>Attributs ({0})</value>
   </data>
   <data name="PkgConflictCount" xml:space="preserve">
-    <value>{0} conflit(s)</value>
+    <value>{count, plural, one {# conflit} other {# conflits}}</value>
   </data>
   <data name="PkgConflictLabel" xml:space="preserve">
     <value>conflit : {0}</value>
@@ -1967,7 +1967,7 @@
     <value>EN DIRECT</value>
   </data>
   <data name="RolPoseCount" xml:space="preserve">
-    <value>{0} pose(s)</value>
+    <value>{count, plural, one {# pose} other {# poses}}</value>
   </data>
   <data name="RolNoPoses" xml:space="preserve">
     <value>Aucune pose dans cette scène.</value>
@@ -2006,13 +2006,13 @@
     <value>modifié</value>
   </data>
   <data name="RolEditedTimes" xml:space="preserve">
-    <value>Modifié {0} fois</value>
+    <value>{count, plural, one {Modifié # fois} other {Modifié # fois}}</value>
   </data>
   <data name="WidSceneLive" xml:space="preserve">
     <value>EN DIRECT</value>
   </data>
   <data name="WidScenePoseCount" xml:space="preserve">
-    <value>{0} pose(s)</value>
+    <value>{count, plural, one {# pose} other {# poses}}</value>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
     <value>Scène dans {0}</value>
@@ -2206,11 +2206,8 @@
   <data name="ResRoutingErrorHint" xml:space="preserve">
     <value>Ce message signifie que la page personnalisée n'est PAS reconnue par le routeur.</value>
   </data>
-  <data name="ResChangeCountOne" xml:space="preserve">
-    <value>{0} modification</value>
-  </data>
-  <data name="ResChangeCountMany" xml:space="preserve">
-    <value>{0} modifications</value>
+  <data name="ResChangeCount" xml:space="preserve">
+    <value>{count, plural, one {# modification} other {# modifications}}</value>
   </data>
   <data name="ResDefaultValueTooltip" xml:space="preserve">
     <value>Valeur par défaut : {0}</value>
@@ -2544,6 +2541,27 @@
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Le schéma de l'application n'a pas pu être chargé. Le gestionnaire softcode à l'adresse {0} est peut-être absent ou renvoie du JSON invalide.</value>
+  </data>
+  <data name="ConfigSavedCount" xml:space="preserve">
+    <value>{count, plural, one {# paramètre enregistré} other {# paramètres enregistrés}}</value>
+  </data>
+  <data name="ErrorCount" xml:space="preserve">
+    <value>{count, plural, one {# erreur} other {# erreurs}}</value>
+  </data>
+  <data name="ProfileUpdated" xml:space="preserve">
+    <value>Profil mis à jour ({count, plural, one {# champ} other {# champs}}).</value>
+  </data>
+  <data name="WarningCount" xml:space="preserve">
+    <value>{count, plural, one {# avertissement} other {# avertissements}}</value>
+  </data>
+  <data name="WikiBatchFailed" xml:space="preserve">
+    <value>{count, plural, one {# page a échoué} other {# pages ont échoué}}</value>
+  </data>
+  <data name="WikiBatchSucceeded" xml:space="preserve">
+    <value>{count, plural, one {# page mise à jour} other {# pages mises à jour}}</value>
+  </data>
+  <data name="WikiDeleteConfirmText" xml:space="preserve">
+    <value>Supprimer {count, plural, one {# page} other {# pages}} et toutes leurs révisions ? Cette action est irréversible.</value>
   </data>
   <data name="AdmAccountStatusActive" xml:space="preserve">
     <value>Actif</value>

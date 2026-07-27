@@ -42,7 +42,7 @@ else
                 </span>
                 <span>
                     <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Style="vertical-align:middle;margin-right:0.1875rem;" />
-                    @Loc["RolPoseCount", _scene!.PoseCount]
+                    @Loc.Plural("RolPoseCount", "count", _scene!.PoseCount)
                 </span>
                 <span>@_scene!.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
             </div>
