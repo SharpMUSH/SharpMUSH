@@ -160,4 +160,96 @@ public class WikiControllerLocaleTests
 		await Assert.That(dto.Locale).IsEqualTo("fr");
 		await Assert.That(dto.MarkdownSource).IsEqualTo("bio fr");
 	}
+
+	[Test]
+	public async Task GetRecentChanges_WithLangReturnsLocalizedTitlesOneRowPerPage()
+	{
+		var (controller, storage) = BuildAnonymous();
+		var alpha = (await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		await storage.CreateAsync("Beta", "b", "#1", WikiNamespace.Main, "general", "en");
+		await storage.UpsertTranslationAsync(alpha.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, published: true, expectedRevisionNumber: null);
+
+		var result = await controller.GetRecentChanges(count: 20, lang: "fr");
+
+		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		await Assert.That(dtos.Count)
+			.IsEqualTo(2)
+			.Because("a localized listing must not return N rows per page");
+		await Assert.That(dtos.Single(d => d.Slug == "alpha").Title).IsEqualTo("Alpha (fr)");
+		await Assert.That(dtos.Single(d => d.Slug == "alpha").IsFallback).IsFalse();
+		await Assert.That(dtos.Single(d => d.Slug == "beta").Title).IsEqualTo("Beta");
+		await Assert.That(dtos.Single(d => d.Slug == "beta").IsFallback).IsTrue();
+	}
+
+	[Test]
+	public async Task ListAllPages_WithLangKeepsTheTotalCountHeaderSemantics()
+	{
+		var (controller, storage) = BuildWithClaims(PortalPermission.WikiRead);
+		await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "general", "en");
+		await storage.CreateAsync("Beta", "b", "#1", WikiNamespace.Main, "general", "en");
+
+		var result = await controller.ListAllPages(skip: 0, take: 50, ns: null, lang: "fr");
+
+		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		await Assert.That(dtos.Count).IsEqualTo(2);
+		await Assert.That(controller.Response.Headers["X-Total-Count"].ToString()).IsEqualTo("2");
+	}
+
+	[Test]
+	public async Task ListNamespacePages_DraftTranslationDoesNotChangeAListedTitle()
+	{
+		var (controller, storage) = BuildAnonymous();
+		var page = (await storage.CreateAsync("Help Intro", "h", "#1", WikiNamespace.Help, "general", "en")).AsT0;
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Intro (brouillon)", "h-fr", "#2", null, published: false, expectedRevisionNumber: null);
+
+		var result = await controller.ListNamespacePages("help", skip: 0, take: 50, lang: "fr");
+
+		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		await Assert.That(dtos.Single().Title)
+			.IsEqualTo("Help Intro")
+			.Because("an unpublished translation must not surface its title in a public listing");
+	}
+
+	[Test]
+	public async Task ListCategoryPages_WithLangReturnsLocalizedTitles()
+	{
+		var (controller, storage) = BuildAnonymous();
+		var page = (await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "lore", "en")).AsT0;
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, published: true, expectedRevisionNumber: null);
+
+		var result = await controller.ListCategoryPages("lore", skip: 0, take: 50, lang: "fr");
+
+		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		await Assert.That(dtos.Single().Title).IsEqualTo("Alpha (fr)");
+	}
+
+	[Test]
+	public async Task ListTagPages_WithLangReturnsLocalizedTitles()
+	{
+		var (controller, storage) = BuildAnonymous();
+		var page = (await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		await storage.SetMetadataAsync(page.Id, "general", ["dragons"], published: true);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, published: true, expectedRevisionNumber: null);
+
+		var result = await controller.ListTagPages("dragons", skip: 0, take: 50, lang: "fr");
+
+		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		await Assert.That(dtos.Single().Title).IsEqualTo("Alpha (fr)");
+	}
+
+	[Test]
+	public async Task ListNamespacePages_StillHidesUnpublishedPagesFromAnonymousReaders()
+	{
+		// LocalizedListAsync must keep calling FilterVisible first; a localized listing that forgot the
+		// page-level gate would leak drafts while every locale assertion stayed green.
+		var (controller, storage) = BuildAnonymous();
+		var draft = (await storage.CreateAsync("Secret", "s", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		await storage.SetMetadataAsync(draft.Id, "general", [], published: false);
+		await storage.CreateAsync("Public", "p", "#1", WikiNamespace.Main, "general", "en");
+
+		var result = await controller.ListNamespacePages("main", skip: 0, take: 50, lang: "fr");
+
+		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		await Assert.That(dtos.Select(d => d.Slug)).IsEquivalentTo(new[] { "public" });
+	}
 }

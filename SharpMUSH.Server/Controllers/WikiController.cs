@@ -238,35 +238,55 @@ public class WikiController(
 	}
 
 	/// <summary>
-	/// GET /api/wiki/recent?count=20
-	/// Returns recently updated pages.
+	/// Localizes a listing into the reader's locale, one DTO per page. <c>AvailableLocales</c> is left
+	/// empty here on purpose: a listing does not drive language chips or hreflang, and loading every
+	/// page's translation set to fill it would be N extra queries for data nothing reads.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="FilterVisible"/> runs first and is not optional — the page-level draft gate is a
+	/// different rule from translation visibility, and a localized listing that dropped it would leak
+	/// unpublished pages while every locale assertion stayed green.
+	/// </remarks>
+	private async Task<IEnumerable<WikiPageDto>> LocalizedListAsync(IEnumerable<WikiPage> pages, string? lang)
+	{
+		var visible = FilterVisible(pages).ToList();
+		var localized = await localization.LocalizeAllAsync(visible, lang, IncludeDrafts);
+		return localized.Select(p => ToDto(p, []));
+	}
+
+	/// <summary>
+	/// GET /api/wiki/recent?count=20&amp;lang=fr
+	/// Returns recently updated pages with titles resolved into the reader's locale, one row per page.
 	/// </summary>
 	[HttpGet("recent")]
-	public async Task<IActionResult> GetRecentChanges([FromQuery] int count = 20)
+	public async Task<IActionResult> GetRecentChanges([FromQuery] int count = 20, [FromQuery] string? lang = null)
 	{
 		var pages = await wikiService.GetRecentChangesAsync(count);
-		return Ok(FilterVisible(pages).Select(ToDto));
+		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
 	/// <summary>
-	/// GET /api/wiki/ns/{namespace}?skip=0&amp;take=50
-	/// Lists pages within a namespace, ordered by title, with pagination.
+	/// GET /api/wiki/ns/{namespace}?skip=0&amp;take=50&amp;lang=fr
+	/// Lists pages within a namespace, ordered by title, with pagination and localized titles.
 	/// </summary>
 	[HttpGet("ns/{ns}")]
-	public async Task<IActionResult> ListNamespacePages(string ns, [FromQuery] int skip = 0, [FromQuery] int take = 50)
+	public async Task<IActionResult> ListNamespacePages(
+		string ns, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
 	{
 		var pages = await wikiService.GetByNamespaceAsync(ParseNamespace(ns), skip, take);
-		return Ok(FilterVisible(pages).Select(ToDto));
+		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
 	/// <summary>
-	/// GET /api/wiki/pages?skip=0&amp;take=50&amp;ns=
-	/// Paginated listing of all pages (optionally restricted to a namespace).
+	/// GET /api/wiki/pages?skip=0&amp;take=50&amp;ns=&amp;lang=fr
+	/// Paginated listing of all pages (optionally restricted to a namespace), with localized titles.
 	/// The X-Total-Count response header carries the unpaginated page count.
 	/// Anonymous callers only see published pages.
 	/// </summary>
 	[HttpGet("pages")]
-	public async Task<IActionResult> ListAllPages([FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? ns = null)
+	public async Task<IActionResult> ListAllPages(
+		[FromQuery] int skip = 0, [FromQuery] int take = 50,
+		[FromQuery] string? ns = null, [FromQuery] string? lang = null)
 	{
 		var nsFilter = ParseOptionalNamespace(ns);
 		var pages = await wikiService.GetAllPagesAsync(skip, take, nsFilter);
@@ -275,29 +295,31 @@ public class WikiController(
 		// would not match the published-only collection they receive.
 		if (CanSeeUnpublished)
 			Response.Headers["X-Total-Count"] = (await wikiService.CountPagesAsync(nsFilter)).ToString();
-		return Ok(FilterVisible(pages).Select(ToDto));
+		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
 	/// <summary>
-	/// GET /api/wiki/category/{category}?skip=0&amp;take=50
-	/// Lists pages in a category. Anonymous callers only see published pages.
+	/// GET /api/wiki/category/{category}?skip=0&amp;take=50&amp;lang=fr
+	/// Lists pages in a category with localized titles. Anonymous callers only see published pages.
 	/// </summary>
 	[HttpGet("category/{category}")]
-	public async Task<IActionResult> ListCategoryPages(string category, [FromQuery] int skip = 0, [FromQuery] int take = 50)
+	public async Task<IActionResult> ListCategoryPages(
+		string category, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
 	{
 		var pages = await wikiService.GetByCategoryAsync(category, skip, take);
-		return Ok(FilterVisible(pages).Select(ToDto));
+		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
 	/// <summary>
-	/// GET /api/wiki/tag/{tag}?skip=0&amp;take=50
-	/// Lists pages carrying a tag. Anonymous callers only see published pages.
+	/// GET /api/wiki/tag/{tag}?skip=0&amp;take=50&amp;lang=fr
+	/// Lists pages carrying a tag with localized titles. Anonymous callers only see published pages.
 	/// </summary>
 	[HttpGet("tag/{tag}")]
-	public async Task<IActionResult> ListTagPages(string tag, [FromQuery] int skip = 0, [FromQuery] int take = 50)
+	public async Task<IActionResult> ListTagPages(
+		string tag, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
 	{
 		var pages = await wikiService.GetByTagAsync(tag, skip, take);
-		return Ok(FilterVisible(pages).Select(ToDto));
+		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
 	/// <summary>
