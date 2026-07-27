@@ -19,7 +19,7 @@ else if (_activeScenes is { Count: > 0 })
         </div>
         <MudText Style="color:var(--text-dim);font-size:0.8125rem;margin-bottom:0.75rem;">
             <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:0.25rem;" />
-            @scene.RoomName — @Loc["WidScenePoseCount", scene.PoseCount]
+            @scene.RoomName — @Loc.Plural("WidScenePoseCount", "count", scene.PoseCount)
         </MudText>
         <MudButton Variant="Variant.Outlined" Size="Size.Small" Href="@($"/scenes/{scene.Id}/live")"
                    Style="border-color:var(--accent);color:var(--accent);">

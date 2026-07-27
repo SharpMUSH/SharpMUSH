@@ -236,7 +236,7 @@
     </TitleContent>
     <DialogContent>
         <MudText>
-            @Loc["PkgUninstallConfirmBody", _uninstallTarget?.ObjectCount ?? 0, _uninstallTarget?.ManagedAttributeCount ?? 0]
+            @Loc.Plural("PkgUninstallConfirmBody", "objects", _uninstallTarget?.ObjectCount ?? 0, "attributes", _uninstallTarget?.ManagedAttributeCount ?? 0)
         </MudText>
         @if (_uninstallTarget?.Dependents.Count > 0)
         {

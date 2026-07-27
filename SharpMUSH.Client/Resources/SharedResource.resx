@@ -762,10 +762,12 @@
     <value>Issues</value>
   </data>
   <data name="ErrorCount" xml:space="preserve">
-    <value>{0} error(s)</value>
+    <value>{count, plural, one {# error} other {# errors}}</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="WarningCount" xml:space="preserve">
-    <value>{0} warning(s)</value>
+    <value>{count, plural, one {# warning} other {# warnings}}</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="CancelConversion" xml:space="preserve">
     <value>Cancel Conversion</value>
@@ -938,7 +940,8 @@
     <value>No changes to save</value>
   </data>
   <data name="ConfigSavedCount" xml:space="preserve">
-    <value>{0} setting(s) saved successfully</value>
+    <value>{count, plural, one {# setting saved successfully} other {# settings saved successfully}}</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="SaveFailed" xml:space="preserve">
     <value>Failed to save configuration: {0}</value>
@@ -1014,13 +1017,15 @@
     <value>Delete Pages</value>
   </data>
   <data name="WikiDeleteConfirmText" xml:space="preserve">
-    <value>Delete {0} page(s) and all their revisions? This cannot be undone.</value>
+    <value>Delete {count, plural, one {# page} other {# pages}} and all their revisions? This cannot be undone.</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="WikiBatchSucceeded" xml:space="preserve">
-    <value>{0} page(s) updated</value>
+    <value>{count, plural, one {# page updated} other {# pages updated}}</value>
   </data>
   <data name="WikiBatchFailed" xml:space="preserve">
-    <value>{0} page(s) failed</value>
+    <value>{count, plural, one {# page failed} other {# pages failed}}</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="WikiNoPages" xml:space="preserve">
     <value>No wiki pages found.</value>
@@ -1098,7 +1103,8 @@
     <value>Could not save profile changes.</value>
   </data>
   <data name="ProfileUpdated" xml:space="preserve">
-    <value>Profile updated ({0} field(s)).</value>
+    <value>Profile updated ({count, plural, one {# field} other {# fields}}).</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Set as profile icon</value>
@@ -1446,7 +1452,8 @@
     <value>Uninstall {0}?</value>
   </data>
   <data name="PkgUninstallConfirmBody" xml:space="preserve">
-    <value>{0} object(s) will be marked for destruction and {1} managed attribute record(s) removed.</value>
+    <value>{objects, plural, one {# object} other {# objects}} will be marked for destruction and {attributes, plural, one {# managed attribute record} other {# managed attribute records}} removed.</value>
+    <comment>ICU MessageFormat. Named args: attributes, objects.</comment>
   </data>
   <data name="PkgDependedOnBy" xml:space="preserve">
     <value>Depended on by: {0}</value>
@@ -1497,7 +1504,8 @@
     <value>Classify external references ({0})</value>
   </data>
   <data name="PkgOccurrences" xml:space="preserve">
-    <value>{0} occurrence(s), e.g. in {1}</value>
+    <value>{count, plural, one {# occurrence} other {# occurrences}}, e.g. in {location}</value>
+    <comment>ICU MessageFormat. Named args: count, location.</comment>
   </data>
   <data name="PkgResolutionLabel" xml:space="preserve">
     <value>Resolution</value>
@@ -1716,7 +1724,8 @@
     <value>Attributes ({0})</value>
   </data>
   <data name="PkgConflictCount" xml:space="preserve">
-    <value>{0} conflict(s)</value>
+    <value>{count, plural, one {# conflict} other {# conflicts}}</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="PkgConflictLabel" xml:space="preserve">
     <value>conflict: {0}</value>
@@ -2841,7 +2850,8 @@
     <value>LIVE</value>
   </data>
   <data name="RolPoseCount" xml:space="preserve">
-    <value>{0} pose(s)</value>
+    <value>{count, plural, one {# pose} other {# poses}}</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="RolNoPoses" xml:space="preserve">
     <value>No poses in this scene.</value>
@@ -2880,13 +2890,15 @@
     <value>edited</value>
   </data>
   <data name="RolEditedTimes" xml:space="preserve">
-    <value>Edited {0} time(s)</value>
+    <value>{count, plural, one {Edited # time} other {Edited # times}}</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="WidSceneLive" xml:space="preserve">
     <value>LIVE</value>
   </data>
   <data name="WidScenePoseCount" xml:space="preserve">
-    <value>{0} pose(s)</value>
+    <value>{count, plural, one {# pose} other {# poses}}</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
     <value>Scene in {0}</value>
@@ -3081,11 +3093,8 @@
   <data name="ResRoutingErrorHint" xml:space="preserve">
     <value>This message means the custom page is NOT being matched by the router.</value>
   </data>
-  <data name="ResChangeCountOne" xml:space="preserve">
-    <value>{0} change</value>
-  </data>
-  <data name="ResChangeCountMany" xml:space="preserve">
-    <value>{0} changes</value>
+  <data name="ResChangeCount" xml:space="preserve">
+    <value>{count, plural, one {# change} other {# changes}}</value>
   </data>
   <data name="ResDefaultValueTooltip" xml:space="preserve">
     <value>Default: {0}</value>
