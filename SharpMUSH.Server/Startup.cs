@@ -316,6 +316,10 @@ public class Startup(
 		services.AddSingleton<WikiMarkdigPipeline>();
 		services.AddSingleton<IWikiService>(sp => (IWikiService)sp.GetRequiredService<ISharpDatabase>());
 
+		// Locale fallback rules (pure) and the one localized-read service every reader path goes through.
+		services.AddSingleton<IWikiLocaleResolver, WikiLocaleResolver>();
+		services.AddSingleton<IWikiLocalizationService, WikiLocalizationService>();
+
 		// Package registry — backed by whichever ISharpDatabase is active (all three DB backends implement IPackageRegistryService).
 		services.AddSingleton<IPackageRegistryService>(sp => (IPackageRegistryService)sp.GetRequiredService<ISharpDatabase>());
 
