@@ -1317,6 +1317,90 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// How the exit was linked. PennMUSH stores HOME and AMBIGUOUS directly in Destination(); SharpMUSH
+	/// records them in a <c>_LINKTYPE</c> attribute instead, which is the convention <c>loc()</c> already
+	/// reads to answer <c>#-3</c> and <c>#-2</c>.
+	/// </summary>
+	private static async ValueTask<string?> LinkTypeOf(AnySharpObject executor, AnySharpObject exitObject)
+	{
+		var linkTypeAttr = await AttributeService!.GetAttributeAsync(
+			executor, exitObject, AttrLinkType, IAttributeService.AttributeMode.Read, false);
+
+		if (!linkTypeAttr.IsAttribute || linkTypeAttr.AsAttribute.Length == 0)
+		{
+			return null;
+		}
+
+		var linkType = linkTypeAttr.AsAttribute[0].Value.ToPlainText().Trim();
+
+		return string.IsNullOrEmpty(linkType) ? null : linkType.ToLowerInvariant();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>find_var_dest</c> (<c>move.c:360</c>): a variable exit works out where it leads at move
+	/// time by evaluating its <c>DESTINATION</c> attribute — with <c>%0</c> set to the exit name or alias
+	/// the mover typed — falling back to <c>EXITTO</c>. The result is parsed as an objid, so it must name
+	/// an object rather than merely matching something nearby.
+	/// <para>Returns <c>null</c> after notifying the mover when no usable destination comes back.</para>
+	/// </summary>
+	private static async ValueTask<AnySharpContainer?> FindVariableDestination(
+		IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject exitObject, string typedName)
+	{
+		var attributeArgs = new Dictionary<string, CallState> { { "0", new CallState(typedName) } };
+
+		var resolved = await AttributeHelpers.EvaluateFormatAttribute(
+			AttributeService!, parser, executor, exitObject, "DESTINATION", attributeArgs, MModule.empty());
+
+		if (MModule.getLength(resolved) == 0)
+		{
+			resolved = await AttributeHelpers.EvaluateFormatAttribute(
+				AttributeService!, parser, executor, exitObject, "EXITTO", attributeArgs, MModule.empty());
+		}
+
+		var destinationText = resolved.ToPlainText().Trim();
+		var located = DBRef.TryParse(destinationText, out var destinationRef)
+			? await Mediator!.Send(new GetObjectNodeQuery(destinationRef!.Value))
+			: new AnyOptionalSharpObject(new None());
+
+		// PennMUSH only permits a variable destination the exit itself could have been linked to
+		// (move.c:457), and an exit is not somewhere you can end up.
+		if (located.IsNone() || !located.Known().IsContainer
+				|| !await ExitCanLinkTo(exitObject, located.Known()))
+		{
+			await NotifyService!.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.VariableExitDestinationInvalidFormat), executor,
+				located.IsNone() ? "#-1" : located.Known().Object().DBRef.Number.ToString());
+
+			return null;
+		}
+
+		return located.Known().AsContainer;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>can_link_to</c> (<c>mushdb.h:87</c>), asked of the exit rather than of the player: the
+	/// exit controls the destination, is allowed to link anywhere, or the destination is LINK_OK and the
+	/// exit passes its link lock.
+	/// </summary>
+	private static async ValueTask<bool> ExitCanLinkTo(AnySharpObject exitObject, AnySharpObject destination)
+	{
+		if (await PermissionService!.Controls(exitObject, destination))
+		{
+			return true;
+		}
+
+		if (await exitObject.HasPower("Link_Anywhere"))
+		{
+			return true;
+		}
+
+		var destinationFlags = await destination.Object().Flags.Value.ToArrayAsync();
+
+		return destinationFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase))
+					 && LockService!.Evaluate(LockType.Link, destination, exitObject);
+	}
+
 	[SharpCommand(Name = "GOTO", Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
 	public static async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1348,56 +1432,57 @@ public partial class Commands
 		}
 
 		var exitObj = exit.AsExit;
+		var exitObject = new AnySharpObject(exitObj);
 
-		var maybeDestination = await exitObj.Home.WithCancellation(CancellationToken.None);
+		// The exit name or alias actually typed: args["1"] when the visitor routed a bare exit command
+		// here, otherwise the argument to an explicit `goto`.
+		var typedName = args.TryGetValue("1", out var typedArg)
+			? typedArg.Message!.ToPlainText()
+			: args["0"].Message!.ToPlainText();
 
-		// PennMUSH could_doit() (predicat.c:75) refuses an exit with no destination before the basic
-		// lock is even evaluated, so do_move falls through to fail_lock.
-		if (maybeDestination.IsNone)
-		{
-			return await FailToGoThatWay(parser, executor, exitObj);
-		}
-
-		var homeLocation = maybeDestination.WithoutNone();
+		var linkType = await LinkTypeOf(executor, exitObject);
 		AnySharpContainer destination;
 
-		if (homeLocation.Object().DBRef.Number == -1)
+		if (linkType == LinkTypeVariable)
 		{
-			var destAttr = await AttributeService!.GetAttributeAsync(
-				executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
+			var variableDestination = await FindVariableDestination(parser, executor, exitObject, typedName);
 
-			if (destAttr.IsNone || destAttr.IsError)
+			if (variableDestination is null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid), executor);
 				return CallState.Empty;
 			}
 
-			var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
-			var located = await LocateService!.LocateAndNotifyIfInvalid(
-				parser,
-				executor,
-				executor,
-				destValue!,
-				LocateFlags.All);
-
-			if (!located.IsValid())
+			destination = variableDestination;
+		}
+		else if (linkType == LinkTypeHome)
+		{
+			// PennMUSH do_move (move.c:451): an exit linked to HOME sends the mover to their own home.
+			if (!executor.IsContent)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid), executor);
-				return CallState.Empty;
+				return await FailToGoThatWay(parser, executor, exitObj);
 			}
 
-			var locatedObj = located.WithoutError().WithoutNone();
-			if (!locatedObj.IsContainer)
+			var moverHome = await executor.AsContent.Home();
+
+			if (moverHome.IsNone)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitNoValidLocationDetail), executor);
-				return CallState.Empty;
+				return await FailToGoThatWay(parser, executor, exitObj);
 			}
 
-			destination = locatedObj.AsContainer;
+			destination = moverHome.WithoutNone();
 		}
 		else
 		{
-			destination = homeLocation;
+			var maybeDestination = await exitObj.Home.WithCancellation(CancellationToken.None);
+
+			// PennMUSH could_doit() (predicat.c:75) refuses an exit with no destination before the basic
+			// lock is even evaluated, so do_move falls through to fail_lock.
+			if (maybeDestination.IsNone)
+			{
+				return await FailToGoThatWay(parser, executor, exitObj);
+			}
+
+			destination = maybeDestination.WithoutNone();
 		}
 
 		if (!await PermissionService!.CanGoto(executor, exitObj, destination))

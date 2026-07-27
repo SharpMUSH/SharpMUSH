@@ -954,7 +954,7 @@ public class SharpMUSHParserVisitor(
 				if (locate.IsExit)
 				{
 					var exit = locate.AsExit;
-					return await HandleGoCommandPattern(parser, exit);
+					return await HandleGoCommandPattern(parser, exit, command);
 				}
 			}
 
@@ -1192,14 +1192,20 @@ public class SharpMUSHParserVisitor(
 		return CallState.Empty;
 	}
 
-	private static async ValueTask<Option<CallState>> HandleGoCommandPattern(IMUSHCodeParser prs, SharpExit exit)
+	/// <param name="typedName">
+	/// The exit name or alias the player actually typed. PennMUSH passes this to a variable exit's
+	/// DESTINATION attribute as %0 (move.c:369), so one exit can route differently per alias.
+	/// </param>
+	private static async ValueTask<Option<CallState>> HandleGoCommandPattern(
+		IMUSHCodeParser prs, SharpExit exit, string typedName)
 	{
 		var newParser = prs.Push(prs.CurrentState with
 		{
 			Command = "GOTO",
 			Arguments = new Dictionary<string, CallState>
 			{
-				{ "0", new CallState(exit.Object.DBRef.ToString(), 0) }
+				{ "0", new CallState(exit.Object.DBRef.ToString(), 0) },
+				{ "1", new CallState(typedName, 0) }
 			},
 			Function = null
 		});

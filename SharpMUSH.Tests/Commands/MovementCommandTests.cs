@@ -315,4 +315,192 @@ public class MovementCommandTests
 
 		await Assert.That(result).IsNotNull();
 	}
+
+	/// <summary>
+	/// PennMUSH variable exits: <c>@link &lt;exit&gt;=variable</c> leaves the destination unresolved, and
+	/// <c>find_var_dest</c> (<c>move.c:360</c>) reads it from the exit's <c>DESTINATION</c> attribute at
+	/// move time.
+	/// </summary>
+	[Test]
+	public async ValueTask VariableExitMovesToTheDestinationAttribute()
+	{
+		var player = await CreateTestPlayerAsync("VarDestPlain");
+
+		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarDestSource");
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+
+		var destName = TestIsolationHelpers.GenerateUniqueName("VarDestTarget");
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
+		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("VarDestExit");
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"&DESTINATION {exitName}={destDbRef}"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+
+		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
+
+		await Assert.That(location.WithExitOption().Known().Object().DBRef.ToString()).IsEqualTo(destDbRef);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>find_var_dest</c> uses <c>call_attrib</c>, so <c>DESTINATION</c> is softcode that is
+	/// evaluated — that is the whole point of a variable exit.
+	/// </summary>
+	[Test]
+	public async ValueTask VariableExitEvaluatesTheDestinationAttribute()
+	{
+		var player = await CreateTestPlayerAsync("VarDestEval");
+
+		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarEvalSource");
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+
+		var destName = TestIsolationHelpers.GenerateUniqueName("VarEvalTarget");
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
+		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("VarEvalExit");
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"&DESTINATION {exitName}=[first({destDbRef} {sourceDbRef})]"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+
+		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
+
+		await Assert.That(location.WithExitOption().Known().Object().DBRef.ToString()).IsEqualTo(destDbRef);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>move.c:377</c> falls back to <c>EXITTO</c> when <c>DESTINATION</c> is absent, "for
+	/// portability".
+	/// </summary>
+	[Test]
+	public async ValueTask VariableExitFallsBackToTheExitToAttribute()
+	{
+		var player = await CreateTestPlayerAsync("VarDestExitTo");
+
+		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarExitToSource");
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+
+		var destName = TestIsolationHelpers.GenerateUniqueName("VarExitToTarget");
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
+		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("VarExitToExit");
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"&EXITTO {exitName}={destDbRef}"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+
+		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
+
+		await Assert.That(location.WithExitOption().Known().Object().DBRef.ToString()).IsEqualTo(destDbRef);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>move.c:369</c> passes the exit name or alias the player actually typed as <c>%0</c>,
+	/// so one exit can route differently per alias.
+	/// </summary>
+	[Test]
+	public async ValueTask VariableExitPassesTheUsedExitNameAsPercentZero()
+	{
+		var player = await CreateTestPlayerAsync("VarDestArg");
+
+		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarArgSource");
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+
+		var northName = TestIsolationHelpers.GenerateUniqueName("VarArgNorth");
+		var northResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {northName}"));
+		var northDbRef = northResult.Message!.ToPlainText()!.Trim();
+
+		var southName = TestIsolationHelpers.GenerateUniqueName("VarArgSouth");
+		var southResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {southName}"));
+		var southDbRef = southResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("VarArgExit");
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@open {exitName};{exitName}North;{exitName}South"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"&DESTINATION {exitName}=[switch(%0,*South,{southDbRef},{northDbRef})]"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"{exitName}South"));
+
+		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
+
+		await Assert.That(location.WithExitOption().Known().Object().DBRef.ToString()).IsEqualTo(southDbRef);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_move</c> (<c>move.c:451</c>): an exit linked to HOME sends the mover to their own
+	/// home, not to a fixed room.
+	/// </summary>
+	[Test]
+	public async ValueTask HomeLinkedExitSendsTheMoverToTheirOwnHome()
+	{
+		var player = await CreateTestPlayerAsync("HomeLinkWalker");
+
+		var homeName = TestIsolationHelpers.GenerateUniqueName("HomeLinkHome");
+		var homeResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {homeName}"));
+		var homeDbRef = homeResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link me={homeDbRef}"));
+
+		var sourceName = TestIsolationHelpers.GenerateUniqueName("HomeLinkSource");
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("HomeLinkExit");
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=home"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+
+		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
+
+		await Assert.That(location.WithExitOption().Known().Object().DBRef.ToString()).IsEqualTo(homeDbRef);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>move.c:459</c> names the offending dbref rather than giving the generic exit failure.
+	/// </summary>
+	[Test]
+	public async ValueTask VariableExitWithNoDestinationAttributeReportsAnInvalidDestination()
+	{
+		var player = await CreateTestPlayerAsync("VarDestMissing");
+
+		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarMissingSource");
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("VarMissingExit");
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.VariableExitDestinationInvalidFormat),
+			player.DbRef, player.DbRef)).IsTrue();
+	}
 }
