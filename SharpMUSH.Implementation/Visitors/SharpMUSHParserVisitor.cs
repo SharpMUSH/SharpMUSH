@@ -1282,6 +1282,14 @@ public class SharpMUSHParserVisitor(
 		// Step 1: Validate if the command can be evaluated (locks)
 		foreach (var (obj, attr, arguments) in matches)
 		{
+			// A HALTED object runs no softcode (PennMUSH PE_NOTHING for a Halted executor), so its
+			// $-commands do not fire — the same rule enforced for u()/ufun in AttributeService. This
+			// is what makes @chown's loop-break (which halts the object) actually stop the loop.
+			if (await obj.HasFlag("HALT"))
+			{
+				continue;
+			}
+
 			var newParser = prs.Push(prs.CurrentState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
@@ -1857,6 +1865,12 @@ public class SharpMUSHParserVisitor(
 	{
 		foreach (var (obj, attr, arguments) in matches)
 		{
+			// See HandleUserDefinedCommand: a HALTED object's $-commands do not run.
+			if (await obj.HasFlag("HALT"))
+			{
+				continue;
+			}
+
 			var newParser = prs.Push(prs.CurrentState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
