@@ -179,8 +179,14 @@ public partial class SurrealDatabase
 			["destKey"] = destKey
 		};
 
+		// Relinking must replace the destination rather than accumulate a second has_home edge, and must
+		// do so in one transaction like every other edge replacement here — otherwise a concurrent reader
+		// can catch the exit detached, and a failure between the two statements strands it unlinked.
 		await ExecuteAsync(
-			$"RELATE exit:$exitKey->has_home->{destTable}:$destKey",
+			$"BEGIN TRANSACTION;" +
+			$"DELETE has_home WHERE in = exit:$exitKey;" +
+			$"RELATE exit:$exitKey->has_home->{destTable}:$destKey;" +
+			$"COMMIT TRANSACTION",
 			parameters, cancellationToken);
 		return true;
 	}

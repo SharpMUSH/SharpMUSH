@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -46,6 +48,55 @@ public class AccountAdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/enable cmd-disable-user"));
 		await Task.Delay(200);
 		await Assert.That(await accountService.AuthenticateAsync("cmd-disable-user", "some-password-1")).IsNotNull();
+	}
+
+	[Test, NotInParallel(nameof(AccountAdminCommandTests))]
+	public async ValueTask AccountClose_BlocksLoginAndRetainsTheRecord()
+	{
+		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		await accountService.CreateAccountAsync("cmd-close-user", "close@example.com", "some-password-1");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/close cmd-close-user"));
+		await Task.Delay(200);
+
+		await Assert.That(await accountService.AuthenticateAsync("cmd-close-user", "some-password-1")).IsNull();
+
+		var reloaded = await accountService.GetByUsernameAsync("cmd-close-user");
+		await Assert.That(reloaded).IsNotNull();
+		await Assert.That(reloaded!.Status).IsEqualTo(AccountStatus.Closed);
+		await Assert.That(reloaded.Email).IsEqualTo("close@example.com");
+		await Assert.That(reloaded.PasswordHash).IsNotEmpty();
+	}
+
+	[Test, NotInParallel(nameof(AccountAdminCommandTests))]
+	public async ValueTask AccountDelete_BlocksLoginAndRetainsTheRecord()
+	{
+		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		await accountService.CreateAccountAsync("cmd-delete-user", "delete@example.com", "some-password-1");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/delete cmd-delete-user"));
+		await Task.Delay(200);
+
+		await Assert.That(await accountService.AuthenticateAsync("cmd-delete-user", "some-password-1")).IsNull();
+
+		var reloaded = await accountService.GetByUsernameAsync("cmd-delete-user");
+		await Assert.That(reloaded).IsNotNull();
+		await Assert.That(reloaded!.Status).IsEqualTo(AccountStatus.Deleted);
+		await Assert.That(reloaded.Email).IsEqualTo("delete@example.com");
+		await Assert.That(reloaded.PasswordHash).IsNotEmpty();
+	}
+
+	[Test, NotInParallel(nameof(AccountAdminCommandTests))]
+	public async ValueTask AccountClose_SystemAccount_IsRefused()
+	{
+		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		var system = await accountService.GetOrCreateSystemAccountAsync();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@account/close {SystemAccount.Username}"));
+		await Task.Delay(200);
+
+		var reloaded = await accountService.GetByIdAsync(system.Id!);
+		await Assert.That(reloaded!.Status).IsEqualTo(AccountStatus.Active);
 	}
 
 	[Test, NotInParallel(nameof(AccountAdminCommandTests))]

@@ -4,6 +4,7 @@ namespace SharpMUSH.Library.Models;
 /// A web/account-layer identity that owns zero or more MUSH characters.
 /// Stored in <c>node_accounts</c> — has no MUSH dbref and no in-game presence.
 /// Characters are linked via <c>edge_account_owns_character</c> graph edges.
+/// Documents are never removed; see <see cref="AccountStatus"/>.
 /// </summary>
 public class SharpAccount
 {
@@ -27,5 +28,11 @@ public class SharpAccount
 
 	public bool MustChangePassword { get; set; }
 
-	public bool IsDisabled { get; set; }
+	public AccountStatus Status { get; set; } = AccountStatus.Active;
+
+	/// <summary>
+	/// Whether this account may be used to log in. Derived from <see cref="Status"/> so there is
+	/// no second field that could contradict it.
+	/// </summary>
+	public bool IsActive => Status == AccountStatus.Active;
 }

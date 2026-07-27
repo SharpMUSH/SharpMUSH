@@ -300,18 +300,15 @@ public class WarningService(
 				var exit = target.AsExit;
 				try
 				{
-					var destination = await exit.Location.WithCancellation(CancellationToken.None);
-					var destObj = destination.Match(
-						player => player.Object,
-						room => room.Object,
-						thing => thing.Object
-					);
+					var destination = await exit.Home.WithCancellation(CancellationToken.None);
 
-					// Check if destination DBRef is -1 (NOTHING) or 0 (invalid)
-					if (destObj.DBRef.Number <= 0)
+					// An @open'd or @unlink'd exit has no destination edge at all; a linked one may still
+					// point at NOTHING. #0 is the master room, a real destination, so only negative
+					// dbrefs are invalid.
+					if (destination.IsNone || destination.WithoutNone().Object().DBRef.Number < 0)
 					{
 						await Complain(checker, target, "exit-unlinked",
-							"Exit is unlinked (destination is NOTHING). This exit can be stolen.");
+							"Exit is unlinked (no destination set). This exit can be stolen.");
 						hasWarnings = true;
 					}
 				}
@@ -328,8 +325,8 @@ public class WarningService(
 				// DESTINATION or EXITTO attributes to dynamically determine the target
 				try
 				{
-					var exitLocation = await target.AsExit.Location.WithCancellation(CancellationToken.None);
-					if (exitLocation.Object().DBRef.Number == -1)
+					var exitDestination = await target.AsExit.Home.WithCancellation(CancellationToken.None);
+					if (!exitDestination.IsNone && exitDestination.WithoutNone().Object().DBRef.Number == -1)
 					{
 						var destAttr = await attributeService.GetAttributeAsync(checker, target, "DESTINATION", IAttributeService.AttributeMode.Read, false);
 						var exitToAttr = await attributeService.GetAttributeAsync(checker, target, "EXITTO", IAttributeService.AttributeMode.Read, false);
@@ -385,61 +382,50 @@ public class WarningService(
 			var exit = target.AsExit;
 			try
 			{
-				var destination = await exit.Location.WithCancellation(CancellationToken.None);
-				var source = await exit.Home.WithCancellation(CancellationToken.None);
+				var maybeDestination = await exit.Home.WithCancellation(CancellationToken.None);
+				var source = await exit.Location.WithCancellation(CancellationToken.None);
 
-				var destObj = destination.Match(
-					player => player.Object,
-					room => room.Object,
-					thing => thing.Object
-				);
-
-				var sourceObj = source.Match(
-					player => player.Object,
-					room => room.Object,
-					thing => thing.Object
-				);
-
-				// Only check if we have valid source and destination (not NOTHING)
-				if (destObj.DBRef.Number > 0 && sourceObj.DBRef.Number > 0)
+				// An unlinked exit has no topology to analyse: it is neither one-way nor duplicated.
+				if (!maybeDestination.IsNone)
 				{
-					var returnExitsQuery = mediator.CreateStream(new GetExitsQuery(destination));
-					var returnExitCount = 0;
+					var destination = maybeDestination.WithoutNone();
+					var destObj = destination.Object();
+					var sourceObj = source.Object();
 
-					await foreach (var returnExit in returnExitsQuery)
+					if (destObj.DBRef.Number >= 0 && sourceObj.DBRef.Number >= 0)
 					{
-						try
-						{
-							var returnDest = await returnExit.Location.WithCancellation(CancellationToken.None);
-							var returnDestObj = returnDest.Match(
-								player => player.Object,
-								room => room.Object,
-								thing => thing.Object
-							);
+						var returnExitsQuery = mediator.CreateStream(new GetExitsQuery(destination));
+						var returnExitCount = 0;
 
-							if (returnDestObj.DBRef.Equals(sourceObj.DBRef))
+						await foreach (var returnExit in returnExitsQuery)
+						{
+							try
 							{
-								returnExitCount++;
+								var returnDest = await returnExit.Home.WithCancellation(CancellationToken.None);
+								if (!returnDest.IsNone && returnDest.WithoutNone().Object().DBRef.Equals(sourceObj.DBRef))
+								{
+									returnExitCount++;
+								}
+							}
+							catch
+							{
+								// Ignore exits we can't check
 							}
 						}
-						catch
+
+						if (warnings.HasFlag(WarningType.ExitOneway) && returnExitCount == 0)
 						{
-							// Ignore exits we can't check
+							await Complain(checker, target, "exit-oneway",
+								"Exit has no return path from destination back to source.");
+							hasWarnings = true;
 						}
-					}
 
-					if (warnings.HasFlag(WarningType.ExitOneway) && returnExitCount == 0)
-					{
-						await Complain(checker, target, "exit-oneway",
-							"Exit has no return path from destination back to source.");
-						hasWarnings = true;
-					}
-
-					if (warnings.HasFlag(WarningType.ExitMultiple) && returnExitCount > 1)
-					{
-						await Complain(checker, target, "exit-multiple",
-							$"Exit has {returnExitCount} return paths from destination back to source.");
-						hasWarnings = true;
+						if (warnings.HasFlag(WarningType.ExitMultiple) && returnExitCount > 1)
+						{
+							await Complain(checker, target, "exit-multiple",
+								$"Exit has {returnExitCount} return paths from destination back to source.");
+							hasWarnings = true;
+						}
 					}
 				}
 			}

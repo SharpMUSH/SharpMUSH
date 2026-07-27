@@ -172,7 +172,6 @@ public class TestObjectFactory
 		if (_objects.TryGetValue(key, out var existingObject))
 			return existingObject;
 
-		var destination = destRoom ?? sourceRoom;
 
 		var sharpObject = new SharpObject
 		{
@@ -197,8 +196,15 @@ public class TestObjectFactory
 		{
 			Object = sharpObject,
 			Aliases = aliases,
-			Location = new(async ct => { await ValueTask.CompletedTask; return (AnySharpContainer)destination; }),
-			Home = new(async ct => { await ValueTask.CompletedTask; return (AnySharpContainer)sourceRoom; })
+			// Location is the room the exit sits in; Home is where it leads (absent when unlinked).
+			Location = new(async ct => { await ValueTask.CompletedTask; return (AnySharpContainer)sourceRoom; }),
+			Home = new(async ct =>
+			{
+				await ValueTask.CompletedTask;
+				return destRoom is null
+					? new AnyOptionalSharpContainer(new None())
+					: (AnyOptionalSharpContainer)destRoom;
+			})
 		};
 
 		var anySharpObject = new AnySharpObject(exit);

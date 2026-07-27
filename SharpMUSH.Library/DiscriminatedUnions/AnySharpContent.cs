@@ -50,10 +50,14 @@ public class AnySharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing>
 		);
 
 
-	public async ValueTask<AnySharpContainer> Home()
-		=> await Match(
-			async player => await player.Home.WithCancellation(CancellationToken.None),
+	/// <summary>
+	/// Where this content goes home to. Players and things always have one; for an exit this is its
+	/// destination, which is absent until <c>@link</c> gives it one.
+	/// </summary>
+	public async ValueTask<AnyOptionalSharpContainer> Home()
+		=> await Match<ValueTask<AnyOptionalSharpContainer>>(
+			async player => (await player.Home.WithCancellation(CancellationToken.None)).WithNoneOption(),
 			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing => await thing.Home.WithCancellation(CancellationToken.None)
+			async thing => (await thing.Home.WithCancellation(CancellationToken.None)).WithNoneOption()
 		);
 }

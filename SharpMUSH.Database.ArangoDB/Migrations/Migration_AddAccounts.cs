@@ -37,7 +37,7 @@ public class Migration_AddAccounts : IArangoMigration
 							CreatedAt = new { type = DatabaseConstants.TypeNumber },
 							UpdatedAt = new { type = DatabaseConstants.TypeNumber },
 							IsVerified = new { type = DatabaseConstants.TypeBoolean },
-							IsDisabled = new { type = DatabaseConstants.TypeBoolean }
+							Status = new { type = DatabaseConstants.TypeString }
 						},
 						required = (string[])["Username", "PasswordHash"],
 						additionalProperties = true

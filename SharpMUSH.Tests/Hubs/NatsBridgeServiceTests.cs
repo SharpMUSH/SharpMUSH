@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Messaging.NATS;
 using SharpMUSH.Server.Hubs;
@@ -50,8 +51,9 @@ public class NatsBridgeServiceTests
 	{
 		var (_, hubContext) = BuildService();
 		var clients = hubContext.Clients;
-		var dbref = "123";
-		var expectedGroup = GameHub.CharacterGroupName(dbref);
+		var character = new DBRef(123, 1700000000);
+		var dbref = character.ToString();
+		var expectedGroup = GameHub.CharacterGroupName(character);
 		var message = new GameOutputMessage(dbref, "Hello!", DateTimeOffset.UtcNow, MessageType.Normal);
 
 		// simulate what NatsBridgeService does when it receives the message
@@ -67,8 +69,9 @@ public class NatsBridgeServiceTests
 	{
 		var (_, hubContext) = BuildService();
 		var clients = hubContext.Clients;
-		var roomDbref = "42";
-		var expectedGroup = GameHub.RoomGroupName(roomDbref);
+		var room = new DBRef(42, 1700000000);
+		var roomDbref = room.ToString();
+		var expectedGroup = GameHub.RoomGroupName(room);
 		var message = new RoomEventMessage(roomDbref, RoomEventType.Say, "Wizard", "Hello all!");
 
 		var proxy = hubContext.Clients.Group(expectedGroup);

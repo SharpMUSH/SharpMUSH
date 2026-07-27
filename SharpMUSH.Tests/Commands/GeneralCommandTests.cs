@@ -4,6 +4,7 @@ using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -676,5 +677,209 @@ public class GeneralCommandTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Fruit: orange")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_look_at</c> (<c>look.c:611</c>): <c>look/outside</c> from a room — or any opaque
+	/// location — has nothing to see out of.
+	/// </summary>
+	[Test]
+	public async ValueTask LookOutsideFromARoomReportsYouCantSeeThroughThat()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookOutsideRoom");
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName("LookOutsideRoomDest");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("look/outside"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.CantSeeThroughThat), player.DbRef, player.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>look.c:618</c>: from inside a container you see that container's own location, not the
+	/// container itself.
+	/// </summary>
+	[Test]
+	public async ValueTask LookOutsideFromInsideAContainerShowsTheContainersRoom()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookOutsideBox");
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName("LookOutsideOuter");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		var boxName = TestIsolationHelpers.GenerateUniqueName("LookOutsideContainer");
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {boxName}"));
+		var boxDbRef = createResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {boxName}=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {boxDbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={boxDbRef}"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("look/outside"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessagePlainTextContains(msg, roomName)),
+				TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>cmd_think</c> (<c>cmds.c:1769</c>) is an unconditional notify, so a bare
+	/// <c>think</c> still emits an (empty) line.
+	/// </summary>
+	[Test]
+	public async ValueTask ThinkWithNoArgumentStillNotifiesTheExecutor()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ThinkEmpty");
+
+		var result = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("think"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessagePlainTextEquals(msg, string.Empty)),
+				TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+
+		// The notify happens before the return, so asserting on it alone would not have caught the
+		// command indexing a "0" argument that a bare `think` does not have. The resulting
+		// KeyNotFoundException is swallowed upstream and surfaces only as a null Message.
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result.Message).IsNotNull();
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_open</c> hands the destination to <c>do_link</c>, which reports a destination it
+	/// cannot link to instead of quietly leaving the exit unlinked. An exit is the one thing you cannot
+	/// end up inside.
+	/// </summary>
+	[Test]
+	public async ValueTask OpenWithAnUnlinkableDestinationReportsTheFailure()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenBadDest");
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenBadDestRoom");
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+
+		var decoyName = TestIsolationHelpers.GenerateUniqueName("OpenBadDestDecoy");
+		var decoyResult = await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@open {decoyName}={roomDbRef}"));
+		var decoyDbRef = decoyResult.Message!.ToPlainText()!.Trim();
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenBadDestExit");
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@open {exitName}={decoyDbRef}"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.CantLinkToThat), player.DbRef, player.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// An exit may lead to any container, not just a room — PennMUSH <c>can_link_to</c> accepts things
+	/// and players too, which is how "enter the wardrobe" exits are built.
+	/// </summary>
+	[Test]
+	public async ValueTask OpenCanLinkAnExitToAThing()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenThingDest");
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenThingDestRoom");
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+
+		var thingName = TestIsolationHelpers.GenerateUniqueName("OpenThingDestThing");
+		var thingResult = await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@create {thingName}"));
+		var thingDbRef = thingResult.Message!.ToPlainText()!.Trim();
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenThingDestExit");
+		var exitResult = await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@open {exitName}={thingDbRef}"));
+
+		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
+		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
+		var destination = await exit.AsExit.Home.WithCancellation(CancellationToken.None);
+
+		await Assert.That(destination.IsNone).IsFalse();
+		await Assert.That(destination.WithoutNone().Object().DBRef.ToString()).IsEqualTo(thingDbRef);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_open</c> hands the destination to <c>parse_linkable_room</c>, which refuses it
+	/// unless <c>can_link_to</c> passes (<c>create.c:61</c>, <c>mushdb.h:87</c>). Widening <c>@open</c> to
+	/// accept any container must not also let a player link an exit into somewhere they do not control.
+	/// </summary>
+	[Test]
+	public async ValueTask OpenCannotLinkAnExitToAContainerTheExecutorDoesNotControl()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenNoLinkPerm");
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermRoom");
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+
+		// God's thing, not LINK_OK, brought within reach so the locate succeeds and only permission decides.
+		var thingName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermThing");
+		var thingResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {thingName}"));
+		var thingDbRef = thingResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {thingDbRef}={roomDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermExit");
+		var exitResult = await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@open {exitName}={thingDbRef}"));
+
+		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
+		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
+		var destination = await exit.AsExit.Home.WithCancellation(CancellationToken.None);
+
+		await Assert.That(destination.IsNone).IsTrue()
+			.Because("the exit must be left unlinked when the executor cannot link to the destination");
+	}
+
+	/// <summary>
+	/// The complement: LINK_OK on the destination is what lets someone else link into it.
+	/// </summary>
+	[Test]
+	public async ValueTask OpenCanLinkAnExitToALinkOkContainerTheExecutorDoesNotControl()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenLinkOk");
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenLinkOkRoom");
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+
+		var thingName = TestIsolationHelpers.GenerateUniqueName("OpenLinkOkThing");
+		var thingResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {thingName}"));
+		var thingDbRef = thingResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {thingDbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=LINK_OK"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenLinkOkExit");
+		var exitResult = await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@open {exitName}={thingDbRef}"));
+
+		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
+		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
+		var destination = await exit.AsExit.Home.WithCancellation(CancellationToken.None);
+
+		await Assert.That(destination.IsNone).IsFalse();
+		await Assert.That(destination.WithoutNone().Object().DBRef.ToString()).IsEqualTo(thingDbRef);
 	}
 }

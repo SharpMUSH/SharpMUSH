@@ -16,7 +16,12 @@ namespace SharpMUSH.Server.Controllers;
 [Produces("application/json")]
 public abstract class ApiControllerBase : ControllerBase
 {
-	/// <summary>The <c>sub</c> claim (account GUID) from the bearer token, or <see langword="null"/> if absent.</summary>
+	/// <summary>
+	/// The account id from the request principal (<c>"node_accounts/&lt;key&gt;"</c>), or
+	/// <see langword="null"/> when the principal carries none. Every authentication scheme puts the
+	/// account id here; the acting character lives in its own claims — see
+	/// <see cref="Authentication.CharacterClaimsExtensions"/>.
+	/// </summary>
 	protected string? CurrentAccountId =>
 			User.FindFirstValue(ClaimTypes.NameIdentifier);
 

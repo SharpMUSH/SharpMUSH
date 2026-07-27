@@ -1,5 +1,6 @@
 using OneOf;
 using OneOf.Types;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -32,7 +33,7 @@ public class AccountService(
 					new DBRef(namedCharacter.Object.Key, namedCharacter.Object.CreationTime), ct);
 		}
 
-		if (account is null || account.IsDisabled)
+		if (account is null || !account.IsActive)
 			return null;
 
 		// A character-name identifier authenticates only via that specific character's own
@@ -74,6 +75,9 @@ public class AccountService(
 
 	public async ValueTask<OneOf<SharpAccount, Error<string>>> CreateAccountAsync(string username, string? email, string password, CancellationToken ct = default)
 	{
+		if (SystemAccount.IsReserved(username))
+			return new Error<string>($"Username '{username}' is reserved.");
+
 		if (await database.GetAccountByUsernameAsync(username, ct) is not null)
 			return new Error<string>($"Username '{username}' is already taken.");
 
@@ -163,26 +167,52 @@ public class AccountService(
 	public ValueTask<SharpAccount?> GetByEmailAsync(string email, CancellationToken ct = default)
 		=> database.GetAccountByEmailAsync(email, ct);
 
-	public async ValueTask<OneOf<Success, Error<string>>> DisableAccountAsync(string accountId, CancellationToken ct = default)
+	public async ValueTask<OneOf<Success, Error<string>>> SetAccountStatusAsync(string accountId, AccountStatus status, CancellationToken ct = default)
 	{
 		var account = await database.GetAccountByIdAsync(accountId, ct);
 		if (account is null)
 			return new Error<string>("Account not found.");
 
-		await database.UpdateAccountDisabledAsync(accountId, true, ct);
-		// The session revoke below is the floor: it must always run, even when no IBanEnforcer is
-		// wired (e.g. SharpMUSH.Library-only tests/hosts without a Server). EnforceAccountBanAsync
-		// additionally invalidates cached claims and disconnects live game/SignalR connections.
-		await accountSessionStore.RevokeAllForAccountAsync(accountId, ct);
-		if (banEnforcer is not null)
+		if (SystemAccount.IsReserved(account.Username))
+			return new Error<string>("The system account's status cannot be changed.");
+
+		await database.UpdateAccountStatusAsync(accountId, status, ct);
+
+		if (status is AccountStatus.Active)
+			return new Success();
+
+		// Status is persisted first because it is the durable gate: every authenticated request
+		// re-reads the account and rejects a non-Active one, so a token stops working at its next
+		// request even if the revoke below fails. Revocation and ban enforcement are attempted
+		// independently — a failure in the first must not skip the second, which is what drops live
+		// connections that never re-authenticate.
+		try
 		{
-			await banEnforcer.EnforceAccountBanAsync(accountId, ct);
+			await accountSessionStore.RevokeAllForAccountAsync(accountId, ct);
 		}
+		finally
+		{
+			if (banEnforcer is not null)
+			{
+				await banEnforcer.EnforceAccountBanAsync(accountId, ct);
+			}
+		}
+
 		return new Success();
 	}
 
-	public ValueTask DeleteAccountAsync(string accountId, CancellationToken ct = default)
-		=> database.DeleteAccountAsync(accountId, ct);
+	public ValueTask<OneOf<Success, Error<string>>> DisableAccountAsync(string accountId, CancellationToken ct = default)
+		=> SetAccountStatusAsync(accountId, AccountStatus.Disabled, ct);
+
+	public ValueTask<OneOf<Success, Error<string>>> CloseAccountAsync(string accountId, CancellationToken ct = default)
+		=> SetAccountStatusAsync(accountId, AccountStatus.Closed, ct);
+
+	public ValueTask<OneOf<Success, Error<string>>> MarkAccountDeletedAsync(string accountId, CancellationToken ct = default)
+		=> SetAccountStatusAsync(accountId, AccountStatus.Deleted, ct);
+
+	public async ValueTask<SharpAccount> GetOrCreateSystemAccountAsync(CancellationToken ct = default)
+		=> await database.GetAccountByUsernameAsync(SystemAccount.Username, ct)
+			?? await CreateUnclaimedAccountAsync(SystemAccount.Username, ct);
 
 	public async ValueTask<OneOf<Success, Error<string>>> SetPasswordAsync(string accountId, string newPassword, bool mustChangePassword, CancellationToken ct = default)
 	{
@@ -199,13 +229,8 @@ public class AccountService(
 	public ValueTask<SharpAccount> CreateUnclaimedAccountAsync(string username, CancellationToken ct = default)
 		=> database.CreateAccountAsync(username, null, string.Empty, ct);
 
-	public async ValueTask<OneOf<Success, Error<string>>> EnableAccountAsync(string accountId, CancellationToken ct = default)
-	{
-		if (await database.GetAccountByIdAsync(accountId, ct) is null)
-			return new Error<string>("Account not found.");
-		await database.UpdateAccountDisabledAsync(accountId, false, ct);
-		return new Success();
-	}
+	public ValueTask<OneOf<Success, Error<string>>> EnableAccountAsync(string accountId, CancellationToken ct = default)
+		=> SetAccountStatusAsync(accountId, AccountStatus.Active, ct);
 
 	public ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken ct = default)
 		=> database.GetAllAccountsAsync(ct);
