@@ -350,6 +350,30 @@ public class WikiCommandTests
 		await ExpectNotify(player.DbRef, "Dragons Listes");
 	}
 
+	/// <remarks>
+	/// <c>@wiki/create</c> is the second and last create path in the codebase, and the only one reachable
+	/// from in-game. Nothing else asserted that it stamps: dropping the <c>sourceLocale</c> argument left
+	/// every unit and integration test green, because an unstamped page still renders — it just resolves
+	/// against a blank locale forever, since nothing normalises empty on read.
+	/// </remarks>
+	[Test]
+	public async ValueTask WikiCreate_StampsTheConfiguredSourceLocale()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiStampCreator");
+		var localization = WebAppFactoryArg.Services.GetRequiredService<IWikiLocalizationService>();
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/create Stamped At Birth=body of a stamped page"));
+
+		var created = await WikiService.GetBySlugAsync("stamped_at_birth", "general", WikiNamespace.Main);
+		await Assert.That(created.IsT0).IsTrue();
+		await Assert.That(created.AsT0.SourceLocale)
+			.IsEqualTo(localization.DefaultLocale)
+			.Because("a page created in-game must be stamped at birth exactly as the API path is; the "
+				+ "migration backfill is not a safety net for pages created after it ran");
+	}
+
 	[Test]
 	public async ValueTask WikiHistory_ShowsTheTranslationsOwnStream()
 	{
