@@ -189,8 +189,8 @@ public class AccountAuthServiceActiveCharacterRefreshTests
 		// Reload. Hold the stored-character read open so a login can land mid-hydration.
 		var afterRefresh = MakeService(storage, roster);
 		storage.GatedKey = "sharpmush.account.activeCharacter";
-		storage.GateReadsOf = new TaskCompletionSource();
-		storage.ReadStarted = new TaskCompletionSource();
+		storage.GateReadsOf = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		storage.ReadStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		var hydrating = afterRefresh.InitAsync();
 		await storage.ReadStarted.Task;          // the stored-character read is now in flight
@@ -214,7 +214,7 @@ public class AccountAuthServiceActiveCharacterRefreshTests
 
 		// Park every write. Hydration must not be able to finish until the clear it issued completes —
 		// a detached clear would let it sail straight past.
-		storage.GateWrites = new TaskCompletionSource();
+		storage.GateWrites = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		var afterRefresh = MakeService(storage, [Alpha, Beta]);
 		var hydrating = afterRefresh.InitAsync();
