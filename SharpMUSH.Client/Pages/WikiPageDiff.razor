@@ -9,7 +9,7 @@
 <PageTitle>@Loc["WkDiffPageTitle", Slug] — @Loc["AppTitle"]</PageTitle>
 
 <div class="wikidiff">
-    <a class="wikidiff-back" href="@($"/wiki/{Ns}/{Category}/{Slug}/history")">
+    <a class="wikidiff-back" href="@($"/wiki/{Ns}/{Category}/{Slug}/history{(string.IsNullOrWhiteSpace(Lang) ? "" : $"?lang={Uri.EscapeDataString(Lang)}")}")">
         <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["WkRevisionHistory"]
     </a>
     <div class="wikidiff-head">
@@ -126,6 +126,14 @@
     [SupplyParameterFromQuery(Name = "to")]
     public int? ToRev { get; set; }
 
+    /// <summary>
+    /// The locale whose revision stream these two numbers belong to, from <c>?lang=</c>. Both sides must
+    /// come from the same stream: numbering restarts at 1 per locale, so fetching one side without it
+    /// diffs French against English and the result reads as a legitimate rewrite.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "lang")]
+    public string? Lang { get; set; }
+
     private string _mode = "unified";
     private WikiRevisionInfo? _fromRev;
     private WikiRevisionInfo? _toRev;
@@ -145,8 +153,8 @@
 
         if (FromRev.HasValue && ToRev.HasValue)
         {
-            var fromTask = Wiki.GetRevisionAsync(Slug, FromRev.Value, Ns, Category);
-            var toTask   = Wiki.GetRevisionAsync(Slug, ToRev.Value, Ns, Category);
+            var fromTask = Wiki.GetRevisionAsync(Slug, FromRev.Value, Ns, Category, Lang);
+            var toTask   = Wiki.GetRevisionAsync(Slug, ToRev.Value, Ns, Category, Lang);
             await Task.WhenAll(fromTask.AsTask(), toTask.AsTask());
             var fromResult = await fromTask;
             var toResult   = await toTask;

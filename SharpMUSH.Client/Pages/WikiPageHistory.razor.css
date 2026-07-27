@@ -53,3 +53,36 @@
     .wikihist-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .wikihist-table > div { min-width: 560px; }
 }
+
+/* Copied from WikiDisplay.razor.css rather than shared: Blazor CSS isolation is per-component,
+   so the chip row needs its own rules in this scope. */
+.wiki-lang-chips {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+}
+
+.wiki-lang-chips-label {
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.wiki-lang-chips a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 999px;
+    color: var(--text-dim);
+    text-decoration: none;
+}
+
+.wiki-lang-chips a:hover {
+    color: var(--mud-palette-primary);
+    border-color: var(--mud-palette-primary);
+}
