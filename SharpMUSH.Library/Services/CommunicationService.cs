@@ -94,7 +94,7 @@ public class CommunicationService(
 		}
 	}
 
-	public async ValueTask<AnySharpObject?> SendToObjectAsync(
+	public async ValueTask<OneOf<AnySharpObject, DeliveryFailure>> SendToObjectAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
@@ -109,7 +109,7 @@ public class CommunicationService(
 		if (maybeLocateTarget.IsError)
 		{
 			await notifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
-			return null;
+			return new DeliveryFailure(DeliveryFailure.Cause.TargetNotFound);
 		}
 
 		var target = maybeLocateTarget.AsSharpObject;
@@ -121,7 +121,7 @@ public class CommunicationService(
 				await notifyService.Notify(executor, $"{target.Object().Name} does not want to hear from you.");
 			}
 
-			return null;
+			return new DeliveryFailure(DeliveryFailure.Cause.TargetWillNotHear);
 		}
 
 		var message = messageFunc(target);
@@ -143,12 +143,12 @@ public class CommunicationService(
 		await foreach (var target in targets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var recipient = await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc,
+			var delivery = await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc,
 				notificationType, notifyOnPermissionFailure);
 
-			if (recipient is not null)
+			if (delivery.IsT0)
 			{
-				notified.Add(recipient);
+				notified.Add(delivery.AsT0);
 			}
 		}
 

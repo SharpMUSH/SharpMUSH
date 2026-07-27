@@ -303,11 +303,12 @@ public class WarningService(
 					var destination = await exit.Home.WithCancellation(CancellationToken.None);
 
 					// An @open'd or @unlink'd exit has no destination edge at all; a linked one may still
-					// point at NOTHING (-1) or an invalid dbref.
-					if (destination.IsNone || destination.WithoutNone().Object().DBRef.Number <= 0)
+					// point at NOTHING. #0 is the master room, a real destination, so only negative
+					// dbrefs are invalid.
+					if (destination.IsNone || destination.WithoutNone().Object().DBRef.Number < 0)
 					{
 						await Complain(checker, target, "exit-unlinked",
-							"Exit is unlinked (destination is NOTHING). This exit can be stolen.");
+							"Exit is unlinked (no destination set). This exit can be stolen.");
 						hasWarnings = true;
 					}
 				}
@@ -391,7 +392,7 @@ public class WarningService(
 					var destObj = destination.Object();
 					var sourceObj = source.Object();
 
-					if (destObj.DBRef.Number > 0 && sourceObj.DBRef.Number > 0)
+					if (destObj.DBRef.Number >= 0 && sourceObj.DBRef.Number >= 0)
 					{
 						var returnExitsQuery = mediator.CreateStream(new GetExitsQuery(destination));
 						var returnExitCount = 0;

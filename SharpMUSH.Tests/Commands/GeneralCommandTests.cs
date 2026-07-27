@@ -816,4 +816,70 @@ public class GeneralCommandTests
 		await Assert.That(destination.IsNone).IsFalse();
 		await Assert.That(destination.WithoutNone().Object().DBRef.ToString()).IsEqualTo(thingDbRef);
 	}
+
+	/// <summary>
+	/// PennMUSH <c>do_open</c> hands the destination to <c>parse_linkable_room</c>, which refuses it
+	/// unless <c>can_link_to</c> passes (<c>create.c:61</c>, <c>mushdb.h:87</c>). Widening <c>@open</c> to
+	/// accept any container must not also let a player link an exit into somewhere they do not control.
+	/// </summary>
+	[Test]
+	public async ValueTask OpenCannotLinkAnExitToAContainerTheExecutorDoesNotControl()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenNoLinkPerm");
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermRoom");
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+
+		// God's thing, not LINK_OK, brought within reach so the locate succeeds and only permission decides.
+		var thingName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermThing");
+		var thingResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {thingName}"));
+		var thingDbRef = thingResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {thingDbRef}={roomDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermExit");
+		var exitResult = await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@open {exitName}={thingDbRef}"));
+
+		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
+		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
+		var destination = await exit.AsExit.Home.WithCancellation(CancellationToken.None);
+
+		await Assert.That(destination.IsNone).IsTrue()
+			.Because("the exit must be left unlinked when the executor cannot link to the destination");
+	}
+
+	/// <summary>
+	/// The complement: LINK_OK on the destination is what lets someone else link into it.
+	/// </summary>
+	[Test]
+	public async ValueTask OpenCanLinkAnExitToALinkOkContainerTheExecutorDoesNotControl()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenLinkOk");
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenLinkOkRoom");
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+
+		var thingName = TestIsolationHelpers.GenerateUniqueName("OpenLinkOkThing");
+		var thingResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {thingName}"));
+		var thingDbRef = thingResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {thingDbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=LINK_OK"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenLinkOkExit");
+		var exitResult = await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@open {exitName}={thingDbRef}"));
+
+		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
+		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
+		var destination = await exit.AsExit.Home.WithCancellation(CancellationToken.None);
+
+		await Assert.That(destination.IsNone).IsFalse();
+		await Assert.That(destination.WithoutNone().Object().DBRef.ToString()).IsEqualTo(thingDbRef);
+	}
 }

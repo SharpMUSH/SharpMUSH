@@ -9,6 +9,20 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// Service for handling communication functions like pemit, emit, etc.
 /// Centralizes the logic for sending messages to players, rooms, and ports.
 /// </summary>
+/// <summary>
+/// Why a message could not be delivered to a target: the name did not resolve, or the target declined
+/// to hear from the executor. Distinguishes "nobody received this" from a successful delivery without
+/// resorting to a nullable service return.
+/// </summary>
+public readonly record struct DeliveryFailure(DeliveryFailure.Cause Reason)
+{
+	public enum Cause
+	{
+		TargetNotFound,
+		TargetWillNotHear
+	}
+}
+
 public interface ICommunicationService
 {
 	/// <summary>
@@ -55,8 +69,11 @@ public interface ICommunicationService
 	/// <param name="messageFunc">Function that takes the target and base message, returns the final message to send</param>
 	/// <param name="notificationType">The type of notification to send</param>
 	/// <param name="notifyOnPermissionFailure">Whether to notify executor if permission check fails</param>
-	/// <returns>The object that received the message, or null if it could not be delivered.</returns>
-	ValueTask<AnySharpObject?> SendToObjectAsync(
+	/// <returns>
+	/// The object that received the message, or <see cref="DeliveryFailure"/> when it could not be
+	/// delivered — the target could not be located, or it declined to hear from the executor.
+	/// </returns>
+	ValueTask<OneOf<AnySharpObject, DeliveryFailure>> SendToObjectAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,

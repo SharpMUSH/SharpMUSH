@@ -1461,63 +1461,17 @@ public partial class Commands
 		AnySharpContainer destinationContainer;
 		if (validDestination.IsExit)
 		{
-			var exitObj = validDestination.AsExit;
-			var maybeHomeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
-
-			const string exitUnlinkedMsg = "That exit doesn't go anywhere.";
+			// Teleporting to an exit means going where it leads. GetExitDestinationAsync yields either a
+			// real object or None, so there is no sentinel dbref to test for here.
+			var maybeHomeLocation = await validDestination.AsExit.Home.WithCancellation(CancellationToken.None);
 
 			if (maybeHomeLocation.IsNone)
 			{
-				await NotifyService!.Notify(executor, exitUnlinkedMsg, executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitGoesNowhere), executor);
 				return CallState.Empty;
 			}
 
-			var homeLocation = maybeHomeLocation.WithoutNone();
-
-			if (homeLocation.Object().DBRef.Number == -1)
-			{
-				var destAttr = await AttributeService!.GetAttributeAsync(
-					executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
-
-				if (destAttr.IsNone || destAttr.IsError)
-				{
-					await NotifyService!.Notify(executor, exitUnlinkedMsg, executor);
-					return CallState.Empty;
-				}
-
-				var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
-				if (string.IsNullOrWhiteSpace(destValue))
-				{
-					await NotifyService!.Notify(executor, exitUnlinkedMsg, executor);
-					return CallState.Empty;
-				}
-
-				var located = await LocateService!.LocateAndNotifyIfInvalid(
-					parser,
-					executor,
-					executor,
-					destValue,
-					LocateFlags.All);
-
-				if (!located.IsValid())
-				{
-					await NotifyService!.Notify(executor, exitUnlinkedMsg, executor);
-					return CallState.Empty;
-				}
-
-				var locatedObj = located.WithoutError().WithoutNone();
-				if (!locatedObj.IsContainer)
-				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid), executor);
-					return CallState.Empty;
-				}
-
-				destinationContainer = locatedObj.AsContainer;
-			}
-			else
-			{
-				destinationContainer = homeLocation;
-			}
+			destinationContainer = maybeHomeLocation.WithoutNone();
 		}
 		else
 		{
