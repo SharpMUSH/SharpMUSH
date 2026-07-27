@@ -60,6 +60,32 @@ public class WikiLocaleResolverTests
 	}
 
 	[Test]
+	public async Task AnExactRegionalTranslationBeatsTheSourceOfTheSameLanguage()
+	{
+		// A page authored in fr may legitimately carry an fr-CA translation: the write boundary rejects
+		// only locale == SourceLocale exactly, and "fr-CA" is not "fr". Preferring the source whenever it
+		// merely shares a *language* with the request would make that translation unreachable for the
+		// reader who asked for it by name.
+		var result = BuildResolver().Resolve("fr-CA", sourceLocale: "fr", available: ["fr-CA"]);
+
+		await Assert.That(result.Locale)
+			.IsEqualTo("fr-CA")
+			.Because("the reader asked for fr-CA by name and a translation exists under that exact tag");
+		await Assert.That(result.IsFallback).IsFalse();
+	}
+
+	[Test]
+	public async Task TheSourceStillWinsWhenNoExactTranslationMatchesTheRequest()
+	{
+		// Same shape as above but with nothing to find: falling back to the fr source for an fr-CA reader
+		// is the same language, so it must not be flagged as a fallback.
+		var result = BuildResolver().Resolve("fr-CA", sourceLocale: "fr", available: []);
+
+		await Assert.That(result.Locale).IsEqualTo("fr");
+		await Assert.That(result.IsFallback).IsFalse();
+	}
+
+	[Test]
 	public async Task Step4_FallsToTheConfiguredDefaultWhenATranslationExistsForIt()
 	{
 		var result = BuildResolver("de").Resolve("fr", sourceLocale: "en", available: ["de"]);

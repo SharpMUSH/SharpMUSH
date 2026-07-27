@@ -36,13 +36,23 @@ public sealed class WikiLocaleResolver(IOptionsMonitor<SharpMUSHOptions> options
 		// unstamped-row case once, loudly.
 		var source = WikiHelpers.NormalizeLocaleOrEmpty(sourceLocale);
 
-		// The source row always exists, so prefer it whenever it is the requested language. This also
-		// makes a stale translation row that shadows the source unreachable rather than authoritative.
-		if (WikiHelpers.SameLanguage(want, source))
+		// The source row always exists, so prefer it when the request names it *exactly*. That also makes a
+		// stale translation row shadowing the source unreachable rather than authoritative.
+		//
+		// Exactly, not same-language: the write boundary rejects only locale == SourceLocale, so an
+		// fr-source page may legitimately carry an fr-CA translation. A language-level test here would
+		// swallow the request for it and serve the source instead, making that row unreachable for the
+		// only reader who could ever want it.
+		if (string.Equals(want, source, StringComparison.OrdinalIgnoreCase))
 			return new LocaleResolution(source, IsFallback: false);
 
 		if (Match(available, c => string.Equals(c, want, StringComparison.OrdinalIgnoreCase)) is { } exact)
 			return new LocaleResolution(exact, IsFallback: false);
+
+		// Same language as the source, with no exact translation to prefer: serving the fr source to an
+		// fr-CA reader is a language match, so it is not a fallback.
+		if (WikiHelpers.SameLanguage(want, source))
+			return new LocaleResolution(source, IsFallback: false);
 
 		if (Match(available, c => WikiHelpers.SameLanguage(c, want)) is { } neutral)
 			return new LocaleResolution(neutral, IsFallback: false);
