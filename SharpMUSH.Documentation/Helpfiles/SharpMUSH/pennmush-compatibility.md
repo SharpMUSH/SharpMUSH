@@ -65,9 +65,11 @@ SharpMUSH releases behaved differently.
 - An unknown function name outside `[...]` is left as literal text
   (`think foo(bar)` prints `foo(bar)`); inside `[...]` it is
   `#-1 FUNCTION (FOO) NOT FOUND`.
-- A HALTED object runs none of its softcode — its `u()`/`ufun()` results and its
-  `$`-commands produce nothing. `@halt <object>` and `@chown` (which halts to
-  break ownership loops) rely on this.
+- A HALTED object runs none of its softcode — `u()`/`ufun()` return the stored
+  attribute text *unevaluated* (PennMUSH's `PE_NOTHING`: `u()` of a halted
+  object's `[add(1,2)]` yields the literal `[add(1,2)]`), while its `$`-commands
+  do not fire. `@halt <object>` and `@chown` (which halts to break ownership
+  loops) rely on this.
 - An uppercase substitution selector capitalizes the first output character:
   `%Q0`, `%N`, `%I0`, `%S` capitalize; `%q0`, `%n`, `%i0`, `%s` do not.
 - `% ` (a percent followed by a space) is emitted literally as `% `.
