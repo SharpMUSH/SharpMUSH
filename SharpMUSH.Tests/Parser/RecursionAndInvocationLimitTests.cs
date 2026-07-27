@@ -381,4 +381,20 @@ public class RecursionAndInvocationLimitTests
 
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("ababababab");
 	}
+
+	/// <summary>
+	/// When the oversized result is produced by a function nested inside another call, the outer
+	/// frame must still report the output-size error — not a generic invocation-limit error. The
+	/// three limits (invocation, recursion/call, output) share one "exceeded" flag, so the flag
+	/// carries the error that first tripped it; an earlier version hardcoded the invocation-limit
+	/// message at the argument-evaluation propagation point and mislabelled this case.
+	/// </summary>
+	[Test]
+	public async Task OutputCeiling_OversizedResultNestedInAnotherCall_ReportsOutputError()
+	{
+		var result = await FunctionParser.FunctionParse(MModule.single("strcat(repeat(x,6000000),tail)"));
+
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 OUTPUT EXCEEDED MAXIMUM SIZE");
+	}
 }

@@ -8,7 +8,7 @@
 
 My initial model ("`%u` = the evaluated trigger line") was **wrong** — the PennMUSH oracle disproved it. Before implementing, pin the real behavior with `SharpMUSH.Tests/PennMUSH/test_parser_parity.t` (build recipe in that file). One measured result to explain and reproduce:
 
-```
+```text
 &TU me=$tu *:@pemit me=RAW=[%c]__EVAL=[%u]
 tu [add(1,2)]
   -> RAW=@pemit me=RAW=[%c]__EVAL=[%u]__EVAL=

@@ -109,7 +109,7 @@ Then update **all three** visitors to fold the new list shapes (left-fold; `&`/`
 
 ## P1 — The two big performance levers
 
-> **Status:** P1.1 is **shipped** (PR #717 — default is now `TwoStage`). P1.2 is **subsumed by P1.3** (a content-addressed parse-tree cache makes the `iter ##` and command-arg re-parses moot). P1.3 is **scoped, not implemented** (`PARSER_PARSE_TREE_CACHE_SCOPING.md`), deliberately benchmark-gated because two-stage SLL already cut parse cost. The subsections below are the original plan, kept for context.
+> **Status:** P1.1 is **shipped** (PR #717 — default is now `TwoStage`). P1.3 is **scoped, not implemented** (`PARSER_PARSE_TREE_CACHE_SCOPING.md`), deliberately benchmark-gated because two-stage SLL already cut parse cost. **P1.2 is only *partly* addressed by P1.3, not fully subsumed:** the content-addressed cache eliminates the `iter ##` re-parse (each element rewrites to the *same* `%iL` text → a cache hit), but it does **not** help the command-argument re-parse where the argument text differs per call (a fresh key every time → always a miss). P1.2's command-arg deferred-subtree reuse therefore remains a separate item worth doing on its own; keep it tracked rather than assuming the cache covers it. The subsections below are the original plan, kept for context.
 
 ### P1.1 Two-stage SLL→LL prediction (single biggest cheap win)
 

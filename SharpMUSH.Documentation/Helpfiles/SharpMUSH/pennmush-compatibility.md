@@ -7,10 +7,13 @@ surprised when code imported from PennMUSH behaves differently.
 
 These are deliberate. SharpMUSH does not intend to change them to match PennMUSH.
 
-**The command word is not evaluated.** PennMUSH evaluates the first word of a
-command line before matching it, so `[strcat(th,ink)] hello` runs `think`.
-SharpMUSH matches the command word literally. Build command names as literal
-text.
+**The command word is not evaluated for built-in dispatch.** PennMUSH evaluates
+the first word of a command line before matching it, so `[strcat(th,ink)] hello`
+runs `think`. SharpMUSH matches the built-in command word literally. Build
+command names as literal text. (This is specifically about matching a built-in
+command name. It does not contradict the `$`-command rule below: once built-in
+dispatch has not matched, `$`-commands *are* matched against the fully evaluated
+line — that is a separate, later stage.)
 
 **Malformed expressions are an error, not silent text.** PennMUSH evaluates
 almost anything — an unclosed `[`, `(`, or `{`, or a trailing `\`, still

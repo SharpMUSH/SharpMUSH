@@ -213,9 +213,10 @@ public class SharpMUSHParserVisitor(
 	/// <summary>
 	/// The known function name closest to <paramref name="name"/>, for PennMUSH's
 	/// "DID YOU MEAN 'X'" hint on an unknown function inside <c>[...]</c> (src/parse.c). Returns the
-	/// nearest library name within a small edit distance (≤2, and never more than a third of the
-	/// typed length, so short typos do not match everything), or null if nothing is close enough.
-	/// Only ever suggests names that exist, so at worst a suggestion is missed, never wrong.
+	/// nearest library name within a small edit distance — <c>min(2, max(1, len/3))</c>: 1 for names
+	/// up to 5 characters, 2 for longer, never more than 2 — so short typos do not match everything,
+	/// or null if nothing is close enough. Only ever suggests names that exist, so at worst a
+	/// suggestion is missed, never wrong.
 	/// </summary>
 	private string? SuggestFunctionName(string name)
 	{
@@ -672,6 +673,7 @@ public class SharpMUSHParserVisitor(
 			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
 			{
 				limitExceeded.IsExceeded = true;
+				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Invoke;
 				return new CallState(ErrorMessages.Returns.Invoke, contextDepth);
 			}
 
@@ -777,6 +779,7 @@ public class SharpMUSHParserVisitor(
 			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
 				limitExceeded.IsExceeded = true;
+				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Call;
 				return new CallState(ErrorMessages.Returns.Call, contextDepth);
 			}
 
@@ -831,10 +834,13 @@ public class SharpMUSHParserVisitor(
 					.ToList();
 			}
 
-			// If a limit was exceeded during argument evaluation, return immediately
+			// If a limit was exceeded during argument evaluation, return immediately with the error
+			// of whichever limit actually tripped (invocation, recursion/call, or output size) —
+			// not a blanket invocation-limit message, which would mislabel e.g. an oversized nested
+			// result as an invocation-limit error.
 			if (limitExceeded.IsExceeded)
 			{
-				return new CallState(ErrorMessages.Returns.Invoke, contextDepth);
+				return new CallState(limitExceeded.ErrorMessage ?? ErrorMessages.Returns.Invoke, contextDepth);
 			}
 
 			// TODO: Pass ParserContexts directly as arguments instead of creating
@@ -876,6 +882,7 @@ public class SharpMUSHParserVisitor(
 			if (result.Message is not null && MModule.getLength(result.Message) > MaxFunctionOutputChars)
 			{
 				limitExceeded.IsExceeded = true;
+				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.OutputTooLarge;
 				return new CallState(ErrorMessages.Returns.OutputTooLarge, contextDepth);
 			}
 
