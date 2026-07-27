@@ -216,6 +216,80 @@ requires a restart to change culture).
 
 ---
 
+## Wiki Content Localization
+
+Portal chrome and engine notifications are localized through resx files. Wiki
+*content* is not — it lives in the database, so it has its own mechanism.
+
+### Shape
+
+A `WikiPage` keeps identity, metadata and the body in the locale it was authored
+in (`SourceLocale`), which is stamped once — at creation for new pages, by
+`Migration_AddWikiTranslations` for pages predating the field — and never
+re-derived on read, so changing `wiki_default_locale` cannot relabel existing
+content. Each translation is an overlay row, `WikiTranslation`, keyed
+by `(PageId, Locale)`. A translation owns its `Title`, `MarkdownSource`,
+`Published` flag and revision history, and **inherits** `Category`, `Tags` and
+`IsProtected` from the source page — structurally, because `WikiTranslation` has
+no field for them.
+
+### Reading
+
+`?lang=<tag>` selects a locale; absent it, the portal sends the `locale`
+localStorage key the language picker writes. Resolution order:
+
+1. Requested locale, normalised; unparseable becomes `Wiki.DefaultLocale` — a bad
+   `?lang=` is never an error, only a write of a bad locale is
+2. The page's own stamped source locale, if it is the requested language
+3. Exact match against the visible translations
+4. Neutral-language match (`fr-CA` finds `fr`, and vice versa)
+5. `Wiki.DefaultLocale`, if a translation exists for it
+6. The source locale — always available, so a read never fails
+
+When the served language differs from the requested one, the reader gets the
+fallback page plus a dismissible notice. Dismissal is per-session on purpose.
+
+### Which locales are allowed?
+
+**Any tag `CultureInfo.GetCultureInfo` accepts** — not only the locales the
+portal chrome has a resx for. A game can translate its wiki into Spanish while
+the chrome falls back to English. The editor's locale dropdown offers
+`PortalLocales.Codes` ∪ existing translations, plus a free-text field.
+
+### Drafts do not leak
+
+`IWikiLocalizationService` filters the candidate translation set by visibility
+*before* the resolver sees it, so an unpublished translation is unreachable
+rather than merely un-rendered: an ordinary reader falls through to the next
+step exactly as if it did not exist. `IWikiLocaleResolver` is permission-blind by
+design, which is what keeps the fallback rules unit-testable with no auth graph.
+
+### Adding a translation
+
+- Portal: `/wiki/{ns}/{category}/{slug}/edit?lang=fr`
+- API: `PUT /api/wiki/{slug}/translations/{locale}?ns=&category=`, carrying the
+  `expectedRevisionNumber` the editor loaded. A concurrent save answers **409**;
+  the editor offers a reload and never retries, because retrying would re-apply
+  the loser's stale markdown over the winner's.
+- In-game: read with `@wiki` in your `@locale`; `@wiki/view/source` reads the
+  source. `wiki(<page>, <field>, [<locale>])` takes an explicit locale, and its
+  `locale` field returns what was actually served.
+
+Configuration: `wiki_default_locale` (`Wiki.DefaultLocale`, default `en`) in
+`/admin/config/wiki`.
+
+### Not localized
+
+- The on-disk helpfiles under `SharpMUSH.Documentation/Helpfiles/` served to the
+  telnet `help` command. They never touch `IWikiService`.
+- `mush-defs.json`, generated from `[SharpFunction]`/`[SharpCommand]` attributes.
+- Category *names*. Category is part of page identity, so a translation cannot
+  carry its own; localized category display names are a separate concern.
+- Wiki search (`@wiki/search`, `wikisearch()`, the omnisearch box). It matches
+  the source `PlainText` only.
+
+---
+
 ## Adding a New Language
 
 Three things are needed:
@@ -308,4 +382,34 @@ SharpMUSH.Implementation/
   Commands/MoreCommands.cs                  — @locale command
   Functions/InformationFunctions.cs         — locale() function
   Services/LocalizedTextFileService.cs      — Locale-aware .txt file selection
+```
+
+Wiki content localization (the database-backed mechanism, not resx):
+
+```
+SharpMUSH.Library/
+  Services/WikiLocaleResolver.cs            — The fallback chain (pure)
+  Services/WikiLocalizationService.cs       — Visibility filtering; the only
+                                              LocalizedWikiPage factory
+  Models/Wiki/WikiTranslation.cs            — The overlay row
+
+SharpMUSH.Contracts/
+  Services/WikiHelpers.cs                   — NormalizeLocale (write boundary,
+                                              returns OneOf) / NormalizeLocaleOrEmpty
+                                              (permissive read path) / NeutralLocale /
+                                              SameLanguage
+
+SharpMUSH.Database.ArangoDB/
+  Migrations/Migration_AddWikiTranslations.cs — SourceLocale / WikiRevision.Locale
+                                              backfill and the unique revision
+                                              constraint (equivalents live in the
+                                              SurrealDB and Memgraph migration
+                                              statement lists)
+
+SharpMUSH.Client/
+  Resources/PortalLocales.cs                — The portal's locale list, shared by the
+                                              language picker and the wiki editor
+
+SharpMUSH.Configuration/
+  Options/WikiOptions.cs                    — wiki_default_locale
 ```

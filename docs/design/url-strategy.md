@@ -68,13 +68,37 @@ non-API routes (standard WASM hosting pattern).
 
 ### Wiki Pages
 
-- `/wiki/Page_Name` — underscores replace spaces in URL
-- Lookup is case-insensitive: `/wiki/page_name` finds "Page Name"
+- `/wiki/{namespace}/{category}/{slug}` — the canonical page route. All three
+  segments are part of a page's identity.
+- Underscores replace spaces in the slug; lookup is case-insensitive
 - Display always shows the page's canonical title (original case)
-- Special characters in page names are percent-encoded in URL
-- Namespace pages: `/wiki/Help:Getting_Started` (colon preserved)
-- Character profiles get the alias `/character/Name` → resolves to
-  `Character:Name` wiki page internally
+- Special characters in slugs are percent-encoded
+- `/help/{topic}` and `/character/{name}` are aliases resolving to the `help`
+  and `character` namespaces at the default `general` category
+
+### Locale
+
+`?lang=<BCP-47 tag>` is the **only** locale mechanism for wiki content. There is
+no locale path prefix and no locale-suffixed slug.
+
+- One canonical slug per page, whatever locale is being read. `?lang=` selects a
+  view of that page; it never creates a second page, and it never changes the
+  `<link rel="canonical">` the prerender emits.
+- A malformed or unknown tag is treated as absent and falls back to the
+  configured `Wiki.DefaultLocale`. It is never a 400 — a read cannot fail for
+  locale reasons.
+- Absent `?lang=`, the portal sends the locale from the `locale` localStorage key
+  the language picker writes. An explicit `?lang=` wins over that preference.
+- `?lang=` is accepted on the page read, the listing endpoints
+  (`recent`, `ns/{ns}`, `pages`, `category/{c}`, `tag/{t}`) and
+  `{slug}/revisions`. Listings return localized titles and still return **one row
+  per page**.
+- `[[WikiLink]]` targets and the unique slug index are unaffected: neither has a
+  locale dimension.
+
+Because `?lang=` does not change page identity, it also does not change any
+permalink: a link someone copies out of the address bar keeps working when the
+reader's locale differs.
 
 ### Character Biographies
 
@@ -159,7 +183,7 @@ query param. When bot detected:
 <meta property="og:title" content="Magic System - GameName Wiki" />
 <meta property="og:description" content="First 200 chars of page content..." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://game.example.com/wiki/Magic_System" />
+<meta property="og:url" content="https://game.example.com/wiki/main/general/magic_system" />
 
 <!-- Character profile -->
 <meta property="og:title" content="Gandalf - GameName" />
@@ -170,6 +194,17 @@ query param. When bot detected:
 <meta property="og:title" content="The Council of Elrond - Scene Archive" />
 <meta property="og:description" content="4 participants, 47 poses, completed June 2025" />
 ```
+
+### hreflang
+
+Prerendered wiki pages emit one `<link rel="alternate" hreflang="…">` per locale
+the page can actually be read in, plus `hreflang="x-default"` at
+`Wiki.DefaultLocale`, and set `<html lang>` to the locale actually served. The
+sitemap carries the same alternates as `xhtml:link` entries.
+
+Nothing is emitted for a single-locale page, and unpublished translations are
+never advertised — the prerender path resolves with drafts excluded, since it is
+unauthenticated by definition.
 
 ### Authenticated Content — No SEO
 
@@ -186,3 +221,6 @@ Bots get a 403 or a generic "Login required" page. No content leak.
   - `/wiki/character/general/Name` → `/character/Name` (301 redirect;
     see "Character Biographies" above)
 - `<link rel="canonical">` included in pre-rendered pages
+- `?lang=` is never canonical. Every locale of a page shares the unsuffixed
+  canonical URL, so translations consolidate ranking signals instead of
+  competing with each other.
