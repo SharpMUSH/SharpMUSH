@@ -45,6 +45,13 @@ public class AccountStatusTests
 	[Arguments("Deleted", AccountStatus.Deleted)]
 	[Arguments("Banished", AccountStatus.Disabled)]
 	[Arguments("garbage", AccountStatus.Disabled)]
+	[Arguments("   ", AccountStatus.Active)]
+	[Arguments("  Closed  ", AccountStatus.Closed)]
+	[Arguments("active", AccountStatus.Active)]
+	[Arguments("CLOSED", AccountStatus.Closed)]
+	[Arguments("42", AccountStatus.Disabled)]
+	[Arguments("-1", AccountStatus.Disabled)]
+	[Arguments("0", AccountStatus.Disabled)]
 	public async ValueTask ParseStatus_MissingIsActive_UnparseableFailsClosed(string? stored, AccountStatus expected)
 	{
 		await Assert.That(AccountStatusParser.Parse(stored)).IsEqualTo(expected);
