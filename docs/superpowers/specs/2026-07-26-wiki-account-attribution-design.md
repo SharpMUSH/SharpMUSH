@@ -115,22 +115,8 @@ implies the role unambiguously — a page means "created it", a revision means "
 it", an asset means "uploaded it" — so the edge carries no discriminator property.
 This follows the existing `edge_account_has_role` shape.
 
-The edge definition belongs to the `graph_accounts` graph, and is added by amending
-`Migration_AddAccounts` in place rather than by adding a new migration — see
-[No data migration](#no-data-migration).
-
-> **Why in place, not a new migration.** This repo's established idiom guards graph
-> creation with `if (!graphs.Any(g => g.Name == ...))`. A *new* migration written that
-> way would find `graph_accounts` already present and skip, leaving the edge definition
-> unregistered.
->
-> Migrations are gated by the `MigrationHistory` collection
-> (`ArangoDatabase.Migration.cs`), so each runs exactly once — nothing re-runs. The
-> problem is ordering, not repetition: `Migration_AddAccounts` is `20250101_001`, so by
-> the time any later-Id migration executes, the graph exists — created either in a
-> previous run on an existing database, or earlier in the same pass on a fresh one.
-> A guarded new migration skips in both cases. Amending the original migration
-> sidesteps the guard entirely.
+The edge definition belongs to the `graph_accounts` graph, declared in
+`Migration_AddAccounts` — see [Schema changes](#schema-changes).
 
 While in `DatabaseConstants`: the `GraphRoles` doc comment describes
 `verticesAll -> IsObject -> Objects`, but the constant's only use is
@@ -265,34 +251,26 @@ resolves to whatever object now occupies the slot.
   instead. Mail stays character-scoped; this is not attribution work, but it is the
   same claim misread in the same way.
 
-## No data migration
+## Schema changes
 
-SharpMUSH is pre-production, so there is no legacy attribution to remap: no resolution
-ladder, no backfill service, no sidecar import, and no special-casing of the seeded
-pages.
+SharpMUSH is pre-production. The database is deleted and setup re-run, so there is no
+data to migrate: no resolution ladder, no backfill service, no sidecar import, and no
+special-casing of the seeded pages.
 
-**Existing migrations are amended in place, not superseded.** No database holds state
-worth preserving, so `Migration_AddAccounts` gains the `edge_account_contributed`
-collection and its `graph_accounts` edge definition, and `Migration_AddWiki` gains the
-`node_wiki_assets` collection and its `UploadedAt` index. The old `AuthorDbref` and
-`LastEditorDbref` properties leave `Migration_AddWiki`'s schema rule, and
+The migration files are therefore just the code that defines the schema, and they are
+edited directly:
+
+- `Migration_AddAccounts` — the `edge_account_contributed` edge collection and its
+  `graph_accounts` edge definition.
+- `Migration_AddWiki` — the `node_wiki_assets` collection with its `UploadedAt` index;
+  `AuthorDbref` and `LastEditorDbref` leave the schema rule.
+- The Memgraph and Surreal `*.Migration.cs` files get the equivalent edits.
+
 `AuthorDbref`, `LastEditorDbref`, `EditorDbref`, and `UploaderDbref` leave the models.
-The Memgraph and Surreal `*.Migration.cs` files get the equivalent edits.
 
-This is the simplest correct option *because* it is pre-production, and it avoids the
-guard problem described above. It stops being available the moment a real deployment
-exists, at which point new collections need new migrations.
-
-**Amending in place and deleting the database are one decision, not two.** Migrations
-are gated by `MigrationHistory`, so an amended `Migration_AddAccounts` will not re-run
-against a database that already recorded it — the new collections would simply never
-appear. The deletion below is what makes the amendment take effect.
-
-**The existing dev database is deleted and SharpMUSH re-set-up**, rather than migrated.
-Old wiki documents carry the removed fields and no edges, so a page read would find
-nothing to traverse and could not populate the non-nullable username. Nothing in the
-codebase destroys data on its own initiative to achieve this — it is a manual step.
-Since seeding is idempotent-create, the three seeded pages regenerate on first startup.
+Deleting the database is required, not incidental: migrations are gated by
+`MigrationHistory`, so an edited migration does not re-run against a database that
+already recorded it.
 
 ## API and UI surface
 
