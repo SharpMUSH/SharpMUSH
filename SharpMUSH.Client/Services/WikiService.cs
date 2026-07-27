@@ -26,7 +26,14 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		int RevisionNumber,
 		string? Category,
 		IReadOnlyList<string>? Tags,
-		bool Published);
+		bool Published,
+		string? Locale,
+		string? RequestedLocale,
+		bool IsFallback,
+		IReadOnlyList<string>? AvailableLocales);
+
+	private record WikiTranslationSummaryDto(
+		string Locale, string Title, bool Published, DateTimeOffset UpdatedAt, int RevisionNumber);
 
 	private record WikiRevisionDto(
 		int RevisionNumber,
@@ -39,6 +46,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	private record UpdatePageRequest(string Markdown, string? EditSummary);
 	private record SetMetadataRequest(string? Category, string[] Tags, bool Published);
 	private record RollbackRequest(int RevisionNumber);
+	private record UpsertTranslationRequest(
+		string Title, string Markdown, string? EditSummary, bool Published, int? ExpectedRevisionNumber);
 	private record ExistsRequest(string[] Refs);
 	private record BatchProtectRequest(string[] Refs, bool IsProtected);
 	private record BatchDeleteRequest(string[] Refs);
@@ -46,12 +55,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// <summary>Per-slug outcome of a batch operation (mirrors WikiController.BatchResult).</summary>
 	public record WikiBatchResult(IReadOnlyList<string> Succeeded, IReadOnlyList<string> Failed);
 
-	public async ValueTask<OneOf<WikiArticle, None>> GetWikiArticle(string slug, string? category = null, string? ns = null)
+	public async ValueTask<OneOf<WikiArticle, None>> GetWikiArticle(
+		string slug, string? category = null, string? ns = null, string? lang = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var url = $"api/wiki/ns/{Uri.EscapeDataString(ns ?? "main")}/{Uri.EscapeDataString(category ?? "general")}/{Uri.EscapeDataString(slug)}";
+			var url = $"api/wiki/ns/{Uri.EscapeDataString(ns ?? "main")}/{Uri.EscapeDataString(category ?? "general")}/{Uri.EscapeDataString(slug)}{LangQuery(lang, first: true)}";
 			var dto = await http.GetFromJsonAsync<WikiPageDto>(url);
 			return dto is null ? new None() : ToArticle(dto);
 		}
@@ -61,7 +71,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "GetWikiArticle failed for slug={Slug}", slug);
+			logger.LogError(ex, "GetWikiArticle failed for slug={Slug} lang={Lang}", slug, lang);
 			return new None();
 		}
 	}
@@ -71,12 +81,12 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Failures (network, server error) return an empty list — the index UI
 	/// simply shows nothing rather than breaking the whole page.
 	/// </summary>
-	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetRecentChangesAsync(int count = 20)
+	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetRecentChangesAsync(int count = 20, string? lang = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>($"api/wiki/recent?count={count}");
+			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>($"api/wiki/recent?count={count}{LangQuery(lang, first: false)}");
 			return dtos?.Select(ToSummary).ToList() ?? [];
 		}
 		catch (Exception ex)
@@ -90,13 +100,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Lists pages within a namespace, ordered by title. Failures return an empty list.
 	/// </summary>
 	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetNamespacePagesAsync(
-		string ns, int skip = 0, int take = 50)
+		string ns, int skip = 0, int take = 50, string? lang = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>(
-				$"api/wiki/ns/{Uri.EscapeDataString(ns)}?skip={skip}&take={take}");
+				$"api/wiki/ns/{Uri.EscapeDataString(ns)}?skip={skip}&take={take}{LangQuery(lang, first: false)}");
 			return dtos?.Select(ToSummary).ToList() ?? [];
 		}
 		catch (Exception ex)
@@ -112,12 +122,12 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Failures return an empty list with a zero total.
 	/// </summary>
 	public async ValueTask<(IReadOnlyList<WikiPageSummary> Items, int Total)> GetAllPagesAsync(
-		int skip = 0, int take = 50, string? ns = null)
+		int skip = 0, int take = 50, string? ns = null, string? lang = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.GetAsync($"api/wiki/pages?skip={skip}&take={take}{NsQuery(ns, first: false)}");
+			var response = await http.GetAsync($"api/wiki/pages?skip={skip}&take={take}{NsQuery(ns, first: false)}{LangQuery(lang, first: false)}");
 			response.EnsureSuccessStatusCode();
 
 			var dtos = await response.Content.ReadFromJsonAsync<List<WikiPageDto>>() ?? [];
@@ -138,13 +148,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Lists pages in a category. Failures return an empty list.
 	/// </summary>
 	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetByCategoryAsync(
-		string category, int skip = 0, int take = 50)
+		string category, int skip = 0, int take = 50, string? lang = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>(
-				$"api/wiki/category/{Uri.EscapeDataString(category)}?skip={skip}&take={take}");
+				$"api/wiki/category/{Uri.EscapeDataString(category)}?skip={skip}&take={take}{LangQuery(lang, first: false)}");
 			return dtos?.Select(ToSummary).ToList() ?? [];
 		}
 		catch (Exception ex)
@@ -158,13 +168,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Lists pages carrying a tag. Failures return an empty list.
 	/// </summary>
 	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetByTagAsync(
-		string tag, int skip = 0, int take = 50)
+		string tag, int skip = 0, int take = 50, string? lang = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>(
-				$"api/wiki/tag/{Uri.EscapeDataString(tag)}?skip={skip}&take={take}");
+				$"api/wiki/tag/{Uri.EscapeDataString(tag)}?skip={skip}&take={take}{LangQuery(lang, first: false)}");
 			return dtos?.Select(ToSummary).ToList() ?? [];
 		}
 		catch (Exception ex)
@@ -178,13 +188,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Returns the revision history for a page, newest first. Failures return an empty list.
 	/// </summary>
 	public async ValueTask<IReadOnlyList<WikiRevisionInfo>> GetRevisionsAsync(
-		string slug, int skip = 0, int take = 20, string? ns = null, string? category = null)
+		string slug, int skip = 0, int take = 20, string? ns = null, string? category = null, string? lang = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var dtos = await http.GetFromJsonAsync<List<WikiRevisionDto>>(
-				$"api/wiki/{Uri.EscapeDataString(slug)}/revisions?skip={skip}&take={take}&ns={Uri.EscapeDataString(ns ?? "main")}&category={Uri.EscapeDataString(category ?? "general")}");
+				$"api/wiki/{Uri.EscapeDataString(slug)}/revisions?skip={skip}&take={take}&ns={Uri.EscapeDataString(ns ?? "main")}&category={Uri.EscapeDataString(category ?? "general")}{LangQuery(lang, first: false)}");
 			return dtos?.Select(ToRevision).ToList() ?? [];
 		}
 		catch (Exception ex)
@@ -197,13 +207,14 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// <summary>
 	/// Returns a single revision snapshot (with full markdown) or None when missing.
 	/// </summary>
-	public async ValueTask<OneOf<WikiRevisionInfo, None>> GetRevisionAsync(string slug, int revisionNumber, string? ns = null, string? category = null)
+	public async ValueTask<OneOf<WikiRevisionInfo, None>> GetRevisionAsync(
+		string slug, int revisionNumber, string? ns = null, string? category = null, string? lang = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var dto = await http.GetFromJsonAsync<WikiRevisionDto>(
-				$"api/wiki/{Uri.EscapeDataString(slug)}/revisions/{revisionNumber}{KeyQuery(ns, category)}");
+				$"api/wiki/{Uri.EscapeDataString(slug)}/revisions/{revisionNumber}{KeyQuery(ns, category)}{LangQuery(lang, first: false)}");
 			return dto is null ? new None() : ToRevision(dto);
 		}
 		catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -214,6 +225,85 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		{
 			logger.LogError(ex, "GetRevisionAsync failed for slug={Slug} rev={Rev}", slug, revisionNumber);
 			return new None();
+		}
+	}
+
+	/// <summary>Locales this reader can read the page in, excluding drafts they may not see.</summary>
+	public async ValueTask<IReadOnlyList<WikiTranslationInfo>> GetTranslationsAsync(
+		string slug, string? ns = null, string? category = null)
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var dtos = await http.GetFromJsonAsync<List<WikiTranslationSummaryDto>>(
+				$"api/wiki/{Uri.EscapeDataString(slug)}/translations{KeyQuery(ns, category)}");
+			return dtos?
+				.Select(d => new WikiTranslationInfo(d.Locale, d.Title, d.Published, d.UpdatedAt, d.RevisionNumber))
+				.ToList() ?? [];
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "GetTranslationsAsync failed for slug={Slug}", slug);
+			return [];
+		}
+	}
+
+	/// <summary>
+	/// Creates or updates one locale's translation. <paramref name="expectedRevisionNumber"/> is the revision
+	/// the editor loaded; null means create-only.
+	/// </summary>
+	/// <remarks>
+	/// A 409 from the server means somebody else saved first. It comes back as a
+	/// <see cref="WikiTranslationSaveError"/> with <c>NeedsReload</c> set, and the caller must offer a reload
+	/// rather than retrying — a retry re-sends this editor's stale markdown over the winner's, which is the
+	/// data loss the whole compare-and-swap exists to prevent.
+	/// </remarks>
+	public async ValueTask<OneOf<WikiTranslationInfo, WikiTranslationSaveError>> UpsertTranslationAsync(
+		string slug, string locale, string title, string markdown, bool published,
+		int? expectedRevisionNumber, string? editSummary = null, string? ns = null, string? category = null)
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var response = await http.PutAsJsonAsync(
+				$"api/wiki/{Uri.EscapeDataString(slug)}/translations/{Uri.EscapeDataString(locale)}{KeyQuery(ns, category)}",
+				new UpsertTranslationRequest(title, markdown, editSummary, published, expectedRevisionNumber));
+
+			if (!response.IsSuccessStatusCode)
+				return new WikiTranslationSaveError(
+					await response.Content.ReadAsStringAsync(),
+					NeedsReload: response.StatusCode == System.Net.HttpStatusCode.Conflict);
+
+			var dto = await response.Content.ReadFromJsonAsync<WikiTranslationSummaryDto>();
+			return dto is null
+				? new WikiTranslationSaveError("The server returned no translation.", NeedsReload: false)
+				: new WikiTranslationInfo(dto.Locale, dto.Title, dto.Published, dto.UpdatedAt, dto.RevisionNumber);
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "UpsertTranslationAsync failed for slug={Slug} locale={Locale}", slug, locale);
+			return new WikiTranslationSaveError(ex.Message, NeedsReload: false);
+		}
+	}
+
+	/// <summary>Removes one locale's translation. The page and every other locale are untouched.</summary>
+	public async ValueTask<OneOf<None, string>> DeleteTranslationAsync(
+		string slug, string locale, string? ns = null, string? category = null)
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var response = await http.DeleteAsync(
+				$"api/wiki/{Uri.EscapeDataString(slug)}/translations/{Uri.EscapeDataString(locale)}{KeyQuery(ns, category)}");
+
+			return response.IsSuccessStatusCode
+				? new None()
+				: await response.Content.ReadAsStringAsync();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "DeleteTranslationAsync failed for slug={Slug} locale={Locale}", slug, locale);
+			return ex.Message;
 		}
 	}
 
@@ -491,6 +581,14 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			Category = dto.Category,
 			Tags = dto.Tags?.ToList() ?? [],
 			Published = dto.Published,
+			Locale = dto.Locale ?? string.Empty,
+			RequestedLocale = dto.RequestedLocale ?? string.Empty,
+			IsFallback = dto.IsFallback,
+			AvailableLocales = dto.AvailableLocales?.ToList() ?? [],
+			// The SERVED row's revision number — the translation's when a translation was served, the page's
+			// otherwise. WikiEdit passes it back as expectedRevisionNumber, which is why it must come from the
+			// same DTO field the server resolved rather than from a separate page lookup.
+			RevisionNumber = dto.RevisionNumber,
 		};
 
 	/// <summary>Builds the optional <c>?ns=</c> / <c>&amp;ns=</c> query suffix for namespaced requests.</summary>
@@ -505,6 +603,16 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	private static string KeyQuery(string? ns, string? category) =>
 		$"?ns={Uri.EscapeDataString(ns ?? "main")}&category={Uri.EscapeDataString(category ?? "general")}";
 
+	/// <summary>
+	/// Builds the optional <c>lang</c> query suffix. Null or blank sends nothing at all, which the server
+	/// reads as "use the configured default" — sending an empty <c>lang=</c> would mean the same thing but
+	/// makes the prerender cache key and the browser history noisier for no gain.
+	/// </summary>
+	private static string LangQuery(string? lang, bool first) =>
+		string.IsNullOrWhiteSpace(lang)
+			? string.Empty
+			: $"{(first ? '?' : '&')}lang={Uri.EscapeDataString(lang)}";
+
 	private static WikiPageSummary ToSummary(WikiPageDto dto) =>
 		new(dto.Slug, dto.Title, dto.Namespace, dto.UpdatedAt, dto.RevisionNumber)
 		{
@@ -512,6 +620,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			Tags = dto.Tags ?? [],
 			Published = dto.Published,
 			IsProtected = dto.IsProtected,
+			Locale = dto.Locale ?? string.Empty,
+			IsFallback = dto.IsFallback,
 		};
 
 	private static WikiRevisionInfo ToRevision(WikiRevisionDto dto) =>

@@ -3420,4 +3420,71 @@
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>The application's schema could not be loaded. The softcode handler at {0} may be missing or returning invalid JSON.</value>
   </data>
+
+  <!-- ======================== -->
+  <!-- Wiki localization        -->
+  <!-- ======================== -->
+  <data name="WikiFallbackNotice" xml:space="preserve">
+    <value>This page is not available in {0} yet — showing the {1} version.</value>
+  </data>
+  <data name="WikiFallbackCreateTranslation" xml:space="preserve">
+    <value>Translate this page</value>
+  </data>
+  <data name="WikiAvailableTranslations" xml:space="preserve">
+    <value>Also available in</value>
+  </data>
+  <data name="WkLocaleSelector" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="WkAddTranslation" xml:space="preserve">
+    <value>Add a translation…</value>
+  </data>
+  <data name="WkSourceLocaleLabel" xml:space="preserve">
+    <value>{0} (source)</value>
+  </data>
+  <data name="WkInheritedFromSource" xml:space="preserve">
+    <value>Inherited from the source language — edit it on the source page.</value>
+  </data>
+  <data name="WkTranslationSaved" xml:space="preserve">
+    <value>Translation saved.</value>
+  </data>
+  <data name="WkTranslationSaveFailed" xml:space="preserve">
+    <value>Could not save the translation: {0}</value>
+  </data>
+  <data name="WkDeleteTranslation" xml:space="preserve">
+    <value>Delete this translation</value>
+  </data>
+  <data name="WkTranslationDeleteConfirmTitle" xml:space="preserve">
+    <value>Delete translation?</value>
+  </data>
+  <data name="WkTranslationDeleteConfirmText" xml:space="preserve">
+    <value>The {0} translation and its history will be removed. The page and its other languages are unaffected.</value>
+  </data>
+  <data name="WkCustomLocalePlaceholder" xml:space="preserve">
+    <value>Language tag, e.g. es or pt-BR</value>
+  </data>
+  <data name="WkHistoryLocale" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="WkTranslationConflict" xml:space="preserve">
+    <value>This translation changed while you were editing. Reload it to see the current version — your unsaved text is still in the editor.</value>
+  </data>
+  <data name="WkTranslationReload" xml:space="preserve">
+    <value>Reload the translation</value>
+  </data>
+  <data name="WikiTranslations" xml:space="preserve">
+    <value>Translations</value>
+  </data>
+  <data name="WikiLocaleFilter" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="WikiAllLocales" xml:space="preserve">
+    <value>All languages</value>
+  </data>
+  <data name="WikiUntranslatedOnly" xml:space="preserve">
+    <value>Missing translations only</value>
+  </data>
+  <data name="ResWikiStatTranslations" xml:space="preserve">
+    <value>Translations</value>
+  </data>
 </root>

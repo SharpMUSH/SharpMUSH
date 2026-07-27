@@ -23,4 +23,10 @@ public record WikiPageSummary(
 
 	/// <summary>When true, only Wizard-level users may edit the page.</summary>
 	public bool IsProtected { get; init; }
+
+	/// <summary>The locale this row's title came from.</summary>
+	public string Locale { get; init; } = string.Empty;
+
+	/// <summary>True when this row's title is a fallback rather than the requested language.</summary>
+	public bool IsFallback { get; init; }
 }

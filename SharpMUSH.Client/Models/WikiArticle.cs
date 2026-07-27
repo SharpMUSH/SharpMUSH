@@ -39,4 +39,23 @@ public class WikiArticle
 
 	/// <summary>When false, the page is a draft hidden from anonymous visitors.</summary>
 	public bool Published { get; set; } = true;
+
+	/// <summary>The locale whose content this article actually carries.</summary>
+	public string Locale { get; set; } = string.Empty;
+
+	/// <summary>The locale the reader asked for, after server-side normalisation.</summary>
+	public string RequestedLocale { get; set; } = string.Empty;
+
+	/// <summary>True when a different language was served than requested — drives the fallback notice.</summary>
+	public bool IsFallback { get; set; }
+
+	/// <summary>Locales this reader can read the page in, source locale first.</summary>
+	public List<string> AvailableLocales { get; set; } = [];
+
+	/// <summary>
+	/// Revision number of the row that was actually served — the translation's when a translation was
+	/// served, the page's otherwise. <c>WikiEdit</c> passes it back as <c>expectedRevisionNumber</c> so a
+	/// concurrent save is detected instead of silently overwritten.
+	/// </summary>
+	public int RevisionNumber { get; set; }
 }

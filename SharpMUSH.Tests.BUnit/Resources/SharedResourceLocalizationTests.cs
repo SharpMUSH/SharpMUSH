@@ -101,6 +101,28 @@ public class SharedResourceLocalizationTests
 	}
 
 	[Test]
+	public async Task Every_wiki_localization_string_is_in_the_resx()
+	{
+		var loc = PortalLocalizer.Create();
+
+		string[] keys =
+		[
+			"WikiFallbackNotice", "WikiFallbackCreateTranslation", "WikiAvailableTranslations",
+			"WkLocaleSelector", "WkAddTranslation", "WkSourceLocaleLabel", "WkInheritedFromSource",
+			"WkTranslationSaved", "WkTranslationSaveFailed", "WkDeleteTranslation",
+			"WkTranslationDeleteConfirmTitle", "WkTranslationDeleteConfirmText",
+			"WkCustomLocalePlaceholder", "WkHistoryLocale",
+			"WkTranslationConflict", "WkTranslationReload",
+			"WikiTranslations", "WikiLocaleFilter", "WikiAllLocales", "WikiUntranslatedOnly",
+			"ResWikiStatTranslations",
+		];
+
+		var missing = keys.Where(k => loc[k].ResourceNotFound).ToList();
+
+		await Assert.That(missing).IsEmpty();
+	}
+
+	[Test]
 	public async Task Every_displayed_enum_member_has_a_label_in_the_resx()
 	{
 		var loc = PortalLocalizer.Create();
