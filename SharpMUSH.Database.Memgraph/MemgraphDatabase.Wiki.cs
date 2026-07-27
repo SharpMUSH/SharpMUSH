@@ -335,7 +335,7 @@ public partial class MemgraphDatabase : IWikiService
 	{
 		await using var session = driver.AsyncSession();
 		var result = await session.RunAsync(
-			"MATCH (r:WikiRevision {pageId: $pageId, revisionNumber: $rev}) RETURN r",
+			"MATCH (r:WikiRevision {pageId: $pageId, revisionNumber: $rev}) WHERE coalesce(r.locale, '') = '' RETURN r",
 			new { pageId, rev = revisionNumber });
 
 		var records = await result.ToListAsync();

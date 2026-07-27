@@ -196,6 +196,25 @@ public class WikiTranslationIntegrationTests
 	}
 
 	[Test]
+	public async Task GetRevisionAsync_NeverReturnsATranslationRevision()
+	{
+		// The two rollback paths (WikiController.Rollback, @wiki/rollback) feed this method's Markdown
+		// straight back into the source page, so a translation revision leaking through here would restore
+		// French prose over an English page. Translation streams restart at 1, so r1 is the collision, and
+		// which of the two rows a provider happens to return is not something to leave to query ordering.
+		var page = await CreateSourcePageAsync("RevByNumber");
+		await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+
+		var revision = await Wiki.GetRevisionAsync(page.Id, 1);
+
+		await Assert.That(revision.IsT0).IsTrue();
+		await Assert.That(revision.AsT0.Locale).IsEqualTo(string.Empty);
+		await Assert.That(revision.AsT0.MarkdownSource)
+			.IsEqualTo("en **body**")
+			.Because("a rollback must restore the source body, never a translation's");
+	}
+
+	[Test]
 	public async Task DeleteTranslationAsync_RemovesOnlyThatLocale()
 	{
 		var page = await CreateSourcePageAsync("DeleteOne");

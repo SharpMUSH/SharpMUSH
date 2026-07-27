@@ -400,7 +400,8 @@ public partial class SurrealDatabase : IWikiService
 			["pageId"] = pageId, ["rev"] = revisionNumber
 		};
 		var response = await ExecuteAsync(
-				$"SELECT {WikiRevisionFields} FROM wiki_revision WHERE pageId = $pageId AND revisionNumber = $rev",
+				$"SELECT {WikiRevisionFields} FROM wiki_revision WHERE pageId = $pageId AND revisionNumber = $rev " +
+				"AND (locale ?? '') = ''",
 				parameters);
 		var results = response.GetValue<List<WikiRevisionDbRecord>>(0);
 		if (results?.Count > 0)

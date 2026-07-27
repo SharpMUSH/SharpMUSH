@@ -129,9 +129,15 @@ public interface IWikiService
 	Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20);
 
 	/// <summary>
-	/// Returns a specific revision snapshot for a page.
+	/// Returns a specific <em>source-locale</em> revision snapshot for a page.
 	/// Returns <c>NotFound</c> if no matching revision exists.
 	/// </summary>
+	/// <remarks>
+	/// The source-stream filter is not cosmetic. Translation revisions restart numbering at 1 and share
+	/// <c>PageId</c>, so without it <c>GetRevisionAsync(pageId, 1)</c> could return a translation's body —
+	/// and its callers are the two rollback paths, which write the returned Markdown straight back onto the
+	/// source page. That would restore French prose over an English page.
+	/// </remarks>
 	Task<OneOf<WikiRevision, NotFound>> GetRevisionAsync(string pageId, int revisionNumber);
 
 	/// <summary>

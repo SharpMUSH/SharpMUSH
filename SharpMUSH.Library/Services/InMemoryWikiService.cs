@@ -294,7 +294,7 @@ public sealed class InMemoryWikiService : IWikiService
 		WikiRevision? result;
 		lock (list)
 		{
-			result = list.FirstOrDefault(r => r.RevisionNumber == revisionNumber);
+			result = list.FirstOrDefault(r => r.RevisionNumber == revisionNumber && r.Locale.Length == 0);
 		}
 
 		if (result is null)

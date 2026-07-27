@@ -23,6 +23,7 @@ public static class DatabaseConstants
 	public const string Accounts = "node_accounts";
 	public const string WikiPages = "node_wiki_pages";
 	public const string WikiRevisions = "node_wiki_revisions";
+	public const string WikiTranslations = "node_wiki_translations";
 
 	// Softcode package manager system collections (decisions 20.3, 20.13).
 	// Not visible to softcode; travels with backups.
