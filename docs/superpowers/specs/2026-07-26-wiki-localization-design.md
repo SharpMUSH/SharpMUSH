@@ -290,14 +290,21 @@ public record WikiOptions(
         Group = "Wiki",
         Order = 1,
         ValidationPattern = @"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")]
-    string DefaultLocale = "en");
+    string DefaultLocale = WikiOptions.DefaultLocaleFallback)
+{
+    /// <summary>
+    /// The one place "en" is written. Shared with Migration_AddWikiTranslations, which cannot read
+    /// configuration — see "SourceLocale is materialised once".
+    /// </summary>
+    public const string DefaultLocaleFallback = "en";
+}
 ```
 
 Because the admin config pages are schema-driven off `[SharpConfig]`, this
 appears in `/admin/config` with no UI work.
 
-**The default is a real default, not a `required` member.** `DefaultLocale = "en"`
-is supplied on the parameter, so a configuration file that omits
+**The default is a real default, not a `required` member.** The parameter defaults to
+`DefaultLocaleFallback`, so a configuration file that omits
 `wiki_default_locale` binds to `en` rather than to null or empty. Every other
 `SharpMUSHOptions` member is `required`; this one deliberately is not, because
 resolution's terminal step depends on it always having a usable value.
@@ -340,6 +347,7 @@ Applied at every point a locale enters storage or configuration:
 | `CreateAsync(sourceLocale)` | `Error<string>`; no page created |
 | `Migration_AddWikiTranslations` backfill | fails the migration loudly |
 | `WikiOptions.DefaultLocale` | fails startup validation |
+| `DeleteTranslationAsync(locale)` | canonicalised first; an unparseable tag yields `NotFound` |
 | `?lang=` on a read | **not** an error — treated as absent, per Error handling |
 
 The read path is deliberately the odd one out: a reader typing a bad `?lang=`
