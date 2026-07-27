@@ -46,7 +46,7 @@
                             </MudText>
                             <MudText Style="font-size:0.75rem;color:var(--text-faint);">
                                 <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Style="vertical-align:middle;margin-right:0.125rem;font-size:0.8125rem;" />
-                                @Loc["RolPoseCount", scene.PoseCount]
+                                @Loc.Plural("RolPoseCount", "count", scene.PoseCount)
                             </MudText>
                             <MudText Style="font-size:0.75rem;color:var(--text-faint);">
                                 @Loc["ResStartedAt", scene.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")]

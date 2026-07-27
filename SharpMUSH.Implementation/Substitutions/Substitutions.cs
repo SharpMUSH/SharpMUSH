@@ -28,8 +28,11 @@ public static partial class Substitutions
 			"T" or "t" => "\t",
 			"#" => $"#{parser.CurrentState.Enactor!.Value.Number}",
 			":" => parser.CurrentState.Enactor!.Value.ToString(),
-			"n" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name,
-			"N" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name.ApplyCase(LetterCasing.Sentence),
+			// Both cases return the plain name; the caller (VisitValidSubstitution) capitalizes the
+			// first character for the uppercase selector %N. Doing it there rather than with
+			// ApplyCase(Sentence) matches PennMUSH, which upper-cases only the first character and
+			// leaves the rest alone — "McDonald" stays "McDonald", not "Mcdonald".
+			"n" or "N" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name,
 			"~" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // Accented name - using regular name as fallback
 			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // Moniker - using regular name as fallback
 			"S" or "s" =>
@@ -82,6 +85,10 @@ public static partial class Substitutions
 																												 // PennMUSH: %? returns "invocations recursions" (two space-separated numbers)
 			"?" => $"{parser.CurrentState.TotalInvocations!.Count} {parser.CurrentState.CallDepth!.Count}",
 			"+" => parser.CurrentState.EnvironmentRegisters.Count.ToString(),
+			// PennMUSH emits "% " (percent then space) literally "for more natural typing"
+			// (src/parse.c), unlike other unknown substitutions where the percent is dropped
+			// (%z -> z). The literal space arrives here as the OTHER_SUB catch-all.
+			" " => "% ",
 			_ => symbol,
 		};
 

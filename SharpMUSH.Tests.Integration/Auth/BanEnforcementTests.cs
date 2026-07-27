@@ -55,7 +55,7 @@ public class BanEnforcementTests(ServerWebAppFactory factory)
 		var sessions = factory.Services.GetRequiredService<IAccountSessionStore>();
 
 		// The token authenticates before enforcement.
-		await Assert.That(await sessions.ValidateAsync(account.AccountSessionToken)).IsEqualTo(account.AccountId);
+		await Assert.That((await sessions.ValidateAsync(account.AccountSessionToken))?.AccountId).IsEqualTo(account.AccountId);
 
 		await enforcement.EnforceAccountBanAsync(account.AccountId);
 

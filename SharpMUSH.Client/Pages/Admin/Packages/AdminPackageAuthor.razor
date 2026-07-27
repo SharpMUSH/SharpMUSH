@@ -78,7 +78,7 @@
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudText><code>@external.Dbref</code></MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @Loc["PkgOccurrences", external.Occurrences, external.ExampleAttribute]
+                                @Loc.Plural("PkgOccurrences", new Dictionary<string, object?> { ["count"] = external.Occurrences, ["location"] = external.ExampleAttribute })
                             </MudText>
                         </MudStack>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-1">
