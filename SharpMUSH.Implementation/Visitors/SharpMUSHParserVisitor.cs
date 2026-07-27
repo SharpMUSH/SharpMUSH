@@ -108,6 +108,121 @@ public class SharpMUSHParserVisitor(
 	}
 
 	/// <summary>
+	/// Whether a name that resolves to no function should be reported as an error rather than
+	/// left as literal text.
+	/// <para>
+	/// PennMUSH reports it only when PE_FUNCTION_MANDATORY is set, which <c>[...]</c> adds
+	/// (src/parse.c) — so <c>think foo(bar)</c> prints <c>foo(bar)</c> while
+	/// <c>think [foo(bar)]</c> errors. Arguments of a real call are evaluated with that flag
+	/// stripped, so an unknown name inside them stays literal too: <c>[strcat(foo(1))]</c>
+	/// yields <c>foo(1)</c>.
+	/// </para>
+	/// Walking outward, whichever context appears first decides: a bracket means the call site
+	/// demands a function, an enclosing call means we are inside its argument list and it does not.
+	/// </summary>
+	private static bool IsUnknownFunctionAnError(ParserRuleContext context)
+	{
+		for (var parent = context.Parent; parent is not null; parent = parent.Parent)
+		{
+			switch (parent)
+			{
+				case BracketPatternContext:
+					return true;
+				case FunctionContext:
+					return false;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Reproduces a <c>name(...)</c> that is not a function call as text, the way PennMUSH does:
+	/// the parentheses and separators are copied through, and the contents are still evaluated
+	/// with function recognition switched off (PE_EVALUATE stays on, PE_FUNCTION_CHECK is cleared).
+	/// So <c>foo(add(1,2))</c> stays <c>foo(add(1,2))</c>, while <c>foo([add(1,2)])</c> becomes
+	/// <c>foo(3)</c> — a bracket re-enables function recognition inside.
+	/// Literal spans are sliced from the source rather than taken from <c>GetText()</c> so that
+	/// markup survives.
+	/// </summary>
+	private async ValueTask<CallState> LiteralFunctionCall(FunctionContext context, SharpMUSHParserVisitor visitor)
+	{
+		var parts = new MString[context.ChildCount];
+
+		visitor._suppressFunctionEval++;
+		try
+		{
+			for (var i = 0; i < context.ChildCount; i++)
+			{
+				parts[i] = context.GetChild(i) switch
+				{
+					EvaluationStringContext argument => (await visitor.Visit(argument))?.Message ?? MModule.empty(),
+					ITerminalNode terminal => SliceSource(terminal.Symbol),
+					_ => MModule.empty()
+				};
+			}
+		}
+		finally
+		{
+			visitor._suppressFunctionEval--;
+		}
+
+		return new CallState(MModule.ConcatMany(parts), context.Depth());
+	}
+
+	/// <summary>
+	/// Everything between a call's parentheses, taken verbatim from the source so that markup
+	/// survives. Used for <c>FunctionFlags.Literal</c> (PennMUSH's <c>lit()</c>), where the
+	/// content is one raw argument: no comma splitting, no substitution.
+	/// <para>
+	/// The opening parenthesis lives inside the FUNCHAR token along with the name and any
+	/// whitespace the lexer folded in after it, so the content starts just past that parenthesis
+	/// — not at the end of the token, which would swallow spaces the caller wrote.
+	/// </para>
+	/// </summary>
+	private MString LiteralArgumentText(FunctionContext context)
+	{
+		var funChar = context.FUNCHAR()?.Symbol;
+		var closeParen = context.CPAREN()?.Symbol;
+		if (funChar is null || closeParen is null)
+		{
+			return MModule.empty();
+		}
+
+		var openParenOffset = funChar.Text.IndexOf('(');
+		if (openParenOffset < 0)
+		{
+			return MModule.empty();
+		}
+
+		var start = funChar.StartIndex + openParenOffset + 1;
+		var length = closeParen.StartIndex - start;
+
+		return length > 0 ? MModule.substring(start, length, source) : MModule.empty();
+	}
+
+	/// <summary>
+	/// Extracts a token's own text from the original markup-carrying source. A token the error
+	/// strategy synthesises for missing input is not part of the lexed stream (<see cref="IToken.TokenIndex"/>
+	/// is negative) and covers no real source span — <see cref="LenientErrorStrategy"/> parks it at
+	/// the previous token's <c>StopIndex</c> so that <c>StopIndex</c>-based length maths in the
+	/// surrounding contexts stay correct, which means slicing the synthetic token on its own would
+	/// return a spurious one-character copy of that last real character. Such tokens must contribute
+	/// nothing here. (In practice recovery ends the enclosing rule at EOF without adding a closer
+	/// child, so this guard is belt-and-suspenders against a future recovery path that inserts one.)
+	/// </summary>
+	private MString SliceSource(IToken token)
+	{
+		if (token.TokenIndex < 0 || token.StartIndex < 0)
+		{
+			return MModule.empty();
+		}
+
+		var length = token.StopIndex - token.StartIndex + 1;
+		return length > 0 ? MModule.substring(token.StartIndex, length, source) : MModule.empty();
+	}
+
+	/// <summary>
 	/// Sends debug or verbose output to owner and DEBUGFORWARDLIST recipients.
 	/// </summary>
 	/// <param name="executor">The executor object</param>
@@ -300,7 +415,11 @@ public class SharpMUSHParserVisitor(
 		// Functions are not recognized — return literal text of the function call.
 		if (_suppressFunctionEval > 0)
 		{
-			return new CallState(GetContextText(context));
+			// Function recognition is off here, but evaluation is not: PennMUSH clears
+			// PE_FUNCTION_CHECK while PE_EVALUATE stays on, so the call is copied through as text
+			// and its contents are still evaluated. Returning the raw source instead would swallow
+			// substitutions — notafunction(strlen(%#)) has to yield notafunction(strlen(#1)).
+			return await LiteralFunctionCall(context, this);
 		}
 
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
@@ -427,8 +546,15 @@ public class SharpMUSHParserVisitor(
 					var userFunction = ResolveUserDefinedFunction(name);
 					if (userFunction is null)
 					{
+						if (!IsUnknownFunctionAnError(context))
+						{
+							// Not a function and not required to be one: the text is prose, not a call.
+							return await LiteralFunctionCall(context, visitor);
+						}
+
 						success = false;
-						return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name), context.Depth());
+						return new CallState(
+							string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()), context.Depth());
 					}
 
 					libraryMatch = (userFunction.Value, false);
@@ -537,14 +663,18 @@ public class SharpMUSHParserVisitor(
 					contextDepth);
 			}
 
-			switch (attribute.Flags)
+			// Test the individual bits: switching on the whole Flags value only ever matched a
+			// function whose flags were *exactly* the parity flag, so any declaration that
+			// combined it with another flag (letq's NoParse, for instance) skipped the check.
+			if (attribute.Flags.HasFlag(FunctionFlags.UnEvenArgsOnly) && args.Length % 2 == 0)
 			{
-				case FunctionFlags.UnEvenArgsOnly when args.Length % 2 == 0:
-					return new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, name.ToUpperInvariant()), contextDepth);
+				return new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, name.ToUpperInvariant()), contextDepth);
+			}
 
-				case FunctionFlags.EvenArgsOnly when args.Length % 2 != 0:
-					return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, name.ToUpperInvariant()),
-						contextDepth);
+			if (attribute.Flags.HasFlag(FunctionFlags.EvenArgsOnly) && args.Length % 2 != 0)
+			{
+				return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, name.ToUpperInvariant()),
+					contextDepth);
 			}
 
 			// Consider moving after RefinedArguments to avoid extra parsing. However, each
@@ -570,19 +700,9 @@ public class SharpMUSHParserVisitor(
 				// FunctionFlags.Literal: treat the entire content between parens as a single
 				// raw unevaluated string. Do NOT split on commas, do NOT evaluate substitutions.
 				// This is how PennMUSH's lit() works — lit(a,b,%q0) returns "a,b,%q0" verbatim.
-				// We reconstruct the raw text from the parse tree using GetText() on the FunctionContext.
-				var funcText = context.GetText();
-				// funcText is e.g. "lit(a,b,%q0)" — strip "lit(" prefix and ")" suffix
-				var openParen = funcText.IndexOf('(');
-				if (openParen >= 0 && funcText.EndsWith(')'))
-				{
-					var rawContent = funcText[(openParen + 1)..^1];
-					refinedArguments = [new CallState(MModule.single(rawContent), contextDepth)];
-				}
-				else
-				{
-					refinedArguments = [CallState.Empty];
-				}
+				// Slice it out of the source rather than rebuilding it from GetText(), which
+				// concatenates token text and so returns the content stripped of its markup.
+				refinedArguments = [new CallState(LiteralArgumentText(context), contextDepth)];
 			}
 			else if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
 			{
