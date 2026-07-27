@@ -119,14 +119,18 @@ The edge definition belongs to the `graph_accounts` graph, and is added by amend
 `Migration_AddAccounts` in place rather than by adding a new migration — see
 [No data migration](#no-data-migration).
 
-> **Why in place, not a new migration.** `Migration_AddAccounts` is `20250101_001`,
-> second only to `Migration_CreateDatabase`, so it creates `graph_accounts` near the
-> start of every run. This repo's established idiom guards graph creation with
-> `if (!graphs.Any(g => g.Name == ...))`. A *new* migration written that way would find
-> the graph already present and skip, so the edge definition would never register —
-> and that happens on a **brand-new** database, not just an existing one. It is
-> migration ordering within a single fresh run, which deleting the database does not
-> avoid. Amending the original migration sidesteps the guard entirely.
+> **Why in place, not a new migration.** This repo's established idiom guards graph
+> creation with `if (!graphs.Any(g => g.Name == ...))`. A *new* migration written that
+> way would find `graph_accounts` already present and skip, leaving the edge definition
+> unregistered.
+>
+> Migrations are gated by the `MigrationHistory` collection
+> (`ArangoDatabase.Migration.cs`), so each runs exactly once — nothing re-runs. The
+> problem is ordering, not repetition: `Migration_AddAccounts` is `20250101_001`, so by
+> the time any later-Id migration executes, the graph exists — created either in a
+> previous run on an existing database, or earlier in the same pass on a fresh one.
+> A guarded new migration skips in both cases. Amending the original migration
+> sidesteps the guard entirely.
 
 While in `DatabaseConstants`: the `GraphRoles` doc comment describes
 `verticesAll -> IsObject -> Objects`, but the constant's only use is
@@ -278,6 +282,11 @@ The Memgraph and Surreal `*.Migration.cs` files get the equivalent edits.
 This is the simplest correct option *because* it is pre-production, and it avoids the
 guard problem described above. It stops being available the moment a real deployment
 exists, at which point new collections need new migrations.
+
+**Amending in place and deleting the database are one decision, not two.** Migrations
+are gated by `MigrationHistory`, so an amended `Migration_AddAccounts` will not re-run
+against a database that already recorded it — the new collections would simply never
+appear. The deletion below is what makes the amendment take effect.
 
 **The existing dev database is deleted and SharpMUSH re-set-up**, rather than migrated.
 Old wiki documents carry the removed fields and no edges, so a page read would find
