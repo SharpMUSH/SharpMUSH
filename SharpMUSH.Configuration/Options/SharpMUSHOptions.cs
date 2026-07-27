@@ -24,4 +24,5 @@ public record SharpMUSHOptions
 	public required SitelockRulesOptions SitelockRules { get; init; }
 	public required WarningOptions Warning { get; init; }
 	public required TextFileOptions TextFile { get; init; }
+	public required WikiOptions Wiki { get; init; }
 };

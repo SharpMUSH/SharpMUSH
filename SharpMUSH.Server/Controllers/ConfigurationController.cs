@@ -289,7 +289,8 @@ public class ConfigurationController(
 			BannedNames = prop.Name == nameof(SharpMUSHOptions.BannedNames) ? (BannedNamesOptions)newValue! : source.BannedNames,
 			SitelockRules = prop.Name == nameof(SharpMUSHOptions.SitelockRules) ? (SitelockRulesOptions)newValue! : source.SitelockRules,
 			Warning = prop.Name == nameof(SharpMUSHOptions.Warning) ? (WarningOptions)newValue! : source.Warning,
-			TextFile = prop.Name == nameof(SharpMUSHOptions.TextFile) ? (TextFileOptions)newValue! : source.TextFile
+			TextFile = prop.Name == nameof(SharpMUSHOptions.TextFile) ? (TextFileOptions)newValue! : source.TextFile,
+			Wiki = prop.Name == nameof(SharpMUSHOptions.Wiki) ? (WikiOptions)newValue! : source.Wiki
 		};
 	}
 

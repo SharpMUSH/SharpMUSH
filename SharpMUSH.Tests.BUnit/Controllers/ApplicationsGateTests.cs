@@ -205,6 +205,7 @@ public class ApplicationsGateTests
 		Warning = new WarningOptions(WarnInterval: "1h"),
 		TextFile = new TextFileOptions(
 			TextFilesDirectory: "TextFiles", EnableMarkdownRendering: true,
-			CacheOnStartup: true)
+			CacheOnStartup: true),
+		Wiki = new WikiOptions()
 	};
 }

@@ -2554,4 +2554,7 @@
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Le schéma de l'application n'a pas pu être chargé. Le gestionnaire softcode à l'adresse {0} est peut-être absent ou renvoie du JSON invalide.</value>
   </data>
+  <data name="Wiki" xml:space="preserve">
+    <value>Wiki</value>
+  </data>
 </root>

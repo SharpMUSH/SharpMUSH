@@ -308,6 +308,9 @@ public static partial class ReadPennMushConfig
 				TextFilesDirectory: RequiredString(Get(nameof(TextFileOptions.TextFilesDirectory)), "TextFiles"),
 				EnableMarkdownRendering: Boolean(Get(nameof(TextFileOptions.EnableMarkdownRendering)), true),
 				CacheOnStartup: Boolean(Get(nameof(TextFileOptions.CacheOnStartup)), true)
+			),
+			Wiki = new WikiOptions(
+				DefaultLocale: RequiredString(Get(nameof(WikiOptions.DefaultLocale)), WikiOptions.DefaultLocaleFallback)
 			)
 		};
 

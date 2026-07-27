@@ -385,7 +385,10 @@ public class Startup(
 		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddKeyedSingleton(nameof(colorFile), colorFile);
 		services.AddOptions<SharpMUSHOptions>().ValidateOnStart();
-		services.AddScoped<IValidateOptions<SharpMUSHOptions>, Configuration.Generated.ValidateSharpMUSHOptions>();
+		// ValidateSharpOptions, not the generated validator directly: it delegates to the generated one and
+		// adds the checks the generator cannot express (currently Wiki.DefaultLocale being a real culture).
+		// Registering the generated validator here would silently skip those.
+		services.AddScoped<IValidateOptions<SharpMUSHOptions>, ValidateSharpOptions>();
 		services.AddOptions<ColorsOptions>().ValidateOnStart();
 		services.AddSingleton<IOptionsWrapper<SharpMUSHOptions>, Library.Services.OptionsWrapper<SharpMUSHOptions>>();
 		services.AddSingleton<IOptionsWrapper<ColorsOptions>, Library.Services.OptionsWrapper<ColorsOptions>>();
