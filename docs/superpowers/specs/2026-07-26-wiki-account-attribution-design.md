@@ -4,28 +4,30 @@ Date: 2026-07-26
 
 ## Problem
 
-Wiki attribution is stored as a raw dbref string: `WikiPage.AuthorDbref` and
-`LastEditorDbref`, `WikiRevision.EditorDbref`, `WikiAsset.UploaderDbref`. Three
-things are wrong with that.
-
-**The stored value is often not a dbref.** `WikiController.CallerDbref` reads
-`ClaimTypes.NameIdentifier` and documents it as the caller's character dbref, but
-`AccountSessionAuthenticationHandler` and `DebugAuthenticationHandler` both put the
-*account* id there. Every portal-authored page therefore stores
-`node_accounts/<key>` in a field named and typed as a dbref. The consequence is not
-cosmetic: `WikiController.IsAuthor` compares the caller's account id against that
-stored value, so **the author check never matches for a portal caller**.
-`GalleryController` has the same miswiring, and reports "Missing character identity."
-while holding an account id.
+Wiki attribution is stored as a character dbref string: `WikiPage.AuthorDbref` and
+`LastEditorDbref`, `WikiRevision.EditorDbref`, `WikiAsset.UploaderDbref`. Two things
+are wrong with that.
 
 **A character is the wrong anchor.** One human may own several characters, and a wiki
 edit is the human's act, not a persona's. Attribution keyed to a character splits one
-contributor's history across their characters and breaks when a character is renamed
-or destroyed.
+contributor's history across their characters, and asks a question with no good answer
+when the character is destroyed: the edit still happened, and someone is still
+accountable for it, but the thing the record points at is gone.
 
 **Nothing survives the account going away.** `DeleteAccountAsync` hard-deletes the
 account document and strips its `edge_account_owns_character` edges first. The moment
 wiki records point at accounts, that becomes a dangling reference.
+
+> **Revised 2026-07-26.** This section originally claimed the stored value was often
+> not a dbref at all — that `WikiController.CallerDbref` read
+> `ClaimTypes.NameIdentifier` (the account id) and so `IsAuthor` never matched for a
+> portal caller. That was true of the branch the spec was drafted against, and is
+> **already fixed on `main`**: `CharacterClaimsExtensions.GetActingCharacter` reads the
+> `character_dbref` claim, and `WikiController`, `GalleryController`,
+> `WikiAssetController`, and `MailController` all go through it. The stored value is now
+> a genuine character reference. That removes a bug from the motivation but not the
+> design: a character is still the wrong anchor, which is the argument this spec rests
+> on.
 
 ## Goal
 
@@ -220,40 +222,41 @@ comment true.
 
 ### Write paths
 
-- `WikiController.CallerDbref` → `CallerAccountId`: same claim, correct name and doc
-  comment. `IsAuthor` then compares account id to account id, fixing the check that
-  currently never matches for portal callers.
-- `GalleryController` takes an account id, and its "Missing character identity."
-  message becomes accurate.
+- `WikiController.CallerDbref` → `CallerAccountId`, reading `NameIdentifier` instead of
+  the character claim. `IsAuthor` then compares account id to account id.
+- `GalleryController` and `WikiAssetController` take an account id for the uploader.
 - In-game: `WikiCommandHelper.EditorDbref(executor)` becomes an async resolve through
   `IAccountService.GetAccountForCharacterAsync`. No linked account means the edit is
   refused with a localized message.
 - Seeding: `StartupHandler`'s three `authorDbref: "#1"` call sites use the system
   account id.
 
-### Objids over dbrefs
+### Objids over dbrefs — done
 
-`SharpObject.DBRef` already builds `new(Key, CreationTime)` and its `ToString()`
-already emits `#N:ms`. All three handlers already emit `character_creation_time`
-(`MushBasicAuthenticationHandler:119`, `AccountSessionAuthenticationHandler:60`,
-`DebugAuthenticationHandler:76`), so the creation time is already on every principal
-and no new claim is needed. Two changes:
+This was specified here and has since been implemented separately, because it is a
+cross-cutting transport concern rather than attribution work. Recorded for context:
 
-- `CharacterIdentity` returns a `DBRef` carrying both parts, instead of an `int` that
-  deliberately parses the objid suffix off and then discards it. The timestamp comes
-  from the objid suffix when present, else from the existing `character_creation_time`
-  claim — which `ApiControllerBase.CurrentCharacterCreationTime` already reads.
-- All three handlers emit `character_dbref` as `player.Object.DBRef.ToString()` rather
-  than `$"#{player.Object.Key}"`, so the claim itself carries the objid.
+An object reference crossed four boundaries as a bare string — a claim, a client hub
+argument, a NATS payload, a SignalR group name — with nothing forcing the spellings to
+agree, so `"42"`, `"#42"`, and `"#42:1700000000"` named three different groups. A
+producer and consumer that disagreed would deliver nothing at all, silently, because
+SignalR accepts any group name and publishing to an empty group is not an error.
 
-This closes a recycle hole: a stale session pointing at a reused dbref currently
-resolves to whatever object now occupies the slot.
+Rather than normalizing at the group-name chokepoint — which would have preserved the
+divergence — the contract is now typed: `CharacterGroupName`, `RoomGroupName`,
+`SendToCharacterAsync`, and `SendToRoomAsync` take a `DBRef`, so a wrong spelling is
+unrepresentable; `DBRef.ToString()` is the only serialization and `DBRef.TryParse` the
+only way in. The handlers emit `character_dbref` as an objid,
+`CharacterClaimsExtensions.GetActingCharacter` returns a parsed `DBRef`, the NATS bridge
+drops payloads that do not parse, and `JoinRoom`/`LeaveRoom` reject unparseable client
+input rather than joining a group nothing publishes to.
 
-- `MailController.ResolvePlayerAsync` reads `NameIdentifier` as a dbref and builds
-  `new DBRef(dbref, null)`. It is wrong twice — portal sessions hand it an account id,
-  and the null creation time makes it recycle-unsafe. It uses `CharacterIdentity`
-  instead. Mail stays character-scoped; this is not attribution work, but it is the
-  same claim misread in the same way.
+Objid rather than bare dbref is the point: it makes delivery recycle-safe, so a stale
+reference to a destroyed object cannot leak to whatever now occupies that slot.
+
+`MailController` and `GalleryController` were each hand-stripping the objid suffix and
+rebuilding `new DBRef(n, null)` — the recycle-unsafe pattern — and now use the parsed
+accessor.
 
 ## Schema changes
 

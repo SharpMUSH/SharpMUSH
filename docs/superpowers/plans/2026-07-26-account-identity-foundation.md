@@ -4,7 +4,7 @@
 
 **Goal:** Make an account a permanent, safely-referenceable identity — closing or deleting an account becomes a status transition rather than a row removal — and make the account id and character objid on a request principal correct and unambiguous.
 
-**Architecture:** `SharpAccount.IsDisabled` (bool) becomes an `AccountStatus` enum with four states, and `DeleteAccountAsync` becomes `SetAccountStatusAsync`, so account documents are never removed. A reserved `system` account owns server-authored content. On the request side, `ClaimTypes.NameIdentifier` becomes uniformly "account id" across all three authentication handlers, and `CharacterIdentity` returns a full objid-carrying `DBRef` instead of a bare int.
+**Architecture:** `SharpAccount.IsDisabled` (bool) becomes an `AccountStatus` enum with four states, and `DeleteAccountAsync` becomes `SetAccountStatusAsync`, so account documents are never removed. A reserved `system` account owns server-authored content. On the request side, `ClaimTypes.NameIdentifier` becomes uniformly "account id" across all three authentication handlers. (The objid transport contract originally planned here as Tasks 6-7 has since been implemented separately — see the note where those tasks were.)
 
 This is phase 1 of the spec at `docs/superpowers/specs/2026-07-26-wiki-account-attribution-design.md`. It touches no wiki code. Phase 2 (attribution edges, asset metadata into the database) depends on it.
 
@@ -29,7 +29,6 @@ This is phase 1 of the spec at `docs/superpowers/specs/2026-07-26-wiki-account-a
 - `SharpMUSH.Library/Models/AccountStatus.cs` — the four-state enum.
 - `SharpMUSH.Library/Definitions/SystemAccount.cs` — the reserved username constant, so server and client agree on one spelling.
 - `SharpMUSH.Tests/Services/AccountStatusTests.cs` — lifecycle transitions, guards, login gating.
-- `SharpMUSH.Tests/Authentication/CharacterIdentityTests.cs` — objid round-trip and recycle mismatch.
 
 **Modified (grouped by responsibility):**
 - *Model + contract:* `SharpAccount.cs`, `ISharpDatabase.cs`, `IAccountService.cs`, `AccountService.cs`
@@ -37,7 +36,7 @@ This is phase 1 of the spec at `docs/superpowers/specs/2026-07-26-wiki-account-a
 - *Bootstrap:* `BootstrapService.cs`
 - *In-game surface:* `AccountAdminCommands.cs`, `ErrorMessages.cs`, `Notifications.resx`, `Notifications.fr.resx`
 - *HTTP surface:* `AdminAccountsController.cs`, `AccountController.cs`, `AuthController.cs`, `RolesController.cs`, `MailController.cs`
-- *Auth:* `AccountSessionAuthenticationHandler.cs`, `MushBasicAuthenticationHandler.cs`, `DebugAuthenticationHandler.cs`, `CharacterIdentity.cs`
+- *Auth:* `MushBasicAuthenticationHandler.cs` (Task 8 only — the other handlers and the claims accessor are already done)
 - *Client:* `AdminAccountsService.cs`, `AdminAccounts.razor`, `AccountRolesModel.cs`, `AdminRoles.razor`, `SharedResource.resx`, `SharedResource.fr.resx`
 
 ---
@@ -718,8 +717,17 @@ session revocation happens in exactly one place."
 
 ### Task 3: The reserved system account
 
+> **Partly landed already.** `SharpMUSH.Library/Definitions/SystemAccount.cs` exists
+> (`Username = "system"`, `IsReserved`), and `BootstrapService`'s first-run guard already
+> asks "does any *non-reserved* account exist?" via `GetAllAccountsAsync` rather than
+> `HasAnyAccountAsync` — the hazard this plan flagged, fixed ahead of time with tests in
+> `SharpMUSH.Tests/Services/BootstrapServiceTests.cs`. Skip Step 3 and Step 6 below;
+> Steps 4, 5, and 7 (the interface accessor, the two service guards, and
+> `GetOrCreateSystemAccountAsync`) are still to do. `BootstrapService` does not yet
+> create the system account — add that call in Step 6's place.
+
 **Files:**
-- Create: `SharpMUSH.Library/Definitions/SystemAccount.cs`
+- Create: `SharpMUSH.Library/Definitions/SystemAccount.cs` *(already exists)*
 - Modify: `SharpMUSH.Library/Services/AccountService.cs` (`CreateAccountAsync`, `SetAccountStatusAsync`)
 - Modify: `SharpMUSH.Library/Services/Interfaces/IAccountService.cs`
 - Modify: `SharpMUSH.Server/Services/BootstrapService.cs:18-32`
@@ -1431,362 +1439,40 @@ rather than relying on it alone. Labels come from SharedResource.resx with
 
 ---
 
-### Task 6: `CharacterIdentity` returns an objid-carrying `DBRef`
+### Tasks 6 and 7: superseded — already implemented
 
-**Files:**
-- Modify: `SharpMUSH.Server/Helpers/CharacterIdentity.cs`
-- Modify: `SharpMUSH.Server/Authentication/MushBasicAuthenticationHandler.cs:121`
-- Modify: `SharpMUSH.Server/Authentication/AccountSessionAuthenticationHandler.cs:56`
-- Modify: `SharpMUSH.Server/Authentication/DebugAuthenticationHandler.cs:79`
-- Modify: `SharpMUSH.Server/Hubs/GameHub.cs:55` (and any caller of `CurrentCharacterDbref` that parses a number)
-- Test: `SharpMUSH.Tests/Authentication/CharacterIdentityTests.cs` (create)
-- Test: `SharpMUSH.Tests/Server/Hubs/CharacterGroupNameTests.cs` (create)
+**Do not implement these.** They were planned here and then done as a separate change,
+because the objid contract is a cross-cutting transport concern rather than attribution
+work. What shipped differs from what this plan described, so the original steps would be
+actively misleading:
 
-**Interfaces:**
-- Consumes: nothing from earlier tasks.
-- Produces: `CharacterIdentity.Resolve(ClaimsPrincipal user) -> DBRef?` — carries `CreationMilliseconds` whenever the principal supplies it. `CharacterIdentity.DbrefNumber` and `CharacterIdentity.Dbref` are removed; Task 7 and phase 2 use `Resolve`. Also produces the normalized `GameHub.CharacterGroupName` from Step 5.
+- There is no `CharacterIdentity` helper. The accessor is
+  `CharacterClaimsExtensions.GetActingCharacter(this ClaimsPrincipal) -> DBRef?`, which
+  already existed on `main` returning a raw string and now returns a parsed `DBRef`.
+- `GameHub.CharacterGroupName`, `RoomGroupName`, `SendToCharacterAsync`, and
+  `SendToRoomAsync` take a `DBRef` rather than a string, so the group-name hazard this
+  plan flagged is closed by the type rather than by normalization.
+- All three handlers emit `character_dbref` as `player.Object.DBRef.ToString()`.
+- `MailController` and `GalleryController` use the parsed accessor; both had been
+  hand-stripping the objid suffix and rebuilding `new DBRef(n, null)`.
+- `GameOutputMessage.CharacterDbref` is nullable; `null` means a server-wide broadcast,
+  replacing the `"*"` sentinel.
 
-**Removing the two old methods is safe:** `CharacterIdentity` currently has zero callers anywhere in the solution — it is new, uncommitted scaffolding. Verify before deleting with `grep -rn --include="*.cs" "CharacterIdentity" . | grep -v Helpers/CharacterIdentity.cs`; if that returns anything other than the tests you just wrote, migrate those callers instead of deleting.
-
-- [ ] **Step 1: Write the failing test**
-
-Create `SharpMUSH.Tests/Authentication/CharacterIdentityTests.cs`:
-
-```csharp
-using SharpMUSH.Library.Models;
-using SharpMUSH.Server.Helpers;
-using SharpMUSH.Server.Hubs;
-using System.Security.Claims;
-
-namespace SharpMUSH.Tests.Authentication;
-
-public class CharacterIdentityTests
-{
-	private static ClaimsPrincipal Principal(params (string Type, string Value)[] claims)
-		=> new(new ClaimsIdentity(claims.Select(c => new Claim(c.Type, c.Value)), "Test"));
-
-	[Test]
-	public async ValueTask Resolve_ObjidClaim_KeepsTheCreationTime()
-	{
-		var user = Principal((GameHub.CharacterDbrefClaim, "#12:1700000000"));
-
-		var dbref = CharacterIdentity.Resolve(user);
-
-		await Assert.That(dbref).IsNotNull();
-		await Assert.That(dbref!.Value.Number).IsEqualTo(12);
-		await Assert.That(dbref.Value.CreationMilliseconds).IsEqualTo(1700000000L);
-	}
-
-	[Test]
-	public async ValueTask Resolve_BareDbrefWithCreationTimeClaim_CombinesThem()
-	{
-		var user = Principal(
-			(GameHub.CharacterDbrefClaim, "#12"),
-			("character_creation_time", "1700000000"));
-
-		var dbref = CharacterIdentity.Resolve(user);
-
-		await Assert.That(dbref!.Value.Number).IsEqualTo(12);
-		await Assert.That(dbref.Value.CreationMilliseconds).IsEqualTo(1700000000L);
-	}
-
-	[Test]
-	public async ValueTask Resolve_CharacterKeyFallback_CombinesWithCreationTime()
-	{
-		var user = Principal(
-			("character_key", "42"),
-			("character_creation_time", "1700000042"));
-
-		var dbref = CharacterIdentity.Resolve(user);
-
-		await Assert.That(dbref!.Value.Number).IsEqualTo(42);
-		await Assert.That(dbref.Value.CreationMilliseconds).IsEqualTo(1700000042L);
-	}
-
-	[Test]
-	public async ValueTask Resolve_BareDbrefOnly_HasNoCreationTime()
-	{
-		var user = Principal((GameHub.CharacterDbrefClaim, "#12"));
-
-		var dbref = CharacterIdentity.Resolve(user);
-
-		await Assert.That(dbref!.Value.Number).IsEqualTo(12);
-		await Assert.That(dbref.Value.CreationMilliseconds).IsNull();
-	}
-
-	[Test]
-	public async ValueTask Resolve_NoCharacterClaims_ReturnsNull()
-	{
-		var user = Principal((ClaimTypes.NameIdentifier, "node_accounts/1"));
-
-		await Assert.That(CharacterIdentity.Resolve(user)).IsNull();
-	}
-
-	[Test]
-	public async ValueTask Resolve_ObjidClaim_DoesNotMatchARecycledDbref()
-	{
-		var user = Principal((GameHub.CharacterDbrefClaim, "#12:1700000000"));
-		var recycledOccupant = new DBRef(12, 1800000000);
-
-		var dbref = CharacterIdentity.Resolve(user);
-
-		await Assert.That(recycledOccupant.Matches(dbref!.Value)).IsFalse();
-	}
-}
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/CharacterIdentityTests/*"`
-Expected: compile failure — `CharacterIdentity` has no `Resolve`.
-
-- [ ] **Step 3: Rewrite `CharacterIdentity`**
-
-Replace the body of `SharpMUSH.Server/Helpers/CharacterIdentity.cs`:
-
-```csharp
-using SharpMUSH.Library.Models;
-using SharpMUSH.Server.Hubs;
-using System.Security.Claims;
-
-namespace SharpMUSH.Server.Helpers;
-
-/// <summary>
-/// Reads the acting character out of a request principal. Both authentication handlers put the
-/// <em>account</em> id in <see cref="ClaimTypes.NameIdentifier"/> (accounts own characters, and one
-/// account can own several), so the character lives in its own claim —
-/// <see cref="GameHub.CharacterDbrefClaim"/>, with <c>character_key</c> as the numeric form emitted
-/// by the development handler. Reading NameIdentifier as a dbref never resolves.
-/// </summary>
-public static class CharacterIdentity
-{
-	/// <summary>
-	/// The acting character as a <see cref="DBRef"/>, or <see langword="null"/> when the principal
-	/// carries none. Carries <see cref="DBRef.CreationMilliseconds"/> whenever the principal
-	/// supplies it, so <see cref="DBRef.Matches"/> rejects a recycled dbref rather than resolving
-	/// to whatever object now occupies the slot.
-	/// </summary>
-	public static DBRef? Resolve(ClaimsPrincipal user)
-	{
-		var creationTime = long.TryParse(user.FindFirstValue("character_creation_time"), out var parsedTime)
-			? parsedTime
-			: (long?)null;
-
-		if (user.FindFirstValue(GameHub.CharacterDbrefClaim) is { } claim)
-		{
-			var parts = claim.TrimStart('#').Split(':', 2);
-			if (int.TryParse(parts[0], out var number))
-			{
-				return new DBRef(number,
-					parts.Length == 2 && long.TryParse(parts[1], out var objidTime) ? objidTime : creationTime);
-			}
-		}
-
-		return int.TryParse(user.FindFirstValue("character_key"), out var key)
-			? new DBRef(key, creationTime)
-			: null;
-	}
-}
-```
-
-- [ ] **Step 4: Emit objids from the handlers**
-
-- `MushBasicAuthenticationHandler.cs:121` — replace `new(GameHub.CharacterDbrefClaim, $"#{player.Object.Key}")` with `new(GameHub.CharacterDbrefClaim, player.Object.DBRef.ToString())`.
-- `AccountSessionAuthenticationHandler.cs:56` — replace `claims.Add(new Claim(GameHub.CharacterDbrefClaim, $"#{acting.Object.Key}"));` with `claims.Add(new Claim(GameHub.CharacterDbrefClaim, acting.Object.DBRef.ToString()));`.
-- `DebugAuthenticationHandler.cs:79` — replace `claims.Add(new(GameHub.CharacterDbrefClaim, $"#{player.Object.Key}"));` with `claims.Add(new(GameHub.CharacterDbrefClaim, player.Object.DBRef.ToString()));`.
-
-`SharpObject.DBRef` is already `new(Key, CreationTime)` and its `ToString()` already emits `#N:ms`, so no new claim and no formatting helper is needed.
-
-Leave the two hardcoded `"#1"` claims in `DebugAuthenticationHandler.cs:89,128` alone — they are bootstrap-pending placeholders with no player object to read a creation time from.
-
-- [ ] **Step 5: Normalize the SignalR group name — do not skip this**
-
-Changing the claim to objid form silently breaks real-time output unless this step goes with it.
-
-`GameHub.OnConnectedAsync` uses the raw claim value as a **group name**:
-`CharacterGroupName(dbref)` → `$"char:{dbref}"` (`GameHub.cs:55,77`). The publisher side,
-`NatsBridgeService.cs:155`, builds the same group name from the dbref that arrives over NATS as
-`game.output.{characterDbref}` — a **bare** dbref, because that is what the engine emits.
-
-So after Step 4 the subscriber would join `char:#12:1700000000` while the publisher targets
-`char:#12`, and the client would receive no game output at all. No test covers this: the group
-name is a string on both sides and nothing asserts they agree.
-
-Fix it at the single point both sides go through — `GameHub.cs:55`:
-
-```csharp
-	/// <summary>
-	/// The SignalR group for a character. Normalizes to the bare dbref number so a bare dbref, a
-	/// plain number, and a full objid all name the same group — the claim carries an objid while
-	/// NatsBridgeService forwards a bare dbref, and the two must land on the same group.
-	/// </summary>
-	public static string CharacterGroupName(string dbref) =>
-		$"char:#{dbref.TrimStart('#').Split(':', 2)[0]}";
-```
-
-`CurrentCharacterDbref` (`GameHub.cs:211`) returns the raw claim string. Check each of its callers:
-any that parses it into a number must go through `CharacterIdentity.Resolve(Context.User)` instead,
-and any that only forwards it as a group name is already covered by the normalization above.
-
-- [ ] **Step 5a: Prove the group names agree**
-
-Add to the `GameHub` test class (or create `SharpMUSH.Tests/Server/Hubs/CharacterGroupNameTests.cs`):
-
-```csharp
-using SharpMUSH.Server.Hubs;
-
-namespace SharpMUSH.Tests.Server.Hubs;
-
-public class CharacterGroupNameTests
-{
-	[Test]
-	[Arguments("#12")]
-	[Arguments("12")]
-	[Arguments("#12:1700000000")]
-	public async ValueTask CharacterGroupName_NormalizesEveryFormToTheSameGroup(string input)
-	{
-		await Assert.That(GameHub.CharacterGroupName(input)).IsEqualTo("char:#12");
-	}
-}
-```
-
-Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/CharacterGroupNameTests/*"`
-Expected: PASS.
-
-Then run the hub tests:
-
-Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/GameHub*/*"`
-Expected: PASS.
-
-- [ ] **Step 6: Run tests to verify they pass**
-
-Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/CharacterIdentityTests/*"`
-Then: `dotnet run --project SharpMUSH.Tests`
-Expected: PASS.
-
-- [ ] **Step 7: Commit**
-
-```bash
-git add SharpMUSH.Server SharpMUSH.Tests
-git commit -m "Make CharacterIdentity objid-aware and emit objids in the claim
-
-It previously parsed the objid suffix off and then discarded it, returning
-a bare int — so a stale session pointing at a recycled dbref resolved to
-whatever object now occupies the slot. Resolve() now returns a DBRef
-carrying the creation time, taken from the objid suffix when present and
-otherwise from the character_creation_time claim every handler already
-emits, and the handlers emit character_dbref via Object.DBRef.ToString().
-
-CharacterGroupName normalizes to the bare dbref number, because the claim
-now carries an objid while NatsBridgeService still forwards a bare dbref —
-without this the subscriber joins char:#12:1700000000, the publisher targets
-char:#12, and the client silently receives no game output."
-```
+Task 8 below is the one piece of identity plumbing still outstanding.
 
 ---
 
-### Task 7: `MailController` resolves its character correctly
-
-**Files:**
-- Modify: `SharpMUSH.Server/Controllers/MailController.cs:159-171`
-- Test: `SharpMUSH.Tests.Integration/` — add to the mail API test class if one exists; otherwise create `SharpMUSH.Tests/Server/Controllers/MailControllerIdentityTests.cs`
-
-**Interfaces:**
-- Consumes: `CharacterIdentity.Resolve` from Task 6.
-- Produces: no new types.
-
-- [ ] **Step 1: Write the failing test**
-
-`ResolvePlayerAsync` is private, so test it through the controller's public surface. Create `SharpMUSH.Tests/Server/Controllers/MailControllerIdentityTests.cs`:
-
-```csharp
-using NSubstitute;
-using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Server.Hubs;
-using System.Security.Claims;
-
-namespace SharpMUSH.Tests.Server.Controllers;
-
-public class MailControllerIdentityTests
-{
-	[Test]
-	public async ValueTask ListMail_AccountIdInNameIdentifier_StillResolvesTheCharacter()
-	{
-		// Arrange a MailController with a substituted IMediator, and a principal shaped like a
-		// portal session: an ACCOUNT id in NameIdentifier plus the character in its own claims.
-		var principal = new ClaimsPrincipal(new ClaimsIdentity(
-		[
-			new Claim(ClaimTypes.NameIdentifier, "node_accounts/1"),
-			new Claim(GameHub.CharacterDbrefClaim, "#12:1700000000"),
-			new Claim("character_creation_time", "1700000000")
-		], "Test"));
-
-		var controller = BuildController(principal, out var mediator);
-
-		await controller.List(CancellationToken.None);
-
-		await mediator.Received().Send(
-			Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 12 && q.DBRef.CreationMilliseconds == 1700000000L),
-			Arg.Any<CancellationToken>());
-	}
-}
-```
-
-`BuildController` and `controller.List` stand in for that file's real construction and a real read action — mirror an existing controller unit test in `SharpMUSH.Tests/Server/Controllers/` for the `ControllerContext`/`HttpContext.User` wiring, and use whichever mail read action exists.
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/MailControllerIdentityTests/*"`
-Expected: FAIL — `ResolvePlayerAsync` parses `"node_accounts/1"` as a dbref, fails, and returns null, so no `GetObjectNodeQuery` is ever sent.
-
-- [ ] **Step 3: Use `CharacterIdentity`**
-
-In `SharpMUSH.Server/Controllers/MailController.cs`, replace `ResolvePlayerAsync`:
-
-```csharp
-	/// <summary>Resolves the authenticated character to a player, or null.</summary>
-	private async Task<SharpPlayer?> ResolvePlayerAsync(CancellationToken ct)
-	{
-		if (CharacterIdentity.Resolve(User) is not { } dbref) return null;
-
-		var result = await mediator.Send(new GetObjectNodeQuery(dbref), ct);
-		return result.IsPlayer ? result.AsPlayer : null;
-	}
-```
-
-Add `using SharpMUSH.Server.Helpers;` to the file's usings. Remove the now-unused `using System.Security.Claims;` if nothing else in the file needs it — leaving it would trip `TreatWarningsAsErrors`.
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/MailControllerIdentityTests/*"`
-Then: `dotnet run --project SharpMUSH.Tests`
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add SharpMUSH.Server SharpMUSH.Tests
-git commit -m "Fix MailController reading NameIdentifier as a character dbref
-
-It was wrong twice: portal sessions put an ACCOUNT id in NameIdentifier,
-so mail never resolved for them, and new DBRef(n, null) discarded the
-creation time and would match a recycled dbref. CharacterIdentity.Resolve
-handles both."
-```
-
----
 
 ### Task 8: `NameIdentifier` becomes uniformly the account id
 
-This is last on purpose: it removes the last producer of a dbref-shaped `NameIdentifier`, so every consumer must already be off it. Task 7 moved the only one that wasn't.
+This is last on purpose: it removes the last producer of a dbref-shaped `NameIdentifier`, so every consumer must already be off it. The controllers that read it as a character reference now go through `GetActingCharacter` instead, so nothing is left depending on the old shape.
 
 **Files:**
 - Modify: `SharpMUSH.Server/Authentication/MushBasicAuthenticationHandler.cs:113-122`
 - Test: `SharpMUSH.Tests/Authentication/` — the existing basic-auth handler test class, or create `MushBasicAuthHandlerClaimsTests.cs`
 
 **Interfaces:**
-- Consumes: `IAccountService.GetAccountForCharacterAsync` (pre-existing); `CharacterIdentity.Resolve` from Task 6.
+- Consumes: `IAccountService.GetAccountForCharacterAsync` (pre-existing); `CharacterClaimsExtensions.GetActingCharacter` (already implemented).
 - Produces: no new types. Establishes the invariant that `ClaimTypes.NameIdentifier` is an account id on every principal, which phase 2's `WikiController.CallerAccountId` depends on.
 
 - [ ] **Step 1: Write the failing test**
@@ -1803,7 +1489,7 @@ This is last on purpose: it removes the last producer of a dbref-shaped `NameIde
 
 		await Assert.That(result.Succeeded).IsTrue();
 		await Assert.That(result.Principal!.FindFirstValue(ClaimTypes.NameIdentifier)).IsEqualTo("node_accounts/7");
-		await Assert.That(CharacterIdentity.Resolve(result.Principal!)!.Value.Number).IsEqualTo(TestCharacterKey);
+		await Assert.That(result.Principal!.GetActingCharacter()!.Value.Number).IsEqualTo(TestCharacterKey);
 	}
 
 	[Test]
@@ -1816,7 +1502,7 @@ This is last on purpose: it removes the last producer of a dbref-shaped `NameIde
 
 		await Assert.That(result.Succeeded).IsTrue();
 		await Assert.That(result.Principal!.FindFirstValue(ClaimTypes.NameIdentifier)).IsNull();
-		await Assert.That(CharacterIdentity.Resolve(result.Principal!)!.Value.Number).IsEqualTo(TestCharacterKey);
+		await Assert.That(result.Principal!.GetActingCharacter()!.Value.Number).IsEqualTo(TestCharacterKey);
 	}
 ```
 
@@ -1862,7 +1548,7 @@ Verify the handler's DI registration resolves `IAccountService` — `Authenticat
     /// The account id from the request principal ("node_accounts/&lt;key&gt;"), or
     /// <see langword="null"/> when the principal carries none. Every authentication handler puts
     /// the account id here; the acting character lives in its own claims — see
-    /// <see cref="Helpers.CharacterIdentity"/>.
+    /// <see cref="Authentication.CharacterClaimsExtensions"/>.
     /// </summary>
     protected string? CurrentAccountId =>
         User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -1873,7 +1559,7 @@ Verify the handler's DI registration resolves `IAccountService` — `Authenticat
 Run: `dotnet run --project SharpMUSH.Tests`
 Then: `dotnet run --project SharpMUSH.Tests.Integration`
 Then: `dotnet run --project SharpMUSH.Tests.BUnit`
-Expected: PASS. Any remaining failure is a consumer still reading `NameIdentifier` as a dbref — fix it with `CharacterIdentity.Resolve`.
+Expected: PASS. Any remaining failure is a consumer still reading `NameIdentifier` as a dbref — fix it with `GetActingCharacter`.
 
 - [ ] **Step 6: Commit**
 
@@ -1903,9 +1589,9 @@ dotnet run --project SharpMUSH.Tests.Integration
 
 Manual check, since it exercises bootstrap ordering that no test covers end to end:
 
-1. Delete the database (`docker compose down -v && docker compose up -d`, or drop the Arango database).
+1. Delete the database (`podman compose down -v && podman compose up -d` — this environment has Podman with `DOCKER_HOST` set and no `docker` binary — or drop the Arango database directly).
 2. Start `SharpMUSH.Server`.
-3. Confirm the log line `Bootstrap: pre-generated unclaimed admin account linked to #1.` appears — this proves the system account's existence did not suppress admin pre-generation, which is the trap in Task 3 Step 6.
+3. Confirm the log line `Bootstrap: pre-generated unclaimed admin account linked to #1.` appears — this proves the system account's existence did not suppress admin pre-generation. `BootstrapServiceTests` covers the guard in isolation; this checks it end to end against a real database.
 4. Run `@account/list` in-game as God and confirm both `system` and `admin` appear, `system` showing `active`.
 5. Run `@account/close system` and confirm it is refused.
 
