@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
+using NSubstitute;
+using SharpMUSH.Configuration.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Library.Models.Wiki;
@@ -17,7 +20,13 @@ public class SeoControllerTests
 {
 	private static SeoController MakeController(InMemoryWikiService wiki)
 	{
-		var controller = new SeoController(wiki, NullLogger<SeoController>.Instance);
+		// A real localization service over the same storage, not a substitute: a double would return an
+		// empty locale list for every page and the sitemap's alternates would never be exercised.
+		var monitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
+		monitor.CurrentValue.Returns(TestSharpMushOptions.Create());
+		var localization = new WikiLocalizationService(
+			wiki, new WikiLocaleResolver(monitor), NullLogger<WikiLocalizationService>.Instance);
+		var controller = new SeoController(wiki, localization, NullLogger<SeoController>.Instance);
 
 		var httpContext = new DefaultHttpContext();
 		httpContext.Request.Scheme = "https";

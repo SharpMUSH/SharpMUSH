@@ -46,10 +46,18 @@ public sealed class BotPrerenderMiddleware(
 		var host = context.Request.Host.Value;
 		var canonicalBase = $"{scheme}://{host}";
 
-		var cached = prerenderCache.Get(path);
+		// A bot may request any locale, so the locale is part of the cache identity. Keying on path alone
+		// would let the first French crawler poison the entry every other reader gets.
+		// This is a read path, so the permissive form: an unparseable ?lang= keys the default entry rather
+		// than producing an error.
+		var requestedLang = context.Request.Query["lang"].FirstOrDefault();
+		var normalizedLang = WikiHelpers.NormalizeLocaleOrEmpty(requestedLang);
+		var cacheKey = normalizedLang.Length == 0 ? path : $"{path}#{normalizedLang}";
+
+		var cached = prerenderCache.Get(cacheKey);
 		if (cached is not null)
 		{
-			logger.LogDebug("BotPrerender: cache hit for {Path}", path);
+			logger.LogDebug("BotPrerender: cache hit for {Key}", cacheKey);
 			await WriteHtmlResponse(context, cached);
 			return;
 		}
@@ -58,6 +66,7 @@ public sealed class BotPrerenderMiddleware(
 		// dependency if IWikiService is registered as Scoped.
 		await using var scope = scopeFactory.CreateAsyncScope();
 		var wikiService = scope.ServiceProvider.GetRequiredService<IWikiService>();
+		var localization = scope.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
 
 		string? html = null;
 
@@ -70,11 +79,16 @@ public sealed class BotPrerenderMiddleware(
 				var category = segments[1];
 				var slug = string.Join('/', segments[2..]);
 				var result = await wikiService.GetBySlugAsync(slug, category, ns);
-				if (result.IsT0)
+				// Published gate: a prerender is anonymous, bot-facing output, and this branch had no
+				// visibility check at all — a draft page was reachable by any crawler that asked.
+				if (result.IsT0 && result.AsT0.Published)
 				{
 					var page = result.AsT0;
-					html = WikiController.GeneratePrerenderHtml(page,
-						$"{canonicalBase}/wiki/{page.Namespace}/{page.Category}/{page.Slug}");
+					html = WikiController.GeneratePrerenderHtml(
+						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
+						$"{canonicalBase}/wiki/{page.Namespace}/{page.Category}/{page.Slug}",
+						await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
+						localization.DefaultLocale);
 				}
 			}
 		}
@@ -84,10 +98,14 @@ public sealed class BotPrerenderMiddleware(
 			if (!string.IsNullOrEmpty(name))
 			{
 				var result = await wikiService.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character);
-				if (result.IsT0)
+				if (result.IsT0 && result.AsT0.Published)
 				{
 					var page = result.AsT0;
-					html = WikiController.GenerateCharacterPrerenderHtml(page, $"{canonicalBase}/character/{name}");
+					html = WikiController.GenerateCharacterPrerenderHtml(
+						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
+						$"{canonicalBase}/character/{name}",
+						await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
+						localization.DefaultLocale);
 				}
 			}
 		}
@@ -97,18 +115,22 @@ public sealed class BotPrerenderMiddleware(
 			if (!string.IsNullOrEmpty(topic))
 			{
 				var result = await wikiService.GetBySlugAsync(topic, WikiHelpers.DefaultCategory, WikiNamespace.Help);
-				if (result.IsT0)
+				if (result.IsT0 && result.AsT0.Published)
 				{
 					var page = result.AsT0;
-					html = WikiController.GeneratePrerenderHtml(page, $"{canonicalBase}/help/{topic}");
+					html = WikiController.GeneratePrerenderHtml(
+						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
+						$"{canonicalBase}/help/{topic}",
+						await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
+						localization.DefaultLocale);
 				}
 			}
 		}
 
 		if (html is not null)
 		{
-			prerenderCache.Set(path, html);
-			logger.LogDebug("BotPrerender: rendered and cached {Path}", path);
+			prerenderCache.Set(cacheKey, html);
+			logger.LogDebug("BotPrerender: rendered and cached {Key}", cacheKey);
 			await WriteHtmlResponse(context, html);
 			return;
 		}
