@@ -50,6 +50,7 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 										Email = (string?)"headwiz@example.com",
 										Status = "Active",
 										MustChangePassword = false,
+										IsReserved = false,
 										Characters = new[] { new { DbrefNumber = 1, Name = "Headwiz" } },
 								},
 								new
@@ -59,6 +60,37 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 										Email = (string?)null,
 										Status = "Disabled",
 										MustChangePassword = false,
+										IsReserved = false,
+										Characters = Array.Empty<object>(),
+								},
+								new
+								{
+										Id = "3",
+										Username = "departed-account",
+										Email = (string?)null,
+										Status = "Closed",
+										MustChangePassword = false,
+										IsReserved = false,
+										Characters = Array.Empty<object>(),
+								},
+								new
+								{
+										Id = "4",
+										Username = "erased-account",
+										Email = (string?)null,
+										Status = "Deleted",
+										MustChangePassword = false,
+										IsReserved = false,
+										Characters = Array.Empty<object>(),
+								},
+								new
+								{
+										Id = "9",
+										Username = "system",
+										Email = (string?)null,
+										Status = "Active",
+										MustChangePassword = false,
+										IsReserved = true,
 										Characters = Array.Empty<object>(),
 								},
 			};
@@ -66,7 +98,8 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 		}
 
 		if (request.Method == HttpMethod.Post &&
-				(path.EndsWith("/reset-password") || path.EndsWith("/disable") || path.EndsWith("/enable")))
+				(path.EndsWith("/reset-password") || path.EndsWith("/disable") || path.EndsWith("/enable")
+					|| path.EndsWith("/status")))
 		{
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
 		}
@@ -148,12 +181,54 @@ public class AdminAccountsPageTests : BunitContext, IAsyncDisposable
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("headwiz-target") || !cut.Markup.Contains("AdmAccountDisabledChip"))
+			if (!cut.Markup.Contains("headwiz-target") || !cut.Markup.Contains("AdmAccountStatusDisabled"))
 				throw new InvalidOperationException("account rows not rendered yet");
 		});
 
 		await Assert.That(cut.Markup).Contains("headwiz-target");
-		await Assert.That(cut.Markup).Contains("AdmAccountDisabledChip");
+		await Assert.That(cut.Markup).Contains("AdmAccountStatusDisabled");
+	}
+
+	[TUnit.Core.Test]
+	public async Task RendersEveryStatus_ForAuthorizedUser()
+	{
+		Auth.SetAuthorized("headwiz");
+		Auth.SetRoles("Wizard");
+
+		var cut = Render<SharpMUSH.Client.Pages.Admin.AdminAccounts>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("departed-account"))
+				throw new InvalidOperationException("account rows not rendered yet");
+		});
+
+		await Assert.That(cut.Markup).Contains("AdmAccountStatusActive");
+		await Assert.That(cut.Markup).Contains("AdmAccountStatusDisabled");
+		await Assert.That(cut.Markup).Contains("AdmAccountStatusClosed");
+		await Assert.That(cut.Markup).Contains("AdmAccountStatusDeleted");
+	}
+
+	/// <summary>
+	/// The reserved row offers no status actions, matching the server-side guard rather than
+	/// relying on it alone. Four actionable rows: Active offers three targets, the other three
+	/// offer one each.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task ReservedAccountRow_OffersNoStatusActions()
+	{
+		Auth.SetAuthorized("headwiz");
+		Auth.SetRoles("Wizard");
+
+		var cut = Render<SharpMUSH.Client.Pages.Admin.AdminAccounts>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("system"))
+				throw new InvalidOperationException("account rows not rendered yet");
+		});
+
+		await Assert.That(cut.FindAll("button[data-testid='account-status-action']").Count).IsEqualTo(6);
 	}
 
 	[TUnit.Core.Test]

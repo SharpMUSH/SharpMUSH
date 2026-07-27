@@ -1495,14 +1495,8 @@
   <data name="AdmStatus" xml:space="preserve">
     <value>État</value>
   </data>
-  <data name="AdmAccountDisabledChip" xml:space="preserve">
-    <value>DÉSACTIVÉ</value>
-  </data>
   <data name="AdmAccountMustChangePasswordChip" xml:space="preserve">
     <value>mot de passe à changer</value>
-  </data>
-  <data name="AdmAccountActiveChip" xml:space="preserve">
-    <value>actif</value>
   </data>
   <data name="AdmResetPassword" xml:space="preserve">
     <value>Réinitialiser le mot de passe</value>
@@ -2553,5 +2547,32 @@
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Le schéma de l'application n'a pas pu être chargé. Le gestionnaire softcode à l'adresse {0} est peut-être absent ou renvoie du JSON invalide.</value>
+  </data>
+  <data name="AdmAccountStatusActive" xml:space="preserve">
+    <value>Actif</value>
+  </data>
+  <data name="AdmAccountStatusDisabled" xml:space="preserve">
+    <value>Désactivé</value>
+  </data>
+  <data name="AdmAccountStatusClosed" xml:space="preserve">
+    <value>Fermé</value>
+  </data>
+  <data name="AdmAccountStatusDeleted" xml:space="preserve">
+    <value>Supprimé</value>
+  </data>
+  <data name="AdmAccountActionActive" xml:space="preserve">
+    <value>Réactiver</value>
+  </data>
+  <data name="AdmAccountActionDisabled" xml:space="preserve">
+    <value>Désactiver</value>
+  </data>
+  <data name="AdmAccountActionClosed" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="AdmAccountActionDeleted" xml:space="preserve">
+    <value>Supprimer</value>
+  </data>
+  <data name="AdmAccountStatusChanged" xml:space="preserve">
+    <value>Statut du compte « {0} » mis à jour.</value>
   </data>
 </root>

@@ -30,17 +30,12 @@ else
             <MudTd>@context.Username</MudTd>
             <MudTd>@(context.Email ?? "—")</MudTd>
             <MudTd>
-                @if (context.Status != "Active")
-                {
-                    <MudChip T="string" Color="Color.Error" Size="Size.Small">@Loc["AdmAccountDisabledChip"]</MudChip>
-                }
-                else if (context.MustChangePassword)
+                <MudChip T="string" Color="@StatusColor(context.Status)" Size="Size.Small">
+                    @Loc[$"AdmAccountStatus{context.Status}"]
+                </MudChip>
+                @if (context.MustChangePassword)
                 {
                     <MudChip T="string" Color="Color.Warning" Size="Size.Small">@Loc["AdmAccountMustChangePasswordChip"]</MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small">@Loc["AdmAccountActiveChip"]</MudChip>
                 }
             </MudTd>
             <MudTd>
@@ -54,10 +49,17 @@ else
             </MudTd>
             <MudTd>
                 <MudButton Size="Size.Small" OnClick="@(() => OpenResetAsync(context))">@Loc["AdmResetPassword"]</MudButton>
-                <MudButton Size="Size.Small" Color="@(context.Status == "Active" ? Color.Error : Color.Success)"
-                           OnClick="@(() => ToggleDisabledAsync(context))">
-                    @(context.Status == "Active" ? Loc["AdmDisableAccount"] : Loc["AdmEnableAccount"])
-                </MudButton>
+                @if (!context.IsReserved)
+                {
+                    @foreach (var target in StatusTargets(context.Status))
+                    {
+                        <MudButton Size="Size.Small" data-testid="account-status-action"
+                                   Color="@(target == "Active" ? Color.Success : Color.Error)"
+                                   OnClick="@(() => SetStatusAsync(context, target))">
+                            @Loc[$"AdmAccountAction{target}"]
+                        </MudButton>
+                    }
+                }
             </MudTd>
         </RowTemplate>
     </MudTable>
@@ -83,11 +85,24 @@ else
         StateHasChanged();
     }
 
-    private async Task ToggleDisabledAsync(AdminAccountsService.AdminAccountRow row)
+    private static Color StatusColor(string status) => status switch
     {
-        var (success, error) = await AccountsService.SetDisabledAsync(row.Id, row.Status == "Active");
+        "Active" => Color.Success,
+        "Disabled" => Color.Warning,
+        _ => Color.Error
+    };
+
+    private static string[] StatusTargets(string status) => status switch
+    {
+        "Active" => ["Disabled", "Closed", "Deleted"],
+        _ => ["Active"]
+    };
+
+    private async Task SetStatusAsync(AdminAccountsService.AdminAccountRow row, string target)
+    {
+        var (success, error) = await AccountsService.SetStatusAsync(row.Id, target);
         Snackbar.Add(success
-            ? Loc[row.Status == "Active" ? "AdmAccountDisabled" : "AdmAccountEnabled", row.Username].Value
+            ? Loc["AdmAccountStatusChanged", row.Username].Value
             : error ?? Loc["AdmOperationFailed"].Value, success ? Severity.Success : Severity.Error);
         await LoadAsync();
     }
