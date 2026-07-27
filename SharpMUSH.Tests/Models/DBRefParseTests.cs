@@ -29,16 +29,20 @@ public class DBRefParseTests
 	public async ValueTask TryParse_BareDbref_HasNoCreationTime()
 	{
 		await Assert.That(DBRef.TryParse("#42", out var dbref)).IsTrue();
-		await Assert.That(dbref!.Value.Number).IsEqualTo(42);
-		await Assert.That(dbref.Value.CreationMilliseconds).IsNull();
+		var parsed = dbref!.Value;
+		await Assert.That(parsed.Number).IsEqualTo(42);
+		await Assert.That(parsed.CreationMilliseconds).IsNull();
+		await Assert.That(parsed.IsObjid).IsFalse();
 	}
 
 	[Test]
 	public async ValueTask TryParse_Objid_KeepsTheCreationTime()
 	{
 		await Assert.That(DBRef.TryParse("#42:1700000000", out var dbref)).IsTrue();
-		await Assert.That(dbref!.Value.Number).IsEqualTo(42);
-		await Assert.That(dbref.Value.CreationMilliseconds).IsEqualTo(1700000000L);
+		var parsed = dbref!.Value;
+		await Assert.That(parsed.Number).IsEqualTo(42);
+		await Assert.That(parsed.CreationMilliseconds).IsEqualTo(1700000000L);
+		await Assert.That(parsed.IsObjid).IsTrue();
 	}
 
 	/// <summary>

@@ -85,8 +85,10 @@ public class DebugAuthenticationHandler(
 					Logger.LogWarning(
 						"[DebugAuth] Account {AccountId} has no linked character with key 1; omitting character claims",
 						account.Id);
+					// No character_dbref claim: without the object we have no creation time, and a
+					// bare "#1" would route to char:#1 while publishers use char:#1:creation — the
+					// connection would silently receive nothing. Better to be plainly characterless.
 					claims.Add(new("character_key", "1"));
-					claims.Add(new(GameHub.CharacterDbrefClaim, "#1"));
 				}
 			}
 			else
@@ -125,6 +127,7 @@ public class DebugAuthenticationHandler(
 		claims.Add(new(ClaimTypes.Name, "DebugAdmin"));
 		claims.Add(new(ClaimTypes.NameIdentifier, "debug-bootstrap-pending"));
 		claims.Add(new("character_key", "1"));
-		claims.Add(new(GameHub.CharacterDbrefClaim, "#1"));
+		// Deliberately no character_dbref: bootstrap has not run, so there is no object to read a
+		// creation time from, and a bare "#1" would name a group no publisher ever targets.
 	}
 }
