@@ -329,10 +329,10 @@ public partial class Functions
 				}
 				else
 				{
-				var derived = JsonPathToPointer(arg2);
-				if (derived is null)
-					return new CallState(ErrorMessages.Returns.PathNotFound);
-				setPointer = derived.Value;
+					var derived = JsonPathToPointer(arg2);
+					if (derived is null)
+						return new CallState(ErrorMessages.Returns.PathNotFound);
+					setPointer = derived.Value;
 				}
 				var setPatch = new JsonPatch(PatchOperation.Add(setPointer, jsonDoc2));
 				var setResult = setPatch.Apply(jsonDoc);
