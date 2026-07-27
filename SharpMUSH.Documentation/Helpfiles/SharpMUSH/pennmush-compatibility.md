@@ -68,6 +68,9 @@ SharpMUSH releases behaved differently.
 - An uppercase substitution selector capitalizes the first output character:
   `%Q0`, `%N`, `%I0`, `%S` capitalize; `%q0`, `%n`, `%i0`, `%s` do not.
 - `% ` (a percent followed by a space) is emitted literally as `% `.
+- `$`-commands are matched against the command line *after* it is evaluated, so a
+  command whose name or arguments only appear once substitutions and functions
+  run still matches and captures its `%0..` from the evaluated text.
 
 ## Known limitations
 

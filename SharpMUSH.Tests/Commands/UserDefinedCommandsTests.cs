@@ -742,4 +742,30 @@ public class UserDefinedCommandsTests
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} fired")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
+
+	/// <summary>
+	/// PennMUSH matches $-commands against the command line after it is evaluated (game.c tests the
+	/// evaluated cptr), so a command whose name only appears once substitutions and functions run
+	/// still triggers. Here the typed line [strcat(&lt;token&gt;)] is not the command name literally,
+	/// but evaluates to it. Matched raw (the previous behavior) it would fall through to "Huh?";
+	/// matched on the evaluated line it fires.
+	/// </summary>
+	[Test]
+	public async ValueTask DollarCommandMatchesAgainstTheEvaluatedLine()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "DollarEval");
+		var token = TestIsolationHelpers.GenerateUniqueName("de");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_EVAL {obj}=${token}:@emit {token} evaluated"));
+
+		// The command name only exists after the strcat evaluates.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"[strcat({token})]"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} evaluated")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
 }

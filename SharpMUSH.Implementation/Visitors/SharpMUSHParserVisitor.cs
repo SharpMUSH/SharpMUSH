@@ -1143,12 +1143,19 @@ public class SharpMUSHParserVisitor(
 			// Optimistic that the command still exists, until we try and it no longer does?
 			// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
 			// It needs to take an area to search in. So this is definitely its own service.
+			// PennMUSH matches $-commands against the command line AFTER evaluation (game.c tests the
+			// evaluated cptr), so substitutions and functions in the typed line are applied before the
+			// pattern is checked and before its wildcards capture %0... This mirrors what the hook
+			// OVERRIDE/EXTEND path already does. It is only reached once no built-in command matched
+			// (Steps 1-8 above), so a built-in never pays for this evaluation.
+			var evaluatedCommandText = (await parser.FunctionParse(commandText))?.Message ?? commandText;
+
 			var nearbyObjects = Mediator.CreateStream(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
 
 			var userDefinedCommandMatches = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
 				nearbyObjects,
-				commandText);
+				evaluatedCommandText);
 
 			if (userDefinedCommandMatches.IsSome())
 			{
@@ -1174,7 +1181,7 @@ public class SharpMUSHParserVisitor(
 					var userDefinedCommandMatchesOnZMR = await CommandDiscoveryService.MatchUserDefinedCommand(
 						parser,
 						zmrContents,
-						commandText);
+						evaluatedCommandText);
 
 					if (userDefinedCommandMatchesOnZMR.IsSome())
 					{
@@ -1190,7 +1197,7 @@ public class SharpMUSHParserVisitor(
 				var userDefinedCommandMatchesOnLocation = await CommandDiscoveryService.MatchUserDefinedCommand(
 					parser,
 					item.ToAsyncEnumerable(),
-					commandText);
+					evaluatedCommandText);
 
 				if (userDefinedCommandMatchesOnLocation.IsSome())
 				{
@@ -1211,7 +1218,7 @@ public class SharpMUSHParserVisitor(
 				var userDefinedCommandMatchesOnPersonalZMR = await CommandDiscoveryService.MatchUserDefinedCommand(
 					parser,
 					personalZMRContents,
-					commandText);
+					evaluatedCommandText);
 
 				if (userDefinedCommandMatchesOnPersonalZMR.IsSome())
 				{
@@ -1232,7 +1239,7 @@ public class SharpMUSHParserVisitor(
 			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
 				globalObjects.ToAsyncEnumerable().Union(globalObjectContent),
-				commandText);
+				evaluatedCommandText);
 
 			if (userDefinedCommandMatchesOnGlobal.IsSome())
 			{
