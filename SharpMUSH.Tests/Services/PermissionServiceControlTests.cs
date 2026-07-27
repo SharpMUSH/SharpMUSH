@@ -101,4 +101,28 @@ public class PermissionServiceControlTests
 
 		await Assert.That(await PermissionService.Controls(owner, thing)).IsTrue();
 	}
+
+	/// <summary>
+	/// An explicitly-set <c>#TRUE</c> control lock is not the same as no lock, and is not meant to be:
+	/// PennMUSH parses <c>#TRUE</c> to a real <c>BOOLEXP_BOOL</c> node (<c>boolexp.c:132</c>), which is
+	/// distinct from the <c>TRUE_BOOLEXP</c> sentinel that means "no lock stored". <c>controls()</c> skips
+	/// only the sentinel, so <c>@lock/control &lt;obj&gt;=#TRUE</c> is how you say "anyone controls this".
+	/// </summary>
+	[Test]
+	public async ValueTask AnExplicitlyTrueControlLockGrantsControlToAnyone()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CtrlExplicitTrue");
+
+		var thingName = TestIsolationHelpers.GenerateUniqueName("CtrlExplicitTrueThing");
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {thingName}"));
+		var thingDbRef = createResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@lock/control {thingDbRef}=#TRUE"));
+
+		var thing = await ObjectAt(thingDbRef);
+		var mortal = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).WithoutNone();
+
+		await Assert.That(await PermissionService.Controls(mortal, thing)).IsTrue();
+	}
 }
