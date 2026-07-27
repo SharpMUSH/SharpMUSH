@@ -214,7 +214,13 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			}
 		}
 
-		return lockService.Evaluate(LockType.Control, target, who);
+		// PennMUSH controls() (predicat.c:416) reads the control lock raw and skips it when unset, rather
+		// than evaluating it: an unset lock passes everybody, so evaluating it here would grant control of
+		// every object without an explicit control lock to everyone. Only a lock that was actually set,
+		// and that `who` passes, grants control.
+		var controlLock = LockService.GetIfSet(LockType.Control, target);
+
+		return controlLock is not null && lockService.Evaluate(controlLock, target, who);
 	}
 
 	public async ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee)

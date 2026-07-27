@@ -55,7 +55,7 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("NoDestWalker");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("NoDestRoom");
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
 
@@ -78,7 +78,7 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("NoDestFailAttr");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("FailAttrRoom");
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
 
@@ -106,11 +106,11 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("UnlinkWalker");
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("UnlinkSource");
-		var sourceResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
 		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("UnlinkDest");
-		var destResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {destName}"));
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
 		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
@@ -134,11 +134,11 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("LinkedWalker");
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("LinkedSource");
-		var sourceResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
 		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("LinkedDest");
-		var destResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {destName}"));
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
 		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));

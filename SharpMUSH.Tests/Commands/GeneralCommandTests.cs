@@ -761,7 +761,7 @@ public class GeneralCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenBadDest");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenBadDestRoom");
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
 
@@ -789,7 +789,7 @@ public class GeneralCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenThingDest");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenThingDestRoom");
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
 
