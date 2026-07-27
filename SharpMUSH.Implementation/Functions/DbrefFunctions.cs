@@ -67,15 +67,13 @@ public partial class Functions
 					}
 				}
 
-				try
-				{
-					var destination = await exit.Location.WithCancellation(CancellationToken.None);
-					return destination.Object().DBRef;
-				}
-				catch (InvalidOperationException)
-				{
-					return "#-1";
-				}
+				// PennMUSH fun_loc (fundb.c:1459) returns Location(it), which for an exit is where it
+				// leads. The room it sits in is what where() reports.
+				var destination = await exit.Home.WithCancellation(CancellationToken.None);
+
+				return destination.IsNone
+					? "#-1"
+					: destination.WithoutNone().Object().DBRef;
 			},
 			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
 		);

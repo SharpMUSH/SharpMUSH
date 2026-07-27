@@ -1,4 +1,6 @@
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -8,6 +10,10 @@ public class DbrefFunctionUnitTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
+
+	private IConnectionService ConnectionService =>
+		WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async Task Loc()
@@ -417,5 +423,46 @@ public class DbrefFunctionUnitTests
 
 		var objIdFromFunc = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
 		await Assert.That(objId).IsEqualTo(objIdFromFunc.ToPlainText());
+	}
+
+	/// <summary>
+	/// PennMUSH <c>fun_loc</c> (<c>fundb.c:1459</c>) returns <c>Location(it)</c>, and an exit's location
+	/// is its destination — not the room it sits in, which is what <c>where()</c> reports.
+	/// </summary>
+	[Test]
+	public async Task LocOfAnExitIsItsDestination()
+	{
+		var destName = TestIsolationHelpers.GenerateUniqueName("LocExitDest");
+		var digResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@dig {destName}"));
+		var destDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("LocExit");
+		var openResult = await CommandParser.CommandParse(1, ConnectionService,
+			MModule.single($"@open {exitName}={destDbRef}"));
+		var exitDbRef = openResult.Message!.ToPlainText()!.Trim();
+
+		var result = (await Parser.FunctionParse(MModule.single($"loc({exitDbRef})")))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo(destDbRef);
+	}
+
+	/// <summary>
+	/// The complement: <c>where()</c> reports the room an exit sits in (PennMUSH <c>Source()</c>).
+	/// </summary>
+	[Test]
+	public async Task WhereOfAnExitIsTheRoomItSitsIn()
+	{
+		var destName = TestIsolationHelpers.GenerateUniqueName("WhereExitDest");
+		var digResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@dig {destName}"));
+		var destDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("WhereExit");
+		var openResult = await CommandParser.CommandParse(1, ConnectionService,
+			MModule.single($"@open {exitName}={destDbRef}"));
+		var exitDbRef = openResult.Message!.ToPlainText()!.Trim();
+
+		var result = (await Parser.FunctionParse(MModule.single($"where({exitDbRef})")))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsNotEqualTo(destDbRef);
 	}
 }
