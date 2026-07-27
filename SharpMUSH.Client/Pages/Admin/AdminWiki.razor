@@ -168,7 +168,7 @@
         <MudText Typo="Typo.h6">@Loc["WikiDeleteConfirmTitle"]</MudText>
     </TitleContent>
     <DialogContent>
-        <MudText>@string.Format(Loc["WikiDeleteConfirmText"], _selected.Count)</MudText>
+        <MudText>@Loc.Plural("WikiDeleteConfirmText", "count", _selected.Count)</MudText>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="@(() => _showDeleteConfirm = false)">@Loc["Cancel"]</MudButton>
@@ -334,9 +334,9 @@
             ok =>
             {
                 if (ok.Succeeded.Count > 0)
-                    Snackbar.Add(string.Format(Loc["WikiBatchSucceeded"], ok.Succeeded.Count), Severity.Success);
+                    Snackbar.Add(Loc.Plural("WikiBatchSucceeded", "count", ok.Succeeded.Count), Severity.Success);
                 if (ok.Failed.Count > 0)
-                    Snackbar.Add(string.Format(Loc["WikiBatchFailed"], ok.Failed.Count), Severity.Error);
+                    Snackbar.Add(Loc.Plural("WikiBatchFailed", "count", ok.Failed.Count), Severity.Error);
             },
             err => Snackbar.Add(err, Severity.Error));
 

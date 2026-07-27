@@ -11,6 +11,12 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+// Movement tests drive full command pipelines (@dig/@open/@link/@tel/walk) against the shared
+// PerTestSession database and assert on the resulting location and the shared NotifyService mock.
+// Run in parallel with the rest of the suite they race on that shared state — which surfaced as
+// flaky, provider-timing-dependent failures (worst on memgraph). Every other stateful command
+// test class here is [NotInParallel] for the same reason; this one was simply missing it.
+[NotInParallel]
 public class MovementCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
