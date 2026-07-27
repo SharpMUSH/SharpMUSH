@@ -159,13 +159,9 @@ public class MailController(IMediator mediator, ILogger<MailController> logger) 
 	/// <summary>Resolves the character this request acts as (the primary character's dbref) to a player, or null.</summary>
 	private async Task<SharpPlayer?> ResolvePlayerAsync(CancellationToken ct)
 	{
-		var raw = User.GetActingCharacterDbref();
-		if (string.IsNullOrWhiteSpace(raw)) return null;
+		if (User.GetActingCharacter() is not { } character) return null;
 
-		var numberPart = raw.TrimStart('#').Split(':', 2)[0];
-		if (!int.TryParse(numberPart, out var dbref)) return null;
-
-		var result = await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref, null)), ct);
+		var result = await mediator.Send(new GetObjectNodeQuery(character), ct);
 		return result.IsPlayer ? result.AsPlayer : null;
 	}
 
