@@ -23,6 +23,7 @@ public class AccountAuthService(
 	private const string RoleKey = "sharpmush.account.role";
 	private const string PermissionsKey = "sharpmush.account.permissions";
 	private const string LoggedOutKey = "sharpmush.account.loggedOut";
+	private const string ActiveCharacterKey = "sharpmush.account.activeCharacter";
 
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 
@@ -84,7 +85,57 @@ public class AccountAuthService(
 			return;
 
 		ActiveCharacter = character;
+		PersistActiveCharacter(character);
 		RaiseActiveCharacterChanged();
+	}
+
+	/// <summary>
+	/// Mirrors the active character into tab-scoped storage so a reload comes back as whoever the
+	/// player switched to. Deliberately not awaited: this setter is synchronous because every caller
+	/// depends on <see cref="ActiveCharacter"/> being visible the instant it returns, and storage is a
+	/// cache of that decision rather than the decision itself. WASM is single-threaded and its interop
+	/// calls run in issue order, so back-to-back switches still land last-write-wins.
+	/// </summary>
+	private void PersistActiveCharacter(CharacterSummary? character) =>
+		_ = PersistActiveCharacterCoreAsync(character);
+
+	/// <summary>
+	/// Reads the stored active character back, or null when there is none (or the stored value is
+	/// unreadable — a corrupt entry must not block hydration; falling back to the roster default is
+	/// exactly what happened before anything was stored at all).
+	/// </summary>
+	private async Task<CharacterSummary?> ReadStoredActiveCharacterAsync()
+	{
+		var stored = await js.InvokeAsync<string?>("sessionStorage.getItem", ActiveCharacterKey);
+		if (string.IsNullOrWhiteSpace(stored))
+			return null;
+
+		try
+		{
+			return JsonSerializer.Deserialize<CharacterSummary>(stored);
+		}
+		catch (JsonException ex)
+		{
+			logger.LogWarning(ex, "Stored active character was unreadable; falling back to the roster default");
+			return null;
+		}
+	}
+
+	private async Task PersistActiveCharacterCoreAsync(CharacterSummary? character)
+	{
+		try
+		{
+			if (character is null)
+				await js.InvokeVoidAsync("sessionStorage.removeItem", ActiveCharacterKey);
+			else
+				await js.InvokeVoidAsync("sessionStorage.setItem", ActiveCharacterKey, JsonSerializer.Serialize(character));
+		}
+		catch (Exception ex)
+		{
+			// A failed write costs the player their acting character on the next reload — worth a log,
+			// never worth taking down the switch that already succeeded in memory.
+			logger.LogWarning(ex, "Could not persist the active character; a reload will fall back to the primary");
+		}
 	}
 
 	/// <summary>
@@ -192,6 +243,18 @@ public class AccountAuthService(
 		Permissions = permissionsJson is null
 			? []
 			: JsonSerializer.Deserialize<IReadOnlyList<string>>(permissionsJson) ?? [];
+
+		// Restore who this tab was acting as, but only into an empty slot: hydration can run AFTER a
+		// login has already seated a character in memory (nothing orders InitAsync against LoginAsync),
+		// and storage must never overwrite a live decision. Assigned directly rather than through
+		// SetActiveCharacter because the value came out of storage — writing it straight back is a
+		// pointless interop round-trip. SetCharacters re-validates it against the roster once that
+		// lands, so a character the account no longer owns is reseated like any other stale active.
+		if (ActiveCharacter is null && await ReadStoredActiveCharacterAsync() is { } restored)
+		{
+			ActiveCharacter = restored;
+			RaiseActiveCharacterChanged();
+		}
 		// CascadingAuthenticationState snapshots before MainLayout's InitAsync runs; re-notify so a reloaded tab's restored session reaches [Authorize] gates.
 		RaiseAuthStateChanged();
 	}
