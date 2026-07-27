@@ -117,9 +117,11 @@ public class AccountAuthService(
 		catch (JsonException ex)
 		{
 			// Drop the bad entry so this self-heals: left in place it would re-log on every reload
-			// until the player happened to switch characters.
+			// until the player happened to switch characters. Awaited rather than detached — we are
+			// already in an async method, so the removal may as well be deterministic; the core method
+			// still swallows and logs interop failures.
 			logger.LogWarning(ex, "Stored active character was unreadable; clearing it and falling back to the roster default");
-			PersistActiveCharacter(null);
+			await PersistActiveCharacterCoreAsync(null);
 			return null;
 		}
 	}

@@ -21,6 +21,10 @@ file sealed class FakeSessionStorage : IJSRuntime
 	/// detached has not applied it by the time its own method returns.</summary>
 	public bool AsyncWrites { get; set; }
 
+	/// <summary>When set, writes park until the test releases them — so a caller that awaits a write
+	/// cannot finish, while one that leaves it detached sails past.</summary>
+	public TaskCompletionSource? GateWrites { get; set; }
+
 	public void Seed(string key, string value) { lock (_items) { _items[key] = value; } }
 	public bool Has(string key) { lock (_items) { return _items.ContainsKey(key); } }
 	public string? Read(string key) { lock (_items) { return _items.TryGetValue(key, out var v) ? v : null; } }
@@ -45,6 +49,9 @@ file sealed class FakeSessionStorage : IJSRuntime
 			ReadStarted?.TrySetResult();
 			return new ValueTask<TValue>(gate.Task.ContinueWith(_ => snapshot, TaskScheduler.Default));
 		}
+
+		if (GateWrites is { } writeGate && identifier != "sessionStorage.getItem")
+			return new ValueTask<TValue>(writeGate.Task.ContinueWith(_ => Invoke<TValue>(identifier, args), TaskScheduler.Default));
 
 		if (AsyncWrites && identifier != "sessionStorage.getItem")
 			return new ValueTask<TValue>(Task.Run(async () => { await Task.Yield(); return Invoke<TValue>(identifier, args); }));
@@ -205,10 +212,21 @@ public class AccountAuthServiceActiveCharacterRefreshTests
 		await seed.LoginAsync("headwiz", "password-one");
 		storage.Seed("sharpmush.account.activeCharacter", "{not json");
 
-		var afterRefresh = MakeService(storage, [Alpha, Beta]);
-		await afterRefresh.InitAsync();
+		// Park every write. Hydration must not be able to finish until the clear it issued completes —
+		// a detached clear would let it sail straight past.
+		storage.GateWrites = new TaskCompletionSource();
 
-		// The bad entry is dropped as soon as it fails to parse, rather than re-logging every reload.
+		var afterRefresh = MakeService(storage, [Alpha, Beta]);
+		var hydrating = afterRefresh.InitAsync();
+		var finishedWithoutTheClear = await Task.WhenAny(hydrating, Task.Delay(250)) == hydrating;
+
+		storage.GateWrites.SetResult();
+		await hydrating;
+		storage.GateWrites = null;
+
+		await Assert.That(finishedWithoutTheClear).IsFalse();
+
+		// And the bad entry is gone, rather than re-logging on every reload.
 		await Assert.That(storage.Has("sharpmush.account.activeCharacter")).IsFalse();
 
 		// Hydration then falls back to the roster default, which re-seats storage with a valid value.
