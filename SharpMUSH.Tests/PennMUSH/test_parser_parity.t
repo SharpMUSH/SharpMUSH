@@ -1,4 +1,4 @@
-# Oracle cases for the parser-parity work (see CoPilot Files/PARSER_IMPROVEMENT_HANDOFF.md).
+# Oracle cases for the parser-parity work (see the sharpmush-parser-internals skill in HarryCordewener/claude-plugins).
 # Every expectation below was produced by a real PennMUSH server, not read off the source.
 #
 # To run against PennMUSH:
