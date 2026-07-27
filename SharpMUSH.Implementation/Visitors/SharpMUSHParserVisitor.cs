@@ -286,11 +286,22 @@ public class SharpMUSHParserVisitor(
 	}
 
 	/// <summary>
-	/// Extracts a token's own text from the original markup-carrying source. Recovery tokens
-	/// synthesised by the error strategy have no extent and yield an empty string.
+	/// Extracts a token's own text from the original markup-carrying source. A token the error
+	/// strategy synthesises for missing input is not part of the lexed stream (<see cref="IToken.TokenIndex"/>
+	/// is negative) and covers no real source span — <see cref="LenientErrorStrategy"/> parks it at
+	/// the previous token's <c>StopIndex</c> so that <c>StopIndex</c>-based length maths in the
+	/// surrounding contexts stay correct, which means slicing the synthetic token on its own would
+	/// return a spurious one-character copy of that last real character. Such tokens must contribute
+	/// nothing here. (In practice recovery ends the enclosing rule at EOF without adding a closer
+	/// child, so this guard is belt-and-suspenders against a future recovery path that inserts one.)
 	/// </summary>
 	private MString SliceSource(IToken token)
 	{
+		if (token.TokenIndex < 0 || token.StartIndex < 0)
+		{
+			return MModule.empty();
+		}
+
 		var length = token.StopIndex - token.StartIndex + 1;
 		return length > 0 ? MModule.substring(token.StartIndex, length, source) : MModule.empty();
 	}
@@ -952,7 +963,7 @@ public class SharpMUSHParserVisitor(
 			var targetObject = await Mediator.Send(new GetObjectNodeQuery(target));
 			if (targetObject.IsNone)
 			{
-				return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name));
+				return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
 			}
 
 			// The arguments pushed for this call become %0, %1, … inside the attribute.

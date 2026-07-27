@@ -25,9 +25,9 @@ public record DebugOptions(
 public enum ParserPredictionMode
 {
 	/// <summary>
-	/// Strong LL: ignores the parser call stack during prediction. Fastest, and — measured across
-	/// the whole test corpus — produces results identical to LL for this grammar. Forcing it is a
-	/// diagnostic option; <see cref="TwoStage"/> gets the same speed without betting on that.
+	/// SLL ("strong LL"): ignores the parser call stack during prediction. Fastest, and — measured
+	/// across the whole test corpus — produces results identical to LL for this grammar. Forcing it
+	/// is a diagnostic option; <see cref="TwoStage"/> gets the same speed without betting on that.
 	/// </summary>
 	SLL,
 
