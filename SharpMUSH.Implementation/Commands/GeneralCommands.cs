@@ -130,6 +130,7 @@ public partial class Commands
 		if (depth > Configuration!.CurrentValue.Limit.FunctionRecursionLimit)
 		{
 			limitExceeded.IsExceeded = true;
+			limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Recursion;
 			callDepth.Decrement();
 			recursionDepths[attributeLongName] = depth - 1;
 			return new CallState(ErrorMessages.Returns.Recursion);
@@ -4117,7 +4118,7 @@ public partial class Commands
 				if (FunctionLibrary != null && FunctionLibrary.TryGetValue(functionName.ToUpper(), out var existing) && existing.IsSystem)
 				{
 					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
-					return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, functionName));
+					return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, functionName.ToUpperInvariant()));
 				}
 
 				// Parse min/max arg bounds (default 0..32, the engine-wide max).

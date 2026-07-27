@@ -235,6 +235,12 @@ public class BooleanExpressionUnitTests
 	[Arguments("#TRUE | | #FALSE")]
 	[Arguments("(#TRUE")]
 	[Arguments("#TRUE)")]
+	// Lexer-level failures: a bare '^' matches no lexer rule (CARET is only a fragment inside
+	// keyword tokens like FLAG^), so these must be rejected too — not just parser-level failures.
+	[Arguments("^")]
+	[Arguments("a^b")]
+	[Arguments("#TRUE^")]
+	[Arguments("#TRUE ^ #FALSE")]
 	[Test]
 	public async Task MalformedExpressionsAreInvalid(string input)
 	{

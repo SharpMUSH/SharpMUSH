@@ -709,4 +709,63 @@ public class UserDefinedCommandsTests
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "MSG=<Alice>-<Bob>")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
+
+	/// <summary>
+	/// A HALTED object runs none of its softcode, so its $-commands do not fire — the same
+	/// PennMUSH PE_NOTHING rule enforced for u()/ufun. This is what makes @chown's loop-break
+	/// (which halts the object) actually stop a runaway $-command. The command fires once before
+	/// the flag is set; after halting, triggering it again must leave the count at one.
+	/// </summary>
+	[Test]
+	public async ValueTask HaltedObjectDollarCommandDoesNotFire()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcHalt");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_HALT {obj}=${token}:@emit {token} fired"));
+
+		// Not halted: the $-command fires.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}"));
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} fired")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+
+		// Halt the object, then trigger again: the emit count must stay at exactly one.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}=HALT"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}"));
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} fired")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// PennMUSH matches $-commands against the command line after it is evaluated (game.c tests the
+	/// evaluated cptr), so a command whose name only appears once substitutions and functions run
+	/// still triggers. Here the typed line [strcat(&lt;token&gt;)] is not the command name literally,
+	/// but evaluates to it. Matched raw (the previous behavior) it would fall through to "Huh?";
+	/// matched on the evaluated line it fires.
+	/// </summary>
+	[Test]
+	public async ValueTask DollarCommandMatchesAgainstTheEvaluatedLine()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "DollarEval");
+		var token = TestIsolationHelpers.GenerateUniqueName("de");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_EVAL {obj}=${token}:@emit {token} evaluated"));
+
+		// The command name only exists after the strcat evaluates.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"[strcat({token})]"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} evaluated")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
 }

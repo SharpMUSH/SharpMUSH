@@ -108,7 +108,7 @@
                     <MudText Typo="Typo.body1">
                         <strong>@Loc["UnsavedChanges"]</strong> @Loc["InThisSection"]
                         <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="ml-2">
-                            @(_changedCount == 1 ? Loc["ResChangeCountOne", _changedCount] : Loc["ResChangeCountMany", _changedCount])
+                            @Loc.Plural("ResChangeCount", "count", _changedCount)
                         </MudChip>
                     </MudText>
                 </div>
@@ -704,7 +704,7 @@
                 response =>
                 {
                     Snackbar.Add(
-                        string.Format(Loc["ConfigSavedCount"].Value, changes.Count),
+                        Loc.Plural("ConfigSavedCount", "count", changes.Count),
                         Severity.Success);
 
                     foreach (var kvp in changes)

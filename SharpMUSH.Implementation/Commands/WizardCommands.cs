@@ -2308,7 +2308,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD ROYALTY|POWER^ANNOUNCE", MinArgs = 0, ParameterNames = ["message"])]
+		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY|POWER^ANNOUNCE", MinArgs = 0, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
