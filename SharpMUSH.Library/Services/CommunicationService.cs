@@ -94,7 +94,7 @@ public class CommunicationService(
 		}
 	}
 
-	public async ValueTask<bool> SendToObjectAsync(
+	public async ValueTask<OneOf<AnySharpObject, DeliveryFailure>> SendToObjectAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
@@ -109,7 +109,7 @@ public class CommunicationService(
 		if (maybeLocateTarget.IsError)
 		{
 			await notifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
-			return false;
+			return new DeliveryFailure(DeliveryFailure.Cause.TargetNotFound);
 		}
 
 		var target = maybeLocateTarget.AsSharpObject;
@@ -121,15 +121,15 @@ public class CommunicationService(
 				await notifyService.Notify(executor, $"{target.Object().Name} does not want to hear from you.");
 			}
 
-			return false;
+			return new DeliveryFailure(DeliveryFailure.Cause.TargetWillNotHear);
 		}
 
 		var message = messageFunc(target);
 		await notifyService.Notify(target, message, executor, notificationType);
-		return true;
+		return target;
 	}
 
-	public async ValueTask SendToMultipleObjectsAsync(
+	public async ValueTask<IReadOnlyList<AnySharpObject>> SendToMultipleObjectsAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
@@ -138,11 +138,20 @@ public class CommunicationService(
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
 	{
+		var notified = new List<AnySharpObject>();
+
 		await foreach (var target in targets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc, notificationType,
-				notifyOnPermissionFailure);
+			var delivery = await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc,
+				notificationType, notifyOnPermissionFailure);
+
+			if (delivery.IsT0)
+			{
+				notified.Add(delivery.AsT0);
+			}
 		}
+
+		return notified;
 	}
 }

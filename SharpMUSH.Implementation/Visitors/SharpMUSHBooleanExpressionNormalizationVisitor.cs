@@ -27,10 +27,10 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 		=> VisitChildren(context);
 
 	public override string VisitLockAndExpr(SharpMUSHBoolExpParser.LockAndExprContext context)
-		=> $"{Visit(context.lockExpr())} & {Visit(context.lockExprList())}";
+		=> string.Join(" & ", context.lockExpr().Select(x => Visit(x)));
 
 	public override string VisitLockOrExpr(SharpMUSHBoolExpParser.LockOrExprContext context)
-		=> $"{Visit(context.lockExpr())} | {Visit(context.lockExprList())}";
+		=> string.Join(" | ", context.lockAndExpr().Select(x => Visit(x)));
 
 	public override string VisitLockExpr(SharpMUSHBoolExpParser.LockExprContext context)
 		=> VisitChildren(context);

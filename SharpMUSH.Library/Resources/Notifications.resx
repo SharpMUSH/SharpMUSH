@@ -678,8 +678,43 @@
   </data>
 
   <!-- Navigation -->
+  <!-- Emit-family sender echoes -->
+  <data name="YouPemitToObjectFormat" xml:space="preserve">
+    <value>You pemit "{0}" to {1}.</value>
+  </data>
+  <data name="YouPemitToCountFormat" xml:space="preserve">
+    <value>You pemit "{0}" to {1} objects.</value>
+  </data>
+  <data name="YouPemitToConnectionsFormat" xml:space="preserve">
+    <value>You pemit "{0}" to {1} connections.</value>
+  </data>
+  <data name="YouRemitInFormat" xml:space="preserve">
+    <value>You remit, "{0}" in {1}</value>
+  </data>
+  <data name="YouLemitFormat" xml:space="preserve">
+    <value>You lemit: "{0}"</value>
+  </data>
+  <data name="YouZemitInZoneFormat" xml:space="preserve">
+    <value>You zemit, "{0}" in zone {1}</value>
+  </data>
+  <data name="ThereCantBeAnythingInThat" xml:space="preserve">
+    <value>There can't be anything in that!</value>
+  </data>
+  <data name="LemitTooManyContainers" xml:space="preserve">
+    <value>Too many containers.</value>
+  </data>
+
   <data name="CantGoThatWay" xml:space="preserve">
     <value>You can't go that way.</value>
+  </data>
+  <data name="CantSeeThroughThat" xml:space="preserve">
+    <value>You can't see through that.</value>
+  </data>
+  <data name="VariableExitDestinationInvalidFormat" xml:space="preserve">
+    <value>Variable exit destination #{0} is invalid or not permitted.</value>
+  </data>
+  <data name="ExitGoesNowhere" xml:space="preserve">
+    <value>That exit doesn't go anywhere.</value>
   </data>
   <data name="ExitNoValidLocation" xml:space="preserve">
     <value>That exit doesn't go to a valid location.</value>

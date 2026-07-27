@@ -104,17 +104,8 @@ public static class OneOfExtensions
 			_ => throw new ArgumentException("Cannot convert an Error to a non-Error value.")
 		);
 
-	public static async ValueTask<AnySharpContainer> Home(this AnySharpContent thing)
-		=> await thing.Match(
-			async player => await player.Home.WithCancellation(CancellationToken.None),
-			async exit => await exit.Location.WithCancellation(CancellationToken.None),
-			async thing2 => await thing2.Home.WithCancellation(CancellationToken.None));
-
-	public static async ValueTask<AnySharpContainer> Location(this AnySharpContent thing)
-		=> await thing.Match(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing2 => await thing2.Location.WithCancellation(CancellationToken.None));
+	// AnySharpContent.Home()/Location() are instance methods, so same-signature extensions here were
+	// unreachable — and had the exit's source/destination edges the wrong way round.
 
 	public static AnySharpObject Known(this AnyOptionalSharpObject union) =>
 		union.Match<AnySharpObject>(

@@ -57,7 +57,7 @@ public class AccountSessionAuthenticationHandler(
 		var acting = ResolveActingCharacter(session.Value, characters);
 		if (acting is not null)
 		{
-			claims.Add(new Claim(GameHub.CharacterDbrefClaim, $"#{acting.Object.Key}"));
+			claims.Add(new Claim(GameHub.CharacterDbrefClaim, acting.Object.DBRef.ToString()));
 			claims.Add(new Claim("character_key", acting.Object.Key.ToString()));
 			claims.Add(new Claim("character_creation_time", acting.Object.CreationTime.ToString()));
 			claims.Add(new Claim("character_name", acting.Object.Name));

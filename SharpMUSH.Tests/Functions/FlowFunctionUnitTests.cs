@@ -56,6 +56,49 @@ public class FlowFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// Argument-parity enforcement. PennMUSH checks these inside the function bodies:
+	/// fun_letq rejects <c>nargs % 2 != 1</c> and fun_setq rejects <c>nargs % 2 != 0</c>
+	/// (src/funmisc.c). SharpMUSH declares the same rule as a function flag, but the
+	/// dispatcher used to compare the whole flags value, so any function that combined
+	/// the parity flag with another (letq carries NoParse) was never checked — letq would
+	/// then read its own body as a register value.
+	/// </summary>
+	[Test]
+	[Arguments("letq(A,1,B,2,%qA%qB)", "12")]
+	[Arguments("letq(body)", "body")]
+	[Arguments("letq(A,1,%qA)", "1")]
+	public async Task ParityAcceptsValidArgumentCounts(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("letq(A,1)", "#-1 FUNCTION (LETQ) EXPECTS AN ODD NUMBER OF ARGUMENTS")]
+	[Arguments("letq(A,1,B,2)", "#-1 FUNCTION (LETQ) EXPECTS AN ODD NUMBER OF ARGUMENTS")]
+	[Arguments("setr(A,1,B)", "#-1 FUNCTION (SETR) EXPECTS AN EVEN NUMBER OF ARGUMENTS")]
+	public async Task ParityRejectsInvalidArgumentCounts(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// CASE/CASEALL must NOT enforce parity: PennMUSH backs them with fun_switch, which
+	/// checks only minargs, and the canonical form with a trailing default is even-numbered.
+	/// </summary>
+	[Test]
+	[Arguments("case(b,a,first,b,second,fallback)", "second")]
+	[Arguments("case(z,a,first,b,second,fallback)", "fallback")]
+	[Arguments("case(a,a,first,b,second)", "first")]
+	[Arguments("caseall(b,a,first,b,second,fallback)", "second")]
+	public async Task CaseHasNoParityRequirement(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 	// Penn firstof: returns first non-zero argument
 	[Test]
 	[Arguments("firstof(0,0,2)", "2")]

@@ -164,7 +164,7 @@ public class AccountSessionAuthHandlerTests
 		var result = await handler.AuthenticateAsync();
 
 		await Assert.That(result.Succeeded).IsTrue();
-		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#1");
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#1:0");
 		await Assert.That(result.Principal!.IsInRole("Wizard")).IsTrue();
 		await Assert.That(result.Principal!.FindAll(PortalPermission.ClaimType).Select(c => c.Value))
 			.Contains("players.view");
@@ -206,7 +206,7 @@ public class AccountSessionAuthHandlerTests
 		await Assert.That(result.Principal!.FindFirst("character_key")!.Value).IsEqualTo("42");
 		await Assert.That(result.Principal!.FindFirst("character_creation_time")!.Value).IsEqualTo("987654321");
 		await Assert.That(result.Principal!.FindFirst("character_name")!.Value).IsEqualTo("Alice");
-		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#42");
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#42:987654321");
 	}
 
 	private static (IAccountSessionStore, IAccountService, AccountClaimsService) TwoCharacterAccount()
@@ -239,7 +239,7 @@ public class AccountSessionAuthHandlerTests
 		var result = await handler.AuthenticateAsync();
 
 		await Assert.That(result.Succeeded).IsTrue();
-		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#7");
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#7:777");
 		await Assert.That(result.Principal!.FindFirst("character_key")!.Value).IsEqualTo("7");
 		await Assert.That(result.Principal!.FindFirst("character_name")!.Value).IsEqualTo("Bob");
 	}
@@ -257,7 +257,7 @@ public class AccountSessionAuthHandlerTests
 		var result = await handler.AuthenticateAsync();
 
 		await Assert.That(result.Succeeded).IsTrue();
-		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#7");
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#7:777");
 	}
 
 	[Test]
