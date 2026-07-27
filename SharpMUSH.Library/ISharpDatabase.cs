@@ -800,7 +800,6 @@ public interface ISharpDatabase
 	/// <summary>Returns the account that owns <paramref name="characterRef"/>, or null if the character has no account.</summary>
 	ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken cancellationToken = default);
 
-	/// <summary>Sets or clears the account's disabled (banned) flag.</summary>
 	/// <summary>
 	/// Sets the account's lifecycle status. Account documents are never removed, so this is the
 	/// only way an account leaves <see cref="AccountStatus.Active"/>.

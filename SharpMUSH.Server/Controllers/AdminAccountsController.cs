@@ -49,7 +49,7 @@ public class AdminAccountsController(
 
 		var account = await accountService.GetByIdAsync(accountId);
 		if (account is null || !account.IsActive)
-			return (null, Unauthorized("Account not found or disabled."));
+			return (null, Unauthorized("Account not found or not active."));
 		if (account.MustChangePassword)
 			return (null, StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action."));
 
@@ -129,8 +129,15 @@ public class AdminAccountsController(
 		if (!Enum.TryParse<AccountStatus>(request.Status, ignoreCase: true, out var status))
 			return BadRequest($"Unknown account status '{request.Status}'.");
 
-		var result = await accountService.SetAccountStatusAsync(FullId(key), status);
-		if (result.IsT1) return NotFound(result.AsT1.Value);
+		// Resolving the account here separates the two error causes: absent is 404, present but
+		// refused (the reserved system account) is 409. Mapping both to NotFound claimed an account
+		// does not exist when it does.
+		var accountId = FullId(key);
+		if (await accountService.GetByIdAsync(accountId) is null)
+			return NotFound($"No account with key '{key}'.");
+
+		var result = await accountService.SetAccountStatusAsync(accountId, status);
+		if (result.IsT1) return Conflict(result.AsT1.Value);
 
 		logger.LogInformation("Admin {AdminId} set account {Key} status to {Status}",
 			LogSanitizer.Sanitize(adminId), LogSanitizer.Sanitize(key), status);

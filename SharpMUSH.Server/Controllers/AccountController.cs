@@ -44,7 +44,7 @@ public class AccountController(
 
 		var account = await accountService.GetByIdAsync(accountId);
 		if (account is null || !account.IsActive)
-			return (null, Unauthorized("Account not found or disabled."));
+			return (null, Unauthorized("Account not found or not active."));
 
 		if (!allowMustChangePassword && account.MustChangePassword)
 			return (null, StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action."));

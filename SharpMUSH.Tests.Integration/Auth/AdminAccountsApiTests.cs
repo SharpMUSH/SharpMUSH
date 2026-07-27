@@ -171,6 +171,46 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(loginResponse.IsSuccessStatusCode).IsFalse();
 	}
 
+	/// <summary>
+	/// The reserved account is present but refuses the transition, so this is 409 rather than 404 —
+	/// mapping it to NotFound would claim an account does not exist when it does.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 9)]
+	public async Task SetStatus_ReservedAccount_ReturnsConflict()
+	{
+		var (http, sessionToken) = await LoginAsGodAccountAsync();
+
+		using var listRequest = new HttpRequestMessage(HttpMethod.Get, "api/admin/accounts");
+		listRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var listResponse = await http.SendAsync(listRequest);
+		var rows = await listResponse.Content.ReadFromJsonAsync<List<AdminAccountRow>>();
+		var reserved = rows!.Single(r => r.IsReserved);
+
+		using var request = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{reserved.Id}/status")
+		{
+			Content = JsonContent.Create(new { status = "Closed" })
+		};
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var response = await http.SendAsync(request);
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+	}
+
+	[Test, NotInParallel("SetupFlow", Order = 10)]
+	public async Task SetStatus_UnknownAccount_ReturnsNotFound()
+	{
+		var (http, sessionToken) = await LoginAsGodAccountAsync();
+
+		using var request = new HttpRequestMessage(HttpMethod.Post, "api/admin/accounts/999999999/status")
+		{
+			Content = JsonContent.Create(new { status = "Closed" })
+		};
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var response = await http.SendAsync(request);
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+	}
+
 	[Test, NotInParallel("SetupFlow", Order = 8)]
 	public async Task SetStatus_UnknownStatus_ReturnsBadRequest()
 	{

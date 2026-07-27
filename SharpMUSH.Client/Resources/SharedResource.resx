@@ -2762,9 +2762,6 @@
   <data name="RolNoAccountFound" xml:space="preserve">
     <value>No account found for “{0}”.</value>
   </data>
-  <data name="RolDisabledBadge" xml:space="preserve">
-    <value>Disabled</value>
-  </data>
   <data name="RolAssignedRoles" xml:space="preserve">
     <value>Assigned roles</value>
   </data>

@@ -1897,9 +1897,6 @@
   <data name="RolNoAccountFound" xml:space="preserve">
     <value>Aucun compte trouvé pour « {0} ».</value>
   </data>
-  <data name="RolDisabledBadge" xml:space="preserve">
-    <value>Désactivé</value>
-  </data>
   <data name="RolAssignedRoles" xml:space="preserve">
     <value>Rôles attribués</value>
   </data>
