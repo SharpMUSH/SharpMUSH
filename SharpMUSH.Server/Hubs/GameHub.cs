@@ -134,8 +134,8 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	/// The client calls this after moving to a new room.
 	/// </summary>
 	/// <param name="roomDbref">The room's objid, e.g. <c>"#7:1700000000"</c>.</param>
-	/// <exception cref="HubException">The argument is not a parseable dbref or objid.</exception>
-	public async Task JoinRoom(string roomDbref)
+	/// <exception cref="HubException">The argument is absent or not a parseable dbref or objid.</exception>
+	public async Task JoinRoom(string? roomDbref)
 	{
 		var room = ParseRoomOrThrow(roomDbref);
 		await Groups.AddToGroupAsync(Context.ConnectionId, RoomGroupName(room));
@@ -148,8 +148,8 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	/// The client calls this before moving away from a room.
 	/// </summary>
 	/// <param name="roomDbref">The room's objid, e.g. <c>"#7:1700000000"</c>.</param>
-	/// <exception cref="HubException">The argument is not a parseable dbref or objid.</exception>
-	public async Task LeaveRoom(string roomDbref)
+	/// <exception cref="HubException">The argument is absent or not a parseable dbref or objid.</exception>
+	public async Task LeaveRoom(string? roomDbref)
 	{
 		var room = ParseRoomOrThrow(roomDbref);
 		await Groups.RemoveFromGroupAsync(Context.ConnectionId, RoomGroupName(room));
@@ -160,9 +160,10 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	/// <summary>
 	/// Parses a client-supplied room reference. Client input is the one place a malformed
 	/// spelling can enter, so it is rejected here rather than silently naming a group nothing
-	/// publishes to.
+	/// publishes to. The parameter is nullable because a client can send JSON <c>null</c>
+	/// regardless of the declared type — nullable reference types are not enforced at runtime.
 	/// </summary>
-	private DBRef ParseRoomOrThrow(string roomDbref)
+	private DBRef ParseRoomOrThrow(string? roomDbref)
 	{
 		if (DBRef.TryParse(roomDbref, out var room) && room is not null)
 		{

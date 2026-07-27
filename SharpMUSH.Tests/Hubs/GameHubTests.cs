@@ -195,7 +195,8 @@ public class GameHubTests
 	[Arguments("5")]
 	[Arguments("not-a-dbref")]
 	[Arguments("")]
-	public async Task JoinRoom_WithUnparseableReference_Throws(string roomDbref)
+	[Arguments(null)]
+	public async Task JoinRoom_WithUnparseableReference_Throws(string? roomDbref)
 	{
 		var (hub, groups) = BuildHub();
 
@@ -261,10 +262,11 @@ public class GameHubTests
 
 		var onTheWire = produced.ToString();
 		await Assert.That(DBRef.TryParse(onTheWire, out var consumed)).IsTrue();
+		var roundTripped = consumed!.Value;
 
-		await Assert.That(GameHub.CharacterGroupName(consumed!.Value))
+		await Assert.That(GameHub.CharacterGroupName(roundTripped))
 			.IsEqualTo(GameHub.CharacterGroupName(produced));
-		await Assert.That(GameHub.RoomGroupName(consumed.Value))
+		await Assert.That(GameHub.RoomGroupName(roundTripped))
 			.IsEqualTo(GameHub.RoomGroupName(produced));
 	}
 

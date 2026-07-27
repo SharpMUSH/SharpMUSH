@@ -154,7 +154,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 			if (msg.Data is null) continue;
 
 			var dbref = msg.Data.CharacterDbref;
-			if (dbref is null || !DBRef.TryParse(dbref, out var character) || character is null)
+			if (!DBRef.TryParse(dbref, out var character) || character is null)
 			{
 				_logger.LogWarning(
 					"[NatsBridge] Dropping GameOutputMessage with unparseable CharacterDbref {Dbref}; " +
