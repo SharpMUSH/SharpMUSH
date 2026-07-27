@@ -5,9 +5,13 @@ using LspRange = SharpMUSH.Library.Models.Range;
 namespace SharpMUSH.Implementation;
 
 /// <summary>
-/// Custom error listener that collects detailed parse error information.
+/// Custom error listener that collects detailed parse error information. Implements the lexer
+/// error interface (<see cref="IAntlrErrorListener{Int32}"/>) as well as the parser one so that a
+/// grammar whose lexer is not total — the lock lexer, where a stray <c>^</c> matches no rule —
+/// surfaces token-recognition failures through <see cref="HasErrors"/> rather than dropping the
+/// offending characters silently (which would let e.g. <c>#TRUE^</c> validate as <c>#TRUE</c>).
 /// </summary>
-public class ParserErrorListener : BaseErrorListener
+public class ParserErrorListener : BaseErrorListener, IAntlrErrorListener<int>
 {
 	private readonly List<ParseError> _errors = [];
 	private readonly string _inputText;
@@ -102,6 +106,31 @@ public class ParserErrorListener : BaseErrorListener
 			ExpectedTokens = expectedTokens,
 			InputText = _inputText,
 			Snippet = snippet,
+		});
+	}
+
+	/// <summary>
+	/// Lexer error overload. A lexer reports the offending symbol as an <see langword="int"/> (the
+	/// input codepoint) rather than an <see cref="IToken"/>; there is no expected-token set to
+	/// extract, so record the position and message directly. Its mere presence in
+	/// <see cref="Errors"/> is enough for callers gating on <see cref="HasErrors"/> to fail closed.
+	/// </summary>
+	public void SyntaxError(
+		TextWriter output,
+		IRecognizer recognizer,
+		int offendingSymbol,
+		int line,
+		int charPositionInLine,
+		string msg,
+		RecognitionException e)
+	{
+		_errors.Add(new ParseError
+		{
+			Line = line,
+			Column = charPositionInLine,
+			Message = msg,
+			InputText = _inputText,
+			Snippet = BuildSnippet(_inputText, line, charPositionInLine),
 		});
 	}
 

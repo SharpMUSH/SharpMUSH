@@ -217,7 +217,7 @@ The community record vindicates the two *load-bearing* SharpMUSH choices: single
 
 1. **`iter()` with `##`**: rewrites pattern per element and calls `FunctionParse` — full pipeline × N elements (`ListFunctions.cs:529–535`). The no-`##` path already reuses the deferred subtree closure. Unify: substitute via iteration registers only (`%iL` already exists) and revisit the subtree.
 2. **Command dispatch**: raw split parse (NoParse mode) → per-arg `FunctionParse` (second full pipeline per arg) → NoParse/EqSplit deferred lambdas that call `FunctionParse` *again* on demand (`ArgumentSplit`, visitor:1970–2016; TODO comment at :1981 acknowledges it). The function-argument path proves the better pattern exists: `CreateDeferredEvaluation` closes over the **subtree** — no re-lex, no re-parse. Command args deserve the same: keep the arg's `EvaluationStringContext` and revisit.
-3. **Attribute evaluation (`u()`, `$`-commands, hooks, `@function`)**: every call re-parses the stored attribute text. Attribute text is immutable between writes and the visitor is stateless w.r.t. the tree (all state flows through `ParserState`) — so **parse trees are cacheable**. Precedent in-repo: `BooleanExpressionParser.Compile` FusionCache. A `FusionCache` keyed on attribute text hash → `startPlainString` tree (plus the `MString` source for slicing) would eliminate the parse phase for hot softcode entirely. This is the biggest structural win available; Penn *cannot* do this (its parse *is* its eval), so it's also a place to beat Penn.
+3. **Attribute evaluation (`u()`, `$`-commands, hooks, `@function`)**: every call re-parses the stored attribute text. Attribute text is immutable between writes and the visitor is stateless w.r.t. the tree (all state flows through `ParserState`) — so **parse trees are cacheable**. Precedent in-repo: `BooleanExpressionParser.Compile` FusionCache. A `FusionCache` keyed on the *full* plaintext (plus the entry rule) → `startPlainString` tree (with the current call's `MString` supplied for slicing) would eliminate the parse phase for hot softcode entirely. Content-addressing is the crux: the key must be the exact source text (or a collision-resistant digest — never a truncated `GetHashCode`, which would let two attributes alias to one tree) together with a grammar/semantic-version component, so a changed attribute simply misses rather than reusing a stale tree. This is the biggest structural win available; Penn *cannot* do this (its parse *is* its eval), so it's also a place to beat Penn. Scoped in `PARSER_PARSE_TREE_CACHE_SCOPING.md`.
 4. **Two-stage SLL** (§5.2.1): multiplies into all of the above; their own 171× measurement bounds the upside on pathological inputs, and ~10× is plausible on typical ones (LL full-context scans measured 477/102 lines).
 5. **Don't bother with**: recognizer pooling (officially unnecessary), `BuildParseTree=false` (visitor needs trees), runtime switching (§5.2.9). Consider `TrimParseTree` only after measuring.
 
@@ -236,14 +236,14 @@ The community record vindicates the two *load-bearing* SharpMUSH choices: single
 See `PARSER_IMPROVEMENT_HANDOFF.md` §Status for outcomes, the corrections implementation forced on this analysis, and one remaining fidelity gap.
 
 **P1 — the two big levers**
-5. Two-stage SLL+Bail with LL-fallback counter (§5.2.1). Flip `DebugOptions` default; correct the enum doc-comment.
-6. Deferred-subtree unification: command args + `iter ##` revisit contexts instead of re-parsing (§6.1–2).
-7. Attribute parse-tree cache (FusionCache, invalidated on attribute write) (§6.3).
+5. ~~Two-stage SLL+Bail with LL-fallback counter (§5.2.1); flip `DebugOptions` default; correct the enum doc-comment~~ — **DONE** (branch `feature/parser-hardening-phase2`), default is now `TwoStage`.
+6. Deferred-subtree unification: command args + `iter ##` revisit contexts instead of re-parsing (§6.1–2) — subsumed by item 7.
+7. Attribute parse-tree cache — **SCOPED as a benchmark-gated follow-up** in `PARSER_PARSE_TREE_CACHE_SCOPING.md`. Content-addressed (key = full plaintext + entry rule), so it needs **no** invalidation on write — a changed attribute is simply a different key. (§6.3)
 
 **P2 — robustness parity**
-8. Evaluation time budget (CPU-slice analogue) checked beside `LimitExceeded` (§4.12.1).
-9. Parse-depth guard: nesting pre-scan and/or `EnsureSufficientExecutionStack` partial class (§4.12.2).
-10. Output-size ceiling (configurable; not 8 K) (§4.12.4); Halted check (§4.12.3); Penn-parity limit defaults decision (§4.11).
+8. ~~Evaluation time budget (CPU-slice analogue) (§4.12.1)~~ — **RESOLVED, no code**: runaway protection is already met by `FunctionInvocationLimit`; a wall-clock deadline would misfire on DB-latency-slow evals, and true per-eval CPU time is infeasible in async .NET.
+9. ~~Parse-depth guard: nesting pre-scan (§4.12.2)~~ — **DONE** (branch `fix/parser-depth-guard`), a pre-parse token-depth guard at all parse entry points (remote-DoS fix).
+10. ~~Output-size ceiling; Halted check (§4.12.4/§4.12.3)~~ — **DONE** (5 MB single-function ceiling; HALT enforced on `u()`/`ufun` and `$`-command dispatch). Penn-parity limit defaults settled in the P3 compatibility table (see the handoff doc).
 
 **P3 — compat decisions & polish**
 11. Decide-and-document: command-word evaluation (§4.5), $-command matching on evaluated line (§4.6 — the hook path is already the spec), limit-hit tail behavior (§4.11), negative-maxargs audit (§4.9), `% `/uppercase-sub/`%c`-`%u` audits (§4.13), parser-failure class reduction via extended token rewriting (§4.7).

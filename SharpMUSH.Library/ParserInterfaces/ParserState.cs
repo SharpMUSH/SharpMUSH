@@ -136,6 +136,14 @@ public class LimitExceededFlag
 	/// Indicates whether a limit has been exceeded during this evaluation.
 	/// </summary>
 	public bool IsExceeded { get; set; }
+
+	/// <summary>
+	/// The MUSH error string of the limit that first tripped — invocation, recursion/call, or the
+	/// output-size ceiling. Set once (first trip wins) alongside <see cref="IsExceeded"/> so that a
+	/// limit hit deep in argument evaluation surfaces the error that actually occurred, rather than
+	/// an outer frame reporting every limit as a generic invocation-limit error.
+	/// </summary>
+	public string? ErrorMessage { get; set; }
 }
 
 /// <summary>
