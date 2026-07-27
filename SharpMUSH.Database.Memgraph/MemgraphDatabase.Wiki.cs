@@ -262,8 +262,14 @@ public partial class MemgraphDatabase : IWikiService
 		// W-7: ExecuteWriteAsync retries on transient Memgraph conflicts; safe under parallel load.
 		await session.ExecuteWriteAsync(async tx =>
 		{
+			// The WikiRevision sweep already covers translation revisions, so only the translation
+			// nodes themselves need their own statement.
 			await tx.RunAsync(
 				"MATCH (r:WikiRevision {pageId: $id}) DELETE r",
+				new { id });
+
+			await tx.RunAsync(
+				"MATCH (t:WikiTranslation {pageId: $id}) DELETE t",
 				new { id });
 
 			await tx.RunAsync(
@@ -323,8 +329,11 @@ public partial class MemgraphDatabase : IWikiService
 	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
 	{
 		await using var session = driver.AsyncSession();
-		var result = await session.RunAsync(
-			"MATCH (r:WikiRevision {pageId: $pageId}) RETURN r ORDER BY r.revisionNumber DESC SKIP $skip LIMIT $take",
+		var result = await session.RunAsync("""
+			MATCH (r:WikiRevision {pageId: $pageId})
+			WHERE coalesce(r.locale, '') = ''
+			RETURN r ORDER BY r.revisionNumber DESC SKIP $skip LIMIT $take
+			""",
 			new { pageId, skip, take });
 
 		var records = await result.ToListAsync();
@@ -437,28 +446,237 @@ public partial class MemgraphDatabase : IWikiService
 	private static string Slugify(string title) =>
 		WikiHelpers.Slugify(title);
 
-	// ---- Translations (Task 8 replaces these) -------------------------------
+	// ---- Translations -------------------------------------------------------
 
-	private static NotSupportedException WikiTranslationsNotImplemented(string provider) =>
-		new($"Wiki translations are not yet implemented for the {provider} provider.");
+	public async Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId)
+	{
+		await using var session = driver.AsyncSession();
+		var result = await session.RunAsync(
+			"MATCH (t:WikiTranslation {pageId: $pageId}) RETURN t ORDER BY t.locale ASC",
+			new { pageId });
 
-	public Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId) =>
-		throw WikiTranslationsNotImplemented("Memgraph");
+		var records = await result.ToListAsync();
+		return records
+			.Select(r => NodeToWikiTranslation(r["t"].As<INode>()))
+			.Select(t => new WikiTranslationSummary(t.Locale, t.Title, t.Published, t.UpdatedAt, t.RevisionNumber))
+			.ToList()
+			.AsReadOnly();
+	}
 
-	public Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale) =>
-		throw WikiTranslationsNotImplemented("Memgraph");
+	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
+	{
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
+		if (normalized.Length == 0) return new NotFound();
 
-	public Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+		await using var session = driver.AsyncSession();
+		var result = await session.RunAsync(
+			"MATCH (t:WikiTranslation {pageId: $pageId, locale: $locale}) RETURN t",
+			new { pageId, locale = normalized });
+
+		var records = await result.ToListAsync();
+		if (records.Count == 0) return new NotFound();
+		return NodeToWikiTranslation(records[0]["t"].As<INode>());
+	}
+
+	public async Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
 		string pageId, string locale, string title, string markdown,
-		string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber) =>
-		throw WikiTranslationsNotImplemented("Memgraph");
+		string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
+	{
+		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
+		if (normalizedLocale.IsT1) return normalizedLocale.AsT1;
 
-	public Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref) =>
-		throw WikiTranslationsNotImplemented("Memgraph");
+		var normalized = normalizedLocale.AsT0;
 
-	public Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(
-		string pageId, string locale, int skip, int take) =>
-		throw WikiTranslationsNotImplemented("Memgraph");
+		var pageLookup = await GetByIdAsync(pageId);
+		if (pageLookup.IsT1)
+			return new Error<string>($"No wiki page with id '{pageId}'.");
+
+		var page = pageLookup.AsT0;
+		if (page.SourceLocale.Length > 0
+			&& string.Equals(page.SourceLocale, normalized, StringComparison.OrdinalIgnoreCase))
+			return new Error<string>(
+				$"'{normalized}' is the page's source locale; edit the page itself rather than adding a translation.");
+
+		var now = DateTimeOffset.UtcNow;
+		var html = _wikiRenderer.RenderToHtml(markdown);
+		var plain = _wikiRenderer.ExtractPlainText(markdown);
+
+		try
+		{
+			await using var session = driver.AsyncSession();
+			// ExecuteWriteAsync gives one managed transaction, so here the row write and the revision append
+			// really are atomic — the spec's preferred shape rather than the conditional-update fallback.
+			return await session.ExecuteWriteAsync<OneOf<WikiTranslation, Error<string>>>(async tx =>
+			{
+				// No MERGE. MERGE + ON MATCH SET revisionNumber = revisionNumber + 1 is an unconditional
+				// bump: two translators who both loaded revision 4 both produce a 5 and one loses their
+				// prose. The compare-and-swap has to be expressed as a MATCH on the expected value.
+				var cypher = expectedRevisionNumber is null
+					? """
+						CREATE (t:WikiTranslation {
+							translationId: $translationId, pageId: $pageId, locale: $locale,
+							title: $title, markdownSource: $markdown, renderedHtml: $html, plainText: $plain,
+							lastEditorDbref: $editorDbref, createdAt: $now, updatedAt: $now,
+							published: $published, revisionNumber: 1
+						})
+						RETURN t
+						"""
+					: """
+						MATCH (t:WikiTranslation {pageId: $pageId, locale: $locale})
+						WHERE t.revisionNumber = $expected
+						SET t.title = $title,
+						    t.markdownSource = $markdown,
+						    t.renderedHtml = $html,
+						    t.plainText = $plain,
+						    t.lastEditorDbref = $editorDbref,
+						    t.updatedAt = $now,
+						    t.published = $published,
+						    t.revisionNumber = t.revisionNumber + 1
+						RETURN t
+						""";
+
+				var result = await tx.RunAsync(cypher,
+					new
+					{
+						pageId,
+						locale = normalized,
+						translationId = Guid.NewGuid().ToString("N"),
+						title,
+						markdown,
+						html,
+						plain,
+						editorDbref,
+						now = now.ToString("O"),
+						published,
+						expected = expectedRevisionNumber ?? 0
+					});
+
+				var records = await result.ToListAsync();
+				if (records.Count == 0)
+				{
+					// Zero rows matched: somebody else already bumped it, or it does not exist. Not retried.
+					return new Error<string>(
+						$"The '{normalized}' translation changed while you were editing, or does not exist "
+						+ $"(expected revision {expectedRevisionNumber}). Reload and re-apply your changes.");
+				}
+
+				var translation = NodeToWikiTranslation(records[0]["t"].As<INode>());
+
+				await SaveMemgraphTranslationRevisionAsync(tx, translation, editorDbref, editSummary, now);
+				return translation;
+			});
+		}
+		catch (Exception ex)
+		{
+			// On the create path a lost race against the (pageId, locale) uniqueness constraint lands here,
+			// and there is nothing of this caller's to preserve. On the update path a conflict has already
+			// returned above, so reaching this handler with a non-null expected revision is a real fault —
+			// report it, never re-read and re-apply, which would overwrite the winner with stale markdown.
+			if (expectedRevisionNumber is null)
+			{
+				var existing = await GetTranslationAsync(pageId, normalized);
+				if (existing.IsT0)
+					return new Error<string>(
+						$"A '{normalized}' translation already exists for page '{pageId}'. "
+						+ "Pass its current revision number to update it.");
+			}
+
+			return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");
+		}
+	}
+
+	public async Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
+	{
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
+		if (normalized.Length == 0) return new NotFound();
+
+		var lookup = await GetTranslationAsync(pageId, normalized);
+		if (lookup.IsT1) return new NotFound();
+
+		await using var session = driver.AsyncSession();
+		await session.ExecuteWriteAsync(async tx =>
+		{
+			await tx.RunAsync(
+				"MATCH (r:WikiRevision {pageId: $pageId, locale: $locale}) DELETE r",
+				new { pageId, locale = normalized });
+
+			await tx.RunAsync(
+				"MATCH (t:WikiTranslation {pageId: $pageId, locale: $locale}) DELETE t",
+				new { pageId, locale = normalized });
+		});
+
+		return new None();
+	}
+
+	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(
+		string pageId, string locale, int skip, int take)
+	{
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
+
+		await using var session = driver.AsyncSession();
+		var result = await session.RunAsync("""
+			MATCH (r:WikiRevision {pageId: $pageId})
+			WHERE coalesce(r.locale, '') = $locale
+			RETURN r ORDER BY r.revisionNumber DESC SKIP $skip LIMIT $take
+			""",
+			new { pageId, locale = wanted, skip, take });
+
+		var records = await result.ToListAsync();
+		return records.Select(r => NodeToWikiRevision(r["r"].As<INode>())).ToList().AsReadOnly();
+	}
+
+	/// <summary>
+	/// Appends a revision node for a translation. <c>revisionId</c> carries the locale so it cannot
+	/// collide with the source page's <c>{pageId}:{revisionNumber}</c> keys.
+	/// </summary>
+	private static async Task SaveMemgraphTranslationRevisionAsync(
+		IAsyncQueryRunner runner,
+		WikiTranslation translation,
+		string editorDbref,
+		string? editSummary,
+		DateTimeOffset timestamp)
+	{
+		await runner.RunAsync("""
+			CREATE (r:WikiRevision {
+				revisionId: $revisionId,
+				pageId: $pageId,
+				locale: $locale,
+				revisionNumber: $revisionNumber,
+				markdownSource: $markdownSource,
+				editorDbref: $editorDbref,
+				timestamp: $timestamp,
+				editSummary: $editSummary
+			})
+			""",
+			new
+			{
+				revisionId = $"{translation.PageId}:{translation.Locale}:{translation.RevisionNumber}",
+				pageId = translation.PageId,
+				locale = translation.Locale,
+				revisionNumber = translation.RevisionNumber,
+				markdownSource = translation.MarkdownSource,
+				editorDbref,
+				timestamp = timestamp.ToString("O"),
+				editSummary = editSummary ?? ""
+			});
+	}
+
+	private static WikiTranslation NodeToWikiTranslation(INode node) => new(
+		Id: node.Properties.TryGetValue("translationId", out var id) ? id?.ToString() ?? "" : "",
+		PageId: node.Properties.TryGetValue("pageId", out var pageId) ? pageId?.ToString() ?? "" : "",
+		Locale: node.Properties.TryGetValue("locale", out var locale) ? locale?.ToString() ?? "" : "",
+		Title: node.Properties.TryGetValue("title", out var title) ? title?.ToString() ?? "" : "",
+		MarkdownSource: node.Properties.TryGetValue("markdownSource", out var md) ? md?.ToString() ?? "" : "",
+		RenderedHtml: node.Properties.TryGetValue("renderedHtml", out var html) ? html?.ToString() ?? "" : "",
+		PlainText: node.Properties.TryGetValue("plainText", out var plain) ? plain?.ToString() ?? "" : "",
+		LastEditorDbref: node.Properties.TryGetValue("lastEditorDbref", out var editor) ? editor?.ToString() ?? "" : "",
+		CreatedAt: node.Properties.TryGetValue("createdAt", out var created)
+			&& DateTimeOffset.TryParse(created?.ToString(), out var createdAt) ? createdAt : DateTimeOffset.MinValue,
+		UpdatedAt: node.Properties.TryGetValue("updatedAt", out var updated)
+			&& DateTimeOffset.TryParse(updated?.ToString(), out var updatedAt) ? updatedAt : DateTimeOffset.MinValue,
+		Published: !node.Properties.TryGetValue("published", out var published) || published is not false,
+		RevisionNumber: node.Properties.TryGetValue("revisionNumber", out var rev)
+			&& int.TryParse(rev?.ToString(), out var revNum) ? revNum : 1);
 
 	#endregion
 }
