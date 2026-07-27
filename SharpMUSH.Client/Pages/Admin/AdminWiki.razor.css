@@ -60,3 +60,13 @@
     overflow-x: auto;
     min-width: 0;
 }
+
+.admin-wiki-coverage {
+    font-size: 0.6875rem;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+}
+
+.admin-wiki-coverage-none {
+    color: var(--mud-palette-warning);
+}
