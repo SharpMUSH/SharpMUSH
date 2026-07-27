@@ -710,6 +710,9 @@
   <data name="CantSeeThroughThat" xml:space="preserve">
     <value>You can't see through that.</value>
   </data>
+  <data name="VariableExitDestinationInvalidFormat" xml:space="preserve">
+    <value>Variable exit destination #{0} is invalid or not permitted.</value>
+  </data>
   <data name="ExitGoesNowhere" xml:space="preserve">
     <value>That exit doesn't go anywhere.</value>
   </data>
