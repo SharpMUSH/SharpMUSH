@@ -227,17 +227,17 @@ public class SharpMUSHParserVisitor(
 		var bestDistance = int.MaxValue;
 		foreach (var (candidate, _) in parser.FunctionLibrary)
 		{
-			var lower = candidate.ToLowerInvariant();
-			var distance = LevenshteinWithin(typed, lower, budget);
+			// Function names are already normalized to lower-case when stored in FunctionLibrary.
+			var distance = LevenshteinWithin(typed, candidate, budget);
 			if (distance < 0)
 			{
 				continue;
 			}
 
 			// Closest wins; ties break alphabetically for a stable suggestion.
-			if (distance < bestDistance || (distance == bestDistance && (best is null || string.CompareOrdinal(lower, best) < 0)))
+			if (distance < bestDistance || (distance == bestDistance && (best is null || string.CompareOrdinal(candidate, best) < 0)))
 			{
-				best = lower;
+				best = candidate;
 				bestDistance = distance;
 			}
 		}
