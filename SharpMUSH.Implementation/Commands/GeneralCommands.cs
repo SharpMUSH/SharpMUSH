@@ -130,6 +130,7 @@ public partial class Commands
 		if (depth > Configuration!.CurrentValue.Limit.FunctionRecursionLimit)
 		{
 			limitExceeded.IsExceeded = true;
+			limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Recursion;
 			callDepth.Decrement();
 			recursionDepths[attributeLongName] = depth - 1;
 			return new CallState(ErrorMessages.Returns.Recursion);

@@ -918,7 +918,10 @@ public class SharpMUSHParserVisitor(
 			}
 
 			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-			GetTelemetryService(parser)?.RecordFunctionInvocation(name, elapsedMs, success);
+			// A limit hit (invocation, recursion/call, or output size) aborts the invocation, so it is
+			// not a successful call even though it returned a value rather than throwing.
+			var limitHit = limitExceeded is { IsExceeded: true };
+			GetTelemetryService(parser)?.RecordFunctionInvocation(name, elapsedMs, success && !limitHit);
 		}
 	}
 

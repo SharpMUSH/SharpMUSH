@@ -366,8 +366,9 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task OutputCeiling_OversizedFunctionResult_IsRefused()
 	{
-		// ~6 million characters, past the 5 MB (5,242,880-char) ceiling.
-		var result = await FunctionParser.FunctionParse(MModule.single("repeat(x,6000000)"));
+		// One character past the 5 MB (5,242,880-char) ceiling — enough to cross it without
+		// allocating far more than necessary.
+		var result = await FunctionParser.FunctionParse(MModule.single("repeat(x,5242881)"));
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 OUTPUT EXCEEDED MAXIMUM SIZE");
@@ -392,9 +393,35 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task OutputCeiling_OversizedResultNestedInAnotherCall_ReportsOutputError()
 	{
-		var result = await FunctionParser.FunctionParse(MModule.single("strcat(repeat(x,6000000),tail)"));
+		var result = await FunctionParser.FunctionParse(MModule.single("strcat(repeat(x,5242881),tail)"));
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 OUTPUT EXCEEDED MAXIMUM SIZE");
+	}
+
+	/// <summary>
+	/// The same propagation guarantee for the recursion limit: when an attribute recurses past
+	/// FunctionRecursionLimit while nested inside another function, the outer frame must report the
+	/// recursion error, not a generic invocation-limit error. The recursion limit is enforced in
+	/// AttributeService/GeneralCommands (a different file from CallFunction), which set the shared
+	/// exceeded-flag; those sites must also record the error string so the propagation point does
+	/// not fall back to the invocation-limit message.
+	/// </summary>
+	[Test]
+	public async Task RecursionLimit_NestedInAnotherCall_ReportsRecursionNotInvocationError()
+	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "NestedRec");
+		// Unbounded self-recursion: u() re-invokes the same attribute, tripping the per-attribute
+		// FunctionRecursionLimit (100) well before the invocation limit (100000).
+		await CommandParser.CommandParse(1, ConnectionService,
+			MModule.single($"&NESTED_REC_UNIQUE {objDbRef}=[u({objDbRef}/NESTED_REC_UNIQUE)]"));
+
+		var result = await FunctionParser.FunctionParse(
+			MModule.single($"strcat([u({objDbRef}/NESTED_REC_UNIQUE)],tail)"));
+
+		await Assert.That(result).IsNotNull();
+		var output = result!.Message.ToPlainText();
+		await Assert.That(output).Contains("#-1 FUNCTION RECURSION LIMIT EXCEEDED");
+		await Assert.That(output).DoesNotContain("INVOCATION LIMIT");
 	}
 }

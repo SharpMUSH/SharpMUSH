@@ -275,6 +275,7 @@ public class AttributeService(
 		if (depth > configuration.CurrentValue.Limit.FunctionRecursionLimit)
 		{
 			limitExceeded.IsExceeded = true;
+			limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Recursion;
 			return MModule.single(ErrorMessages.Returns.Recursion);
 		}
 
