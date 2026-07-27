@@ -648,6 +648,44 @@ public class InMemoryWikiServiceTests
 	}
 
 	[Test]
+	public async Task GetRevisionForLocaleAsync_ReturnsTheRequestedLocalesRevisionNotTheSources()
+	{
+		// Numbering restarts at 1 per locale, so revision 1 exists in both streams with different prose.
+		// If this returned the source row the history page would diff French against English and render it
+		// as a plausible rewrite rather than an error.
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons", markdown: "en v1");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+
+		var french = await svc.GetRevisionForLocaleAsync(page.Id, "fr", 1);
+		var source = await svc.GetRevisionForLocaleAsync(page.Id, string.Empty, 1);
+
+		await Assert.That(french.IsT0).IsTrue();
+		await Assert.That(french.AsT0.Locale).IsEqualTo("fr");
+		await Assert.That(french.AsT0.MarkdownSource).IsEqualTo("corps fr");
+		await Assert.That(source.IsT0).IsTrue();
+		await Assert.That(source.AsT0.MarkdownSource)
+			.IsEqualTo("en v1")
+			.Because("the empty stream is the source's, and the two rows share a revision number");
+	}
+
+	[Test]
+	public async Task GetRevisionForLocaleAsync_IsNotFoundWhenThatStreamLacksTheNumber()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons", markdown: "en v1");
+		await svc.UpdateAsync(page.Id, "en v2", "#1");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+
+		// Source revision 2 exists; French stops at 1.
+		var result = await svc.GetRevisionForLocaleAsync(page.Id, "fr", 2);
+
+		await Assert.That(result.IsT1)
+			.IsTrue()
+			.Because("a missing revision in one locale must not fall through to another locale's row");
+	}
+
+	[Test]
 	public async Task DeleteTranslationAsync_RemovesTheRowAndItsRevisions()
 	{
 		var svc = BuildService();

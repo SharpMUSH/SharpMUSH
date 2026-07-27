@@ -339,16 +339,8 @@ public class WikiController(
 		if (!CanSee(lookup.AsT0)) return NotFound();
 
 		var page = lookup.AsT0;
-		var localized = await localization.LocalizeAsync(page, lang, IncludeDrafts);
-
 		// The source page's revisions are stored with an empty Locale; a translation's carry its tag.
-		// SourceLocaleOf, not a local re-derivation: SourceLocale is materialised once and there is exactly
-		// one accessor for it, so a controller cannot start disagreeing with the resolver about what
-		// language a page was authored in.
-		var stream = string.Equals(
-			localized.Locale, localization.SourceLocaleOf(page), StringComparison.OrdinalIgnoreCase)
-			? string.Empty
-			: localized.Locale;
+		var stream = await ResolveRevisionStreamAsync(page, lang);
 
 		var revisions = await wikiService.GetRevisionsForLocaleAsync(page.Id, stream, skip, take);
 		return Ok(revisions.Select(ToDto));
@@ -465,21 +457,58 @@ public class WikiController(
 	}
 
 	/// <summary>
-	/// GET /api/wiki/{slug}/revisions/{number}
+	/// GET /api/wiki/{slug}/revisions/{number}?ns=&amp;category=&amp;lang=
 	/// Returns a single revision snapshot, including its full markdown body.
 	/// </summary>
+	/// <remarks>
+	/// <c>lang</c> selects the same stream <see cref="GetRevisions"/> would list, and it is not optional
+	/// decoration: revision numbering restarts at 1 per locale, so a number resolved against the wrong
+	/// stream silently returns a different language's prose. The history page would then diff French
+	/// against English and render it as a legitimate rewrite.
+	/// </remarks>
 	[HttpGet("{slug}/revisions/{number:int}")]
-	public async Task<IActionResult> GetRevision(string slug, int number, [FromQuery] string? ns = null, [FromQuery] string? category = null)
+	public async Task<IActionResult> GetRevision(
+		string slug, int number,
+		[FromQuery] string? ns = null, [FromQuery] string? category = null,
+		[FromQuery] string? lang = null)
 	{
 		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
 		if (!CanSee(lookup.AsT0)) return NotFound();
 
-		var result = await wikiService.GetRevisionAsync(lookup.AsT0.Id, number);
+		var page = lookup.AsT0;
+		var stream = await ResolveRevisionStreamAsync(page, lang);
+
+		var result = await wikiService.GetRevisionForLocaleAsync(page.Id, stream, number);
 		return result.Match<IActionResult>(
 			revision => Ok(ToDto(revision)),
 			_ => NotFound());
+	}
+
+	/// <summary>
+	/// Resolves which revision stream a <c>lang</c> query names: <see cref="string.Empty"/> for the source
+	/// page's own stream, or the translation's locale tag.
+	/// </summary>
+	/// <remarks>
+	/// Shared by <see cref="GetRevisions"/> and <see cref="GetRevision"/> so the list and the per-revision
+	/// fetch can never disagree about which stream a request is in — that disagreement is precisely how a
+	/// history list of French revisions ends up diffing English bodies.
+	/// <para>
+	/// Resolution goes through <c>LocalizeAsync</c>, so a draft translation the caller may not see falls
+	/// back to the source stream rather than leaking its prose through the diff view, and
+	/// <c>SourceLocaleOf</c> rather than a local re-derivation keeps the controller from disagreeing with
+	/// the resolver about what language a page was authored in.
+	/// </para>
+	/// </remarks>
+	private async Task<string> ResolveRevisionStreamAsync(WikiPage page, string? lang)
+	{
+		var localized = await localization.LocalizeAsync(page, lang, IncludeDrafts);
+
+		return string.Equals(
+			localized.Locale, localization.SourceLocaleOf(page), StringComparison.OrdinalIgnoreCase)
+			? string.Empty
+			: localized.Locale;
 	}
 
 	/// <summary>Request body for creating a new wiki page. Category is part of identity and is fixed at create.</summary>

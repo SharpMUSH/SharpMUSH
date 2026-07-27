@@ -752,6 +752,27 @@ public partial class SurrealDatabase : IWikiService
 		return (results?.Select(MapToWikiRevision).ToList() ?? []).AsReadOnly();
 	}
 
+	public async Task<OneOf<WikiRevision, NotFound>> GetRevisionForLocaleAsync(
+			string pageId, string locale, int revisionNumber)
+	{
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
+
+		var parameters = new Dictionary<string, object?>
+		{
+			["pageId"] = pageId, ["rev"] = revisionNumber, ["locale"] = wanted
+		};
+		// (locale ?? '') rather than a bare locale comparison: rows predating the empty-marker backfill
+		// carry no locale field at all, and SurrealDB matches nothing rather than treating it as NONE = ''.
+		var response = await ExecuteAsync(
+				$"SELECT {WikiRevisionFields} FROM wiki_revision " +
+				"WHERE pageId = $pageId AND revisionNumber = $rev AND (locale ?? '') = $locale",
+				parameters);
+		var results = response.GetValue<List<WikiRevisionDbRecord>>(0);
+		if (results?.Count > 0)
+			return MapToWikiRevision(results[0]);
+		return new NotFound();
+	}
+
 	/// <summary>
 	/// Appends a revision row for a translation, carrying <c>locale</c> so the per-locale stream and the
 	/// (pageId, locale, revisionNumber) unique index both work.

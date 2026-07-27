@@ -708,6 +708,31 @@ public partial class ArangoDatabase : IWikiService
 			.AsReadOnly();
 	}
 
+	public async Task<OneOf<WikiRevision, NotFound>> GetRevisionForLocaleAsync(
+		string pageId, string locale, int revisionNumber)
+	{
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
+
+		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			"""
+			FOR r IN @@c
+				FILTER r.PageId == @pageId AND r.RevisionNumber == @rev
+					AND (r.Locale == @locale OR (@locale == "" AND r.Locale == null))
+				RETURN r
+			""",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiRevisions },
+				{ "pageId", pageId },
+				{ "rev", revisionNumber },
+				{ "locale", wanted }
+			});
+
+		return result.FirstOrDefault() is { ValueKind: not JsonValueKind.Undefined } elem
+			? OneOf<WikiRevision, NotFound>.FromT0(WikiRevisionFromJson(elem))
+			: new NotFound();
+	}
+
 	/// <summary>
 	/// Appends a revision snapshot for a translation. The document carries <c>Locale</c>, which is what
 	/// splits history into a stream per (PageId, Locale).

@@ -492,6 +492,24 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult(result);
 	}
 
+	public Task<OneOf<WikiRevision, NotFound>> GetRevisionForLocaleAsync(string pageId, string locale, int revisionNumber)
+	{
+		if (!_revisions.TryGetValue(pageId, out var list))
+			return Task.FromResult<OneOf<WikiRevision, NotFound>>(new NotFound());
+
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
+
+		WikiRevision? result;
+		lock (list)
+		{
+			result = list.FirstOrDefault(r =>
+				r.RevisionNumber == revisionNumber
+				&& string.Equals(r.Locale, wanted, StringComparison.OrdinalIgnoreCase));
+		}
+
+		return Task.FromResult<OneOf<WikiRevision, NotFound>>(result is null ? new NotFound() : result);
+	}
+
 	/// <summary>The dictionary key for a translation, or null when the locale tag is unusable.</summary>
 	private static (string PageId, string Locale)? TranslationKey(string pageId, string locale)
 	{

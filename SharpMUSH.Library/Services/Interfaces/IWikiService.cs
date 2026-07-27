@@ -205,4 +205,22 @@ public interface IWikiService
 	/// ints, and the compiler would not complain.
 	/// </remarks>
 	Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(string pageId, string locale, int skip, int take);
+
+	/// <summary>
+	/// Returns one revision snapshot from a single <c>(pageId, locale)</c> stream.
+	/// Pass <see cref="string.Empty"/> for the source-locale stream, which is what
+	/// <see cref="GetRevisionAsync"/> returns.
+	/// Returns <c>NotFound</c> if that stream has no such revision number.
+	/// </summary>
+	/// <remarks>
+	/// Revision numbering restarts at 1 in every locale, so <c>revisionNumber</c> alone does not identify a
+	/// revision — <c>(locale, revisionNumber)</c> does. Without this method the history route can list a
+	/// locale's stream while the per-revision route serves the source stream's row of the same number, and a
+	/// diff of French against English renders as a plausible-looking rewrite rather than an error.
+	/// <para>
+	/// This is deliberately <em>not</em> what the rollback paths call: they must stay pinned to the source
+	/// stream, which is why <see cref="GetRevisionAsync"/> keeps its narrower contract.
+	/// </para>
+	/// </remarks>
+	Task<OneOf<WikiRevision, NotFound>> GetRevisionForLocaleAsync(string pageId, string locale, int revisionNumber);
 }

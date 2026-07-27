@@ -215,6 +215,49 @@ public class WikiTranslationIntegrationTests
 	}
 
 	[Test]
+	public async Task GetRevisionForLocaleAsync_ReturnsTheRequestedLocalesRevisionNotTheSources()
+	{
+		// Revision 1 exists in both streams with different prose, so a provider that ignores the locale
+		// filter returns the English row and the assertion below is the only thing that notices. This is
+		// what makes GET /revisions/{n}?lang=fr serve French rather than diffing French against English.
+		var page = await CreateSourcePageAsync("RevByLocale");
+		await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+
+		var french = await Wiki.GetRevisionForLocaleAsync(page.Id, "fr", 1);
+		var source = await Wiki.GetRevisionForLocaleAsync(page.Id, string.Empty, 1);
+
+		await Assert.That(french.IsT0).IsTrue();
+		await Assert.That(french.AsT0.Locale).IsEqualTo("fr");
+		await Assert.That(french.AsT0.MarkdownSource)
+			.IsEqualTo("corps fr")
+			.Because("the French revision 1 is not the English revision 1");
+		await Assert.That(source.IsT0).IsTrue();
+		await Assert.That(source.AsT0.Locale).IsEqualTo(string.Empty);
+		await Assert.That(source.AsT0.MarkdownSource)
+			.IsEqualTo("en **body**")
+			.Because("the empty stream stays the source's, on every backend");
+	}
+
+	[Test]
+	public async Task GetRevisionForLocaleAsync_IsNotFoundWhenThatStreamLacksTheNumber()
+	{
+		// The failure mode this rules out is a provider whose locale predicate silently matches nothing —
+		// or everything. Source revision 2 exists; asking the French stream for 2 must be NotFound, not
+		// the English revision 2.
+		var page = await CreateSourcePageAsync("RevByLocaleMissing");
+		await Wiki.UpdateAsync(page.Id, "en v2", "#1");
+		await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+
+		var missing = await Wiki.GetRevisionForLocaleAsync(page.Id, "fr", 2);
+		var present = await Wiki.GetRevisionForLocaleAsync(page.Id, "fr", 1);
+
+		await Assert.That(missing.IsT1).IsTrue();
+		await Assert.That(present.IsT0)
+			.IsTrue()
+			.Because("a provider matching nothing at all would also make the NotFound above pass");
+	}
+
+	[Test]
 	public async Task DeleteTranslationAsync_RemovesOnlyThatLocale()
 	{
 		var page = await CreateSourcePageAsync("DeleteOne");

@@ -339,6 +339,57 @@ public class WikiControllerTranslationTests
 	}
 
 	[Test]
+	public async Task GetRevision_WithLangReturnsThatLocalesRevisionNotTheSources()
+	{
+		// The list route returns the fr stream, whose numbering restarts at 1. Before lang existed here,
+		// GET /revisions/1?lang=fr answered with the English revision 1 — the history page would then show
+		// French entries and diff English bodies, which reads as a legitimate rename rather than a bug.
+		var (controller, storage) = BuildAnonymous();
+		var page = (await storage.CreateAsync("Dragons", "en v1", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+
+		var french = await controller.GetRevision("dragons", 1, "main", "general", lang: "fr");
+		var source = await controller.GetRevision("dragons", 1, "main", "general", lang: null);
+
+		var frenchDto = (WikiController.WikiRevisionDto)((OkObjectResult)french).Value!;
+		var sourceDto = (WikiController.WikiRevisionDto)((OkObjectResult)source).Value!;
+		await Assert.That(frenchDto.MarkdownSource).IsEqualTo("corps fr");
+		await Assert.That(sourceDto.MarkdownSource)
+			.IsEqualTo("en v1")
+			.Because("omitting lang must keep serving the source stream the rollback UI already reads");
+	}
+
+	[Test]
+	public async Task GetRevision_ForADraftTranslationServesTheSourceStreamToAReader()
+	{
+		// Same rule as GetRevisions: the reader cannot see the draft, so the stream resolves to the source.
+		// Serving the draft's revision here would leak its prose one number at a time.
+		var (controller, storage) = BuildAnonymous();
+		var page = (await storage.CreateAsync("Dragons", "en v1", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
+
+		var result = await controller.GetRevision("dragons", 1, "main", "general", lang: "fr");
+
+		var dto = (WikiController.WikiRevisionDto)((OkObjectResult)result).Value!;
+		await Assert.That(dto.MarkdownSource).IsEqualTo("en v1");
+	}
+
+	[Test]
+	public async Task GetRevision_IsNotFoundWhenTheRequestedLocaleStreamLacksThatNumber()
+	{
+		// The fallback that must NOT happen: fr has one revision, en has two, and asking fr for 2 must be
+		// a 404 rather than quietly handing back the English revision 2.
+		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
+		var page = (await storage.CreateAsync("Dragons", "en v1", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		await storage.UpdateAsync(page.Id, "en v2", "#1");
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+
+		var result = await controller.GetRevision("dragons", 2, "main", "general", lang: "fr");
+
+		await Assert.That(result).IsTypeOf<NotFoundResult>();
+	}
+
+	[Test]
 	public async Task TranslationWriteEndpointsAreGatedOnWikiEdit()
 	{
 		// Every test above constructs the controller directly, which bypasses the authorization filter

@@ -632,6 +632,24 @@ public partial class MemgraphDatabase : IWikiService
 		return records.Select(r => NodeToWikiRevision(r["r"].As<INode>())).ToList().AsReadOnly();
 	}
 
+	public async Task<OneOf<WikiRevision, NotFound>> GetRevisionForLocaleAsync(
+		string pageId, string locale, int revisionNumber)
+	{
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
+
+		await using var session = driver.AsyncSession();
+		var result = await session.RunAsync("""
+			MATCH (r:WikiRevision {pageId: $pageId, revisionNumber: $rev})
+			WHERE coalesce(r.locale, '') = $locale
+			RETURN r
+			""",
+			new { pageId, rev = revisionNumber, locale = wanted });
+
+		var records = await result.ToListAsync();
+		if (records.Count == 0) return new NotFound();
+		return NodeToWikiRevision(records[0]["r"].As<INode>());
+	}
+
 	/// <summary>
 	/// Appends a revision node for a translation. <c>revisionId</c> carries the locale so it cannot
 	/// collide with the source page's <c>{pageId}:{revisionNumber}</c> keys.
