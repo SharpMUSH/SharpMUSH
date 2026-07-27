@@ -64,6 +64,14 @@ public enum AccountStatus { Active, Disabled, Closed, Deleted }
 - **Closed** — the holder has left. Reversible by an admin, not self-service.
 - **Deleted** — removal requested. The row is retained regardless.
 
+**Every non-`Active` status is admin-reversible**, including `Deleted`. That follows from
+retaining credentials: the row keeps everything needed to restore the account, so a
+one-way `Deleted` would be a rule with nothing behind it. `Deleted` therefore means
+"treated as deleted" — unusable for login, presented as gone — not "unrecoverable".
+Service, API, and UI allow the same transitions, and the admin UI offers *Reactivate* on
+all three non-active states. The only irreversible operation is the one this design
+removes: deleting the row.
+
 Replacing rather than adding avoids a bool and an enum that can contradict each other
 (`IsDisabled = false` with `Status = Deleted`), which would force every read site to
 know which one wins. Login succeeds only when `Status == Active`, replacing today's
@@ -171,14 +179,20 @@ Because the traversal projects `account.Username` in the same query, live resolu
 falls out for free: a rename propagates to all historical attribution, and no separate
 batch resolver is needed.
 
-### Account ids stay server-side
+### Account ids stay out of wiki DTOs
 
-Public DTOs carry a username only. Account ids live on the Library models for the
-`IsAuthor` comparison and never reach the browser.
+Wiki DTOs carry a username only; account ids live on the Library models for the
+`IsAuthor` comparison. The rule is scoped to wiki attribution rather than global — the
+admin account surfaces legitimately need an account id, since `AdminAccountRow.Id` is what
+the status endpoint is addressed by. The point is that a reader of a wiki page is never
+handed an internal account key, not that the identifier is a secret.
 
 One cosmetic consequence: `WikiPageHistory.razor` derives its avatar colour from
-`EditorDbref.GetHashCode()`, which will hash a username instead, so existing avatar
-colours change.
+`EditorDbref.GetHashCode()`, which will hash a username instead. Worth noting these
+colours were never stable to begin with — .NET randomizes string hash codes per process,
+so they already change on every server restart. A stable per-contributor colour would need
+an explicit hash, which is out of scope; this design only changes what gets fed to an
+already-unstable one.
 
 ## Asset metadata in the database
 
@@ -199,11 +213,23 @@ descending replaces `ListAsync`'s current full directory scan and in-memory sort
   `ISharpDatabase`. `WikiAssetController` and `GalleryController` change only in the
   uploader parameter, from a dbref to an account id.
 
-**Write ordering.** Bytes first, then metadata; if metadata insertion fails, delete the
-bytes — the rollback the current implementation already performs. Delete goes the
-other way: metadata and edge first, then bytes. The asymmetry is deliberate: an
-orphaned `.bin` is invisible and reclaimable, whereas metadata pointing at missing
-bytes is a live-looking asset that 404s.
+**Write ordering.** Three steps — bytes, metadata, uploader edge — and each needs its own
+rollback, because the uploader is non-nullable on the model:
+
+1. Write bytes. On failure, nothing to undo.
+2. Insert metadata. On failure, delete the bytes (the rollback the current implementation
+   already performs).
+3. Create the uploader edge. **On failure, delete the metadata and the bytes.** A metadata
+   row without its edge is not merely untidy — it violates the non-nullable
+   `UploaderAccountId` contract, so every later read of that asset fails to resolve.
+   Leaving it behind is worse than never having written it.
+
+Delete goes the other way: metadata and edge first, then bytes. The asymmetry is
+deliberate: an orphaned `.bin` is invisible and reclaimable, whereas metadata pointing at
+missing bytes is a live-looking asset that 404s.
+
+Both partial-write boundaries get a test — bytes-without-metadata and
+metadata-without-edge are the two states a reader cannot cope with.
 
 `Sha256` moves across unchanged. Nothing reads it for deduplication today, and no
 dedup behavior is introduced or removed.
@@ -231,7 +257,12 @@ comment true.
 - Seeding: `StartupHandler`'s three `authorDbref: "#1"` call sites use the system
   account id.
 
-### Objids over dbrefs — done
+### Objids over dbrefs — done in PR #722
+
+> Reviewers reading this against `main` alone will find `GameHub.CharacterGroupName` taking a
+> `string` and the handlers emitting a bare `#N`. That is correct: this section describes PR
+> #722, which is open alongside this document. Everything below is true once #722 merges, and
+> nothing in phase 1 or phase 2 depends on it landing first — the two are independent.
 
 This was specified here and has since been implemented separately, because it is a
 cross-cutting transport concern rather than attribution work. Recorded for context:
@@ -311,8 +342,8 @@ populated — a missing key falls back to the raw key.
 ## Testing
 
 - **Unit** — `AccountStatus` transitions and the system-account guard; login rejected
-  for every non-`Active` status; `CharacterIdentity` round-tripping an objid, including
-  the recycled-timestamp mismatch; the derived last-editor calculation.
+  for every non-`Active` status; the fail-closed status parse (a missing stored value reads
+  as `Active`, an unparseable one as `Disabled`); the derived last-editor calculation.
 - **Wiki service** — edge creation on create, update, and upload; author preserved
   across edits; last editor tracking the newest revision.
 - **Integration, per backend** — the traversal projects the current username; a rename

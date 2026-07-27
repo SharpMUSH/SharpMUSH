@@ -19,7 +19,12 @@ This is phase 1 of the spec at `docs/superpowers/specs/2026-07-26-wiki-account-a
 - **Never introduce nullable returns from services.** Use `OneOf<T, Error<string>>` / `OneOf<T, NotFound>`. (Existing `SharpAccount?` lookup returns are pre-existing and stay as they are; do not add new ones.)
 - Prefer `var`; no `this.` qualifier.
 - **Do not add narrating or explanatory code comments.** Comment only what the code cannot say — a non-obvious invariant or a reason. Let the code and tests speak.
-- Enum values are persisted **as strings**, and an unparseable or missing stored value reads back as `AccountStatus.Active`.
+- Enum values are persisted **as strings**. A **missing** status field reads back as
+  `AccountStatus.Active` (documents written before the field existed are active accounts); an
+  **unparseable** value reads back as `AccountStatus.Disabled`. The asymmetry is deliberate:
+  `Status` gates authentication, so an unrecognised value must fail closed. A corrupt or
+  future-version value locking an account out is recoverable by an admin; one silently
+  re-enabling a closed account is not.
 - Run all tests with `dotnet run --project SharpMUSH.Tests` (TUnit). Filter with `--treenode-filter "/*/*/<ClassName>/*"`.
 - Blazor component tests live in `SharpMUSH.Tests.BUnit`, run with `dotnet run --project SharpMUSH.Tests.BUnit`.
 
@@ -114,6 +119,19 @@ public class AccountStatusTests
 	};
 
 	[Test]
+	[Arguments(null, AccountStatus.Active)]
+	[Arguments("", AccountStatus.Active)]
+	[Arguments("Active", AccountStatus.Active)]
+	[Arguments("Closed", AccountStatus.Closed)]
+	[Arguments("Deleted", AccountStatus.Deleted)]
+	[Arguments("Banished", AccountStatus.Disabled)]
+	[Arguments("garbage", AccountStatus.Disabled)]
+	public async ValueTask ParseStatus_MissingIsActive_UnparseableFailsClosed(string? stored, AccountStatus expected)
+	{
+		await Assert.That(AccountStatusParser.Parse(stored)).IsEqualTo(expected);
+	}
+
+	[Test]
 	public async ValueTask NewAccount_DefaultsToActive()
 	{
 		var account = new SharpAccount { Username = "Fresh", PasswordHash = "hash" };
@@ -179,6 +197,33 @@ public enum AccountStatus
 	Deleted
 }
 ```
+
+Add the shared parser alongside it, in the same file, so all three providers use one
+implementation of the fail-open/fail-closed rule:
+
+```csharp
+namespace SharpMUSH.Library.Models;
+
+public static class AccountStatusParser
+{
+	/// <summary>
+	/// Reads a persisted status. A <see langword="null"/> or empty value means the field was never
+	/// written, which is an active account. Any other unrecognised value fails closed to
+	/// <see cref="AccountStatus.Disabled"/>: <see cref="SharpAccount.Status"/> gates authentication,
+	/// and a corrupt value must not be able to re-enable a closed account.
+	/// </summary>
+	public static AccountStatus Parse(string? stored)
+		=> string.IsNullOrEmpty(stored)
+			? AccountStatus.Active
+			: Enum.TryParse<AccountStatus>(stored, out var parsed)
+				? parsed
+				: AccountStatus.Disabled;
+}
+```
+
+Each provider's mapper calls this as `ParseStatus`; add
+`private static AccountStatus ParseStatus(string? stored) => AccountStatusParser.Parse(stored);`
+to each, or call `AccountStatusParser.Parse` directly.
 
 - [ ] **Step 4: Replace the property on the model**
 
@@ -248,10 +293,7 @@ Replace `UpdateAccountDisabledAsync` with:
 In `AccountFromJson`, replace the `IsDisabled` line with:
 
 ```csharp
-			Status = elem.TryGetProperty("Status", out var statusProp)
-				&& Enum.TryParse<AccountStatus>(statusProp.GetString(), out var parsedStatus)
-					? parsedStatus
-					: AccountStatus.Active
+			Status = ParseStatus(elem.TryGetProperty("Status", out var statusProp) ? statusProp.GetString() : null)
 ```
 
 - [ ] **Step 7: Update the ArangoDB schema rule**
@@ -289,10 +331,7 @@ Replace `UpdateAccountDisabledAsync` with:
 In `MapNodeToAccount`, replace the `IsDisabled` line with:
 
 ```csharp
-			Status = node.Properties.TryGetValue("status", out var status)
-				&& Enum.TryParse<AccountStatus>(status?.ToString(), out var parsedStatus)
-					? parsedStatus
-					: AccountStatus.Active
+			Status = ParseStatus(node.Properties.TryGetValue("status", out var status) ? status?.ToString() : null)
 ```
 
 - [ ] **Step 9: Update the SurrealDB provider**
@@ -328,7 +367,7 @@ Replace `UpdateAccountDisabledAsync` with:
 In `MapRecordToAccount`, replace the `IsDisabled = rec.isDisabled` line with:
 
 ```csharp
-		Status = Enum.TryParse<AccountStatus>(rec.status, out var parsedStatus) ? parsedStatus : AccountStatus.Active,
+		Status = ParseStatus(rec.status),
 ```
 
 - [ ] **Step 10: Update `AccountService`**
@@ -639,13 +678,21 @@ with:
 		if (status is AccountStatus.Active)
 			return new Success();
 
-		// The session revoke is the floor: it must always run, even when no IBanEnforcer is wired
-		// (e.g. a Library-only host without a Server). EnforceAccountBanAsync additionally
-		// invalidates cached claims and drops live game/SignalR connections.
-		await accountSessionStore.RevokeAllForAccountAsync(accountId, ct);
-		if (banEnforcer is not null)
+		// Status is persisted first, because it is the durable gate: every authenticated request
+		// re-reads the account and rejects a non-Active one, so a token stops working at its next
+		// request even if the revoke below fails. Revocation and ban enforcement are then attempted
+		// independently — a failure in the first must not skip the second, which is what drops live
+		// SignalR connections that never re-authenticate.
+		try
 		{
-			await banEnforcer.EnforceAccountBanAsync(accountId, ct);
+			await accountSessionStore.RevokeAllForAccountAsync(accountId, ct);
+		}
+		finally
+		{
+			if (banEnforcer is not null)
+			{
+				await banEnforcer.EnforceAccountBanAsync(accountId, ct);
+			}
 		}
 
 		return new Success();
@@ -667,6 +714,12 @@ Then rewrite `DisableAccountAsync` and `EnableAccountAsync` to delegate, removin
 	public ValueTask<OneOf<Success, Error<string>>> EnableAccountAsync(string accountId, CancellationToken ct = default)
 		=> SetAccountStatusAsync(accountId, AccountStatus.Active, ct);
 ```
+
+The `try`/`finally` is the whole mitigation, deliberately. A retry queue or outbox would be
+over-engineering here: `AccountSessionAuthenticationHandler` re-reads the account and checks
+status on **every request**, so a failed revocation cannot leave a token usable — it only leaves
+an already-established connection alive until enforcement runs. The `finally` closes that gap;
+persisting status first means the durable gate is set before either side effect is attempted.
 
 - [ ] **Step 5: Remove `DeleteAccountAsync` from the database layer**
 
@@ -717,14 +770,21 @@ session revocation happens in exactly one place."
 
 ### Task 3: The reserved system account
 
-> **Partly landed already.** `SharpMUSH.Library/Definitions/SystemAccount.cs` exists
-> (`Username = "system"`, `IsReserved`), and `BootstrapService`'s first-run guard already
-> asks "does any *non-reserved* account exist?" via `GetAllAccountsAsync` rather than
-> `HasAnyAccountAsync` — the hazard this plan flagged, fixed ahead of time with tests in
-> `SharpMUSH.Tests/Services/BootstrapServiceTests.cs`. Skip Step 3 and Step 6 below;
-> Steps 4, 5, and 7 (the interface accessor, the two service guards, and
-> `GetOrCreateSystemAccountAsync`) are still to do. `BootstrapService` does not yet
-> create the system account — add that call in Step 6's place.
+> **Partly landed already** — in PR #722, so this holds only once that has merged.
+> `SharpMUSH.Library/Definitions/SystemAccount.cs` exists (`Username = "system"`,
+> `IsReserved`), and `BootstrapService`'s first-run guard already asks "does any
+> *non-reserved* account exist?" via `GetAllAccountsAsync` rather than `HasAnyAccountAsync`,
+> with tests in `SharpMUSH.Tests/Services/BootstrapServiceTests.cs`.
+>
+> **What is left in this task**, precisely:
+>
+> - **Step 3 — skip.** `SystemAccount.cs` already exists exactly as written.
+> - **Steps 4, 5, 7 — do.** The interface accessor, the two service guards, and
+>   `GetOrCreateSystemAccountAsync`.
+> - **Step 6 — do, reduced.** The guard is already correct; what is still missing is the
+>   `GetOrCreateSystemAccountAsync` call at the top of `StartAsync`, so the account actually
+>   gets created. Do not skip this — without it nothing ever creates the system account and
+>   the guard change alone is inert.
 
 **Files:**
 - Create: `SharpMUSH.Library/Definitions/SystemAccount.cs` *(already exists)*
@@ -795,7 +855,7 @@ Add `using SharpMUSH.Library.Definitions;` to the file's usings.
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/AccountStatusTests/*"`
-Expected: compile failure — `SystemAccount` not found; `GetOrCreateSystemAccountAsync` not defined.
+Expected: compile failure — `GetOrCreateSystemAccountAsync` is not defined on `IAccountService`. (`SystemAccount` itself resolves; it landed in PR #722.)
 
 - [ ] **Step 3: Create the constant**
 
@@ -856,9 +916,10 @@ Add the accessor:
 
 Add `using SharpMUSH.Library.Definitions;` to the file's usings.
 
-- [ ] **Step 6: Create the system account at bootstrap**
+- [ ] **Step 6: Actually create the system account at bootstrap**
 
-Replace the body of `StartAsync` in `SharpMUSH.Server/Services/BootstrapService.cs`:
+`BootstrapService.StartAsync` already carries the corrected guard but never creates the
+account. Add the one missing call at the top, so the method reads:
 
 ```csharp
 	public async Task StartAsync(CancellationToken cancellationToken)
@@ -883,7 +944,7 @@ Replace the body of `StartAsync` in `SharpMUSH.Server/Services/BootstrapService.
 
 Add `using SharpMUSH.Library.Definitions;` and `using System.Linq;` if not already present.
 
-The guard has to stop using `HasAnyAccountAsync`: the system account now always exists, so "any account exists" would be permanently true and the admin account would never be pre-generated. `BootstrapService` was the only caller of `HasAnyAccountAsync`, so leave that method in place — it is still a reasonable contract — but it now has no production caller.
+The `GetOrCreateSystemAccountAsync` line is the only new one; the guard beneath it landed in PR #722. `HasAnyAccountAsync` keeps its declaration — it is still a reasonable contract — but now has no production caller.
 
 - [ ] **Step 7: Run tests to verify they pass**
 
