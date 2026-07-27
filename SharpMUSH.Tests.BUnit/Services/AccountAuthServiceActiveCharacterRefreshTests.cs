@@ -17,9 +17,13 @@ file sealed class FakeSessionStorage : IJSRuntime
 {
 	private readonly Dictionary<string, string> _items = new(StringComparer.Ordinal);
 
-	public void Seed(string key, string value) => _items[key] = value;
-	public bool Has(string key) => _items.ContainsKey(key);
-	public string? Read(string key) => _items.TryGetValue(key, out var v) ? v : null;
+	/// <summary>When set, writes only apply after a real await — so a caller that leaves a write
+	/// detached has not applied it by the time its own method returns.</summary>
+	public bool AsyncWrites { get; set; }
+
+	public void Seed(string key, string value) { lock (_items) { _items[key] = value; } }
+	public bool Has(string key) { lock (_items) { return _items.ContainsKey(key); } }
+	public string? Read(string key) { lock (_items) { return _items.TryGetValue(key, out var v) ? v : null; } }
 
 	/// <summary>
 	/// Holds the answer to a <c>getItem</c> for this key until the test releases it, modelling a real
@@ -42,6 +46,9 @@ file sealed class FakeSessionStorage : IJSRuntime
 			return new ValueTask<TValue>(gate.Task.ContinueWith(_ => snapshot, TaskScheduler.Default));
 		}
 
+		if (AsyncWrites && identifier != "sessionStorage.getItem")
+			return new ValueTask<TValue>(Task.Run(async () => { await Task.Yield(); return Invoke<TValue>(identifier, args); }));
+
 		return ValueTask.FromResult(Invoke<TValue>(identifier, args));
 	}
 
@@ -52,16 +59,19 @@ file sealed class FakeSessionStorage : IJSRuntime
 	{
 		var key = args?.Length > 0 ? args[0]?.ToString() ?? string.Empty : string.Empty;
 
-		switch (identifier)
+		lock (_items)
 		{
-			case "sessionStorage.setItem" when args?.Length > 1:
-				_items[key] = args[1]?.ToString() ?? string.Empty;
-				break;
-			case "sessionStorage.removeItem":
-				_items.Remove(key);
-				break;
-			case "sessionStorage.getItem":
-				return _items.TryGetValue(key, out var value) && value is TValue typed ? typed : default!;
+			switch (identifier)
+			{
+				case "sessionStorage.setItem" when args?.Length > 1:
+					_items[key] = args[1]?.ToString() ?? string.Empty;
+					break;
+				case "sessionStorage.removeItem":
+					_items.Remove(key);
+					break;
+				case "sessionStorage.getItem":
+					return _items.TryGetValue(key, out var value) && value is TValue typed ? typed : default!;
+			}
 		}
 
 		return default!;
@@ -205,6 +215,47 @@ public class AccountAuthServiceActiveCharacterRefreshTests
 		await afterRefresh.GetCharactersAsync();
 		await Assert.That(afterRefresh.ActiveCharacter?.DbrefNumber).IsEqualTo(Alpha.DbrefNumber);
 		await Assert.That(storage.Read("sharpmush.account.activeCharacter")).Contains("\"Alpha\"");
+	}
+
+	[Test]
+	public async Task Logout_LeavesNoStoredCharacterBehind()
+	{
+		var storage = new FakeSessionStorage();
+
+		var svc = MakeService(storage, [Alpha, Beta]);
+		await svc.InitAsync();
+		await svc.LoginAsync("headwiz", "password-one");
+		svc.SetActiveCharacter(Beta);
+
+		// End-state cover only: in-process both the awaited removal and the detached one land before
+		// LogoutAsync returns, so this cannot distinguish them. It guards the property that matters to
+		// a user — no stale acting character survives a logout to be restored by the next login — while
+		// the awaited removal in LogoutAsync is what makes that hold in a browser, where a navigation
+		// right after logout can cut a detached continuation short.
+		storage.AsyncWrites = true;
+		await svc.LogoutAsync();
+
+		await Assert.That(storage.Has("sharpmush.account.activeCharacter")).IsFalse();
+	}
+
+	[Test]
+	public async Task ARenamedCharacter_IsReboundToTheRosterCopy()
+	{
+		var storage = new FakeSessionStorage();
+
+		var seed = MakeService(storage, [Alpha, Beta]);
+		await seed.InitAsync();
+		await seed.LoginAsync("headwiz", "password-one");
+		seed.SetActiveCharacter(Beta);
+
+		// Beta was renamed server-side after the switch; the stored snapshot still says "Beta".
+		var renamed = Beta with { Name = "BetaRenamed" };
+		var afterRefresh = MakeService(storage, [Alpha, renamed]);
+		await afterRefresh.InitAsync();
+		await afterRefresh.GetCharactersAsync();
+
+		await Assert.That(afterRefresh.ActiveCharacter?.DbrefNumber).IsEqualTo(Beta.DbrefNumber);
+		await Assert.That(afterRefresh.ActiveCharacter?.Name).IsEqualTo("BetaRenamed");
 	}
 
 	[Test]

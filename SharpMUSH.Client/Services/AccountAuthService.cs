@@ -170,14 +170,33 @@ public class AccountAuthService(
 	/// longer owns. Re-validating membership on every assignment closes that gap: a still-present
 	/// active character is left alone (regardless of its new position in the roster); an absent one
 	/// is reseated exactly like the null case.
+	///
+	/// A still-present active character is re-bound to the roster's instance rather than merely kept:
+	/// identity is the dbref/creation-time pair, but the rest of the summary (name, flags) is a
+	/// snapshot that can be stale — most visibly one restored from storage after a reload, which may
+	/// predate a rename or a flag change by any amount of time. The roster is the fresher copy, so
+	/// anything rendering <see cref="ActiveCharacter"/> shows current data.
 	/// </summary>
 	private void SetCharacters(IReadOnlyList<CharacterSummary> characters)
 	{
 		Characters = characters;
-		var activeStillPresent = ActiveCharacter is not null && characters.Any(c =>
+		var stillPresent = ActiveCharacter is null ? null : characters.FirstOrDefault(c =>
 			c.DbrefNumber == ActiveCharacter.DbrefNumber && c.CreationTime == ActiveCharacter.CreationTime);
-		if (!activeStillPresent)
+
+		if (stillPresent is null)
+		{
 			SetActiveCharacter(characters.FirstOrDefault());
+			return;
+		}
+
+		// Same character, drifted details. SetActiveCharacter would no-op on the identity check, so
+		// rebind directly — and persist, so the next reload restores the fresh copy too.
+		if (stillPresent != ActiveCharacter)
+		{
+			ActiveCharacter = stillPresent;
+			PersistActiveCharacter(stillPresent);
+			RaiseActiveCharacterChanged();
+		}
 	}
 
 	/// <summary>
@@ -715,6 +734,15 @@ public class AccountAuthService(
 		await js.InvokeVoidAsync("sessionStorage.removeItem", MustChangePasswordKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", PermissionsKey);
+		// Awaited here rather than left to SetActiveCharacter's detached write above: the invariant
+		// below (every storage mutation complete before the event fires) has to hold for this key too,
+		// or a stale acting character could outlive the logout and be restored by the next login in
+		// this tab.
+		await js.InvokeVoidAsync("sessionStorage.removeItem", ActiveCharacterKey);
+		// Awaited here rather than left to SetActiveCharacter's detached write above: the invariant
+		// below (every storage mutation complete before the event fires) has to hold for this key too,
+		// or a stale acting character could outlive the logout and be restored by the next login in
+		// this tab.
 
 		// Explicit-logout latch: sticks until the next successful login/register/setup in this
 		// tab, so dev-mode debug re-auth (or any other silent re-persist) can't undo the logout.
