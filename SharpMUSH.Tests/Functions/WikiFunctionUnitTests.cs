@@ -169,4 +169,25 @@ public class WikiFunctionUnitTests
 		// MaxArgs moved 2 → 3 for the locale; it must not have become unbounded.
 		await Assert.That(await Eval("wiki(home,text,fr,extra)")).StartsWith("#-1");
 	}
+
+	/// <remarks>
+	/// The design spec says <c>wikilist()</c> and <c>wikirecent()</c> "return localized titles". They do
+	/// not return titles at all — they return page *references*, the canonical slug (or ns:category:slug),
+	/// which is what makes their output a valid input to <c>wiki()</c> and <c>@wiki</c>. A slug has no
+	/// locale dimension, so there is nothing here to localize, and localizing anyway would cost one
+	/// translation lookup per row for output that is byte-identical. This test pins the contract so the
+	/// spec sentence does not get "fixed" into a breaking change.
+	/// </remarks>
+	[Test]
+	public async Task WikiList_ReturnsReferencesAndIsLocaleIndependent()
+	{
+		var slug = await SeedTranslatedPageAsync("Fn Listed Locale Page");
+
+		var listed = await Eval("wikilist(main)");
+
+		await Assert.That(listed).Contains(slug);
+		await Assert.That(listed)
+			.DoesNotContain("(fr)")
+			.Because("a reference is a slug, never a title, so no locale can change it");
+	}
 }
