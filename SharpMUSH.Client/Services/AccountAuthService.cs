@@ -573,9 +573,21 @@ public class AccountAuthService(
 			// switching is the only thing that can, since only the server may mint the binding.
 			if (unlinkedTheActing && remaining.FirstOrDefault() is { } replacement)
 			{
-				await SwitchCharacterAsync(replacement);
-				// Re-read the roster so the server can say which entry the new token is bound to.
+				var rebound = await SwitchCharacterAsync(replacement) is not null;
+
+				// Re-read the roster either way: the unlink itself succeeded, so the list must reflect
+				// it, and the server is the only thing that can say what the session is bound to now.
 				await GetCharactersAsync();
+
+				if (!rebound)
+				{
+					// The unlink stands, but this tab is acting as nobody until something switches it.
+					// Reported rather than swallowed — the caller cannot tell "rebound to a fresh
+					// character" from "left with no identity" by looking at Success alone.
+					logger.LogWarning("Unlinked the acting character but could not rebind the session; acting as nobody until the next switch");
+					return (true, "Character unlinked, but switching to another character failed. Pick a character to continue.");
+				}
+
 				return (true, null);
 			}
 

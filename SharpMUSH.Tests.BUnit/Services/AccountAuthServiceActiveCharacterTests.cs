@@ -25,7 +25,7 @@ file sealed class FakeLoginHandler(IReadOnlyList<CharacterSummary> characters)
 /// roster it hands back. A fake that served an unmarked roster would be telling the client "you act as
 /// nobody", which is exactly what it means now.
 /// </summary>
-file abstract class BindingAwareHandler(IReadOnlyList<CharacterSummary> characters) : HttpMessageHandler
+file abstract class BindingAwareHandler(IReadOnlyList<CharacterSummary> characters, bool refuseSwitch = false) : HttpMessageHandler
 {
 	private readonly List<CharacterSummary> _roster = [.. characters];
 	private int? _boundKey = characters.FirstOrDefault()?.DbrefNumber;
@@ -46,6 +46,9 @@ file abstract class BindingAwareHandler(IReadOnlyList<CharacterSummary> characte
 
 		if (path.EndsWith("api/auth/switch-character", StringComparison.Ordinal))
 		{
+			if (refuseSwitch)
+				return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+
 			var body = await request.Content!.ReadAsStringAsync(cancellationToken);
 			using var parsed = JsonDocument.Parse(body);
 			_boundKey = parsed.RootElement.GetProperty("characterKey").GetInt32();
@@ -84,8 +87,8 @@ file abstract class BindingAwareHandler(IReadOnlyList<CharacterSummary> characte
 /// Adds nothing to <see cref="BindingAwareHandler"/> beyond a name the Unlink tests read better with;
 /// the DELETE and switch routes it needs are already there.
 /// </summary>
-file sealed class FakeAccountHandler(IReadOnlyList<CharacterSummary> characters)
-	: BindingAwareHandler(characters);
+file sealed class FakeAccountHandler(IReadOnlyList<CharacterSummary> characters, bool refuseSwitch = false)
+	: BindingAwareHandler(characters, refuseSwitch);
 
 public class AccountAuthServiceActiveCharacterTests
 {
@@ -357,5 +360,33 @@ public class AccountAuthServiceActiveCharacterTests
 		await Assert.That(sut.Characters.Select(x => x.DbrefNumber)).IsEquivalentTo([a.DbrefNumber, c.DbrefNumber]);
 		await Assert.That(sut.ActiveCharacter).IsNotNull();
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(a.DbrefNumber);
+	}
+
+	[Test]
+	public async Task UnlinkCharacterAsync_RebindFails_ReportsItInsteadOfClaimingACleanUnlink()
+	{
+		var a = new CharacterSummary(1, 100L, "A", "");
+		var b = new CharacterSummary(2, 200L, "B", "");
+
+		var httpClientFactory = Substitute.For<IHttpClientFactory>();
+		// Not disposed: the service keeps calling through this client after this returns.
+		var http = new HttpClient(new FakeAccountHandler([a, b], refuseSwitch: true)) { BaseAddress = new Uri("https://localhost:8081/") };
+		httpClientFactory.CreateClient("api").Returns(http);
+
+		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(),
+			Substitute.For<ILogger<AccountAuthService>>(), Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		// Hydrate before logging in: a first InitAsync after login reads empty storage and would clear
+		// the token LoginAsync just set (see MakeUnlinkableServiceAsync's note).
+		await sut.InitAsync();
+		await sut.LoginAsync("headwiz", "password-one");
+
+		// A (the acting character) goes; the rebind to B is refused by the server.
+		var (success, error) = await sut.UnlinkCharacterAsync(a.DbrefNumber);
+
+		// The unlink itself stands, so Success is true — but the caller must be able to tell that it
+		// was left with no acting character rather than rebound to a fresh one.
+		await Assert.That(success).IsTrue();
+		await Assert.That(error).IsNotNull();
+		await Assert.That(sut.ActiveCharacter).IsNull();
 	}
 }
