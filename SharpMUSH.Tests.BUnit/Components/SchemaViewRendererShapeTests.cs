@@ -1,9 +1,12 @@
 using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using SharpMUSH.Client.Components.Schema;
 using SharpMUSH.Client.Models.Applications;
+using SharpMUSH.Client.Resources;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -16,6 +19,7 @@ public class SchemaViewRendererShapeTests : BunitContext
 	public SchemaViewRendererShapeTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -43,7 +47,7 @@ public class SchemaViewRendererShapeTests : BunitContext
 	public async Task NullDocument_RendersNothingToDisplay()
 	{
 		var cut = Render<SchemaViewRenderer>(p => p.Add(x => x.Document, (PortalSchemaDocument?)null));
-		await Assert.That(cut.Markup).Contains("Nothing to display");
+		await Assert.That(cut.Markup).Contains("WidNothingToDisplay");
 	}
 
 	[TUnit.Core.Test]

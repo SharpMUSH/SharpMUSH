@@ -8,6 +8,7 @@
 @inject IWebAssemblyHostEnvironment HostEnv
 @inject NavigationManager Navigation
 @inject ServerInfoService ServerInfo
+@inject IStringLocalizer<SharedResource> Loc
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:0.84375rem;">
@@ -33,7 +34,7 @@
                  Size="Size.Small"
                  Color="@(_connected ? Color.Success : Color.Error)"
                  Style="min-width:90px;justify-content:center;">
-            @(_connected ? "Connected" : "Disconnected")
+            @(_connected ? Loc["Connected"] : Loc["Disconnected"])
         </MudChip>
 
         @if (!_connected)
@@ -42,21 +43,21 @@
             @if (AccountAuth.IsLoggedIn)
             {
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                           OnClick="ConnectAsync">Connect</MudButton>
+                           OnClick="ConnectAsync">@Loc["Connect"]</MudButton>
             }
             else
             {
                 <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
-                           OnClick='() => Navigation.NavigateTo("/login")'>Log in</MudButton>
+                           OnClick='() => Navigation.NavigateTo("/login")'>@Loc["Login"]</MudButton>
             }
         }
         else
         {
             <MudText Typo="Typo.caption" Style="color:#888;flex:1;">
-                @(_playerName ?? "not logged in")
+                @(_playerName ?? Loc["TermNotLoggedIn"].Value)
             </MudText>
             <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small"
-                       OnClick="DisconnectAsync">Disconnect</MudButton>
+                       OnClick="DisconnectAsync">@Loc["Disconnect"]</MudButton>
         }
     </div>
 
@@ -69,13 +70,13 @@
                    @oninput="@(e => _input = e.Value?.ToString() ?? string.Empty)"
                    @onkeydown="OnInputKeyDown"
                    disabled="@(!_connected)"
-                   placeholder="say hello   ·   pose waves   ·   look   ·   who" />
-            <button type="button" class="term-send" @onclick="SendAsync" disabled="@(!_connected)" title="Send">
+                   placeholder="@Loc["TermInputPlaceholder"]" />
+            <button type="button" class="term-send" @onclick="SendAsync" disabled="@(!_connected)" title="@Loc["Send"]">
                 <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:0.875rem;" />
             </button>
             @if (ShowClearButton)
             {
-                <button type="button" class="term-clear" @onclick="ClearAsync" title="Clear terminal">
+                <button type="button" class="term-clear" @onclick="ClearAsync" title="@Loc["TermClearTerminal"]">
                     <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:0.9375rem;" />
                 </button>
             }
@@ -326,7 +327,7 @@
     /// Records the connected player's name on the underlying terminal service. <c>_playerName</c>
     /// reads this back directly, preferring it over <c>AccountAuth.ActiveCharacter</c>, and
     /// Play.razor's page header reads it off the play terminal instance the same way
-    /// (<c>PlayTerminal.ConnectedPlayerName ?? "Play Terminal"</c>). Direct/manual "Character" tab
+    /// (<c>PlayTerminal.ConnectedPlayerName ?? Loc["NavPlayTerminal"]</c>). Direct/manual "Character" tab
     /// and typed-<c>connect</c> flows depend on this write — they never touch <c>AccountAuth</c> at
     /// all. The single-character auto-login and dev-debug OTT paths call this too (matching the
     /// character they just resolved), but that is redundant rather than load-bearing: those paths
@@ -357,7 +358,7 @@
         {
             await ConnectAsCharacterAsync(target);
         }
-        catch (Exception ex) { AddLocalLine($"[Error] {ex.Message}", TerminalLineSource.System); }
+        catch (Exception ex) { AddLocalLine(Loc["TermErrorLine", ex.Message], TerminalLineSource.System); }
     }
 
     private async Task DisconnectAsync()

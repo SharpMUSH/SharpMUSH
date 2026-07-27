@@ -1,10 +1,13 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Resources;
 using System.Net;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -53,6 +56,7 @@ public class ServerStartupGateTests : BunitContext
 	public ServerStartupGateTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -87,7 +91,7 @@ public class ServerStartupGateTests : BunitContext
 
 		await Assert.That(handler.CallCount).IsGreaterThanOrEqualTo(3);
 		await Assert.That(cut.Markup).DoesNotContain(ChildMarker);
-		await Assert.That(cut.Markup).Contains("Game is starting up");
+		await Assert.That(cut.Markup).Contains("WidGameStartingUp");
 	}
 
 	[TUnit.Core.Test]
@@ -111,7 +115,7 @@ public class ServerStartupGateTests : BunitContext
 		}, TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Markup).Contains(ChildMarker);
-		await Assert.That(cut.Markup).DoesNotContain("Game is starting up");
+		await Assert.That(cut.Markup).DoesNotContain("WidGameStartingUp");
 		// Two failures, then the third call is the success that flips it healthy.
 		await Assert.That(handler.CallCount).IsGreaterThanOrEqualTo(3);
 	}
@@ -146,7 +150,7 @@ public class ServerStartupGateTests : BunitContext
 		cut.Render();
 
 		await Assert.That(cut.Markup).Contains(ChildMarker);
-		await Assert.That(cut.Markup).DoesNotContain("Game is starting up");
+		await Assert.That(cut.Markup).DoesNotContain("WidGameStartingUp");
 		// No further probing happened once healthy — the loop truly stopped, not just "happened
 		// to keep succeeding".
 		await Assert.That(handler.CallCount).IsEqualTo(callsWhenHealthy);

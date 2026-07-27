@@ -3,10 +3,13 @@ using System.Net.Http.Json;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
@@ -45,8 +48,9 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 										Id = "1",
 										Username = "headwiz-target",
 										Email = (string?)"headwiz@example.com",
-										IsDisabled = false,
+										Status = "Active",
 										MustChangePassword = false,
+										IsReserved = false,
 										Characters = new[] { new { DbrefNumber = 1, Name = "Headwiz" } },
 								},
 								new
@@ -54,8 +58,39 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 										Id = "2",
 										Username = "banned-account",
 										Email = (string?)null,
-										IsDisabled = true,
+										Status = "Disabled",
 										MustChangePassword = false,
+										IsReserved = false,
+										Characters = Array.Empty<object>(),
+								},
+								new
+								{
+										Id = "3",
+										Username = "departed-account",
+										Email = (string?)null,
+										Status = "Closed",
+										MustChangePassword = false,
+										IsReserved = false,
+										Characters = Array.Empty<object>(),
+								},
+								new
+								{
+										Id = "4",
+										Username = "erased-account",
+										Email = (string?)null,
+										Status = "Deleted",
+										MustChangePassword = false,
+										IsReserved = false,
+										Characters = Array.Empty<object>(),
+								},
+								new
+								{
+										Id = "9",
+										Username = "system",
+										Email = (string?)null,
+										Status = "Active",
+										MustChangePassword = false,
+										IsReserved = true,
 										Characters = Array.Empty<object>(),
 								},
 			};
@@ -63,7 +98,8 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 		}
 
 		if (request.Method == HttpMethod.Post &&
-				(path.EndsWith("/reset-password") || path.EndsWith("/disable") || path.EndsWith("/enable")))
+				(path.EndsWith("/reset-password") || path.EndsWith("/disable") || path.EndsWith("/enable")
+					|| path.EndsWith("/status")))
 		{
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
 		}
@@ -113,7 +149,8 @@ file static class AdminAccountsTestServices
 						NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
 				.AddSingleton(sp => new AdminAccountsService(
 						sp.GetRequiredService<IHttpClientFactory>(),
-						sp.GetRequiredService<AccountAuthService>()));
+						sp.GetRequiredService<AccountAuthService>()))
+				.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		return apiClient;
@@ -144,12 +181,54 @@ public class AdminAccountsPageTests : BunitContext, IAsyncDisposable
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("headwiz-target") || !cut.Markup.Contains("DISABLED"))
+			if (!cut.Markup.Contains("headwiz-target") || !cut.Markup.Contains("AdmAccountStatusDisabled"))
 				throw new InvalidOperationException("account rows not rendered yet");
 		});
 
 		await Assert.That(cut.Markup).Contains("headwiz-target");
-		await Assert.That(cut.Markup).Contains("DISABLED");
+		await Assert.That(cut.Markup).Contains("AdmAccountStatusDisabled");
+	}
+
+	[TUnit.Core.Test]
+	public async Task RendersEveryStatus_ForAuthorizedUser()
+	{
+		Auth.SetAuthorized("headwiz");
+		Auth.SetRoles("Wizard");
+
+		var cut = Render<SharpMUSH.Client.Pages.Admin.AdminAccounts>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("departed-account"))
+				throw new InvalidOperationException("account rows not rendered yet");
+		});
+
+		await Assert.That(cut.Markup).Contains("AdmAccountStatusActive");
+		await Assert.That(cut.Markup).Contains("AdmAccountStatusDisabled");
+		await Assert.That(cut.Markup).Contains("AdmAccountStatusClosed");
+		await Assert.That(cut.Markup).Contains("AdmAccountStatusDeleted");
+	}
+
+	/// <summary>
+	/// The reserved row offers no status actions, matching the server-side guard rather than
+	/// relying on it alone. Four actionable rows: Active offers three targets, the other three
+	/// offer one each.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task ReservedAccountRow_OffersNoStatusActions()
+	{
+		Auth.SetAuthorized("headwiz");
+		Auth.SetRoles("Wizard");
+
+		var cut = Render<SharpMUSH.Client.Pages.Admin.AdminAccounts>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("system"))
+				throw new InvalidOperationException("account rows not rendered yet");
+		});
+
+		await Assert.That(cut.FindAll("button[data-testid='account-status-action']").Count).IsEqualTo(6);
 	}
 
 	[TUnit.Core.Test]

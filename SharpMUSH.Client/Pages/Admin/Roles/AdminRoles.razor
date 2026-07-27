@@ -3,29 +3,30 @@
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Authorization
 @attribute [Authorize(Policy = "roles.admin")]
+@inject IStringLocalizer<SharedResource> Loc
 @inject RoleRegistryClient Roles
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>Roles — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["RolPageTitle"] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="roleadmin">
     <div class="roleadmin-head">
         <div>
-            <div class="roleadmin-kicker">Manage · Access control</div>
-            <h1 class="roleadmin-title">Roles &amp; Permissions</h1>
+            <div class="roleadmin-kicker">@Loc["RolKicker"]</div>
+            <h1 class="roleadmin-title">@Loc["RolHeading"]</h1>
         </div>
         <div class="roleadmin-actions">
             <div class="ra-seg">
                 <button type="button" class="ra-seg-btn @(_tab == Tab.Roles ? "ra-seg-btn--on" : "")"
-                        @onclick="@(() => _tab = Tab.Roles)">Roles</button>
+                        @onclick="@(() => _tab = Tab.Roles)">@Loc["RolTabRoles"]</button>
                 <button type="button" class="ra-seg-btn @(_tab == Tab.Assignments ? "ra-seg-btn--on" : "")"
-                        @onclick="@(() => _tab = Tab.Assignments)">Assignments</button>
+                        @onclick="@(() => _tab = Tab.Assignments)">@Loc["RolTabAssignments"]</button>
             </div>
             @if (_tab == Tab.Roles)
             {
                 <button type="button" class="ra-btn ra-btn--primary" @onclick="NewRole">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> New role
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> @Loc["RolNewRole"]
                 </button>
             }
         </div>
@@ -41,7 +42,7 @@
             <div class="roleadmin-list">
                 @if (SortedRoles.Count == 0)
                 {
-                    <div class="ra-empty-list">No roles defined.</div>
+                    <div class="ra-empty-list">@Loc["RolNoRolesDefined"]</div>
                 }
                 @foreach (var role in SortedRoles)
                 {
@@ -55,7 +56,7 @@
                         </div>
                         @if (r.IsSystem)
                         {
-                            <span class="ra-badge">System</span>
+                            <span class="ra-badge">@Loc["RolSystemBadge"]</span>
                         }
                         <span class="ra-prio">@r.Priority</span>
                     </button>
@@ -67,9 +68,9 @@
                 {
                     <div class="ra-empty-detail">
                         <MudIcon Icon="@Icons.Material.Filled.Shield" Style="font-size:2.5rem;color:var(--text-faint);opacity:0.4;" />
-                        <span>Select a role, or create a new one.</span>
+                        <span>@Loc["RolSelectOrCreate"]</span>
                         <button type="button" class="ra-btn ra-btn--primary" @onclick="NewRole">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> New role
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> @Loc["RolNewRole"]
                         </button>
                     </div>
                 }
@@ -79,10 +80,10 @@
                         <span class="ra-detail-dot" style="@($"background:{SafeColor(_editColor)};")"></span>
                         <div style="flex:1;min-width:0;">
                             <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;">
-                                <h2 class="ra-detail-name">@(_editing.IsSystem ? _editing.Name : (string.IsNullOrWhiteSpace(_editName) ? "Untitled" : _editName))</h2>
+                                <h2 class="ra-detail-name">@(_editing.IsSystem ? _editing.Name : (string.IsNullOrWhiteSpace(_editName) ? Loc["RolUntitled"] : _editName))</h2>
                                 @if (_editing.IsSystem)
                                 {
-                                    <span class="ra-badge">System</span>
+                                    <span class="ra-badge">@Loc["RolSystemBadge"]</span>
                                 }
                             </div>
                             <div class="ra-detail-slug">@_editing.Slug</div>
@@ -91,26 +92,26 @@
 
                     <div class="ra-fields">
                         <div class="ra-field">
-                            <div class="ra-field-label">Name</div>
+                            <div class="ra-field-label">@Loc["RolNameLabel"]</div>
                             <input class="ra-input" type="text" value="@_editName"
                                    @oninput="@(e => _editName = e.Value?.ToString() ?? string.Empty)" />
                         </div>
                         <div class="ra-field ra-field--narrow">
-                            <div class="ra-field-label">Color</div>
+                            <div class="ra-field-label">@Loc["RolColorLabel"]</div>
                             <input class="ra-input" type="text" value="@_editColor"
                                    @oninput="@(e => _editColor = e.Value?.ToString() ?? string.Empty)" />
                         </div>
                         <div class="ra-field ra-field--narrow">
-                            <div class="ra-field-label">Priority</div>
+                            <div class="ra-field-label">@Loc["RolPriorityLabel"]</div>
                             <input class="ra-input" type="number" inputmode="numeric" value="@_editPriority"
                                    @onchange="@(e => OnPriorityChange(e.Value?.ToString()))" />
                         </div>
                     </div>
 
-                    @foreach (var group in PortalPermission.All.GroupBy(d => d.Group))
+                    @foreach (var group in PortalPermission.All.GroupBy(d => d.GroupKey))
                     {
                         <div class="ra-section">
-                            <div class="ra-section-label">@group.Key</div>
+                            <div class="ra-section-label">@Loc[group.Key]</div>
                             <div class="ra-perm-card">
                                 @foreach (var def in group)
                                 {
@@ -118,20 +119,20 @@
                                     var state = StateFor(d.Scope);
                                     <div class="ra-perm-row">
                                         <div class="ra-perm-label">
-                                            <div class="ra-perm-name">@d.Label</div>
-                                            <div class="ra-perm-desc">@d.Description</div>
+                                            <div class="ra-perm-name">@Loc[d.LabelKey]</div>
+                                            <div class="ra-perm-desc">@Loc[d.DescriptionKey]</div>
                                             <code class="ra-perm-scope">@d.Scope</code>
                                         </div>
                                         <div class="ra-tristate">
                                             <button type="button"
                                                     class="ra-tri ra-tri--inherit @(state == "Inherit" ? "ra-tri--on" : "")"
-                                                    @onclick="@(() => SetState(d.Scope, "Inherit"))">Inherit</button>
+                                                    @onclick="@(() => SetState(d.Scope, "Inherit"))">@Loc["RolInherit"]</button>
                                             <button type="button"
                                                     class="ra-tri ra-tri--allow @(state == "Allow" ? "ra-tri--on" : "")"
-                                                    @onclick="@(() => SetState(d.Scope, "Allow"))">Allow</button>
+                                                    @onclick="@(() => SetState(d.Scope, "Allow"))">@Loc["RolAllow"]</button>
                                             <button type="button"
                                                     class="ra-tri ra-tri--deny @(state == "Deny" ? "ra-tri--on" : "")"
-                                                    @onclick="@(() => SetState(d.Scope, "Deny"))">Deny</button>
+                                                    @onclick="@(() => SetState(d.Scope, "Deny"))">@Loc["RolDeny"]</button>
                                         </div>
                                     </div>
                                 }
@@ -141,12 +142,12 @@
 
                     <div class="ra-section ra-section--actions">
                         <button type="button" class="ra-btn ra-btn--primary" @onclick="SaveRole" disabled="@_saving">
-                            <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:0.875rem;" /> Save role
+                            <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:0.875rem;" /> @Loc["RolSaveRole"]
                         </button>
                         @if (!_editing.IsSystem)
                         {
                             <button type="button" class="ra-btn ra-btn--danger" @onclick="DeleteRole" disabled="@_saving">
-                                <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:0.875rem;" /> Delete
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:0.875rem;" /> @Loc["Delete"]
                             </button>
                         }
                     </div>
@@ -159,7 +160,7 @@
         <div class="roleadmin-assign">
             <div class="ra-search">
                 <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;color:var(--text-faint);" />
-                <input value="@_lookupName" placeholder="Search by username…"
+                <input value="@_lookupName" placeholder="@Loc["RolSearchByUsername"]"
                        @oninput="@(e => _lookupName = e.Value?.ToString() ?? string.Empty)"
                        @onkeydown="OnLookupKeyDown" />
                 <button type="button" class="ra-btn ra-btn--primary" @onclick="Lookup" disabled="@_looking">
@@ -169,7 +170,7 @@
                     }
                     else
                     {
-                        <text>Look up</text>
+                        <text>@Loc["RolLookUp"]</text>
                     }
                 </button>
             </div>
@@ -178,7 +179,7 @@
             {
                 <div class="ra-empty-detail">
                     <MudIcon Icon="@Icons.Material.Filled.PersonOff" Style="font-size:2.5rem;color:var(--text-faint);opacity:0.4;" />
-                    <span>No account found for &ldquo;@_lookupName&rdquo;.</span>
+                    <span>@Loc["RolNoAccountFound", _lookupName]</span>
                 </div>
             }
             else if (_account is not null)
@@ -188,9 +189,9 @@
                         <div style="flex:1;min-width:0;">
                             <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;">
                                 <h2 class="ra-detail-name">@_account.Username</h2>
-                                @if (_account.IsDisabled)
+                                @if (_account.Status != "Active")
                                 {
-                                    <span class="ra-badge ra-badge--danger">Disabled</span>
+                                    <span class="ra-badge ra-badge--danger">@Loc[$"AdmAccountStatus{_account.Status}"]</span>
                                 }
                             </div>
                             <div class="ra-account-email">@_account.Email</div>
@@ -198,11 +199,11 @@
                     </div>
 
                     <div class="ra-section">
-                        <div class="ra-section-label">Assigned roles</div>
+                        <div class="ra-section-label">@Loc["RolAssignedRoles"]</div>
                         <div class="ra-chips">
                             @if (_account.RoleSlugs.Length == 0)
                             {
-                                <span class="ra-empty">No roles assigned.</span>
+                                <span class="ra-empty">@Loc["RolNoRolesAssigned"]</span>
                             }
                             @foreach (var slug in _account.RoleSlugs)
                             {
@@ -211,7 +212,7 @@
                                 <span class="ra-chip">
                                     <span class="ra-dot ra-dot--sm" style="@($"background:{SafeColor(role?.Color ?? "#888")};")"></span>
                                     @(role?.Name ?? s)
-                                    <button type="button" class="ra-chip-x" title="Remove"
+                                    <button type="button" class="ra-chip-x" title="@Loc["RolRemoveRole"]"
                                             @onclick="@(() => RemoveAssignment(s))">×</button>
                                 </span>
                             }
@@ -221,7 +222,7 @@
                     @if (Assignable.Count > 0)
                     {
                         <div class="ra-section">
-                            <div class="ra-section-label">Add role</div>
+                            <div class="ra-section-label">@Loc["RolAddRole"]</div>
                             <div class="ra-chips">
                                 @foreach (var role in Assignable)
                                 {
@@ -241,7 +242,7 @@
             {
                 <div class="ra-empty-detail">
                     <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Style="font-size:2.5rem;color:var(--text-faint);opacity:0.4;" />
-                    <span>Search for an account to manage its roles.</span>
+                    <span>@Loc["RolSearchAccountPrompt"]</span>
                 </div>
             }
         </div>
@@ -311,7 +312,7 @@
 
     private async Task NewRole()
     {
-        var dialog = await DialogService.ShowAsync<RoleEditDialog>("New role");
+        var dialog = await DialogService.ShowAsync<RoleEditDialog>(Loc["RolNewRole"]);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
         {
@@ -354,7 +355,7 @@
 
         if (string.IsNullOrWhiteSpace(_editName))
         {
-            Snackbar.Add("Name is required.", Severity.Warning);
+            Snackbar.Add(Loc["RolNameRequired"], Severity.Warning);
             return;
         }
 
@@ -374,12 +375,12 @@
 
         if (ok)
         {
-            Snackbar.Add($"Saved {model.Slug}.", Severity.Success);
+            Snackbar.Add(Loc["RolSaved", model.Slug], Severity.Success);
             await LoadAsync();
         }
         else
         {
-            Snackbar.Add(error ?? "Save failed.", Severity.Error);
+            Snackbar.Add(error ?? Loc["RolSaveFailed"], Severity.Error);
         }
     }
 
@@ -388,23 +389,23 @@
         if (_editing is null || _editing.IsSystem) return;
 
         var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Delete role",
-            $"Delete '{_editing.Name}' ({_editing.Slug})? This removes it from any accounts that hold it.",
-            yesText: "Delete", cancelText: "Cancel");
+            Loc["RolDeleteTitle"],
+            Loc["RolDeleteConfirm", _editing.Name, _editing.Slug],
+            yesText: Loc["Delete"], cancelText: Loc["Cancel"]);
 
         if (confirmed == true)
         {
             var (ok, error) = await Roles.DeleteAsync(_editing.Slug);
             if (ok)
             {
-                Snackbar.Add($"Deleted {_editing.Slug}.", Severity.Success);
+                Snackbar.Add(Loc["RolDeleted", _editing.Slug], Severity.Success);
                 _selected = null;
                 _editing = null;
                 await LoadAsync();
             }
             else
             {
-                Snackbar.Add(error ?? "Failed to delete role.", Severity.Error);
+                Snackbar.Add(error ?? Loc["RolDeleteFailed"], Severity.Error);
             }
         }
     }
@@ -419,7 +420,7 @@
         var name = _lookupName.Trim();
         if (string.IsNullOrEmpty(name))
         {
-            Snackbar.Add("Enter a username to look up.", Severity.Warning);
+            Snackbar.Add(Loc["RolEnterUsername"], Severity.Warning);
             return;
         }
 
@@ -435,12 +436,12 @@
 
         if (await Roles.AssignAsync(_account.AccountId, slug))
         {
-            Snackbar.Add($"Assigned {slug}.", Severity.Success);
+            Snackbar.Add(Loc["RolAssigned", slug], Severity.Success);
             _account = await Roles.LookupAccountAsync(_account.Username);
         }
         else
         {
-            Snackbar.Add("Failed to assign role.", Severity.Error);
+            Snackbar.Add(Loc["RolAssignFailed"], Severity.Error);
         }
     }
 
@@ -450,12 +451,12 @@
 
         if (await Roles.RemoveAsync(_account.AccountId, slug))
         {
-            Snackbar.Add($"Removed {slug}.", Severity.Success);
+            Snackbar.Add(Loc["RolRemoved", slug], Severity.Success);
             _account = await Roles.LookupAccountAsync(_account.Username);
         }
         else
         {
-            Snackbar.Add("Failed to remove role.", Severity.Error);
+            Snackbar.Add(Loc["RolRemoveFailed"], Severity.Error);
         }
     }
 

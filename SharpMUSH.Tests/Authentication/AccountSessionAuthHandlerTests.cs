@@ -33,7 +33,7 @@ public class AccountSessionAuthHandlerTests
 			Email = null,
 			PasswordHash = "hash",
 			CreatedAt = 1_000_000,
-			IsDisabled = isDisabled,
+			Status = isDisabled ? AccountStatus.Disabled : AccountStatus.Active,
 		};
 
 	private static SharpPlayer MakePlayer(int key, string name, long creationTime = 0L)
@@ -144,7 +144,8 @@ public class AccountSessionAuthHandlerTests
 		var accountService = Substitute.For<IAccountService>();
 		var accountServiceForClaims = Substitute.For<IAccountService>();
 
-		sessionStore.ValidateAsync("good").Returns(Task.FromResult<string?>("node_accounts/1"));
+		sessionStore.ValidateAsync("good").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(
+			new IAccountSessionStore.SessionIdentity("node_accounts/1", 1, MakePlayer(1, "Alice").Object.CreationTime)));
 		accountService.GetByIdAsync("node_accounts/1")
 			.Returns(new ValueTask<SharpAccount?>(MakeAccount()));
 		accountService.GetCharactersAsync("node_accounts/1")
@@ -163,7 +164,7 @@ public class AccountSessionAuthHandlerTests
 		var result = await handler.AuthenticateAsync();
 
 		await Assert.That(result.Succeeded).IsTrue();
-		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#1");
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#1:0");
 		await Assert.That(result.Principal!.IsInRole("Wizard")).IsTrue();
 		await Assert.That(result.Principal!.FindAll(PortalPermission.ClaimType).Select(c => c.Value))
 			.Contains("players.view");
@@ -185,7 +186,8 @@ public class AccountSessionAuthHandlerTests
 		var accountService = Substitute.For<IAccountService>();
 		var accountServiceForClaims = Substitute.For<IAccountService>();
 
-		sessionStore.ValidateAsync("good").Returns(Task.FromResult<string?>("node_accounts/1"));
+		sessionStore.ValidateAsync("good").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(
+			new IAccountSessionStore.SessionIdentity("node_accounts/1", 42, 987654321L)));
 		accountService.GetByIdAsync("node_accounts/1")
 			.Returns(new ValueTask<SharpAccount?>(MakeAccount()));
 		accountService.GetCharactersAsync("node_accounts/1")
@@ -204,7 +206,7 @@ public class AccountSessionAuthHandlerTests
 		await Assert.That(result.Principal!.FindFirst("character_key")!.Value).IsEqualTo("42");
 		await Assert.That(result.Principal!.FindFirst("character_creation_time")!.Value).IsEqualTo("987654321");
 		await Assert.That(result.Principal!.FindFirst("character_name")!.Value).IsEqualTo("Alice");
-		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#42");
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#42:987654321");
 	}
 
 	private static (IAccountSessionStore, IAccountService, AccountClaimsService) TwoCharacterAccount()
@@ -214,7 +216,10 @@ public class AccountSessionAuthHandlerTests
 		var accountServiceForClaims = Substitute.For<IAccountService>();
 
 		IReadOnlyList<SharpPlayer> roster = [MakePlayer(1, "Alice", 111L), MakePlayer(7, "Bob", 777L)];
-		sessionStore.ValidateAsync("good").Returns(Task.FromResult<string?>("node_accounts/1"));
+		// Bound to Bob (#7), the NON-primary — the binding lives in the session, so this is what an
+		// account that switched characters looks like on its next request.
+		sessionStore.ValidateAsync("good").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(
+			new IAccountSessionStore.SessionIdentity("node_accounts/1", 7, 777L)));
 		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
 		accountService.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
 		accountServiceForClaims.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
@@ -223,46 +228,62 @@ public class AccountSessionAuthHandlerTests
 	}
 
 	[Test]
-	public async Task ActingCharacterHint_OwnedCharacter_OverridesPrimary()
+	public async Task SessionBoundToANonPrimaryCharacter_ActsAsIt()
 	{
 		var (sessionStore, accountService, accountClaims) = TwoCharacterAccount();
 
+		// No hint header: the acting character comes from the token alone.
 		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
-			authorizationHeader: "Bearer good", actingCharacterHeader: "#7");
+			authorizationHeader: "Bearer good");
 
 		var result = await handler.AuthenticateAsync();
 
 		await Assert.That(result.Succeeded).IsTrue();
-		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#7");
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#7:777");
 		await Assert.That(result.Principal!.FindFirst("character_key")!.Value).IsEqualTo("7");
 		await Assert.That(result.Principal!.FindFirst("character_name")!.Value).IsEqualTo("Bob");
 	}
 
 	[Test]
-	public async Task ActingCharacterHint_ViaQueryParam_OverridesPrimary()
+	public async Task AClientSuppliedHint_CannotChangeTheActingCharacter()
 	{
 		var (sessionStore, accountService, accountClaims) = TwoCharacterAccount();
 
+		// The token is bound to Bob (#7); the request asks to act as Alice (#1). The header is not read
+		// at all any more — this is the property that makes the acting identity unspoofable.
 		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
-			authorizationHeader: "Bearer good", actingCharacterQuery: "7");
-
-		var result = await handler.AuthenticateAsync();
-
-		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#7");
-	}
-
-	[Test]
-	public async Task ActingCharacterHint_NotOwned_FallsBackToPrimary()
-	{
-		var (sessionStore, accountService, accountClaims) = TwoCharacterAccount();
-
-		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
-			authorizationHeader: "Bearer good", actingCharacterHeader: "#999");
+			authorizationHeader: "Bearer good", actingCharacterHeader: "#1");
 
 		var result = await handler.AuthenticateAsync();
 
 		await Assert.That(result.Succeeded).IsTrue();
-		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#1");
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#7:777");
+	}
+
+	[Test]
+	public async Task SessionBoundToACharacterTheAccountNoLongerOwns_ActsAsNobody()
+	{
+		var sessionStore = Substitute.For<IAccountSessionStore>();
+		var accountService = Substitute.For<IAccountService>();
+		var accountServiceForClaims = Substitute.For<IAccountService>();
+
+		// Bound to #7, but the live roster no longer contains it (unlinked after the token was minted).
+		IReadOnlyList<SharpPlayer> roster = [MakePlayer(1, "Alice", 111L)];
+		sessionStore.ValidateAsync("good").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(
+			new IAccountSessionStore.SessionIdentity("node_accounts/1", 7, 777L)));
+		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
+		accountService.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+		accountServiceForClaims.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+
+		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService,
+			MakeAccountClaims(accountServiceForClaims, PortalRole.Player), authorizationHeader: "Bearer good");
+
+		var result = await handler.AuthenticateAsync();
+
+		// Membership is re-checked per request, and there is deliberately no fallback to the primary:
+		// acting as someone the account no longer owns must stop at once, not silently redirect.
+		await Assert.That(result.Succeeded).IsTrue();
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)).IsNull();
 	}
 
 	[Test]
@@ -272,7 +293,7 @@ public class AccountSessionAuthHandlerTests
 		var accountService = Substitute.For<IAccountService>();
 		var accountClaims = MakeAccountClaims(Substitute.For<IAccountService>(), PortalRole.Guest);
 
-		sessionStore.ValidateAsync("bad").Returns(Task.FromResult<string?>(null));
+		sessionStore.ValidateAsync("bad").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(null));
 
 		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
 			authorizationHeader: "Bearer bad");
@@ -290,7 +311,7 @@ public class AccountSessionAuthHandlerTests
 		var accountService = Substitute.For<IAccountService>();
 		var accountClaims = MakeAccountClaims(Substitute.For<IAccountService>(), PortalRole.Guest);
 
-		sessionStore.ValidateAsync("disabled-token").Returns(Task.FromResult<string?>("node_accounts/2"));
+		sessionStore.ValidateAsync("disabled-token").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(new IAccountSessionStore.SessionIdentity("node_accounts/2", null, null)));
 		accountService.GetByIdAsync("node_accounts/2")
 			.Returns(new ValueTask<SharpAccount?>(MakeAccount(id: "node_accounts/2", isDisabled: true)));
 
@@ -323,7 +344,7 @@ public class AccountSessionAuthHandlerTests
 		var sessionStore = Substitute.For<IAccountSessionStore>();
 		var accountService = Substitute.For<IAccountService>();
 
-		sessionStore.ValidateAsync("qs-token").Returns(Task.FromResult<string?>("node_accounts/3"));
+		sessionStore.ValidateAsync("qs-token").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(new IAccountSessionStore.SessionIdentity("node_accounts/3", null, null)));
 		accountService.GetByIdAsync("node_accounts/3")
 			.Returns(new ValueTask<SharpAccount?>(MakeAccount(id: "node_accounts/3")));
 		accountService.GetCharactersAsync("node_accounts/3")

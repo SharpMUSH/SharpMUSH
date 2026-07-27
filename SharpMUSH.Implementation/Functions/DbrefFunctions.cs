@@ -67,15 +67,13 @@ public partial class Functions
 					}
 				}
 
-				try
-				{
-					var destination = await exit.Location.WithCancellation(CancellationToken.None);
-					return destination.Object().DBRef;
-				}
-				catch (InvalidOperationException)
-				{
-					return "#-1";
-				}
+				// PennMUSH fun_loc (fundb.c:1459) returns Location(it), which for an exit is where it
+				// leads. The room it sits in is what where() reports.
+				var destination = await exit.Home.WithCancellation(CancellationToken.None);
+
+				return destination.IsNone
+					? "#-1"
+					: destination.WithoutNone().Object().DBRef;
 			},
 			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
 		);
@@ -392,7 +390,8 @@ public partial class Functions
 					thing => thing.Object.DBRef.ToString(),
 					_ => "#-1");
 			},
-			async exit => (await exit.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
+			// PennMUSH fun_home (fundb.c:1672) returns Source() for an exit — the room it sits in.
+			async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
 			async thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef
 		);
 	}
@@ -1575,7 +1574,7 @@ public partial class Functions
 					else if (current.IsExit)
 					{
 						// Exits' location is their source room
-						var location = await current.AsExit.Home.WithCancellation(CancellationToken.None);
+						var location = await current.AsExit.Location.WithCancellation(CancellationToken.None);
 						current = location.WithRoomOption();
 					}
 					else

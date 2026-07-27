@@ -14,6 +14,7 @@ using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.BUnit.Components;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Layout;
 
@@ -64,19 +65,12 @@ file sealed class NavMenuSwitchApiHandler(IReadOnlyList<CharacterSummary> charac
 
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{
-				Content = JsonContent.Create(new { ott = "new-character-ott", expiresIn = 300 })
+				Content = JsonContent.Create(new { ott = "new-character-ott", expiresIn = 300, accountSessionToken = "bound-to-target" })
 			});
 		}
 
 		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
 	}
-}
-
-file sealed class NavMenuSwitchStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
 }
 
 /// <summary>
@@ -101,7 +95,7 @@ public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 	{
 		Services.AddMudServices();
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
-		Services.AddSingleton<IStringLocalizer<SharedResource>, NavMenuSwitchStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session-token-1");

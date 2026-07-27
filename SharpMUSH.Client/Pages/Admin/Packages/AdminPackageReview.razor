@@ -6,13 +6,14 @@
 @inject PackagesAdminService Packages
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Review Install — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["PkgReviewInstall"] — @Loc["PkgAdminSection"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="pkg-review">
 @if (_plan is null)
 {
-    <MudText Typo="Typo.h4" Class="mb-2">Review</MudText>
+    <MudText Typo="Typo.h4" Class="mb-2">@Loc["PkgReview"]</MudText>
     @if (_loadError is not null)
     {
         <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
@@ -26,19 +27,19 @@ else
 {
     <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
         <MudText Typo="Typo.h4">
-            @(_plan.Changeset.Kind == PackageRevisionKind.Install ? "Install" : "Upgrade"): @_plan.PackageId @_plan.Version
+            @(_plan.Changeset.Kind == PackageRevisionKind.Install ? Loc["PkgInstallHeading"] : Loc["PkgUpgradeHeading"]): @_plan.PackageId @_plan.Version
         </MudText>
         <MudSpacer />
-        <MudButton Variant="Variant.Outlined" OnClick="@(() => Nav.NavigateTo("/admin/packages/browse"))">Cancel</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="@(() => Nav.NavigateTo("/admin/packages/browse"))">@Loc["Cancel"]</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanApply || _busy)" OnClick="@ApplyAsync">
-            Apply
+            @Loc["PkgApply"]
         </MudButton>
     </MudStack>
     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
-        @_remote / @_path at @_plan.Commit[..Math.Min(10, _plan.Commit.Length)]
+        @Loc["PkgPlanLocation", _remote, _path, _plan.Commit[..Math.Min(10, _plan.Commit.Length)]]
         @if (_plan.Changeset.FromVersion is not null)
         {
-            <text> — upgrading from @_plan.Changeset.FromVersion</text>
+            <text> @Loc["PkgUpgradingFrom", _plan.Changeset.FromVersion]</text>
         }
     </MudText>
 
@@ -48,15 +49,17 @@ else
         <MudAlert Severity="Severity.Error" Class="mb-2">
             @if (issue.IsConflict)
             {
-                <text>Conflicts with installed <b>@issue.PackageId</b> @issue.InstalledVersion.</text>
+                <text>@Loc["PkgConflictsWithInstalled"] <b>@issue.PackageId</b> @issue.InstalledVersion.</text>
             }
             else
             {
-                <text>Requires <b>@issue.PackageId</b> @issue.Constraint
-                    @(issue.InstalledVersion is null ? " — not installed." : $" — installed: {issue.InstalledVersion}.")</text>
+                <text>@Loc["PkgRequires"] <b>@issue.PackageId</b> @issue.Constraint
+                    @(issue.InstalledVersion is null
+                        ? Loc["PkgNotInstalledSuffix"]
+                        : Loc["PkgInstalledSuffix", issue.InstalledVersion])</text>
                 @if (issue.Source is not null)
                 {
-                    <text> Available from @issue.Source.Repo@(issue.Source.Path is null ? "" : $" ({issue.Source.Path})").</text>
+                    <text> @Loc["PkgAvailableFrom", issue.Source.Repo, issue.Source.Path is null ? "" : $" ({issue.Source.Path})"]</text>
                 }
             }
         </MudAlert>
@@ -69,8 +72,7 @@ else
     @foreach (var collision in _plan.Changeset.CommandCollisions)
     {
         <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-1">
-            $-command "@collision.Pattern" is already defined by package @collision.OtherPackageId
-            (@collision.OtherObjid/@collision.OtherAttribute).
+            @Loc["PkgCommandCollision", collision.Pattern, collision.OtherPackageId, collision.OtherObjid, collision.OtherAttribute]
         </MudAlert>
     }
     @foreach (var note in _plan.Changeset.Notes)
@@ -82,7 +84,7 @@ else
     @if (_plan.Configure.Count > 0)
     {
         <MudCard Class="mb-4">
-            <MudCardHeader><MudText Typo="Typo.h6">Configuration</MudText></MudCardHeader>
+            <MudCardHeader><MudText Typo="Typo.h6">@Loc["Configuration"]</MudText></MudCardHeader>
             <MudCardContent>
                 <MudStack Spacing="2">
                     @foreach (var prompt in _plan.Configure)
@@ -91,11 +93,11 @@ else
                                       Value="@(_answers.GetValueOrDefault(prompt.Key) ?? prompt.Default ?? "")"
                                       ValueChanged="@(v => _answers[prompt.Key] = v)"
                                       Label="@($"{prompt.Label} ({prompt.Type})")"
-                                      HelperText="@(prompt.Type == "dbref" ? "Object id, e.g. #123:456" : null)"
+                                      HelperText="@(prompt.Type == "dbref" ? Loc["PkgDbrefHelper"].Value : null)"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" />
                     }
                     <MudButton Variant="Variant.Outlined" Disabled="@_busy" OnClick="@ReplanAsync">
-                        Re-plan with these answers
+                        @Loc["PkgReplan"]
                     </MudButton>
                 </MudStack>
             </MudCardContent>
@@ -104,11 +106,11 @@ else
 
     @* ── Objects ──────────────────────────────────────────────────────── *@
     <MudCard Class="mb-4">
-        <MudCardHeader><MudText Typo="Typo.h6">Objects (@_plan.Changeset.Objects.Count)</MudText></MudCardHeader>
+        <MudCardHeader><MudText Typo="Typo.h6">@Loc["PkgObjectsCount", _plan.Changeset.Objects.Count]</MudText></MudCardHeader>
         <MudCardContent>
             <MudTable Items="_plan.Changeset.Objects" Dense="true">
                 <HeaderContent>
-                    <MudTh>Ref</MudTh><MudTh>Action</MudTh><MudTh>Type</MudTh><MudTh>Name</MudTh><MudTh>Details</MudTh>
+                    <MudTh>@Loc["PkgRef"]</MudTh><MudTh>@Loc["PkgAction"]</MudTh><MudTh>@Loc["PkgType"]</MudTh><MudTh>@Loc["PkgName"]</MudTh><MudTh>@Loc["PkgDetails"]</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd><code>@context.Ref</code></MudTd>
@@ -118,7 +120,7 @@ else
                     <MudTd>
                         @if (context.RenamedFromRef is not null)
                         {
-                            <MudText Typo="Typo.caption">renamed from @context.RenamedFromRef (keeps @context.Objid)</MudText>
+                            <MudText Typo="Typo.caption">@Loc["PkgRenamedFrom", context.RenamedFromRef, context.Objid ?? string.Empty]</MudText>
                         }
                         @foreach (var diff in context.MetadataDiffs ?? [])
                         {
@@ -126,7 +128,7 @@ else
                         }
                         @if (context.Action == PackageObjectAction.Delete)
                         {
-                            <MudText Typo="Typo.caption" Color="Color.Error">@context.Objid will be marked GOING</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Error">@Loc["PkgWillBeMarkedGoing", context.Objid ?? string.Empty]</MudText>
                         }
                     </MudTd>
                 </RowTemplate>
@@ -138,10 +140,10 @@ else
     <MudCard Class="mb-4">
         <MudCardHeader>
             <MudText Typo="Typo.h6">
-                Attributes (@_plan.Changeset.Attributes.Count)
+                @Loc["PkgAttributesCount", _plan.Changeset.Attributes.Count]
                 @if (_conflicts.Count > 0)
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">@_conflicts.Count conflict(s)</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">@Loc["PkgConflictCount", _conflicts.Count]</MudChip>
                 }
             </MudText>
         </MudCardHeader>
@@ -155,7 +157,9 @@ else
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <code>@change.TargetRef/@change.Attribute</code>
                                 <MudChip T="string" Size="Size.Small" Color="@AttributeColor(change)">
-                                    @(change.Action == PackageAttributeAction.Conflict ? $"conflict: {change.Conflict}" : change.Action.ToString())
+                                    @(change.Action == PackageAttributeAction.Conflict
+                                        ? Loc["PkgConflictLabel", change.Conflict?.ToString() ?? string.Empty].Value
+                                        : change.Action.ToString())
                                 </MudChip>
                                 @foreach (var danger in render?.DangerousPatterns ?? [])
                                 {
@@ -164,8 +168,8 @@ else
                                 }
                                 @if (change.RequiresApplyResolution)
                                 {
-                                    <MudTooltip Text="Some refs resolve at apply time (new objects / configure)">
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">resolves at apply</MudChip>
+                                    <MudTooltip Text="@Loc["PkgResolvesAtApplyTooltip"]">
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Loc["PkgResolvesAtApply"]</MudChip>
                                     </MudTooltip>
                                 }
                             </MudStack>
@@ -175,21 +179,21 @@ else
                                 @if (render?.BaseHtml is not null)
                                 {
                                     <MudItem xs="12" md="4">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Base (as installed)</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgBaseAsInstalled"]</MudText>
                                         <pre class="mush-pane">@((MarkupString)render.BaseHtml)</pre>
                                     </MudItem>
                                 }
                                 @if (render?.LiveHtml is not null)
                                 {
                                     <MudItem xs="12" md="4">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Live (your version)</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgLiveYourVersion"]</MudText>
                                         <pre class="mush-pane">@((MarkupString)render.LiveHtml)</pre>
                                     </MudItem>
                                 }
                                 @if (render?.NewHtml is not null)
                                 {
                                     <MudItem xs="12" md="4">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">New (@_plan.Version)</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgNewVersion", _plan.Version]</MudText>
                                         <pre class="mush-pane">@((MarkupString)render.NewHtml)</pre>
                                     </MudItem>
                                 }
@@ -201,18 +205,18 @@ else
                                 <MudRadioGroup T="string"
                                                Value="@(_decisions.GetValueOrDefault(key) ?? "")"
                                                ValueChanged="@(v => _decisions[key] = v)">
-                                    <MudRadio T="string" Value="@("KeepMine")">Keep mine</MudRadio>
+                                    <MudRadio T="string" Value="@("KeepMine")">@Loc["PkgKeepMine"]</MudRadio>
                                     <MudRadio T="string" Value="@("TakeTheirs")">
-                                        @(change.Conflict == PackageConflictKind.ModifyDelete ? "Delete it (take theirs)" : "Take theirs")
+                                        @(change.Conflict == PackageConflictKind.ModifyDelete ? Loc["PkgDeleteTakeTheirs"] : Loc["PkgTakeTheirs"])
                                     </MudRadio>
-                                    <MudRadio T="string" Value="@("UseCustom")">Edit merged value</MudRadio>
+                                    <MudRadio T="string" Value="@("UseCustom")">@Loc["PkgEditMergedValue"]</MudRadio>
                                 </MudRadioGroup>
                                 @if (_decisions.GetValueOrDefault(key) == "UseCustom")
                                 {
                                     <MudTextField T="string"
                                                   Value="@(_customValues.GetValueOrDefault(key) ?? change.LiveValue ?? change.NewValue ?? "")"
                                                   ValueChanged="@(v => _customValues[key] = v)"
-                                                  Label="Merged value" Lines="4" Variant="Variant.Outlined" />
+                                                  Label="@Loc["PkgMergedValueLabel"]" Lines="4" Variant="Variant.Outlined" />
                                 }
                             }
                         </ChildContent>
@@ -252,7 +256,7 @@ else
         _version = query["version"];
         if (string.IsNullOrEmpty(_remote))
         {
-            _loadError = "Missing 'remote' parameter.";
+            _loadError = Loc["PkgMissingRemoteParam"];
             return;
         }
 
@@ -318,7 +322,7 @@ else
                 return;
             }
 
-            Snackbar.Add($"{_plan.PackageId} {_plan.Version} applied (revision {result!.Revision}).", Severity.Success);
+            Snackbar.Add(Loc["PkgApplied", _plan.PackageId, _plan.Version, result!.Revision], Severity.Success);
             foreach (var note in result.Notes.Take(6))
             {
                 Snackbar.Add(note, Severity.Info);

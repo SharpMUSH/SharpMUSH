@@ -222,13 +222,17 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		if (parser.CurrentState.Arguments.Count <= 0)
+		// PennMUSH cmd_think (cmds.c:1769) is an unconditional notify, so a bare `think` prints a
+		// blank line rather than nothing at all. A bare `think` has no "0" argument at all, so the
+		// return has to come off the same check as the notify.
+		if (!parser.CurrentState.Arguments.TryGetValue("0", out var thought))
 		{
-			return new None();
+			await NotifyService!.Notify(executor, string.Empty, executor);
+			return CallState.Empty;
 		}
 
-		await NotifyService!.Notify(executor, parser.CurrentState.Arguments["0"].Message!.ToString(), executor);
-		return parser.CurrentState.Arguments["0"];
+		await NotifyService!.Notify(executor, thought.Message!.ToString(), executor);
+		return thought;
 	}
 
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]
@@ -569,10 +573,20 @@ public partial class Commands
 
 		AnyOptionalSharpObject viewing = new None();
 
-		if (lookOutside && executor.IsContent)
+		if (lookOutside)
 		{
-			var container = await executor.AsContent.Location();
-			viewing = container.WithRoomOption().Match<AnyOptionalSharpObject>(
+			// PennMUSH do_look_at (look.c:611): looking outside shows the location OF your location, so
+			// there is nothing to see when you are standing in a room or inside an opaque container.
+			var container = executor.IsContent ? await executor.AsContent.Location() : null;
+
+			if (container is null || container.IsRoom || await container.WithExitOption().IsOpaque())
+			{
+				await NotifyService!.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.CantSeeThroughThat), executor);
+				return new CallState(ErrorMessages.Returns.CantSeeThroughThat);
+			}
+
+			viewing = (await container.Location()).WithRoomOption().Match<AnyOptionalSharpObject>(
 				player => player,
 				room => room,
 				exit => exit,
@@ -793,8 +807,10 @@ public partial class Commands
 					foreach (var exit in visibleExits)
 					{
 						var exitObj = exit.WithRoomOption().Object();
-						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
-						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
+						var destination = exit.IsExit
+							? await exit.AsExit.Home.WithCancellation(CancellationToken.None)
+							: new AnyOptionalSharpContainer(new None());
+						var destName = destination.IsNone ? "*UNLINKED*" : destination.WithoutNone().Object().Name;
 
 						var exitMString = WrapExitInSendTag(exitObj.Name);
 
@@ -827,8 +843,10 @@ public partial class Commands
 					foreach (var exit in visibleExits)
 					{
 						var exitObj = exit.WithRoomOption().Object();
-						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
-						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
+						var destination = exit.IsExit
+							? await exit.AsExit.Home.WithCancellation(CancellationToken.None)
+							: new AnyOptionalSharpContainer(new None());
+						var destName = destination.IsNone ? "*UNLINKED*" : destination.WithoutNone().Object().Name;
 
 						var exitMString = WrapExitInSendTag(exitObj.Name);
 
@@ -1162,14 +1180,23 @@ public partial class Commands
 				var homeContainer = await viewingKnown.MinusRoom().Home();
 				var locationContainer = await viewingKnown.AsContent.Location();
 
-				var homeObject = homeContainer.Object();
 				var locationObject = locationContainer.Object();
-				var homeFlags = await homeObject.Flags.Value.ToArrayAsync();
 				var locationFlags = await locationObject.Flags.Value.ToArrayAsync();
-
-				var homeFlagStr = string.Join(string.Empty, homeFlags.Select(x => x.Symbol));
 				var locationFlagStr = string.Join(string.Empty, locationFlags.Select(x => x.Symbol));
-				await NotifyService.Notify(enactor, Format($"Home: {homeObject.Name.Hilight()}(#{homeObject.DBRef.Number}{homeFlagStr})"), enactor);
+
+				// An unlinked exit has no destination to report; PennMUSH shows #-1 for NOTHING.
+				if (homeContainer.IsNone)
+				{
+					await NotifyService.Notify(enactor, Format($"Home: #-1"), enactor);
+				}
+				else
+				{
+					var homeObject = homeContainer.WithoutNone().Object();
+					var homeFlags = await homeObject.Flags.Value.ToArrayAsync();
+					var homeFlagStr = string.Join(string.Empty, homeFlags.Select(x => x.Symbol));
+					await NotifyService.Notify(enactor, Format($"Home: {homeObject.Name.Hilight()}(#{homeObject.DBRef.Number}{homeFlagStr})"), enactor);
+				}
+
 				await NotifyService.Notify(enactor, Format($"Location: {locationObject.Name.Hilight()}(#{locationObject.DBRef.Number}{locationFlagStr})"), enactor);
 			}
 		}
@@ -1177,7 +1204,8 @@ public partial class Commands
 		return new CallState(obj.DBRef.ToString());
 	}
 
-	[SharpCommand(Name = "@PEMIT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["target", "message"])]
+	[SharpCommand(Name = "@PEMIT", Switches = ["LIST", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit,
+		MinArgs = 1, MaxArgs = 2, ParameterNames = ["target", "message"])]
 	public static async ValueTask<Option<CallState>> PrivateEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -1194,7 +1222,7 @@ public partial class Commands
 
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
-		await CommunicationService!.SendToMultipleObjectsAsync(
+		var notified = await CommunicationService!.SendToMultipleObjectsAsync(
 			parser,
 			executor,
 			enactor,
@@ -1203,7 +1231,229 @@ public partial class Commands
 			INotifyService.NotificationType.Announce,
 			notifyOnPermissionFailure: true);
 
+		await EchoEmitToSender(executor, parser.CurrentState.Switches, notified, notification);
+
 		return new None();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_pemit</c> (<c>speech.c:595</c>): unless <c>/silent</c>, the sender is told what
+	/// they sent — naming the single recipient, or counting them when there was more than one. Pemitting
+	/// only to yourself says nothing, since you already saw the message.
+	/// </summary>
+	private static async ValueTask EchoEmitToSender(
+		AnySharpObject executor, IEnumerable<string> switches, IReadOnlyList<AnySharpObject> notified, string message)
+	{
+		if (switches.Contains("SILENT") || notified.Count == 0)
+		{
+			return;
+		}
+
+		if (notified.Count > 1)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouPemitToCountFormat),
+				executor, message, notified.Count);
+			return;
+		}
+
+		var only = notified[0];
+		if (only.Object().DBRef == executor.Object().DBRef)
+		{
+			return;
+		}
+
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat),
+			executor, message, only.Object().Name);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>fail_lock</c> (<c>lock.c:832</c>) for an exit's basic lock: the exit's
+	/// <c>@fail</c> replaces the default message, <c>@ofail</c> goes to the rest of the room, and
+	/// <c>@afail</c> runs as the exit.
+	/// </summary>
+	private static async ValueTask<Option<CallState>> FailToGoThatWay(
+		IMUSHCodeParser parser, AnySharpObject executor, SharpExit exit)
+	{
+		var exitObject = new AnySharpObject(exit);
+
+		var failAttr = await AttributeService!.GetAttributeAsync(
+			executor, exitObject, "FAILURE", IAttributeService.AttributeMode.Read, true);
+
+		if (failAttr.IsAttribute && failAttr.AsAttribute.Length > 0
+				&& !string.IsNullOrEmpty(failAttr.AsAttribute[0].Value.ToPlainText()))
+		{
+			await NotifyService!.Notify(executor, failAttr.AsAttribute[0].Value, executor);
+		}
+		else
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
+		}
+
+		var ofailAttr = await AttributeService!.GetAttributeAsync(
+			executor, exitObject, "OFAILURE", IAttributeService.AttributeMode.Read, true);
+
+		if (ofailAttr.IsAttribute && ofailAttr.AsAttribute.Length > 0
+				&& !string.IsNullOrEmpty(ofailAttr.AsAttribute[0].Value.ToPlainText()))
+		{
+			await CommunicationService!.SendToRoomAsync(
+				executor,
+				await executor.Where(),
+				_ => ofailAttr.AsAttribute[0].Value,
+				INotifyService.NotificationType.Emit,
+				excludeObjects: [executor]);
+		}
+
+		var afailAttr = await AttributeService!.GetAttributeAsync(
+			executor, exitObject, "AFAILURE", IAttributeService.AttributeMode.Read, true);
+
+		if (afailAttr.IsAttribute && afailAttr.AsAttribute.Length > 0
+				&& !string.IsNullOrEmpty(afailAttr.AsAttribute[0].Value.ToPlainText()))
+		{
+			await parser.With(
+				state => state with { Executor = exit.Object.DBRef, Caller = state.Executor },
+				async p => await p.CommandParse(afailAttr.AsAttribute[0].Value));
+		}
+
+		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// How the exit was linked. PennMUSH stores HOME and AMBIGUOUS directly in Destination(); SharpMUSH
+	/// records them in a <c>_LINKTYPE</c> attribute instead, which is the convention <c>loc()</c> already
+	/// reads to answer <c>#-3</c> and <c>#-2</c>.
+	/// </summary>
+	private static async ValueTask<string?> LinkTypeOf(AnySharpObject executor, AnySharpObject exitObject)
+	{
+		var linkTypeAttr = await AttributeService!.GetAttributeAsync(
+			executor, exitObject, AttrLinkType, IAttributeService.AttributeMode.Read, false);
+
+		if (!linkTypeAttr.IsAttribute || linkTypeAttr.AsAttribute.Length == 0)
+		{
+			return null;
+		}
+
+		var linkType = linkTypeAttr.AsAttribute[0].Value.ToPlainText().Trim();
+
+		return string.IsNullOrEmpty(linkType) ? null : linkType.ToLowerInvariant();
+	}
+
+	/// <summary>
+	/// Why an exit could not say where it leads.
+	/// </summary>
+	private enum ExitDestinationFailure
+	{
+		/// <summary>No destination at all — never linked, or <c>@unlink</c>ed.</summary>
+		Unlinked,
+
+		/// <summary>A variable exit failed to resolve one, and has already told the executor why.</summary>
+		AlreadyReported
+	}
+
+	/// <summary>
+	/// Where an exit leads for a particular mover. <c>goto</c> and <c>@teleport</c> both need this and
+	/// must not drift apart: a variable exit computes its destination from <c>@DESTINATION</c>, a
+	/// home-linked exit sends the mover to <em>their own</em> home — which is why the mover is a separate
+	/// parameter from the executor — and otherwise it is the stored destination edge.
+	/// </summary>
+	private static async ValueTask<OneOf<AnySharpContainer, ExitDestinationFailure>> ResolveExitDestination(
+		IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject mover, SharpExit exitObj, string typedName)
+	{
+		var exitObject = new AnySharpObject(exitObj);
+		var linkType = await LinkTypeOf(executor, exitObject);
+
+		if (linkType == LinkTypeVariable)
+		{
+			var variableDestination = await FindVariableDestination(parser, executor, exitObject, typedName);
+
+			return variableDestination is null
+				? ExitDestinationFailure.AlreadyReported
+				: variableDestination;
+		}
+
+		if (linkType == LinkTypeHome)
+		{
+			// PennMUSH do_move (move.c:451): an exit linked to HOME sends the mover to their own home.
+			if (!mover.IsContent)
+			{
+				return ExitDestinationFailure.Unlinked;
+			}
+
+			var moverHome = await mover.AsContent.Home();
+
+			return moverHome.IsNone
+				? ExitDestinationFailure.Unlinked
+				: moverHome.WithoutNone();
+		}
+
+		var maybeDestination = await exitObj.Home.WithCancellation(CancellationToken.None);
+
+		return maybeDestination.IsNone
+			? ExitDestinationFailure.Unlinked
+			: maybeDestination.WithoutNone();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>find_var_dest</c> (<c>move.c:360</c>): a variable exit works out where it leads at move
+	/// time by evaluating its <c>DESTINATION</c> attribute — with <c>%0</c> set to the exit name or alias
+	/// the mover typed — falling back to <c>EXITTO</c>. The result is parsed as an objid, so it must name
+	/// an object rather than merely matching something nearby.
+	/// <para>Returns <c>null</c> after notifying the mover when no usable destination comes back.</para>
+	/// </summary>
+	private static async ValueTask<AnySharpContainer?> FindVariableDestination(
+		IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject exitObject, string typedName)
+	{
+		var attributeArgs = new Dictionary<string, CallState> { { "0", new CallState(typedName) } };
+
+		var resolved = await AttributeHelpers.EvaluateFormatAttribute(
+			AttributeService!, parser, executor, exitObject, "DESTINATION", attributeArgs, MModule.empty());
+
+		if (MModule.getLength(resolved) == 0)
+		{
+			resolved = await AttributeHelpers.EvaluateFormatAttribute(
+				AttributeService!, parser, executor, exitObject, "EXITTO", attributeArgs, MModule.empty());
+		}
+
+		var destinationText = resolved.ToPlainText().Trim();
+		var located = DBRef.TryParse(destinationText, out var destinationRef)
+			? await Mediator!.Send(new GetObjectNodeQuery(destinationRef!.Value))
+			: new AnyOptionalSharpObject(new None());
+
+		// PennMUSH only permits a variable destination the exit itself could have been linked to
+		// (move.c:457), and an exit is not somewhere you can end up.
+		if (located.IsNone() || !located.Known().IsContainer
+				|| !await ExitCanLinkTo(exitObject, located.Known()))
+		{
+			await NotifyService!.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.VariableExitDestinationInvalidFormat), executor,
+				located.IsNone() ? "#-1" : located.Known().Object().DBRef.Number.ToString());
+
+			return null;
+		}
+
+		return located.Known().AsContainer;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>can_link_to</c> (<c>mushdb.h:87</c>), asked of the exit rather than of the player: the
+	/// exit controls the destination, is allowed to link anywhere, or the destination is LINK_OK and the
+	/// exit passes its link lock.
+	/// </summary>
+	private static async ValueTask<bool> ExitCanLinkTo(AnySharpObject exitObject, AnySharpObject destination)
+	{
+		if (await PermissionService!.Controls(exitObject, destination))
+		{
+			return true;
+		}
+
+		if (await exitObject.HasPower("Link_Anywhere"))
+		{
+			return true;
+		}
+
+		var destinationFlags = await destination.Object().Flags.Value.ToArrayAsync();
+
+		return destinationFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase))
+					 && LockService!.Evaluate(LockType.Link, destination, exitObject);
 	}
 
 	[SharpCommand(Name = "GOTO", Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
@@ -1217,7 +1467,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var exit = await LocateService!.LocateAndNotifyIfInvalid(
+		var exit = await LocateService!.Locate(
 			parser,
 			executor,
 			executor,
@@ -1228,59 +1478,40 @@ public partial class Commands
 			| LocateFlags.OnlyMatchTypePreference
 			| LocateFlags.FailIfNotPreferred);
 
-		if (!exit.IsValid())
+		// PennMUSH do_move (move.c:432) answers a failed exit match with "You can't go that way.",
+		// not with the generic locate failure.
+		if (!exit.IsValid() || !exit.IsExit)
 		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
 			return CallState.Empty;
 		}
 
 		var exitObj = exit.AsExit;
+		var exitObject = new AnySharpObject(exitObj);
 
-		var homeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
-		AnySharpContainer destination;
+		// The exit name or alias actually typed: args["1"] when the visitor routed a bare exit command
+		// here, otherwise the argument to an explicit `goto`.
+		var typedName = args.TryGetValue("1", out var typedArg)
+			? typedArg.Message!.ToPlainText()
+			: args["0"].Message!.ToPlainText();
 
-		if (homeLocation.Object().DBRef.Number == -1)
+		var resolved = await ResolveExitDestination(parser, executor, executor, exitObj, typedName);
+
+		if (!resolved.IsT0)
 		{
-			var destAttr = await AttributeService!.GetAttributeAsync(
-				executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
-
-			if (destAttr.IsNone || destAttr.IsError)
-			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid), executor);
-				return CallState.Empty;
-			}
-
-			var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
-			var located = await LocateService!.LocateAndNotifyIfInvalid(
-				parser,
-				executor,
-				executor,
-				destValue!,
-				LocateFlags.All);
-
-			if (!located.IsValid())
-			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid), executor);
-				return CallState.Empty;
-			}
-
-			var locatedObj = located.WithoutError().WithoutNone();
-			if (!locatedObj.IsContainer)
-			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitNoValidLocationDetail), executor);
-				return CallState.Empty;
-			}
-
-			destination = locatedObj.AsContainer;
+			// PennMUSH could_doit() (predicat.c:75) refuses an exit with no destination before the basic
+			// lock is even evaluated, so do_move falls through to fail_lock. A variable exit that could
+			// not work out where it leads has already reported that itself.
+			return resolved.AsT1 == ExitDestinationFailure.Unlinked
+				? await FailToGoThatWay(parser, executor, exitObj)
+				: CallState.Empty;
 		}
-		else
-		{
-			destination = homeLocation;
-		}
+
+		var destination = resolved.AsT0;
 
 		if (!await PermissionService!.CanGoto(executor, exitObj, destination))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
-			return CallState.Empty;
+			return await FailToGoThatWay(parser, executor, exitObj);
 		}
 
 		if (await MoveService!.WouldCreateLoop(executor.AsContent, destination))
@@ -1336,63 +1567,10 @@ public partial class Commands
 
 		var validDestination = destination.WithoutError().WithoutNone();
 
-		AnySharpContainer destinationContainer;
-		if (validDestination.IsExit)
-		{
-			var exitObj = validDestination.AsExit;
-			var homeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
-
-			if (homeLocation.Object().DBRef.Number == -1)
-			{
-				var destAttr = await AttributeService!.GetAttributeAsync(
-					executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
-
-				const string exitUnlinkedMsg = "That exit doesn't go anywhere.";
-
-				if (destAttr.IsNone || destAttr.IsError)
-				{
-					await NotifyService!.Notify(executor, exitUnlinkedMsg, executor);
-					return CallState.Empty;
-				}
-
-				var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
-				if (string.IsNullOrWhiteSpace(destValue))
-				{
-					await NotifyService!.Notify(executor, exitUnlinkedMsg, executor);
-					return CallState.Empty;
-				}
-
-				var located = await LocateService!.LocateAndNotifyIfInvalid(
-					parser,
-					executor,
-					executor,
-					destValue,
-					LocateFlags.All);
-
-				if (!located.IsValid())
-				{
-					await NotifyService!.Notify(executor, exitUnlinkedMsg, executor);
-					return CallState.Empty;
-				}
-
-				var locatedObj = located.WithoutError().WithoutNone();
-				if (!locatedObj.IsContainer)
-				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid), executor);
-					return CallState.Empty;
-				}
-
-				destinationContainer = locatedObj.AsContainer;
-			}
-			else
-			{
-				destinationContainer = homeLocation;
-			}
-		}
-		else
-		{
-			destinationContainer = validDestination.AsContainer;
-		}
+		// Teleporting to an exit means going where it leads. That is resolved per target inside the loop,
+		// because a home-linked exit leads somewhere different for each mover.
+		var destinationExit = validDestination.IsExit ? validDestination.AsExit : null;
+		var fixedDestination = destinationExit is null ? validDestination.AsContainer : null;
 
 		foreach (var obj in toTeleportStringList)
 		{
@@ -1418,6 +1596,30 @@ public partial class Commands
 			{
 				await NotifyService!.Notify(executor, ErrorMessages.Returns.CannotTeleport, executor);
 				continue;
+			}
+
+			AnySharpContainer destinationContainer;
+
+			if (destinationExit is null)
+			{
+				destinationContainer = fixedDestination!;
+			}
+			else
+			{
+				var resolvedExit = await ResolveExitDestination(
+					parser, executor, target, destinationExit, destinationString);
+
+				if (!resolvedExit.IsT0)
+				{
+					if (resolvedExit.AsT1 == ExitDestinationFailure.Unlinked)
+					{
+						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitGoesNowhere), executor);
+					}
+
+					continue;
+				}
+
+				destinationContainer = resolvedExit.AsT0;
 			}
 
 			// Zone teleport restriction: check if the source room blocks teleporting out.
@@ -2954,8 +3156,11 @@ public partial class Commands
 			LocateFlags.All,
 			async target =>
 			{
+				// PennMUSH do_one_remit (speech.c:1263): only containers hold anything.
 				if (!target.IsContainer)
 				{
+					await NotifyService!.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor);
 					return CallState.Empty;
 				}
 
@@ -2966,10 +3171,34 @@ public partial class Commands
 					_ => message,
 					notificationType);
 
+				await EchoRemitToSender(executor, parser.CurrentState.Switches, target, message);
+
 				return CallState.Empty;
 			});
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_one_remit</c> (<c>speech.c:1273</c>): tell the sender what they remitted, unless
+	/// <c>/silent</c> or they are standing in the target room and already saw it.
+	/// </summary>
+	private static async ValueTask EchoRemitToSender(
+		AnySharpObject executor, IEnumerable<string> switches, AnySharpObject target, MString message)
+	{
+		if (switches.Contains("SILENT"))
+		{
+			return;
+		}
+
+		var executorLocation = await executor.Where();
+		if (executorLocation.Object().DBRef == target.Object().DBRef)
+		{
+			return;
+		}
+
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouRemitInFormat),
+			executor, message.ToPlainText(), $"{target.Object().Name}(#{target.Object().DBRef.Number})");
 	}
 
 	[SharpCommand(Name = "@PROMPT", Switches = ["SILENT", "NOISY", "NOEVAL", "SPOOF"],
@@ -4028,13 +4257,45 @@ public partial class Commands
 		var executorLocation = await executor.OutermostWhere();
 		var message = args["0"].Message!;
 
+		// PennMUSH do_lemit (speech.c:1334) requires the absolute location to be a room.
+		if (!executorLocation.IsRoom)
+		{
+			await NotifyService!.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.LemitTooManyContainers), executor);
+			return new CallState(ErrorMessages.Returns.NothingToDo);
+		}
+
 		await CommunicationService!.SendToRoomAsync(
 			executor,
 			executorLocation,
 			_ => message,
 			INotifyService.NotificationType.Emit);
 
+		await EchoLemitToSender(executor, parser.CurrentState.Switches, executorLocation, message);
+
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_lemit</c> (<c>speech.c:1343</c>): echoed only when the sender is not directly in the
+	/// room they lemitted to — otherwise they already saw the emit.
+	/// </summary>
+	private static async ValueTask EchoLemitToSender(
+		AnySharpObject executor, IEnumerable<string> switches, AnySharpContainer room, MString message)
+	{
+		if (switches.Contains("SILENT"))
+		{
+			return;
+		}
+
+		var executorLocation = await executor.Where();
+		if (executorLocation.Object().DBRef == room.Object().DBRef)
+		{
+			return;
+		}
+
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouLemitFormat),
+			executor, message.ToPlainText());
 	}
 
 	[SharpCommand(Name = "@NSLEMIT", Switches = ["NOEVAL", "NOISY", "SILENT"],
@@ -4055,6 +4316,15 @@ public partial class Commands
 			: INotifyService.NotificationType.Emit;
 
 		var executorLocation = await executor.OutermostWhere();
+
+		// PennMUSH do_lemit (speech.c:1334) requires the absolute location to be a room.
+		if (!executorLocation.IsRoom)
+		{
+			await NotifyService!.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.LemitTooManyContainers), executor);
+			return new CallState(ErrorMessages.Returns.NothingToDo);
+		}
+
 		var contents = executorLocation.Content(Mediator!);
 		var message = args["0"].Message!;
 
@@ -4068,6 +4338,8 @@ public partial class Commands
 				executor,
 				spoofType);
 		}
+
+		await EchoLemitToSender(executor, parser.CurrentState.Switches, executorLocation, message);
 
 		return CallState.Empty;
 	}
@@ -4100,6 +4372,14 @@ public partial class Commands
 			LocateFlags.All,
 			async zone =>
 			{
+				// PennMUSH do_zemit (speech.c:1405) requires control of the zone object.
+				if (!await PermissionService!.Controls(executor, zone))
+				{
+					await NotifyService!.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+					return CallState.Empty;
+				}
+
 				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
 
 				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
@@ -4112,6 +4392,8 @@ public partial class Commands
 						await NotifyService!.Notify(content.WithRoomOption(), message, executor, notificationType);
 					}
 				}
+
+				await EchoZemitToSender(executor, parser.CurrentState.Switches, zone, message);
 
 				return CallState.Empty;
 			});
@@ -4649,6 +4931,14 @@ public partial class Commands
 			LocateFlags.All,
 			async zone =>
 			{
+				// PennMUSH do_zemit (speech.c:1405) requires control of the zone object.
+				if (!await PermissionService!.Controls(executor, zone))
+				{
+					await NotifyService!.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+					return CallState.Empty;
+				}
+
 				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
 
 				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
@@ -4662,10 +4952,28 @@ public partial class Commands
 					}
 				}
 
+				await EchoZemitToSender(executor, parser.CurrentState.Switches, zone, message);
+
 				return CallState.Empty;
 			});
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_zemit</c> (<c>speech.c:1419</c>): tell the sender what they zemitted, unless
+	/// <c>/silent</c>.
+	/// </summary>
+	private static async ValueTask EchoZemitToSender(
+		AnySharpObject executor, IEnumerable<string> switches, AnySharpObject zone, MString message)
+	{
+		if (switches.Contains("SILENT"))
+		{
+			return;
+		}
+
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouZemitInZoneFormat),
+			executor, message.ToPlainText(), $"{zone.Object().Name}(#{zone.Object().DBRef.Number})");
 	}
 
 	[SharpCommand(Name = "@CHANNEL",
@@ -5286,8 +5594,11 @@ public partial class Commands
 				LocateFlags.All,
 				async target =>
 				{
+					// PennMUSH do_one_remit (speech.c:1263): only containers hold anything.
 					if (!target.IsContainer)
 					{
+						await NotifyService!.NotifyLocalized(executor,
+							nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor);
 						return CallState.Empty;
 					}
 
@@ -5296,6 +5607,8 @@ public partial class Commands
 						target.AsContainer,
 						_ => message,
 						INotifyService.NotificationType.Emit);
+
+					await EchoRemitToSender(executor, parser.CurrentState.Switches, target, message);
 
 					return CallState.Empty;
 				});
@@ -6127,6 +6440,8 @@ public partial class Commands
 			? INotifyService.NotificationType.NSAnnounce
 			: INotifyService.NotificationType.Announce;
 
+		var switches = parser.CurrentState.Switches;
+
 		if (IsIntegerList(recipients))
 		{
 			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -6134,10 +6449,20 @@ public partial class Commands
 				.ToArray();
 
 			await CommunicationService!.SendToPortsAsync(executor, ports, _ => message, notificationType);
+
+			// PennMUSH bsd.c:5133 reports port pemits by connection count.
+			if (!switches.Contains("SILENT") && ports.Length > 0)
+			{
+				await NotifyService!.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.YouPemitToConnectionsFormat), executor,
+					message.ToPlainText(), ports.Length);
+			}
+
 			return CallState.Empty;
 		}
 
 		var recipientList = ArgHelpers.NameList(recipients);
+		var notified = new List<AnySharpObject>();
 
 		foreach (var recipient in recipientList)
 		{
@@ -6154,11 +6479,14 @@ public partial class Commands
 					if (await PermissionService.CanInteract(executor, target, InteractType.Hear))
 					{
 						await NotifyService!.Notify(target, message, executor, notificationType);
+						notified.Add(target);
 					}
 
 					return CallState.Empty;
 				});
 		}
+
+		await EchoEmitToSender(executor, switches, notified, message.ToPlainText());
 
 		return CallState.Empty;
 	}

@@ -11,6 +11,7 @@ using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Layout;
 
@@ -35,7 +36,11 @@ file sealed class NavMenuApiHandler(IReadOnlyList<CharacterSummary> characters) 
 				{
 					accountId = "acct-1",
 					username = "headwiz",
-					characters,
+					// The login endpoint binds the session to the primary and marks it; an unmarked roster
+					// would mean "acting as nobody", which is not what a fresh login looks like.
+					characters = characters
+						.Select((c, i) => new { c.DbrefNumber, c.CreationTime, c.Name, c.Flags, isActing = i == 0 })
+						.ToList(),
 					accountSessionToken = "session-token-1",
 					mustChangePassword = false,
 					role = "Wizard",
@@ -56,13 +61,6 @@ file sealed class NavMenuApiHandler(IReadOnlyList<CharacterSummary> characters) 
 	}
 }
 
-file sealed class NavMenuStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
-
 /// <summary>
 /// Regression coverage for the reported bug: switching characters in the portal updates the
 /// top-right chrome but the bottom-left nav profile card kept showing the old name. Two compounding
@@ -81,7 +79,7 @@ public class NavMenuActiveCharacterTests : BunitContext, IAsyncDisposable
 	{
 		Services.AddMudServices();
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
-		Services.AddSingleton<IStringLocalizer<SharedResource>, NavMenuStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 
 		// Wrapped in the real facades (not bare substitutes) — NavMenu now also injects

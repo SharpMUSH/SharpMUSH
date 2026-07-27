@@ -183,6 +183,8 @@ public partial class ArangoDatabase
 
 	public async ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer location, CancellationToken ct = default)
 	{
+		// Relinking must replace the destination, not accumulate a second HasHome edge.
+		await UnlinkExitAsync(exit, ct);
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
 			new SharpEdgeCreateRequest(exit.Id!, location.Id), cancellationToken: ct);
 		return true;
@@ -191,7 +193,8 @@ public partial class ArangoDatabase
 	public async ValueTask<bool> UnlinkExitAsync(SharpExit exit, CancellationToken ct = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
-			$"FOR v, e IN 1..1 INBOUND {exit.Id} GRAPH {DatabaseConstants.GraphHomes} RETURN e", cancellationToken: ct);
+			// HasHome edges go FROM the exit TO its destination, so traverse OUTBOUND from the exit.
+			$"FOR v, e IN 1..1 OUTBOUND {exit.Id} GRAPH {DatabaseConstants.GraphHomes} RETURN e", cancellationToken: ct);
 
 		if (!result.Any())
 		{
@@ -270,8 +273,8 @@ public partial class ArangoDatabase
 				new SharpEdgeCreateRequest(exit.Id, obj.Id), cancellationToken: ct);
 			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphLocations, DatabaseConstants.AtLocation,
 				new SharpEdgeCreateRequest(exit.Id, location.Id), cancellationToken: ct);
-			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
-				new SharpEdgeCreateRequest(exit.Id, location.Id), cancellationToken: ct);
+			// No HasHome edge: a new exit is unlinked until @link points it somewhere, matching PennMUSH's
+			// Destination() == NOTHING. Seeding it to the source room made every exit look self-linked.
 			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
 				new SharpEdgeCreateRequest(obj.Id, creator.Id!), cancellationToken: ct);
 
@@ -509,7 +512,7 @@ public partial class ArangoDatabase
 				Object = convertObject,
 				Aliases = res.Aliases,
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct))
+				Home = new(async ct => await GetExitDestinationAsync(id, ct))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'")
 		};
@@ -570,7 +573,7 @@ public partial class ArangoDatabase
 			{
 				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct))
+				Home = new(async ct => await GetExitDestinationAsync(id, ct))
 			},
 			_ => new None(),
 		};

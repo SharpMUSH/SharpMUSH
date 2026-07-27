@@ -16,6 +16,7 @@ using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -32,13 +33,6 @@ file sealed class SceneLiveHarness : ComponentBase
 		builder.AddAttribute(2, nameof(SceneLive.Id), Id);
 		builder.CloseComponent();
 	}
-}
-
-file sealed class SceneStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
 }
 
 /// <summary>
@@ -166,7 +160,7 @@ public class SceneSurfaceTests : BunitContext
 			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SceneService>.Instance))
 			.AddSingleton<IConnectionStateService>(_hub)
 			.AddSingleton<ISceneHubControl>(_hub)
-			.AddSingleton<IStringLocalizer<SharedResource>, SceneStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -206,7 +200,8 @@ public class SceneSurfaceTests : BunitContext
 		await Assert.That(markup).Contains("Mysterious Stranger");
 		await Assert.That(markup).Contains("Bartender");
 		// Edited pose (editCount > 1) shows the badge; the unedited one does not add a second.
-		await Assert.That(markup).Contains("edited");
+		// The localizer stub echoes resource keys, so the badge renders as its key.
+		await Assert.That(markup).Contains("RolEditedBadge");
 	}
 
 	[TUnit.Core.Test]

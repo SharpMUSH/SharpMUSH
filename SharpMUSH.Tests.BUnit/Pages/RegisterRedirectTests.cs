@@ -1,6 +1,9 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
+using SharpMUSH.Client.Resources;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
@@ -15,6 +18,7 @@ public class RegisterRedirectTests : BunitContext
 	public async Task Register_RedirectsToLoginRegisterTab()
 	{
 		JSInterop.Mode = JSRuntimeMode.Loose;
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		Render<SharpMUSH.Client.Pages.Register>();
 

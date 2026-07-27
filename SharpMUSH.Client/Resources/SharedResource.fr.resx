@@ -290,4 +290,2286 @@
   <data name="AdvancedCategoryDescription" xml:space="preserve">
     <value>Attributs, drapeaux, coûts et paramètres spécialisés</value>
   </data>
+  <data name="Send" xml:space="preserve">
+    <value>Envoyer</value>
+  </data>
+  <data name="WidgetZoneTopBar" xml:space="preserve">
+    <value>Barre supérieure</value>
+  </data>
+  <data name="WidgetZoneLeftSidebar" xml:space="preserve">
+    <value>Barre latérale gauche</value>
+  </data>
+  <data name="WidgetZoneRightSidebar" xml:space="preserve">
+    <value>Barre latérale droite</value>
+  </data>
+  <data name="WidgetZoneMainContent" xml:space="preserve">
+    <value>Contenu principal</value>
+  </data>
+  <data name="WidgetZoneFooter" xml:space="preserve">
+    <value>Pied de page</value>
+  </data>
+  <data name="AuthSignIn" xml:space="preserve">
+    <value>Connexion</value>
+  </data>
+  <data name="AuthRegister" xml:space="preserve">
+    <value>Inscription</value>
+  </data>
+  <data name="AuthUsername" xml:space="preserve">
+    <value>Nom d'utilisateur</value>
+  </data>
+  <data name="AuthUsernameOrEmail" xml:space="preserve">
+    <value>Nom d'utilisateur ou e-mail</value>
+  </data>
+  <data name="AuthPassword" xml:space="preserve">
+    <value>Mot de passe</value>
+  </data>
+  <data name="AuthEmailOptional" xml:space="preserve">
+    <value>E-mail (facultatif)</value>
+  </data>
+  <data name="AuthCreateAccount" xml:space="preserve">
+    <value>Créer un compte</value>
+  </data>
+  <data name="AuthConnectDirectly" xml:space="preserve">
+    <value>Ou connectez-vous directement via le</value>
+  </data>
+  <data name="AuthTerminalLink" xml:space="preserve">
+    <value>terminal</value>
+  </data>
+  <data name="AuthEnterCredentials" xml:space="preserve">
+    <value>Veuillez saisir vos identifiants.</value>
+  </data>
+  <data name="AuthLoginFailed" xml:space="preserve">
+    <value>Échec de la connexion.</value>
+  </data>
+  <data name="AuthUsernamePasswordRequired" xml:space="preserve">
+    <value>Le nom d'utilisateur et le mot de passe sont obligatoires.</value>
+  </data>
+  <data name="AuthRegistrationFailed" xml:space="preserve">
+    <value>Échec de l'inscription.</value>
+  </data>
+  <data name="AuthFirstRunSetup" xml:space="preserve">
+    <value>Configuration initiale</value>
+  </data>
+  <data name="AuthSetupWelcome" xml:space="preserve">
+    <value>Bienvenue sur {0}</value>
+  </data>
+  <data name="AuthSetupComplete" xml:space="preserve">
+    <value>Configuration terminée. Vous êtes l'administrateur.</value>
+  </data>
+  <data name="AuthSetupAdminLinked" xml:space="preserve">
+    <value>Le compte administrateur {0} est désormais lié au joueur pré-généré #1, God.</value>
+  </data>
+  <data name="AuthSetupSignedInAs" xml:space="preserve">
+    <value>Vous êtes connecté en tant que {0}.</value>
+  </data>
+  <data name="AuthSetupSignInToManage" xml:space="preserve">
+    <value>Connectez-vous pour commencer à gérer votre jeu.</value>
+  </data>
+  <data name="AuthEnterPortal" xml:space="preserve">
+    <value>Accéder au portail</value>
+  </data>
+  <data name="AuthClaimAdminTitle" xml:space="preserve">
+    <value>Revendiquer le compte administrateur</value>
+  </data>
+  <data name="AuthClaimAdminLead" xml:space="preserve">
+    <value>Ce jeu n'a pas encore été revendiqué. Choisissez un nom d'utilisateur et un mot de passe pour le compte administrateur pré-généré (lié au joueur #1, God). La première personne à remplir ce formulaire devient l'administrateur.</value>
+  </data>
+  <data name="AuthConfirmPassword" xml:space="preserve">
+    <value>Confirmer le mot de passe</value>
+  </data>
+  <data name="AuthSettingUp" xml:space="preserve">
+    <value>Configuration en cours…</value>
+  </data>
+  <data name="AuthCreateAdminAccount" xml:space="preserve">
+    <value>Créer le compte administrateur</value>
+  </data>
+  <data name="AuthUsernameRequired" xml:space="preserve">
+    <value>Le nom d'utilisateur est obligatoire.</value>
+  </data>
+  <data name="AuthPasswordRequired" xml:space="preserve">
+    <value>Le mot de passe est obligatoire.</value>
+  </data>
+  <data name="AuthPasswordsDoNotMatch" xml:space="preserve">
+    <value>Les mots de passe ne correspondent pas.</value>
+  </data>
+  <data name="AuthPasswordTooShort" xml:space="preserve">
+    <value>Le mot de passe doit comporter au moins 8 caractères.</value>
+  </data>
+  <data name="AuthSetupAlreadyCompleted" xml:space="preserve">
+    <value>La configuration vient d'être effectuée par quelqu'un d'autre. Si ce n'était pas vous, contactez immédiatement l'opérateur du serveur.</value>
+  </data>
+  <data name="AuthUsernameTaken" xml:space="preserve">
+    <value>Ce nom d'utilisateur est déjà pris — choisissez-en un autre.</value>
+  </data>
+  <data name="AuthSetupFailed" xml:space="preserve">
+    <value>Échec de la configuration.</value>
+  </data>
+  <data name="AuthAccount" xml:space="preserve">
+    <value>Compte</value>
+  </data>
+  <data name="AuthDebugMode" xml:space="preserve">
+    <value>Mode débogage</value>
+  </data>
+  <data name="AuthDebugModeBody" xml:space="preserve">
+    <value>Vous êtes authentifié en tant que {0} (environnement de développement). Aucune session de compte n'est associée ; la gestion du compte nécessite une connexion à un compte réel.</value>
+  </data>
+  <data name="AuthNotLoggedInAccount" xml:space="preserve">
+    <value>Vous n'êtes pas connecté à un compte. Utilisez le panneau de connexion du terminal pour vous connecter.</value>
+  </data>
+  <data name="AuthGoToHome" xml:space="preserve">
+    <value>Aller à l'accueil</value>
+  </data>
+  <data name="AuthPasswordChangeRequired" xml:space="preserve">
+    <value>Changement de mot de passe requis.</value>
+  </data>
+  <data name="AuthPasswordChangeRequiredBody" xml:space="preserve">
+    <value>Vous devez changer votre mot de passe avant d'utiliser le reste du portail.</value>
+  </data>
+  <data name="AuthProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="AuthEdit" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="AuthChange" xml:space="preserve">
+    <value>Changer</value>
+  </data>
+  <data name="AuthCurrentPassword" xml:space="preserve">
+    <value>Mot de passe actuel</value>
+  </data>
+  <data name="AuthNewPassword" xml:space="preserve">
+    <value>Nouveau mot de passe</value>
+  </data>
+  <data name="AuthNoCharactersLinked" xml:space="preserve">
+    <value>Aucun personnage n'est lié à ce compte.</value>
+  </data>
+  <data name="AuthColumnName" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="AuthColumnDbref" xml:space="preserve">
+    <value>Dbref</value>
+  </data>
+  <data name="AuthColumnActions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="AuthUnlinkCharacter" xml:space="preserve">
+    <value>Dissocier le personnage</value>
+  </data>
+  <data name="AuthCreateNewCharacter" xml:space="preserve">
+    <value>+ Créer un nouveau personnage</value>
+  </data>
+  <data name="AuthLogOutOfAccount" xml:space="preserve">
+    <value>Se déconnecter du compte</value>
+  </data>
+  <data name="AuthUsernameUpdated" xml:space="preserve">
+    <value>Nom d'utilisateur mis à jour.</value>
+  </data>
+  <data name="AuthPasswordUpdated" xml:space="preserve">
+    <value>Mot de passe mis à jour.</value>
+  </data>
+  <data name="AuthSwitchCharacter" xml:space="preserve">
+    <value>Changer de personnage</value>
+  </data>
+  <data name="AuthNoCharacter" xml:space="preserve">
+    <value>Aucun personnage</value>
+  </data>
+  <data name="AuthAccountManagement" xml:space="preserve">
+    <value>Gestion du compte</value>
+  </data>
+  <data name="AuthLogout" xml:space="preserve">
+    <value>Déconnexion</value>
+  </data>
+  <data name="AuthOpenInNewTab" xml:space="preserve">
+    <value>Ouvrir {0} dans un nouvel onglet</value>
+  </data>
+  <data name="PkgAdminSection" xml:space="preserve">
+    <value>Admin</value>
+  </data>
+  <data name="PkgClose" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="PkgNoReadme" xml:space="preserve">
+    <value>Aucun README disponible.</value>
+  </data>
+  <data name="PkgName" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="PkgVersionLabel" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="PkgBrowse" xml:space="preserve">
+    <value>Parcourir</value>
+  </data>
+  <data name="PkgRemotes" xml:space="preserve">
+    <value>Dépôts distants</value>
+  </data>
+  <data name="PkgAuthor" xml:space="preserve">
+    <value>Créer</value>
+  </data>
+  <data name="PkgPackages" xml:space="preserve">
+    <value>Paquets</value>
+  </data>
+  <data name="PkgSoftcodePackages" xml:space="preserve">
+    <value>Paquets de softcode</value>
+  </data>
+  <data name="PkgInstalledDescription" xml:space="preserve">
+    <value>Paquets de softcode installés. Les mises à jour passent toujours par un plan vérifié — rien ne s'applique automatiquement.</value>
+  </data>
+  <data name="PkgInstalled" xml:space="preserve">
+    <value>Installés</value>
+  </data>
+  <data name="PkgUpdatesAvailable" xml:space="preserve">
+    <value>Mises à jour disponibles</value>
+  </data>
+  <data name="PkgObjects" xml:space="preserve">
+    <value>Objets</value>
+  </data>
+  <data name="PkgUpdates" xml:space="preserve">
+    <value>Mises à jour</value>
+  </data>
+  <data name="PkgSearchPlaceholder" xml:space="preserve">
+    <value>Rechercher des paquets…</value>
+  </data>
+  <data name="PkgNoneInstalled" xml:space="preserve">
+    <value>Aucun paquet installé pour l'instant. Configurez un dépôt distant, puis parcourez-le pour installer votre premier paquet.</value>
+  </data>
+  <data name="PkgNoUpdatesAvailable" xml:space="preserve">
+    <value>Aucun paquet n'a de mise à jour disponible.</value>
+  </data>
+  <data name="PkgNoSearchMatch" xml:space="preserve">
+    <value>Aucun paquet ne correspond à votre recherche.</value>
+  </data>
+  <data name="PkgTagMoved" xml:space="preserve">
+    <value>tag déplacé !</value>
+  </data>
+  <data name="PkgVersionAvailable" xml:space="preserve">
+    <value>{0} disponible</value>
+  </data>
+  <data name="PkgCurrent" xml:space="preserve">
+    <value>à jour</value>
+  </data>
+  <data name="PkgDevDrift" xml:space="preserve">
+    <value>dérive dev</value>
+  </data>
+  <data name="PkgInstalledOn" xml:space="preserve">
+    <value>installé le {0}</value>
+  </data>
+  <data name="PkgObjAttrCounts" xml:space="preserve">
+    <value>{0} obj / {1} attr</value>
+  </data>
+  <data name="PkgRequiredBy" xml:space="preserve">
+    <value>requis par {0}</value>
+  </data>
+  <data name="PkgCheck" xml:space="preserve">
+    <value>Vérifier</value>
+  </data>
+  <data name="PkgRevisionHistory" xml:space="preserve">
+    <value>Historique des révisions</value>
+  </data>
+  <data name="PkgUninstall" xml:space="preserve">
+    <value>Désinstaller</value>
+  </data>
+  <data name="PkgRevisionsOf" xml:space="preserve">
+    <value>{0} — révisions</value>
+  </data>
+  <data name="PkgRevisionLine" xml:space="preserve">
+    <value>rév. {0} — {1} {2}</value>
+  </data>
+  <data name="PkgRollBack" xml:space="preserve">
+    <value>Revenir en arrière</value>
+  </data>
+  <data name="PkgUninstallConfirmTitle" xml:space="preserve">
+    <value>Désinstaller {0} ?</value>
+  </data>
+  <data name="PkgUninstallConfirmBody" xml:space="preserve">
+    <value>{0} objet(s) seront marqués pour destruction et {1} enregistrement(s) d'attributs gérés seront supprimés.</value>
+  </data>
+  <data name="PkgDependedOnBy" xml:space="preserve">
+    <value>Utilisé comme dépendance par : {0}</value>
+  </data>
+  <data name="PkgForceRemoval" xml:space="preserve">
+    <value>Forcer la suppression malgré tout</value>
+  </data>
+  <data name="PkgUpdateCheckFailed" xml:space="preserve">
+    <value>La vérification des mises à jour a échoué — le dépôt source est-il joignable ?</value>
+  </data>
+  <data name="PkgTrustWarningTagMoved" xml:space="preserve">
+    <value>AVERTISSEMENT DE CONFIANCE : le tag de version de {0} {1} ne pointe plus vers le commit installé.</value>
+  </data>
+  <data name="PkgRolledBack" xml:space="preserve">
+    <value>Retour à la révision {0} effectué (nouvelle révision {1}).</value>
+  </data>
+  <data name="PkgUninstalled" xml:space="preserve">
+    <value>{0} a été désinstallé.</value>
+  </data>
+  <data name="PkgKickerAuthoring" xml:space="preserve">
+    <value>Développement · Création de paquets</value>
+  </data>
+  <data name="PkgAuthorHeading" xml:space="preserve">
+    <value>Créer un paquet</value>
+  </data>
+  <data name="PkgAuthorDescription" xml:space="preserve">
+    <value>Transformez des objets existants en package.yaml. Chaque dbref de la sélection doit devenir symbolique : les références internes à la sélection sont résolues automatiquement ; vous classez les autres ci-dessous.</value>
+  </data>
+  <data name="PkgStepSelectObjects" xml:space="preserve">
+    <value>Sélectionner les objets</value>
+  </data>
+  <data name="PkgObjectIdsLabel" xml:space="preserve">
+    <value>Identifiants d'objets (un par ligne, ex. #847:1778518155494)</value>
+  </data>
+  <data name="PkgScanSelection" xml:space="preserve">
+    <value>Analyser la sélection</value>
+  </data>
+  <data name="PkgStepRefsAttributes" xml:space="preserve">
+    <value>Réfs et attributs</value>
+  </data>
+  <data name="PkgManifestRefLabel" xml:space="preserve">
+    <value>Réf. du manifeste (minuscules, tirets bas)</value>
+  </data>
+  <data name="PkgAttributesToInclude" xml:space="preserve">
+    <value>Attributs à inclure :</value>
+  </data>
+  <data name="PkgStepClassifyExternal" xml:space="preserve">
+    <value>Classer les références externes ({0})</value>
+  </data>
+  <data name="PkgOccurrences" xml:space="preserve">
+    <value>{0} occurrence(s), ex. dans {1}</value>
+  </data>
+  <data name="PkgResolutionLabel" xml:space="preserve">
+    <value>Résolution</value>
+  </data>
+  <data name="PkgModeWellKnown" xml:space="preserve">
+    <value>well-known</value>
+  </data>
+  <data name="PkgModeConfigure" xml:space="preserve">
+    <value>configure</value>
+  </data>
+  <data name="PkgWellKnownRefLabel" xml:space="preserve">
+    <value>Réf. well-known</value>
+  </data>
+  <data name="PkgConfigureKeyLabel" xml:space="preserve">
+    <value>Clé configure</value>
+  </data>
+  <data name="PkgConfigurePromptLabel" xml:space="preserve">
+    <value>Invite affichée aux installateurs</value>
+  </data>
+  <data name="PkgStepMetadataExport" xml:space="preserve">
+    <value>Métadonnées et export</value>
+  </data>
+  <data name="PkgPackageIdLabel" xml:space="preserve">
+    <value>Identifiant du paquet (minuscules, traits d'union)</value>
+  </data>
+  <data name="PkgLicenseLabel" xml:space="preserve">
+    <value>Licence (facultatif)</value>
+  </data>
+  <data name="PkgAuthorsLabel" xml:space="preserve">
+    <value>Auteurs (séparés par des virgules)</value>
+  </data>
+  <data name="PkgDescriptionLabel" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="PkgExportYaml" xml:space="preserve">
+    <value>Exporter package.yaml</value>
+  </data>
+  <data name="PkgExportHint" xml:space="preserve">
+    <value>Committez ceci dans un dépôt de paquets (un répertoire par paquet), listez-le dans index.yaml et taguez les versions sous la forme</value>
+  </data>
+  <data name="PkgDownload" xml:space="preserve">
+    <value>Télécharger</value>
+  </data>
+  <data name="PkgEnterObjectId" xml:space="preserve">
+    <value>Saisissez au moins un identifiant d'objet.</value>
+  </data>
+  <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
+    <value>Classez {0} : les réfs configure nécessitent une clé et un libellé.</value>
+  </data>
+  <data name="PkgKickerRegistry" xml:space="preserve">
+    <value>Développement · Registre des paquets</value>
+  </data>
+  <data name="PkgBrowseHeading" xml:space="preserve">
+    <value>Parcourir les paquets</value>
+  </data>
+  <data name="PkgBrowseDescription" xml:space="preserve">
+    <value>Actualise le cache du dépôt distant et liste ses paquets. Les versions proviennent des tags de release ; la pointe de la branche est le canal dev.</value>
+  </data>
+  <data name="PkgRemoteLabel" xml:space="preserve">
+    <value>Dépôt distant</value>
+  </data>
+  <data name="PkgRefreshAndBrowse" xml:space="preserve">
+    <value>Actualiser et parcourir</value>
+  </data>
+  <data name="PkgUnreviewedSource" xml:space="preserve">
+    <value>Cette source n'a pas été vérifiée. Inspectez tout le code sur l'écran de vérification avant d'appliquer.</value>
+  </data>
+  <data name="PkgSnapshotAt" xml:space="preserve">
+    <value>{0} à {1}</value>
+  </data>
+  <data name="PkgNoDescription" xml:space="preserve">
+    <value>(aucune description)</value>
+  </data>
+  <data name="PkgManifestParseFailed" xml:space="preserve">
+    <value>Le manifeste à la pointe de la branche n'a pas pu être analysé.</value>
+  </data>
+  <data name="PkgDevChannelOption" xml:space="preserve">
+    <value>canal dev ({0})</value>
+  </data>
+  <data name="PkgReviewInstall" xml:space="preserve">
+    <value>Vérifier l'installation</value>
+  </data>
+  <data name="PkgNoReleaseTags" xml:space="preserve">
+    <value>Aucun tag de release — seul le canal dev est disponible.</value>
+  </data>
+  <data name="PkgKickerSources" xml:space="preserve">
+    <value>Développement · Sources de paquets</value>
+  </data>
+  <data name="PkgRemotesHeading" xml:space="preserve">
+    <value>Dépôts distants de paquets</value>
+  </data>
+  <data name="PkgRemotesDescription" xml:space="preserve">
+    <value>Dépôts Git depuis lesquels ce jeu installe des paquets. Les niveaux de confiance sont votre décision — les annonces communautaires ci-dessous sont sélectionnées dans le dépôt officiel, jamais auto-déclarées.</value>
+  </data>
+  <data name="PkgConfiguredRemotes" xml:space="preserve">
+    <value>Dépôts distants configurés</value>
+  </data>
+  <data name="PkgUrl" xml:space="preserve">
+    <value>URL</value>
+  </data>
+  <data name="PkgTrust" xml:space="preserve">
+    <value>Confiance</value>
+  </data>
+  <data name="PkgBranch" xml:space="preserve">
+    <value>Branche</value>
+  </data>
+  <data name="PkgDefaultBranch" xml:space="preserve">
+    <value>par défaut</value>
+  </data>
+  <data name="PkgAddRemoteHeading" xml:space="preserve">
+    <value>Ajouter un dépôt distant</value>
+  </data>
+  <data name="PkgGitUrlLabel" xml:space="preserve">
+    <value>URL Git</value>
+  </data>
+  <data name="PkgTrustOfficial" xml:space="preserve">
+    <value>officiel</value>
+  </data>
+  <data name="PkgTrustCommunity" xml:space="preserve">
+    <value>communauté</value>
+  </data>
+  <data name="PkgTrustUnknown" xml:space="preserve">
+    <value>inconnu</value>
+  </data>
+  <data name="PkgBranchOptionalLabel" xml:space="preserve">
+    <value>Branche (facultatif)</value>
+  </data>
+  <data name="PkgAddRemote" xml:space="preserve">
+    <value>Ajouter le dépôt distant</value>
+  </data>
+  <data name="PkgCommunityDirectory" xml:space="preserve">
+    <value>Annuaire communautaire</value>
+  </data>
+  <data name="PkgCommunityDirectoryHint" xml:space="preserve">
+    <value>Dépôts communautaires acceptés, sélectionnés dans le dépôt officiel des paquets.</value>
+  </data>
+  <data name="PkgConfigured" xml:space="preserve">
+    <value>configuré</value>
+  </data>
+  <data name="PkgNoCommunityRepos" xml:space="preserve">
+    <value>Aucun dépôt communautaire accepté pour l'instant.</value>
+  </data>
+  <data name="PkgRemoteSaved" xml:space="preserve">
+    <value>Dépôt distant « {0} » enregistré.</value>
+  </data>
+  <data name="PkgCommunityRemoteAdded" xml:space="preserve">
+    <value>« {0} » ajouté comme dépôt distant communautaire.</value>
+  </data>
+  <data name="PkgRemoteRemoved" xml:space="preserve">
+    <value>Dépôt distant « {0} » supprimé.</value>
+  </data>
+  <data name="PkgReview" xml:space="preserve">
+    <value>Vérification</value>
+  </data>
+  <data name="PkgInstallHeading" xml:space="preserve">
+    <value>Installation</value>
+  </data>
+  <data name="PkgUpgradeHeading" xml:space="preserve">
+    <value>Mise à jour</value>
+  </data>
+  <data name="PkgApply" xml:space="preserve">
+    <value>Appliquer</value>
+  </data>
+  <data name="PkgPlanLocation" xml:space="preserve">
+    <value>{0} / {1} à {2}</value>
+  </data>
+  <data name="PkgUpgradingFrom" xml:space="preserve">
+    <value>— mise à jour depuis {0}</value>
+  </data>
+  <data name="PkgConflictsWithInstalled" xml:space="preserve">
+    <value>En conflit avec la version installée de</value>
+  </data>
+  <data name="PkgRequires" xml:space="preserve">
+    <value>Nécessite</value>
+  </data>
+  <data name="PkgNotInstalledSuffix" xml:space="preserve">
+    <value> — non installé.</value>
+  </data>
+  <data name="PkgInstalledSuffix" xml:space="preserve">
+    <value> — installé : {0}.</value>
+  </data>
+  <data name="PkgAvailableFrom" xml:space="preserve">
+    <value>Disponible depuis {0}{1}.</value>
+  </data>
+  <data name="PkgCommandCollision" xml:space="preserve">
+    <value>La commande $ « {0} » est déjà définie par le paquet {1} ({2}/{3}).</value>
+  </data>
+  <data name="PkgDbrefHelper" xml:space="preserve">
+    <value>Identifiant d'objet, ex. #123:456</value>
+  </data>
+  <data name="PkgReplan" xml:space="preserve">
+    <value>Recalculer le plan avec ces réponses</value>
+  </data>
+  <data name="PkgObjectsCount" xml:space="preserve">
+    <value>Objets ({0})</value>
+  </data>
+  <data name="PkgRef" xml:space="preserve">
+    <value>Réf.</value>
+  </data>
+  <data name="PkgAction" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="PkgType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="PkgDetails" xml:space="preserve">
+    <value>Détails</value>
+  </data>
+  <data name="PkgRenamedFrom" xml:space="preserve">
+    <value>renommé depuis {0} (conserve {1})</value>
+  </data>
+  <data name="PkgWillBeMarkedGoing" xml:space="preserve">
+    <value>{0} sera marqué GOING</value>
+  </data>
+  <data name="PkgAttributesCount" xml:space="preserve">
+    <value>Attributs ({0})</value>
+  </data>
+  <data name="PkgConflictCount" xml:space="preserve">
+    <value>{0} conflit(s)</value>
+  </data>
+  <data name="PkgConflictLabel" xml:space="preserve">
+    <value>conflit : {0}</value>
+  </data>
+  <data name="PkgResolvesAtApplyTooltip" xml:space="preserve">
+    <value>Certaines réfs sont résolues au moment de l'application (nouveaux objets / configure)</value>
+  </data>
+  <data name="PkgResolvesAtApply" xml:space="preserve">
+    <value>résolu à l'application</value>
+  </data>
+  <data name="PkgBaseAsInstalled" xml:space="preserve">
+    <value>Base (telle qu'installée)</value>
+  </data>
+  <data name="PkgLiveYourVersion" xml:space="preserve">
+    <value>En jeu (votre version)</value>
+  </data>
+  <data name="PkgNewVersion" xml:space="preserve">
+    <value>Nouveau ({0})</value>
+  </data>
+  <data name="PkgKeepMine" xml:space="preserve">
+    <value>Garder la mienne</value>
+  </data>
+  <data name="PkgDeleteTakeTheirs" xml:space="preserve">
+    <value>Supprimer (prendre la leur)</value>
+  </data>
+  <data name="PkgTakeTheirs" xml:space="preserve">
+    <value>Prendre la leur</value>
+  </data>
+  <data name="PkgEditMergedValue" xml:space="preserve">
+    <value>Modifier la valeur fusionnée</value>
+  </data>
+  <data name="PkgMergedValueLabel" xml:space="preserve">
+    <value>Valeur fusionnée</value>
+  </data>
+  <data name="PkgMissingRemoteParam" xml:space="preserve">
+    <value>Paramètre « remote » manquant.</value>
+  </data>
+  <data name="PkgApplied" xml:space="preserve">
+    <value>{0} {1} appliqué (révision {2}).</value>
+  </data>
+  <data name="TermNotLoggedIn" xml:space="preserve">
+    <value>non connecté</value>
+  </data>
+  <data name="TermInputPlaceholder" xml:space="preserve">
+    <value>say bonjour   ·   pose salue   ·   look   ·   who</value>
+    <comment>Les verbes de commande (say, pose, look, who) sont la syntaxe du jeu et restent en anglais ; seuls leurs arguments sont traduits.</comment>
+  </data>
+  <data name="TermClearTerminal" xml:space="preserve">
+    <value>Effacer le terminal</value>
+  </data>
+  <data name="TermBrowserMine" xml:space="preserve">
+    <value>À moi</value>
+  </data>
+  <data name="TermBrowserSearch" xml:space="preserve">
+    <value>Rechercher</value>
+  </data>
+  <data name="TermBrowserHere" xml:space="preserve">
+    <value>Ici</value>
+  </data>
+  <data name="TermBrowserGo" xml:space="preserve">
+    <value>Lancer</value>
+  </data>
+  <data name="TermBrowserExampleLabel" xml:space="preserve">
+    <value>p. ex.</value>
+  </data>
+  <data name="TermBrowserNoObjects" xml:space="preserve">
+    <value>Aucun objet trouvé.</value>
+  </data>
+  <data name="TermBrowserError" xml:space="preserve">
+    <value>Erreur : {0}</value>
+  </data>
+  <data name="TermMushHelp" xml:space="preserve">
+    <value>Aide MUSH</value>
+  </data>
+  <data name="TermHelpBack" xml:space="preserve">
+    <value>Retour</value>
+  </data>
+  <data name="TermHelpClose" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="TermHelpSearchPlaceholder" xml:space="preserve">
+    <value>Rechercher fonctions et commandes…</value>
+  </data>
+  <data name="TermHelpEmpty" xml:space="preserve">
+    <value>Utilisez la recherche ci-dessus ou cliquez sur « 📖 Show full help » dans l'éditeur.</value>
+    <comment>Le libellé entre guillemets provient du fournisseur de survol Monaco (wwwroot/js/mush-monaco.js) et n'est pas localisé — le conserver tel quel.</comment>
+  </data>
+  <data name="TermHelpKindCommand" xml:space="preserve">
+    <value>Commande</value>
+  </data>
+  <data name="TermHelpKindFunction" xml:space="preserve">
+    <value>Fonction</value>
+  </data>
+  <data name="TermHelpSwitches" xml:space="preserve">
+    <value>Commutateurs : {0}</value>
+  </data>
+  <data name="TermSoftcodeEditorTitle" xml:space="preserve">
+    <value>Éditeur de softcode</value>
+  </data>
+  <data name="TermObjects" xml:space="preserve">
+    <value>Objets</value>
+  </data>
+  <data name="TermEditor" xml:space="preserve">
+    <value>Éditeur</value>
+  </data>
+  <data name="TermCreateThing" xml:space="preserve">
+    <value>Créer une chose</value>
+  </data>
+  <data name="TermCreateRoom" xml:space="preserve">
+    <value>Créer une salle</value>
+  </data>
+  <data name="TermExpandObjects" xml:space="preserve">
+    <value>Développer les objets</value>
+  </data>
+  <data name="TermCollapseObjects" xml:space="preserve">
+    <value>Réduire les objets</value>
+  </data>
+  <data name="TermExpandAttributes" xml:space="preserve">
+    <value>Développer les attributs</value>
+  </data>
+  <data name="TermCollapseAttributes" xml:space="preserve">
+    <value>Réduire les attributs</value>
+  </data>
+  <data name="TermAddAttribute" xml:space="preserve">
+    <value>Ajouter un attribut</value>
+  </data>
+  <data name="TermObjectNamePlaceholder" xml:space="preserve">
+    <value>nom</value>
+  </data>
+  <data name="TermFilterAttributes" xml:space="preserve">
+    <value>Filtrer les attributs…</value>
+  </data>
+  <data name="TermClear" xml:space="preserve">
+    <value>Effacer</value>
+  </data>
+  <data name="TermSelectAnObject" xml:space="preserve">
+    <value>Sélectionnez un objet.</value>
+  </data>
+  <data name="TermNoAttributes" xml:space="preserve">
+    <value>Aucun attribut.</value>
+  </data>
+  <data name="TermNoMatch" xml:space="preserve">
+    <value>Aucun résultat.</value>
+  </data>
+  <data name="TermUnsaved" xml:space="preserve">
+    <value>non enregistré</value>
+  </data>
+  <data name="TermNoAttributeSelected" xml:space="preserve">
+    <value>Aucun attribut sélectionné</value>
+  </data>
+  <data name="TermTest" xml:space="preserve">
+    <value>Tester</value>
+  </data>
+  <data name="TermTestTooltip" xml:space="preserve">
+    <value>Tester — évaluer sans enregistrer</value>
+  </data>
+  <data name="TermRefreshAttributes" xml:space="preserve">
+    <value>Actualiser les attributs</value>
+  </data>
+  <data name="TermEvalResult" xml:space="preserve">
+    <value>Résultat de l'évaluation</value>
+  </data>
+  <data name="TermErrorLine" xml:space="preserve">
+    <value>[Erreur] {0}</value>
+  </data>
+  <data name="TermNoOutput" xml:space="preserve">
+    <value>(aucune sortie)</value>
+  </data>
+  <data name="TermAttrEmpty" xml:space="preserve">
+    <value>(vide)</value>
+  </data>
+  <data name="TermAttrKindCommand" xml:space="preserve">
+    <value>Déclencheur de commande</value>
+  </data>
+  <data name="TermAttrKindFunction" xml:space="preserve">
+    <value>Fonction</value>
+  </data>
+  <data name="TermAttrKindListen" xml:space="preserve">
+    <value>Déclencheur d'écoute</value>
+  </data>
+  <data name="TermAttrKindData" xml:space="preserve">
+    <value>Données</value>
+  </data>
+  <data name="TermAttrKindText" xml:space="preserve">
+    <value>Texte</value>
+  </data>
+  <data name="TermErrorLoadingObject" xml:space="preserve">
+    <value>Erreur lors du chargement de l'objet : {0}</value>
+  </data>
+  <data name="TermSavedAttribute" xml:space="preserve">
+    <value>&amp;{0} enregistré sur #{1}.</value>
+  </data>
+  <data name="TermDeletedAttribute" xml:space="preserve">
+    <value>&amp;{0} supprimé.</value>
+  </data>
+  <data name="LayLayouts" xml:space="preserve">
+    <value>Disposition</value>
+  </data>
+  <data name="LayLayoutsKicker" xml:space="preserve">
+    <value>Construction · Dispositions de page</value>
+  </data>
+  <data name="LayLayoutsBlurb" xml:space="preserve">
+    <value>Organisez les widgets de chaque page en les faisant glisser d'une zone à l'autre. Les modifications sont publiées pour tous les visiteurs.</value>
+  </data>
+  <data name="LayBadgeCustomized" xml:space="preserve">
+    <value>personnalisée</value>
+  </data>
+  <data name="LayBadgeDefault" xml:space="preserve">
+    <value>par défaut</value>
+  </data>
+  <data name="LayScopeGlobal" xml:space="preserve">
+    <value>Habillage du site</value>
+  </data>
+  <data name="LayScopeGlobalDesc" xml:space="preserve">
+    <value>Barre supérieure, barres latérales et pied de page communs à toutes les pages.</value>
+  </data>
+  <data name="LayScopeHome" xml:space="preserve">
+    <value>Page d'accueil</value>
+  </data>
+  <data name="LayScopeHomeDesc" xml:space="preserve">
+    <value>Le contenu principal de la page d'accueil.</value>
+  </data>
+  <data name="LayScopeWikiIndex" xml:space="preserve">
+    <value>Index du wiki</value>
+  </data>
+  <data name="LayScopeWikiIndexDesc" xml:space="preserve">
+    <value>La page d'accueil /wiki.</value>
+  </data>
+  <data name="LayScopeProfile" xml:space="preserve">
+    <value>Profil de personnage</value>
+  </data>
+  <data name="LayScopeProfileDesc" xml:space="preserve">
+    <value>Le corps de la page /character/{name} et la colonne de droite.</value>
+  </data>
+  <data name="LayEditorPageTitle" xml:space="preserve">
+    <value>Disposition — {0}</value>
+  </data>
+  <data name="LayAllLayouts" xml:space="preserve">
+    <value>Toutes les dispositions</value>
+  </data>
+  <data name="LayPreview" xml:space="preserve">
+    <value>Aperçu</value>
+  </data>
+  <data name="LayPublish" xml:space="preserve">
+    <value>Publier</value>
+  </data>
+  <data name="LayPublishing" xml:space="preserve">
+    <value>Publication…</value>
+  </data>
+  <data name="LayUnknownScope" xml:space="preserve">
+    <value>Portée de disposition inconnue « {0} ».</value>
+  </data>
+  <data name="LayWidgetsPanel" xml:space="preserve">
+    <value>Widgets</value>
+  </data>
+  <data name="LayPaletteHint" xml:space="preserve">
+    <value>Faites glisser un widget dans une zone. Ramenez ici un widget déjà placé pour le retirer.</value>
+  </data>
+  <data name="LaySidebarsAndFooter" xml:space="preserve">
+    <value>Barres latérales et pied de page</value>
+  </data>
+  <data name="LayGridZoneHint" xml:space="preserve">
+    <value>grille de 12 colonnes</value>
+  </data>
+  <data name="LayFlowZoneHint" xml:space="preserve">
+    <value>horizontale — sans largeur</value>
+  </data>
+  <data name="LayWidthInColumns" xml:space="preserve">
+    <value>Largeur en colonnes (1–12)</value>
+  </data>
+  <data name="LayHasConfig" xml:space="preserve">
+    <value>Configuré</value>
+  </data>
+  <data name="LayConfigure" xml:space="preserve">
+    <value>Configurer</value>
+  </data>
+  <data name="LayRemove" xml:space="preserve">
+    <value>Retirer</value>
+  </data>
+  <data name="LayLivePreview" xml:space="preserve">
+    <value>Aperçu en direct</value>
+  </data>
+  <data name="LayPreviewNote" xml:space="preserve">
+    <value>Reflète les modifications non enregistrées</value>
+  </data>
+  <data name="LayPreviewNoteProfile" xml:space="preserve">
+    <value> · les widgets de personnage affichent ici un état générique</value>
+  </data>
+  <data name="LayConfigureWidget" xml:space="preserve">
+    <value>Configurer {0}</value>
+  </data>
+  <data name="LayPublished" xml:space="preserve">
+    <value>Disposition {0} publiée.</value>
+  </data>
+  <data name="LayPublishFailed" xml:space="preserve">
+    <value>Échec de la publication de la disposition.</value>
+  </data>
+  <data name="LayResetLayout" xml:space="preserve">
+    <value>Réinitialiser la disposition</value>
+  </data>
+  <data name="LayResetConfirm" xml:space="preserve">
+    <value>Réinitialiser la disposition {0} à sa valeur par défaut ? Toutes les personnalisations seront perdues.</value>
+  </data>
+  <data name="LayReset" xml:space="preserve">
+    <value>Réinitialiser</value>
+  </data>
+  <data name="LayResetDone" xml:space="preserve">
+    <value>Disposition {0} réinitialisée.</value>
+  </data>
+  <data name="LayResetFailed" xml:space="preserve">
+    <value>Échec de la réinitialisation de la disposition.</value>
+  </data>
+  <data name="LayWidgetCharacterDirectory" xml:space="preserve">
+    <value>Répertoire des personnages</value>
+  </data>
+  <data name="LayWidgetWikiIndex" xml:space="preserve">
+    <value>Index du wiki</value>
+  </data>
+  <data name="LayWidgetSchemaApplication" xml:space="preserve">
+    <value>Application de schéma</value>
+  </data>
+  <data name="LayWidgetGameStats" xml:space="preserve">
+    <value>Statistiques du jeu</value>
+  </data>
+  <data name="LayWidgetActiveScene" xml:space="preserve">
+    <value>Scène active</value>
+  </data>
+  <data name="LayWidgetRecentWikiActivity" xml:space="preserve">
+    <value>Activité récente du wiki</value>
+  </data>
+  <data name="LayWidgetOnlineCharacters" xml:space="preserve">
+    <value>Personnages connectés</value>
+  </data>
+  <data name="LayWidgetQuickstart" xml:space="preserve">
+    <value>Démarrage rapide</value>
+  </data>
+  <data name="LayWidgetQuickLinks" xml:space="preserve">
+    <value>Liens rapides</value>
+  </data>
+  <data name="LayWidgetCharacterGallery" xml:space="preserve">
+    <value>Galerie du personnage</value>
+  </data>
+  <data name="LayWidgetWelcomeText" xml:space="preserve">
+    <value>Texte d'accueil</value>
+  </data>
+  <data name="LayWidgetSpacer" xml:space="preserve">
+    <value>Espaceur</value>
+  </data>
+  <data name="LayWidgetWikiBody" xml:space="preserve">
+    <value>Corps du wiki</value>
+  </data>
+  <data name="LaySpacerHelp" xml:space="preserve">
+    <value>Hauteur de l'espace vide, en pixels. Sa largeur suit le nombre de colonnes de l'emplacement.</value>
+  </data>
+  <data name="LaySpacerHeight" xml:space="preserve">
+    <value>Hauteur (px)</value>
+  </data>
+  <data name="LayConfigJsonHelp" xml:space="preserve">
+    <value>Configuration propre à cette instance de {0}, au format JSON. Laissez vide pour aucune configuration.</value>
+  </data>
+  <data name="LayConfigJsonLabel" xml:space="preserve">
+    <value>JSON de configuration</value>
+  </data>
+  <data name="LayApply" xml:space="preserve">
+    <value>Appliquer</value>
+  </data>
+  <data name="LayInvalidJson" xml:space="preserve">
+    <value>JSON invalide : {0}</value>
+  </data>
+  <data name="LayApplications" xml:space="preserve">
+    <value>Applications</value>
+  </data>
+  <data name="LayAppsKicker" xml:space="preserve">
+    <value>Construction · Widgets personnalisés</value>
+  </data>
+  <data name="LayAppsSchemaRegistry" xml:space="preserve">
+    <value>Registre des schémas</value>
+  </data>
+  <data name="LayAppsNew" xml:space="preserve">
+    <value>Nouvelle application</value>
+  </data>
+  <data name="LayAppsPages" xml:space="preserve">
+    <value>Pages</value>
+  </data>
+  <data name="LayAppsWidgets" xml:space="preserve">
+    <value>Widgets</value>
+  </data>
+  <data name="LayAppsSchemas" xml:space="preserve">
+    <value>Schémas</value>
+  </data>
+  <data name="LayAppsStatRegistered" xml:space="preserve">
+    <value>enregistrées</value>
+  </data>
+  <data name="LayAppsStatPages" xml:space="preserve">
+    <value>applications plein écran</value>
+  </data>
+  <data name="LayAppsStatWidgets" xml:space="preserve">
+    <value>zones du tableau de bord</value>
+  </data>
+  <data name="LayAppsStatSchemas" xml:space="preserve">
+    <value>définis en softcode</value>
+  </data>
+  <data name="LayAppsSearchPlaceholder" xml:space="preserve">
+    <value>Rechercher une application ou un schéma…</value>
+  </data>
+  <data name="LayAppsNoMatch" xml:space="preserve">
+    <value>Aucune application ne correspond.</value>
+  </data>
+  <data name="LayAppsEmptyDetail" xml:space="preserve">
+    <value>Sélectionnez une application ou enregistrez-en une nouvelle.</value>
+  </data>
+  <data name="LayAppsRegister" xml:space="preserve">
+    <value>Enregistrer une application</value>
+  </data>
+  <data name="LayEdit" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="LayAppSchemaUrl" xml:space="preserve">
+    <value>URL du schéma</value>
+  </data>
+  <data name="LayAppDataUrl" xml:space="preserve">
+    <value>URL des données</value>
+  </data>
+  <data name="LayAppSubmitRoute" xml:space="preserve">
+    <value>Route de soumission</value>
+  </data>
+  <data name="LayAppNavPlacement" xml:space="preserve">
+    <value>Emplacement dans la navigation</value>
+  </data>
+  <data name="LayAppDisplayOrder" xml:space="preserve">
+    <value>Ordre d'affichage</value>
+  </data>
+  <data name="LayAppMinRole" xml:space="preserve">
+    <value>Rôle minimal</value>
+  </data>
+  <data name="LayAppAllowedZones" xml:space="preserve">
+    <value>Zones autorisées</value>
+  </data>
+  <data name="LayActions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="LayAppOpen" xml:space="preserve">
+    <value>Ouvrir l'application</value>
+  </data>
+  <data name="LayAppEditInSoftcode" xml:space="preserve">
+    <value>Modifier en softcode</value>
+  </data>
+  <data name="LayAppViewSchema" xml:space="preserve">
+    <value>Voir le schéma</value>
+  </data>
+  <data name="LayAppEditTitle" xml:space="preserve">
+    <value>Modifier {0}</value>
+  </data>
+  <data name="LayAppRemoveTitle" xml:space="preserve">
+    <value>Retirer l'application</value>
+  </data>
+  <data name="LayAppRemoveConfirm" xml:space="preserve">
+    <value>Retirer « {0} » ({1}) ? Cela ne fait que la détacher du portail ; le softcode reste intact.</value>
+  </data>
+  <data name="LayAppRemoved" xml:space="preserve">
+    <value>{0} retirée.</value>
+  </data>
+  <data name="LayAppRemoveFailed" xml:space="preserve">
+    <value>Échec du retrait de l'application.</value>
+  </data>
+  <data name="LayAppSlug" xml:space="preserve">
+    <value>Slug</value>
+  </data>
+  <data name="LayAppSlugHelper" xml:space="preserve">
+    <value>Clé d'URL — /apps/{slug}. Non modifiable après la création.</value>
+  </data>
+  <data name="LayAppDisplayName" xml:space="preserve">
+    <value>Nom affiché</value>
+  </data>
+  <data name="LayAppKind" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="LayAppKindPage" xml:space="preserve">
+    <value>Page (/apps/{slug})</value>
+  </data>
+  <data name="LayAppKindWidget" xml:space="preserve">
+    <value>Widget (zone de disposition)</value>
+  </data>
+  <data name="LayAppMinimumRole" xml:space="preserve">
+    <value>Rôle minimal</value>
+  </data>
+  <data name="LayAppSchemaUrlHelper" xml:space="preserve">
+    <value>Route du gestionnaire HTTP renvoyant le Portal Schema Document, p. ex. http/chargen/schema</value>
+  </data>
+  <data name="LayAppDataUrlOptional" xml:space="preserve">
+    <value>URL des données (facultatif)</value>
+  </data>
+  <data name="LayAppDataUrlHelper" xml:space="preserve">
+    <value>Données d'affichage de la vue / de préremplissage du formulaire</value>
+  </data>
+  <data name="LayAppSubmitRouteOptional" xml:space="preserve">
+    <value>Route de soumission (facultatif)</value>
+  </data>
+  <data name="LayAppIconOptional" xml:space="preserve">
+    <value>Icône (facultatif)</value>
+  </data>
+  <data name="LayAppIconHelper" xml:space="preserve">
+    <value>Chaîne d'icône Material MudBlazor</value>
+  </data>
+  <data name="LayAppNavPlacementOptional" xml:space="preserve">
+    <value>Emplacement dans la navigation (facultatif)</value>
+  </data>
+  <data name="LayAppNavPlacementHelper" xml:space="preserve">
+    <value>À renseigner pour afficher une application Page dans la navigation</value>
+  </data>
+  <data name="LayAppOrder" xml:space="preserve">
+    <value>Ordre</value>
+  </data>
+  <data name="LayAppRequiredFields" xml:space="preserve">
+    <value>Le slug, le nom affiché et l'URL du schéma sont obligatoires.</value>
+  </data>
+  <data name="LayAppSaved" xml:space="preserve">
+    <value>{0} enregistrée.</value>
+  </data>
+  <data name="LayAppSaveFailed" xml:space="preserve">
+    <value>Échec de l'enregistrement.</value>
+  </data>
+  <data name="AdmKicker" xml:space="preserve">
+    <value>Administration</value>
+  </data>
+  <data name="AdmBreadcrumb" xml:space="preserve">
+    <value>Admin</value>
+  </data>
+  <data name="AdmDashboardTitle" xml:space="preserve">
+    <value>Tableau de bord d'administration</value>
+  </data>
+  <data name="AdmPlayersTitle" xml:space="preserve">
+    <value>Joueurs</value>
+  </data>
+  <data name="AdmPlayersAction" xml:space="preserve">
+    <value>Voir les joueurs</value>
+  </data>
+  <data name="AdmPlayersComingSoon" xml:space="preserve">
+    <value>L'administration des joueurs arrive bientôt.</value>
+  </data>
+  <data name="AdmAccountsTitle" xml:space="preserve">
+    <value>Comptes</value>
+  </data>
+  <data name="AdmAccountsAction" xml:space="preserve">
+    <value>Gérer les comptes</value>
+  </data>
+  <data name="AdmCharactersAction" xml:space="preserve">
+    <value>Voir les personnages</value>
+  </data>
+  <data name="AdmCharactersComingSoon" xml:space="preserve">
+    <value>L'administration des personnages arrive bientôt.</value>
+  </data>
+  <data name="AdmProfilesTitle" xml:space="preserve">
+    <value>Profils</value>
+  </data>
+  <data name="AdmProfilesAction" xml:space="preserve">
+    <value>Profils de personnage</value>
+  </data>
+  <data name="AdmConfigAction" xml:space="preserve">
+    <value>Configuration du site</value>
+  </data>
+  <data name="AdmRolesTitle" xml:space="preserve">
+    <value>Rôles</value>
+  </data>
+  <data name="AdmRolesAction" xml:space="preserve">
+    <value>Rôles et permissions</value>
+  </data>
+  <data name="AdmModerationTitle" xml:space="preserve">
+    <value>Modération</value>
+  </data>
+  <data name="AdmModerationAction" xml:space="preserve">
+    <value>Signalements et bannissements</value>
+  </data>
+  <data name="AdmModerationComingSoon" xml:space="preserve">
+    <value>Les signalements, les bannissements et le journal d'audit arrivent bientôt.</value>
+  </data>
+  <data name="AdmSuggestionsAction" xml:space="preserve">
+    <value>Suggestions de mots</value>
+  </data>
+  <data name="AdmMediaTitle" xml:space="preserve">
+    <value>Bibliothèque d'images</value>
+  </data>
+  <data name="AdmMediaAction" xml:space="preserve">
+    <value>Ressources multimédias</value>
+  </data>
+  <data name="AdmApplicationsTitle" xml:space="preserve">
+    <value>Applications</value>
+  </data>
+  <data name="AdmApplicationsAction" xml:space="preserve">
+    <value>Widgets personnalisés</value>
+  </data>
+  <data name="AdmPackagesTitle" xml:space="preserve">
+    <value>Paquets</value>
+  </data>
+  <data name="AdmPackagesAction" xml:space="preserve">
+    <value>Paquets de softcode</value>
+  </data>
+  <data name="AdmLayoutTitle" xml:space="preserve">
+    <value>Disposition</value>
+  </data>
+  <data name="AdmLayoutAction" xml:space="preserve">
+    <value>Éditeur de disposition</value>
+  </data>
+  <data name="AdmServerAction" xml:space="preserve">
+    <value>État du serveur</value>
+  </data>
+  <data name="AdmDatabaseImportTitle" xml:space="preserve">
+    <value>Import de base de données</value>
+  </data>
+  <data name="AdmDatabaseImportAction" xml:space="preserve">
+    <value>Importer une base de données</value>
+  </data>
+  <data name="AdmPlayerNumber" xml:space="preserve">
+    <value>Joueur #{0}</value>
+  </data>
+  <data name="AdmPlayerDetailKicker" xml:space="preserve">
+    <value>Administration · Joueur</value>
+  </data>
+  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
+    <value>Le détail du joueur arrive bientôt.</value>
+  </data>
+  <data name="AdmServerKicker" xml:space="preserve">
+    <value>Admin · Serveur</value>
+  </data>
+  <data name="AdmServerGodOnly" xml:space="preserve">
+    <value>Paramètres du serveur réservés à God</value>
+  </data>
+  <data name="AdmServerComingSoon" xml:space="preserve">
+    <value>La configuration du serveur et les métriques en direct arrivent bientôt.</value>
+  </data>
+  <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
+    <value>Rechercher un nom d'utilisateur ou une adresse e-mail…</value>
+  </data>
+  <data name="AdmUsername" xml:space="preserve">
+    <value>Nom d'utilisateur</value>
+  </data>
+  <data name="AdmEmail" xml:space="preserve">
+    <value>E-mail</value>
+  </data>
+  <data name="AdmStatus" xml:space="preserve">
+    <value>État</value>
+  </data>
+  <data name="AdmAccountMustChangePasswordChip" xml:space="preserve">
+    <value>mot de passe à changer</value>
+  </data>
+  <data name="AdmResetPassword" xml:space="preserve">
+    <value>Réinitialiser le mot de passe</value>
+  </data>
+  <data name="AdmEnableAccount" xml:space="preserve">
+    <value>Activer</value>
+  </data>
+  <data name="AdmDisableAccount" xml:space="preserve">
+    <value>Désactiver</value>
+  </data>
+  <data name="AdmAccountEnabled" xml:space="preserve">
+    <value>Compte « {0} » activé.</value>
+  </data>
+  <data name="AdmAccountDisabled" xml:space="preserve">
+    <value>Compte « {0} » désactivé.</value>
+  </data>
+  <data name="AdmOperationFailed" xml:space="preserve">
+    <value>L'opération a échoué.</value>
+  </data>
+  <data name="AdmCharacterUnlinked" xml:space="preserve">
+    <value>{0} a été dissocié de « {1} ».</value>
+  </data>
+  <data name="AdmUnlinkFailed" xml:space="preserve">
+    <value>La dissociation a échoué.</value>
+  </data>
+  <data name="AdmPasswordReset" xml:space="preserve">
+    <value>Mot de passe de « {0} » réinitialisé à : {1} — transmettez-le de manière sécurisée ; il devra être changé à la prochaine connexion.</value>
+  </data>
+  <data name="AdmResetFailed" xml:space="preserve">
+    <value>La réinitialisation a échoué.</value>
+  </data>
+  <data name="AdmProfilesSubtitle" xml:space="preserve">
+    <value>Les profils de personnage sont servis par l'objet {0} en jeu via son softcode {1}. Personnalisez-le en jeu avec {2}, ou réinstallez le gestionnaire standard ci-dessous.</value>
+  </data>
+  <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
+    <value>Impossible de charger l'état du gestionnaire.</value>
+  </data>
+  <data name="AdmProfilesConfigured" xml:space="preserve">
+    <value>Configuré</value>
+  </data>
+  <data name="AdmYes" xml:space="preserve">
+    <value>Oui</value>
+  </data>
+  <data name="AdmProfilesNotConfiguredValue" xml:space="preserve">
+    <value>Non (http_handler non défini)</value>
+  </data>
+  <data name="AdmProfilesHandler" xml:space="preserve">
+    <value>Gestionnaire</value>
+  </data>
+  <data name="AdmProfilesHandlerNotFound" xml:space="preserve">
+    <value>#{0} — INTROUVABLE</value>
+  </data>
+  <data name="AdmAttribute" xml:space="preserve">
+    <value>Attribut</value>
+  </data>
+  <data name="AdmPresent" xml:space="preserve">
+    <value>Présent</value>
+  </data>
+  <data name="AdmMissing" xml:space="preserve">
+    <value>Manquant</value>
+  </data>
+  <data name="AdmResetting" xml:space="preserve">
+    <value>Réinitialisation…</value>
+  </data>
+  <data name="AdmProfilesResetCaption" xml:space="preserve">
+    <value>Écrase les attributs standard {0} et {1} avec les valeurs par défaut intégrées. Les attributs personnalisés que vous avez ajoutés restent intacts.</value>
+  </data>
+  <data name="AdmProfilesResetComplete" xml:space="preserve">
+    <value>Réinitialisation terminée : {0} attributs écrits.</value>
+  </data>
+  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
+    <value>La réinitialisation a échoué ({0}).</value>
+  </data>
+  <data name="AdmProfilesResetFailedError" xml:space="preserve">
+    <value>La réinitialisation a échoué : {0}</value>
+  </data>
+  <data name="AdmHelpKicker" xml:space="preserve">
+    <value>Documentation</value>
+  </data>
+  <data name="AdmHelpSubtitle" xml:space="preserve">
+    <value>Parcourez les rubriques, recherchez des références et lisez le manuel.</value>
+  </data>
+  <data name="WkEditLivePreview" xml:space="preserve">
+    <value>modification · aperçu en direct</value>
+  </data>
+  <data name="WkPageTitlePlaceholder" xml:space="preserve">
+    <value>Titre de la page</value>
+  </data>
+  <data name="WkBold" xml:space="preserve">
+    <value>Gras</value>
+  </data>
+  <data name="WkItalic" xml:space="preserve">
+    <value>Italique</value>
+  </data>
+  <data name="WkHeading" xml:space="preserve">
+    <value>Titre</value>
+  </data>
+  <data name="WkListItem" xml:space="preserve">
+    <value>Élément de liste</value>
+  </data>
+  <data name="WkQuote" xml:space="preserve">
+    <value>Citation</value>
+  </data>
+  <data name="WkLink" xml:space="preserve">
+    <value>Lien</value>
+  </data>
+  <data name="WkInsertImage" xml:space="preserve">
+    <value>Insérer une image</value>
+  </data>
+  <data name="WkAddTagPlaceholder" xml:space="preserve">
+    <value>ajouter une étiquette…</value>
+  </data>
+  <data name="WkSummaryPlaceholder" xml:space="preserve">
+    <value>Résumez votre modification (p. ex. « correction d'une faute »)…</value>
+  </data>
+  <data name="WkMinorEdit" xml:space="preserve">
+    <value>Modification mineure</value>
+  </data>
+  <data name="WkBytesDelta" xml:space="preserve">
+    <value>{0} octets</value>
+  </data>
+  <data name="WkDiscard" xml:space="preserve">
+    <value>Abandonner</value>
+  </data>
+  <data name="WkPublishChanges" xml:space="preserve">
+    <value>Publier les modifications</value>
+  </data>
+  <data name="WkPublishNotice" xml:space="preserve">
+    <value>Les modifications sont publiées immédiatement et visibles par tous.</value>
+  </data>
+  <data name="WkFormattingHelp" xml:space="preserve">
+    <value>Aide au formatage</value>
+  </data>
+  <data name="WkDirectiveNoPages" xml:space="preserve">
+    <value>Aucune page pour le moment.</value>
+  </data>
+  <data name="WkDirectiveCategoryHeader" xml:space="preserve">
+    <value>Catégorie : {0}</value>
+  </data>
+  <data name="WkDirectiveTagHeader" xml:space="preserve">
+    <value>Étiquette : {0}</value>
+  </data>
+  <data name="WkNoAssets" xml:space="preserve">
+    <value>Aucun média téléversé pour le moment.</value>
+  </data>
+  <data name="WkHistoryPageTitle" xml:space="preserve">
+    <value>Historique : {0}</value>
+  </data>
+  <data name="WkRevisionHistory" xml:space="preserve">
+    <value>Historique des révisions</value>
+  </data>
+  <data name="WkCompareSelected" xml:space="preserve">
+    <value>Comparer la sélection</value>
+  </data>
+  <data name="WkHistoryIntro" xml:space="preserve">
+    <value>Sélectionnez une révision plus ancienne et une plus récente, puis comparez. {0} révisions en tout.</value>
+  </data>
+  <data name="WkNoRevisionHistory" xml:space="preserve">
+    <value>Aucun historique de révision trouvé.</value>
+  </data>
+  <data name="WkColOld" xml:space="preserve">
+    <value>Ancienne</value>
+  </data>
+  <data name="WkColNew" xml:space="preserve">
+    <value>Nouvelle</value>
+  </data>
+  <data name="WkColTimestampSummary" xml:space="preserve">
+    <value>Horodatage / Résumé</value>
+  </data>
+  <data name="WkColAuthor" xml:space="preserve">
+    <value>Auteur</value>
+  </data>
+  <data name="WkColSize" xml:space="preserve">
+    <value>Taille</value>
+  </data>
+  <data name="WkColActions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="WkCurrentRevision" xml:space="preserve">
+    <value>actuelle</value>
+  </data>
+  <data name="WkViewRevision" xml:space="preserve">
+    <value>Afficher cette révision</value>
+  </data>
+  <data name="WkRestoreRevision" xml:space="preserve">
+    <value>Restaurer cette révision</value>
+  </data>
+  <data name="WkRestoredToRevision" xml:space="preserve">
+    <value>Restauré à la révision {0}.</value>
+  </data>
+  <data name="WkRestoreFailed" xml:space="preserve">
+    <value>Échec de la restauration : {0}</value>
+  </data>
+  <data name="WkPageFallbackTitle" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="WkDiffPageTitle" xml:space="preserve">
+    <value>Différences : {0}</value>
+  </data>
+  <data name="WkComparingRevisions" xml:space="preserve">
+    <value>Comparaison des révisions</value>
+  </data>
+  <data name="WkDiffUnified" xml:space="preserve">
+    <value>Unifié</value>
+  </data>
+  <data name="WkDiffSideBySide" xml:space="preserve">
+    <value>Côte à côte</value>
+  </data>
+  <data name="WkDiffLoadFailed" xml:space="preserve">
+    <value>Impossible de charger une ou les deux révisions. Vérifiez les numéros de révision.</value>
+  </data>
+  <data name="WkRevisionShort" xml:space="preserve">
+    <value>rév. n° {0}</value>
+  </data>
+  <data name="WkLinesAdded" xml:space="preserve">
+    <value>+{0} ajoutées</value>
+  </data>
+  <data name="WkLinesRemoved" xml:space="preserve">
+    <value>−{0} supprimées</value>
+  </data>
+  <data name="WkDiffRevOld" xml:space="preserve">
+    <value>Rév. {0} — Ancienne</value>
+  </data>
+  <data name="WkDiffRevNew" xml:space="preserve">
+    <value>Rév. {0} — Nouvelle</value>
+  </data>
+  <data name="WkImageLibrary" xml:space="preserve">
+    <value>Bibliothèque d'images</value>
+  </data>
+  <data name="WkImageLibraryDescription" xml:space="preserve">
+    <value>Gérez les médias téléversés utilisés dans le wiki et le portail.</value>
+  </data>
+  <data name="WkTotalAssets" xml:space="preserve">
+    <value>Médias au total</value>
+  </data>
+  <data name="WkStorageUsed" xml:space="preserve">
+    <value>Stockage utilisé</value>
+  </data>
+  <data name="WkKindImagePlural" xml:space="preserve">
+    <value>Images</value>
+  </data>
+  <data name="WkKindOther" xml:space="preserve">
+    <value>Autres</value>
+  </data>
+  <data name="WkKindImage" xml:space="preserve">
+    <value>Image</value>
+  </data>
+  <data name="WkKindVideo" xml:space="preserve">
+    <value>Vidéo</value>
+  </data>
+  <data name="WkKindDocument" xml:space="preserve">
+    <value>Document</value>
+  </data>
+  <data name="WkViewGrid" xml:space="preserve">
+    <value>Grille</value>
+  </data>
+  <data name="WkViewList" xml:space="preserve">
+    <value>Liste</value>
+  </data>
+  <data name="WkNoAssetsFound" xml:space="preserve">
+    <value>Aucun média trouvé.</value>
+  </data>
+  <data name="WkCopyUrl" xml:space="preserve">
+    <value>Copier l'URL</value>
+  </data>
+  <data name="WkColPreview" xml:space="preserve">
+    <value>Aperçu</value>
+  </data>
+  <data name="WkColFileName" xml:space="preserve">
+    <value>Nom du fichier</value>
+  </data>
+  <data name="WkColKind" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="WkColUploaded" xml:space="preserve">
+    <value>Téléversé le</value>
+  </data>
+  <data name="WkColUploader" xml:space="preserve">
+    <value>Téléversé par</value>
+  </data>
+  <data name="WkDeleteAssetTitle" xml:space="preserve">
+    <value>Supprimer ce média ?</value>
+  </data>
+  <data name="WkDeleteAssetConfirm" xml:space="preserve">
+    <value>Cette action supprimera définitivement {0}. Les liens vers ce média seront rompus.</value>
+  </data>
+  <data name="WkAssetUploaded" xml:space="preserve">
+    <value>{0} téléversé.</value>
+  </data>
+  <data name="WkUploadFailed" xml:space="preserve">
+    <value>Échec du téléversement : {0}</value>
+  </data>
+  <data name="WkUploadError" xml:space="preserve">
+    <value>Erreur de téléversement : {0}</value>
+  </data>
+  <data name="WkAssetDeleted" xml:space="preserve">
+    <value>{0} supprimé.</value>
+  </data>
+  <data name="WkAssetDeleteFailed" xml:space="preserve">
+    <value>Impossible de supprimer {0}.</value>
+  </data>
+  <data name="WkUrlCopied" xml:space="preserve">
+    <value>URL copiée.</value>
+  </data>
+  <data name="WkWikiAssets" xml:space="preserve">
+    <value>Médias du wiki</value>
+  </data>
+  <data name="WkStaffMedia" xml:space="preserve">
+    <value>Personnel · Médias</value>
+  </data>
+  <data name="WkAssetUploadHint" xml:space="preserve">
+    <value>PNG, JPEG, GIF, WebP ou SVG — 10 Mo maximum.</value>
+  </data>
+  <data name="WkCopyMarkdown" xml:space="preserve">
+    <value>Copier le Markdown</value>
+  </data>
+  <data name="WkFileTooLarge" xml:space="preserve">
+    <value>Le fichier dépasse la limite de 10 Mo.</value>
+  </data>
+  <data name="WkMarkdownCopied" xml:space="preserve">
+    <value>Markdown copié dans le presse-papiers.</value>
+  </data>
+  <data name="WkDeleteAssetPrompt" xml:space="preserve">
+    <value>Supprimer « {0} » ? Les pages qui l'intègrent afficheront une image cassée.</value>
+  </data>
+  <data name="WkDeleteFailed" xml:space="preserve">
+    <value>Échec de la suppression.</value>
+  </data>
+  <data name="RolPageTitle" xml:space="preserve">
+    <value>Rôles</value>
+  </data>
+  <data name="RolKicker" xml:space="preserve">
+    <value>Gérer · Contrôle d'accès</value>
+  </data>
+  <data name="RolHeading" xml:space="preserve">
+    <value>Rôles et permissions</value>
+  </data>
+  <data name="RolTabRoles" xml:space="preserve">
+    <value>Rôles</value>
+  </data>
+  <data name="RolTabAssignments" xml:space="preserve">
+    <value>Attributions</value>
+  </data>
+  <data name="RolNewRole" xml:space="preserve">
+    <value>Nouveau rôle</value>
+  </data>
+  <data name="RolNoRolesDefined" xml:space="preserve">
+    <value>Aucun rôle défini.</value>
+  </data>
+  <data name="RolSystemBadge" xml:space="preserve">
+    <value>Système</value>
+  </data>
+  <data name="RolSelectOrCreate" xml:space="preserve">
+    <value>Sélectionnez un rôle ou créez-en un nouveau.</value>
+  </data>
+  <data name="RolUntitled" xml:space="preserve">
+    <value>Sans titre</value>
+  </data>
+  <data name="RolNameLabel" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="RolColorLabel" xml:space="preserve">
+    <value>Couleur</value>
+  </data>
+  <data name="RolPriorityLabel" xml:space="preserve">
+    <value>Priorité</value>
+  </data>
+  <data name="RolSlugLabel" xml:space="preserve">
+    <value>Slug</value>
+  </data>
+  <data name="RolSlugHelper" xml:space="preserve">
+    <value>Clé machine stable. Non modifiable après la création.</value>
+  </data>
+  <data name="RolColorHelper" xml:space="preserve">
+    <value>Couleur CSS, par ex. #6cde9a</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>La valeur la plus élevée l'emporte en cas de conflit</value>
+  </data>
+  <data name="RolInherit" xml:space="preserve">
+    <value>Hériter</value>
+  </data>
+  <data name="RolAllow" xml:space="preserve">
+    <value>Autoriser</value>
+  </data>
+  <data name="RolDeny" xml:space="preserve">
+    <value>Refuser</value>
+  </data>
+  <data name="RolSaveRole" xml:space="preserve">
+    <value>Enregistrer le rôle</value>
+  </data>
+  <data name="RolSearchByUsername" xml:space="preserve">
+    <value>Rechercher par nom d'utilisateur…</value>
+  </data>
+  <data name="RolLookUp" xml:space="preserve">
+    <value>Rechercher</value>
+  </data>
+  <data name="RolNoAccountFound" xml:space="preserve">
+    <value>Aucun compte trouvé pour « {0} ».</value>
+  </data>
+  <data name="RolAssignedRoles" xml:space="preserve">
+    <value>Rôles attribués</value>
+  </data>
+  <data name="RolNoRolesAssigned" xml:space="preserve">
+    <value>Aucun rôle attribué.</value>
+  </data>
+  <data name="RolRemoveRole" xml:space="preserve">
+    <value>Retirer</value>
+  </data>
+  <data name="RolAddRole" xml:space="preserve">
+    <value>Ajouter un rôle</value>
+  </data>
+  <data name="RolSearchAccountPrompt" xml:space="preserve">
+    <value>Recherchez un compte pour gérer ses rôles.</value>
+  </data>
+  <data name="RolNameRequired" xml:space="preserve">
+    <value>Le nom est obligatoire.</value>
+  </data>
+  <data name="RolSlugAndNameRequired" xml:space="preserve">
+    <value>Le slug et le nom sont obligatoires.</value>
+  </data>
+  <data name="RolSaved" xml:space="preserve">
+    <value>{0} enregistré.</value>
+  </data>
+  <data name="RolSaveFailed" xml:space="preserve">
+    <value>Échec de l'enregistrement.</value>
+  </data>
+  <data name="RolDeleteTitle" xml:space="preserve">
+    <value>Supprimer le rôle</value>
+  </data>
+  <data name="RolDeleteConfirm" xml:space="preserve">
+    <value>Supprimer « {0} » ({1}) ? Ce rôle sera retiré de tous les comptes qui le détiennent.</value>
+  </data>
+  <data name="RolDeleted" xml:space="preserve">
+    <value>{0} supprimé.</value>
+  </data>
+  <data name="RolDeleteFailed" xml:space="preserve">
+    <value>Échec de la suppression du rôle.</value>
+  </data>
+  <data name="RolEnterUsername" xml:space="preserve">
+    <value>Saisissez un nom d'utilisateur à rechercher.</value>
+  </data>
+  <data name="RolAssigned" xml:space="preserve">
+    <value>{0} attribué.</value>
+  </data>
+  <data name="RolAssignFailed" xml:space="preserve">
+    <value>Échec de l'attribution du rôle.</value>
+  </data>
+  <data name="RolRemoved" xml:space="preserve">
+    <value>{0} retiré.</value>
+  </data>
+  <data name="RolRemoveFailed" xml:space="preserve">
+    <value>Échec du retrait du rôle.</value>
+  </data>
+  <data name="RolScene" xml:space="preserve">
+    <value>Scène</value>
+  </data>
+  <data name="RolLiveScene" xml:space="preserve">
+    <value>Scène en direct</value>
+  </data>
+  <data name="RolSceneNotFound" xml:space="preserve">
+    <value>Scène introuvable.</value>
+  </data>
+  <data name="RolSceneIn" xml:space="preserve">
+    <value>Scène dans {0}</value>
+  </data>
+  <data name="RolLiveBadge" xml:space="preserve">
+    <value>EN DIRECT</value>
+  </data>
+  <data name="RolPoseCount" xml:space="preserve">
+    <value>{0} pose(s)</value>
+  </data>
+  <data name="RolNoPoses" xml:space="preserve">
+    <value>Aucune pose dans cette scène.</value>
+  </data>
+  <data name="RolWatchLive" xml:space="preserve">
+    <value>Suivre en direct</value>
+  </data>
+  <data name="RolBackToScenes" xml:space="preserve">
+    <value>Retour aux scènes</value>
+  </data>
+  <data name="RolBackToActiveScenes" xml:space="preserve">
+    <value>Retour aux scènes actives</value>
+  </data>
+  <data name="RolViewArchive" xml:space="preserve">
+    <value>Voir l'archive</value>
+  </data>
+  <data name="RolNotConnected" xml:space="preserve">
+    <value>Non connecté au jeu — connectez-vous pour publier et recevoir les poses en direct.</value>
+  </data>
+  <data name="RolWaitingForActivity" xml:space="preserve">
+    <value>En attente d'activité…</value>
+  </data>
+  <data name="RolModePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="RolModeSay" xml:space="preserve">
+    <value>Say</value>
+  </data>
+  <data name="RolModeSemipose" xml:space="preserve">
+    <value>Semipose</value>
+  </data>
+  <data name="RolComposePlaceholder" xml:space="preserve">
+    <value>Posez, parlez ou narrez…</value>
+  </data>
+  <data name="RolEditedBadge" xml:space="preserve">
+    <value>modifié</value>
+  </data>
+  <data name="RolEditedTimes" xml:space="preserve">
+    <value>Modifié {0} fois</value>
+  </data>
+  <data name="WidSceneLive" xml:space="preserve">
+    <value>EN DIRECT</value>
+  </data>
+  <data name="WidScenePoseCount" xml:space="preserve">
+    <value>{0} pose(s)</value>
+  </data>
+  <data name="WidSceneIn" xml:space="preserve">
+    <value>Scène dans {0}</value>
+  </data>
+  <data name="WidJoinScene" xml:space="preserve">
+    <value>Rejoindre la scène</value>
+  </data>
+  <data name="WidNoActiveScenes" xml:space="preserve">
+    <value>Aucune scène active pour le moment.</value>
+  </data>
+  <data name="WidBrowseArchive" xml:space="preserve">
+    <value>Parcourir les archives</value>
+  </data>
+  <data name="WidOnlineNow" xml:space="preserve">
+    <value>En ligne</value>
+  </data>
+  <data name="WidViewAllCount" xml:space="preserve">
+    <value>Voir les {0} →</value>
+  </data>
+  <data name="WidNobodyConnected" xml:space="preserve">
+    <value>Personne n'est connecté pour le moment.</value>
+  </data>
+  <data name="WidConfigureQuickLinks" xml:space="preserve">
+    <value>Configurer les liens rapides</value>
+  </data>
+  <data name="WidNewHere" xml:space="preserve">
+    <value>Nouveau ici ?</value>
+  </data>
+  <data name="WidNoCharacterYet" xml:space="preserve">
+    <value>Vous n'avez pas encore de personnage</value>
+  </data>
+  <data name="WidCreateFirstCharacter" xml:space="preserve">
+    <value>Créez votre premier personnage pour commencer à jouer.</value>
+  </data>
+  <data name="WidCreateYourCharacter" xml:space="preserve">
+    <value>Créer votre personnage</value>
+  </data>
+  <data name="WidQuickstartIntro" xml:space="preserve">
+    <value>Commencez par lire le wiki, parcourir les personnages ou rejoindre une scène.</value>
+  </data>
+  <data name="WidReadTheWiki" xml:space="preserve">
+    <value>Lire le wiki</value>
+  </data>
+  <data name="WidBrowseCharacters" xml:space="preserve">
+    <value>Parcourir les personnages</value>
+  </data>
+  <data name="WidBrowseScenes" xml:space="preserve">
+    <value>Parcourir les scènes</value>
+  </data>
+  <data name="WidNewCharacter" xml:space="preserve">
+    <value>Nouveau personnage</value>
+  </data>
+  <data name="WidRecentWikiActivity" xml:space="preserve">
+    <value>Activité récente du wiki</value>
+  </data>
+  <data name="WidNoRecentWikiActivity" xml:space="preserve">
+    <value>Aucune activité récente du wiki.</value>
+  </data>
+  <data name="WidSchemaUnavailable" xml:space="preserve">
+    <value>Schéma du widget indisponible.</value>
+  </data>
+  <data name="WidPlayersOnline" xml:space="preserve">
+    <value>Joueurs en ligne</value>
+  </data>
+  <data name="WidActiveScenes" xml:space="preserve">
+    <value>Scènes actives</value>
+  </data>
+  <data name="WidFormNoPages" xml:space="preserve">
+    <value>Ce formulaire ne contient aucune page.</value>
+  </data>
+  <data name="WidFormStepOf" xml:space="preserve">
+    <value>Étape {0} sur {1}</value>
+  </data>
+  <data name="WidBack" xml:space="preserve">
+    <value>Retour</value>
+  </data>
+  <data name="WidNext" xml:space="preserve">
+    <value>Suivant</value>
+  </data>
+  <data name="WidSubmit" xml:space="preserve">
+    <value>Envoyer</value>
+  </data>
+  <data name="WidAction" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="WidFieldRequired" xml:space="preserve">
+    <value>{0} est obligatoire.</value>
+  </data>
+  <data name="WidFillRequiredFields" xml:space="preserve">
+    <value>Veuillez remplir les champs obligatoires mis en évidence.</value>
+  </data>
+  <data name="WidActionFailed" xml:space="preserve">
+    <value>L'action a échoué.</value>
+  </data>
+  <data name="WidNothingToDisplay" xml:space="preserve">
+    <value>Rien à afficher.</value>
+  </data>
+  <data name="WidTrustOfficial" xml:space="preserve">
+    <value>Officiel</value>
+  </data>
+  <data name="WidTrustCommunity" xml:space="preserve">
+    <value>Communauté</value>
+  </data>
+  <data name="WidTrustUnknown" xml:space="preserve">
+    <value>Inconnu</value>
+  </data>
+  <data name="WidTrustOfficialTooltip" xml:space="preserve">
+    <value>Maintenu par l'organisation SharpMUSH</value>
+  </data>
+  <data name="WidTrustCommunityTooltip" xml:space="preserve">
+    <value>Source communautaire connue — relisez le code avant de l'appliquer</value>
+  </data>
+  <data name="WidTrustUnknownTooltip" xml:space="preserve">
+    <value>Source non vérifiée — inspectez tout avant de l'appliquer</value>
+  </data>
+  <data name="WidGameStartingUp" xml:space="preserve">
+    <value>Le jeu démarre…</value>
+  </data>
+  <data name="WidWaitingForServer" xml:space="preserve">
+    <value>En attente de la mise en ligne du serveur…</value>
+  </data>
+  <data name="WidPluginChangedReloading" xml:space="preserve">
+    <value>Un plugin a changé — rechargement…</value>
+  </data>
+  <data name="WidWidgetRenderFailed" xml:space="preserve">
+    <value>Ce widget n'a pas pu s'afficher.</value>
+  </data>
+  <data name="WidLoadingWikiPage" xml:space="preserve">
+    <value>Chargement de la page du wiki</value>
+  </data>
+  <data name="ResAnyoneCanEdit" xml:space="preserve">
+    <value>tout le monde peut modifier</value>
+  </data>
+  <data name="ResHistory" xml:space="preserve">
+    <value>Historique</value>
+  </data>
+  <data name="ResOnThisPage" xml:space="preserve">
+    <value>Sur cette page</value>
+  </data>
+  <data name="ResCategoryGeneral" xml:space="preserve">
+    <value>Général</value>
+  </data>
+  <data name="ResScenesSubtitle" xml:space="preserve">
+    <value>Parcourez et suivez les sessions de jeu de rôle.</value>
+  </data>
+  <data name="ResTabRecent" xml:space="preserve">
+    <value>Récentes</value>
+  </data>
+  <data name="ResTabLive" xml:space="preserve">
+    <value>En direct</value>
+  </data>
+  <data name="ResNoScenesFound" xml:space="preserve">
+    <value>Aucune scène trouvée.</value>
+  </data>
+  <data name="ResRead" xml:space="preserve">
+    <value>Lire</value>
+  </data>
+  <data name="ResJoin" xml:space="preserve">
+    <value>Rejoindre</value>
+  </data>
+  <data name="ResActiveScenesSubtitle" xml:space="preserve">
+    <value>Sessions en cours en ce moment.</value>
+  </data>
+  <data name="ResStartedAt" xml:space="preserve">
+    <value>Début {0}</value>
+  </data>
+  <data name="ResViewLog" xml:space="preserve">
+    <value>Voir le journal</value>
+  </data>
+  <data name="ResAdminWikiKicker" xml:space="preserve">
+    <value>Personnel · wiki</value>
+  </data>
+  <data name="ResWikiStatTotalPages" xml:space="preserve">
+    <value>Pages au total</value>
+  </data>
+  <data name="ResWikiStatDrafts" xml:space="preserve">
+    <value>Brouillons</value>
+  </data>
+  <data name="ResSearchTitlesPlaceholder" xml:space="preserve">
+    <value>Rechercher un titre…</value>
+  </data>
+  <data name="ResDraft" xml:space="preserve">
+    <value>Brouillon</value>
+  </data>
+  <data name="ResConfigSectionKicker" xml:space="preserve">
+    <value>Admin · paramètres du serveur</value>
+  </data>
+  <data name="ResConfigHomeKicker" xml:space="preserve">
+    <value>Admin · configuration du serveur</value>
+  </data>
+  <data name="ResRoutingErrorHint" xml:space="preserve">
+    <value>Ce message signifie que la page personnalisée n'est PAS reconnue par le routeur.</value>
+  </data>
+  <data name="ResChangeCountOne" xml:space="preserve">
+    <value>{0} modification</value>
+  </data>
+  <data name="ResChangeCountMany" xml:space="preserve">
+    <value>{0} modifications</value>
+  </data>
+  <data name="ResDefaultValueTooltip" xml:space="preserve">
+    <value>Valeur par défaut : {0}</value>
+  </data>
+  <data name="ResChangedBadge" xml:space="preserve">
+    <value>modifié</value>
+  </data>
+  <data name="ResValidationFailed" xml:space="preserve">
+    <value>Échec de la validation</value>
+  </data>
+  <data name="ResInvalid" xml:space="preserve">
+    <value>Non valide</value>
+  </data>
+  <data name="ResSaveFailedShort" xml:space="preserve">
+    <value>Échec de l'enregistrement</value>
+  </data>
+  <data name="ResWsConnectedTo" xml:space="preserve">
+    <value>[Système] Connecté à {0}</value>
+  </data>
+  <data name="ResWsConnectFailed" xml:space="preserve">
+    <value>[Erreur] Échec de la connexion : {0}</value>
+  </data>
+  <data name="ResWsDisconnected" xml:space="preserve">
+    <value>[Système] Déconnecté</value>
+  </data>
+  <data name="ResWsDisconnectFailed" xml:space="preserve">
+    <value>[Erreur] Échec de la déconnexion : {0}</value>
+  </data>
+  <data name="ResWsSent" xml:space="preserve">
+    <value>[Envoyé] {0}</value>
+  </data>
+  <data name="ResWsSendFailed" xml:space="preserve">
+    <value>[Erreur] Échec de l'envoi : {0}</value>
+  </data>
+  <data name="ResWsReceived" xml:space="preserve">
+    <value>[Reçu] {0}</value>
+  </data>
+  <data name="EnumPermGroupBuild" xml:space="preserve">
+    <value>Construction</value>
+  </data>
+  <data name="EnumPermGroupManage" xml:space="preserve">
+    <value>Gestion</value>
+  </data>
+  <data name="EnumPermWikiRead" xml:space="preserve">
+    <value>Wiki · Lecture</value>
+  </data>
+  <data name="EnumPermWikiReadDesc" xml:space="preserve">
+    <value>Consulter les pages wiki non publiées ou en brouillon (les pages publiées sont visibles par tout le monde).</value>
+  </data>
+  <data name="EnumPermWikiCreate" xml:space="preserve">
+    <value>Wiki · Création</value>
+  </data>
+  <data name="EnumPermWikiCreateDesc" xml:space="preserve">
+    <value>Créer de nouvelles pages wiki.</value>
+  </data>
+  <data name="EnumPermWikiEdit" xml:space="preserve">
+    <value>Wiki · Modification</value>
+  </data>
+  <data name="EnumPermWikiEditDesc" xml:space="preserve">
+    <value>Modifier, restaurer et réétiqueter les pages wiki existantes (non protégées).</value>
+  </data>
+  <data name="EnumPermWikiDelete" xml:space="preserve">
+    <value>Wiki · Suppression</value>
+  </data>
+  <data name="EnumPermWikiDeleteDesc" xml:space="preserve">
+    <value>Supprimer des pages wiki et leur historique de révisions.</value>
+  </data>
+  <data name="EnumPermWikiAdmin" xml:space="preserve">
+    <value>Wiki · Modération</value>
+  </data>
+  <data name="EnumPermWikiAdminDesc" xml:space="preserve">
+    <value>Protéger et déprotéger des pages, modifier les pages protégées, effectuer des opérations groupées et accéder au tableau de bord d'administration du wiki.</value>
+  </data>
+  <data name="EnumPermMediaUpload" xml:space="preserve">
+    <value>Bibliothèque d'images · Téléversement</value>
+  </data>
+  <data name="EnumPermMediaUploadDesc" xml:space="preserve">
+    <value>Téléverser des images destinées aux pages wiki.</value>
+  </data>
+  <data name="EnumPermMediaAdmin" xml:space="preserve">
+    <value>Bibliothèque d'images · Gestion</value>
+  </data>
+  <data name="EnumPermMediaAdminDesc" xml:space="preserve">
+    <value>Parcourir et supprimer la bibliothèque de médias partagée.</value>
+  </data>
+  <data name="EnumPermSoftcodeUse" xml:space="preserve">
+    <value>Éditeur de softcode</value>
+  </data>
+  <data name="EnumPermSoftcodeUseDesc" xml:space="preserve">
+    <value>Ouvrir l'éditeur de softcode pour consulter et modifier les attributs des objets.</value>
+  </data>
+  <data name="EnumPermApplicationsAdmin" xml:space="preserve">
+    <value>Applications</value>
+  </data>
+  <data name="EnumPermApplicationsAdminDesc" xml:space="preserve">
+    <value>Enregistrer et gérer les applications pilotées par schéma.</value>
+  </data>
+  <data name="EnumPermPackagesAdmin" xml:space="preserve">
+    <value>Paquets</value>
+  </data>
+  <data name="EnumPermPackagesAdminDesc" xml:space="preserve">
+    <value>Installer, mettre à jour et gérer les paquets de softcode.</value>
+  </data>
+  <data name="EnumPermConfigAdmin" xml:space="preserve">
+    <value>Configuration du serveur</value>
+  </data>
+  <data name="EnumPermConfigAdminDesc" xml:space="preserve">
+    <value>Modifier la configuration du serveur, le sitelock, les noms interdits et les restrictions.</value>
+  </data>
+  <data name="EnumPermRolesAdmin" xml:space="preserve">
+    <value>Rôles et permissions</value>
+  </data>
+  <data name="EnumPermRolesAdminDesc" xml:space="preserve">
+    <value>Créer des rôles, modifier les permissions et attribuer des rôles aux comptes.</value>
+  </data>
+  <data name="EnumPermPlayersView" xml:space="preserve">
+    <value>Joueurs · Consultation</value>
+  </data>
+  <data name="EnumPermPlayersViewDesc" xml:space="preserve">
+    <value>Parcourir les comptes de joueurs, les personnages et les profils (lecture seule).</value>
+  </data>
+  <data name="EnumPermPlayersModerate" xml:space="preserve">
+    <value>Joueurs · Modération</value>
+  </data>
+  <data name="EnumPermPlayersModerateDesc" xml:space="preserve">
+    <value>Désactiver, bannir, avertir et modifier les comptes de joueurs, les personnages et les profils.</value>
+  </data>
+  <data name="EnumPermLayoutAdmin" xml:space="preserve">
+    <value>Éditeur de mise en page</value>
+  </data>
+  <data name="EnumPermLayoutAdminDesc" xml:space="preserve">
+    <value>Modifier la mise en page des widgets du portail.</value>
+  </data>
+  <data name="EnumPermServerAdmin" xml:space="preserve">
+    <value>Serveur (God)</value>
+  </data>
+  <data name="EnumPermServerAdminDesc" xml:space="preserve">
+    <value>Opérations au niveau du serveur et import de base de données. Réservé à God par défaut.</value>
+  </data>
+  <data name="EnumObjectTypeThing" xml:space="preserve">
+    <value>Objet</value>
+  </data>
+  <data name="EnumObjectTypeRoom" xml:space="preserve">
+    <value>Salle</value>
+  </data>
+  <data name="EnumObjectTypeExit" xml:space="preserve">
+    <value>Sortie</value>
+  </data>
+  <data name="EnumObjectTypePlayer" xml:space="preserve">
+    <value>Joueur</value>
+  </data>
+  <data name="EnumObjectTypeUnknown" xml:space="preserve">
+    <value>Inconnu</value>
+  </data>
+  <data name="EnumApplicationKindPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="EnumApplicationKindWidget" xml:space="preserve">
+    <value>Widget</value>
+  </data>
+  <data name="EnumRevisionKindInstall" xml:space="preserve">
+    <value>Installation</value>
+  </data>
+  <data name="EnumRevisionKindUpgrade" xml:space="preserve">
+    <value>Mise à jour</value>
+  </data>
+  <data name="EnumRevisionKindRollback" xml:space="preserve">
+    <value>Retour en arrière</value>
+  </data>
+  <data name="EnumUnitBytes" xml:space="preserve">
+    <value>{0} o</value>
+  </data>
+  <data name="EnumUnitKilobytes" xml:space="preserve">
+    <value>{0} ko</value>
+  </data>
+  <data name="EnumUnitMegabytes" xml:space="preserve">
+    <value>{0} Mo</value>
+  </data>
+  <data name="EnumUnitGigabytes" xml:space="preserve">
+    <value>{0} Go</value>
+  </data>
+  <data name="NavToggleNavigation" xml:space="preserve">
+    <value>Basculer la navigation</value>
+  </data>
+  <data name="NavSearchPlaceholder" xml:space="preserve">
+    <value>Rechercher…</value>
+  </data>
+  <data name="NavOpenTerminal" xml:space="preserve">
+    <value>Ouvrir le terminal</value>
+  </data>
+  <data name="NavCloseTerminal" xml:space="preserve">
+    <value>Fermer le terminal</value>
+  </data>
+  <data name="NavCommandTerminal" xml:space="preserve">
+    <value>terminal de commande</value>
+  </data>
+  <data name="NavCharsShort" xml:space="preserve">
+    <value>Persos</value>
+  </data>
+  <data name="NavMenuLabel" xml:space="preserve">
+    <value>Menu</value>
+  </data>
+  <data name="NavSectionWorld" xml:space="preserve">
+    <value>Monde</value>
+  </data>
+  <data name="NavSectionBuild" xml:space="preserve">
+    <value>Création</value>
+  </data>
+  <data name="NavSectionManage" xml:space="preserve">
+    <value>Gestion</value>
+  </data>
+  <data name="NavPlayUnreadActivity" xml:space="preserve">
+    <value>Activité de jeu non lue</value>
+  </data>
+  <data name="NavPlaySessionActive" xml:space="preserve">
+    <value>Session de jeu active</value>
+  </data>
+  <data name="NavOnline" xml:space="preserve">
+    <value>en ligne</value>
+  </data>
+  <data name="NavOffline" xml:space="preserve">
+    <value>hors ligne</value>
+  </data>
+  <data name="NavAccountTag" xml:space="preserve">
+    <value>compte</value>
+  </data>
+  <data name="NavGuestTag" xml:space="preserve">
+    <value>invité</value>
+  </data>
+  <data name="NavPlayTerminal" xml:space="preserve">
+    <value>Terminal de jeu</value>
+  </data>
+  <data name="NavInPlay" xml:space="preserve">
+    <value>en jeu</value>
+  </data>
+  <data name="NavNotConnected" xml:space="preserve">
+    <value>non connecté</value>
+  </data>
+  <data name="NavTerminalSettings" xml:space="preserve">
+    <value>Paramètres du terminal</value>
+  </data>
+  <data name="NavTerminalWidthTooltip" xml:space="preserve">
+    <value>Largeur de terminal préférée en colonnes (min. 78). La police s'adapte automatiquement pour la remplir — plus d'espace signifie une police plus grande — et cette valeur est transmise au serveur comme largeur d'écran.</value>
+  </data>
+  <data name="NavTerminalWidthCols" xml:space="preserve">
+    <value>Largeur (col.)</value>
+  </data>
+  <data name="NavFocusMode" xml:space="preserve">
+    <value>Mode concentration</value>
+  </data>
+  <data name="NavExitFocusMode" xml:space="preserve">
+    <value>Quitter le mode concentration</value>
+  </data>
+  <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
+    <value>— Connectez-vous pour voir qui est là —</value>
+  </data>
+  <data name="NavExits" xml:space="preserve">
+    <value>Sorties</value>
+  </data>
+  <data name="NavNoExitsAvailable" xml:space="preserve">
+    <value>— Aucune sortie disponible —</value>
+  </data>
+  <data name="NavSettingsAccountDescription" xml:space="preserve">
+    <value>E-mail, mot de passe et sécurité de connexion</value>
+  </data>
+  <data name="NavSettingsCharactersDescription" xml:space="preserve">
+    <value>Gérer les personnages liés à votre compte</value>
+  </data>
+  <data name="NavTheme" xml:space="preserve">
+    <value>Thème</value>
+  </data>
+  <data name="NavSettingsThemeDescription" xml:space="preserve">
+    <value>Préférences d'apparence et de couleur d'accent</value>
+  </data>
+  <data name="NavThemeComingSoon" xml:space="preserve">
+    <value>Les préférences de thème arrivent bientôt.</value>
+  </data>
+  <data name="NavCharacterManagement" xml:space="preserve">
+    <value>Gestion des personnages</value>
+  </data>
+  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
+    <value>La gestion des personnages arrive bientôt.</value>
+  </data>
+  <data name="NavGoToAccountPage" xml:space="preserve">
+    <value>Accéder à la page de votre compte</value>
+  </data>
+  <data name="NavMailFolders" xml:space="preserve">
+    <value>Dossiers</value>
+  </data>
+  <data name="NavMailSelectMessage" xml:space="preserve">
+    <value>Sélectionnez un message à lire</value>
+  </data>
+  <data name="NavMailReadFullMessage" xml:space="preserve">
+    <value>Lire le message complet →</value>
+  </data>
+  <data name="NavMailForward" xml:space="preserve">
+    <value>Transférer</value>
+  </data>
+  <data name="NavCharactersRegistered" xml:space="preserve">
+    <value>{0} personnages enregistrés</value>
+  </data>
+  <data name="NavCharacterRegistered" xml:space="preserve">
+    <value>{0} personnage enregistré</value>
+  </data>
+  <data name="NavCreateCharacter" xml:space="preserve">
+    <value>Créer le personnage</value>
+  </data>
+  <data name="NavCreateACharacter" xml:space="preserve">
+    <value>Créer un personnage</value>
+  </data>
+  <data name="NavCreateCharacterBlurb" xml:space="preserve">
+    <value>Un personnage est une identité que vous incarnez dans le jeu. Il est lié à votre compte ; vous pourrez en créer d'autres plus tard.</value>
+  </data>
+  <data name="NavCharacterName" xml:space="preserve">
+    <value>Nom du personnage</value>
+  </data>
+  <data name="NavApplication" xml:space="preserve">
+    <value>Application</value>
+  </data>
+  <data name="NavLoadingApplication" xml:space="preserve">
+    <value>Chargement de l'application…</value>
+  </data>
+  <data name="NavNoApplicationRegistered" xml:space="preserve">
+    <value>Aucune application n'est enregistrée à l'adresse {0}.</value>
+  </data>
+  <data name="NavNoApplicationAccess" xml:space="preserve">
+    <value>Vous n'avez pas accès à cette application.</value>
+  </data>
+  <data name="NavApplicationComponentLoadFailed" xml:space="preserve">
+    <value>Le composant compilé de cette application n'a pas pu être chargé. Le code navigateur est peut-être désactivé (allow_browser_code), ou l'assembly n'a pas passé la vérification.</value>
+  </data>
+  <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
+    <value>Le schéma de l'application n'a pas pu être chargé. Le gestionnaire softcode à l'adresse {0} est peut-être absent ou renvoie du JSON invalide.</value>
+  </data>
+  <data name="AdmAccountStatusActive" xml:space="preserve">
+    <value>Actif</value>
+  </data>
+  <data name="AdmAccountStatusDisabled" xml:space="preserve">
+    <value>Désactivé</value>
+  </data>
+  <data name="AdmAccountStatusClosed" xml:space="preserve">
+    <value>Fermé</value>
+  </data>
+  <data name="AdmAccountStatusDeleted" xml:space="preserve">
+    <value>Supprimé</value>
+  </data>
+  <data name="AdmAccountActionActive" xml:space="preserve">
+    <value>Réactiver</value>
+  </data>
+  <data name="AdmAccountActionDisabled" xml:space="preserve">
+    <value>Désactiver</value>
+  </data>
+  <data name="AdmAccountActionClosed" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="AdmAccountActionDeleted" xml:space="preserve">
+    <value>Supprimer</value>
+  </data>
+  <data name="AdmAccountStatusChanged" xml:space="preserve">
+    <value>Statut du compte « {0} » mis à jour.</value>
+  </data>
 </root>

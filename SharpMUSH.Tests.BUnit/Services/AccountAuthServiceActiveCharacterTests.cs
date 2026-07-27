@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using NSubstitute;
@@ -13,53 +14,81 @@ namespace SharpMUSH.Tests.BUnit.Services;
 /// roster, so tests can drive <see cref="AccountAuthService.LoginAsync"/> end-to-end instead of
 /// calling the private roster-defaulting logic's only public entry point indirectly.
 /// </summary>
-file sealed class FakeLoginHandler(IReadOnlyList<CharacterSummary> characters) : HttpMessageHandler
+file sealed class FakeLoginHandler(IReadOnlyList<CharacterSummary> characters)
+	: BindingAwareHandler(characters);
+
+/// <summary>
+/// Stands in for the server's half of the acting-character contract, because the client no longer has
+/// a half of its own: the session token carries the binding, so the roster the server serves is the
+/// only thing that says which character a tab acts as. This fake therefore tracks the binding the way
+/// the real server does — the primary at login, the target after a switch — and marks it on every
+/// roster it hands back. A fake that served an unmarked roster would be telling the client "you act as
+/// nobody", which is exactly what it means now.
+/// </summary>
+file abstract class BindingAwareHandler(IReadOnlyList<CharacterSummary> characters, bool refuseSwitch = false) : HttpMessageHandler
 {
-	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-		Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+	private readonly List<CharacterSummary> _roster = [.. characters];
+	private int? _boundKey = characters.FirstOrDefault()?.DbrefNumber;
+
+	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		var path = request.RequestUri!.AbsolutePath;
+
+		if (request.Method == HttpMethod.Delete)
+		{
+			// Honour the unlink: the client re-reads the roster afterwards, and a fake that kept
+			// serving the deleted character would hide whether the rebind picked a survivor.
+			var deletedKey = int.Parse(path[(path.LastIndexOf('/') + 1)..]);
+			_roster.RemoveAll(c => c.DbrefNumber == deletedKey);
+			if (_boundKey == deletedKey) _boundKey = null;
+			return new HttpResponseMessage(HttpStatusCode.OK);
+		}
+
+		if (path.EndsWith("api/auth/switch-character", StringComparison.Ordinal))
+		{
+			if (refuseSwitch)
+				return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+
+			var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+			using var parsed = JsonDocument.Parse(body);
+			_boundKey = parsed.RootElement.GetProperty("characterKey").GetInt32();
+
+			return new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = JsonContent.Create(new { ott = "ott-1", expiresIn = 60, accountSessionToken = $"bound-to-{_boundKey}" })
+			};
+		}
+
+		var marked = _roster
+			.Select(c => new { c.DbrefNumber, c.CreationTime, c.Name, c.Flags, isActing = c.DbrefNumber == _boundKey })
+			.ToList();
+
+		// The bare-array roster endpoint and the login envelope both carry the marker.
+		if (path.EndsWith("api/account/characters", StringComparison.Ordinal) && request.Method == HttpMethod.Get)
+			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(marked) };
+
+		return new HttpResponseMessage(HttpStatusCode.OK)
 		{
 			Content = JsonContent.Create(new
 			{
 				accountId = "acct-1",
 				username = "headwiz",
-				characters,
+				characters = marked,
 				accountSessionToken = "session-token-1",
 				mustChangePassword = false,
 				role = "God",
 				permissions = new[] { "*" },
 			})
-		});
+		};
+	}
 }
 
 /// <summary>
-/// Fakes a successful api/auth/account-login round-trip (like <see cref="FakeLoginHandler"/>) AND a
-/// successful <c>DELETE api/account/characters/{dbref}</c> round-trip, so Unlink tests can drive the
-/// real HTTP call inside <see cref="AccountAuthService.UnlinkCharacterAsync"/> rather than faking it
-/// away. The delete response body is never parsed by the caller (only the status code matters), so
-/// an empty 200 is enough.
+/// Adds nothing to <see cref="BindingAwareHandler"/> beyond a name the Unlink tests read better with;
+/// the DELETE and switch routes it needs are already there.
 /// </summary>
-file sealed class FakeAccountHandler(IReadOnlyList<CharacterSummary> characters) : HttpMessageHandler
-{
-	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-	{
-		if (request.Method == HttpMethod.Delete)
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
-
-		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-		{
-			Content = JsonContent.Create(new
-			{
-				accountId = "acct-1",
-				username = "headwiz",
-				characters,
-				accountSessionToken = "session-token-1",
-				mustChangePassword = false,
-				role = "God",
-				permissions = new[] { "*" },
-			})
-		});
-	}
-}
+file sealed class FakeAccountHandler(IReadOnlyList<CharacterSummary> characters, bool refuseSwitch = false)
+	: BindingAwareHandler(characters, refuseSwitch);
 
 public class AccountAuthServiceActiveCharacterTests
 {
@@ -209,7 +238,7 @@ public class AccountAuthServiceActiveCharacterTests
 	/// below, which exercise the disjoint case that the old test wrongly asserted the opposite of).
 	/// </remarks>
 	[Test]
-	public async Task LoginAsync_ActiveCharacterStillInReloadedRoster_IsNotResetToFirstEntry()
+	public async Task LoginAsync_RebindsToThePrimaryTheServerMarks()
 	{
 		var a = new CharacterSummary(1, 100L, "A", "");
 		var b = new CharacterSummary(2, 200L, "B", "");
@@ -223,21 +252,21 @@ public class AccountAuthServiceActiveCharacterTests
 		await sut.LoginAsync("headwiz", "password-one");
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(a.DbrefNumber);
 
-		// Simulate the user having switched to a different character before the roster reloads.
+		// A local switch is not what makes a character acting any more — the token is, and this one is
+		// still bound to A. Setting it here only moves what the UI shows until the server speaks again.
 		sut.SetActiveCharacter(b);
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(b.DbrefNumber);
 
-		// New roster still contains B, just no longer first (C is).
+		// Log in afresh against a roster where C is primary. A login mints a token bound to the
+		// primary, so the reloaded roster marks C — and the marker, not the previous local value, is
+		// the answer. (That a real switch survives a reload is pinned by the switch tests, where the
+		// token carries it.)
 		using var secondHttp = MakeLoginHttpClient([c, b]);
 		httpClientFactory.CreateClient("api").Returns(secondHttp);
 
 		await sut.LoginAsync("headwiz", "password-one");
 
-		// The new roster's first entry is C — if the membership guard regressed back to "only
-		// reseat when null", this would already pass for the wrong reason; the disjoint-roster
-		// tests below are what actually pin the new behavior. This assertion pins that a merely
-		// reordered-but-present active character is never touched.
-		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(b.DbrefNumber);
+		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(c.DbrefNumber);
 	}
 
 	/// <summary>
@@ -331,5 +360,32 @@ public class AccountAuthServiceActiveCharacterTests
 		await Assert.That(sut.Characters.Select(x => x.DbrefNumber)).IsEquivalentTo([a.DbrefNumber, c.DbrefNumber]);
 		await Assert.That(sut.ActiveCharacter).IsNotNull();
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(a.DbrefNumber);
+	}
+
+	[Test]
+	public async Task UnlinkCharacterAsync_RebindFails_ReportsItInsteadOfClaimingACleanUnlink()
+	{
+		var a = new CharacterSummary(1, 100L, "A", "");
+		var b = new CharacterSummary(2, 200L, "B", "");
+
+		var httpClientFactory = Substitute.For<IHttpClientFactory>();
+		using var http = new HttpClient(new FakeAccountHandler([a, b], refuseSwitch: true)) { BaseAddress = new Uri("https://localhost:8081/") };
+		httpClientFactory.CreateClient("api").Returns(http);
+
+		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(),
+			Substitute.For<ILogger<AccountAuthService>>(), Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		// Hydrate before logging in: a first InitAsync after login reads empty storage and would clear
+		// the token LoginAsync just set (see MakeUnlinkableServiceAsync's note).
+		await sut.InitAsync();
+		await sut.LoginAsync("headwiz", "password-one");
+
+		// A (the acting character) goes; the rebind to B is refused by the server.
+		var (success, error) = await sut.UnlinkCharacterAsync(a.DbrefNumber);
+
+		// The unlink itself stands, so Success is true — but the caller must be able to tell that it
+		// was left with no acting character rather than rebound to a fresh one.
+		await Assert.That(success).IsTrue();
+		await Assert.That(error).IsNotNull();
+		await Assert.That(sut.ActiveCharacter).IsNull();
 	}
 }

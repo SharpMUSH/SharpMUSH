@@ -12,7 +12,7 @@
 @if (Article is null)
 {
     <div class="wiki-article">
-        <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> Wiki</a>
+        <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["Wiki"]</a>
         <MudAlert Severity="@Severity.Info" Variant="Variant.Outlined" Class="mt-2">
             <AuthorizeView Policy="wiki.create">
                 <Authorized>
@@ -44,24 +44,24 @@ else
 {
     <div class="wiki-article-grid">
         <article class="wiki-article-main">
-            <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> Wiki</a>
+            <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["Wiki"]</a>
             <div class="wiki-article-kicker">@CategoryLabel</div>
             <h1 class="wiki-article-title">@Article.Title</h1>
 
             <div class="wiki-article-meta">
                 <span class="wiki-article-edit">
-                    <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:0.8125rem;" /> anyone can edit
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:0.8125rem;" /> @Loc["ResAnyoneCanEdit"]
                 </span>
                 <div style="flex:1;"></div>
                 <AuthorizeView Policy="wiki.edit">
                     <Authorized>
                         <button type="button" class="wiki-btn wiki-btn--solid" @onclick="ActivateEditMode">
-                            <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:0.875rem;" /> Edit
+                            <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:0.875rem;" /> @Loc["WikiEdit"]
                         </button>
                     </Authorized>
                 </AuthorizeView>
                 <a class="wiki-btn" href="@HistoryHref">
-                    <MudIcon Icon="@Icons.Material.Filled.History" Style="font-size:0.875rem;" /> History
+                    <MudIcon Icon="@Icons.Material.Filled.History" Style="font-size:0.875rem;" /> @Loc["ResHistory"]
                 </a>
             </div>
 
@@ -80,7 +80,7 @@ else
             @if (_toc.Count > 0)
             {
                 <div class="wiki-toc-sticky">
-                    <div class="wiki-toc-label">On this page</div>
+                    <div class="wiki-toc-label">@Loc["ResOnThisPage"]</div>
                     <div class="wiki-toc-list">
                         @foreach (var entry in _toc)
                         {
@@ -143,7 +143,7 @@ else
     private List<TocEntry> _toc = [];
 
     private string CategoryLabel =>
-        string.IsNullOrWhiteSpace(Category) ? "General" : char.ToUpper(Category[0]) + Category[1..];
+        string.IsNullOrWhiteSpace(Category) ? Loc["ResCategoryGeneral"] : char.ToUpper(Category[0]) + Category[1..];
 
     private string HistoryHref =>
         $"{WikiRoutes.WikiPathFor(Namespace, Category, Slug)}/history";

@@ -4,12 +4,12 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject SceneService SceneService
 
-<PageTitle>Active Scenes — SharpMUSH</PageTitle>
+<PageTitle>@Loc["WidActiveScenes"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="scenes-active-page" style="padding:var(--cpad);">
     <div style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">@Loc["SceneArchive"]</div>
-    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:0.25rem;">Active Scenes</MudText>
-    <div style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.5rem;">Sessions running right now.</div>
+    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:0.25rem;">@Loc["WidActiveScenes"]</MudText>
+    <div style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.5rem;">@Loc["ResActiveScenesSubtitle"]</div>
 
     @if (_loading)
     {
@@ -22,7 +22,7 @@
     }
     else if (_scenes.Count == 0)
     {
-        <EmptyState>No active scenes running.</EmptyState>
+        <EmptyState>@Loc["WidNoActiveScenes"]</EmptyState>
     }
     else
     {
@@ -34,7 +34,7 @@
                     <div style="flex:1;min-width:0;">
                         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.1875rem;">
                             <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                                     Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">LIVE</MudChip>
+                                     Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">@Loc["RolLiveBadge"]</MudChip>
                             <MudText Style="font-size:0.875rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                                 @SceneTitle(scene)
                             </MudText>
@@ -46,10 +46,10 @@
                             </MudText>
                             <MudText Style="font-size:0.75rem;color:var(--text-faint);">
                                 <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Style="vertical-align:middle;margin-right:0.125rem;font-size:0.8125rem;" />
-                                @scene.PoseCount pose(s)
+                                @Loc["RolPoseCount", scene.PoseCount]
                             </MudText>
                             <MudText Style="font-size:0.75rem;color:var(--text-faint);">
-                                Started @scene.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                @Loc["ResStartedAt", scene.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")]
                             </MudText>
                         </div>
                     </div>
@@ -57,12 +57,12 @@
                         <MudButton Variant="Variant.Text" Size="Size.Small"
                                    Style="color:var(--text-dim);text-transform:none;"
                                    Href="@($"/scenes/{scene.Id}")">
-                            View Log
+                            @Loc["ResViewLog"]
                         </MudButton>
                         <MudButton Variant="Variant.Outlined" Size="Size.Small"
                                    Style="border-color:var(--accent);color:var(--accent);text-transform:none;"
                                    Href="@($"/scenes/{scene.Id}/live")">
-                            Watch Live
+                            @Loc["RolWatchLive"]
                         </MudButton>
                     </div>
                 </MudPaper>
@@ -81,8 +81,8 @@
         _loading = false;
     }
 
-    private static string SceneTitle(SceneSummary s) =>
+    private string SceneTitle(SceneSummary s) =>
         s.Meta.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)
             ? t
-            : $"Scene in {s.RoomName}";
+            : Loc["RolSceneIn", s.RoomName];
 }
