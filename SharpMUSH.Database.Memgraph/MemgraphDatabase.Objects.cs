@@ -116,6 +116,8 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 		var exitKey = ExtractKey(exit.Id!);
 		var destKey = ExtractKey(location.Id);
 		var destLabel = ExtractTypedLabel(location.Id);
+		// Relinking must replace the destination, not accumulate a second HAS_HOME edge.
+		await UnlinkExitAsync(exit, cancellationToken);
 		await ExecuteWithRetryAsync("""
 MATCH (e:Exit {key: $exitKey}), (dest:%DEST_LABEL% {key: $destKey})
 CREATE (e)-[:HAS_HOME]->(dest)

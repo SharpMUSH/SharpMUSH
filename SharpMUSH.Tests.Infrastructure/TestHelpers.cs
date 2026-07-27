@@ -227,4 +227,29 @@ public static class TestHelpers
 				 (c.GetArguments().Length >= 3 &&
 					((c.GetArguments()[2] is AnySharpObject sObj && sObj.Object().DBRef == senderDbRef) ||
 					 (c.GetArguments()[2] is DBRef sd && sd == senderDbRef)))));
+
+	/// <summary>
+	/// Like <see cref="ReceivedNotifyLocalizedWithKey"/>, but also renders the message so the format
+	/// arguments are checked. Asserting the key alone passes even when the command formats it with the
+	/// wrong values — a recipient count, say.
+	/// </summary>
+	public static bool ReceivedNotifyLocalizedRendering(
+		INotifyService notifyService,
+		string key,
+		string expectedText,
+		DBRef? receiverDbRef = null)
+	{
+		var localization = new SharpMUSH.Library.Services.LocalizationService();
+
+		return notifyService.ReceivedCalls()
+			.Where(c =>
+				c.GetMethodInfo().Name == "NotifyLocalized" &&
+				c.GetArguments().Length >= 2 &&
+				c.GetArguments()[1] is string k && k == key &&
+				(receiverDbRef == null ||
+				 (c.GetArguments()[0] is AnySharpObject obj && obj.Object().DBRef == receiverDbRef) ||
+				 (c.GetArguments()[0] is DBRef d && d == receiverDbRef)))
+			.Select(c => c.GetArguments()[^1] as object[] ?? [])
+			.Any(args => localization.Format(key, null, args) == expectedText);
+	}
 }
