@@ -17,12 +17,19 @@ public static class ListWiki
 	private const int SearchScanPageSize = 200;
 	private const int MaxSearchResults = 25;
 
+	/// <param name="locale">The reader's locale, or null for the configured default.</param>
+	/// <param name="forceSource">
+	/// <c>/SOURCE</c>: list source-locale titles, skipping localization entirely.
+	/// </param>
 	public static async ValueTask<MString> List(
 		IMUSHCodeParser parser,
 		IMediator mediator,
 		IWikiService wikiService,
+		IWikiLocalizationService localization,
 		INotifyService notifyService,
-		MString? nsArg)
+		MString? nsArg,
+		string? locale = null,
+		bool forceSource = false)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
@@ -46,7 +53,8 @@ public static class ListWiki
 		{
 			MModule.single($"WIKI: {total} page(s){(ns is null ? "" : $" in namespace '{nsText!.ToLowerInvariant()}'")}:"),
 		};
-		lines.AddRange(pages.Select(p => MModule.single("  " + WikiCommandHelper.FormatPageLine(p))));
+		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
+			.Select(l => MModule.single("  " + l)));
 		if (total > pages.Count)
 			lines.Add(MModule.single($"  … and {total - pages.Count} more. See the web portal for the full index."));
 
@@ -84,12 +92,19 @@ public static class ListWiki
 		return output;
 	}
 
+	/// <param name="locale">The reader's locale, or null for the configured default.</param>
+	/// <param name="forceSource">
+	/// <c>/SOURCE</c>: list source-locale titles, skipping localization entirely.
+	/// </param>
 	public static async ValueTask<MString> Recent(
 		IMUSHCodeParser parser,
 		IMediator mediator,
 		IWikiService wikiService,
+		IWikiLocalizationService localization,
 		INotifyService notifyService,
-		MString? countArg)
+		MString? countArg,
+		string? locale = null,
+		bool forceSource = false)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
@@ -104,11 +119,33 @@ public static class ListWiki
 		var pages = await wikiService.GetRecentChangesAsync(count);
 
 		var lines = new List<MString> { MModule.single("WIKI: Recently edited pages:") };
-		lines.AddRange(pages.Select(p => MModule.single("  " + WikiCommandHelper.FormatPageLine(p))));
+		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
+			.Select(l => MModule.single("  " + l)));
 
 		var output = MModule.multipleWithDelimiter(MModule.single("\n"), lines);
 		await notifyService.Notify(executor, output, executor);
 		return output;
+	}
+
+	/// <summary>
+	/// Formats a listing, resolving each title into the reader's locale unless <paramref name="forceSource"/>.
+	/// </summary>
+	/// <remarks>
+	/// <c>includeDrafts: false</c> even for a wizard: a listing is a discovery surface, and an unpublished
+	/// translation's title appearing in it is exactly the leak the visibility filter exists to prevent. A
+	/// staffer who wants to see a draft translation opens the page.
+	/// </remarks>
+	private static async ValueTask<IReadOnlyList<string>> FormatPagesAsync(
+		IWikiLocalizationService localization,
+		IReadOnlyList<WikiPage> pages,
+		string? locale,
+		bool forceSource)
+	{
+		if (forceSource)
+			return pages.Select(WikiCommandHelper.FormatPageLine).ToList();
+
+		var localized = await localization.LocalizeAllAsync(pages, locale, includeDrafts: false);
+		return localized.Select(WikiCommandHelper.FormatPageLine).ToList();
 	}
 
 	/// <summary>

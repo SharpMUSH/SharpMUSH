@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
@@ -42,8 +43,13 @@ public static class EditWiki
 			return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
+		// Stamped at birth, exactly as the API create path is: SourceLocale is materialised once and never
+		// re-derived on read, so a page that misses its stamp here would need the migration to rescue it.
+		// This is the second and last create path in the codebase.
+		var localization = parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
 		var result = await wikiService.CreateAsync(
-			title, contentArg.ToPlainText(), WikiCommandHelper.EditorDbref(executor), ns, category);
+			title, contentArg.ToPlainText(), WikiCommandHelper.EditorDbref(executor), ns, category,
+			localization.DefaultLocale);
 
 		return await result.Match(
 			async page =>
