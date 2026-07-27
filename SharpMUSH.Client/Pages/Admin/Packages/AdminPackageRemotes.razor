@@ -5,23 +5,23 @@
 @using SharpMUSH.Library.Models.Packages
 @inject PackagesAdminService Packages
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Package Remotes — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["PkgRemotesHeading"] — @Loc["PkgAdminSection"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="pkg-page" style="padding:var(--cpad);">
     <div class="pkg-header">
-        <div class="pkg-kicker">Build · Package sources</div>
-        <h1 class="pkg-title">Package Remotes</h1>
+        <div class="pkg-kicker">@Loc["PkgKickerSources"]</div>
+        <h1 class="pkg-title">@Loc["PkgRemotesHeading"]</h1>
         <p class="pkg-desc">
-            Git repos this game installs packages from. Trust levels are your call —
-            community listings below are curated in the official repo, never self-declared.
+            @Loc["PkgRemotesDescription"]
         </p>
     </div>
 
 <div class="pkg-cols">
     <div>
         <div class="pkg-card">
-            <div class="pkg-card-head">Configured remotes</div>
+            <div class="pkg-card-head">@Loc["PkgConfiguredRemotes"]</div>
             <div class="pkg-card-body">
                 @if (_remotes is null)
                 {
@@ -31,16 +31,16 @@
                 {
                     <MudTable Items="_remotes" Dense="true">
                         <HeaderContent>
-                            <MudTh>Name</MudTh><MudTh>URL</MudTh><MudTh>Trust</MudTh><MudTh>Branch</MudTh><MudTh />
+                            <MudTh>@Loc["PkgName"]</MudTh><MudTh>@Loc["PkgUrl"]</MudTh><MudTh>@Loc["PkgTrust"]</MudTh><MudTh>@Loc["PkgBranch"]</MudTh><MudTh />
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd>@context.Name</MudTd>
                             <MudTd><MudText Typo="Typo.caption">@context.Url</MudText></MudTd>
                             <MudTd><TrustBadge Trust="@context.Trust" /></MudTd>
-                            <MudTd>@(context.Branch ?? "default")</MudTd>
+                            <MudTd>@(context.Branch ?? Loc["PkgDefaultBranch"])</MudTd>
                             <MudTd>
                                 <MudIconButton Icon="@Icons.Material.Filled.TravelExplore" Size="Size.Small"
-                                               title="Browse" Href="@($"/admin/packages/browse?remote={Uri.EscapeDataString(context.Name)}")" />
+                                               title="@Loc["PkgBrowse"]" Href="@($"/admin/packages/browse?remote={Uri.EscapeDataString(context.Name)}")" />
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
                                                OnClick="@(() => DeleteAsync(context.Name))" />
                             </MudTd>
@@ -49,20 +49,20 @@
                 }
 
                 <MudDivider Class="my-4" />
-                <MudText Typo="Typo.subtitle1" Class="mb-2">Add a remote</MudText>
+                <MudText Typo="Typo.subtitle1" Class="mb-2">@Loc["PkgAddRemoteHeading"]</MudText>
                 <MudStack Spacing="2">
-                    <MudTextField @bind-Value="_newName" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    <MudTextField @bind-Value="_newUrl" Label="Git URL" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField @bind-Value="_newName" Label="@Loc["PkgName"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField @bind-Value="_newUrl" Label="@Loc["PkgGitUrlLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
                     <MudStack Row="true" Spacing="2">
-                        <MudSelect T="string" @bind-Value="_newTrust" Label="Trust" Variant="Variant.Outlined" Margin="Margin.Dense">
-                            <MudSelectItem Value="@("official")">official</MudSelectItem>
-                            <MudSelectItem Value="@("community")">community</MudSelectItem>
-                            <MudSelectItem Value="@("unknown")">unknown</MudSelectItem>
+                        <MudSelect T="string" @bind-Value="_newTrust" Label="@Loc["PkgTrust"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="@("official")">@Loc["PkgTrustOfficial"]</MudSelectItem>
+                            <MudSelectItem Value="@("community")">@Loc["PkgTrustCommunity"]</MudSelectItem>
+                            <MudSelectItem Value="@("unknown")">@Loc["PkgTrustUnknown"]</MudSelectItem>
                         </MudSelect>
-                        <MudTextField @bind-Value="_newBranch" Label="Branch (optional)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        <MudTextField @bind-Value="_newBranch" Label="@Loc["PkgBranchOptionalLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
                     </MudStack>
                     <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@AddRemoteAsync">
-                        Add remote
+                        @Loc["PkgAddRemote"]
                     </MudButton>
                 </MudStack>
             </div>
@@ -72,13 +72,13 @@
     <div>
         <div class="pkg-card">
             <div class="pkg-card-head">
-                <span style="flex:1;">Community directory</span>
+                <span style="flex:1;">@Loc["PkgCommunityDirectory"]</span>
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Disabled="@_busy"
                                OnClick="@LoadCommunityAsync" />
             </div>
             <div class="pkg-card-body">
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-                    Accepted community repos, curated in the official packages repo.
+                    @Loc["PkgCommunityDirectoryHint"]
                 </MudText>
                 @if (_community is null)
                 {
@@ -97,12 +97,12 @@
                                                OnClick="@(() => ShowReadmeAsync(entry.Listing))" />
                                 @if (entry.AlreadyConfigured)
                                 {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Success">configured</MudChip>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success">@Loc["PkgConfigured"]</MudChip>
                                 }
                                 else
                                 {
                                     <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@_busy"
-                                               OnClick="@(() => AddCommunityAsync(entry.Listing))">Add</MudButton>
+                                               OnClick="@(() => AddCommunityAsync(entry.Listing))">@Loc["Add"]</MudButton>
                                 }
                             </MudStack>
                             <MudText Typo="Typo.body2">@entry.Listing.Description</MudText>
@@ -111,7 +111,7 @@
                     }
                     @if (_community.Listings.Count == 0)
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">No community repos accepted yet.</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@Loc["PkgNoCommunityRepos"]</MudText>
                     }
                     @foreach (var error in _community.Errors)
                     {
@@ -137,7 +137,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="@(() => _showReadme = false)">Close</MudButton>
+        <MudButton OnClick="@(() => _showReadme = false)">@Loc["PkgClose"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -180,7 +180,7 @@
                 return;
             }
 
-            Snackbar.Add($"Remote '{_newName}' saved.", Severity.Success);
+            Snackbar.Add(Loc["PkgRemoteSaved", _newName], Severity.Success);
             _newName = _newUrl = _newBranch = "";
             _remotes = await Packages.GetRemotesAsync();
             await LoadCommunityAsync();
@@ -198,7 +198,7 @@
         {
             var error = await Packages.UpsertRemoteAsync(new RemoteRequest(
                 listing.Name, listing.Url, "community", listing.Branch));
-            Snackbar.Add(error ?? $"Added '{listing.Name}' as a community remote.", error is null ? Severity.Success : Severity.Error);
+            Snackbar.Add(error ?? Loc["PkgCommunityRemoteAdded", listing.Name], error is null ? Severity.Success : Severity.Error);
             _remotes = await Packages.GetRemotesAsync();
             await LoadCommunityAsync();
         }
@@ -211,7 +211,7 @@
     private async Task DeleteAsync(string name)
     {
         await Packages.DeleteRemoteAsync(name);
-        Snackbar.Add($"Removed remote '{name}'.", Severity.Info);
+        Snackbar.Add(Loc["PkgRemoteRemoved", name], Severity.Info);
         _remotes = await Packages.GetRemotesAsync();
         await LoadCommunityAsync();
     }
@@ -222,6 +222,6 @@
         _readmeHtml = null;
         _showReadme = true;
         var readme = await Packages.GetCommunityReadmeAsync(listing.Url);
-        _readmeHtml = readme?.Html ?? "<em>No README available.</em>";
+        _readmeHtml = readme?.Html ?? $"<em>{Loc["PkgNoReadme"]}</em>";
     }
 }

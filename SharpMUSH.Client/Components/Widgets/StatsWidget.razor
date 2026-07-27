@@ -4,13 +4,14 @@
 @inject CharacterDirectoryService CharacterDirectory
 @inject WikiService WikiService
 @inject SceneService SceneService
+@inject IStringLocalizer<SharedResource> Loc
 
 <MudGrid Spacing="3">
     @foreach (var tile in Tiles)
     {
         <MudItem xs="6" sm="3">
             <MudPaper Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
-                <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">@tile.Label</MudText>
+                <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">@Loc[tile.LabelKey]</MudText>
                 <MudText Style="font-size:1.75rem;font-weight:700;color:var(--accent);line-height:1.2;margin-top:0.25rem;">@tile.Value</MudText>
             </MudPaper>
         </MudItem>
@@ -26,12 +27,12 @@
     private int? _online;
     private int? _activeScenes;
 
-    private (string Label, string Value)[] Tiles =>
+    private (string LabelKey, string Value)[] Tiles =>
     [
-        ("Players Online", _online?.ToString() ?? "—"),
-        ("Active Scenes",  _activeScenes?.ToString() ?? "—"),
-        ("Recent Changes", _recent?.ToString() ?? "—"),
-        ("Characters",     _characters?.ToString() ?? "—"),
+        ("WidPlayersOnline", _online?.ToString() ?? "—"),
+        ("WidActiveScenes",  _activeScenes?.ToString() ?? "—"),
+        ("RecentChanges",    _recent?.ToString() ?? "—"),
+        ("Characters",       _characters?.ToString() ?? "—"),
     ];
 
     protected override async Task OnInitializedAsync()

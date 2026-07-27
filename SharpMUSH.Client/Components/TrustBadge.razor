@@ -1,8 +1,12 @@
 @using SharpMUSH.Library.Models.Packages
+@inject IStringLocalizer<SharedResource> Loc
 
-<MudTooltip Text="@Tooltip">
-    <MudChip T="string" Size="Size.Small" Color="@BadgeColor" Variant="Variant.Filled">
-        @Trust.ToString().ToLowerInvariant()
+@* The badge reads lower-case by design; that is a visual treatment applied in CSS, never by
+   lower-casing a translated word. *@
+<MudTooltip Text="@Loc[TooltipKey]">
+    <MudChip T="string" Size="Size.Small" Color="@BadgeColor" Variant="Variant.Filled"
+             Style="text-transform:lowercase;">
+        @Loc[LabelKey]
     </MudChip>
 </MudTooltip>
 
@@ -16,10 +20,17 @@
         _ => Color.Error
     };
 
-    private string Tooltip => Trust switch
+    private string LabelKey => Trust switch
     {
-        PackageRemoteTrust.Official => "Maintained by the SharpMUSH organization",
-        PackageRemoteTrust.Community => "Known community source — review code before applying",
-        _ => "Unreviewed source — inspect everything before applying"
+        PackageRemoteTrust.Official => "WidTrustOfficial",
+        PackageRemoteTrust.Community => "WidTrustCommunity",
+        _ => "WidTrustUnknown"
+    };
+
+    private string TooltipKey => Trust switch
+    {
+        PackageRemoteTrust.Official => "WidTrustOfficialTooltip",
+        PackageRemoteTrust.Community => "WidTrustCommunityTooltip",
+        _ => "WidTrustUnknownTooltip"
     };
 }

@@ -36,28 +36,40 @@ public static class PortalPermission
 	public const string LayoutAdmin = "layout.admin";
 	public const string ServerAdmin = "server.admin";
 
-	/// <summary>Display metadata for one scope, used by the role-editor permission matrix.</summary>
-	public sealed record Definition(string Scope, string Label, string Group, string Description);
+	/// <summary>
+	/// Display metadata for one scope, used by the role-editor permission matrix. Everything but
+	/// <paramref name="Scope"/> is a <c>SharedResource</c> key rather than text — a static list cannot
+	/// reach the render site's localizer, so the matrix resolves these through <c>Loc[...]</c>.
+	/// </summary>
+	/// <param name="Scope">The stable permission scope string. API surface — never localize or rename.</param>
+	/// <param name="LabelKey">Resource key for the row's short label.</param>
+	/// <param name="GroupKey">Resource key for the section heading this row sits under. Doubles as the grouping key.</param>
+	/// <param name="DescriptionKey">Resource key for the sentence explaining what granting the scope allows.</param>
+	public sealed record Definition(string Scope, string LabelKey, string GroupKey, string DescriptionKey);
+
+	private const string GroupContent = "Content";
+	private const string GroupBuild = "EnumPermGroupBuild";
+	private const string GroupManage = "EnumPermGroupManage";
 
 	/// <summary>Every scope, in editor display order, grouped like the nav.</summary>
 	public static readonly IReadOnlyList<Definition> All =
 	[
-		new(WikiRead, "Wiki · Read", "Content", "View unpublished/draft wiki pages (published pages are public to everyone)."),
-		new(WikiCreate, "Wiki · Create", "Content", "Create new wiki pages."),
-		new(WikiEdit, "Wiki · Edit", "Content", "Edit, rollback, and retag existing (unprotected) wiki pages."),
-		new(WikiDelete, "Wiki · Delete", "Content", "Delete wiki pages and their revision history."),
-		new(WikiAdmin, "Wiki · Moderate", "Content", "Protect/unprotect, edit protected pages, batch operations, and the wiki admin dashboard."),
-		new(MediaUpload, "Image Library · Upload", "Content", "Upload image assets for use in wiki pages."),
-		new(MediaAdmin, "Image Library · Manage", "Content", "Browse and delete the shared media library."),
-		new(SoftcodeUse, "Softcode Editor", "Build", "Open the softcode editor to view and edit object attributes."),
-		new(ApplicationsAdmin, "Applications", "Build", "Register and manage schema-driven applications."),
-		new(PackagesAdmin, "Packages", "Build", "Install, update, and manage softcode packages."),
-		new(ConfigAdmin, "Server Config", "Manage", "Edit server configuration, sitelock, banned names, restrictions."),
-		new(RolesAdmin, "Roles & Permissions", "Manage", "Create roles, edit permissions, and assign roles to accounts."),
-		new(PlayersView, "Players · View", "Manage", "Browse player accounts, characters, and profiles (read-only)."),
-		new(PlayersModerate, "Players · Moderate", "Manage", "Disable, ban, warn, and edit player accounts, characters, and profiles."),
-		new(LayoutAdmin, "Layout Editor", "Manage", "Edit the portal widget layout."),
-		new(ServerAdmin, "Server (God)", "Manage", "Server-level operations and database import. God-only by default."),
+		new(WikiRead, "EnumPermWikiRead", GroupContent, "EnumPermWikiReadDesc"),
+		new(WikiCreate, "EnumPermWikiCreate", GroupContent, "EnumPermWikiCreateDesc"),
+		new(WikiEdit, "EnumPermWikiEdit", GroupContent, "EnumPermWikiEditDesc"),
+		new(WikiDelete, "EnumPermWikiDelete", GroupContent, "EnumPermWikiDeleteDesc"),
+		new(WikiAdmin, "EnumPermWikiAdmin", GroupContent, "EnumPermWikiAdminDesc"),
+		new(MediaUpload, "EnumPermMediaUpload", GroupContent, "EnumPermMediaUploadDesc"),
+		new(MediaAdmin, "EnumPermMediaAdmin", GroupContent, "EnumPermMediaAdminDesc"),
+		new(SoftcodeUse, "EnumPermSoftcodeUse", GroupBuild, "EnumPermSoftcodeUseDesc"),
+		new(ApplicationsAdmin, "EnumPermApplicationsAdmin", GroupBuild, "EnumPermApplicationsAdminDesc"),
+		new(PackagesAdmin, "EnumPermPackagesAdmin", GroupBuild, "EnumPermPackagesAdminDesc"),
+		new(ConfigAdmin, "EnumPermConfigAdmin", GroupManage, "EnumPermConfigAdminDesc"),
+		new(RolesAdmin, "EnumPermRolesAdmin", GroupManage, "EnumPermRolesAdminDesc"),
+		new(PlayersView, "EnumPermPlayersView", GroupManage, "EnumPermPlayersViewDesc"),
+		new(PlayersModerate, "EnumPermPlayersModerate", GroupManage, "EnumPermPlayersModerateDesc"),
+		new(LayoutAdmin, "EnumPermLayoutAdmin", GroupManage, "EnumPermLayoutAdminDesc"),
+		new(ServerAdmin, "EnumPermServerAdmin", GroupManage, "EnumPermServerAdminDesc"),
 	];
 
 	/// <summary>

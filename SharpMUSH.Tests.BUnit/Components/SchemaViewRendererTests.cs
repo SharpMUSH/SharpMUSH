@@ -1,9 +1,12 @@
 using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using SharpMUSH.Client.Components.Schema;
 using SharpMUSH.Client.Models.Applications;
+using SharpMUSH.Client.Resources;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -17,6 +20,7 @@ public class SchemaViewRendererTests : BunitContext
 	public SchemaViewRendererTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 

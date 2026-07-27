@@ -9,7 +9,7 @@
 @inject IConnectionStateService Hub
 @inject ISceneHubControl SceneHub
 
-<PageTitle>Live Scene — SharpMUSH</PageTitle>
+<PageTitle>@Loc["RolLiveScene"] — @Loc["AppTitle"]</PageTitle>
 
 @if (_loading)
 {
@@ -20,9 +20,9 @@
 else if (_notFound)
 {
     <div style="padding:var(--cpad);">
-        <MudAlert Severity="Severity.Warning">Scene not found.</MudAlert>
+        <MudAlert Severity="Severity.Warning">@Loc["RolSceneNotFound"]</MudAlert>
         <MudButton Href="/scenes/active" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
-            Back to Active Scenes
+            @Loc["RolBackToActiveScenes"]
         </MudButton>
     </div>
 }
@@ -32,7 +32,7 @@ else
 
         <div class="scene-live-header" style="padding:0.75rem var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
             <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                     Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">LIVE</MudChip>
+                     Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">@Loc["RolLiveBadge"]</MudChip>
             <MudText Style="font-size:0.9375rem;font-weight:600;">@SceneTitle(_scene!)</MudText>
             <MudText Style="font-size:0.75rem;color:var(--text-dim);margin-left:0.25rem;">
                 <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:0.125rem;" />
@@ -41,21 +41,21 @@ else
             <MudSpacer />
             <MudButton Variant="Variant.Text" Size="Size.Small"
                        Color="Color.Default" Href="@($"/scenes/{Id}")">
-                View Archive
+                @Loc["RolViewArchive"]
             </MudButton>
         </div>
 
         @if (!Hub.IsConnected)
         {
             <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
-                Not connected to the game — connect to post and receive live poses.
+                @Loc["RolNotConnected"]
             </MudAlert>
         }
 
         <div class="scene-log scene-log--live" style="flex:1;min-height:0;padding:1rem var(--cpad);">
             @if (_poses.Count == 0)
             {
-                <MudText Style="color:var(--text-faint);font-style:italic;">Waiting for activity…</MudText>
+                <MudText Style="color:var(--text-faint);font-style:italic;">@Loc["RolWaitingForActivity"]</MudText>
             }
             @foreach (var pose in _poses)
             {
@@ -66,11 +66,11 @@ else
         <div class="scene-live-compose" style="padding:0.625rem var(--cpad);border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:flex-end;gap:0.5rem;flex-shrink:0;">
             <MudSelect T="string" @bind-Value="_mode" Dense="true" Margin="Margin.Dense"
                        Variant="Variant.Outlined" Style="max-width:130px;">
-                <MudSelectItem Value="@("pose")">Pose</MudSelectItem>
-                <MudSelectItem Value="@("say")">Say</MudSelectItem>
-                <MudSelectItem Value="@("semipose")">Semipose</MudSelectItem>
+                <MudSelectItem Value="@("pose")">@Loc["RolModePose"]</MudSelectItem>
+                <MudSelectItem Value="@("say")">@Loc["RolModeSay"]</MudSelectItem>
+                <MudSelectItem Value="@("semipose")">@Loc["RolModeSemipose"]</MudSelectItem>
             </MudSelect>
-            <MudTextField @bind-Value="_composeText" Placeholder="Pose, say, or narrate…"
+            <MudTextField @bind-Value="_composeText" Placeholder="@Loc["RolComposePlaceholder"]"
                           Variant="Variant.Outlined" Margin="Margin.Dense"
                           Lines="2" MaxLines="4"
                           Style="flex:1;background:var(--surface-2);"
@@ -256,8 +256,8 @@ else
         }
     }
 
-    private static string SceneTitle(SceneSummary s) =>
+    private string SceneTitle(SceneSummary s) =>
         s.Meta.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)
             ? t
-            : $"Scene in {s.RoomName}";
+            : Loc["RolSceneIn", s.RoomName];
 }

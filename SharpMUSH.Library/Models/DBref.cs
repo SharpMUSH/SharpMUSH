@@ -39,11 +39,24 @@ public readonly struct DBRef : IEquatable<DBRef>
 
 	public static bool operator !=(DBRef left, DBRef right) => !(left == right);
 
-	public static bool TryParse(string value, out DBRef? dbref)
+	public static bool TryParse(string? value, out DBRef? dbref)
 	{
+		// Null and blank return false rather than throwing, matching every framework TryParse.
+		// This is the inbound boundary for untrusted text — JSON payloads and SignalR arguments
+		// deserialize to null despite non-nullable declarations, since nullable reference types
+		// are not enforced at runtime — so callers must be able to rely on a bool, not a catch.
+		if (string.IsNullOrWhiteSpace(value))
+		{
+			dbref = default;
+			return false;
+		}
+
 		var parsed = HelperFunctions.ParseDbRef(value);
 
-		dbref = parsed.IsSome() ? parsed.AsValue() : default;
+		// Cast the null arm explicitly: with `: default` the ternary's natural type is DBRef, so a
+		// failed parse yielded default(DBRef) — #0 — which then widened to DBRef?. The signature
+		// promised null and never produced it, making `out var` look safe when it was #0.
+		dbref = parsed.IsSome() ? parsed.AsValue() : (DBRef?)null;
 		return parsed.IsSome();
 	}
 

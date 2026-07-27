@@ -6,27 +6,27 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject NavigationManager Nav
 
-<PageTitle>Diff: @Slug — SharpMUSH</PageTitle>
+<PageTitle>@Loc["WkDiffPageTitle", Slug] — @Loc["AppTitle"]</PageTitle>
 
 <div class="wikidiff">
     <a class="wikidiff-back" href="@($"/wiki/{Ns}/{Category}/{Slug}/history")">
-        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> Revision history
+        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["WkRevisionHistory"]
     </a>
     <div class="wikidiff-head">
         <div>
-            <div class="wikidiff-kicker">Comparing revisions</div>
+            <div class="wikidiff-kicker">@Loc["WkComparingRevisions"]</div>
             <h1 class="wikidiff-title">@_displayTitle</h1>
         </div>
         <div class="wikidiff-toggle">
             <button type="button"
                     class="@($"wikidiff-toggle-btn{(_mode == "unified" ? " active" : "")}")"
                     @onclick="@(() => _mode = "unified")">
-                Unified
+                @Loc["WkDiffUnified"]
             </button>
             <button type="button"
                     class="@($"wikidiff-toggle-btn{(_mode == "split" ? " active" : "")}")"
                     @onclick="@(() => _mode = "split")">
-                Side by side
+                @Loc["WkDiffSideBySide"]
             </button>
         </div>
     </div>
@@ -38,28 +38,28 @@
     }
     else if (_fromRev is null || _toRev is null)
     {
-        <MudAlert Severity="Severity.Warning">Could not load one or both revisions. Check your revision numbers.</MudAlert>
+        <MudAlert Severity="Severity.Warning">@Loc["WkDiffLoadFailed"]</MudAlert>
     }
     else
     {
         <div class="wikidiff-revbar">
             <div class="wikidiff-revcard">
                 <div class="wikidiff-revdate">@_fromRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
-                <div class="wikidiff-revmeta">@_fromRev.EditorDbref · rev #@_fromRev.RevisionNumber</div>
+                <div class="wikidiff-revmeta">@_fromRev.EditorDbref · @Loc["WkRevisionShort", _fromRev.RevisionNumber]</div>
             </div>
             <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="font-size:1rem;color:var(--text-faint);flex-shrink:0;" />
             <div class="wikidiff-revcard wikidiff-revcard--new">
                 <div class="wikidiff-revdate">@_toRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
-                <div class="wikidiff-revmeta">@_toRev.EditorDbref · rev #@_toRev.RevisionNumber</div>
+                <div class="wikidiff-revmeta">@_toRev.EditorDbref · @Loc["WkRevisionShort", _toRev.RevisionNumber]</div>
             </div>
         </div>
 
         <div class="wikidiff-stats">
-            <span class="wikidiff-stat-add">+@_addedCount added</span>
-            <span class="wikidiff-stat-del">−@_removedCount removed</span>
+            <span class="wikidiff-stat-add">@Loc["WkLinesAdded", _addedCount]</span>
+            <span class="wikidiff-stat-del">@Loc["WkLinesRemoved", _removedCount]</span>
             @if (!string.IsNullOrWhiteSpace(_toRev.EditSummary))
             {
-                <span class="wikidiff-stat-sum">· Summary: <span style="font-style:italic;">@_toRev.EditSummary</span></span>
+                <span class="wikidiff-stat-sum">· @Loc["Summary"]: <span style="font-style:italic;">@_toRev.EditSummary</span></span>
             }
         </div>
 
@@ -67,11 +67,11 @@
         {
             <div class="wikidiff-body wikidiff-split">
                 <div class="wikidiff-split-col">
-                    <div class="wikidiff-split-head wikidiff-split-head--old">Rev @_fromRev.RevisionNumber — Old</div>
+                    <div class="wikidiff-split-head wikidiff-split-head--old">@Loc["WkDiffRevOld", _fromRev.RevisionNumber]</div>
                     <pre class="wikidiff-pane">@_fromRev.MarkdownSource</pre>
                 </div>
                 <div class="wikidiff-split-col">
-                    <div class="wikidiff-split-head wikidiff-split-head--new">Rev @_toRev.RevisionNumber — New</div>
+                    <div class="wikidiff-split-head wikidiff-split-head--new">@Loc["WkDiffRevNew", _toRev.RevisionNumber]</div>
                     <pre class="wikidiff-pane">@_toRev.MarkdownSource</pre>
                 </div>
             </div>
@@ -133,7 +133,7 @@
     private List<DiffLine> _hunks = [];
     private int _addedCount;
     private int _removedCount;
-    private string _displayTitle = "Page";
+    private string _displayTitle = string.Empty;
 
     private enum DiffLineKind { Header, Added, Removed, Context }
     private record DiffLine(DiffLineKind Kind, string Text);
@@ -141,7 +141,7 @@
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
-        _displayTitle = string.IsNullOrWhiteSpace(Slug) ? "Page" : Slug.Replace('-', ' ');
+        _displayTitle = string.IsNullOrWhiteSpace(Slug) ? Loc["WkPageFallbackTitle"] : Slug.Replace('-', ' ');
 
         if (FromRev.HasValue && ToRev.HasValue)
         {

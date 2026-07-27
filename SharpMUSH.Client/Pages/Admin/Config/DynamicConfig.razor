@@ -9,12 +9,12 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@CategoryTitle - Configuration</PageTitle>
+<PageTitle>@CategoryTitle - @Loc["Configuration"]</PageTitle>
 
 <div class="config-section-page">
     <div class="config-section-header">
         <div>
-            <div class="config-kicker">Admin · server settings</div>
+            <div class="config-kicker">@Loc["ResConfigSectionKicker"]</div>
             <h1 class="config-title">@CategoryTitle</h1>
             @if (!string.IsNullOrWhiteSpace(_categoryMetadata?.Description))
             {
@@ -41,7 +41,7 @@
                         <br/>
                         @Loc["RoutingErrorExpected"] <code>/admin/config/@Category</code>
                         <br/>
-                        This message means the custom page is NOT being matched by the router.
+                        @Loc["ResRoutingErrorHint"]
                     </MudAlert>
                 </MudCardContent>
             </MudCard>
@@ -108,7 +108,7 @@
                     <MudText Typo="Typo.body1">
                         <strong>@Loc["UnsavedChanges"]</strong> @Loc["InThisSection"]
                         <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="ml-2">
-                            @_changedCount @((_changedCount == 1) ? "change" : "changes")
+                            @(_changedCount == 1 ? Loc["ResChangeCountOne", _changedCount] : Loc["ResChangeCountMany", _changedCount])
                         </MudChip>
                     </MudText>
                 </div>
@@ -256,7 +256,7 @@
                     @displayName
                     @if (isChanged)
                     {
-                        <span class="config-changed" title="@($"Default: {prop.DefaultValue}")">changed</span>
+                        <span class="config-changed" title="@Loc["ResDefaultValueTooltip", prop.DefaultValue ?? string.Empty]">@Loc["ResChangedBadge"]</span>
                     }
                 </div>
                 @if (!string.IsNullOrEmpty(prop.Description))
@@ -316,7 +316,7 @@
                             var index = i;
                             <span class="config-chip @(isChanged ? "config-chip--changed" : "")">
                                 @items[index]
-                                <button type="button" class="config-chip-x" title="Remove"
+                                <button type="button" class="config-chip-x" title="@Loc["LayRemove"]"
                                         @onclick="@(() => RemoveListItemAt(prop, index))">×</button>
                             </span>
                         }
@@ -359,7 +359,7 @@
                                         var valueIndex = v;
                                         <span class="config-chip">
                                             @entry.Values[valueIndex]
-                                            <button type="button" class="config-chip-x" title="Remove"
+                                            <button type="button" class="config-chip-x" title="@Loc["LayRemove"]"
                                                     @onclick="@(() => RemoveDictValueItem(prop, entryIndex, valueIndex))">×</button>
                                         </span>
                                     }
@@ -727,17 +727,17 @@
                                 {
                                     if (prop.Name == "_global")
                                     {
-                                        Snackbar.Add(prop.Value.GetString() ?? "Validation failed", Severity.Error);
+                                        Snackbar.Add(prop.Value.GetString() ?? Loc["ResValidationFailed"].Value, Severity.Error);
                                     }
                                     else
                                     {
-                                        _validationErrors[prop.Name] = prop.Value.GetString() ?? "Invalid";
+                                        _validationErrors[prop.Name] = prop.Value.GetString() ?? Loc["ResInvalid"].Value;
                                     }
                                 }
                             }
                             else
                             {
-                                Snackbar.Add(errorsElement.GetString() ?? "Save failed", Severity.Error);
+                                Snackbar.Add(errorsElement.GetString() ?? Loc["ResSaveFailedShort"].Value, Severity.Error);
                             }
                         }
                         else

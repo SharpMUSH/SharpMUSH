@@ -223,7 +223,7 @@ public class AccountPanelTests : BunitContext
 
 		var link = cut.Find("a.phosphor-profile-card");
 		await Assert.That(link.GetAttribute("href")).IsEqualTo("/login");
-		await Assert.That(cut.Markup).Contains("Sign in");
+		await Assert.That(cut.Markup).Contains("AuthSignIn");
 
 		// No account chip/panel affordance at all — not just closed, but structurally absent.
 		await Assert.That(cut.FindAll("button.phosphor-profile-card").Count).IsEqualTo(0);
@@ -251,7 +251,7 @@ public class AccountPanelTests : BunitContext
 			if (cut.FindAll(".account-panel").Count == 0)
 				throw new InvalidOperationException("panel not open yet");
 		});
-		await Assert.That(cut.Markup).Contains("Account Management");
+		await Assert.That(cut.Markup).Contains("AuthAccountManagement");
 	}
 
 	[Test]
@@ -271,7 +271,7 @@ public class AccountPanelTests : BunitContext
 			if (cut.FindAll(".account-panel").Count == 0)
 				throw new InvalidOperationException("panel not open yet");
 		});
-		await Assert.That(cut.Markup).Contains("Account Management");
+		await Assert.That(cut.Markup).Contains("AuthAccountManagement");
 	}
 
 	// ── Panel behavior (direct AccountPanel render) ─────────────────────────────────────────
@@ -431,7 +431,7 @@ public class AccountPanelTests : BunitContext
 	{
 		var cut = RenderPanel(initialOpen: true);
 
-		var link = cut.FindAll(".account-panel-item").Single(el => el.TextContent.Contains("Account Management"));
+		var link = cut.FindAll(".account-panel-item").Single(el => el.TextContent.Contains("AuthAccountManagement"));
 		await Assert.That(link.TagName).IsEqualTo("A");
 		await Assert.That(link.GetAttribute("href")).IsEqualTo("/account");
 
@@ -452,7 +452,7 @@ public class AccountPanelTests : BunitContext
 		var invoked = false;
 		var cut = RenderPanel(initialOpen: true, onLogout: EventCallback.Factory.Create(this, () => invoked = true));
 
-		cut.FindAll(".account-panel-item").Single(el => el.TextContent.Contains("Logout")).Click();
+		cut.FindAll(".account-panel-item").Single(el => el.TextContent.Contains("AuthLogout")).Click();
 
 		await Assert.That(invoked).IsTrue();
 		cut.WaitForAssertion(() =>
@@ -468,7 +468,7 @@ public class AccountPanelTests : BunitContext
 		var cut = RenderPanel(characters: [], initialOpen: true);
 
 		await Assert.That(cut.FindAll(".account-panel-item--inert").Count).IsEqualTo(1);
-		await Assert.That(cut.Find(".account-panel-item--inert").TextContent).Contains("No character");
+		await Assert.That(cut.Find(".account-panel-item--inert").TextContent).Contains("AuthNoCharacter");
 
 		// The submenu section must not exist at all — not just be unreachable.
 		await Assert.That(cut.FindAll(".account-panel-level--submenu").Count).IsEqualTo(0);
@@ -476,7 +476,7 @@ public class AccountPanelTests : BunitContext
 		await Assert.That(cut.FindAll(".account-panel-switch-btn").Count).IsEqualTo(0);
 
 		// Account Management and Logout are unaffected by an empty roster.
-		await Assert.That(cut.Markup).Contains("Account Management");
-		await Assert.That(cut.Markup).Contains("Logout");
+		await Assert.That(cut.Markup).Contains("AuthAccountManagement");
+		await Assert.That(cut.Markup).Contains("AuthLogout");
 	}
 }

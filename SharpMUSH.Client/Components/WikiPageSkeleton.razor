@@ -1,5 +1,7 @@
+@inject IStringLocalizer<SharedResource> Loc
+
 <MudCard Class="WikiContent" Style="min-height:100%;width:100%;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-lg);" Elevation="0"
-         aria-busy="true" aria-label="Loading wiki page">
+         aria-busy="true" aria-label="@Loc["WidLoadingWikiPage"]">
     <MudCardHeader>
         <MudSkeleton Width="60%" Height="42px" />
     </MudCardHeader>

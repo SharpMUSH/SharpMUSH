@@ -6,10 +6,10 @@ namespace SharpMUSH.Client.Services;
 /// A customizable page layout: its scope key, a human label, and the zones an admin may edit for it.
 /// </summary>
 /// <param name="Scope">Machine key passed to <see cref="ILayoutService"/> and the layout REST API.</param>
-/// <param name="DisplayName">Human-readable label shown in the admin layout index.</param>
-/// <param name="Description">Short explanation of what the scope drives.</param>
+/// <param name="DisplayNameKey"><c>SharedResource</c> key for the label shown in the admin layout index.</param>
+/// <param name="DescriptionKey"><c>SharedResource</c> key for a short explanation of what the scope drives.</param>
 /// <param name="Zones">Zones this scope renders, and therefore the zones the editor exposes.</param>
-public record LayoutScope(string Scope, string DisplayName, string Description, WidgetZone[] Zones);
+public record LayoutScope(string Scope, string DisplayNameKey, string DescriptionKey, WidgetZone[] Zones);
 
 /// <summary>
 /// The known, editable layout scopes. <c>"global"</c> drives the shell chrome (top bar, sidebars,
@@ -24,13 +24,13 @@ public static class LayoutScopes
 
 	public static readonly IReadOnlyList<LayoutScope> All =
 	[
-		new(Global, "Site Chrome", "Top bar, sidebars, and footer shared by every page.",
+		new(Global, "LayScopeGlobal", "LayScopeGlobalDesc",
 			[WidgetZone.TopBar, WidgetZone.LeftSidebar, WidgetZone.RightSidebar, WidgetZone.Footer]),
-		new(Home, "Home Page", "The main content of the landing page.",
+		new(Home, "LayScopeHome", "LayScopeHomeDesc",
 			[WidgetZone.MainContent]),
-		new(WikiIndex, "Wiki Index", "The /wiki landing page.",
+		new(WikiIndex, "LayScopeWikiIndex", "LayScopeWikiIndexDesc",
 			[WidgetZone.MainContent]),
-		new(Profile, "Character Profile", "The /character/{name} page body and right rail.",
+		new(Profile, "LayScopeProfile", "LayScopeProfileDesc",
 			[WidgetZone.MainContent, WidgetZone.RightSidebar]),
 	];
 
