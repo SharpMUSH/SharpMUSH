@@ -86,7 +86,7 @@ public partial class WikiAssetController(
 			}
 		}
 
-		var uploaderDbref = User.GetActingCharacterDbref();
+		var uploaderDbref = User.GetActingCharacter()?.ToString();
 		if (string.IsNullOrEmpty(uploaderDbref))
 			return Unauthorized(new { error = "No character on this session." });
 

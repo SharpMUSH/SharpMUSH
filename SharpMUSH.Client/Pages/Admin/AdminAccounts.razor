@@ -2,12 +2,13 @@
 @attribute [Authorize(Roles = "Wizard,God")]
 @inject AdminAccountsService AccountsService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Accounts — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["AdmAccountsTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
-<MudText Typo="Typo.h5" Class="mb-4">Accounts</MudText>
+<MudText Typo="Typo.h5" Class="mb-4">@Loc["AdmAccountsTitle"]</MudText>
 
-<MudTextField T="string" @bind-Value="_search" Placeholder="Search username or email…"
+<MudTextField T="string" @bind-Value="_search" Placeholder="@Loc["AdmAccountsSearchPlaceholder"]"
               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
               Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnSearchDebouncedAsync" Class="mb-4" />
 
@@ -19,10 +20,10 @@ else
 {
     <MudTable Items="_rows" Dense="true" Hover="true">
         <HeaderContent>
-            <MudTh>Username</MudTh>
-            <MudTh>Email</MudTh>
-            <MudTh>Status</MudTh>
-            <MudTh>Characters</MudTh>
+            <MudTh>@Loc["AdmUsername"]</MudTh>
+            <MudTh>@Loc["AdmEmail"]</MudTh>
+            <MudTh>@Loc["AdmStatus"]</MudTh>
+            <MudTh>@Loc["Characters"]</MudTh>
             <MudTh />
         </HeaderContent>
         <RowTemplate>
@@ -31,15 +32,15 @@ else
             <MudTd>
                 @if (context.IsDisabled)
                 {
-                    <MudChip T="string" Color="Color.Error" Size="Size.Small">DISABLED</MudChip>
+                    <MudChip T="string" Color="Color.Error" Size="Size.Small">@Loc["AdmAccountDisabledChip"]</MudChip>
                 }
                 else if (context.MustChangePassword)
                 {
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">must change pw</MudChip>
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">@Loc["AdmAccountMustChangePasswordChip"]</MudChip>
                 }
                 else
                 {
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small">active</MudChip>
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small">@Loc["AdmAccountActiveChip"]</MudChip>
                 }
             </MudTd>
             <MudTd>
@@ -52,10 +53,10 @@ else
                 }
             </MudTd>
             <MudTd>
-                <MudButton Size="Size.Small" OnClick="@(() => OpenResetAsync(context))">Reset password</MudButton>
+                <MudButton Size="Size.Small" OnClick="@(() => OpenResetAsync(context))">@Loc["AdmResetPassword"]</MudButton>
                 <MudButton Size="Size.Small" Color="@(context.IsDisabled ? Color.Success : Color.Error)"
                            OnClick="@(() => ToggleDisabledAsync(context))">
-                    @(context.IsDisabled ? "Enable" : "Disable")
+                    @(context.IsDisabled ? Loc["AdmEnableAccount"] : Loc["AdmDisableAccount"])
                 </MudButton>
             </MudTd>
         </RowTemplate>
@@ -86,15 +87,15 @@ else
     {
         var (success, error) = await AccountsService.SetDisabledAsync(row.Id, !row.IsDisabled);
         Snackbar.Add(success
-            ? $"Account '{row.Username}' {(row.IsDisabled ? "enabled" : "disabled")}."
-            : error ?? "Operation failed.", success ? Severity.Success : Severity.Error);
+            ? Loc[row.IsDisabled ? "AdmAccountEnabled" : "AdmAccountDisabled", row.Username].Value
+            : error ?? Loc["AdmOperationFailed"].Value, success ? Severity.Success : Severity.Error);
         await LoadAsync();
     }
 
     private async Task UnlinkAsync(AdminAccountsService.AdminAccountRow row, AdminAccountsService.AdminCharacterSummary character)
     {
         var (success, error) = await AccountsService.UnlinkCharacterAsync(row.Id, character.DbrefNumber);
-        Snackbar.Add(success ? $"Unlinked {character.Name} from '{row.Username}'." : error ?? "Unlink failed.",
+        Snackbar.Add(success ? Loc["AdmCharacterUnlinked", character.Name, row.Username].Value : error ?? Loc["AdmUnlinkFailed"].Value,
             success ? Severity.Success : Severity.Error);
         await LoadAsync();
     }
@@ -104,8 +105,8 @@ else
         var temp = $"temp-{Guid.NewGuid().ToString("N")[..10]}";
         var (success, error) = await AccountsService.ResetPasswordAsync(row.Id, temp);
         Snackbar.Add(success
-            ? $"Password for '{row.Username}' reset to: {temp} — share it securely; they must change it at next login."
-            : error ?? "Reset failed.", success ? Severity.Warning : Severity.Error, o => o.RequireInteraction = true);
+            ? Loc["AdmPasswordReset", row.Username, temp].Value
+            : error ?? Loc["AdmResetFailed"].Value, success ? Severity.Warning : Severity.Error, o => o.RequireInteraction = true);
         await LoadAsync();
     }
 }

@@ -198,6 +198,24 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	/// <summary>
+	/// Builds the lexer for one parse. Recognizers are constructed with ANTLR's
+	/// <c>ConsoleErrorListener</c> attached; the parser's is swapped for a collecting listener at
+	/// each call site, but the lexer's was left in place, so anything it disliked printed to the
+	/// server's stdout instead of reaching the player. Nothing consumes lexer diagnostics — the
+	/// grammar's catch-all rules make token recognition total — so the listener is simply removed.
+	/// </summary>
+	private static SharpMUSHLexer CreateLexer(StringSpanInputStream inputStream)
+	{
+		var lexer = new SharpMUSHLexer(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
+		lexer.RemoveErrorListeners();
+
+		return lexer;
+	}
+
+	/// <summary>
 	/// Gets the configured ANTLR prediction mode based on configuration.
 	/// </summary>
 	private PredictionMode GetPredictionMode()
@@ -247,10 +265,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		parser ??= this;
 
 		StringSpanInputStream inputStream = new(MModule.plainText(text), methodName);
-		SharpMUSHLexer sharpLexer = new(inputStream)
-		{
-			TokenFactory = OptimizedTokenFactory.Default
-		};
+		var sharpLexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
@@ -449,10 +464,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var plaintext = MModule.plainText(text);
 		StringSpanInputStream inputStream = new(plaintext, nameof(CommandListParseVisitor));
-		SharpMUSHLexer sharpLexer = new(inputStream)
-		{
-			TokenFactory = OptimizedTokenFactory.Default
-		};
+		var sharpLexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
@@ -567,8 +579,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		return result ?? CallState.Empty;
 	}
 
+	// Enter through the EOF-anchored rule, as the diagnostic and semantic-token paths already do.
+	// commaCommandArgs on its own can stop early and report success on a prefix, silently dropping
+	// whatever followed instead of surfacing it to the lenient recovery path.
 	public ValueTask<CallState?> CommandCommaArgsParse(MString text)
-		=> ParseInternal(text, p => p.commaCommandArgs(), nameof(CommandCommaArgsParse),
+		=> ParseInternal(text, p => p.startPlainCommaCommandArgs(), nameof(CommandCommaArgsParse),
 			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	public ValueTask<CallState?> CommandSingleArgParse(MString text)
@@ -590,10 +605,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var plaintext = MModule.plainText(text);
 		StringSpanInputStream inputStream = new(plaintext, nameof(Tokenize));
-		SharpMUSHLexer sharpLexer = new(inputStream)
-		{
-			TokenFactory = OptimizedTokenFactory.Default
-		};
+		var sharpLexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 
@@ -632,10 +644,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var plaintext = MModule.plainText(text);
 		StringSpanInputStream inputStream = new(plaintext, nameof(ValidateAndGetErrors));
-		SharpMUSHLexer sharpLexer = new(inputStream)
-		{
-			TokenFactory = OptimizedTokenFactory.Default
-		};
+		var sharpLexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
@@ -736,10 +745,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var plaintext = MModule.plainText(text);
 		StringSpanInputStream inputStream = new(plaintext, nameof(GetSemanticTokens));
-		SharpMUSHLexer sharpLexer = new(inputStream)
-		{
-			TokenFactory = OptimizedTokenFactory.Default
-		};
+		var sharpLexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
@@ -1074,7 +1080,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var tokens = tokenStream.tokens;
 		var depth = 0;
-		var pendingEscapedOpeners = 0;
 
 		for (var i = 0; i < tokens.Count; i++)
 		{
@@ -1090,24 +1095,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				{
 					depth--;
 				}
-				else
+				else if (token is IWritableToken writable)
 				{
 					// Orphaned CBRACK at depth 0 — treat as literal ']'
-					if (token is IWritableToken writable)
-					{
-						writable.Type = SharpMUSHLexer.OTHER;
-					}
-					if (pendingEscapedOpeners > 0)
-						pendingEscapedOpeners--;
+					writable.Type = SharpMUSHLexer.OTHER;
 				}
-			}
-			else if (depth == 0
-				&& token.Type == SharpMUSHLexer.ESCAPE
-				&& i + 1 < tokens.Count
-				&& tokens[i + 1].Type == SharpMUSHLexer.ANY
-				&& tokens[i + 1].Text == "[")
-			{
-				pendingEscapedOpeners++;
 			}
 		}
 	}
@@ -1116,7 +1108,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var tokens = tokenStream.tokens;
 		var depth = 0;
-		var pendingEscapedOpeners = 0;
 
 		for (var i = 0; i < tokens.Count; i++)
 		{
@@ -1132,24 +1123,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				{
 					depth--;
 				}
-				else
+				else if (token is IWritableToken writable)
 				{
 					// Orphaned CBRACE at depth 0 — treat as literal '}'
-					if (token is IWritableToken writable)
-					{
-						writable.Type = SharpMUSHLexer.OTHER;
-					}
-					if (pendingEscapedOpeners > 0)
-						pendingEscapedOpeners--;
+					writable.Type = SharpMUSHLexer.OTHER;
 				}
-			}
-			else if (depth == 0
-				&& token.Type == SharpMUSHLexer.ESCAPE
-				&& i + 1 < tokens.Count
-				&& tokens[i + 1].Type == SharpMUSHLexer.ANY
-				&& tokens[i + 1].Text == "{")
-			{
-				pendingEscapedOpeners++;
 			}
 		}
 	}

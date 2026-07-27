@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -17,7 +18,11 @@ public class BootstrapService(
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
-		if (await accountService.HasAnyAccountAsync(cancellationToken))
+		// Reserved accounts don't count as "someone has registered" — they are created by the
+		// server, so counting them would make this guard permanently true and the admin account
+		// would never be pre-generated.
+		var accounts = await accountService.GetAllAccountsAsync(cancellationToken);
+		if (accounts.Any(a => !SystemAccount.IsReserved(a.Username)))
 		{
 			logger.LogDebug("Bootstrap: accounts already exist, skipping.");
 			return;

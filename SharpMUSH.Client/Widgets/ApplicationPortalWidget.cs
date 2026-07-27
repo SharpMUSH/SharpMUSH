@@ -14,7 +14,6 @@ public sealed class ApplicationPortalWidget(PortalApplication app) : IPortalWidg
 {
 	public string Name => app.Slug;
 	public string DisplayName => app.DisplayName;
-	public string Description => $"Application · {app.SchemaUrl}";
 	public WidgetSize DefaultSize => WidgetSize.Large;
 	public WidgetZone[] AllowedZones => app.ZoneEnums.ToArray();
 	public Type ComponentType => typeof(SchemaWidget);

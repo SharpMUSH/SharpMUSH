@@ -83,7 +83,7 @@ public class GalleryController(
 
 		// Never default a missing identity to God (#1): reject so uploads cannot be
 		// misattributed or bypass identity-based controls downstream.
-		var uploaderDbref = User.GetActingCharacterDbref();
+		var uploaderDbref = User.GetActingCharacter()?.ToString();
 		if (string.IsNullOrEmpty(uploaderDbref))
 			return Unauthorized("Missing character identity.");
 		await using var content = file.OpenReadStream();
@@ -188,13 +188,9 @@ public class GalleryController(
 
 	private async Task<AnySharpObject?> ResolveViewerAsync(CancellationToken ct)
 	{
-		var raw = User.GetActingCharacterDbref();
-		if (string.IsNullOrWhiteSpace(raw)) return null;
+		if (User.GetActingCharacter() is not { } character) return null;
 
-		var numberPart = raw.TrimStart('#').Split(':', 2)[0];
-		if (!int.TryParse(numberPart, out var number)) return null;
-
-		var result = await mediator.Send(new GetObjectNodeQuery(new DBRef(number, null)), ct);
+		var result = await mediator.Send(new GetObjectNodeQuery(character), ct);
 		return result.IsNone ? null : result.Known;
 	}
 

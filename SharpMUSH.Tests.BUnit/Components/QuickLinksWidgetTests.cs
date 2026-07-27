@@ -2,10 +2,13 @@ using System.Text.Json;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor;
 using MudBlazor.Services;
 using SharpMUSH.Client.Components.Widgets;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Library.Models.Portal.Widgets;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -20,6 +23,7 @@ public abstract class QuickLinksWidgetTestBase : BunitContext
 	protected QuickLinksWidgetTestBase()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		Auth = AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -59,7 +63,7 @@ public class QuickLinksWidgetNullConfigTests : QuickLinksWidgetTestBase
 			.Add(c => c.Config, (JsonElement?)null)
 			.Add(c => c.Zone, WidgetZone.TopBar.ToString()));
 
-		await Assert.That(cut.Markup).Contains("Configure Quick Links");
+		await Assert.That(cut.Markup).Contains("WidConfigureQuickLinks");
 	}
 }
 

@@ -118,7 +118,7 @@ public class MushBasicAuthenticationHandler(
 			new("character_key", player.Object.Key.ToString()),
 			new("character_creation_time", player.Object.CreationTime.ToString()),
 			new("character_name", player.Object.Name),
-			new(GameHub.CharacterDbrefClaim, $"#{player.Object.Key}")
+			new(GameHub.CharacterDbrefClaim, player.Object.DBRef.ToString())
 		};
 
 		var identity = new ClaimsIdentity(claims, SchemeName);

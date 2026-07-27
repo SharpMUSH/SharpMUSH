@@ -10,8 +10,7 @@ namespace SharpMUSH.Client.Widgets;
 public sealed class QuickLinksWidgetDescriptor : IPortalWidget
 {
 	public string Name => "QuickLinks";
-	public string DisplayName => "Quick Links";
-	public string Description => "Shows a configurable list of links.";
+	public string DisplayName => "LayWidgetQuickLinks";
 	public WidgetSize DefaultSize => WidgetSize.Small;
 	public WidgetZone[] AllowedZones =>
 	[

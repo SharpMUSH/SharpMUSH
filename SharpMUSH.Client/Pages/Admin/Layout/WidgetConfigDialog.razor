@@ -1,23 +1,24 @@
+@using System.Net
 @using System.Text.Json
-@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
 
 <MudDialog>
     <DialogContent>
         @if (IsSpacer)
         {
             <MudText Typo="Typo.body2" Class="mb-3" Style="color:var(--text-dim);">
-                Height of the empty space, in pixels. Its width follows the placement's column span.
+                @Loc["LaySpacerHelp"]
             </MudText>
-            <MudNumericField @bind-Value="_height" Label="Height (px)" Variant="Variant.Outlined"
+            <MudNumericField @bind-Value="_height" Label="@Loc["LaySpacerHeight"]" Variant="Variant.Outlined"
                              Min="0" Max="600" Step="4" />
         }
         else
         {
             <MudText Typo="Typo.body2" Class="mb-2" Style="color:var(--text-dim);">
-                Per-instance configuration for <strong>@WidgetName</strong>, as JSON. Leave empty for no config.
+                @((MarkupString)string.Format(Loc["LayConfigJsonHelp"].Value, $"<strong>{WebUtility.HtmlEncode(WidgetName)}</strong>"))
             </MudText>
             <MudTextField @bind-Value="_json" Variant="Variant.Outlined" Lines="10"
-                          Label="Config JSON" Class="layout-config-json"
+                          Label="@Loc["LayConfigJsonLabel"]" Class="layout-config-json"
                           Style="font-family:var(--font-mono);font-size:0.78125rem;" />
             @if (_error is not null)
             {
@@ -26,8 +27,8 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Apply</MudButton>
+        <MudButton OnClick="Cancel">@Loc["Cancel"]</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">@Loc["LayApply"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -106,7 +107,7 @@
         }
         catch (JsonException ex)
         {
-            _error = $"Invalid JSON: {ex.Message}";
+            _error = Loc["LayInvalidJson", ex.Message];
             return;
         }
 

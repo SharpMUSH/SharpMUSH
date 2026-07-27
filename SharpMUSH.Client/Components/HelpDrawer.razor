@@ -6,6 +6,7 @@
 @using SharpMUSH.Client.Services
 @inject HelpService Help
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedResource> Loc
 @implements IAsyncDisposable
 
 <MudDrawer @bind-Open="_open"
@@ -18,16 +19,16 @@
 
         <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid #333;flex-shrink:0;">
             <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Secondary" Size="Size.Small" />
-            <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Style="flex:1;">MUSH Help</MudText>
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Style="flex:1;">@Loc["TermMushHelp"]</MudText>
 
             @if (_history.Count > 0)
             {
-                <MudTooltip Text="Back">
+                <MudTooltip Text="@Loc["TermHelpBack"]">
                     <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"
                                    Color="Color.Default" OnClick="GoBack" />
                 </MudTooltip>
             }
-            <MudTooltip Text="Close">
+            <MudTooltip Text="@Loc["TermHelpClose"]">
                 <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
                                Color="Color.Default" OnClick="Close" />
             </MudTooltip>
@@ -39,7 +40,7 @@
                              SearchFunc="SearchEntries"
                              ValueChanged="OnEntrySelected"
                              ToStringFunc="@(e => e?.Name ?? string.Empty)"
-                             Placeholder="Search functions &amp; commands…"
+                             Placeholder="@Loc["TermHelpSearchPlaceholder"]"
                              Variant="Variant.Outlined"
                              Margin="Margin.Dense"
                              Adornment="Adornment.Start"
@@ -55,7 +56,7 @@
             @if (_current is null)
             {
                 <div style="color:#666;font-style:italic;font-size:0.8125rem;margin-top:1rem;">
-                    Search above or click "📖 Show full help" in the editor.
+                    @Loc["TermHelpEmpty"]
                 </div>
             }
             else
@@ -65,10 +66,10 @@
                         @(_current.IsCommand ? _current.Name : _current.Name + "()")
                     </MudText>
                     <MudText Typo="Typo.caption" Style="color:#666;">
-                        @(_current.IsCommand ? "Command" : "Function")
+                        @(_current.IsCommand ? Loc["TermHelpKindCommand"] : Loc["TermHelpKindFunction"])
                         @if (_current.Switches.Length > 0)
                         {
-                            <text> · Switches: @string.Join(", ", _current.Switches)</text>
+                            <text> · @Loc["TermHelpSwitches", string.Join(", ", _current.Switches)]</text>
                         }
                     </MudText>
                 </div>

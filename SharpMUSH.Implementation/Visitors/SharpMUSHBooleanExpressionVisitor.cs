@@ -76,10 +76,27 @@ public class SharpMUSHBooleanExpressionVisitor(
 	}
 
 	public override Expression VisitLockAndExpr(SharpMUSHBoolExpParser.LockAndExprContext context)
-		=> Expression.AndAlso(Visit(context.lockExpr()), Visit(context.lockExprList()));
+		=> Fold(context.lockExpr(), Expression.AndAlso);
 
 	public override Expression VisitLockOrExpr(SharpMUSHBoolExpParser.LockOrExprContext context)
-		=> Expression.OrElse(Visit(context.lockExpr()), Visit(context.lockExprList()));
+		=> Fold(context.lockAndExpr(), Expression.OrElse);
+
+	/// <summary>
+	/// Combines the operands of one precedence level left-to-right. A single operand passes
+	/// through untouched, so the `a` in `a | b` and the bare `a` produce identical trees.
+	/// Folding left keeps short-circuit evaluation in source order.
+	/// </summary>
+	private Expression Fold<T>(T[] operands, Func<Expression, Expression, BinaryExpression> combine)
+		where T : Antlr4.Runtime.ParserRuleContext
+	{
+		var result = Visit(operands[0]);
+		for (var i = 1; i < operands.Length; i++)
+		{
+			result = combine(result, Visit(operands[i]));
+		}
+
+		return result;
+	}
 
 	public override Expression VisitLockExpr(SharpMUSHBoolExpParser.LockExprContext context)
 	{

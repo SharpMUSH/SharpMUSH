@@ -10,8 +10,7 @@ namespace SharpMUSH.Client.Widgets;
 public sealed class WikiBodyWidgetDescriptor : IPortalWidget
 {
 	public string Name => "WikiBody";
-	public string DisplayName => "Wiki Body";
-	public string Description => "A character's free-form wiki biography.";
+	public string DisplayName => "LayWidgetWikiBody";
 	public WidgetSize DefaultSize => WidgetSize.Large;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent];
 	public Type ComponentType => typeof(WikiBodyWidget);

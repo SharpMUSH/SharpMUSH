@@ -113,6 +113,21 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		return lockee.Object().Locks.GetValueOrDefault(standardType.ToString(), defaultLockData).LockString;
 	}
 
+	/// <summary>
+	/// The lock exactly as stored, or <c>null</c> when the object has none — the distinction
+	/// <see cref="Get"/> erases by defaulting to <c>#TRUE</c>.
+	/// <para>
+	/// An unset lock passes everybody, which is the right default for gates like @lock/enter but the
+	/// wrong one for a permission check: evaluating an absent control lock would hand control of every
+	/// unlocked object to everyone. PennMUSH <c>controls()</c> (<c>predicat.c:416</c>) reads the raw
+	/// boolexp and skips it when it is <c>TRUE_BOOLEXP</c> for exactly this reason.
+	/// </para>
+	/// </summary>
+	public static string? GetIfSet(LockType standardType, AnySharpObject lockee)
+		=> lockee.Object().Locks.TryGetValue(standardType.ToString(), out var lockData)
+			? lockData.LockString
+			: null;
+
 	public bool Evaluate(
 		string lockString,
 		AnySharpObject gated,

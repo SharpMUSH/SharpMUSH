@@ -29,6 +29,27 @@ public class ParserBehaviorUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// lit() returns its argument untouched, and "untouched" includes markup. The content used
+	/// to be rebuilt from GetText(), which concatenates token text and therefore returns the
+	/// characters without the colour runs the source carried — so colour applied to text stored
+	/// in an attribute was lost the moment it passed through lit().
+	/// </summary>
+	[Test]
+	public async Task LitPreservesMarkup()
+	{
+		var coloured = (await Parser.FunctionParse(MModule.single("ansi(+red,test)")))?.Message!;
+		await Assert.That(coloured.ToString()).Contains("[");
+
+		// Equivalent to lit(<coloured text>) arriving from a stored attribute value.
+		var source = MModule.multiple([MModule.single("lit("), coloured, MModule.single(")")]);
+
+		var result = (await Parser.FunctionParse(source))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("test");
+		await Assert.That(result.ToString()).Contains("[");
+	}
+
 	// Penn fn.1-fn.3: fn() calls functions by name
 	[Test]
 	[Arguments("fn(add,1,2)", "3")]
@@ -47,6 +68,71 @@ public class ParserBehaviorUnitTests
 	[Test]
 	[Arguments("fn(notafunction)", "#-1 FUNCTION (NOTAFUNCTION) NOT FOUND")]
 	public async Task FnError(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// A name that is not a function is only an error where PennMUSH sets
+	/// PE_FUNCTION_MANDATORY, i.e. inside <c>[...]</c> (src/parse.c). Everywhere else the
+	/// text is copied through, so ordinary prose containing parentheses survives evaluation.
+	/// </summary>
+	[Test]
+	[Arguments("notafunction(bar)", "notafunction(bar)")]
+	[Arguments("Hello there(friend)", "Hello there(friend)")]
+	[Arguments("strcat(notafunction(1))", "notafunction(1)")]
+	[Arguments("strcat(a,notafunction(1),b)", "anotafunction(1)b")]
+	// Still literal when a bracket encloses the whole expression: the argument evaluation
+	// inside strcat is what strips PE_FUNCTION_MANDATORY, and the bracket is outside it.
+	[Arguments("[strcat(notafunction(1))]", "notafunction(1)")]
+	public async Task UnknownFunctionStaysLiteralOutsideBrackets(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("[notafunction(bar)]", "#-1 FUNCTION (NOTAFUNCTION) NOT FOUND")]
+	[Arguments("[NotAFunction(bar)]", "#-1 FUNCTION (NOTAFUNCTION) NOT FOUND")]
+	[Arguments("strcat([notafunction(1)])", "#-1 FUNCTION (NOTAFUNCTION) NOT FOUND")]
+	public async Task UnknownFunctionErrorsInsideBrackets(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// The contents of a non-call are still evaluated with function recognition off, exactly
+	/// as PennMUSH clears PE_FUNCTION_CHECK before copying the parenthesised text through —
+	/// so a nested call stays literal, but a bracket inside re-enables evaluation.
+	/// </summary>
+	[Test]
+	[Arguments("notafunction(add(1,2))", "notafunction(add(1,2))")]
+	[Arguments("notafunction([add(1,2)])", "notafunction(3)")]
+	[Arguments("notafunction(a,b)", "notafunction(a,b)")]
+	// Evaluation reaches into the copied text: a substitution is still substituted, whether it
+	// sits directly in the non-call or inside a call that the non-call demoted to text.
+	[Arguments("notafunction(%#)", "notafunction(#1)")]
+	[Arguments("notafunction(strlen(%#))", "notafunction(strlen(#1))")]
+	[Arguments("notafunction(add(%#,2))", "notafunction(add(#1,2))")]
+	public async Task NonCallContentsEvaluateWithoutFunctionRecognition(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// The same rule reached through function-argument braces, which also clear function
+	/// recognition while leaving evaluation on. These already worked — the brace grammar treats a
+	/// function name as plain text so no call is ever recognised inside — and they guard against
+	/// the non-call path regressing them.
+	/// </summary>
+	[Test]
+	[Arguments("strcat({%#})", "#1")]
+	[Arguments("strcat({strlen(%#)})", "strlen(#1)")]
+	[Arguments("strcat({[strlen(%#)]})", "2")]
+	public async Task FunctionArgumentBracesEvaluateWithoutFunctionRecognition(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);

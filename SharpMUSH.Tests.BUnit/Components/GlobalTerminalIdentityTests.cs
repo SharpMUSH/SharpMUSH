@@ -3,13 +3,16 @@ using System.Net.Http.Json;
 using Bunit;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.JSInterop;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -90,6 +93,8 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		var hostEnv = Substitute.For<IWebAssemblyHostEnvironment>();
 		hostEnv.Environment.Returns("Production");
 		Services.AddSingleton(hostEnv);
+
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 	}
 
 	/// <summary>
@@ -145,7 +150,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		await cut.InvokeAsync(() => first.ConnectionStateChanged += Raise.Event<Action<bool>>(true));
 
 		await Assert.That(cut.Markup).Contains("Alpha");
-		await Assert.That(cut.Markup).DoesNotContain("not logged in");
+		await Assert.That(cut.Markup).DoesNotContain("TermNotLoggedIn");
 	}
 
 	[Test]
@@ -207,7 +212,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		await cut.InvokeAsync(() => second.ConnectionStateChanged += Raise.Event<Action<bool>>(true));
 
 		await Assert.That(cut.Markup).Contains("Beta");
-		await Assert.That(cut.Markup).DoesNotContain("not logged in");
+		await Assert.That(cut.Markup).DoesNotContain("TermNotLoggedIn");
 	}
 
 	/// <summary>
@@ -278,7 +283,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 		});
 
 		await Assert.That(cut.Markup).Contains("DirectChar");
-		await Assert.That(cut.Markup).DoesNotContain("not logged in");
+		await Assert.That(cut.Markup).DoesNotContain("TermNotLoggedIn");
 	}
 
 	public new async ValueTask DisposeAsync()

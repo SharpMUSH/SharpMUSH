@@ -3,20 +3,20 @@
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Settings — SharpMUSH</PageTitle>
+<PageTitle>@Loc["Settings"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="settings-page">
     <header class="settings-header">
-        <div class="settings-kicker">@Loc["AppTitle"] · Settings</div>
-        <h1 class="settings-title">Settings</h1>
+        <div class="settings-kicker">@Loc["AppTitle"] · @Loc["Settings"]</div>
+        <h1 class="settings-title">@Loc["Settings"]</h1>
     </header>
 
     <div class="settings-nav">
         <button type="button" class="settings-nav-item" @onclick='() => Nav.NavigateTo("/account")'>
             <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Class="settings-nav-icon" />
             <div class="settings-nav-body">
-                <span class="settings-nav-label">Account</span>
-                <span class="settings-nav-desc">Email, password, and login security</span>
+                <span class="settings-nav-label">@Loc["AuthAccount"]</span>
+                <span class="settings-nav-desc">@Loc["NavSettingsAccountDescription"]</span>
             </div>
             <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="settings-nav-arrow" />
         </button>
@@ -24,8 +24,8 @@
         <button type="button" class="settings-nav-item" @onclick='() => Nav.NavigateTo("/settings/characters")'>
             <MudIcon Icon="@Icons.Material.Filled.People" Class="settings-nav-icon" />
             <div class="settings-nav-body">
-                <span class="settings-nav-label">Characters</span>
-                <span class="settings-nav-desc">Manage characters linked to your account</span>
+                <span class="settings-nav-label">@Loc["Characters"]</span>
+                <span class="settings-nav-desc">@Loc["NavSettingsCharactersDescription"]</span>
             </div>
             <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="settings-nav-arrow" />
         </button>
@@ -33,8 +33,8 @@
         <button type="button" class="settings-nav-item" @onclick='() => Nav.NavigateTo("/settings/theme")'>
             <MudIcon Icon="@Icons.Material.Filled.Palette" Class="settings-nav-icon" />
             <div class="settings-nav-body">
-                <span class="settings-nav-label">Theme</span>
-                <span class="settings-nav-desc">Appearance and accent preferences</span>
+                <span class="settings-nav-label">@Loc["NavTheme"]</span>
+                <span class="settings-nav-desc">@Loc["NavSettingsThemeDescription"]</span>
             </div>
             <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="settings-nav-arrow" />
         </button>

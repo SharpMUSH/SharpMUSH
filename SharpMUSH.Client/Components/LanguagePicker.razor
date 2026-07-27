@@ -1,7 +1,6 @@
 @using System.Globalization
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
-@inject IStringLocalizer<SharedResource> Loc
 
 <MudMenu Icon="@Icons.Material.Filled.Language" Color="Color.Inherit" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
     @foreach (var lang in _languages)

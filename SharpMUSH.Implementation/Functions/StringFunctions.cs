@@ -682,8 +682,11 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(concat));
 	}
 
+	// No parity requirement: PennMUSH's fun_switch (which backs CASE/CASEALL/SWITCH) checks only
+	// minargs, so both case(str,pat,res) and case(str,pat,res,default) are legal — and the trailing
+	// default makes the common form even-numbered.
 	[SharpFunction(Name = "case", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly,
+		Flags = FunctionFlags.NoParse,
 		ParameterNames = ["expression", "case...|result...", "default"])]
 	public static async ValueTask<CallState> Case(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -705,7 +708,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "caseall", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly, ParameterNames = ["string", "expression...|list...", "default"])]
+		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
 	public static async ValueTask<CallState> CaseAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();

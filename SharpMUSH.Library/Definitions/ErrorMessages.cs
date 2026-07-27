@@ -61,8 +61,13 @@ public static class ErrorMessages
 
 		public const string NoSuchAttribute = "#-1 NO SUCH ATTRIBUTE";
 
+		/// <summary>
+		/// Wording matches PennMUSH's <c>#-1 FUNCTION (NAME) NOT FOUND</c> (src/parse.c), which
+		/// <c>fn()</c> already emitted verbatim while the parser used a different phrasing for the
+		/// same condition. Takes the function name, conventionally upper-cased by the caller.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string NoSuchFunction = "#-1 COULD NOT FIND FUNCTION: {0}";
+		public const string NoSuchFunction = "#-1 FUNCTION ({0}) NOT FOUND";
 		public const string NoSuchPower = "#-1 NO SUCH POWER";
 		public const string NoSuchFlag = "#-1 NO SUCH FLAG";
 		public const string NoSuchTimezone = "#-1 NO SUCH TIMEZONE";
@@ -110,6 +115,7 @@ public static class ErrorMessages
 		public const string NothingToEvaluate = "#-1 NOTHING TO EVALUATE";
 		public const string NothingToDo = "#-1 NOTHING TO DO";
 		public const string ExitsCannotContainThings = "#-1 EXITS CANNOT CONTAIN THINGS";
+		public const string CantSeeThroughThat = "#-1 CANNOT SEE THROUGH THAT";
 		public const string ParentLoop = "#-1 PARENT LOOP DETECTED";
 		public const string NotSupported = "#-1 BEHAVIOR NOT SUPPORTED BY SHARPMUSH";
 		public const string SafeObject = "#-1 OBJECT IS SAFE";
@@ -618,9 +624,30 @@ public static class ErrorMessages
 		public const string TryingToLink = "Trying to link...";
 
 		public const string CantGoThatWay = "You can't go that way.";
+		public const string CantSeeThroughThat = "You can't see through that.";
+		public const string ExitGoesNowhere = "That exit doesn't go anywhere.";
 		public const string ExitNoValidLocation = "That exit doesn't go to a valid location.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string VariableExitDestinationInvalidFormat =
+			"Variable exit destination #{0} is invalid or not permitted.";
 		public const string CantGoThatWayContainmentLoop = "You can't go that way - it would create a containment loop.";
 		public const string YouHaveBeenTeleported = "You have been teleported.";
+
+		// Emit-family sender echoes, suppressed by /silent (PennMUSH speech.c, bsd.c).
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouPemitToObjectFormat = "You pemit \"{0}\" to {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouPemitToCountFormat = "You pemit \"{0}\" to {1} objects.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouPemitToConnectionsFormat = "You pemit \"{0}\" to {1} connections.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouRemitInFormat = "You remit, \"{0}\" in {1}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouLemitFormat = "You lemit: \"{0}\"";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouZemitInZoneFormat = "You zemit, \"{0}\" in zone {1}";
+		public const string ThereCantBeAnythingInThat = "There can't be anything in that!";
+		public const string LemitTooManyContainers = "Too many containers.";
 
 		public const string DontYouHaveAnythingToSay = "Don't you have anything to say?";
 		public const string HuhTypeHelp = "Huh?  (Type \"help\" for help.)";

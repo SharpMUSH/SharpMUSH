@@ -38,7 +38,7 @@
     <div class="phosphor-content-col">
 
         <header class="phosphor-topbar">
-            <button class="phosphor-icon-btn" @onclick="ToggleSidebar" title="Toggle navigation">
+            <button class="phosphor-icon-btn" @onclick="ToggleSidebar" title="@Loc["NavToggleNavigation"]">
                 <MudIcon Icon="@Icons.Material.Filled.Menu" Style="font-size:1.25rem;" />
             </button>
             <div class="phosphor-topbar-title">@PageTitle()</div>
@@ -53,7 +53,7 @@
             <div class="phosphor-search">
                 <span class="phosphor-search-icon">⌕</span>
                 <input type="search"
-                       placeholder="Search…"
+                       placeholder="@Loc["NavSearchPlaceholder"]"
                        @bind="_searchQuery"
                        @bind:event="oninput"
                        @onkeydown="HandleSearchKeyDown" />
@@ -64,7 +64,7 @@
 
             <button class="@($"phosphor-icon-btn{(_terminalOpen ? " phosphor-icon-btn--active" : "")}")"
                     @onclick="ToggleTerminal"
-                    title="@(_terminalOpen ? "Close Terminal" : "Open Terminal")">
+                    title="@(_terminalOpen ? Loc["NavCloseTerminal"] : Loc["NavOpenTerminal"])">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:1.125rem;" />
             </button>
         </header>
@@ -84,12 +84,12 @@
         <div class="phosphor-terminal" style="@(_terminalOpen ? null : "display:none;")">
             <div class="phosphor-terminal-header">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:0.9375rem;color:var(--accent);margin-right:0.5625rem;" />
-                <span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;">command terminal</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;">@Loc["NavCommandTerminal"]</span>
                 <span style="font-family:'JetBrains Mono',monospace;font-size:0.6875rem;color:var(--text-faint);margin-left:0.5rem;">
-                    · @(Terminal.IsConnected ? "connected" : "disconnected")
+                    · @(Terminal.IsConnected ? Loc["Connected"] : Loc["Disconnected"])
                 </span>
                 <div style="flex:1;"></div>
-                <button class="phosphor-icon-btn" @onclick="ToggleTerminal" title="Close Terminal">
+                <button class="phosphor-icon-btn" @onclick="ToggleTerminal" title="@Loc["NavCloseTerminal"]">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:1.125rem;" />
                 </button>
             </div>
@@ -111,12 +111,12 @@
                     @BottomTab("/play", Icons.Material.Filled.SportsEsports, Loc["Play"])
                 }
                 @BottomTab("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
-                @BottomTab("/characters", Icons.Material.Filled.Groups, "Chars")
+                @BottomTab("/characters", Icons.Material.Filled.Groups, Loc["NavCharsShort"])
                 <button type="button"
                         class="phosphor-bottomtab @(_mobileNavOpen ? "phosphor-bottomtab--on" : "")"
                         @onclick="ToggleMobileNav">
                     <MudIcon Icon="@Icons.Material.Filled.Menu" Class="phosphor-bottomtab-icon" />
-                    <span class="phosphor-bottomtab-label">Menu</span>
+                    <span class="phosphor-bottomtab-label">@Loc["NavMenuLabel"]</span>
                 </button>
             </nav>
         }
@@ -321,14 +321,29 @@
             ["mail", ..] => Loc["Mail"],
             ["wiki", ..] => Loc["Wiki"],
             ["softcode", ..] => Loc["SoftcodeEditor"],
-            ["apps", ..] => "Applications",
+            ["apps", ..] => Loc["LayApplications"],
             ["account"] => Loc["MyAccount"],
             ["settings"] => Loc["Settings"],
             ["help", ..] => Loc["Help"],
-            ["admin", "packages", ..] => "Packages",
-            ["admin", "wiki", ..] => "Wiki Admin",
-            ["admin", "media", ..] => "Image Library",
-            ["admin", "applications", ..] => "Applications",
+            ["admin", "packages", ..] => Loc["PkgPackages"],
+            ["admin", "wiki", ..] => Loc["WikiAdmin"],
+            ["admin", "media", ..] => Loc["AdmMediaTitle"],
+            ["admin", "applications", ..] => Loc["AdmApplicationsTitle"],
+            ["admin", "accounts", ..] => Loc["AdmAccountsTitle"],
+            ["admin", "characters", ..] => Loc["Characters"],
+            ["admin", "profiles", ..] => Loc["ProfileHandler"],
+            ["admin", "server", ..] => Loc["ServerSettings"],
+            ["admin", "roles", ..] => Loc["AdmRolesTitle"],
+            ["admin", "players", ..] => Loc["AdmPlayersTitle"],
+            ["admin", "moderation", ..] => Loc["AdmModerationTitle"],
+            ["admin", "layout", ..] => Loc["AdmLayoutTitle"],
+            ["admin", "suggestions", ..] => Loc["Suggestions"],
+            ["admin", "config", ..] => Loc["Configuration"],
+            ["admin", "bannednames", ..] => Loc["BannedNames"],
+            ["admin", "restrictions", ..] => Loc["Restrictions"],
+            ["admin", "sitelock", ..] => Loc["Sitelock"],
+            ["admin", "database", ..] => Loc["AdmDatabaseImportTitle"],
+            ["admin"] => Loc["AdmDashboardTitle"],
             _ => Capitalize(seg[^1].Replace('-', ' ')),
         };
     }

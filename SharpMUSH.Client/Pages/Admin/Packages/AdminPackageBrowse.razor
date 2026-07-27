@@ -5,21 +5,21 @@
 @inject PackagesAdminService Packages
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Browse Packages — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["PkgBrowseHeading"] — @Loc["PkgAdminSection"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="pkg-page" style="padding:var(--cpad);">
     <div class="pkg-header">
-        <div class="pkg-kicker">Build · Package registry</div>
-        <h1 class="pkg-title">Browse Packages</h1>
+        <div class="pkg-kicker">@Loc["PkgKickerRegistry"]</div>
+        <h1 class="pkg-title">@Loc["PkgBrowseHeading"]</h1>
         <p class="pkg-desc">
-            Refreshes the remote's repo cache and lists its packages. Versions come from release tags;
-            the branch tip is the dev channel.
+            @Loc["PkgBrowseDescription"]
         </p>
     </div>
 
     <div class="pkg-toolbar mb-4">
-        <MudSelect T="string" @bind-Value="_selectedRemote" Label="Remote" Variant="Variant.Outlined"
+        <MudSelect T="string" @bind-Value="_selectedRemote" Label="@Loc["PkgRemoteLabel"]" Variant="Variant.Outlined"
                    Margin="Margin.Dense" Style="max-width: 320px">
             @foreach (var remote in _remotes ?? [])
             {
@@ -27,7 +27,7 @@
             }
         </MudSelect>
         <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Disabled="@(_busy || string.IsNullOrEmpty(_selectedRemote))"
-                   OnClick="@BrowseAsync">Refresh &amp; browse</MudButton>
+                   OnClick="@BrowseAsync">@Loc["PkgRefreshAndBrowse"]</MudButton>
         @if (_remoteRecord is not null)
         {
             <TrustBadge Trust="@_remoteRecord.Trust" />
@@ -37,7 +37,7 @@
     @if (_remoteRecord is { Trust: PackageRemoteTrust.Unknown })
     {
         <MudAlert Severity="Severity.Warning" Class="mb-4">
-            This source has not been reviewed. Inspect all code on the review screen before applying.
+            @Loc["PkgUnreviewedSource"]
         </MudAlert>
     }
 
@@ -49,7 +49,7 @@
     @if (_snapshot is not null)
     {
         <div class="pkg-snapshot-meta mb-2">
-            @_snapshot.Url at @_snapshot.HeadCommit[..Math.Min(10, _snapshot.HeadCommit.Length)]
+            @Loc["PkgSnapshotAt", _snapshot.Url, _snapshot.HeadCommit[..Math.Min(10, _snapshot.HeadCommit.Length)]]
         </div>
         <div class="pkg-grid">
             @foreach (var entry in _snapshot.Packages)
@@ -61,27 +61,27 @@
                                        OnClick="@(() => ShowReadmeAsync(entry))" />
                     </div>
                     <div class="pkg-card-body">
-                        <div style="font-size:0.8125rem;color:var(--text-dim);margin-bottom:0.75rem;">@(entry.Description ?? "(no description)")</div>
+                        <div style="font-size:0.8125rem;color:var(--text-dim);margin-bottom:0.75rem;">@(entry.Description ?? Loc["PkgNoDescription"])</div>
                         @if (entry.PackageId is null)
                         {
-                            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">Manifest at the tip did not parse.</MudAlert>
+                            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">@Loc["PkgManifestParseFailed"]</MudAlert>
                         }
                         <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
                             <MudSelect T="string" Value="@SelectedVersion(entry)" ValueChanged="@(v => _selectedVersions[entry.Path] = v)"
-                                       Label="Version" Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 220px">
+                                       Label="@Loc["PkgVersionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 220px">
                                 @foreach (var version in entry.Versions)
                                 {
                                     <MudSelectItem Value="@version.Version">@version.Version</MudSelectItem>
                                 }
-                                <MudSelectItem Value="@DevChannel">dev channel (@(entry.Version ?? "tip"))</MudSelectItem>
+                                <MudSelectItem Value="@DevChannel">@Loc["PkgDevChannelOption", entry.Version ?? "tip"]</MudSelectItem>
                             </MudSelect>
                             <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Size="Size.Small"
-                                       OnClick="@(() => GoToReview(entry))">Review install</MudButton>
+                                       OnClick="@(() => GoToReview(entry))">@Loc["PkgReviewInstall"]</MudButton>
                         </div>
                         @if (entry.Versions.Count == 0)
                         {
                             <div style="font-size:0.75rem;color:var(--text-faint);margin-top:0.5rem;">
-                                No release tags — only the dev channel is available.
+                                @Loc["PkgNoReleaseTags"]
                             </div>
                         }
                     </div>
@@ -104,7 +104,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="@(() => _showReadme = false)">Close</MudButton>
+        <MudButton OnClick="@(() => _showReadme = false)">@Loc["PkgClose"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -173,7 +173,7 @@
         _readmeHtml = null;
         _showReadme = true;
         var readme = await Packages.GetRemoteReadmeAsync(_selectedRemote, entry.Path);
-        _readmeHtml = readme?.Html ?? "<em>No README available.</em>";
+        _readmeHtml = readme?.Html ?? $"<em>{Loc["PkgNoReadme"]}</em>";
     }
 
     private void GoToReview(PackageRepoEntry entry)
