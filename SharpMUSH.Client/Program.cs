@@ -110,10 +110,8 @@ builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredServi
 builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<ConnectionStateService>());
 
 builder.Services.AddTransient<AccountSessionBearerHandler>();
-builder.Services.AddTransient<ActingCharacterHeaderHandler>();
 builder.Services.AddHttpClient("api", c => c.BaseAddress = apiBaseAddress)
-	.AddHttpMessageHandler<AccountSessionBearerHandler>()
-	.AddHttpMessageHandler<ActingCharacterHeaderHandler>();
+	.AddHttpMessageHandler<AccountSessionBearerHandler>();
 
 if (builder.HostEnvironment.IsDevelopment())
 {

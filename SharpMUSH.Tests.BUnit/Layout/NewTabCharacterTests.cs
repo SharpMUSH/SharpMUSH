@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
@@ -27,52 +28,62 @@ namespace SharpMUSH.Tests.BUnit.Layout;
 /// </summary>
 file sealed class NewTabApiHandler(IReadOnlyList<CharacterSummary> characters) : HttpMessageHandler
 {
-	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	// Which character the session token is bound to. The client has no say in this any more — the
+	// roster the server marks is the only answer — so the fake has to model it to mean anything.
+	private int? _boundKey = characters.FirstOrDefault()?.DbrefNumber;
+
+	private object MarkedRoster() => characters
+		.Select(c => new { c.DbrefNumber, c.CreationTime, c.Name, c.Flags, isActing = c.DbrefNumber == _boundKey })
+		.ToList();
+
+	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
 
 		if (request.Method == HttpMethod.Post && path == "api/auth/account-login")
 		{
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+			return new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = JsonContent.Create(new
 				{
 					accountId = "acct-1",
 					username = "headwiz",
-					characters,
+					characters = MarkedRoster(),
 					accountSessionToken = "session-token-1",
 					mustChangePassword = false,
 					role = "Wizard",
 					permissions = new[] { "*" },
 				})
-			});
+			};
 		}
+
+		if (request.Method == HttpMethod.Get && path == "api/account/characters")
+			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(MarkedRoster()) };
 
 		if (request.Method == HttpMethod.Get && path == "api/applications")
-		{
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = JsonContent.Create(Array.Empty<object>())
-			});
-		}
+			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<object>()) };
 
 		if (request.Method == HttpMethod.Get && path == "api/setup/status")
-		{
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = JsonContent.Create(new { needsSetup = false })
-			});
-		}
+			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { needsSetup = false }) };
 
 		if (request.Method == HttpMethod.Post && path == "api/auth/switch-character")
 		{
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+			var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+			using var parsed = JsonDocument.Parse(body);
+			var requestedKey = parsed.RootElement.GetProperty("characterKey").GetInt32();
+
+			// Only characters the account owns are bindable, exactly as the endpoint enforces.
+			if (characters.All(c => c.DbrefNumber != requestedKey))
+				return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+
+			_boundKey = requestedKey;
+			return new HttpResponseMessage(HttpStatusCode.OK)
 			{
-				Content = JsonContent.Create(new { ott = "new-character-ott", expiresIn = 300 })
-			});
+				Content = JsonContent.Create(new { ott = "new-character-ott", expiresIn = 300, accountSessionToken = $"bound-to-{requestedKey}" })
+			};
 		}
 
-		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+		return new HttpResponseMessage(HttpStatusCode.NotFound);
 	}
 }
 

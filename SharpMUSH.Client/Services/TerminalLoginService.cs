@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Client.Services;
 
@@ -10,14 +11,23 @@ namespace SharpMUSH.Client.Services;
 /// it connects.
 /// </summary>
 public class TerminalLoginService(
-	ITerminalService terminal, AccountAuthService accountAuth, NavigationManager navigation)
+	ITerminalService terminal, AccountAuthService accountAuth, NavigationManager navigation,
+	IConnectionStateService connectionState)
 {
 	public async Task<bool> ConnectAsCharacterAsync(AccountAuthService.CharacterSummary character)
 	{
-		var ott = await accountAuth.GetOttForCharacterAsync(character);
+		// Switch rather than merely minting an OTT: this is also the ?as= new-tab entry point, and that
+		// tab starts life holding a COPY of its opener's token — bound to the OPENER's character. The
+		// switch mints a token bound to this character and the tab adopts it, so the portal half of the
+		// new tab is this character too, not just the terminal socket.
+		var ott = await accountAuth.SwitchCharacterAsync(character);
 		if (ott is null) return false;
 
-		accountAuth.SetActiveCharacter(character);
+		// The hub authenticates with the session token; it holds the pre-switch one until it
+		// reconnects, so without this the portal half would keep acting as the previous character
+		// while the terminal and REST calls had already moved.
+		await connectionState.ReconnectAsync();
+
 		terminal.ConnectedPlayerName = character.Name;
 		await terminal.ConnectWithOttAsync(ServerUri, ott);
 		return true;

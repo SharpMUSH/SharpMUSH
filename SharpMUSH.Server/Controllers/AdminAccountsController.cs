@@ -43,9 +43,10 @@ public class AdminAccountsController(
 		if (header is null || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
 			return (null, Unauthorized("Invalid or expired account session."));
 
-		var accountId = await accountSessionStore.ValidateAsync(header["Bearer ".Length..].Trim());
-		if (accountId is null)
+		var session = await accountSessionStore.ValidateAsync(header["Bearer ".Length..].Trim());
+		if (session is null)
 			return (null, Unauthorized("Invalid or expired account session."));
+		var accountId = session.Value.AccountId;
 
 		var account = await accountService.GetByIdAsync(accountId);
 		if (account is null || !account.IsActive)

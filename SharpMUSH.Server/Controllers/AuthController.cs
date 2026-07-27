@@ -74,12 +74,14 @@ public class AuthController(
 
 		if (!string.IsNullOrWhiteSpace(request.AccountSessionToken) && request.CharacterKey.HasValue)
 		{
-			var accountId = await accountSessionStore.ValidateAsync(request.AccountSessionToken);
-			if (accountId is null)
+			var session = await accountSessionStore.ValidateAsync(request.AccountSessionToken);
+			if (session is null)
 			{
 				logger.LogInformation("OTT via account session: invalid or expired session token");
 				return Unauthorized("Invalid or expired account session.");
 			}
+
+			var accountId = session.Value.AccountId;
 
 			var sessionAccount = await accountService.GetByIdAsync(accountId);
 			if (sessionAccount is null || !sessionAccount.IsActive)
@@ -155,14 +157,24 @@ public class AuthController(
 	/// <summary>Request body for switching the active character via an authenticated account session.</summary>
 	public record SwitchCharacterRequest(int CharacterKey, long CharacterCreationTime);
 
-	/// <summary>Response body containing the one-time token for the switched-to character.</summary>
-	public record SwitchCharacterResponse(string Ott, int ExpiresIn);
+	/// <summary>
+	/// Response body for a character switch: an OTT for the terminal, plus the session token the
+	/// caller must adopt — that token, not anything the client sends per request, is what makes the
+	/// server treat later calls as this character.
+	/// </summary>
+	public record SwitchCharacterResponse(string Ott, int ExpiresIn, string AccountSessionToken);
 
 	/// <summary>
-	/// Switch to a different character under the same account and return an OTT for it.
-	/// Authenticates via the AccountSession scheme (the same session stays active — this
-	/// mints no new token family). Replaces <c>jwt-switch-character</c> for session-based auth.
+	/// Switch to a different character under the same account. Mints a NEW session token bound to the
+	/// target character and returns it alongside an OTT for the terminal; the caller replaces its own
+	/// stored token with it.
 	/// </summary>
+	/// <remarks>
+	/// The previous token is deliberately NOT revoked — it is left to lapse on its own sliding TTL.
+	/// A tab opened via <c>window.open</c> inherits a COPY of its opener's sessionStorage, so the new
+	/// tab consuming an <c>?as=</c> hint calls this endpoint while its opener is still using the token
+	/// it inherited from. Revoking here would log the opener out.
+	/// </remarks>
 	[HttpPost("switch-character")]
 	[Authorize(AuthenticationSchemes = AccountSessionAuthenticationHandler.SchemeName)]
 	[EnableRateLimiting("public-api")]
@@ -192,7 +204,11 @@ public class AuthController(
 
 		const int ttl = 60;
 		var ott = await ottStore.CreateTokenAsync(new DBRef(character.Object.Key, character.Object.CreationTime), TimeSpan.FromSeconds(ttl));
-		return Ok(new SwitchCharacterResponse(ott, ttl));
+		var sessionToken = await accountSessionStore.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15), ClientIp(),
+			character.Object.Key, character.Object.CreationTime);
+
+		logger.LogInformation("Session rebound to character {Name} (#{Key})", character.Object.Name, character.Object.Key);
+		return Ok(new SwitchCharacterResponse(ott, ttl, sessionToken));
 	}
 
 	/// <summary>Request body for account login.</summary>
@@ -229,12 +245,21 @@ public class AuthController(
 		if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
 			return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
 
-		var charSummaries = await CharacterSummaryMapper.BuildSummariesAsync(characters);
-
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
 		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
 
-		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp());
+		// Bind the session to the primary character up front, so there is never a "has characters but
+		// the token names none" state for a request handler to paper over. Switching mints a new token.
+		// Ordered by dbref: GetCharactersAsync passes the backend query through unsorted, so an
+		// unordered pick could bind a different character on each login for a multi-character account.
+		var primary = characters.OrderBy(c => c.Object.Key).FirstOrDefault();
+
+		// The roster carries the binding too — the token is opaque to the client, so this response is
+		// where the tab learns who it starts as.
+		var charSummaries = await CharacterSummaryMapper.BuildSummariesAsync(characters,
+			actingKey: primary?.Object.Key, actingCreationTime: primary?.Object.CreationTime);
+		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp(),
+			primary?.Object.Key, primary?.Object.CreationTime);
 		logger.LogInformation("Account login success for {Username} ({Id})", Sanitize(account.Username), Sanitize(account.Id));
 		return Ok(new AccountLoginResponse(account.Id!, account.Username, charSummaries, sessionToken,
 			account.MustChangePassword, role.ToString(), permissions.ToList()));
@@ -308,7 +333,8 @@ public class AuthController(
 		var account = await accountService.GetAccountForCharacterAsync(playerRef);
 		string? accountSessionToken = null;
 		if (account is not null)
-			accountSessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp());
+			accountSessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp(),
+				player.Object.Key, player.Object.CreationTime);
 
 		logger.LogInformation("Debug OTT issued for {Name} (#{Key}), account: {AccountId}",
 			Sanitize(player.Object.Name), player.Object.Key, Sanitize(account?.Id ?? "none"));
