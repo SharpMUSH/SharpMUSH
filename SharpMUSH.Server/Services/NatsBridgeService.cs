@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 using NATS.Client.Serializers.Json;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Messaging.NATS;
 using SharpMUSH.Server.Hubs;
@@ -21,8 +22,9 @@ public interface INatsBridgeService : IHostedService;
 /// forwards incoming messages to the appropriate SignalR groups.
 ///
 /// Subjects consumed:
-///   "game.output.{characterDbref}" → SignalR group "char:{characterDbref}"
-///   "game.room.{roomDbref}"        → SignalR group "room:{roomDbref}"
+///   "game.output.{characterObjid}" → SignalR group "char:{characterObjid}"
+///   "game.room.{roomObjid}"        → SignalR group "room:{roomObjid}"
+/// Both carry an objid ("#42:1700000000"); a message whose reference does not parse is dropped.
 /// The "game.scene.{sceneId}" → "scene:{sceneId}" leg moved into the Scene plugin (Phase 5) as an
 /// IBridgeSubscriptionSource, run here alongside the built-ins via the catalog's BridgeSources.
 ///
@@ -152,7 +154,15 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 			if (msg.Data is null) continue;
 
 			var dbref = msg.Data.CharacterDbref;
-			var group = GameHub.CharacterGroupName(dbref);
+			if (dbref is null || !DBRef.TryParse(dbref, out var character) || character is null)
+			{
+				_logger.LogWarning(
+					"[NatsBridge] Dropping GameOutputMessage with unparseable CharacterDbref {Dbref}; " +
+					"the contract is an objid such as #42:1700000000", dbref);
+				continue;
+			}
+
+			var group = GameHub.CharacterGroupName(character.Value);
 
 			_logger.LogDebug("[NatsBridge] Forwarding GameOutputMessage for char:{Dbref} to group {Group}",
 				dbref, group);
@@ -179,7 +189,15 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 			if (msg.Data is null) continue;
 
 			var dbref = msg.Data.RoomDbref;
-			var group = GameHub.RoomGroupName(dbref);
+			if (!DBRef.TryParse(dbref, out var room) || room is null)
+			{
+				_logger.LogWarning(
+					"[NatsBridge] Dropping RoomEventMessage with unparseable RoomDbref {Dbref}; " +
+					"the contract is an objid such as #7:1700000000", dbref);
+				continue;
+			}
+
+			var group = GameHub.RoomGroupName(room.Value);
 
 			_logger.LogDebug("[NatsBridge] Forwarding RoomEventMessage for room:{Dbref} to group {Group}",
 				dbref, group);
