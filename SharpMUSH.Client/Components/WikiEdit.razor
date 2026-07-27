@@ -1,4 +1,5 @@
 @using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Resources
 @using SharpMUSH.Library.Services
 @inject IJSRuntime JsRuntime
 @inject WikiMarkdigPipeline Pipeline
@@ -17,6 +18,36 @@
             </span>
         </div>
 
+        <div class="wiki-edit-localerow">
+            <MudIcon Icon="@Icons.Material.Filled.Language" Style="font-size:0.875rem;color:var(--text-faint);" />
+            <MudSelect T="string"
+                       Value="@SelectedLocale"
+                       ValueChanged="@SelectLocaleAsync"
+                       Label="@Loc["WkLocaleSelector"].Value"
+                       Dense="true"
+                       Margin="Margin.Dense"
+                       Variant="Variant.Outlined"
+                       Style="max-width:220px;">
+                @foreach (var locale in AvailableLocales)
+                {
+                    <MudSelectItem T="string" Value="@locale">@LocaleLabel(locale)</MudSelectItem>
+                }
+            </MudSelect>
+            @if (_addingLocale)
+            {
+                <input class="wiki-edit-localeinput" value="@_customLocale"
+                       @oninput="@(e => _customLocale = e.Value?.ToString() ?? string.Empty)"
+                       @onkeydown="@(async e => { if (e.Key == "Enter") await AddCustomLocaleAsync(); })"
+                       placeholder="@Loc["WkCustomLocalePlaceholder"]" />
+            }
+            else
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small" Style="text-transform:none;"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@(() => _addingLocale = true)">@Loc["WkAddTranslation"]</MudButton>
+            }
+        </div>
+
         <div class="wiki-edit-titlerow">
             <input class="wiki-edit-title" value="@Article.Title"
                    @oninput="@(e => Article.Title = e.Value?.ToString() ?? string.Empty)"
@@ -24,6 +55,7 @@
             <div class="wiki-edit-cat">
                 <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:0.875rem;color:var(--text-faint);" />
                 <input value="@Article.Category"
+                       disabled="@IsTranslation"
                        @oninput="@(e => Article.Category = e.Value?.ToString())"
                        placeholder="@Loc["WikiCategory"]" />
             </div>
@@ -74,10 +106,11 @@
             {
                 var t = tag;
                 <span class="wiki-edit-tag">@t
-                    <button type="button" @onclick="@(() => RemoveTag(t))">×</button>
+                    <button type="button" disabled="@IsTranslation" @onclick="@(() => RemoveTag(t))">×</button>
                 </span>
             }
             <input class="wiki-edit-taginput" value="@_tagEntry"
+                   disabled="@IsTranslation"
                    @oninput="@(e => _tagEntry = e.Value?.ToString() ?? string.Empty)"
                    @onkeydown="OnTagKeyDown" placeholder="@Loc["WkAddTagPlaceholder"]" />
             <div style="flex:1;"></div>
@@ -87,6 +120,14 @@
                 @Loc["WikiPublished"]
             </label>
         </div>
+
+        @if (IsTranslation)
+        {
+            <div class="wiki-edit-inherited">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Style="font-size:0.75rem;" />
+                <span>@Loc["WkInheritedFromSource"]</span>
+            </div>
+        }
 
         <div class="wiki-edit-savebar">
             <div class="wiki-edit-summary">
@@ -131,6 +172,61 @@
 
     /// <summary>Invoked when the user clicks Cancel/Discard.</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>The page's stamped source locale. Editing this locale edits the page itself.</summary>
+    [Parameter] public string SourceLocale { get; set; } = "en";
+
+    /// <summary>The locale currently being edited. Equal to <see cref="SourceLocale"/> for the source page.</summary>
+    [Parameter] public string SelectedLocale { get; set; } = "en";
+
+    /// <summary>Source locale plus every existing translation's locale.</summary>
+    [Parameter] public IReadOnlyList<string> AvailableLocales { get; set; } = [];
+
+    /// <summary>Raised when the editor switches to a different locale, so the host can load its content.</summary>
+    [Parameter] public EventCallback<string> OnLocaleChanged { get; set; }
+
+    /// <summary>Free-text tag for "Add a translation…", so a game can translate into any real locale.</summary>
+    private string _customLocale = string.Empty;
+    private bool _addingLocale;
+
+    /// <summary>
+    /// True when the selected locale is a different language from the source, i.e. we are editing an
+    /// overlay row rather than the page. Category, tags and protection are inherited in that case, and
+    /// <c>WikiTranslation</c> has no field for them — the disabled inputs make that visible.
+    /// </summary>
+    private bool IsTranslation => !WikiHelpers.SameLanguage(SelectedLocale, SourceLocale);
+
+    /// <summary>
+    /// Public mirror of <see cref="IsTranslation"/> so the host and component tests can tell whether a save
+    /// goes to the translation endpoint (and therefore carries an expected revision number) or to the
+    /// page-update endpoint.
+    /// </summary>
+    public bool IsTranslationEdit => IsTranslation;
+
+    /// <summary>Switches the editor to another locale. Public so component tests can drive it directly.</summary>
+    public async Task SelectLocaleAsync(string locale)
+    {
+        _addingLocale = false;
+        if (string.Equals(locale, SelectedLocale, StringComparison.OrdinalIgnoreCase)) return;
+        await OnLocaleChanged.InvokeAsync(locale);
+    }
+
+    private async Task AddCustomLocaleAsync()
+    {
+        // The free-text field is a write path in spirit: whatever is typed here ends up as a stored Locale,
+        // so it is canonicalised and rejected here rather than being sent for the server to refuse.
+        // NormalizeLocale's Error case is silently ignored rather than surfaced, because the field is
+        // validated as-you-type by the same rule and an empty selection is the visible feedback.
+        var normalized = WikiHelpers.NormalizeLocale(_customLocale);
+        if (normalized.IsT1) return;
+        _customLocale = string.Empty;
+        await SelectLocaleAsync(normalized.AsT0);
+    }
+
+    private string LocaleLabel(string locale) =>
+        WikiHelpers.SameLanguage(locale, SourceLocale)
+            ? string.Format(Loc["WkSourceLocaleLabel"], PortalLocales.DisplayName(locale))
+            : PortalLocales.DisplayName(locale);
 
     private readonly string _taId = $"wiki-edit-ta-{Guid.NewGuid():N}";
     private bool _saving;

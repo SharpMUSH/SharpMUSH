@@ -1,7 +1,11 @@
+@using Microsoft.Extensions.Localization
 @using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Resources
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Services
 @inject WikiService Wiki
 @inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
 
 @if (_loading)
 {
@@ -16,11 +20,24 @@ else
 {
     <br />
     <WikiEdit Article="@_editDraft"
+              SourceLocale="@_sourceLocale"
+              SelectedLocale="@_selectedLocale"
+              AvailableLocales="@_availableLocales"
+              OnLocaleChanged="@HandleLocaleChanged"
               OnSaved="@HandleSave"
               OnCancel="@HandleCancel" />
     @if (_saveError is not null)
     {
-        <MudAlert Severity="Severity.Error" Class="mt-2">@_saveError</MudAlert>
+        <MudAlert Severity="@(_saveConflict ? Severity.Warning : Severity.Error)" Dense="true" Class="mt-2">
+            @_saveError
+            @if (_saveConflict)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small"
+                           OnClick="@(() => Nav.NavigateTo(Nav.Uri, forceLoad: true))">
+                    @Loc["WkTranslationReload"]
+                </MudButton>
+            }
+        </MudAlert>
     }
 }
 
@@ -46,6 +63,18 @@ else
     private string? _saveError;
     private bool _loading = true;
 
+    private string _sourceLocale = "en";
+    private string _selectedLocale = "en";
+    private IReadOnlyList<string> _availableLocales = [];
+
+    /// <summary>
+    /// Revision number of the row currently loaded, held for optimistic concurrency on save.
+    /// </summary>
+    private int _loadedRevision;
+
+    /// <summary>Set when the server answered 409; drives the reload prompt instead of a plain error toast.</summary>
+    private bool _saveConflict;
+
     public async Task ActivateEditMode()
     {
         _editDraft = _article is not null
@@ -64,9 +93,66 @@ else
         StateHasChanged();
     }
 
+    /// <summary>
+    /// Switching locale in the editor is a navigation, not local state: <c>?lang=</c> stays the single
+    /// source of truth for which locale is on screen, so a refresh or a back button lands where expected.
+    /// </summary>
+    private void HandleLocaleChanged(string locale)
+    {
+        var ns = Namespace ?? "main";
+        var cat = Category ?? "general";
+        Nav.NavigateTo($"/wiki/{ns}/{cat}/{Slug}/edit?lang={Uri.EscapeDataString(locale)}");
+    }
+
+    /// <summary>
+    /// The revision number to compare against on a translation save, or null for create-only.
+    /// </summary>
+    /// <remarks>
+    /// Null when the loaded article is not this locale's own row — the reader was served a fallback because
+    /// no translation exists yet, so its <c>RevisionNumber</c> belongs to a different stream and passing it
+    /// would make the very first save look stale.
+    /// </remarks>
+    private int? ExpectedTranslationRevision =>
+        _article is not null && WikiHelpers.SameLanguage(_article.Locale, _selectedLocale)
+            ? _loadedRevision
+            : null;
+
     private async Task HandleSave(WikiArticle draft)
     {
         _saveError = null;
+        _saveConflict = false;
+
+        if (!WikiHelpers.SameLanguage(_selectedLocale, _sourceLocale))
+        {
+            // A translation owns Title, body and Published; Category, Tags and IsProtected are inherited
+            // structurally, so there is no metadata call to make here.
+            var translationResult = await Wiki.UpsertTranslationAsync(
+                draft.Slug, _selectedLocale, draft.Title, draft.Content, draft.Published,
+                ExpectedTranslationRevision, editSummary: null, ns: Namespace, category: Category);
+
+            translationResult.Switch(
+                _ =>
+                {
+                    _editDraft = null;
+                    Mode = WikiMode.View;
+                    Nav.NavigateTo(
+                        $"/wiki/{Namespace ?? "main"}/{Category ?? "general"}/{Slug}?lang={Uri.EscapeDataString(_selectedLocale)}",
+                        forceLoad: true);
+                },
+                err =>
+                {
+                    // On a conflict, prompt for a reload and STOP. Retrying — or silently re-reading the
+                    // current revision and saving again — would re-apply this editor's stale markdown over
+                    // the other translator's, which is precisely the loss expectedRevisionNumber prevents.
+                    // The draft stays in the editor so its text can be copied out first.
+                    _saveConflict = err.NeedsReload;
+                    _saveError = err.NeedsReload ? Loc["WkTranslationConflict"] : err.Message;
+                });
+
+            StateHasChanged();
+            return;
+        }
+
         OneOf.OneOf<WikiArticle, string> result;
 
         if (string.IsNullOrEmpty(draft.Slug))
@@ -133,6 +219,17 @@ else
         _loading = true;
         var result = await Wiki.GetWikiArticle(Slug, Category, Namespace, Locale);
         _article = result.IsT0 ? result.AsT0 : null;
+
+        if (_article is not null)
+        {
+            // The served locale is the source locale unless a translation won, in which case the source is
+            // whichever available locale is not the served one. AvailableLocales is source-first.
+            _availableLocales = _article.AvailableLocales;
+            _sourceLocale = _article.AvailableLocales.FirstOrDefault() ?? _article.Locale;
+            _selectedLocale = _article.Locale;
+            _loadedRevision = _article.RevisionNumber;
+        }
+
         _loading = false;
         await base.OnInitializedAsync();
     }
