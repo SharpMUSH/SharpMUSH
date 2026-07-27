@@ -216,4 +216,28 @@ public class AccountAuthServiceHubTokenTests : BunitContext
 
 		await Assert.That(offendingMembers).IsEmpty();
 	}
+
+	[Test]
+	public async Task SwitchCharacterAsync_TokenWriteFails_LeavesTheOldTokenInPlace()
+	{
+		JSInterop.Mode = JSRuntimeMode.Loose;
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session-token-1");
+		JSInterop.SetupVoid("sessionStorage.setItem", "sharpmush.account.sessionToken", "session-token-2")
+			.SetException(new InvalidOperationException("storage unavailable"));
+
+		var handler = new CapturingHandler(HttpStatusCode.OK,
+			new { ott = "one-time-token", expiresIn = 60, accountSessionToken = "session-token-2" });
+		using var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var httpClientFactory = Substitute.For<IHttpClientFactory>();
+		httpClientFactory.CreateClient("api").Returns(http);
+
+		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+
+		var ott = await service.SwitchCharacterAsync(new AccountAuthService.CharacterSummary(42, 12345L, "Bob", ""));
+
+		// Reported as failed, and the in-memory token agrees — a tab that cannot persist the new
+		// credential must not start acting on it, or a reload would silently revert the identity.
+		await Assert.That(ott).IsNull();
+		await Assert.That(service.AccountSessionToken).IsEqualTo("session-token-1");
+	}
 }

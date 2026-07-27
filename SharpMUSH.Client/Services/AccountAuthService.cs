@@ -708,8 +708,11 @@ public class AccountAuthService(
 	/// </summary>
 	private async Task AdoptSessionTokenAsync(string token)
 	{
-		AccountSessionToken = token;
+		// Storage first. A throwing interop call propagates to SwitchCharacterAsync, which reports the
+		// switch as failed — so the in-memory token must not have moved yet, or the tab would be acting
+		// as the new character while the caller believes it isn't and a reload would restore the old one.
 		await js.InvokeVoidAsync("sessionStorage.setItem", SessionTokenKey, token);
+		AccountSessionToken = token;
 	}
 
 	private async Task PersistSessionAsync(

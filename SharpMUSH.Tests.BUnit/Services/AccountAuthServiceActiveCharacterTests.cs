@@ -369,8 +369,7 @@ public class AccountAuthServiceActiveCharacterTests
 		var b = new CharacterSummary(2, 200L, "B", "");
 
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
-		// Not disposed: the service keeps calling through this client after this returns.
-		var http = new HttpClient(new FakeAccountHandler([a, b], refuseSwitch: true)) { BaseAddress = new Uri("https://localhost:8081/") };
+		using var http = new HttpClient(new FakeAccountHandler([a, b], refuseSwitch: true)) { BaseAddress = new Uri("https://localhost:8081/") };
 		httpClientFactory.CreateClient("api").Returns(http);
 
 		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(),

@@ -15,8 +15,9 @@ public class CharacterSwitchService(AccountAuthService accountAuth, IConnectionS
 	/// <summary>Returns false when the server refused the switch; the tab keeps its current identity.</summary>
 	public async Task<bool> SwitchAsync(AccountAuthService.CharacterSummary character)
 	{
-		var ott = await accountAuth.SwitchCharacterAsync(character);
-		if (ott is null) return false;
+		// The OTT is for terminals, which this service deliberately does not touch — only whether the
+		// switch took matters here.
+		if (await accountAuth.SwitchCharacterAsync(character) is null) return false;
 
 		await connectionState.ReconnectAsync();
 		return true;
