@@ -324,7 +324,7 @@ RETURN c.value AS nextKey
 			Object = sharpObj,
 			Aliases = aliases,
 			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
-			Home = new(async ct => await GetHomeAsync(id, ct))
+			Home = new(async ct => await GetExitDestinationAsync(id, ct))
 		};
 	}
 
@@ -372,6 +372,34 @@ RETURN destObj
 		_ => throw new Exception("Invalid home: Exit"),
 		thing => thing,
 		_ => throw new Exception("No home found"));
+	}
+
+	/// <summary>
+	/// An exit's destination. Absent on a freshly @open'd or an @unlink'd exit, hence optional.
+	/// </summary>
+	private async ValueTask<AnyOptionalSharpContainer> GetExitDestinationAsync(string typedId, CancellationToken ct)
+	{
+		var key = ExtractKey(typedId);
+		var typedLabel = ExtractTypedLabel(typedId);
+		var result = await ExecuteWithRetryAsync("""
+MATCH (src:%LABEL% {key: $key})-[:HAS_HOME]->(dest)
+MATCH (dest)-[:IS_OBJECT]->(destObj:Object)
+RETURN destObj
+""".Replace("%LABEL%", typedLabel), new { key }, ct);
+
+		if (result.Result.Count == 0)
+		{
+			return new None();
+		}
+
+		var destObjNode = result.Result[0]["destObj"].As<INode>();
+		var destination = await BuildTypedObjectFromObjectNode(destObjNode, ct);
+		return destination.Match<AnyOptionalSharpContainer>(
+			player => player,
+			room => room,
+			_ => new None(),
+			thing => thing,
+			_ => new None());
 	}
 
 	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct)

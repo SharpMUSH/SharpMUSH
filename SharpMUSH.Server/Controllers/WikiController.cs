@@ -174,7 +174,7 @@ public class WikiController(
 	/// claim). Never defaults to a privileged dbref: a missing claim means we cannot attribute the
 	/// action, so callers must reject the request rather than silently acting as God (#1).
 	/// </summary>
-	private string? CallerDbref => User.GetActingCharacterDbref();
+	private string? CallerDbref => User.GetActingCharacter()?.ToString();
 
 	/// <summary>True when the caller is the original author of <paramref name="page"/>. Authors
 	/// always see their own drafts even without the <see cref="PortalPermission.WikiRead"/> scope.</summary>

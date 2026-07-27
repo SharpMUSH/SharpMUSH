@@ -13,11 +13,18 @@ options {
 
 lock: lockExprList EOF;
 
-lockExprList: lockAndExpr | lockOrExpr | lockExpr;
+// Operator precedence, mirroring PennMUSH's boolexp grammar (src/boolexp.c):
+//     E -> T | E      (OR, lowest precedence)
+//     T -> F & T      (AND, binds tighter than OR)
+//     F -> !F | A     (NOT, binds tightest — see notExpr below)
+// so `a & b | c` groups as `(a & b) | c`. A flat `lockAndExpr | lockOrExpr | lockExpr`
+// alternation would instead give both operators equal precedence and parse this as
+// `a & (b | c)`, silently changing who passes a lock.
+lockExprList: lockOrExpr;
 
-lockAndExpr: lockExpr AND lockExprList;
+lockOrExpr: lockAndExpr (OR lockAndExpr)*;
 
-lockOrExpr: lockExpr OR lockExprList;
+lockAndExpr: lockExpr (AND lockExpr)*;
 
 lockExpr:
     notExpr

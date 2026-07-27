@@ -18,14 +18,14 @@ internal class AccountDbRecord : Record
 	public long updatedAt { get; set; }
 	public bool isVerified { get; set; }
 	public bool mustChangePassword { get; set; }
-	public bool isDisabled { get; set; }
+	public string status { get; set; } = nameof(AccountStatus.Active);
 }
 
 public partial class SurrealDatabase
 {
 	#region Accounts
 
-	private const string AccountFieldSelection = "id, username, email, passwordHash, createdAt, updatedAt, isVerified, mustChangePassword, isDisabled";
+	private const string AccountFieldSelection = "id, username, email, passwordHash, createdAt, updatedAt, isVerified, mustChangePassword, status";
 
 	public async ValueTask<SharpAccount?> GetAccountByEmailAsync(string email, CancellationToken cancellationToken = default)
 	{
@@ -73,7 +73,7 @@ public partial class SurrealDatabase
 		var response = await ExecuteAsync("""
 CREATE account CONTENT {
 	username: $username, email: $email, passwordHash: $passwordHash,
-	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, mustChangePassword: false, isDisabled: false
+	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, mustChangePassword: false, status: 'Active'
 }
 """, parameters, cancellationToken);
 		return await GetAccountByUsernameAsync(username, cancellationToken)
@@ -106,19 +106,6 @@ CREATE account CONTENT {
 		var key = NormalizeSurrealId(accountId, "account");
 		var parameters = new Dictionary<string, object?> { ["id"] = new StringRecordId(key), ["username"] = newUsername, ["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
 		await ExecuteAsync("UPDATE $id SET username = $username, updatedAt = $now", parameters, cancellationToken);
-	}
-
-	public async ValueTask DeleteAccountAsync(string accountId, CancellationToken cancellationToken = default)
-	{
-		var key = NormalizeSurrealId(accountId, "account");
-		var parameters = new Dictionary<string, object?> { ["id"] = new StringRecordId(key) };
-		// One transaction so the account row and its ownership edges are torn down atomically.
-		await ExecuteAsync(
-			"BEGIN TRANSACTION;" +
-			"DELETE account_owns_character WHERE in = $id;" +
-			"DELETE $id;" +
-			"COMMIT TRANSACTION",
-			parameters, cancellationToken);
 	}
 
 	public async ValueTask LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
@@ -164,21 +151,21 @@ SELECT out.key AS dbref FROM account_owns_character WHERE in = $accountId
 	{
 		var parameters = new Dictionary<string, object?> { ["dbref"] = characterRef.Number };
 		var response = await ExecuteAsync("""
-SELECT in.id AS id, in.username AS username, in.email AS email, in.passwordHash AS passwordHash, in.createdAt AS createdAt, in.updatedAt AS updatedAt, in.isVerified AS isVerified, in.mustChangePassword AS mustChangePassword, in.isDisabled AS isDisabled
+SELECT in.id AS id, in.username AS username, in.email AS email, in.passwordHash AS passwordHash, in.createdAt AS createdAt, in.updatedAt AS updatedAt, in.isVerified AS isVerified, in.mustChangePassword AS mustChangePassword, in.status AS status
 FROM account_owns_character WHERE out.key = $dbref
 """, parameters, cancellationToken);
 		var results = response.GetValue<List<AccountDbRecord>>(0);
 		return results?.Count > 0 ? MapRecordToAccount(results[0]) : null;
 	}
 
-	public async ValueTask UpdateAccountDisabledAsync(string accountId, bool value, CancellationToken cancellationToken = default)
+	public async ValueTask UpdateAccountStatusAsync(string accountId, AccountStatus status, CancellationToken cancellationToken = default)
 	{
 		var key = NormalizeSurrealId(accountId, "account");
-		await ExecuteAsync("UPDATE $accountId SET isDisabled = $value, updatedAt = $now",
+		await ExecuteAsync("UPDATE $accountId SET status = $status, updatedAt = $now",
 			new Dictionary<string, object?>
 			{
 				["accountId"] = new StringRecordId(key),
-				["value"] = value,
+				["status"] = status.ToString(),
 				["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			}, cancellationToken);
 	}
@@ -201,7 +188,7 @@ FROM account_owns_character WHERE out.key = $dbref
 		UpdatedAt = rec.updatedAt,
 		IsVerified = rec.isVerified,
 		MustChangePassword = rec.mustChangePassword,
-		IsDisabled = rec.isDisabled
+		Status = AccountStatusParser.Parse(rec.status)
 	};
 
 	private static string NormalizeAccountId(RecordId? id)

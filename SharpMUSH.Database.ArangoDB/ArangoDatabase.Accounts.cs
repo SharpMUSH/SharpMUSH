@@ -71,7 +71,7 @@ public partial class ArangoDatabase
 			UpdatedAt = now,
 			IsVerified = false,
 			MustChangePassword = false,
-			IsDisabled = false
+			Status = nameof(AccountStatus.Active)
 		};
 
 		var created = await arangoDb.Document.CreateAsync<object, JsonElement>(
@@ -111,22 +111,6 @@ public partial class ArangoDatabase
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Accounts,
 			new { _key = key, Username = newUsername, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
 			mergeObjects: true, cancellationToken: cancellationToken);
-	}
-
-	public async ValueTask DeleteAccountAsync(string accountId, CancellationToken cancellationToken = default)
-	{
-		// Remove all character links first
-		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
-			"FOR e IN @@edge FILTER e._from == @accountId REMOVE e IN @@edge",
-			bindVars: new Dictionary<string, object>
-			{
-				{ "@edge", DatabaseConstants.AccountOwnsCharacter },
-				{ "accountId", accountId }
-			}, cancellationToken: cancellationToken);
-
-		var key = ExtractKey(accountId);
-		await arangoDb.Document.DeleteAsync<JsonElement>(handle, DatabaseConstants.Accounts, key,
-			cancellationToken: cancellationToken);
 	}
 
 	public async ValueTask LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
@@ -197,11 +181,11 @@ public partial class ArangoDatabase
 		return result.FirstOrDefault() is { ValueKind: not JsonValueKind.Undefined } elem ? AccountFromJson(elem) : null;
 	}
 
-	public async ValueTask UpdateAccountDisabledAsync(string accountId, bool value, CancellationToken cancellationToken = default)
+	public async ValueTask UpdateAccountStatusAsync(string accountId, AccountStatus status, CancellationToken cancellationToken = default)
 	{
 		var key = ExtractKey(accountId);
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Accounts,
-			new { _key = key, IsDisabled = value, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+			new { _key = key, Status = status.ToString(), UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
 			mergeObjects: true, cancellationToken: cancellationToken);
 	}
 
@@ -231,7 +215,7 @@ public partial class ArangoDatabase
 			UpdatedAt = elem.TryGetProperty("UpdatedAt", out var updatedProp) ? updatedProp.GetInt64() : 0,
 			IsVerified = elem.TryGetProperty("IsVerified", out var verifiedProp) && verifiedProp.GetBoolean(),
 			MustChangePassword = elem.TryGetProperty("MustChangePassword", out var mustChangeProp) && mustChangeProp.GetBoolean(),
-			IsDisabled = elem.TryGetProperty("IsDisabled", out var disabledProp) && disabledProp.GetBoolean()
+			Status = AccountStatusParser.Parse(elem.TryGetProperty("Status", out var statusProp) ? statusProp.GetString() : null)
 		};
 	}
 

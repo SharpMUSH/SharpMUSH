@@ -47,7 +47,7 @@ public partial class MemgraphDatabase
 		await ExecuteWithRetryAsync("""
 CREATE (a:Account {
 	id: $id, username: $username, email: $email, passwordHash: $passwordHash,
-	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, mustChangePassword: false, isDisabled: false
+	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, mustChangePassword: false, status: 'Active'
 })
 """, new { id, username, email = (object?)email, passwordHash = hashedPassword, createdAt = now, updatedAt = now }, cancellationToken);
 
@@ -92,14 +92,6 @@ CREATE (a:Account {
 		await ExecuteWithRetryAsync(
 			"MATCH (a:Account {id: $id}) SET a.username = $username, a.updatedAt = $now",
 			new { id = key, username = newUsername, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
-	}
-
-	public async ValueTask DeleteAccountAsync(string accountId, CancellationToken cancellationToken = default)
-	{
-		var key = accountId.Contains('/') ? accountId.Split('/')[1] : accountId;
-		await ExecuteWithRetryAsync(
-			"MATCH (a:Account {id: $id}) DETACH DELETE a",
-			new { id = key }, cancellationToken);
 	}
 
 	public async ValueTask LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
@@ -149,12 +141,12 @@ RETURN a
 		return result.Result.Count > 0 ? MapNodeToAccount(result.Result[0]["a"].As<INode>()) : null;
 	}
 
-	public async ValueTask UpdateAccountDisabledAsync(string accountId, bool value, CancellationToken cancellationToken = default)
+	public async ValueTask UpdateAccountStatusAsync(string accountId, AccountStatus status, CancellationToken cancellationToken = default)
 	{
 		var key = accountId.Contains('/') ? accountId.Split('/')[1] : accountId;
 		await ExecuteWithRetryAsync(
-			"MATCH (a:Account {id: $id}) SET a.isDisabled = $value, a.updatedAt = $now",
-			new { id = key, value, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
+			"MATCH (a:Account {id: $id}) SET a.status = $status, a.updatedAt = $now",
+			new { id = key, status = status.ToString(), now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
 	}
 
 	public async ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken cancellationToken = default)
@@ -179,7 +171,7 @@ RETURN a
 			UpdatedAt = node.Properties.TryGetValue("updatedAt", out var updated) ? Convert.ToInt64(updated) : 0,
 			IsVerified = node.Properties.TryGetValue("isVerified", out var verified) && (bool)verified,
 			MustChangePassword = node.Properties.TryGetValue("mustChangePassword", out var mustChange) && (bool)mustChange,
-			IsDisabled = node.Properties.TryGetValue("isDisabled", out var disabled) && (bool)disabled
+			Status = AccountStatusParser.Parse(node.Properties.TryGetValue("status", out var status) ? status?.ToString() : null)
 		};
 	}
 

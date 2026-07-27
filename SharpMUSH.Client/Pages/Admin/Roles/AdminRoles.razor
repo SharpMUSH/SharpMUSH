@@ -189,9 +189,9 @@
                         <div style="flex:1;min-width:0;">
                             <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;">
                                 <h2 class="ra-detail-name">@_account.Username</h2>
-                                @if (_account.IsDisabled)
+                                @if (_account.Status != "Active")
                                 {
-                                    <span class="ra-badge ra-badge--danger">@Loc["RolDisabledBadge"]</span>
+                                    <span class="ra-badge ra-badge--danger">@Loc[$"AdmAccountStatus{_account.Status}"]</span>
                                 }
                             </div>
                             <div class="ra-account-email">@_account.Email</div>

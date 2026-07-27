@@ -6,8 +6,8 @@ namespace SharpMUSH.Client.Services;
 public class AdminAccountsService(IHttpClientFactory httpClientFactory, AccountAuthService accountAuth)
 {
 	public record AdminCharacterSummary(int DbrefNumber, string Name);
-	public record AdminAccountRow(string Id, string Username, string? Email, bool IsDisabled,
-		bool MustChangePassword, IReadOnlyList<AdminCharacterSummary> Characters);
+	public record AdminAccountRow(string Id, string Username, string? Email, string Status,
+		bool MustChangePassword, bool IsReserved, IReadOnlyList<AdminCharacterSummary> Characters);
 	private record ResetPasswordRequest(string NewPassword);
 
 	private HttpClient CreateClient()
@@ -45,6 +45,12 @@ public class AdminAccountsService(IHttpClientFactory httpClientFactory, AccountA
 	public async Task<(bool Success, string? Error)> SetDisabledAsync(string key, bool disabled)
 	{
 		var response = await CreateClient().PostAsync($"api/admin/accounts/{key}/{(disabled ? "disable" : "enable")}", null);
+		return response.IsSuccessStatusCode ? (true, null) : (false, await response.Content.ReadAsStringAsync());
+	}
+
+	public async Task<(bool Success, string? Error)> SetStatusAsync(string key, string status)
+	{
+		var response = await CreateClient().PostAsJsonAsync($"api/admin/accounts/{key}/status", new { status });
 		return response.IsSuccessStatusCode ? (true, null) : (false, await response.Content.ReadAsStringAsync());
 	}
 

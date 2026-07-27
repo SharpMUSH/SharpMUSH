@@ -19,7 +19,9 @@ public partial class ArangoDatabase
 						["AccountId"] = session.AccountId,
 						["ExpiryUnixMs"] = session.ExpiryUnixMs,
 						["TtlMs"] = session.TtlMs,
-						["OriginIp"] = session.OriginIp
+						["OriginIp"] = session.OriginIp,
+						["CharacterKey"] = session.CharacterKey,
+						["CharacterCreationTime"] = session.CharacterCreationTime
 					} }
 			}, cancellationToken: cancellationToken);
 	}
@@ -37,7 +39,12 @@ public partial class ArangoDatabase
 			AccountId = e.GetProperty("AccountId").GetString()!,
 			ExpiryUnixMs = e.GetProperty("ExpiryUnixMs").GetInt64(),
 			TtlMs = e.GetProperty("TtlMs").GetInt64(),
-			OriginIp = e.GetProperty("OriginIp").GetString()!
+			OriginIp = e.GetProperty("OriginIp").GetString()!,
+			// Sessions minted before the character binding existed simply have no property.
+			CharacterKey = e.TryGetProperty("CharacterKey", out var ck) && ck.ValueKind == JsonValueKind.Number
+				? ck.GetInt32() : null,
+			CharacterCreationTime = e.TryGetProperty("CharacterCreationTime", out var cc) && cc.ValueKind == JsonValueKind.Number
+				? cc.GetInt64() : null
 		};
 	}
 

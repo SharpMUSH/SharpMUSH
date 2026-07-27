@@ -65,7 +65,7 @@ file sealed class NavMenuSwitchApiHandler(IReadOnlyList<CharacterSummary> charac
 
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{
-				Content = JsonContent.Create(new { ott = "new-character-ott", expiresIn = 300 })
+				Content = JsonContent.Create(new { ott = "new-character-ott", expiresIn = 300, accountSessionToken = "bound-to-target" })
 			});
 		}
 

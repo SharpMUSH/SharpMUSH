@@ -2360,14 +2360,8 @@
   <data name="AdmStatus" xml:space="preserve">
     <value>Status</value>
   </data>
-  <data name="AdmAccountDisabledChip" xml:space="preserve">
-    <value>DISABLED</value>
-  </data>
   <data name="AdmAccountMustChangePasswordChip" xml:space="preserve">
     <value>must change pw</value>
-  </data>
-  <data name="AdmAccountActiveChip" xml:space="preserve">
-    <value>active</value>
   </data>
   <data name="AdmResetPassword" xml:space="preserve">
     <value>Reset password</value>
@@ -2767,9 +2761,6 @@
   </data>
   <data name="RolNoAccountFound" xml:space="preserve">
     <value>No account found for “{0}”.</value>
-  </data>
-  <data name="RolDisabledBadge" xml:space="preserve">
-    <value>Disabled</value>
   </data>
   <data name="RolAssignedRoles" xml:space="preserve">
     <value>Assigned roles</value>
@@ -3486,5 +3477,31 @@
   </data>
   <data name="ResWikiStatTranslations" xml:space="preserve">
     <value>Translations</value>
+  <data name="AdmAccountStatusActive" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="AdmAccountStatusDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="AdmAccountStatusClosed" xml:space="preserve">
+    <value>Closed</value>
+  </data>
+  <data name="AdmAccountStatusDeleted" xml:space="preserve">
+    <value>Deleted</value>
+  </data>
+  <data name="AdmAccountActionActive" xml:space="preserve">
+    <value>Reactivate</value>
+  </data>
+  <data name="AdmAccountActionDisabled" xml:space="preserve">
+    <value>Disable</value>
+  </data>
+  <data name="AdmAccountActionClosed" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="AdmAccountActionDeleted" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="AdmAccountStatusChanged" xml:space="preserve">
+    <value>Account '{0}' status updated.</value>
   </data>
 </root>

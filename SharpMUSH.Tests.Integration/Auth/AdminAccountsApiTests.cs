@@ -43,7 +43,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
 	private record AccountLoginRequest(string UsernameOrEmail, string Password);
-	private record AdminAccountRow(string Id, string Username, string? Email, bool IsDisabled, bool MustChangePassword);
+	private record AdminAccountRow(string Id, string Username, string? Email, string Status, bool MustChangePassword, bool IsReserved);
 	private record CreateCharacterRequest(string Name, string Password);
 	private record CreatedCharacterResponse(int DbrefNumber, long CreationTime);
 
@@ -131,6 +131,132 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
 		using var response = await http.SendAsync(request);
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+	}
+
+	/// <summary>
+	/// The end-to-end shape of the lifecycle: the status endpoint persists a transition, the row
+	/// projection reflects it, and — the point of the whole design — the account can no longer
+	/// authenticate while its record survives intact.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 7)]
+	public async Task SetStatus_Closed_BlocksLoginAndKeepsTheRow()
+	{
+		var (http, sessionToken) = await LoginAsGodAccountAsync();
+		var (_, target) = await RegisterAccountAsync();
+
+		using var listRequest = new HttpRequestMessage(HttpMethod.Get, "api/admin/accounts");
+		listRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var listResponse = await http.SendAsync(listRequest);
+		var rows = await listResponse.Content.ReadFromJsonAsync<List<AdminAccountRow>>();
+		var targetRow = rows!.Single(r => r.Username == target.Username);
+
+		using var statusRequest = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{targetRow.Id}/status")
+		{
+			Content = JsonContent.Create(new { status = "Closed" })
+		};
+		statusRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var statusResponse = await http.SendAsync(statusRequest);
+		await Assert.That(statusResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+
+		using var afterRequest = new HttpRequestMessage(HttpMethod.Get, "api/admin/accounts");
+		afterRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var afterResponse = await http.SendAsync(afterRequest);
+		var afterRows = await afterResponse.Content.ReadFromJsonAsync<List<AdminAccountRow>>();
+		var afterRow = afterRows!.Single(r => r.Username == target.Username);
+		await Assert.That(afterRow.Status).IsEqualTo("Closed");
+		await Assert.That(afterRow.Username).IsEqualTo(target.Username);
+
+		using var loginResponse = await http.PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(target.Username, Password));
+		await Assert.That(loginResponse.IsSuccessStatusCode).IsFalse();
+	}
+
+	/// <summary>
+	/// The reserved account is present but refuses the transition, so this is 409 rather than 404 —
+	/// mapping it to NotFound would claim an account does not exist when it does.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 9)]
+	public async Task SetStatus_ReservedAccount_ReturnsConflict()
+	{
+		var (http, sessionToken) = await LoginAsGodAccountAsync();
+
+		using var listRequest = new HttpRequestMessage(HttpMethod.Get, "api/admin/accounts");
+		listRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var listResponse = await http.SendAsync(listRequest);
+		var rows = await listResponse.Content.ReadFromJsonAsync<List<AdminAccountRow>>();
+		var reserved = rows!.Single(r => r.IsReserved);
+
+		using var request = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{reserved.Id}/status")
+		{
+			Content = JsonContent.Create(new { status = "Closed" })
+		};
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var response = await http.SendAsync(request);
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+	}
+
+	[Test, NotInParallel("SetupFlow", Order = 10)]
+	public async Task SetStatus_UnknownAccount_ReturnsNotFound()
+	{
+		var (http, sessionToken) = await LoginAsGodAccountAsync();
+
+		using var request = new HttpRequestMessage(HttpMethod.Post, "api/admin/accounts/999999999/status")
+		{
+			Content = JsonContent.Create(new { status = "Closed" })
+		};
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var response = await http.SendAsync(request);
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+	}
+
+	/// <summary>
+	/// Enum.TryParse succeeds on numeric text, so without an IsDefined check "42" would be
+	/// persisted as an undefined status that no UI label or query understands.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 11)]
+	public async Task SetStatus_NumericStatus_ReturnsBadRequest()
+	{
+		var (http, sessionToken) = await LoginAsGodAccountAsync();
+		var (_, target) = await RegisterAccountAsync();
+
+		using var listRequest = new HttpRequestMessage(HttpMethod.Get, "api/admin/accounts");
+		listRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var listResponse = await http.SendAsync(listRequest);
+		var rows = await listResponse.Content.ReadFromJsonAsync<List<AdminAccountRow>>();
+		var targetRow = rows!.Single(r => r.Username == target.Username);
+
+		using var request = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{targetRow.Id}/status")
+		{
+			Content = JsonContent.Create(new { status = "42" })
+		};
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var response = await http.SendAsync(request);
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+	}
+
+	[Test, NotInParallel("SetupFlow", Order = 8)]
+	public async Task SetStatus_UnknownStatus_ReturnsBadRequest()
+	{
+		var (http, sessionToken) = await LoginAsGodAccountAsync();
+		var (_, target) = await RegisterAccountAsync();
+
+		using var listRequest = new HttpRequestMessage(HttpMethod.Get, "api/admin/accounts");
+		listRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var listResponse = await http.SendAsync(listRequest);
+		var rows = await listResponse.Content.ReadFromJsonAsync<List<AdminAccountRow>>();
+		var targetRow = rows!.Single(r => r.Username == target.Username);
+
+		using var request = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{targetRow.Id}/status")
+		{
+			Content = JsonContent.Create(new { status = "Banished" })
+		};
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var response = await http.SendAsync(request);
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
 	}
 
 	[Test, NotInParallel("SetupFlow", Order = 6)]

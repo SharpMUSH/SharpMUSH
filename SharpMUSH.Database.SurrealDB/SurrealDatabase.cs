@@ -400,7 +400,7 @@ public partial class SurrealDatabase(
 			Object = sharpObj,
 			Aliases = exitRecord.aliases,
 			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
-			Home = new(async ct => await GetHomeAsync(id, ct))
+			Home = new(async ct => await GetExitDestinationAsync(id, ct))
 		};
 	}
 
@@ -448,6 +448,33 @@ public partial class SurrealDatabase(
 			_ => throw new InvalidOperationException($"Invalid home for {typedId}: Exit objects cannot be homes"),
 			thing => thing,
 			_ => throw new InvalidOperationException($"No home found for {typedId}"));
+	}
+
+	/// <summary>
+	/// An exit's destination. Absent on a freshly @open'd or an @unlink'd exit, hence optional.
+	/// </summary>
+	private async ValueTask<AnyOptionalSharpContainer> GetExitDestinationAsync(string typedId, CancellationToken ct)
+	{
+		var key = ExtractKey(typedId);
+		var table = ExtractTable(typedId);
+		var parameters = new Dictionary<string, object?> { ["key"] = key };
+		var result = await ExecuteAsync(
+			$"SELECT VALUE out.key FROM has_home WHERE in = {table}:$key",
+			parameters, ct);
+
+		var destKeys = result.GetValue<List<int>>(0)!;
+		if (destKeys.Count == 0)
+		{
+			return new None();
+		}
+
+		var destination = await BuildTypedObjectFromKey(destKeys[0], ct);
+		return destination.Match<AnyOptionalSharpContainer>(
+			player => player,
+			room => room,
+			_ => new None(),
+			thing => thing,
+			_ => new None());
 	}
 
 	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct)

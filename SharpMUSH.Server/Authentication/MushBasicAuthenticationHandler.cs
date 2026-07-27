@@ -31,7 +31,8 @@ public class MushBasicAuthenticationHandler(
 	ILoggerFactory logger,
 	UrlEncoder encoder,
 	IMediator mediator,
-	IPasswordService passwordService)
+	IPasswordService passwordService,
+	IAccountService accountService)
 	: AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
 	public const string SchemeName = "MushBasic";
@@ -113,13 +114,20 @@ public class MushBasicAuthenticationHandler(
 
 		var claims = new List<Claim>
 		{
-			new(ClaimTypes.NameIdentifier, $"#{player.Object.Key}"),
 			new(ClaimTypes.Name, player.Object.Name),
 			new("character_key", player.Object.Key.ToString()),
 			new("character_creation_time", player.Object.CreationTime.ToString()),
 			new("character_name", player.Object.Name),
-			new(GameHub.CharacterDbrefClaim, $"#{player.Object.Key}")
+			new(GameHub.CharacterDbrefClaim, player.Object.DBRef.ToString())
 		};
+
+		// NameIdentifier is the ACCOUNT id on every principal. A character with no owning account
+		// still authenticates here — this is character-password basic auth — but carries no account
+		// id, so account-anchored writes reject it rather than acting as somebody.
+		if ((await accountService.GetAccountForCharacterAsync(player.Object.DBRef))?.Id is { } accountId)
+		{
+			claims.Add(new Claim(ClaimTypes.NameIdentifier, accountId));
+		}
 
 		var identity = new ClaimsIdentity(claims, SchemeName);
 		var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);

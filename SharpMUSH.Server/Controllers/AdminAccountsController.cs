@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
@@ -25,8 +26,12 @@ public class AdminAccountsController(
 	ILogger<AdminAccountsController> logger) : ControllerBase
 {
 	public record AdminCharacterSummary(int DbrefNumber, string Name);
-	public record AdminAccountRow(string Id, string Username, string? Email, bool IsDisabled,
-		bool MustChangePassword, IReadOnlyList<AdminCharacterSummary> Characters);
+	/// <param name="IsReserved">
+	/// True for a server-owned account whose status cannot be changed. Reported rather than derived
+	/// client-side so the reservation rule lives only where it is enforced.
+	/// </param>
+	public record AdminAccountRow(string Id, string Username, string? Email, string Status,
+		bool MustChangePassword, bool IsReserved, IReadOnlyList<AdminCharacterSummary> Characters);
 	public record ResetPasswordRequest(string NewPassword);
 
 	private static string FullId(string key) => $"node_accounts/{key}";
@@ -38,13 +43,14 @@ public class AdminAccountsController(
 		if (header is null || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
 			return (null, Unauthorized("Invalid or expired account session."));
 
-		var accountId = await accountSessionStore.ValidateAsync(header["Bearer ".Length..].Trim());
-		if (accountId is null)
+		var session = await accountSessionStore.ValidateAsync(header["Bearer ".Length..].Trim());
+		if (session is null)
 			return (null, Unauthorized("Invalid or expired account session."));
+		var accountId = session.Value.AccountId;
 
 		var account = await accountService.GetByIdAsync(accountId);
-		if (account is null || account.IsDisabled)
-			return (null, Unauthorized("Account not found or disabled."));
+		if (account is null || !account.IsActive)
+			return (null, Unauthorized("Account not found or not active."));
 		if (account.MustChangePassword)
 			return (null, StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action."));
 
@@ -69,7 +75,7 @@ public class AdminAccountsController(
 
 		var rows = await accounts.ToAsyncEnumerable()
 			.Select(async (account, ct) => new AdminAccountRow(KeyOf(account), account.Username, account.Email,
-				account.IsDisabled, account.MustChangePassword,
+				account.Status.ToString(), account.MustChangePassword, SystemAccount.IsReserved(account.Username),
 				(await accountService.GetCharactersAsync(account.Id!, ct))
 				.Select(c => new AdminCharacterSummary(c.Object.Key, c.Object.Name)).ToList()))
 			.ToListAsync();
@@ -110,6 +116,32 @@ public class AdminAccountsController(
 		var result = await accountService.EnableAccountAsync(FullId(key));
 		if (result.IsT1) return NotFound(result.AsT1.Value);
 		logger.LogInformation("Admin {AdminId} enabled account {Key}", LogSanitizer.Sanitize(adminId), LogSanitizer.Sanitize(key));
+		return NoContent();
+	}
+
+	public record SetStatusRequest(string Status);
+
+	[HttpPost("{key}/status")]
+	public async Task<IActionResult> SetStatus(string key, [FromBody] SetStatusRequest request)
+	{
+		var (adminId, failure) = await RequireWizardAsync();
+		if (failure is not null) return failure;
+
+		if (!AccountStatusParser.TryParseName(request.Status, out var status))
+			return BadRequest($"Unknown account status '{request.Status}'.");
+
+		// Resolving the account here separates the two error causes: absent is 404, present but
+		// refused (the reserved system account) is 409. Mapping both to NotFound claimed an account
+		// does not exist when it does.
+		var accountId = FullId(key);
+		if (await accountService.GetByIdAsync(accountId) is null)
+			return NotFound($"No account with key '{key}'.");
+
+		var result = await accountService.SetAccountStatusAsync(accountId, status);
+		if (result.IsT1) return Conflict(result.AsT1.Value);
+
+		logger.LogInformation("Admin {AdminId} set account {Key} status to {Status}",
+			LogSanitizer.Sanitize(adminId), LogSanitizer.Sanitize(key), status);
 		return NoContent();
 	}
 

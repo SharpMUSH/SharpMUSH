@@ -230,7 +230,10 @@
         _busy = true;
         var (success, error) = await AccountAuth.UnlinkCharacterAsync(dbrefNumber);
         _busy = false;
-        if (!success) _profileError = error;
+        // An error alongside success is advisory: the unlink landed, but something after it did not
+        // (the session could not be rebound), and the player has to know to pick a character.
+        if (error is not null) _profileError = error;
+        else if (success) _profileError = null;
         StateHasChanged();
     }
 
