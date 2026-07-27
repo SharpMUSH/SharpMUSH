@@ -20,10 +20,6 @@ using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>
-/// Null-stub localizer that returns the key as the string value.
-/// Avoids requiring .resx resource files in the test project.
-/// </summary>
-/// <summary>
 /// HttpMessageHandler that routes wiki API calls directly to an InMemoryWikiService.
 /// This gives tests a fully working WikiService without a real server or stub 404s.
 /// </summary>

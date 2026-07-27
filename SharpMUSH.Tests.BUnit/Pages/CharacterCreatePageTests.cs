@@ -14,7 +14,6 @@ using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
-/// <summary>Echoes the resource key back, so assertions here pin keys rather than English copy.</summary>
 /// <summary>Fakes the character-create endpoint (<c>POST api/account/characters</c>).</summary>
 file sealed class CharacterCreateApiHandler(bool succeed) : HttpMessageHandler
 {

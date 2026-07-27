@@ -113,21 +113,43 @@ claiming to be French, `UpsertTranslationAsync` begins rejecting `fr` as
 meaning — all with no migration, no audit trail, and nothing to alert on.
 
 Instead, `Migration_AddWikiTranslations` performs a one-time idempotent backfill,
-stamping `SourceLocale = Wiki.DefaultLocale` on every row where it is absent or
-empty. After that migration the field is authoritative and immutable per page, and
-the configured default only affects *new* pages and fallback resolution — never the
-interpretation of existing ones.
+stamping a source locale on every page row where it is absent or empty, and a
+`Locale` on every revision row. After that migration the field is authoritative and
+immutable per page, and the configured default only affects *new* pages and fallback
+resolution — never the interpretation of existing ones.
+
+**The backfill cannot read `Wiki.DefaultLocale`, and must not try.**
+`OptionsService` is an `IOptionsFactory<SharpMUSHOptions>` over `ISharpDatabase`
+(`SharpMUSH.Library/Services/OptionsService.cs:7`), so the configured value lives
+*inside* the database the migration is preparing; Core.Arango also instantiates
+migrations reflectively, with no DI to inject options through. The backfill therefore
+stamps a compile-time `WikiOptions.DefaultLocaleFallback` constant (`"en"`).
+
+That is not a compromise: the migration ships in the same release that introduces
+`wiki_default_locale`, so no operator can have set it yet, and the constant is by
+construction the value the option itself defaults to. Keep the two as one shared
+`const` rather than two literals, so they cannot drift.
+
+After the backfill, nothing derives a source locale from configuration ever again.
+`WikiLocalizationService` may keep a defensive branch that logs at Warning if it
+ever reads an unstamped row — a read must never fail for locale reasons, so
+*something* has to render such a row — but that is a diagnostic, **not** a fallback
+rule. The distinction is the whole point of this section: no write path can produce
+an empty `SourceLocale`, and no behaviour depends on one. Do not let that branch grow
+back into "treat empty as the configured default".
 
 This costs the design its "no data migration" property, which was worth less than
-it sounded: it is a single `UPDATE`-shaped pass over one collection, run once, and
-it is the only way the field can mean anything stable. The claim is now narrower
-and true: **no schema migration and no rewrite of page content** — one additive
-column stamped once.
+it sounded: two `UPDATE`-shaped passes — one over the page collection, one over the
+revision collection — run once, and it is the only way the field can mean anything
+stable. The claim is now narrower and true: **no schema migration and no rewrite of
+page content** — two additive columns stamped once.
 
-The backfill cannot infer the authored language of pre-existing prose — it can only
-stamp the configured default. **SharpMUSH is pre-production, so that is not a
-problem worth engineering around:** a game whose existing content is not in the
-configured default can set `wiki_default_locale` first, or simply wipe and reseed.
+The backfill cannot infer the authored language of pre-existing prose — and, per the
+constraint above, it cannot even consult the configured default; it stamps `"en"`.
+**SharpMUSH is pre-production, so that is not a problem worth engineering around:**
+a game whose existing content is not English can wipe and reseed, or correct
+`SourceLocale` afterwards. Setting `wiki_default_locale` beforehand does *not* help,
+because the migration cannot read it.
 The migration therefore stays deliberately simple — stamp the default, log the value
 and the row count — with no attempt at language detection, no interactive prompt and
 no per-page override. Revisit only if this ships to a live game with content that
@@ -232,7 +254,7 @@ already deployed — differently in each store:
 | Backend | Current revision index | Effect of the first translation revision |
 |---|---|---|
 | SurrealDB | `wiki_revision_page_rev ON wiki_revision FIELDS pageId, revisionNumber UNIQUE` (`SurrealDatabase.Migration.cs:97`) | **Rejected.** Translation revision 1 collides with the source's revision 1. |
-| ArangoDB | `Fields = ["PageId", "RevisionNumber"]`, `Persistent`, no `Unique` (`Migration_AddWiki.cs:101`) | Accepted; no constraint. |
+| ArangoDB | `Fields = ["PageId", "RevisionNumber"]`, `Persistent`, no `Unique` (`Migration_AddWiki.cs:101-105`) | Accepted; no constraint. |
 | Memgraph | two *separate* non-unique indexes, on `pageId` and on `revisionNumber` (`MemgraphDatabase.Migration.cs:124`) | Accepted; no constraint. |
 
 This is worse than a single store needing a fix. A numbering bug would fail loudly
@@ -268,14 +290,21 @@ public record WikiOptions(
         Group = "Wiki",
         Order = 1,
         ValidationPattern = @"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")]
-    string DefaultLocale = "en");
+    string DefaultLocale = WikiOptions.DefaultLocaleFallback)
+{
+    /// <summary>
+    /// The one place "en" is written. Shared with Migration_AddWikiTranslations, which cannot read
+    /// configuration — see "SourceLocale is materialised once".
+    /// </summary>
+    public const string DefaultLocaleFallback = "en";
+}
 ```
 
 Because the admin config pages are schema-driven off `[SharpConfig]`, this
 appears in `/admin/config` with no UI work.
 
-**The default is a real default, not a `required` member.** `DefaultLocale = "en"`
-is supplied on the parameter, so a configuration file that omits
+**The default is a real default, not a `required` member.** The parameter defaults to
+`DefaultLocaleFallback`, so a configuration file that omits
 `wiki_default_locale` binds to `en` rather than to null or empty. Every other
 `SharpMUSHOptions` member is `required`; this one deliberately is not, because
 resolution's terminal step depends on it always having a usable value.
@@ -318,6 +347,7 @@ Applied at every point a locale enters storage or configuration:
 | `CreateAsync(sourceLocale)` | `Error<string>`; no page created |
 | `Migration_AddWikiTranslations` backfill | fails the migration loudly |
 | `WikiOptions.DefaultLocale` | fails startup validation |
+| `DeleteTranslationAsync(locale)` | canonicalised first; an unparseable tag yields `NotFound` |
 | `?lang=` on a read | **not** an error — treated as absent, per Error handling |
 
 The read path is deliberately the odd one out: a reader typing a bad `?lang=`

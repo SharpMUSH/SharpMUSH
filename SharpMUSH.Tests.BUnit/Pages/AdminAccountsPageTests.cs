@@ -14,10 +14,6 @@ using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>
-/// Null-stub localizer that returns the key as the string value.
-/// Avoids requiring .resx resource files in the test project.
-/// </summary>
-/// <summary>
 /// HttpMessageHandler faking the admin-accounts API surface: GET api/admin/accounts (with
 /// optional ?search=), and the per-account POST/DELETE mutation routes. The fixed row set is
 /// returned regardless of query so tests can assert on rendered content deterministically.

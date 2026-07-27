@@ -28,6 +28,7 @@ public class SharedResourceLocalizationTests
 	[Test]
 	public async Task Multi_word_keys_resolve_to_their_resource_value()
 	{
+		using var culture = CultureScope.For("en");
 		var loc = PortalLocalizer.Create();
 
 		await Assert.That(loc["SceneArchive"].ResourceNotFound).IsFalse();
@@ -37,22 +38,16 @@ public class SharedResourceLocalizationTests
 	[Test]
 	public async Task Translated_cultures_resolve_to_their_satellite_value()
 	{
+		using var culture = CultureScope.For("fr");
 		var loc = PortalLocalizer.Create();
-		var previous = CultureInfo.CurrentUICulture;
-		CultureInfo.CurrentUICulture = new CultureInfo("fr");
-		try
-		{
-			await Assert.That(loc["AdminPanel"].Value).IsEqualTo("Panneau d'administration");
-		}
-		finally
-		{
-			CultureInfo.CurrentUICulture = previous;
-		}
+
+		await Assert.That(loc["AdminPanel"].Value).IsEqualTo("Panneau d'administration");
 	}
 
 	[Test]
 	public async Task No_resource_value_is_left_as_its_own_camel_case_key()
 	{
+		using var culture = CultureScope.For("en");
 		var unlocalized = PortalLocalizer.Create()
 			.GetAllStrings(includeParentCultures: true)
 			.Where(s => s.Value == s.Name && Regex.IsMatch(s.Name, "[a-z][A-Z]"))
@@ -78,6 +73,7 @@ public class SharedResourceLocalizationTests
 	[Test]
 	public async Task Widget_zone_labels_read_as_words()
 	{
+		using var culture = CultureScope.For("en");
 		var loc = PortalLocalizer.Create();
 
 		await Assert.That(loc[WidgetZone.MainContent.ResourceKey()].Value).IsEqualTo("Main Content");

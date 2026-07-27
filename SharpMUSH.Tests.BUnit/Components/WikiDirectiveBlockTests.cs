@@ -11,7 +11,6 @@ using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
-/// <summary>Null-stub localizer that echoes the resource key as its value.</summary>
 /// <summary>
 /// HttpMessageHandler that returns a canned response for every request,
 /// recording the last request path for assertions.
