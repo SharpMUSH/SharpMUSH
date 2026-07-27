@@ -116,7 +116,10 @@ public class AccountAuthService(
 		}
 		catch (JsonException ex)
 		{
-			logger.LogWarning(ex, "Stored active character was unreadable; falling back to the roster default");
+			// Drop the bad entry so this self-heals: left in place it would re-log on every reload
+			// until the player happened to switch characters.
+			logger.LogWarning(ex, "Stored active character was unreadable; clearing it and falling back to the roster default");
+			PersistActiveCharacter(null);
 			return null;
 		}
 	}
@@ -250,14 +253,19 @@ public class AccountAuthService(
 		// SetActiveCharacter because the value came out of storage — writing it straight back is a
 		// pointless interop round-trip. SetCharacters re-validates it against the roster once that
 		// lands, so a character the account no longer owns is reseated like any other stale active.
-		// Re-check the slot AFTER the read: the storage round-trip is an await, and a login can seat a
-		// character while it is in flight. Testing before the await would let a stale stored value
-		// clobber the newer live one.
-		var restored = await ReadStoredActiveCharacterAsync();
-		if (restored is not null && ActiveCharacter is null)
+		// Skip the read outright when a character is already seated (a login can beat hydration here),
+		// then re-check the slot AFTER the read as well: the storage round-trip is an await, and a login
+		// can land while it is in flight. Testing only before the await would let a stale stored value
+		// clobber the newer live one; testing only after it would spend an interop call to learn
+		// something we already knew.
+		if (ActiveCharacter is null)
 		{
-			ActiveCharacter = restored;
-			RaiseActiveCharacterChanged();
+			var restored = await ReadStoredActiveCharacterAsync();
+			if (restored is not null && ActiveCharacter is null)
+			{
+				ActiveCharacter = restored;
+				RaiseActiveCharacterChanged();
+			}
 		}
 		// CascadingAuthenticationState snapshots before MainLayout's InitAsync runs; re-notify so a reloaded tab's restored session reaches [Authorize] gates.
 		RaiseAuthStateChanged();

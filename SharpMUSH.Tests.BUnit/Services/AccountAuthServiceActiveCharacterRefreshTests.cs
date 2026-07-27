@@ -17,6 +17,10 @@ file sealed class FakeSessionStorage : IJSRuntime
 {
 	private readonly Dictionary<string, string> _items = new(StringComparer.Ordinal);
 
+	public void Seed(string key, string value) => _items[key] = value;
+	public bool Has(string key) => _items.ContainsKey(key);
+	public string? Read(string key) => _items.TryGetValue(key, out var v) ? v : null;
+
 	/// <summary>
 	/// Holds the answer to a <c>getItem</c> for this key until the test releases it, modelling a real
 	/// interop round-trip. The value is snapshotted when the call is made (as the JS side would), so
@@ -179,6 +183,28 @@ public class AccountAuthServiceActiveCharacterRefreshTests
 
 		// The live selection is newer than anything storage had to say.
 		await Assert.That(afterRefresh.ActiveCharacter?.DbrefNumber).IsEqualTo(Beta.DbrefNumber);
+	}
+
+	[Test]
+	public async Task ACorruptStoredCharacter_IsClearedSoItStopsRecurring()
+	{
+		var storage = new FakeSessionStorage();
+
+		var seed = MakeService(storage, [Alpha, Beta]);
+		await seed.InitAsync();
+		await seed.LoginAsync("headwiz", "password-one");
+		storage.Seed("sharpmush.account.activeCharacter", "{not json");
+
+		var afterRefresh = MakeService(storage, [Alpha, Beta]);
+		await afterRefresh.InitAsync();
+
+		// The bad entry is dropped as soon as it fails to parse, rather than re-logging every reload.
+		await Assert.That(storage.Has("sharpmush.account.activeCharacter")).IsFalse();
+
+		// Hydration then falls back to the roster default, which re-seats storage with a valid value.
+		await afterRefresh.GetCharactersAsync();
+		await Assert.That(afterRefresh.ActiveCharacter?.DbrefNumber).IsEqualTo(Alpha.DbrefNumber);
+		await Assert.That(storage.Read("sharpmush.account.activeCharacter")).Contains("\"Alpha\"");
 	}
 
 	[Test]
