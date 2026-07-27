@@ -82,3 +82,9 @@ test('parity.sub_itext_lower', $god, 'think iter(alpha,%i0)', '^alpha$');
 test('parity.sub_itext_upper', $god, 'think iter(alpha,%I0)', '^Alpha$');
 # "% " (percent-space) is emitted literally, unlike other unknown subs where % is dropped.
 test('parity.sub_pct_space', $god, 'think a% b', '^a% b$');
+
+# --- Unknown-function suggestion --------------------------------------------
+# A close typo inside [...] gets "DID YOU MEAN 'X'"; a name with no near match does not.
+test('parity.suggest_close', $god, 'think [ad(1,2)]', "DID YOU MEAN 'ADD'");
+test('parity.suggest_far', $god, 'think [xyzzyplughqq(1)]', 'NOT FOUND$');
+

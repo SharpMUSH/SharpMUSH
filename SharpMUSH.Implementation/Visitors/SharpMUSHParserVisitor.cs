@@ -211,6 +211,81 @@ public class SharpMUSHParserVisitor(
 	}
 
 	/// <summary>
+	/// The known function name closest to <paramref name="name"/>, for PennMUSH's
+	/// "DID YOU MEAN 'X'" hint on an unknown function inside <c>[...]</c> (src/parse.c). Returns the
+	/// nearest library name within a small edit distance (≤2, and never more than a third of the
+	/// typed length, so short typos do not match everything), or null if nothing is close enough.
+	/// Only ever suggests names that exist, so at worst a suggestion is missed, never wrong.
+	/// </summary>
+	private string? SuggestFunctionName(string name)
+	{
+		var typed = name.ToLowerInvariant();
+		var budget = Math.Min(2, Math.Max(1, typed.Length / 3));
+
+		string? best = null;
+		var bestDistance = int.MaxValue;
+		foreach (var (candidate, _) in parser.FunctionLibrary)
+		{
+			var lower = candidate.ToLowerInvariant();
+			var distance = LevenshteinWithin(typed, lower, budget);
+			if (distance < 0)
+			{
+				continue;
+			}
+
+			// Closest wins; ties break alphabetically for a stable suggestion.
+			if (distance < bestDistance || (distance == bestDistance && (best is null || string.CompareOrdinal(lower, best) < 0)))
+			{
+				best = lower;
+				bestDistance = distance;
+			}
+		}
+
+		return best;
+	}
+
+	/// <summary>
+	/// Levenshtein edit distance between <paramref name="a"/> and <paramref name="b"/>, returning
+	/// -1 as soon as it is known to exceed <paramref name="max"/> (a length gap alone can decide
+	/// this without any work). Bounding the search keeps the per-candidate cost tiny.
+	/// </summary>
+	private static int LevenshteinWithin(string a, string b, int max)
+	{
+		if (Math.Abs(a.Length - b.Length) > max)
+		{
+			return -1;
+		}
+
+		var previous = new int[b.Length + 1];
+		var current = new int[b.Length + 1];
+		for (var j = 0; j <= b.Length; j++)
+		{
+			previous[j] = j;
+		}
+
+		for (var i = 1; i <= a.Length; i++)
+		{
+			current[0] = i;
+			var rowMin = current[0];
+			for (var j = 1; j <= b.Length; j++)
+			{
+				var cost = a[i - 1] == b[j - 1] ? 0 : 1;
+				current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
+				rowMin = Math.Min(rowMin, current[j]);
+			}
+
+			if (rowMin > max)
+			{
+				return -1;
+			}
+
+			(previous, current) = (current, previous);
+		}
+
+		return previous[b.Length] <= max ? previous[b.Length] : -1;
+	}
+
+	/// <summary>
 	/// Extracts a token's own text from the original markup-carrying source. Recovery tokens
 	/// synthesised by the error strategy have no extent and yield an empty string.
 	/// </summary>
@@ -551,8 +626,14 @@ public class SharpMUSHParserVisitor(
 						}
 
 						success = false;
-						return new CallState(
-							string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()), context.Depth());
+						var notFound = string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant());
+						var suggestion = SuggestFunctionName(name);
+						if (suggestion is not null)
+						{
+							notFound += $" DID YOU MEAN '{suggestion.ToUpperInvariant()}'";
+						}
+
+						return new CallState(notFound, context.Depth());
 					}
 
 					libraryMatch = (userFunction.Value, false);

@@ -71,6 +71,8 @@ SharpMUSH releases behaved differently.
 - `$`-commands are matched against the command line *after* it is evaluated, so a
   command whose name or arguments only appear once substitutions and functions
   run still matches and captures its `%0..` from the evaluated text.
+- An unknown function inside `[...]` whose name is close to a real one is
+  reported as `#-1 FUNCTION (NAME) NOT FOUND DID YOU MEAN 'CLOSEST'`.
 
 ## Known limitations
 
