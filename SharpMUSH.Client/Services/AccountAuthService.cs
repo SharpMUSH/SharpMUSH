@@ -276,7 +276,9 @@ public class AccountAuthService(
 		// then re-check the slot AFTER the read as well: the storage round-trip is an await, and a login
 		// can land while it is in flight. Testing only before the await would let a stale stored value
 		// clobber the newer live one; testing only after it would spend an interop call to learn
-		// something we already knew.
+		// something we already knew. Static analysis reads the inner check as always-true because it
+		// does not model the await as a point where another continuation can run — it is load-bearing,
+		// and deleting it fails ALoginLandingDuringHydration_IsNotClobberedByTheStoredValue.
 		if (ActiveCharacter is null)
 		{
 			var restored = await ReadStoredActiveCharacterAsync();
