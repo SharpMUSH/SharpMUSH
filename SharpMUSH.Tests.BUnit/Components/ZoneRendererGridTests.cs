@@ -1,10 +1,13 @@
 using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using SharpMUSH.Client.Components.Layout;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Models.Portal.Widgets;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -19,6 +22,7 @@ public class ZoneRendererGridTests : BunitContext
 		var registry = new WidgetRegistry();
 		registry.Register(new WelcomeTextWidgetDescriptor());
 		Services.AddSingleton<IWidgetRegistry>(registry);
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 

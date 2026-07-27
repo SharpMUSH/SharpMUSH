@@ -14,6 +14,7 @@ using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.BUnit.Components;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Layout;
 
@@ -75,13 +76,6 @@ file sealed class NewTabApiHandler(IReadOnlyList<CharacterSummary> characters) :
 	}
 }
 
-file sealed class NewTabStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
-
 /// <summary>
 /// Task 9: opening a character in a new tab. Two halves, exercised through two different real render
 /// trees:
@@ -110,7 +104,7 @@ public class NewTabCharacterTests : BunitContext, IAsyncDisposable
 	{
 		Services.AddMudServices();
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
-		Services.AddSingleton<IStringLocalizer<SharedResource>, NewTabStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 
 		// MainLayout's OnInitializedAsync calls AccountAuth.InitAsync(), which is the FIRST call to it

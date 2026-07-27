@@ -7,7 +7,7 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>History: @Slug — SharpMUSH</PageTitle>
+<PageTitle>@Loc["WkHistoryPageTitle", Slug] — @Loc["AppTitle"]</PageTitle>
 
 <div class="wikihist">
     <a class="wikihist-back" href="@WikiRoutes.PathFor(Ns, Category, Slug)">
@@ -15,7 +15,7 @@
     </a>
     <div class="wikihist-head">
         <div>
-            <div class="wikihist-kicker">Revision history</div>
+            <div class="wikihist-kicker">@Loc["WkRevisionHistory"]</div>
             <h1 class="wikihist-title">@_displayTitle</h1>
         </div>
         @if (_oldRev.HasValue && _newRev.HasValue && _oldRev.Value != _newRev.Value)
@@ -23,12 +23,12 @@
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                        Href="@DiffHref()"
                        StartIcon="@Icons.Material.Filled.CompareArrows">
-                Compare selected
+                @Loc["WkCompareSelected"]
             </MudButton>
         }
     </div>
     <p class="wikihist-intro">
-        Select an <strong>older</strong> and a <strong>newer</strong> revision, then compare. @_revisions.Count revisions in all.
+        @Loc["WkHistoryIntro", _revisions.Count]
     </p>
 
     @if (_loading)
@@ -41,18 +41,18 @@
     }
     else if (_revisions.Count == 0)
     {
-        <EmptyState>No revision history found.</EmptyState>
+        <EmptyState>@Loc["WkNoRevisionHistory"]</EmptyState>
     }
     else
     {
         <div class="wikihist-table">
         <div style="display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px 80px;gap:0.25rem;align-items:center;padding:0.375rem 0.625rem;border-bottom:2px solid var(--border);background:var(--surface-3);border-radius:var(--radius) var(--radius) 0 0;">
-            <MudText Class="section-kicker" Style="grid-column:1;text-align:center;">Old</MudText>
-            <MudText Class="section-kicker" Style="grid-column:2;text-align:center;">New</MudText>
-            <MudText Class="section-kicker" Style="grid-column:3;">Timestamp / Summary</MudText>
-            <MudText Class="section-kicker" Style="grid-column:4;">Author</MudText>
-            <MudText Class="section-kicker" Style="grid-column:5;">Size</MudText>
-            <MudText Class="section-kicker" Style="grid-column:6;text-align:center;">Actions</MudText>
+            <MudText Class="section-kicker" Style="grid-column:1;text-align:center;">@Loc["WkColOld"]</MudText>
+            <MudText Class="section-kicker" Style="grid-column:2;text-align:center;">@Loc["WkColNew"]</MudText>
+            <MudText Class="section-kicker" Style="grid-column:3;">@Loc["WkColTimestampSummary"]</MudText>
+            <MudText Class="section-kicker" Style="grid-column:4;">@Loc["WkColAuthor"]</MudText>
+            <MudText Class="section-kicker" Style="grid-column:5;">@Loc["WkColSize"]</MudText>
+            <MudText Class="section-kicker" Style="grid-column:6;text-align:center;">@Loc["WkColActions"]</MudText>
         </div>
 
         <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);overflow:hidden;">
@@ -94,7 +94,7 @@
                             @if (isCurrent)
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Primary"
-                                         Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">current</MudChip>
+                                         Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">@Loc["WkCurrentRevision"]</MudChip>
                             }
                         </div>
                         @if (!string.IsNullOrWhiteSpace(rev.EditSummary))
@@ -129,13 +129,13 @@
                     </div>
 
                     <div style="display:flex;gap:0.25rem;align-items:center;justify-content:center;">
-                        <MudTooltip Text="View this revision">
+                        <MudTooltip Text="@Loc["WkViewRevision"]">
                             <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
                                            Href="@($"/wiki/{Ns}/{Category}/{Slug}?rev={rev.RevisionNumber}")" />
                         </MudTooltip>
                         @if (!isCurrent)
                         {
-                            <MudTooltip Text="Restore to this revision">
+                            <MudTooltip Text="@Loc["WkRestoreRevision"]">
                                 <MudIconButton Icon="@Icons.Material.Filled.Restore" Size="Size.Small"
                                                Color="Color.Warning"
                                                OnClick="@(() => RestoreAsync(rev))"
@@ -162,12 +162,12 @@
     private int? _oldRev;
     private int? _newRev;
 
-    private string _displayTitle = "Page";
+    private string _displayTitle = string.Empty;
 
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
-        _displayTitle = string.IsNullOrWhiteSpace(Slug) ? "Page" : Slug.Replace('-', ' ');
+        _displayTitle = string.IsNullOrWhiteSpace(Slug) ? Loc["WkPageFallbackTitle"] : Slug.Replace('-', ' ');
 
         var result = await Wiki.GetRevisionsAsync(Slug, ns: Ns, category: Category);
         _revisions = [.. result];
@@ -205,10 +205,10 @@
         result.Switch(
             _ =>
             {
-                Snackbar.Add($"Restored to revision {rev.RevisionNumber}.", Severity.Success);
+                Snackbar.Add(Loc["WkRestoredToRevision", rev.RevisionNumber], Severity.Success);
                 Nav.NavigateTo(WikiRoutes.PathFor(Ns, Category, Slug));
             },
-            err => Snackbar.Add($"Restore failed: {err}", Severity.Error)
+            err => Snackbar.Add(Loc["WkRestoreFailed", err], Severity.Error)
         );
     }
 

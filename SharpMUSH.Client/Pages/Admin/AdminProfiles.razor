@@ -3,17 +3,19 @@
 @using System.Net.Http.Json
 @inject IHttpClientFactory HttpClientFactory
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Profile Handler — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["ProfileHandler"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
 <div style="padding:var(--cpad);">
     <div class="ph-header">
-        <div class="ph-kicker">Administration</div>
-        <h1 class="ph-title">Profile Handler</h1>
+        <div class="ph-kicker">@Loc["AdmKicker"]</div>
+        <h1 class="ph-title">@Loc["ProfileHandler"]</h1>
         <p class="ph-subtitle">
-            Character profiles are served by the in-game <code>http_handler</code> object via its
-            <code>HTTP`PROFILE`*</code> softcode. Customize it in-game with <code>&amp;HTTP`PROFILE`GET …</code>,
-            or reinstall the stock handler below.
+            @((MarkupString)Loc["AdmProfilesSubtitle",
+                "<code>http_handler</code>",
+                "<code>HTTP`PROFILE`*</code>",
+                "<code>&amp;HTTP`PROFILE`GET …</code>"].Value)
         </p>
     </div>
 
@@ -23,23 +25,23 @@
     }
     else if (_status is null)
     {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Could not load handler status.</MudAlert>
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@Loc["AdmProfilesStatusLoadFailed"]</MudAlert>
     }
     else
     {
         <div class="ph-card ph-status">
             <div class="ph-status-row">
-                <span class="ph-status-label">Configured</span>
-                <span class="ph-status-value">@(_status.Configured ? "Yes" : "No (http_handler unset)")</span>
+                <span class="ph-status-label">@Loc["AdmProfilesConfigured"]</span>
+                <span class="ph-status-value">@(_status.Configured ? Loc["AdmYes"] : Loc["AdmProfilesNotConfiguredValue"])</span>
             </div>
             @if (_status.Configured)
             {
                 <div class="ph-status-row">
-                    <span class="ph-status-label">Handler</span>
+                    <span class="ph-status-label">@Loc["AdmProfilesHandler"]</span>
                     <span class="ph-status-value">
                         @(_status.HandlerExists
                             ? $"{_status.HandlerName} (#{_status.HandlerDbref})"
-                            : $"#{_status.HandlerDbref} — NOT FOUND")
+                            : Loc["AdmProfilesHandlerNotFound", _status.HandlerDbref?.ToString() ?? string.Empty].Value)
                     </span>
                 </div>
             }
@@ -49,8 +51,8 @@
         {
             <div class="ph-card ph-attrs">
                 <div class="ph-attrs-head">
-                    <span>Attribute</span>
-                    <span>Status</span>
+                    <span>@Loc["AdmAttribute"]</span>
+                    <span>@Loc["AdmStatus"]</span>
                 </div>
                 @foreach (var attr in _status.Attributes)
                 {
@@ -58,11 +60,11 @@
                         <code>@attr.Attribute</code>
                         @if (attr.Present)
                         {
-                            <span class="ph-chip ph-chip-ok">Present</span>
+                            <span class="ph-chip ph-chip-ok">@Loc["AdmPresent"]</span>
                         }
                         else
                         {
-                            <span class="ph-chip ph-chip-warn">Missing</span>
+                            <span class="ph-chip ph-chip-warn">@Loc["AdmMissing"]</span>
                         }
                     </div>
                 }
@@ -72,11 +74,12 @@
                        StartIcon="@Icons.Material.Filled.RestartAlt"
                        OnClick="ResetAsync" Disabled="_resetting"
                        Style="background:var(--accent);color:var(--accent-on);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;">
-                @(_resetting ? "Resetting…" : "Reset to Defaults")
+                @(_resetting ? Loc["AdmResetting"] : Loc["ResetToDefaults"])
             </MudButton>
             <p class="ph-caption">
-                Overwrites the stock <code>HTTP`PROFILE`*</code> and <code>FN`*</code> attributes with the
-                built-in defaults. Custom attributes you added are left untouched.
+                @((MarkupString)Loc["AdmProfilesResetCaption",
+                    "<code>HTTP`PROFILE`*</code>",
+                    "<code>FN`*</code>"].Value)
             </p>
         }
     }
@@ -118,17 +121,17 @@
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<ResetResult>();
-                Snackbar.Add($"Reset complete: {result?.Written ?? 0} attributes written.", Severity.Success);
+                Snackbar.Add(Loc["AdmProfilesResetComplete", result?.Written ?? 0], Severity.Success);
                 await LoadAsync();
             }
             else
             {
-                Snackbar.Add($"Reset failed ({(int)response.StatusCode}).", Severity.Error);
+                Snackbar.Add(Loc["AdmProfilesResetFailedStatus", (int)response.StatusCode], Severity.Error);
             }
         }
         catch (HttpRequestException ex)
         {
-            Snackbar.Add($"Reset failed: {ex.Message}", Severity.Error);
+            Snackbar.Add(Loc["AdmProfilesResetFailedError", ex.Message], Severity.Error);
         }
         _resetting = false;
     }

@@ -2,13 +2,16 @@ using System.Net;
 using System.Net.Http.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components.Widgets;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -60,6 +63,7 @@ public class QuickstartWidgetTests : BunitContext, IAsyncDisposable
 	public QuickstartWidgetTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -101,9 +105,9 @@ public class QuickstartWidgetTests : BunitContext, IAsyncDisposable
 		var auth = BuildAuth([]);
 		var cut = RenderWidget(auth);
 
-		await Assert.That(cut.Markup).Contains("Read the Wiki");
-		await Assert.That(cut.Markup).Contains("Browse Characters");
-		await Assert.That(cut.Markup).DoesNotContain("Create your character");
+		await Assert.That(cut.Markup).Contains("WidReadTheWiki");
+		await Assert.That(cut.Markup).Contains("WidBrowseCharacters");
+		await Assert.That(cut.Markup).DoesNotContain("WidCreateYourCharacter");
 	}
 
 	[TUnit.Core.Test]
@@ -114,12 +118,12 @@ public class QuickstartWidgetTests : BunitContext, IAsyncDisposable
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("Create your character"))
+			if (!cut.Markup.Contains("WidCreateYourCharacter"))
 				throw new InvalidOperationException("hero not rendered yet");
 		});
 
 		var cta = cut.Find("a[href=\"/characters/new\"]");
-		await Assert.That(cta.TextContent).Contains("Create your character");
+		await Assert.That(cta.TextContent).Contains("WidCreateYourCharacter");
 	}
 
 	[TUnit.Core.Test]
@@ -129,9 +133,9 @@ public class QuickstartWidgetTests : BunitContext, IAsyncDisposable
 		var cut = RenderWidget(auth);
 
 		var link = cut.Find("a[href=\"/characters/new\"]");
-		await Assert.That(link.TextContent).Contains("New character");
-		await Assert.That(cut.Markup).DoesNotContain("You don't have a character yet");
-		await Assert.That(cut.Markup).DoesNotContain("Create your character");
+		await Assert.That(link.TextContent).Contains("WidNewCharacter");
+		await Assert.That(cut.Markup).DoesNotContain("WidNoCharacterYet");
+		await Assert.That(cut.Markup).DoesNotContain("WidCreateYourCharacter");
 	}
 
 	public new async ValueTask DisposeAsync()

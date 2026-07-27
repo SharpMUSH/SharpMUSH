@@ -8,15 +8,9 @@ using NSubstitute;
 using SharpMUSH.Client.Pages;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class PlayStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => Enumerable.Empty<LocalizedString>();
-}
 
 public class PlaySidebarTests : BunitContext
 {
@@ -54,7 +48,7 @@ public class PlaySidebarTests : BunitContext
 		Services.AddSingleton(hostEnv);
 
 		// IStringLocalizer<SharedResource> (injected by Play.razor)
-		Services.AddSingleton<IStringLocalizer<SharedResource>, PlayStubLocalizer<SharedResource>>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 	}
 
 	[TUnit.Core.Test]

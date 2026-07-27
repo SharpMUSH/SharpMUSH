@@ -2,37 +2,37 @@
 @using System.Text.Json
 @using SharpMUSH.Library.Authorization
 @attribute [Authorize(Policy = "layout.admin")]
+@inject IStringLocalizer<SharedResource> Loc
 @inject ILayoutService LayoutService
 @inject IWidgetRegistry Registry
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
-@inject NavigationManager Nav
 
-<PageTitle>@(_scopeInfo?.DisplayName ?? Scope) Layout — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["LayEditorPageTitle", ScopeLabel] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="layedit">
     <div class="layedit-head">
         <div>
-            <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Filled.ArrowBack" Style="font-size:0.8125rem;" /> All layouts</a>
-            <h1 class="layedit-title">@(_scopeInfo?.DisplayName ?? Scope)</h1>
-            <p class="layedit-blurb">@(_scopeInfo?.Description)</p>
+            <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Filled.ArrowBack" Style="font-size:0.8125rem;" /> @Loc["LayAllLayouts"]</a>
+            <h1 class="layedit-title">@ScopeLabel</h1>
+            <p class="layedit-blurb">@(_scopeInfo is null ? null : Loc[_scopeInfo.DescriptionKey].Value)</p>
         </div>
         <div class="layedit-actions">
             <button type="button" class="le-btn @(_showPreview ? "le-btn--on" : "")" @onclick="@(() => _showPreview = !_showPreview)">
-                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;" /> Preview
+                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;" /> @Loc["LayPreview"]
             </button>
             <button type="button" class="le-btn" @onclick="ResetAsync" disabled="@_saving">
-                <MudIcon Icon="@Icons.Material.Filled.RestartAlt" Style="font-size:0.875rem;" /> Reset to default
+                <MudIcon Icon="@Icons.Material.Filled.RestartAlt" Style="font-size:0.875rem;" /> @Loc["ResetToDefault"]
             </button>
             <button type="button" class="le-btn le-btn--primary" @onclick="SaveAsync" disabled="@(_saving || !_dirty)">
-                <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:0.875rem;" /> @(_saving ? "Publishing…" : "Publish")
+                <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:0.875rem;" /> @(_saving ? Loc["LayPublishing"] : Loc["LayPublish"])
             </button>
         </div>
     </div>
 
     @if (_scopeInfo is null)
     {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Unknown layout scope “@Scope”.</MudAlert>
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@Loc["LayUnknownScope", Scope]</MudAlert>
     }
     else if (_loading)
     {
@@ -46,15 +46,15 @@
                           ItemDropped="OnDropped" Class="le-board">
             <ChildContent>
                 <div class="le-palette">
-                    <div class="le-panel-label">Widgets</div>
+                    <div class="le-panel-label">@Loc["LayWidgetsPanel"]</div>
                     <MudDropZone T="EditItem" Identifier="palette" Class="le-palette-zone" AllowReorder="false" />
-                    <div class="le-hint">Drag a widget into a zone. Drag a placed widget back here to remove it.</div>
+                    <div class="le-hint">@Loc["LayPaletteHint"]</div>
 
-                    <div class="le-panel-label" style="margin-top:1.125rem;">Sidebars &amp; footer</div>
+                    <div class="le-panel-label" style="margin-top:1.125rem;">@Loc["LaySidebarsAndFooter"]</div>
                     <div class="le-settings">
-                        <label class="le-toggle"><input type="checkbox" checked="@_leftOn" @onchange="@(e => { _leftOn = (bool)e.Value!; _dirty = true; })" /> Left sidebar</label>
-                        <label class="le-toggle"><input type="checkbox" checked="@_rightOn" @onchange="@(e => { _rightOn = (bool)e.Value!; _dirty = true; })" /> Right sidebar</label>
-                        <label class="le-toggle"><input type="checkbox" checked="@_footerOn" @onchange="@(e => { _footerOn = (bool)e.Value!; _dirty = true; })" /> Footer</label>
+                        <label class="le-toggle"><input type="checkbox" checked="@_leftOn" @onchange="@(e => { _leftOn = (bool)e.Value!; _dirty = true; })" /> @Loc[WidgetZone.LeftSidebar.ResourceKey()]</label>
+                        <label class="le-toggle"><input type="checkbox" checked="@_rightOn" @onchange="@(e => { _rightOn = (bool)e.Value!; _dirty = true; })" /> @Loc[WidgetZone.RightSidebar.ResourceKey()]</label>
+                        <label class="le-toggle"><input type="checkbox" checked="@_footerOn" @onchange="@(e => { _footerOn = (bool)e.Value!; _dirty = true; })" /> @Loc[WidgetZone.Footer.ResourceKey()]</label>
                     </div>
                 </div>
 
@@ -64,8 +64,8 @@
                         <div class="le-zone">
                             <div class="le-zone-head">
                                 <MudIcon Icon="@ZoneIcon(zone)" Style="font-size:0.875rem;color:var(--accent);" />
-                                <span>@zone</span>
-                                <span class="le-zone-hint">@(IsGridZone(zone) ? "12-column grid" : "horizontal — no width")</span>
+                                <span>@Loc[zone.ResourceKey()]</span>
+                                <span class="le-zone-hint">@(IsGridZone(zone) ? Loc["LayGridZoneHint"] : Loc["LayFlowZoneHint"])</span>
                             </div>
                             <MudDropZone T="EditItem" Identifier="@zone.ToString()"
                                          Class="@($"le-zone-drop {(IsGridZone(zone) ? "le-zone-drop--grid" : "")}")" />
@@ -82,7 +82,7 @@
                         <span style="flex:1;"></span>
                         @if (IsGridZoneName(context.Zone))
                         {
-                            <div class="le-width" @onpointerdown:stopPropagation="true" title="Width in columns (1–12)">
+                            <div class="le-width" @onpointerdown:stopPropagation="true" title="@Loc["LayWidthInColumns"]">
                                 <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Style="font-size:0.8125rem;color:var(--text-faint);" />
                                 <input type="range" min="1" max="12" step="1" class="le-span-slider"
                                        value="@ClampSpan(context.Span)"
@@ -94,12 +94,12 @@
                         }
                         @if (context.Config is not null)
                         {
-                            <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:0.75rem;color:var(--accent);" Title="Has config" />
+                            <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:0.75rem;color:var(--accent);" Title="@Loc["LayHasConfig"]" />
                         }
-                        <button type="button" class="le-item-btn" title="Configure" @onclick="@(() => EditConfigAsync(context))" @onclick:stopPropagation="true">
+                        <button type="button" class="le-item-btn" title="@Loc["LayConfigure"]" @onclick="@(() => EditConfigAsync(context))" @onclick:stopPropagation="true">
                             <MudIcon Icon="@Icons.Material.Filled.Settings" Style="font-size:0.8125rem;" />
                         </button>
-                        <button type="button" class="le-item-btn le-item-btn--danger" title="Remove" @onclick="@(() => Remove(context))" @onclick:stopPropagation="true">
+                        <button type="button" class="le-item-btn le-item-btn--danger" title="@Loc["LayRemove"]" @onclick="@(() => Remove(context))" @onclick:stopPropagation="true">
                             <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.8125rem;" />
                         </button>
                     }
@@ -113,16 +113,16 @@
             <div class="le-preview">
                 <div class="le-preview-head">
                     <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;color:var(--accent);" />
-                    <span>Live preview</span>
+                    <span>@Loc["LayLivePreview"]</span>
                     <span class="le-preview-note">
-                        Reflects unsaved changes@(Scope == LayoutScopes.Profile ? " · character widgets show a generic state here" : "")
+                        @Loc["LayPreviewNote"]@(Scope == LayoutScopes.Profile ? Loc["LayPreviewNoteProfile"].Value : string.Empty)
                     </span>
                 </div>
                 <div class="le-preview-surface">
                     @foreach (var zone in _scopeInfo.Zones)
                     {
                         <div class="le-preview-zone">
-                            <div class="le-preview-zlabel">@zone</div>
+                            <div class="le-preview-zlabel">@Loc[zone.ResourceKey()]</div>
                             <ZoneRenderer Zone="zone" Layout="preview" Grid="IsGridZone(zone)" />
                         </div>
                     }
@@ -195,6 +195,16 @@
     private string _leftWidth = "280px", _rightWidth = "280px";
     private bool _showPreview = true;
 
+    private string ScopeLabel => _scopeInfo is null ? Scope : Loc[_scopeInfo.DisplayNameKey].Value;
+
+    // Built-in descriptors put a SharedResource key in DisplayName; application-backed ones carry
+    // admin-supplied text (or a bare slug), which the lookup misses and passes through unchanged.
+    private string WidgetLabel(IPortalWidget widget)
+    {
+        var label = Loc[widget.DisplayName];
+        return label.ResourceNotFound ? widget.DisplayName : label.Value;
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         _scopeInfo = LayoutScopes.Find(Scope);
@@ -220,8 +230,8 @@
 
         _palette = Registry.GetAllWidgets()
             .Where(w => w.AllowedZones.Any(z => _scopeInfo!.Zones.Contains(z)))
-            .OrderBy(w => w.DisplayName)
-            .Select(w => new EditItem { WidgetName = w.Name, DisplayName = w.DisplayName, Zone = "palette", IsTemplate = true })
+            .Select(w => new EditItem { WidgetName = w.Name, DisplayName = WidgetLabel(w), Zone = "palette", IsTemplate = true })
+            .OrderBy(i => i.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
         _zones = _scopeInfo!.Zones.ToDictionary(
@@ -231,7 +241,7 @@
                 .Select(p => new EditItem
                 {
                     WidgetName = p.WidgetName,
-                    DisplayName = Registry.GetWidget(p.WidgetName)?.DisplayName ?? p.WidgetName,
+                    DisplayName = Registry.GetWidget(p.WidgetName) is { } w ? WidgetLabel(w) : p.WidgetName,
                     Zone = z.ToString(),
                     Config = p.Config,
                     Span = ClampSpan(p.Span)
@@ -323,7 +333,7 @@
             { x => x.WidgetKey, item.WidgetName },
             { x => x.InitialJson, item.Config?.GetRawText() }
         };
-        var dialog = await DialogService.ShowAsync<WidgetConfigDialog>($"Configure {item.DisplayName}", parameters);
+        var dialog = await DialogService.ShowAsync<WidgetConfigDialog>(Loc["LayConfigureWidget", item.DisplayName], parameters);
         var result = await dialog.Result;
         if (result is null || result.Canceled)
         {
@@ -363,11 +373,11 @@
         if (ok)
         {
             _dirty = false;
-            Snackbar.Add($"Published the {_scopeInfo.DisplayName} layout.", Severity.Success);
+            Snackbar.Add(Loc["LayPublished", ScopeLabel], Severity.Success);
         }
         else
         {
-            Snackbar.Add("Failed to publish layout.", Severity.Error);
+            Snackbar.Add(Loc["LayPublishFailed"], Severity.Error);
         }
     }
 
@@ -379,9 +389,9 @@
         }
 
         var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Reset layout",
-            $"Reset the {_scopeInfo.DisplayName} layout to its default? Any customizations will be discarded.",
-            yesText: "Reset", cancelText: "Cancel");
+            Loc["LayResetLayout"],
+            Loc["LayResetConfirm", ScopeLabel],
+            yesText: Loc["LayReset"], cancelText: Loc["Cancel"]);
 
         if (confirmed != true)
         {
@@ -395,11 +405,11 @@
         if (ok)
         {
             await LoadAsync();
-            Snackbar.Add($"Reset the {_scopeInfo.DisplayName} layout.", Severity.Success);
+            Snackbar.Add(Loc["LayResetDone", ScopeLabel], Severity.Success);
         }
         else
         {
-            Snackbar.Add("Failed to reset layout.", Severity.Error);
+            Snackbar.Add(Loc["LayResetFailed"], Severity.Error);
         }
     }
 
