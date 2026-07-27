@@ -2562,6 +2562,7 @@
   </data>
   <data name="WikiDeleteConfirmText" xml:space="preserve">
     <value>Supprimer {count, plural, one {# page} other {# pages}} et toutes leurs révisions ? Cette action est irréversible.</value>
+  </data>
   <data name="AdmAccountStatusActive" xml:space="preserve">
     <value>Actif</value>
   </data>
