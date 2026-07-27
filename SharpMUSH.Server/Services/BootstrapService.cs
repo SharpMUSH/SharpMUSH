@@ -18,6 +18,8 @@ public class BootstrapService(
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
+		await accountService.GetOrCreateSystemAccountAsync(cancellationToken);
+
 		// Reserved accounts don't count as "someone has registered" — they are created by the
 		// server, so counting them would make this guard permanently true and the admin account
 		// would never be pre-generated.

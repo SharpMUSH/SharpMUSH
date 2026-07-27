@@ -1,5 +1,6 @@
 using OneOf.Types;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -15,9 +16,10 @@ public partial class Commands
 	/// <c>@account &lt;name&gt;</c> — show account details;
 	/// <c>@account/list [pattern]</c>;
 	/// <c>@account/newpassword &lt;name&gt;=&lt;password&gt;</c> — set + force change on next login;
-	/// <c>@account/disable &lt;name&gt;</c> / <c>@account/enable &lt;name&gt;</c>.</para>
+	/// <c>@account/disable &lt;name&gt;</c> / <c>@account/enable &lt;name&gt;</c>;
+	/// <c>@account/close &lt;name&gt;</c> / <c>@account/delete &lt;name&gt;</c> — the account record is retained either way.</para>
 	/// </summary>
-	[SharpCommand(Name = "@ACCOUNT", Switches = ["LIST", "NEWPASSWORD", "DISABLE", "ENABLE"],
+	[SharpCommand(Name = "@ACCOUNT", Switches = ["LIST", "NEWPASSWORD", "DISABLE", "ENABLE", "CLOSE", "DELETE"],
 		Behavior = CommandBehavior.Default | CommandBehavior.EqSplit | CommandBehavior.RSNoParse,
 		CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 2, ParameterNames = ["name", "password"])]
 	public static async ValueTask<Option<CallState>> AccountAdmin(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -35,7 +37,7 @@ public partial class Commands
 				? accounts
 				: accounts.Where(a => a.Username.Contains(arg0, StringComparison.OrdinalIgnoreCase)).ToList();
 			var lines = filtered.Select(a =>
-				$"{a.Username,-30} {(a.IsDisabled ? "DISABLED" : "active"),-10} {(a.MustChangePassword ? "must-change-pw" : string.Empty)}");
+				$"{a.Username,-30} {StatusLabel(a.Status),-10} {(a.MustChangePassword ? "must-change-pw" : string.Empty)}");
 			await NotifyService!.Notify(executor,
 				filtered.Count == 0 ? "No matching accounts." : string.Join("\n", lines));
 			return CallState.Empty;
@@ -43,7 +45,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(arg0))
 		{
-			await NotifyService!.Notify(executor, "Usage: @account[/list|/newpassword|/disable|/enable] <name>[=<password>]");
+			await NotifyService!.Notify(executor, "Usage: @account[/list|/newpassword|/disable|/enable|/close|/delete] <name>[=<password>]");
 			return CallState.Empty;
 		}
 
@@ -97,6 +99,38 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		if (switches.Contains("CLOSE"))
+		{
+			var result = await AccountService.CloseAccountAsync(account.Id!);
+			if (result.IsT0)
+			{
+				await NotifyService!.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.AccountClosedFormat), executor, account.Username);
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, result.AsT1.Value);
+			}
+
+			return CallState.Empty;
+		}
+
+		if (switches.Contains("DELETE"))
+		{
+			var result = await AccountService.MarkAccountDeletedAsync(account.Id!);
+			if (result.IsT0)
+			{
+				await NotifyService!.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.AccountMarkedDeletedFormat), executor, account.Username);
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, result.AsT1.Value);
+			}
+
+			return CallState.Empty;
+		}
+
 		// No switch: show details.
 		var characters = await AccountService.GetCharactersAsync(account.Id!);
 		var charList = characters.Count == 0
@@ -105,8 +139,14 @@ public partial class Commands
 		await NotifyService!.Notify(executor,
 			$"Account: {account.Username}\n" +
 			$"Email: {account.Email ?? "(none)"}\n" +
-			$"Status: {(account.IsDisabled ? "DISABLED" : "active")}{(account.MustChangePassword ? ", must change password" : string.Empty)}\n" +
+			$"Status: {StatusLabel(account.Status)}{(account.MustChangePassword ? ", must change password" : string.Empty)}\n" +
 			$"Characters:\n{charList}");
 		return CallState.Empty;
 	}
+
+	private static string StatusLabel(AccountStatus status) => status switch
+	{
+		AccountStatus.Active => "active",
+		_ => status.ToString().ToUpperInvariant()
+	};
 }

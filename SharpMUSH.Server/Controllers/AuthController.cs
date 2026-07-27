@@ -82,8 +82,8 @@ public class AuthController(
 			}
 
 			var sessionAccount = await accountService.GetByIdAsync(accountId);
-			if (sessionAccount is null || sessionAccount.IsDisabled)
-				return Unauthorized("Account not found or disabled.");
+			if (sessionAccount is null || !sessionAccount.IsActive)
+				return Unauthorized("Account not found or not active.");
 			if (sessionAccount.MustChangePassword)
 				return StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action.");
 
@@ -175,8 +175,8 @@ public class AuthController(
 		if (accountId is null) return Unauthorized("Invalid or expired account session.");
 
 		var account = await accountService.GetByIdAsync(accountId);
-		if (account is null || account.IsDisabled)
-			return Unauthorized("Account not found or disabled.");
+		if (account is null || !account.IsActive)
+			return Unauthorized("Account not found or not active.");
 		if (account.MustChangePassword)
 			return StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action.");
 

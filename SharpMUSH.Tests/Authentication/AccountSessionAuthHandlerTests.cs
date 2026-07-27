@@ -33,7 +33,7 @@ public class AccountSessionAuthHandlerTests
 			Email = null,
 			PasswordHash = "hash",
 			CreatedAt = 1_000_000,
-			IsDisabled = isDisabled,
+			Status = isDisabled ? AccountStatus.Disabled : AccountStatus.Active,
 		};
 
 	private static SharpPlayer MakePlayer(int key, string name, long creationTime = 0L)
