@@ -212,4 +212,33 @@ public class InMemoryAccountSessionStoreTests
 		await Assert.That((await store.ValidateAsync(t2))?.AccountId).IsNull();
 		await Assert.That((await store.ValidateAsync(t3))?.AccountId).IsEqualTo("acct-C");
 	}
+
+	[Test]
+	public async Task ValidateAsync_BoundToken_ReturnsTheCharacterItWasMintedFor()
+	{
+		var store = new InMemoryAccountSessionStore();
+		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(5), "10.0.0.1", 7, 777L);
+
+		var identity = await store.ValidateAsync(token);
+
+		// The binding IS the acting identity — a store that round-trips the account but drops the
+		// character would silently put every session back on its primary.
+		await Assert.That(identity!.Value.AccountId).IsEqualTo("acct-1");
+		await Assert.That(identity!.Value.CharacterKey).IsEqualTo(7);
+		await Assert.That(identity!.Value.CharacterCreationTime).IsEqualTo(777L);
+	}
+
+	[Test]
+	public async Task ValidateAsync_UnboundToken_ReturnsNoCharacter()
+	{
+		var store = new InMemoryAccountSessionStore();
+		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(5), "10.0.0.1");
+
+		var identity = await store.ValidateAsync(token);
+
+		// An account with no characters yet: bound to nobody, and it must stay that way.
+		await Assert.That(identity!.Value.AccountId).IsEqualTo("acct-1");
+		await Assert.That(identity!.Value.CharacterKey).IsNull();
+		await Assert.That(identity!.Value.CharacterCreationTime).IsNull();
+	}
 }

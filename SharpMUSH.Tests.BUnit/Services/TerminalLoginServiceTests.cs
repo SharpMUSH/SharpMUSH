@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
 
 namespace SharpMUSH.Tests.BUnit.Services;
@@ -88,7 +89,7 @@ public class TerminalLoginServiceTests : BunitContext, IAsyncDisposable
 
 		var terminal = Substitute.For<ITerminalService>();
 		var nav = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
-		return (auth, terminal, new TerminalLoginService(terminal, auth, nav));
+		return (auth, terminal, new TerminalLoginService(terminal, auth, nav, Substitute.For<IConnectionStateService>()));
 	}
 
 	[Test]

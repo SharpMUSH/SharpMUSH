@@ -123,31 +123,22 @@ public class AccountAuthService(
 	{
 		Characters = characters;
 
-		// The server marks which entry this tab's token is bound to; that answer wins over whatever is
-		// in memory, and is how a reloaded tab learns who it is. Only when the roster carries no mark
-		// (an older response, or a session bound to nothing) does the previous local answer stand.
+		// The server marks which entry this tab's token is bound to, and that answer is the whole
+		// answer: an unbound token (or one naming a character the account no longer owns) comes back
+		// with no marker, and the server acts as nobody for it. Picking a character here anyway would
+		// show an identity the server will not honour — the exact drift this design removes.
 		var marked = characters.FirstOrDefault(c => c.IsActing);
-		if (marked is not null)
+		if (marked is null)
 		{
-			SetActiveCharacter(marked);
+			SetActiveCharacter(null);
 			return;
 		}
 
-		var stillPresent = ActiveCharacter is null ? null : characters.FirstOrDefault(c =>
-			c.DbrefNumber == ActiveCharacter.DbrefNumber && c.CreationTime == ActiveCharacter.CreationTime);
-
-		if (stillPresent is null)
+		// SetActiveCharacter no-ops when the identity matches, which would leave a drifted name or
+		// flag set on screen after a rename, so assign directly when only the details moved.
+		if (marked != ActiveCharacter)
 		{
-			SetActiveCharacter(characters.FirstOrDefault());
-			return;
-		}
-
-		// Same character, drifted details (a rename since the roster was last read): rebind to the
-		// roster's copy so nothing renders a stale name. SetActiveCharacter no-ops on identity, so
-		// this assigns directly.
-		if (stillPresent != ActiveCharacter)
-		{
-			ActiveCharacter = stillPresent;
+			ActiveCharacter = marked;
 			RaiseActiveCharacterChanged();
 		}
 	}
@@ -559,6 +550,9 @@ public class AccountAuthService(
 		}
 	}
 
+	/// <summary>Re-reads the roster so the server can say which entry the new token is bound to.</summary>
+	private async Task RefreshCharactersAsync() => await GetCharactersAsync();
+
 	public async Task<(bool Success, string? Error)> UnlinkCharacterAsync(int dbrefNumber)
 	{
 		await InitAsync();
@@ -573,7 +567,21 @@ public class AccountAuthService(
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync());
 
-			SetCharacters(Characters.Where(c => c.DbrefNumber != dbrefNumber).ToList());
+			var unlinkedTheActing = ActiveCharacter?.DbrefNumber == dbrefNumber;
+			var remaining = Characters.Where(c => c.DbrefNumber != dbrefNumber).ToList();
+
+			// Unlinking the character this tab acts as leaves the session bound to a character the
+			// account no longer owns, which the server treats as acting-as-nobody. Rebind to a
+			// remaining character so the tab comes back with a usable identity instead of a dead one;
+			// switching is the only thing that can, since only the server may mint the binding.
+			if (unlinkedTheActing && remaining.FirstOrDefault() is { } replacement)
+			{
+				await SwitchCharacterAsync(replacement);
+				await RefreshCharactersAsync();
+				return (true, null);
+			}
+
+			SetCharacters(remaining);
 			return (true, null);
 		}
 		catch (Exception ex)
