@@ -71,3 +71,14 @@ test('parity.halt_set', $god, '@set HaltParity=HALT', '.');
 test('parity.halt_suppressed', $god, 'think u(HaltParity/C)', '^\[add\(1,2\)\]$');
 test('parity.halt_unset', $god, '@set HaltParity=!HALT', '.');
 test('parity.halt_restored', $god, 'think u(HaltParity/C)', '^3$');
+
+# --- Substitutions --------------------------------------------------------
+# An uppercase selector capitalizes the first output character (src/parse.c); digit/symbol
+# selectors are unaffected, and it is a no-op when that character is not a letter.
+test('parity.sub_q_lower', $god, 'think [setq(0,foo)]%q0', '^foo$');
+test('parity.sub_q_upper', $god, 'think [setq(0,foo)]%Q0', '^Foo$');
+test('parity.sub_q_upper_nonletter', $god, 'think [setq(0,42x)]%Q0', '^42x$');
+test('parity.sub_itext_lower', $god, 'think iter(alpha,%i0)', '^alpha$');
+test('parity.sub_itext_upper', $god, 'think iter(alpha,%I0)', '^Alpha$');
+# "% " (percent-space) is emitted literally, unlike other unknown subs where % is dropped.
+test('parity.sub_pct_space', $god, 'think a% b', '^a% b$');

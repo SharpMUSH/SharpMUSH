@@ -2333,16 +2333,16 @@ public class SharpMUSHParserVisitor(
 		var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
 		var simpleSubstitutionSymbol = context.substitutionSymbol();
 
+		CallState? result;
 		if (complexSubstitutionSymbol is not null)
 		{
 			var state = await VisitChildren(context);
-			return await Substitutions.Substitutions.ParseComplexSubstitution(state, parser, AttributeService, Mediator,
+			result = await Substitutions.Substitutions.ParseComplexSubstitution(state, parser, AttributeService, Mediator,
 				complexSubstitutionSymbol);
 		}
-
-		if (simpleSubstitutionSymbol is not null)
+		else if (simpleSubstitutionSymbol is not null)
 		{
-			return await Substitutions.Substitutions.ParseSimpleSubstitution(
+			result = await Substitutions.Substitutions.ParseSimpleSubstitution(
 				simpleSubstitutionSymbol.GetText(),
 				parser,
 				Mediator,
@@ -2350,8 +2350,38 @@ public class SharpMUSHParserVisitor(
 				Configuration,
 				simpleSubstitutionSymbol);
 		}
+		else
+		{
+			result = await VisitChildren(context) ?? new CallState(textContents, context.Depth());
+		}
 
-		return await VisitChildren(context) ?? new CallState(textContents, context.Depth());
+		return CapitalizeForUpperSelector(context, result);
+	}
+
+	/// <summary>
+	/// PennMUSH capitalizes the first character of a substitution's output when the selector letter
+	/// is uppercase — <c>%Q0</c> vs <c>%q0</c>, <c>%N</c> vs <c>%n</c>, <c>%I0</c> vs <c>%i0</c>, and
+	/// so on (src/parse.c). The rule keys on the character immediately after <c>%</c>, so digit and
+	/// symbol substitutions (<c>%0</c>, <c>%#</c>, <c>%!</c>) are never affected, and it is a no-op
+	/// when the first output character is not a letter. Applying it here, once, covers every
+	/// substitution kind; it is idempotent for any output that is already capitalized.
+	/// </summary>
+	private static CallState? CapitalizeForUpperSelector(ValidSubstitutionContext context, CallState? result)
+	{
+		if (result?.Message is null || result.Message.Length < 1)
+		{
+			return result;
+		}
+
+		var selector = context.GetText();
+		if (selector.Length == 0 || !char.IsAsciiLetterUpper(selector[0]))
+		{
+			return result;
+		}
+
+		var firstChar = MModule.apply(MModule.substring(0, 1, result.Message), x => x.ToUpperInvariant());
+		var rest = MModule.substring(1, result.Message.Length - 1, result.Message);
+		return result with { Message = MModule.concat(firstChar, rest) };
 	}
 
 	public override async ValueTask<CallState?> VisitCommand([NotNull] CommandContext context)
