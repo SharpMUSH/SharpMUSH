@@ -18,20 +18,20 @@ public class ParserErrorListener : BaseErrorListener
 	/// <summary>Maps ANTLR symbolic/literal token names to human-readable characters or phrases.</summary>
 	private static readonly Dictionary<string, string> TokenDisplayNames = new(StringComparer.OrdinalIgnoreCase)
 	{
-		["CPAREN"] = ")",
-		["CBRACK"] = "]",
-		["CBRACE"] = "}",
-		["OPAREN"] = "(",
-		["OBRACK"] = "[",
-		["OBRACE"] = "{",
+		["CPAREN"]  = ")",
+		["CBRACK"]  = "]",
+		["CBRACE"]  = "}",
+		["OPAREN"]  = "(",
+		["OBRACK"]  = "[",
+		["OBRACE"]  = "{",
 		["COMMAWS"] = ",",
-		["EQUALS"] = "=",
+		["EQUALS"]  = "=",
 		["SEMICOLON"] = ";",
 		["PERCENT"] = "%",
-		["ESCAPE"] = "\\",
+		["ESCAPE"]  = "\\",
 		["FUNCHAR"] = "function name",
-		["EOF"] = "end of input",
-		["<EOF>"] = "end of input",
+		["EOF"]     = "end of input",
+		["<EOF>"]   = "end of input",
 	};
 
 	public ParserErrorListener(string inputText)
@@ -232,7 +232,7 @@ public class ParserErrorListener : BaseErrorListener
 
 		var absoluteOffset = lineStart + charPositionInLine;
 		var start = Math.Max(0, absoluteOffset - SnippetRadius);
-		var end = Math.Min(inputText.Length, absoluteOffset + SnippetRadius);
+		var end   = Math.Min(inputText.Length, absoluteOffset + SnippetRadius);
 
 		if (start >= end)
 			return null;

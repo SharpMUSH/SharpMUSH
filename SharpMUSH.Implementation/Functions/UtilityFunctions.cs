@@ -1210,33 +1210,33 @@ public partial class Functions
 
 			// itext() context — int level, or "L" for the outermost iteration.
 			case "iter":
-				{
-					var maxCount = parser.CurrentState.IterationRegisters.Count;
-					if (registerName.Equals("L", StringComparison.OrdinalIgnoreCase))
-						return ValueTask.FromResult(maxCount == 0
-							? new CallState(ErrorMessages.Returns.RegisterRange)
-							: new CallState(parser.CurrentState.IterationRegisters.Last().Value));
-					if (!int.TryParse(registerName, out var lvl))
-						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
-					if (lvl < 0 || lvl >= maxCount)
-						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
-					return ValueTask.FromResult(
-						new CallState(parser.CurrentState.IterationRegisters.ElementAt(maxCount - lvl - 1).Value));
-				}
+			{
+				var maxCount = parser.CurrentState.IterationRegisters.Count;
+				if (registerName.Equals("L", StringComparison.OrdinalIgnoreCase))
+					return ValueTask.FromResult(maxCount == 0
+						? new CallState(ErrorMessages.Returns.RegisterRange)
+						: new CallState(parser.CurrentState.IterationRegisters.Last().Value));
+				if (!int.TryParse(registerName, out var lvl))
+					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
+				if (lvl < 0 || lvl >= maxCount)
+					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
+				return ValueTask.FromResult(
+					new CallState(parser.CurrentState.IterationRegisters.ElementAt(maxCount - lvl - 1).Value));
+			}
 
 			// stext() context — int depth, or "L" for the outermost switch.
 			case "switch":
-				{
-					var stack = parser.CurrentState.SwitchStack;
-					var depth = 0;
-					if (registerName.Equals("L", StringComparison.OrdinalIgnoreCase))
-						depth = stack.Count - 1;
-					else if (!string.IsNullOrEmpty(registerName) && (!int.TryParse(registerName, out depth) || depth < 0))
-						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NonNegativeInteger));
-					if (stack.Count == 0 || depth < 0 || depth >= stack.Count)
-						return ValueTask.FromResult(new CallState(string.Empty));
-					return ValueTask.FromResult(new CallState(stack.ElementAtOrDefault(depth) ?? MModule.empty()));
-				}
+			{
+				var stack = parser.CurrentState.SwitchStack;
+				var depth = 0;
+				if (registerName.Equals("L", StringComparison.OrdinalIgnoreCase))
+					depth = stack.Count - 1;
+				else if (!string.IsNullOrEmpty(registerName) && (!int.TryParse(registerName, out depth) || depth < 0))
+					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NonNegativeInteger));
+				if (stack.Count == 0 || depth < 0 || depth >= stack.Count)
+					return ValueTask.FromResult(new CallState(string.Empty));
+				return ValueTask.FromResult(new CallState(stack.ElementAtOrDefault(depth) ?? MModule.empty()));
+			}
 
 			default:
 				// Unreachable: canonicalType is always one of the five valid names (or we returned above).
@@ -1259,7 +1259,7 @@ public partial class Functions
 		// Check if second argument exists and is not empty
 		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace(MModule.plainText(arg1.Message)))
 		{
-			// One argument: random number from 0 to arg-1
+		// One argument: random number from 0 to arg-1
 			if (!int.TryParse(MModule.plainText(arg0.Message), out var maxVal))
 			{
 				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));

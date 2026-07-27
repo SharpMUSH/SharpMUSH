@@ -16,7 +16,7 @@ public class LocalizedTextFileService(ITextFileService textFileService) : ILocal
 	/// </summary>
 	private static bool NeedsLocale(string? locale)
 		=> !string.IsNullOrWhiteSpace(locale)
-			 && !locale.Equals("en", StringComparison.OrdinalIgnoreCase);
+		   && !locale.Equals("en", StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// Builds the locale-specific file reference.

@@ -141,8 +141,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 				// If target is a DBRef or objid like "#123" or "#123:timestamp", compare owner DBRefs
 				var parsedTargetOpt = HelperFunctions.ParseDbRef(target);
-				if (parsedTargetOpt.IsSome())
-				{
+if (parsedTargetOpt.IsSome())
+{
 					// Get the target object by DBRef (validates creation timestamp if objid format)
 					var targetObjResult = med.Send(
 							new GetObjectNodeQuery(parsedTargetOpt.AsValue()),
@@ -211,8 +211,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 			// If target is a DBRef or objid like "#123" or "#123:timestamp", check if carrying that specific object
 			var parsedCarryOpt = HelperFunctions.ParseDbRef(target);
-			if (parsedCarryOpt.IsSome())
-			{
+if (parsedCarryOpt.IsSome())
+{
 				try
 				{
 					if (unlockerObj.IsContainer)
@@ -630,8 +630,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 				// If target is a DBRef or objid like "#123" or "#123:timestamp", resolve it
 				var parsedIndirectOpt = HelperFunctions.ParseDbRef(target);
-				if (parsedIndirectOpt.IsSome())
-				{
+if (parsedIndirectOpt.IsSome())
+{
 					// Validates creation timestamp if objid format
 					var targetObjResult = med.Send(
 							new GetObjectNodeQuery(parsedIndirectOpt.AsValue()),

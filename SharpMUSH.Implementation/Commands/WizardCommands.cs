@@ -1721,11 +1721,11 @@ public partial class Commands
 		{
 			if (!executor.IsGod())
 			{
-				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.PermissionDenied,
-					notifyMessage: ErrorMessages.Notifications.ShutdownOnlyGodPanic,
-					shouldNotify: true);
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.ShutdownOnlyGodPanic,
+				shouldNotify: true);
 			}
 
 			await GameBroadcastService!.BroadcastShutdownAsync(executorName, isReboot: false);
@@ -2042,9 +2042,9 @@ public partial class Commands
 					shouldNotify: true);
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaListingHeader), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaListingColumnHeader), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaListingSeparator), executor);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaListingHeader), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaListingColumnHeader), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaListingSeparator), executor);
 
 			var players = Mediator!.CreateStream(new GetAllPlayersQuery());
 			await foreach (var player in players)
@@ -2139,7 +2139,7 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockCheckRequiresHost), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockCheckRequiresHost), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
@@ -2165,7 +2165,7 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameRequiresName), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameRequiresName), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
@@ -2180,7 +2180,7 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockBanRequiresPattern), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockBanRequiresPattern), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
@@ -2196,7 +2196,7 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRegisterRequiresPattern), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRegisterRequiresPattern), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
@@ -2211,7 +2211,7 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRemoveRequiresPattern), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRemoveRequiresPattern), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 

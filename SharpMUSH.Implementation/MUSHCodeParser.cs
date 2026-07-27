@@ -77,7 +77,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			// player (e.g. bare "q" -> QUIT), silently disconnecting them. The trie is only ever
 			// consulted post-login, so SOCKET commands never belong here.
 			if (commandInfo.IsSystem
-					&& !commandInfo.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET))
+			    && !commandInfo.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET))
 			{
 				trie.Add(commandName, commandInfo.LibraryInformation);
 			}

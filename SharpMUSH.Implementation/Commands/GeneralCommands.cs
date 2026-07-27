@@ -1378,7 +1378,7 @@ public partial class Commands
 				var locatedObj = located.WithoutError().WithoutNone();
 				if (!locatedObj.IsContainer)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid), executor);
 					return CallState.Empty;
 				}
 
@@ -3242,7 +3242,7 @@ public partial class Commands
 
 			if (switches.Contains("SAVE") && !executor.IsGod())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOnlyGodCanUseSave), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOnlyGodCanUseSave), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
@@ -3252,13 +3252,13 @@ public partial class Commands
 
 		if (args.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoriesHeader), executor);
-			foreach (var cat in allCategories)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoryItemFormat), executor, cat);
-			}
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseCategoryHelp), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseOptionHelp), executor);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoriesHeader), executor);
+		foreach (var cat in allCategories)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoryItemFormat), executor, cat);
+		}
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseCategoryHelp), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseOptionHelp), executor);
 			return CallState.Empty;
 		}
 
@@ -3276,17 +3276,17 @@ public partial class Commands
 
 			if (categoryOptions.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoOptionsInCategoryFormat), executor, matchingCategory);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoOptionsInCategoryFormat), executor, matchingCategory);
 				return CallState.Empty;
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat), executor, matchingCategory);
-			foreach (var opt in categoryOptions)
-			{
-				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
-				var value = opt.Value?.ToString() ?? "null";
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
-			}
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat), executor, matchingCategory);
+		foreach (var opt in categoryOptions)
+		{
+			var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
+			var value = opt.Value?.ToString() ?? "null";
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
+		}
 			return CallState.Empty;
 		}
 
@@ -3300,9 +3300,9 @@ public partial class Commands
 			var value = matchingOption.Value?.ToString() ?? "null";
 			var desc = matchingOption.ConfigAttr.Description;
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionDescriptionFormat), executor, desc);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionCategoryFormat), executor, matchingOption.Category);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionDescriptionFormat), executor, desc);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionCategoryFormat), executor, matchingOption.Category);
 			return new CallState(value);
 		}
 
