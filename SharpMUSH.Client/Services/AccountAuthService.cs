@@ -250,7 +250,11 @@ public class AccountAuthService(
 		// SetActiveCharacter because the value came out of storage — writing it straight back is a
 		// pointless interop round-trip. SetCharacters re-validates it against the roster once that
 		// lands, so a character the account no longer owns is reseated like any other stale active.
-		if (ActiveCharacter is null && await ReadStoredActiveCharacterAsync() is { } restored)
+		// Re-check the slot AFTER the read: the storage round-trip is an await, and a login can seat a
+		// character while it is in flight. Testing before the await would let a stale stored value
+		// clobber the newer live one.
+		var restored = await ReadStoredActiveCharacterAsync();
+		if (restored is not null && ActiveCharacter is null)
 		{
 			ActiveCharacter = restored;
 			RaiseActiveCharacterChanged();

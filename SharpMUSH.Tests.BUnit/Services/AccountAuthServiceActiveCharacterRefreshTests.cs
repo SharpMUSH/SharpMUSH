@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
-using Microsoft.JSInterop.Infrastructure;
 using NSubstitute;
 using SharpMUSH.Client.Services;
 using System.Net;
@@ -18,11 +17,32 @@ file sealed class FakeSessionStorage : IJSRuntime
 {
 	private readonly Dictionary<string, string> _items = new(StringComparer.Ordinal);
 
-	public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-		ValueTask.FromResult(Invoke<TValue>(identifier, args));
+	/// <summary>
+	/// Holds the answer to a <c>getItem</c> for this key until the test releases it, modelling a real
+	/// interop round-trip. The value is snapshotted when the call is made (as the JS side would), so
+	/// writes that happen while the read is in flight do not change what it returns.
+	/// </summary>
+	public TaskCompletionSource? GateReadsOf { get; set; }
+	public string? GatedKey { get; set; }
+
+	/// <summary>Completed the moment the gated read is actually in flight.</summary>
+	public TaskCompletionSource? ReadStarted { get; set; }
+
+	public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+	{
+		var key = args?.Length > 0 ? args[0]?.ToString() : null;
+		if (GateReadsOf is { } gate && identifier == "sessionStorage.getItem" && key == GatedKey)
+		{
+			var snapshot = Invoke<TValue>(identifier, args);
+			ReadStarted?.TrySetResult();
+			return new ValueTask<TValue>(gate.Task.ContinueWith(_ => snapshot, TaskScheduler.Default));
+		}
+
+		return ValueTask.FromResult(Invoke<TValue>(identifier, args));
+	}
 
 	public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args) =>
-		ValueTask.FromResult(Invoke<TValue>(identifier, args));
+		InvokeAsync<TValue>(identifier, args);
 
 	private TValue Invoke<TValue>(string identifier, object?[]? args)
 	{
@@ -132,6 +152,33 @@ public class AccountAuthServiceActiveCharacterRefreshTests
 		await afterRefresh.GetCharactersAsync();
 
 		await Assert.That(afterRefresh.ActiveCharacter?.DbrefNumber).IsEqualTo(Alpha.DbrefNumber);
+	}
+
+	[Test]
+	public async Task ALoginLandingDuringHydration_IsNotClobberedByTheStoredValue()
+	{
+		var storage = new FakeSessionStorage();
+		CharacterSummary[] roster = [Alpha, Beta];
+
+		var seed = MakeService(storage, roster);
+		await seed.InitAsync();
+		await seed.LoginAsync("headwiz", "password-one");
+		seed.SetActiveCharacter(Alpha);
+
+		// Reload. Hold the stored-character read open so a login can land mid-hydration.
+		var afterRefresh = MakeService(storage, roster);
+		storage.GatedKey = "sharpmush.account.activeCharacter";
+		storage.GateReadsOf = new TaskCompletionSource();
+		storage.ReadStarted = new TaskCompletionSource();
+
+		var hydrating = afterRefresh.InitAsync();
+		await storage.ReadStarted.Task;          // the stored-character read is now in flight
+		afterRefresh.SetActiveCharacter(Beta);   // ...and a login lands right here
+		storage.GateReadsOf.SetResult();
+		await hydrating;
+
+		// The live selection is newer than anything storage had to say.
+		await Assert.That(afterRefresh.ActiveCharacter?.DbrefNumber).IsEqualTo(Beta.DbrefNumber);
 	}
 
 	[Test]
