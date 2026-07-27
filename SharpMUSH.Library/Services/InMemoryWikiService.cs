@@ -8,8 +8,8 @@ namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// In-memory implementation of <see cref="IWikiService"/>.
-/// Intended for unit tests and development use.
-/// An ArangoDB-backed implementation will replace the persistence layer in a later phase.
+/// Intended for unit tests and development use; the three database providers implement the same
+/// contract for production.
 /// </summary>
 /// <remarks>
 /// Thread-safe: all state is stored in <see cref="ConcurrentDictionary{TKey,TValue}"/> instances.
@@ -20,6 +20,7 @@ public sealed class InMemoryWikiService : IWikiService
 	private readonly ConcurrentDictionary<string, WikiPage> _pagesById = new();
 	private readonly ConcurrentDictionary<string, string> _slugIndex = new(StringComparer.OrdinalIgnoreCase);
 	private readonly ConcurrentDictionary<string, List<WikiRevision>> _revisions = new();
+	private readonly ConcurrentDictionary<(string PageId, string Locale), WikiTranslation> _translations = new();
 
 	private readonly WikiMarkdigPipeline _renderer;
 	private int _idCounter;
@@ -124,8 +125,22 @@ public sealed class InMemoryWikiService : IWikiService
 		string markdown,
 		string authorDbref,
 		WikiNamespace ns = WikiNamespace.Main,
-		string? category = null)
+		string? category = null,
+		string? sourceLocale = null)
 	{
+		// SourceLocale is materialised once and never re-derived, so a junk tag must not reach storage.
+		// Null or blank is the "not stamped" case, left to the migration backfill rather than an error;
+		// a non-blank tag that is not a locale is an error, because storing it would corrupt every later read.
+		var stampedLocale = string.Empty;
+		if (!string.IsNullOrWhiteSpace(sourceLocale))
+		{
+			var normalizedSource = WikiHelpers.NormalizeLocale(sourceLocale);
+			if (normalizedSource.IsT1)
+				return Task.FromResult<OneOf<WikiPage, Error<string>>>(normalizedSource.AsT1);
+
+			stampedLocale = normalizedSource.AsT0;
+		}
+
 		var slug = Slugify(title);
 		var cat = WikiHelpers.NormalizeCategory(category);
 		var slugKey = SlugKey(ns, cat, slug);
@@ -151,6 +166,7 @@ public sealed class InMemoryWikiService : IWikiService
 			RevisionNumber: 1)
 		{
 			Category = cat,
+			SourceLocale = stampedLocale,
 		};
 
 		// C-6: Atomic TryAdd eliminates the TOCTOU race between ContainsKey and write.
@@ -206,6 +222,9 @@ public sealed class InMemoryWikiService : IWikiService
 		_slugIndex.TryRemove(slugKey, out _);
 		_revisions.TryRemove(id, out _);
 
+		foreach (var key in _translations.Keys.Where(k => k.PageId == id).ToList())
+			_translations.TryRemove(key, out _);
+
 		return Task.FromResult<OneOf<None, NotFound>>(new None());
 	}
 
@@ -258,6 +277,7 @@ public sealed class InMemoryWikiService : IWikiService
 		lock (list)
 		{
 			result = list
+				.Where(r => r.Locale.Length == 0)
 				.OrderByDescending(r => r.RevisionNumber)
 				.Skip(skip)
 				.Take(take)
@@ -309,6 +329,194 @@ public sealed class InMemoryWikiService : IWikiService
 			EditorDbref: editorDbref,
 			Timestamp: page.UpdatedAt,
 			EditSummary: editSummary);
+
+		lock (revList)
+		{
+			revList.Add(rev);
+		}
+	}
+
+	// ---- Translations -------------------------------------------------------
+
+	public Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId)
+	{
+		IReadOnlyList<WikiTranslationSummary> result = _translations
+			.Where(kv => kv.Key.PageId == pageId)
+			.Select(kv => new WikiTranslationSummary(
+				kv.Value.Locale, kv.Value.Title, kv.Value.Published, kv.Value.UpdatedAt, kv.Value.RevisionNumber))
+			.OrderBy(s => s.Locale, StringComparer.OrdinalIgnoreCase)
+			.ToList();
+		return Task.FromResult(result);
+	}
+
+	public Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
+	{
+		var key = TranslationKey(pageId, locale);
+		if (key is not null && _translations.TryGetValue(key.Value, out var translation))
+			return Task.FromResult<OneOf<WikiTranslation, NotFound>>(translation);
+		return Task.FromResult<OneOf<WikiTranslation, NotFound>>(new NotFound());
+	}
+
+	public Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+		string pageId,
+		string locale,
+		string title,
+		string markdown,
+		string editorDbref,
+		string? editSummary,
+		bool published,
+		int? expectedRevisionNumber)
+	{
+		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
+		if (normalizedLocale.IsT1)
+			return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(normalizedLocale.AsT1);
+
+		var normalized = normalizedLocale.AsT0;
+
+		if (!_pagesById.TryGetValue(pageId, out var page))
+			return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
+				new Error<string>($"No wiki page with id '{pageId}'."));
+
+		if (page.SourceLocale.Length > 0
+			&& string.Equals(page.SourceLocale, normalized, StringComparison.OrdinalIgnoreCase))
+			return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
+				new Error<string>(
+					$"'{normalized}' is the page's source locale; edit the page itself rather than adding a translation."));
+
+		var key = (PageId: pageId, Locale: normalized);
+		var now = DateTimeOffset.UtcNow;
+		var html = _renderer.RenderToHtml(markdown);
+		var plain = _renderer.ExtractPlainText(markdown);
+
+		// Compare-and-swap, not AddOrUpdate. AddOrUpdate would happily fold two writers that both loaded
+		// revision 4 into one revision 5 and lose one translator's prose.
+		WikiTranslation updated;
+		if (expectedRevisionNumber is null)
+		{
+			updated = new WikiTranslation(
+				Id: $"{pageId}:{normalized}",
+				PageId: pageId,
+				Locale: normalized,
+				Title: title,
+				MarkdownSource: markdown,
+				RenderedHtml: html,
+				PlainText: plain,
+				LastEditorDbref: editorDbref,
+				CreatedAt: now,
+				UpdatedAt: now,
+				Published: published,
+				RevisionNumber: 1);
+
+			// Create-only: an existing row is a conflict, not something to overwrite.
+			if (!_translations.TryAdd(key, updated))
+				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
+					new Error<string>(
+						$"A '{normalized}' translation already exists for page '{pageId}'. "
+						+ "Pass its current revision number to update it."));
+		}
+		else
+		{
+			if (!_translations.TryGetValue(key, out var existing))
+				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
+					new Error<string>($"No '{normalized}' translation exists for page '{pageId}' to update."));
+
+			if (existing.RevisionNumber != expectedRevisionNumber.Value)
+				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
+					new Error<string>(
+						$"The '{normalized}' translation changed while you were editing "
+						+ $"(expected revision {expectedRevisionNumber.Value}, found {existing.RevisionNumber}). "
+						+ "Reload and re-apply your changes."));
+
+			updated = existing with
+			{
+				Title = title,
+				MarkdownSource = markdown,
+				RenderedHtml = html,
+				PlainText = plain,
+				LastEditorDbref = editorDbref,
+				UpdatedAt = now,
+				Published = published,
+				RevisionNumber = existing.RevisionNumber + 1,
+			};
+
+			// TryUpdate's comparison value is the CAS: a writer who won the race between TryGetValue and
+			// here has already replaced `existing`, so this fails and no revision is appended.
+			if (!_translations.TryUpdate(key, updated, existing))
+				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
+					new Error<string>(
+						$"The '{normalized}' translation changed while you were editing. "
+						+ "Reload and re-apply your changes."));
+		}
+
+		SaveTranslationRevisionSnapshot(updated, editorDbref, editSummary);
+
+		return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(updated);
+	}
+
+	public Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
+	{
+		var key = TranslationKey(pageId, locale);
+		if (key is null || !_translations.TryRemove(key.Value, out var removed))
+			return Task.FromResult<OneOf<None, NotFound>>(new NotFound());
+
+		if (_revisions.TryGetValue(pageId, out var list))
+		{
+			lock (list)
+			{
+				list.RemoveAll(r => string.Equals(r.Locale, removed.Locale, StringComparison.OrdinalIgnoreCase));
+			}
+		}
+
+		return Task.FromResult<OneOf<None, NotFound>>(new None());
+	}
+
+	public Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(string pageId, string locale, int skip, int take)
+	{
+		if (!_revisions.TryGetValue(pageId, out var list))
+			return Task.FromResult<IReadOnlyList<WikiRevision>>([]);
+
+		// Empty means the source-locale stream; anything else is matched after normalisation. This is a
+		// read, so an unusable tag yields "no such stream" rather than an error.
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
+
+		IReadOnlyList<WikiRevision> result;
+		lock (list)
+		{
+			result = list
+				.Where(r => string.Equals(r.Locale, wanted, StringComparison.OrdinalIgnoreCase))
+				.OrderByDescending(r => r.RevisionNumber)
+				.Skip(skip)
+				.Take(take)
+				.ToList();
+		}
+		return Task.FromResult(result);
+	}
+
+	/// <summary>The dictionary key for a translation, or null when the locale tag is unusable.</summary>
+	private static (string PageId, string Locale)? TranslationKey(string pageId, string locale)
+	{
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
+		return normalized.Length == 0 ? null : (pageId, normalized);
+	}
+
+	/// <summary>
+	/// Appends a full snapshot revision for a translation. The id carries the locale so a translation
+	/// revision can never collide with the source page's <c>{PageId}:{RevisionNumber}</c> keys.
+	/// </summary>
+	private void SaveTranslationRevisionSnapshot(WikiTranslation translation, string editorDbref, string? editSummary)
+	{
+		var revList = _revisions.GetOrAdd(translation.PageId, _ => []);
+		var rev = new WikiRevision(
+			Id: $"{translation.PageId}:{translation.Locale}:{translation.RevisionNumber}",
+			PageId: translation.PageId,
+			RevisionNumber: translation.RevisionNumber,
+			MarkdownSource: translation.MarkdownSource,
+			EditorDbref: editorDbref,
+			Timestamp: translation.UpdatedAt,
+			EditSummary: editSummary)
+		{
+			Locale = translation.Locale,
+		};
 
 		lock (revList)
 		{

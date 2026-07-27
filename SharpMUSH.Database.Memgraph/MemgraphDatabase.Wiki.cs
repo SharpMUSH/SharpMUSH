@@ -125,8 +125,22 @@ public partial class MemgraphDatabase : IWikiService
 		string markdown,
 		string authorDbref,
 		WikiNamespace ns = WikiNamespace.Main,
-		string? category = null)
+		string? category = null,
+		string? sourceLocale = null)
 	{
+		// SourceLocale is materialised once and never re-derived, so a junk tag must not reach storage.
+		// Null or blank is the "not stamped" case, left to the migration backfill rather than an error;
+		// a non-blank tag that is not a locale is an error, because storing it would corrupt every later read.
+		var stampedLocale = string.Empty;
+		if (!string.IsNullOrWhiteSpace(sourceLocale))
+		{
+			var normalizedSource = WikiHelpers.NormalizeLocale(sourceLocale);
+			if (normalizedSource.IsT1)
+				return normalizedSource.AsT1;
+
+			stampedLocale = normalizedSource.AsT0;
+		}
+
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var slug = Slugify(title);
 		var cat = WikiHelpers.NormalizeCategory(category);
@@ -163,7 +177,8 @@ public partial class MemgraphDatabase : IWikiService
 					revisionNumber: 1,
 					category: $cat,
 					tags: [],
-					published: true
+					published: true,
+					sourceLocale: $sourceLocale
 				}) RETURN p
 				""",
 				new
@@ -177,7 +192,8 @@ public partial class MemgraphDatabase : IWikiService
 					html,
 					plain,
 					authorDbref,
-					now = now.ToString("O")
+					now = now.ToString("O"),
+					sourceLocale = stampedLocale
 				});
 
 			var records = await result.ToListAsync();
@@ -392,6 +408,9 @@ public partial class MemgraphDatabase : IWikiService
 			Category = string.IsNullOrEmpty(category) ? null : category,
 			Tags = tags,
 			Published = published,
+			// Read straight through: a node the backfill has not reached yields empty, which means
+			// "not yet stamped". Nothing substitutes the configured default here or anywhere on the read path.
+			SourceLocale = node.Properties.TryGetValue("sourceLocale", out var srcLoc) ? srcLoc?.ToString() ?? "" : "",
 		};
 	}
 
@@ -409,11 +428,37 @@ public partial class MemgraphDatabase : IWikiService
 			EditorDbref: node["editorDbref"].As<string>(),
 			Timestamp: timestamp,
 			EditSummary: string.IsNullOrEmpty(editSummary) ? null : editSummary
-		);
+		)
+		{
+			Locale = node.Properties.TryGetValue("locale", out var revLoc) ? revLoc?.ToString() ?? "" : "",
+		};
 	}
 
 	private static string Slugify(string title) =>
 		WikiHelpers.Slugify(title);
+
+	// ---- Translations (Task 8 replaces these) -------------------------------
+
+	private static NotSupportedException WikiTranslationsNotImplemented(string provider) =>
+		new($"Wiki translations are not yet implemented for the {provider} provider.");
+
+	public Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId) =>
+		throw WikiTranslationsNotImplemented("Memgraph");
+
+	public Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale) =>
+		throw WikiTranslationsNotImplemented("Memgraph");
+
+	public Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+		string pageId, string locale, string title, string markdown,
+		string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber) =>
+		throw WikiTranslationsNotImplemented("Memgraph");
+
+	public Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref) =>
+		throw WikiTranslationsNotImplemented("Memgraph");
+
+	public Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(
+		string pageId, string locale, int skip, int take) =>
+		throw WikiTranslationsNotImplemented("Memgraph");
 
 	#endregion
 }

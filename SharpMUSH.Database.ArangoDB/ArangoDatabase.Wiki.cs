@@ -175,8 +175,22 @@ public partial class ArangoDatabase : IWikiService
 		string markdown,
 		string authorDbref,
 		WikiNamespace ns = WikiNamespace.Main,
-		string? category = null)
+		string? category = null,
+		string? sourceLocale = null)
 	{
+		// SourceLocale is materialised once and never re-derived, so a junk tag must not reach storage.
+		// Null or blank is the "not stamped" case, left to the migration backfill rather than an error;
+		// a non-blank tag that is not a locale is an error, because storing it would corrupt every later read.
+		var stampedLocale = string.Empty;
+		if (!string.IsNullOrWhiteSpace(sourceLocale))
+		{
+			var normalizedSource = WikiHelpers.NormalizeLocale(sourceLocale);
+			if (normalizedSource.IsT1)
+				return normalizedSource.AsT1;
+
+			stampedLocale = normalizedSource.AsT0;
+		}
+
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var slug = Slugify(title);
 		var cat = WikiHelpers.NormalizeCategory(category);
@@ -205,7 +219,8 @@ public partial class ArangoDatabase : IWikiService
 			RevisionNumber = 1,
 			Category = cat,
 			Tags = Array.Empty<string>(),
-			Published = true
+			Published = true,
+			SourceLocale = stampedLocale
 		};
 
 		var created = await arangoDb.Document.CreateAsync<object, JsonElement>(
@@ -435,6 +450,9 @@ public partial class ArangoDatabase : IWikiService
 			Category = category,
 			Tags = tags,
 			Published = published,
+			// Read straight through: a document the backfill has not reached yields empty, which means
+			// "not yet stamped". Nothing substitutes the configured default here or anywhere on the read path.
+			SourceLocale = elem.TryGetProperty("SourceLocale", out var srcLoc) ? srcLoc.GetString() ?? "" : "",
 		};
 	}
 
@@ -457,11 +475,37 @@ public partial class ArangoDatabase : IWikiService
 			EditorDbref: elem.TryGetProperty("EditorDbref", out var edProp) ? edProp.GetString() ?? "" : "",
 			Timestamp: timestamp,
 			EditSummary: editSummary
-		);
+		)
+		{
+			Locale = elem.TryGetProperty("Locale", out var revLoc) ? revLoc.GetString() ?? "" : "",
+		};
 	}
 
 	private static string Slugify(string title) =>
 		WikiHelpers.Slugify(title);
+
+	// ---- Translations (Task 7 replaces these) -------------------------------
+
+	private static NotSupportedException WikiTranslationsNotImplemented(string provider) =>
+		new($"Wiki translations are not yet implemented for the {provider} provider.");
+
+	public Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId) =>
+		throw WikiTranslationsNotImplemented("ArangoDB");
+
+	public Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale) =>
+		throw WikiTranslationsNotImplemented("ArangoDB");
+
+	public Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+		string pageId, string locale, string title, string markdown,
+		string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber) =>
+		throw WikiTranslationsNotImplemented("ArangoDB");
+
+	public Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref) =>
+		throw WikiTranslationsNotImplemented("ArangoDB");
+
+	public Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(
+		string pageId, string locale, int skip, int take) =>
+		throw WikiTranslationsNotImplemented("ArangoDB");
 
 	#endregion
 }

@@ -30,6 +30,9 @@ internal class WikiPageDbRecord : Record
 	public List<string>? tags { get; set; }
 	// Nullable so records created before the field existed deserialize as null → default true.
 	public bool? published { get; set; }
+	// Nullable so records predating the wiki-translations migration deserialize as null → empty,
+	// i.e. "not yet stamped". Never re-derived from the configured default on read.
+	public string? sourceLocale { get; set; }
 }
 
 internal class WikiCountRecord : Record
@@ -45,6 +48,9 @@ internal class WikiRevisionDbRecord : Record
 	public string editorDbref { get; set; } = "";
 	public string timestamp { get; set; } = "";
 	public string? editSummary { get; set; }
+	// Nullable so rows predating the wiki-translations migration deserialize as null → empty, the
+	// canonical marker for the source-locale stream.
+	public string? locale { get; set; }
 }
 
 public partial class SurrealDatabase : IWikiService
@@ -56,10 +62,10 @@ public partial class SurrealDatabase : IWikiService
 	private const string WikiPageFields =
 			"id, slug, title, namespace, markdownSource, renderedHtml, plainText, " +
 			"authorDbref, lastEditorDbref, createdAt, updatedAt, isProtected, revisionNumber, " +
-			"category, tags, published";
+			"category, tags, published, sourceLocale";
 
 	private const string WikiRevisionFields =
-			"id, pageId, revisionNumber, markdownSource, editorDbref, timestamp, editSummary";
+			"id, pageId, revisionNumber, markdownSource, editorDbref, timestamp, editSummary, locale";
 
 	public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
@@ -182,8 +188,22 @@ public partial class SurrealDatabase : IWikiService
 			string markdown,
 			string authorDbref,
 			WikiNamespace ns = WikiNamespace.Main,
-			string? category = null)
+			string? category = null,
+			string? sourceLocale = null)
 	{
+		// SourceLocale is materialised once and never re-derived, so a junk tag must not reach storage.
+		// Null or blank is the "not stamped" case, left to the migration backfill rather than an error;
+		// a non-blank tag that is not a locale is an error, because storing it would corrupt every later read.
+		var stampedLocale = string.Empty;
+		if (!string.IsNullOrWhiteSpace(sourceLocale))
+		{
+			var normalizedSource = WikiHelpers.NormalizeLocale(sourceLocale);
+			if (normalizedSource.IsT1)
+				return normalizedSource.AsT1;
+
+			stampedLocale = normalizedSource.AsT0;
+		}
+
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var slug = Slugify(title);
 		var cat = WikiHelpers.NormalizeCategory(category);
@@ -206,7 +226,8 @@ public partial class SurrealDatabase : IWikiService
 			["plain"] = plain,
 			["authorDbref"] = authorDbref,
 			["cat"] = cat,
-			["now"] = now.ToString("O")
+			["now"] = now.ToString("O"),
+			["sourceLocale"] = stampedLocale
 		};
 
 		var response = await ExecuteAsync("""
@@ -225,7 +246,8 @@ public partial class SurrealDatabase : IWikiService
             	revisionNumber: 1,
             	category: $cat,
             	tags: [],
-            	published: true
+            	published: true,
+            	sourceLocale: $sourceLocale
             }
             """,
 				parameters);
@@ -463,6 +485,9 @@ public partial class SurrealDatabase : IWikiService
 			Category = string.IsNullOrEmpty(r.category) ? null : r.category,
 			Tags = r.tags ?? [],
 			Published = r.published ?? true,
+			// Read straight through: a record the backfill has not reached yields empty, which means
+			// "not yet stamped". Nothing substitutes the configured default here or anywhere on the read path.
+			SourceLocale = r.sourceLocale ?? "",
 		};
 	}
 
@@ -478,11 +503,37 @@ public partial class SurrealDatabase : IWikiService
 				EditorDbref: r.editorDbref,
 				Timestamp: timestamp,
 				EditSummary: string.IsNullOrEmpty(r.editSummary) ? null : r.editSummary
-		);
+		)
+		{
+			Locale = r.locale ?? "",
+		};
 	}
 
 	private static string Slugify(string title) =>
 			WikiHelpers.Slugify(title);
+
+	// ---- Translations (Task 9 replaces these) -------------------------------
+
+	private static NotSupportedException WikiTranslationsNotImplemented(string provider) =>
+			new($"Wiki translations are not yet implemented for the {provider} provider.");
+
+	public Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId) =>
+			throw WikiTranslationsNotImplemented("SurrealDB");
+
+	public Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale) =>
+			throw WikiTranslationsNotImplemented("SurrealDB");
+
+	public Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+			string pageId, string locale, string title, string markdown,
+			string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber) =>
+			throw WikiTranslationsNotImplemented("SurrealDB");
+
+	public Task<OneOf<OkNone, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref) =>
+			throw WikiTranslationsNotImplemented("SurrealDB");
+
+	public Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(
+			string pageId, string locale, int skip, int take) =>
+			throw WikiTranslationsNotImplemented("SurrealDB");
 
 	#endregion
 }
