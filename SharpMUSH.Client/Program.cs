@@ -7,6 +7,7 @@ using Microsoft.JSInterop;
 using MudBlazor.Services;
 using SharpMUSH.Client;
 using SharpMUSH.Client.Authentication;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Services;
@@ -17,7 +18,7 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.AddSharedResourceLocalization();
 builder.Services.AddMudServices();
 builder.Services.AddLogging();
 builder.Services.AddSingleton<ISlugHelper, SlugHelper>();

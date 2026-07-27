@@ -1,6 +1,7 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Models.Applications
 @using Markdig
+@inject IStringLocalizer<SharedResource> Loc
 
 @* Renders a read-only Portal Schema Document (kind:"view"). Pure renderer: all values and their
    per-viewer visibility come from softcode via the data payload. See dynamic-applications.md. *@
@@ -9,7 +10,7 @@
 {
     @* No document, or every field was filtered out (e.g. a character with no profile data set) — show
        a placeholder instead of collapsing to nothing, so the widget/page never silently disappears. *@
-    <MudText Typo="Typo.body2" Class="mud-text-secondary">Nothing to display.</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WidNothingToDisplay"]</MudText>
 }
 else
 {

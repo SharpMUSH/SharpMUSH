@@ -620,6 +620,7 @@ public static class ErrorMessages
 
 		public const string CantGoThatWay = "You can't go that way.";
 		public const string CantSeeThroughThat = "You can't see through that.";
+		public const string ExitGoesNowhere = "That exit doesn't go anywhere.";
 		public const string ExitNoValidLocation = "That exit doesn't go to a valid location.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string VariableExitDestinationInvalidFormat =

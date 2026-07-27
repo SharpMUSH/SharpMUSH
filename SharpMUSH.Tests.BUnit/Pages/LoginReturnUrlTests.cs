@@ -10,6 +10,7 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
@@ -40,13 +41,6 @@ file sealed class LoginApiHandler : HttpMessageHandler
 	}
 }
 
-file sealed class LoginStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
-
 /// <summary>
 /// Coverage for Login honoring an optional <c>returnUrl</c> query parameter on successful
 /// sign-in (RedirectToLogin now sends anonymous visitors here with one attached — see
@@ -74,7 +68,7 @@ public class LoginReturnUrlTests : BunitContext, IAsyncDisposable
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
 			.AddSingleton(Substitute.For<ITerminalService>())
-			.AddSingleton<IStringLocalizer<SharedResource>, LoginStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}

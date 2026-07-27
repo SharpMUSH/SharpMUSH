@@ -713,6 +713,9 @@
   <data name="VariableExitDestinationInvalidFormat" xml:space="preserve">
     <value>Variable exit destination #{0} is invalid or not permitted.</value>
   </data>
+  <data name="ExitGoesNowhere" xml:space="preserve">
+    <value>That exit doesn't go anywhere.</value>
+  </data>
   <data name="ExitNoValidLocation" xml:space="preserve">
     <value>That exit doesn't go to a valid location.</value>
   </data>

@@ -4,27 +4,28 @@
 @using SharpMUSH.Client.Services
 @inject AccountAuthService AccountAuth
 @inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>First-Run Setup — SharpMUSH</PageTitle>
+<PageTitle>@Loc["AuthFirstRunSetup"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="setup-page">
     <div class="setup-brand">
-        <img src="assets/Logo.svg" alt="SharpMUSH" class="setup-logo" />
-        <h1 class="setup-brand-title">Welcome to SharpMUSH</h1>
+        <img src="assets/Logo.svg" alt="@Loc["AppTitle"]" class="setup-logo" />
+        <h1 class="setup-brand-title">@Loc["AuthSetupWelcome", Loc["AppTitle"]]</h1>
     </div>
 
     @if (_success)
     {
         <div class="setup-card">
-            <div class="setup-kicker">First-Run Setup</div>
-            <h2 class="setup-title">Setup complete. You are the administrator.</h2>
+            <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
+            <h2 class="setup-title">@Loc["AuthSetupComplete"]</h2>
             @if (_autoLoggedIn)
             {
                 <p class="setup-lead">
-                    The administrator account <strong>@_completedUsername</strong> is now linked to the
-                    pre-generated player #1, God. You are signed in as <strong>@_completedUsername</strong>.
+                    @Loc["AuthSetupAdminLinked", _completedUsername]
+                    @Loc["AuthSetupSignedInAs", _completedUsername]
                 </p>
-                <button class="setup-submit setup-signin" type="button" @onclick="EnterPortal">Enter the portal</button>
+                <button class="setup-submit setup-signin" type="button" @onclick="EnterPortal">@Loc["AuthEnterPortal"]</button>
             }
             else
             {
@@ -32,23 +33,19 @@
                      (see SetupController.Complete's try/catch) — no session was minted, so send
                      the claimer to a normal sign-in instead of pretending they're logged in. -->
                 <p class="setup-lead">
-                    The administrator account <strong>@_completedUsername</strong> is now linked to the
-                    pre-generated player #1, God. Sign in to start managing your game.
+                    @Loc["AuthSetupAdminLinked", _completedUsername]
+                    @Loc["AuthSetupSignInToManage"]
                 </p>
-                <a class="setup-submit setup-signin" href="/login">Sign in</a>
+                <a class="setup-submit setup-signin" href="/login">@Loc["AuthSignIn"]</a>
             }
         </div>
     }
     else
     {
         <div class="setup-card">
-            <div class="setup-kicker">First-Run Setup</div>
-            <h2 class="setup-title">Claim the administrator account</h2>
-            <p class="setup-lead">
-                This game hasn't been claimed yet. Choose a username and password for the
-                pre-generated administrator account (linked to player #1, God). The first
-                person to complete this form becomes the administrator.
-            </p>
+            <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
+            <h2 class="setup-title">@Loc["AuthClaimAdminTitle"]</h2>
+            <p class="setup-lead">@Loc["AuthClaimAdminLead"]</p>
 
             @if (_error is not null)
             {
@@ -56,25 +53,25 @@
             }
 
             <div class="setup-field">
-                <label class="setup-label" for="setup-username">Username</label>
+                <label class="setup-label" for="setup-username">@Loc["AuthUsername"]</label>
                 <input id="setup-username" class="setup-input" type="text"
                        @bind="_username" @bind:event="oninput" disabled="@_busy" autocomplete="username" />
             </div>
 
             <div class="setup-field">
-                <label class="setup-label" for="setup-password">Password</label>
+                <label class="setup-label" for="setup-password">@Loc["AuthPassword"]</label>
                 <input id="setup-password" class="setup-input" type="password"
                        @bind="_password" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
             </div>
 
             <div class="setup-field">
-                <label class="setup-label" for="setup-confirm">Confirm Password</label>
+                <label class="setup-label" for="setup-confirm">@Loc["AuthConfirmPassword"]</label>
                 <input id="setup-confirm" class="setup-input" type="password"
                        @bind="_confirm" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
             </div>
 
             <button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
-                @(_busy ? "Setting up…" : "Create Admin Account")
+                @(_busy ? Loc["AuthSettingUp"] : Loc["AuthCreateAdminAccount"])
             </button>
         </div>
     }
@@ -103,10 +100,10 @@
     private async Task SubmitAsync()
     {
         _error = null;
-        if (string.IsNullOrWhiteSpace(_username)) { _error = "Username is required."; return; }
-        if (string.IsNullOrWhiteSpace(_password)) { _error = "Password is required."; return; }
-        if (_password != _confirm) { _error = "Passwords do not match."; return; }
-        if (_password.Length < 8) { _error = "Password must be at least 8 characters."; return; }
+        if (string.IsNullOrWhiteSpace(_username)) { _error = Loc["AuthUsernameRequired"]; return; }
+        if (string.IsNullOrWhiteSpace(_password)) { _error = Loc["AuthPasswordRequired"]; return; }
+        if (_password != _confirm) { _error = Loc["AuthPasswordsDoNotMatch"]; return; }
+        if (_password.Length < 8) { _error = Loc["AuthPasswordTooShort"]; return; }
 
         _busy = true;
         StateHasChanged();
@@ -119,10 +116,10 @@
             _error = error switch
             {
                 not null when error.Contains("already been completed", StringComparison.OrdinalIgnoreCase)
-                    => "Setup was just completed by someone else. If that wasn't you, contact the server operator immediately.",
+                    => Loc["AuthSetupAlreadyCompleted"],
                 not null when error.Contains("already taken", StringComparison.OrdinalIgnoreCase)
-                    => "That username is already taken — choose another.",
-                _ => error ?? "Setup failed.",
+                    => Loc["AuthUsernameTaken"],
+                _ => error ?? Loc["AuthSetupFailed"],
             };
             StateHasChanged();
             return;

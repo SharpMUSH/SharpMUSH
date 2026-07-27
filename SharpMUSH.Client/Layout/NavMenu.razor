@@ -36,7 +36,7 @@
     <nav class="phosphor-nav">
 
         <div class="nav-group">
-            <div class="nav-group-label">Play</div>
+            <div class="nav-group-label">@Loc["Play"]</div>
             @NavItem("/", Icons.Material.Filled.Home, Loc["Home"], NavLinkMatch.All)
             @* Logged-in users Play as their character; guests Play only when the server allows it. *@
             @if (_showPlay)
@@ -50,7 +50,7 @@
                     @if (_playActive)
                     {
                         <span class="phosphor-nav-dot @(_playUnread ? "phosphor-nav-dot--unread" : "")"
-                              title="@(_playUnread ? "Unread play activity" : "Play session active")"></span>
+                              title="@(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])"></span>
                     }
                 </NavLink>
             }
@@ -63,42 +63,42 @@
         </div>
 
         <div class="nav-group">
-            <div class="nav-group-label">World</div>
+            <div class="nav-group-label">@Loc["NavSectionWorld"]</div>
             @NavItem("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
             @NavItem("/characters", Icons.Material.Filled.Groups, Loc["Characters"])
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="World" Applications="_apps" />
         </div>
 
         <div class="nav-group">
-            <div class="nav-group-label">Build</div>
+            <div class="nav-group-label">@Loc["NavSectionBuild"]</div>
             <AuthorizeView Policy="softcode.use">
                 <Authorized>@NavItem("/softcode", Icons.Material.Filled.Code, Loc["SoftcodeEditor"])</Authorized>
             </AuthorizeView>
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Build" Applications="_apps" />
             <AuthorizeView Policy="applications.admin">
-                <Authorized>@NavItem("/admin/applications", Icons.Material.Filled.Apps, "Applications")</Authorized>
+                <Authorized>@NavItem("/admin/applications", Icons.Material.Filled.Apps, Loc["AdmApplicationsTitle"])</Authorized>
             </AuthorizeView>
             <AuthorizeView Policy="layout.admin">
-                <Authorized>@NavItem("/admin/layout", Icons.Material.Filled.Dashboard, "Layout")</Authorized>
+                <Authorized>@NavItem("/admin/layout", Icons.Material.Filled.Dashboard, Loc["LayLayouts"])</Authorized>
             </AuthorizeView>
             <AuthorizeView Policy="packages.admin">
-                <Authorized>@NavItem("/admin/packages", Icons.Material.Filled.Inventory2, "Packages")</Authorized>
+                <Authorized>@NavItem("/admin/packages", Icons.Material.Filled.Inventory2, Loc["PkgPackages"])</Authorized>
             </AuthorizeView>
         </div>
 
         <div class="nav-group">
-            <div class="nav-group-label">Manage</div>
+            <div class="nav-group-label">@Loc["NavSectionManage"]</div>
             <AuthorizeView Policy="players.view">
-                <Authorized>@NavItem("/admin", Icons.Material.Filled.Dashboard, "Admin", NavLinkMatch.All)</Authorized>
+                <Authorized>@NavItem("/admin", Icons.Material.Filled.Dashboard, Loc["AdmBreadcrumb"], NavLinkMatch.All)</Authorized>
             </AuthorizeView>
             <AuthorizeView Policy="roles.admin">
-                <Authorized>@NavItem("/admin/roles", Icons.Material.Filled.Shield, "Roles")</Authorized>
+                <Authorized>@NavItem("/admin/roles", Icons.Material.Filled.Shield, Loc["AdmRolesTitle"])</Authorized>
             </AuthorizeView>
             <AuthorizeView Policy="wiki.admin">
-                <Authorized>@NavItem("/admin/wiki", Icons.Material.Filled.AdminPanelSettings, "Wiki Admin")</Authorized>
+                <Authorized>@NavItem("/admin/wiki", Icons.Material.Filled.AdminPanelSettings, Loc["WikiAdmin"])</Authorized>
             </AuthorizeView>
             <AuthorizeView Policy="media.admin">
-                <Authorized>@NavItem("/admin/media", Icons.Material.Filled.PermMedia, "Image Library")</Authorized>
+                <Authorized>@NavItem("/admin/media", Icons.Material.Filled.PermMedia, Loc["AdmMediaTitle"])</Authorized>
             </AuthorizeView>
             <AuthorizeView Policy="config.admin">
                 <Authorized>@NavItem("/admin/config", Icons.Material.Filled.Tune, Loc["Config"])</Authorized>
@@ -144,7 +144,7 @@
                     {
                         <div style="text-align:left;line-height:1.2;overflow:hidden;flex:1;">
                             <div class="phosphor-profile-name">@DisplayName</div>
-                            <div class="phosphor-profile-sub">@UserTag · @(_characterActive ? "online" : "offline")</div>
+                            <div class="phosphor-profile-sub">@UserTag · @(_characterActive ? Loc["NavOnline"] : Loc["NavOffline"])</div>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Class="phosphor-profile-chevron" />
                     }
@@ -160,7 +160,7 @@
         </Authorized>
         <NotAuthorized>
             <div class="phosphor-profile-wrap">
-                <a href="/login" class="phosphor-profile-card" title="Sign in">
+                <a href="/login" class="phosphor-profile-card" title="@Loc["AuthSignIn"]">
                     <div class="phosphor-avatar-wrap">
                         <div class="phosphor-avatar" style="background:var(--surface-3);color:var(--text-faint);">
                             <MudIcon Icon="@Icons.Material.Filled.Login" Style="font-size:1.1rem;" />
@@ -169,8 +169,8 @@
                     @if (!IsCollapsed)
                     {
                         <div style="text-align:left;line-height:1.2;overflow:hidden;">
-                            <div class="phosphor-profile-name">Sign in</div>
-                            <div class="phosphor-profile-sub">guest</div>
+                            <div class="phosphor-profile-name">@Loc["AuthSignIn"]</div>
+                            <div class="phosphor-profile-sub">@Loc["NavGuestTag"]</div>
                         </div>
                     }
                 </a>
@@ -246,7 +246,7 @@
         get
         {
             var ch = AccountAuth.ActiveCharacter;
-            return ch is not null ? $"#{ch.DbrefNumber}" : "account";
+            return ch is not null ? $"#{ch.DbrefNumber}" : Loc["NavAccountTag"];
         }
     }
 

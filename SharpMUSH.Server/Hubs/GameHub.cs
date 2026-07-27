@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Server.Authentication;
@@ -50,14 +51,17 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	public const string CharacterDbrefClaim = "character_dbref";
 
 	/// <summary>
-	/// Formats a SignalR group name for a character.
+	/// The SignalR group for a character. Takes a <see cref="DBRef"/> rather than a string so
+	/// subscriber and publisher cannot disagree on a spelling: <see cref="DBRef.ToString"/> is the
+	/// one serialization, and <see cref="DBRef.TryParse"/> the one way in from the wire.
 	/// </summary>
-	public static string CharacterGroupName(string dbref) => $"char:{dbref}";
+	public static string CharacterGroupName(DBRef character) => $"char:{character}";
 
 	/// <summary>
-	/// Formats a SignalR group name for a room.
+	/// The SignalR group for a room. Takes a <see cref="DBRef"/> for the same reason as
+	/// <see cref="CharacterGroupName"/>.
 	/// </summary>
-	public static string RoomGroupName(string dbref) => $"room:{dbref}";
+	public static string RoomGroupName(DBRef room) => $"room:{room}";
 
 	/// <inheritdoc/>
 	public override async Task OnConnectedAsync()
@@ -71,16 +75,15 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 			return;
 		}
 
-		var dbref = Context.User?.FindFirst(CharacterDbrefClaim)?.Value;
-		if (!string.IsNullOrWhiteSpace(dbref))
+		if (Context.User?.GetActingCharacter() is { } character)
 		{
-			await Groups.AddToGroupAsync(Context.ConnectionId, CharacterGroupName(dbref));
+			await Groups.AddToGroupAsync(Context.ConnectionId, CharacterGroupName(character));
 			logger.LogInformation("[GameHub] Connection {ConnectionId} joined character group {Group}",
-				Context.ConnectionId, CharacterGroupName(dbref));
+				Context.ConnectionId, CharacterGroupName(character));
 		}
 		else
 		{
-			logger.LogWarning("[GameHub] Connection {ConnectionId} has no {Claim} claim; not added to character group",
+			logger.LogWarning("[GameHub] Connection {ConnectionId} has no usable {Claim} claim; not added to character group",
 				Context.ConnectionId, CharacterDbrefClaim);
 		}
 
@@ -107,16 +110,16 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	/// <param name="command">The raw command string typed by the player.</param>
 	public async Task SendCommand(string command)
 	{
-		var dbref = Context.User?.FindFirst(CharacterDbrefClaim)?.Value;
-		if (string.IsNullOrEmpty(dbref))
+		if (Context.User?.GetActingCharacter() is not { } character)
 		{
 			// No character identity → the command is unroutable; fail at the auth boundary
 			// rather than publishing an empty-dbref message onto the bus.
-			logger.LogWarning("[GameHub] Connection {ConnectionId} sent a command without a {Claim} claim; rejecting",
+			logger.LogWarning("[GameHub] Connection {ConnectionId} sent a command without a usable {Claim} claim; rejecting",
 				Context.ConnectionId, CharacterDbrefClaim);
 			throw new HubException("No character identity on this connection.");
 		}
 
+		var dbref = character.ToString();
 		logger.LogDebug("[GameHub] Connection {ConnectionId} (char:{Dbref}) sent command: {Command}",
 			Context.ConnectionId, dbref, command);
 
@@ -130,24 +133,46 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	/// Adds the calling connection to the SignalR group for the specified room.
 	/// The client calls this after moving to a new room.
 	/// </summary>
-	/// <param name="roomDbref">The dbref of the room to subscribe to.</param>
-	public async Task JoinRoom(string roomDbref)
+	/// <param name="roomDbref">The room's objid, e.g. <c>"#7:1700000000"</c>.</param>
+	/// <exception cref="HubException">The argument is absent or not a parseable dbref or objid.</exception>
+	public async Task JoinRoom(string? roomDbref)
 	{
-		await Groups.AddToGroupAsync(Context.ConnectionId, RoomGroupName(roomDbref));
+		var room = ParseRoomOrThrow(roomDbref);
+		await Groups.AddToGroupAsync(Context.ConnectionId, RoomGroupName(room));
 		logger.LogDebug("[GameHub] Connection {ConnectionId} joined room group {Group}",
-			Context.ConnectionId, RoomGroupName(roomDbref));
+			Context.ConnectionId, RoomGroupName(room));
 	}
 
 	/// <summary>
 	/// Removes the calling connection from the SignalR group for the specified room.
 	/// The client calls this before moving away from a room.
 	/// </summary>
-	/// <param name="roomDbref">The dbref of the room to unsubscribe from.</param>
-	public async Task LeaveRoom(string roomDbref)
+	/// <param name="roomDbref">The room's objid, e.g. <c>"#7:1700000000"</c>.</param>
+	/// <exception cref="HubException">The argument is absent or not a parseable dbref or objid.</exception>
+	public async Task LeaveRoom(string? roomDbref)
 	{
-		await Groups.RemoveFromGroupAsync(Context.ConnectionId, RoomGroupName(roomDbref));
+		var room = ParseRoomOrThrow(roomDbref);
+		await Groups.RemoveFromGroupAsync(Context.ConnectionId, RoomGroupName(room));
 		logger.LogDebug("[GameHub] Connection {ConnectionId} left room group {Group}",
-			Context.ConnectionId, RoomGroupName(roomDbref));
+			Context.ConnectionId, RoomGroupName(room));
+	}
+
+	/// <summary>
+	/// Parses a client-supplied room reference. Client input is the one place a malformed
+	/// spelling can enter, so it is rejected here rather than silently naming a group nothing
+	/// publishes to. The parameter is nullable because a client can send JSON <c>null</c>
+	/// regardless of the declared type — nullable reference types are not enforced at runtime.
+	/// </summary>
+	private DBRef ParseRoomOrThrow(string? roomDbref)
+	{
+		if (DBRef.TryParse(roomDbref, out var room) && room is not null)
+		{
+			return room.Value;
+		}
+
+		logger.LogWarning("[GameHub] Connection {ConnectionId} sent an unparseable room reference {Room}",
+			Context.ConnectionId, roomDbref);
+		throw new HubException($"'{roomDbref}' is not a valid dbref or objid.");
 	}
 
 	// These are called by internal services (e.g. NatsBridgeService, REST controllers)
@@ -158,25 +183,25 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	/// Sends a <see cref="GameOutputMessage"/> to all connections belonging to a specific character.
 	/// </summary>
 	/// <param name="hubContext">The hub context injected by the calling service.</param>
-	/// <param name="characterDbref">The character's dbref string (e.g. "#42").</param>
+	/// <param name="character">The character's objid.</param>
 	/// <param name="message">The output message to deliver.</param>
 	public static Task SendToCharacterAsync(
 		IHubContext<GameHub, IGameHubClient> hubContext,
-		string characterDbref,
+		DBRef character,
 		GameOutputMessage message) =>
-		hubContext.Clients.Group(CharacterGroupName(characterDbref)).ReceiveOutput(message);
+		hubContext.Clients.Group(CharacterGroupName(character)).ReceiveOutput(message);
 
 	/// <summary>
 	/// Broadcasts a <see cref="RoomEventMessage"/> to all connections observing a room.
 	/// </summary>
 	/// <param name="hubContext">The hub context injected by the calling service.</param>
-	/// <param name="roomDbref">The room's dbref string (e.g. "#1").</param>
+	/// <param name="room">The room's objid.</param>
 	/// <param name="message">The room event message to broadcast.</param>
 	public static Task SendToRoomAsync(
 		IHubContext<GameHub, IGameHubClient> hubContext,
-		string roomDbref,
+		DBRef room,
 		RoomEventMessage message) =>
-		hubContext.Clients.Group(RoomGroupName(roomDbref)).ReceiveRoomEvent(message);
+		hubContext.Clients.Group(RoomGroupName(room)).ReceiveRoomEvent(message);
 
 	/// <summary>
 	/// Broadcasts a system <see cref="GameOutputMessage"/> to all currently connected clients.
@@ -188,7 +213,7 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 		IHubContext<GameHub, IGameHubClient> hubContext,
 		string content) =>
 		hubContext.Clients.All.ReceiveOutput(new GameOutputMessage(
-			CharacterDbref: "*",
+			CharacterDbref: null,
 			Content: content,
 			Timestamp: DateTimeOffset.UtcNow,
 			MessageType: MessageType.System));

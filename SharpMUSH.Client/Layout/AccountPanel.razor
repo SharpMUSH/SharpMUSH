@@ -7,6 +7,8 @@
    HandleOpenInNewTabAsync is what actually calls window.open, carrying the target
    character via a one-shot ?as=<dbref>-<creationTime> entry hint. *@
 
+@inject IStringLocalizer<SharedResource> Loc
+
 <div>
     @if (IsOpen)
     {
@@ -30,24 +32,24 @@
                         {
                             <button type="button" class="account-panel-item account-panel-switch-btn" @onclick="OpenSubmenu">
                                 <span class="account-panel-item-icon">&#8644;</span>
-                                <span class="account-panel-item-label">Switch Character</span>
+                                <span class="account-panel-item-label">@Loc["AuthSwitchCharacter"]</span>
                             </button>
                         }
                         else
                         {
                             <div class="account-panel-item account-panel-item--inert">
                                 <span class="account-panel-item-icon">&#8644;</span>
-                                <span class="account-panel-item-label">No character</span>
+                                <span class="account-panel-item-label">@Loc["AuthNoCharacter"]</span>
                             </div>
                         }
                         <a href="/account" class="account-panel-item" @onclick="ClosePanelAsync">
                             <span class="account-panel-item-icon">&#9881;</span>
-                            <span class="account-panel-item-label">Account Management</span>
+                            <span class="account-panel-item-label">@Loc["AuthAccountManagement"]</span>
                         </a>
                         <div class="account-panel-divider"></div>
                         <button type="button" class="account-panel-item account-panel-item--danger" @onclick="HandleLogoutAsync">
                             <span class="account-panel-item-icon">&#9211;</span>
-                            <span class="account-panel-item-label">Logout</span>
+                            <span class="account-panel-item-label">@Loc["AuthLogout"]</span>
                         </button>
                     </div>
 
@@ -57,7 +59,7 @@
                         <div class="account-panel-level account-panel-level--submenu">
                             <button type="button" class="account-panel-back" @onclick="BackToRoot">
                                 <span class="account-panel-item-icon">&#8249;</span>
-                                <span>Switch Character</span>
+                                <span>@Loc["AuthSwitchCharacter"]</span>
                             </button>
                             <div class="account-panel-characters" role="menu">
                                 @foreach (var character in Characters)
@@ -73,7 +75,7 @@
                                         <span class="account-panel-character-dbref">#@character.DbrefNumber</span>
                                         <button type="button"
                                                 class="account-panel-newtab"
-                                                title="Open @character.Name in a new tab"
+                                                title="@Loc["AuthOpenInNewTab", character.Name]"
                                                 @onclick="() => OnOpenInNewTab.InvokeAsync(character)"
                                                 @onclick:stopPropagation="true">
                                             <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Style="font-size:0.8125rem;" />

@@ -70,11 +70,11 @@
 		try
 		{
 			await WebSocketClient.ConnectAsync(serverUri);
-			AddMessage($"[System] Connected to {serverUri}");
+			AddMessage(Loc["ResWsConnectedTo", serverUri]);
 		}
 		catch (Exception ex)
 		{
-			AddMessage($"[Error] Failed to connect: {ex.Message}");
+			AddMessage(Loc["ResWsConnectFailed", ex.Message]);
 		}
 	}
 
@@ -83,11 +83,11 @@
 		try
 		{
 			await WebSocketClient.DisconnectAsync();
-			AddMessage("[System] Disconnected");
+			AddMessage(Loc["ResWsDisconnected"]);
 		}
 		catch (Exception ex)
 		{
-			AddMessage($"[Error] Failed to disconnect: {ex.Message}");
+			AddMessage(Loc["ResWsDisconnectFailed", ex.Message]);
 		}
 	}
 
@@ -99,12 +99,12 @@
 		try
 		{
 			await WebSocketClient.SendAsync(messageToSend);
-			AddMessage($"[Sent] {messageToSend}");
+			AddMessage(Loc["ResWsSent", messageToSend]);
 			messageToSend = "";
 		}
 		catch (Exception ex)
 		{
-			AddMessage($"[Error] Failed to send: {ex.Message}");
+			AddMessage(Loc["ResWsSendFailed", ex.Message]);
 		}
 	}
 
@@ -118,7 +118,7 @@
 
 	private void OnMessageReceived(object? sender, string message)
 	{
-		AddMessage($"[Received] {message}");
+		AddMessage(Loc["ResWsReceived", message]);
 		InvokeAsync(StateHasChanged);
 	}
 

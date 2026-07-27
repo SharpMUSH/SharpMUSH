@@ -12,15 +12,9 @@ using SharpMUSH.Client.Models.Applications;
 using SharpMUSH.Client.Models.Widgets;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
-
-file sealed class SchemaAppStubLocalizer<T> : IStringLocalizer<T>
-{
-	public LocalizedString this[string name] => new(name, name);
-	public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
-	public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
-}
 
 /// <summary>Serves the profile pipeline (roster for name→objid, the view schema, and the per-character data).</summary>
 file sealed class ProfileAppHandler : HttpMessageHandler
@@ -86,7 +80,7 @@ public class SchemaWidgetApplicationTests : BunitContext
 			.AddSingleton(sp => new ApplicationRegistryClient(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<ApplicationRegistryClient>.Instance))
 			.AddSingleton(sp => new SchemaAppService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
-			.AddSingleton<IStringLocalizer<SharedResource>, SchemaAppStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -132,7 +126,7 @@ public class SchemaWidgetLazyFetchTests : BunitContext
 			.AddSingleton(sp => new ApplicationRegistryClient(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<ApplicationRegistryClient>.Instance))
 			.AddSingleton(sp => new SchemaAppService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
-			.AddSingleton<IStringLocalizer<SharedResource>, SchemaAppStubLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}

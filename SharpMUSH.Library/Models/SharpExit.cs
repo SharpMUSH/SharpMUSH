@@ -14,8 +14,9 @@ public class SharpExit
 	public required SharpObject Object { get; set; }
 
 	/// <summary>
-	/// The room the exit sits in — PennMUSH's <c>Source()</c>. Backed by the AtLocation edge, which is
-	/// also what makes the exit show up in that room's contents.
+	/// The container the exit sits in — PennMUSH's <c>Source()</c>. Usually a room, but exits can also
+	/// live on a player or a thing. Backed by the AtLocation edge, which is also what makes the exit show
+	/// up in that container's contents.
 	/// </summary>
 	[JsonIgnore]
 	public required AsyncLazy<AnySharpContainer> Location { get; set; }

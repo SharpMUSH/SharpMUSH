@@ -1,5 +1,6 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
 
 @* Renders a single scene pose: the display persona (ShowAsName → AuthorName),
    an "edited" badge when the pose has been edited, the timestamp, and the pose body
@@ -10,8 +11,8 @@
         <span style="font-weight:600;color:var(--accent);font-size:0.8125rem;">@Pose.DisplayName</span>
         @if (Pose.WasEdited)
         {
-            <span class="scene-edited-badge" title="@($"Edited {Pose.EditCount - 1} time(s)")"
-                  style="font-size:0.625rem;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-faint);border:1px solid var(--border);border-radius:4px;padding:0 0.3125rem;">edited</span>
+            <span class="scene-edited-badge" title="@Loc["RolEditedTimes", Pose.EditCount - 1]"
+                  style="font-size:0.625rem;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-faint);border:1px solid var(--border);border-radius:4px;padding:0 0.3125rem;">@Loc["RolEditedBadge"]</span>
         }
         <span style="font-size:0.6875rem;color:var(--text-faint);margin-left:auto;">
             @Pose.CreatedAtUtc.ToLocalTime().ToString("HH:mm")

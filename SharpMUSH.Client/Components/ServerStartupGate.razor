@@ -19,13 +19,13 @@ else
         <div class="startup-gate-glow"></div>
         <div class="startup-gate-body">
             <div class="startup-gate-brand">
-                <img src="assets/Logo.svg" alt="SharpMUSH" class="startup-gate-logo" />
-                <h1 class="startup-gate-title">SharpMUSH</h1>
+                <img src="assets/Logo.svg" alt="@Loc["AppTitle"]" class="startup-gate-logo" />
+                <h1 class="startup-gate-title">@Loc["AppTitle"]</h1>
             </div>
             <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" Class="startup-gate-spinner" />
-            <MudText Typo="Typo.h6" Align="Align.Center" Class="startup-gate-message">Game is starting up&hellip;</MudText>
+            <MudText Typo="Typo.h6" Align="Align.Center" Class="startup-gate-message">@Loc["WidGameStartingUp"]</MudText>
             <MudText Typo="Typo.body2" Align="Align.Center" Class="startup-gate-submessage">
-                Waiting for the server to come online&hellip;
+                @Loc["WidWaitingForServer"]
             </MudText>
         </div>
     </div>
@@ -46,6 +46,9 @@ else
 
     [Inject]
     private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+
+    [Inject]
+    private IStringLocalizer<SharedResource> Loc { get; set; } = default!;
 
     private bool _healthy;
     private CancellationTokenSource? _lifetimeCts;

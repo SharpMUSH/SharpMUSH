@@ -1,13 +1,13 @@
 @page "/help"
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Help — SharpMUSH</PageTitle>
+<PageTitle>@Loc["Help"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="help-page">
     <header class="help-header">
-        <div class="help-kicker">Documentation</div>
-        <h1 class="help-title">Help</h1>
-        <p class="help-subtitle">Browse topics, search references, and read the manual.</p>
+        <div class="help-kicker">@Loc["AdmHelpKicker"]</div>
+        <h1 class="help-title">@Loc["Help"]</h1>
+        <p class="help-subtitle">@Loc["AdmHelpSubtitle"]</p>
     </header>
 
     <section class="help-body">

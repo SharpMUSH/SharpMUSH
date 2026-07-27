@@ -7,6 +7,7 @@
 @inject ApplicationCatalog Catalog
 @inject ApplicationRegistryClient RegistryClient
 @inject CharacterDirectoryService Directory
+@inject IStringLocalizer<SharedResource> Loc
 
 @* A schema-driven widget (Area 21). Its schema/data routes come either from its config ({ schemaUrl,
    dataUrl }, for manually-placed schema widgets) or — when it is an application-backed palette widget —
@@ -20,7 +21,7 @@
 }
 else if (_schema is null)
 {
-    <MudText Typo="Typo.caption" Class="mud-text-secondary">Widget schema unavailable.</MudText>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["WidSchemaUnavailable"]</MudText>
 }
 else if (_schema.IsForm)
 {

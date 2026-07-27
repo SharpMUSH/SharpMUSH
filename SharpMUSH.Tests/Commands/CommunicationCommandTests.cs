@@ -445,10 +445,40 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var targetName = TestIsolationHelpers.GenerateUniqueName("PemitSilentTarget");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {targetName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {targetName}"));
+		var targetDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@pemit/silent {targetName}=Quietly"));
+
+		// /silent suppresses the sender's echo, not the delivery — without this a no-op would pass.
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(targetDbRef), Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessagePlainTextEquals(msg, "Quietly")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsFalse();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>speech.c:599</c> skips the echo when the only recipient was the sender, who has
+	/// already seen the message.
+	/// </summary>
+	[Test]
+	public async ValueTask PemitToYourselfDoesNotEchoBack()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@pemit #{executor.Number}=Talking to myself"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessagePlainTextEquals(msg, "Talking to myself")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsFalse();
@@ -469,8 +499,10 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@pemit/list {firstName} {secondName}=Group message"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToCountFormat), executor, executor)).IsTrue();
+		// The key alone would pass even if the command counted the recipients wrong.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
+			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToCountFormat),
+			"You pemit \"Group message\" to 2 objects.", executor)).IsTrue();
 	}
 
 	/// <summary>

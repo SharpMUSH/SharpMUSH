@@ -2,12 +2,12 @@
 @attribute [Authorize(Policy = "players.view")]
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Admin Dashboard — SharpMUSH</PageTitle>
+<PageTitle>@Loc["AdmDashboardTitle"] — @Loc["AppTitle"]</PageTitle>
 
 <div style="padding:var(--cpad);">
     <div class="ph-header">
-        <div class="ph-kicker">Administration</div>
-        <h1 class="ph-title">Admin Dashboard</h1>
+        <div class="ph-kicker">@Loc["AdmKicker"]</div>
+        <h1 class="ph-title">@Loc["AdmDashboardTitle"]</h1>
     </div>
 
     <div class="ph-grid">
@@ -18,8 +18,8 @@
                     <MudIcon Icon="@card.Icon" />
                 </div>
                 <div class="ph-card-body">
-                    <div class="ph-card-title">@card.Title</div>
-                    <div class="ph-card-action">@card.Action</div>
+                    <div class="ph-card-title">@Loc[card.TitleKey]</div>
+                    <div class="ph-card-action">@Loc[card.ActionKey]</div>
                 </div>
                 <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Class="ph-card-chevron" />
             </a>
@@ -28,24 +28,24 @@
 </div>
 
 @code {
-    private record AdminCard(string Title, string Action, string Href, string Icon);
+    private record AdminCard(string TitleKey, string ActionKey, string Href, string Icon);
 
     private readonly AdminCard[] _cards =
     [
-        new("Players", "View Players", "/admin/players", Icons.Material.Filled.Group),
-        new("Accounts", "Manage Accounts", "/admin/accounts", Icons.Material.Filled.ManageAccounts),
-        new("Characters", "View Characters", "/admin/characters", Icons.Material.Filled.Person),
-        new("Profiles", "Character Profiles", "/admin/profiles", Icons.Material.Filled.Badge),
-        new("Configuration", "Site Config", "/admin/config", Icons.Material.Filled.Settings),
-        new("Roles", "Roles & Permissions", "/admin/roles", Icons.Material.Filled.Shield),
-        new("Moderation", "Reports & Bans", "/admin/moderation", Icons.Material.Filled.Gavel),
-        new("Suggestions", "Word Suggestions", "/admin/suggestions", Icons.Material.Filled.Lightbulb),
-        new("Wiki Admin", "Wiki Admin", "/admin/wiki", Icons.Material.Filled.MenuBook),
-        new("Image Library", "Media Assets", "/admin/media", Icons.Material.Filled.PermMedia),
-        new("Applications", "Custom Widgets", "/admin/applications", Icons.Material.Filled.Apps),
-        new("Packages", "Softcode Packages", "/admin/packages", Icons.Material.Filled.Inventory2),
-        new("Layout", "Layout Editor", "/admin/layout", Icons.Material.Filled.Dashboard),
-        new("Server", "Server Status", "/admin/server", Icons.Material.Filled.Dns),
-        new("Database Import", "Import Database", "/admin/database/import", Icons.Material.Filled.CloudUpload),
+        new("AdmPlayersTitle", "AdmPlayersAction", "/admin/players", Icons.Material.Filled.Group),
+        new("AdmAccountsTitle", "AdmAccountsAction", "/admin/accounts", Icons.Material.Filled.ManageAccounts),
+        new("Characters", "AdmCharactersAction", "/admin/characters", Icons.Material.Filled.Person),
+        new("AdmProfilesTitle", "AdmProfilesAction", "/admin/profiles", Icons.Material.Filled.Badge),
+        new("Configuration", "AdmConfigAction", "/admin/config", Icons.Material.Filled.Settings),
+        new("AdmRolesTitle", "AdmRolesAction", "/admin/roles", Icons.Material.Filled.Shield),
+        new("AdmModerationTitle", "AdmModerationAction", "/admin/moderation", Icons.Material.Filled.Gavel),
+        new("Suggestions", "AdmSuggestionsAction", "/admin/suggestions", Icons.Material.Filled.Lightbulb),
+        new("WikiAdmin", "WikiAdmin", "/admin/wiki", Icons.Material.Filled.MenuBook),
+        new("AdmMediaTitle", "AdmMediaAction", "/admin/media", Icons.Material.Filled.PermMedia),
+        new("AdmApplicationsTitle", "AdmApplicationsAction", "/admin/applications", Icons.Material.Filled.Apps),
+        new("AdmPackagesTitle", "AdmPackagesAction", "/admin/packages", Icons.Material.Filled.Inventory2),
+        new("AdmLayoutTitle", "AdmLayoutAction", "/admin/layout", Icons.Material.Filled.Dashboard),
+        new("Server", "AdmServerAction", "/admin/server", Icons.Material.Filled.Dns),
+        new("AdmDatabaseImportTitle", "AdmDatabaseImportAction", "/admin/database/import", Icons.Material.Filled.CloudUpload),
     ];
 }

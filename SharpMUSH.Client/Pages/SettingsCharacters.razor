@@ -2,19 +2,19 @@
 @attribute [Authorize]
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Characters — Settings — SharpMUSH</PageTitle>
+<PageTitle>@Loc["Characters"] — @Loc["Settings"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="settings-page">
     <header class="settings-header">
-        <div class="settings-kicker">@Loc["AppTitle"] · Settings</div>
-        <h1 class="settings-title">Character Management</h1>
+        <div class="settings-kicker">@Loc["AppTitle"] · @Loc["Settings"]</div>
+        <h1 class="settings-title">@Loc["NavCharacterManagement"]</h1>
     </header>
 
     <section class="settings-card">
-        <div class="settings-card-section-label">Coming soon</div>
+        <div class="settings-card-section-label">@Loc["ComingSoon"]</div>
         <p class="settings-card-text">
-            Character management is on the way. For now, see the
-            <a class="settings-link" href="/account">account page</a>.
+            @Loc["NavCharacterManagementComingSoon"]
+            <a class="settings-link" href="/account">@Loc["NavGoToAccountPage"]</a>
         </p>
     </section>
 </div>
