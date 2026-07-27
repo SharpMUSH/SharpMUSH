@@ -1,8 +1,12 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -25,17 +29,128 @@ public class MovementCommandTests
 		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
+	/// <summary>
+	/// PennMUSH <c>do_move</c> (<c>move.c:435</c>): when nothing matches as an exit the answer is
+	/// "You can't go that way.", not a generic "I don't see that here."
+	/// </summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask GotoCommand()
+	public async ValueTask GotoSomethingThatIsNotAnExitReportsCantGoThatWay()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("goto #0"));
+		var player = await CreateTestPlayerAsync("GotoNonExit");
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("goto #0"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.CantGoThatWay), player.DbRef, player.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>move.c:449</c> → <c>predicat.c:75</c>: <c>could_doit</c> fails when an exit has no
+	/// destination, so <c>do_move</c> falls through to
+	/// <c>fail_lock(..., "You can't go that way.")</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask WalkingAnExitWithNoDestinationReportsCantGoThatWay()
+	{
+		var player = await CreateTestPlayerAsync("NoDestWalker");
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName("NoDestRoom");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("NoDestExit");
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.CantGoThatWay), player.DbRef, player.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH routes the failure through <c>fail_lock</c>, so the exit's own <c>@fail</c> replaces the
+	/// default message rather than being ignored.
+	/// </summary>
+	[Test]
+	public async ValueTask WalkingAnExitWithNoDestinationUsesTheExitsFailureAttribute()
+	{
+		var player = await CreateTestPlayerAsync("NoDestFailAttr");
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName("FailAttrRoom");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("FailAttrExit");
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"&FAILURE {exitName}=The door is bricked up."));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "You can't go that way.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessagePlainTextContains(msg, "The door is bricked up.")),
+				TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// <c>@unlink</c> removes the destination edge entirely. Walking the exit afterwards must report the
+	/// same PennMUSH failure rather than throwing out of the database layer.
+	/// </summary>
+	[Test]
+	public async ValueTask WalkingAnUnlinkedExitReportsCantGoThatWay()
+	{
+		var player = await CreateTestPlayerAsync("UnlinkWalker");
+
+		var sourceName = TestIsolationHelpers.GenerateUniqueName("UnlinkSource");
+		var sourceResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+
+		var destName = TestIsolationHelpers.GenerateUniqueName("UnlinkDest");
+		var destResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {destName}"));
+		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("UnlinkExitWalk");
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}={destDbRef}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@unlink {exitName}"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.CantGoThatWay), player.DbRef, player.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// A linked exit still has to work: this pins the destination edge the other three tests depend on.
+	/// </summary>
+	[Test]
+	public async ValueTask WalkingALinkedExitMovesThePlayerToTheDestination()
+	{
+		var player = await CreateTestPlayerAsync("LinkedWalker");
+
+		var sourceName = TestIsolationHelpers.GenerateUniqueName("LinkedSource");
+		var sourceResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+
+		var destName = TestIsolationHelpers.GenerateUniqueName("LinkedDest");
+		var destResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {destName}"));
+		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("LinkedExitWalk");
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}={destDbRef}"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+
+		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
+
+		await Assert.That(location.WithExitOption().Known().Object().DBRef.ToString()).IsEqualTo(destDbRef);
 	}
 
 	[Test]

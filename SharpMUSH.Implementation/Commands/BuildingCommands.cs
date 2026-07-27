@@ -656,7 +656,9 @@ public partial class Commands
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
-							if (!destObj.IsRoom)
+							// An exit may lead to any container — room, player or thing (PennMUSH can_link_to).
+							// Only another exit is not a place you can end up.
+							if (!destObj.IsContainer)
 							{
 								return await NotifyService!.NotifyAndReturn(
 										executor.Object().DBRef,
@@ -665,13 +667,13 @@ public partial class Commands
 										shouldNotify: true);
 							}
 
-							var destinationRoom = destObj.AsRoom;
+							var destinationRoom = destObj.AsContainer;
 
 							bool canLink = await PermissionService!.Controls(executor, destObj);
 
 							if (!canLink)
 							{
-								var destFlags = await destinationRoom.Object.Flags.Value.ToArrayAsync();
+								var destFlags = await destinationRoom.Object().Flags.Value.ToArrayAsync();
 								var hasLinkOk = destFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase));
 
 								if (!hasLinkOk)
@@ -729,7 +731,7 @@ public partial class Commands
 
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
-							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, exitObj.Object().DBRef.Number, destinationRoom.Object.DBRef.Number);
+							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, exitObj.Object().DBRef.Number, destinationRoom.Object().DBRef.Number);
 							return CallState.Empty;
 						}
 					);
@@ -1296,12 +1298,23 @@ public partial class Commands
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor, executor, destName, LocateFlags.All);
 
-			if (!locateResult.IsError && locateResult.AsSharpObject.IsRoom)
+			if (locateResult.IsError)
 			{
-				var exitObj = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
-				await Mediator.Send(new LinkExitCommand(exitObj.AsExit, locateResult.AsSharpObject.AsRoom));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToNameFormat), executor, destName);
+				// LocateAndNotifyIfInvalidWithCallState has already said why.
+				return new CallState(exitDbRef.ToString());
 			}
+
+			// An exit may lead to any container — room, player or thing (PennMUSH can_link_to). Anything
+			// else is reported rather than leaving the exit silently unlinked.
+			if (!locateResult.AsSharpObject.IsContainer)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
+				return new CallState(exitDbRef.ToString());
+			}
+
+			var exitObj = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
+			await Mediator.Send(new LinkExitCommand(exitObj.AsExit, locateResult.AsSharpObject.AsContainer));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToNameFormat), executor, destName);
 		}
 
 		return new CallState(exitDbRef.ToString());

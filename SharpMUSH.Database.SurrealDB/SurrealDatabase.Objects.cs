@@ -179,6 +179,8 @@ public partial class SurrealDatabase
 			["destKey"] = destKey
 		};
 
+		// Relinking must replace the destination, not accumulate a second has_home edge.
+		await UnlinkExitAsync(exit, cancellationToken);
 		await ExecuteAsync(
 			$"RELATE exit:$exitKey->has_home->{destTable}:$destKey",
 			parameters, cancellationToken);

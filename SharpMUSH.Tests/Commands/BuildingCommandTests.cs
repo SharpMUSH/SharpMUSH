@@ -448,21 +448,27 @@ public class BuildingCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(RecycleObject))]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask UnlinkExit()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Unlink Room"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@open Unlink Exit=#14"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@unlink Unlink Exit"));
+		var roomName = TestIsolationHelpers.GenerateUniqueName("UnlinkRoom");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "Unlinked")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		var exitName = TestIsolationHelpers.GenerateUniqueName("UnlinkExit");
+		var openResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@open {exitName}={roomDbRef}"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@unlink {exitName}"));
+
+		DBRef.TryParse(openResult.Message!.ToPlainText()!.Trim(), out var exitRef);
+		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
+		var destination = await exit.AsExit.Home.WithCancellation(CancellationToken.None);
+
+		await Assert.That(destination.IsNone).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.UnlinkedExit), executor, executor)).IsTrue();
 	}
 
 	[Test]

@@ -193,7 +193,9 @@ public partial class LocateService(
 		}
 		else if (where.IsExit)
 		{
-			location = await where.MinusRoom().Home();
+			// Search the exit's destination; an unlinked exit has none, so fall back to the room it sits in.
+			var destination = await where.MinusRoom().Home();
+			location = destination.IsNone ? await FriendlyWhereIs(where) : destination.WithoutNone();
 		}
 		else
 		{
@@ -599,9 +601,13 @@ public partial class LocateService(
 	{
 		if (thing.IsRoom) return null;
 		var minusRoom = thing.MinusRoom();
-		return thing.IsExit
-			? (await minusRoom.Home()).Object().DBRef
-			: (await minusRoom.Location()).Object().DBRef;
+		if (!thing.IsExit)
+		{
+			return (await minusRoom.Location()).Object().DBRef;
+		}
+
+		var destination = await minusRoom.Home();
+		return destination.IsNone ? null : destination.WithoutNone().Object().DBRef;
 	}
 
 	public async ValueTask<AnySharpContainer> Room(AnySharpObject content)
@@ -637,7 +643,7 @@ public partial class LocateService(
 	public static async ValueTask<AnySharpContainer> FriendlyWhereIs(AnySharpObject obj) => await obj.Match(
 		async player => await player.Location.WithCancellation(CancellationToken.None),
 		async room => await ValueTask.FromResult<AnySharpContainer>(room),
-		async exit => await exit.Home.WithCancellation(CancellationToken.None),
+		async exit => await exit.Location.WithCancellation(CancellationToken.None),
 		async thing => await thing.Location.WithCancellation(CancellationToken.None)
 	);
 

@@ -392,7 +392,8 @@ public partial class Functions
 					thing => thing.Object.DBRef.ToString(),
 					_ => "#-1");
 			},
-			async exit => (await exit.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
+			// PennMUSH fun_home (fundb.c:1672) returns Source() for an exit — the room it sits in.
+			async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
 			async thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef
 		);
 	}
@@ -1575,7 +1576,7 @@ public partial class Functions
 					else if (current.IsExit)
 					{
 						// Exits' location is their source room
-						var location = await current.AsExit.Home.WithCancellation(CancellationToken.None);
+						var location = await current.AsExit.Location.WithCancellation(CancellationToken.None);
 						current = location.WithRoomOption();
 					}
 					else

@@ -5,6 +5,7 @@ using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -420,5 +421,165 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases), executor, executor)).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_pemit</c> (<c>speech.c:595</c>) echoes the message back to the sender unless
+	/// <c>/silent</c> is given and the target is not the sender itself.
+	/// </summary>
+	[Test]
+	public async ValueTask PemitEchoesTheMessageBackToTheSender()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var targetName = TestIsolationHelpers.GenerateUniqueName("PemitEchoTarget");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {targetName}"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@pemit {targetName}=Hello there"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask PemitSilentSuppressesTheSenderEcho()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var targetName = TestIsolationHelpers.GenerateUniqueName("PemitSilentTarget");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {targetName}"));
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@pemit/silent {targetName}=Quietly"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsFalse();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>speech.c:596</c>: more than one recipient collapses the echo into a count.
+	/// </summary>
+	[Test]
+	public async ValueTask PemitListEchoesTheRecipientCount()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var firstName = TestIsolationHelpers.GenerateUniqueName("PemitListA");
+		var secondName = TestIsolationHelpers.GenerateUniqueName("PemitListB");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {firstName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {secondName}"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@pemit/list {firstName} {secondName}=Group message"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToCountFormat), executor, executor)).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_one_remit</c> (<c>speech.c:1263</c>): an exit cannot hold anything.
+	/// </summary>
+	[Test]
+	public async ValueTask RemitToAnExitReportsThatNothingCanBeInIt()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitExitRoom");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("RemitExit");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@open {exitName}={roomDbRef}"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@remit {exitName}=Nobody hears this"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor, executor)).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>speech.c:1273</c>: the sender is told what they remitted, but only when they are not
+	/// standing in the target room themselves.
+	/// </summary>
+	[Test]
+	public async ValueTask RemitEchoesToTheSenderWhenTheyAreElsewhere()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitEchoRoom");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@remit {roomDbRef}=Anyone there?"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.YouRemitInFormat), executor, executor)).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask RemitSilentSuppressesTheSenderEcho()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitSilentRoom");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@remit/silent {roomDbRef}=Hush"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.YouRemitInFormat), executor, executor)).IsFalse();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_lemit</c> (<c>speech.c:1343</c>): echoed only when the sender is not directly in the
+	/// outermost room, i.e. when they are inside a container.
+	/// </summary>
+	[Test]
+	public async ValueTask LemitEchoesToTheSenderFromInsideAContainer()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LemitEcho");
+
+		var boxName = TestIsolationHelpers.GenerateUniqueName("LemitBox");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {boxName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {boxName}=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={boxName}"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@lemit Anyone outside?"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.YouLemitFormat), player.DbRef, player.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_zemit</c> (<c>speech.c:1405</c>) requires control of the zone object.
+	/// </summary>
+	[Test]
+	public async ValueTask ZemitRequiresControlOfTheZone()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ZemitNoControl");
+
+		// God is the one object a mortal provably cannot control, so this isolates the new permission
+		// branch from the Control-lock default that governs ordinary objects.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}=#0"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@zemit #1=Not mine"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.PermissionDenied), player.DbRef, player.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>speech.c:1419</c>: the sender is told what they zemitted.
+	/// </summary>
+	[Test]
+	public async ValueTask ZemitEchoesToTheSender()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var zmoName = TestIsolationHelpers.GenerateUniqueName("ZemitEchoZMO");
+		var zmoResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zmoName}"));
+		var zmoDbRef = zmoResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@zemit {zmoDbRef}=Zone wide"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.YouZemitInZoneFormat), executor, executor)).IsTrue();
 	}
 }

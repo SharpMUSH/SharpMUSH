@@ -55,8 +55,8 @@ public interface ICommunicationService
 	/// <param name="messageFunc">Function that takes the target and base message, returns the final message to send</param>
 	/// <param name="notificationType">The type of notification to send</param>
 	/// <param name="notifyOnPermissionFailure">Whether to notify executor if permission check fails</param>
-	/// <returns>True if message was sent successfully, false otherwise</returns>
-	ValueTask<bool> SendToObjectAsync(
+	/// <returns>The object that received the message, or null if it could not be delivered.</returns>
+	ValueTask<AnySharpObject?> SendToObjectAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
@@ -75,8 +75,8 @@ public interface ICommunicationService
 	/// <param name="messageFunc">Function that takes the target and base message, returns the final message to send</param>
 	/// <param name="notificationType">The type of notification to send</param>
 	/// <param name="notifyOnPermissionFailure">Whether to notify executor if permission check fails</param>
-	/// <returns>Task representing the async operation</returns>
-	ValueTask SendToMultipleObjectsAsync(
+	/// <returns>The objects that actually received the message, in the order they were notified.</returns>
+	ValueTask<IReadOnlyList<AnySharpObject>> SendToMultipleObjectsAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
