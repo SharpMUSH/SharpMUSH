@@ -18,4 +18,12 @@ public record WikiRevision(
 	string MarkdownSource,
 	string EditorDbref,
 	DateTimeOffset Timestamp,
-	string? EditSummary);
+	string? EditSummary)
+{
+	/// <summary>
+	/// The locale this revision belongs to, so history is a stream per <c>(PageId, Locale)</c>.
+	/// Init-only with an empty default: existing rows read back as source-locale revisions, and
+	/// <see cref="string.Empty"/> is the canonical marker for "the source-locale stream".
+	/// </summary>
+	public string Locale { get; init; } = string.Empty;
+}
