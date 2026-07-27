@@ -42,7 +42,7 @@ public class AccountServiceTests
 	}
 
 	private static SharpAccount MakeAccount(string id = "accounts/1", string username = "TestUser",
-		string? email = null, bool isDisabled = false)
+		string? email = null, AccountStatus status = AccountStatus.Active)
 		=> new()
 		{
 			Id = id,
@@ -50,7 +50,7 @@ public class AccountServiceTests
 			Email = email,
 			PasswordHash = "hash",
 			CreatedAt = 1_000_000,
-			IsDisabled = isDisabled
+			Status = status
 		};
 
 	[Test]
@@ -187,7 +187,7 @@ public class AccountServiceTests
 	{
 		var (svc, db, pw, _) = Build();
 
-		var disabled = MakeAccount(isDisabled: true);
+		var disabled = MakeAccount(status: AccountStatus.Disabled);
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(disabled);
 		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 
@@ -372,18 +372,6 @@ public class AccountServiceTests
 	}
 
 	[Test]
-	public async ValueTask DeleteAccountAsync_ForwardsToDatabase()
-	{
-		var (svc, db, _, _) = Build();
-
-		db.DeleteAccountAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(ValueTask.CompletedTask);
-
-		await svc.DeleteAccountAsync("accounts/1");
-
-		await db.Received(1).DeleteAccountAsync("accounts/1", Arg.Any<CancellationToken>());
-	}
-
-	[Test]
 	public async ValueTask DisableAccountAsync_AccountNotFound_ReturnsError()
 	{
 		var (svc, db, _, _) = Build();
@@ -407,7 +395,7 @@ public class AccountServiceTests
 		var result = await svc.DisableAccountAsync("accounts/1");
 
 		await Assert.That(result.IsT0).IsTrue();
-		await db.Received(1).UpdateAccountDisabledAsync("accounts/1", true, Arg.Any<CancellationToken>());
+		await db.Received(1).UpdateAccountStatusAsync("accounts/1", AccountStatus.Disabled, Arg.Any<CancellationToken>());
 		await sessions.Received(1).RevokeAllForAccountAsync("accounts/1", Arg.Any<CancellationToken>());
 	}
 
@@ -422,7 +410,7 @@ public class AccountServiceTests
 		var result = await svc.DisableAccountAsync("accounts/1");
 
 		await Assert.That(result.IsT0).IsTrue();
-		await db.Received(1).UpdateAccountDisabledAsync("accounts/1", true, Arg.Any<CancellationToken>());
+		await db.Received(1).UpdateAccountStatusAsync("accounts/1", AccountStatus.Disabled, Arg.Any<CancellationToken>());
 		await sessions.Received(1).RevokeAllForAccountAsync("accounts/1", Arg.Any<CancellationToken>());
 	}
 
@@ -475,12 +463,12 @@ public class AccountServiceTests
 		var (svc, db, _, _) = Build();
 
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>())
-			.Returns(MakeAccount(isDisabled: true));
+			.Returns(MakeAccount(status: AccountStatus.Disabled));
 
 		var result = await svc.EnableAccountAsync("accounts/1");
 
 		await Assert.That(result.IsT0).IsTrue();
-		await db.Received(1).UpdateAccountDisabledAsync("accounts/1", false, Arg.Any<CancellationToken>());
+		await db.Received(1).UpdateAccountStatusAsync("accounts/1", AccountStatus.Active, Arg.Any<CancellationToken>());
 	}
 
 	[Test]

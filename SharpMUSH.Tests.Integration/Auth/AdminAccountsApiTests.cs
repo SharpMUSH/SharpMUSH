@@ -43,7 +43,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
 	private record AccountLoginRequest(string UsernameOrEmail, string Password);
-	private record AdminAccountRow(string Id, string Username, string? Email, bool IsDisabled, bool MustChangePassword);
+	private record AdminAccountRow(string Id, string Username, string? Email, string Status, bool MustChangePassword);
 	private record CreateCharacterRequest(string Name, string Password);
 	private record CreatedCharacterResponse(int DbrefNumber, long CreationTime);
 

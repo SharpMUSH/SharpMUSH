@@ -787,7 +787,6 @@ public interface ISharpDatabase
 
 	ValueTask UpdateAccountUsernameAsync(string accountId, string newUsername, CancellationToken cancellationToken = default);
 
-	ValueTask DeleteAccountAsync(string accountId, CancellationToken cancellationToken = default);
 
 	/// <summary>Creates a graph edge linking <paramref name="characterRef"/> to the account.</summary>
 	ValueTask LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default);
@@ -802,7 +801,11 @@ public interface ISharpDatabase
 	ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken cancellationToken = default);
 
 	/// <summary>Sets or clears the account's disabled (banned) flag.</summary>
-	ValueTask UpdateAccountDisabledAsync(string accountId, bool value, CancellationToken cancellationToken = default);
+	/// <summary>
+	/// Sets the account's lifecycle status. Account documents are never removed, so this is the
+	/// only way an account leaves <see cref="AccountStatus.Active"/>.
+	/// </summary>
+	ValueTask UpdateAccountStatusAsync(string accountId, AccountStatus status, CancellationToken cancellationToken = default);
 
 	/// <summary>Returns all accounts. Admin tooling only — account counts are small.</summary>
 	ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken cancellationToken = default);

@@ -6,7 +6,7 @@ namespace SharpMUSH.Client.Services;
 public class AdminAccountsService(IHttpClientFactory httpClientFactory, AccountAuthService accountAuth)
 {
 	public record AdminCharacterSummary(int DbrefNumber, string Name);
-	public record AdminAccountRow(string Id, string Username, string? Email, bool IsDisabled,
+	public record AdminAccountRow(string Id, string Username, string? Email, string Status,
 		bool MustChangePassword, IReadOnlyList<AdminCharacterSummary> Characters);
 	private record ResetPasswordRequest(string NewPassword);
 

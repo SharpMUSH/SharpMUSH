@@ -42,7 +42,7 @@ public class RolesController(
 		string AccountId,
 		string Username,
 		string? Email,
-		bool IsDisabled,
+		string Status,
 		string[] RoleSlugs);
 
 	[HttpGet]
@@ -133,7 +133,7 @@ public class RolesController(
 			account.Id!,
 			account.Username,
 			account.Email,
-			account.IsDisabled,
+			account.Status.ToString(),
 			assigned.Select(r => r.Slug).ToArray()));
 	}
 

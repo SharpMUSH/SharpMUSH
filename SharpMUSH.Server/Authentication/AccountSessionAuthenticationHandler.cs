@@ -37,7 +37,7 @@ public class AccountSessionAuthenticationHandler(
 			return AuthenticateResult.Fail("Invalid or expired account session.");
 
 		var account = await accountService.GetByIdAsync(accountId);
-		if (account is null || account.IsDisabled)
+		if (account is null || !account.IsActive)
 			return AuthenticateResult.Fail("Account not found or disabled.");
 
 		var role = await accountClaims.ComputeAccountRoleAsync(accountId);

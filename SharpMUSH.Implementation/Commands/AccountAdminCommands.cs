@@ -1,5 +1,6 @@
 using OneOf.Types;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -35,7 +36,7 @@ public partial class Commands
 				? accounts
 				: accounts.Where(a => a.Username.Contains(arg0, StringComparison.OrdinalIgnoreCase)).ToList();
 			var lines = filtered.Select(a =>
-				$"{a.Username,-30} {(a.IsDisabled ? "DISABLED" : "active"),-10} {(a.MustChangePassword ? "must-change-pw" : string.Empty)}");
+				$"{a.Username,-30} {StatusLabel(a.Status),-10} {(a.MustChangePassword ? "must-change-pw" : string.Empty)}");
 			await NotifyService!.Notify(executor,
 				filtered.Count == 0 ? "No matching accounts." : string.Join("\n", lines));
 			return CallState.Empty;
@@ -105,8 +106,14 @@ public partial class Commands
 		await NotifyService!.Notify(executor,
 			$"Account: {account.Username}\n" +
 			$"Email: {account.Email ?? "(none)"}\n" +
-			$"Status: {(account.IsDisabled ? "DISABLED" : "active")}{(account.MustChangePassword ? ", must change password" : string.Empty)}\n" +
+			$"Status: {StatusLabel(account.Status)}{(account.MustChangePassword ? ", must change password" : string.Empty)}\n" +
 			$"Characters:\n{charList}");
 		return CallState.Empty;
 	}
+
+	private static string StatusLabel(AccountStatus status) => status switch
+	{
+		AccountStatus.Active => "active",
+		_ => status.ToString().ToUpperInvariant()
+	};
 }

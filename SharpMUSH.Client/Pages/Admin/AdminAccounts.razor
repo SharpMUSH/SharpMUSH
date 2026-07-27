@@ -30,7 +30,7 @@ else
             <MudTd>@context.Username</MudTd>
             <MudTd>@(context.Email ?? "—")</MudTd>
             <MudTd>
-                @if (context.IsDisabled)
+                @if (context.Status != "Active")
                 {
                     <MudChip T="string" Color="Color.Error" Size="Size.Small">@Loc["AdmAccountDisabledChip"]</MudChip>
                 }
@@ -54,9 +54,9 @@ else
             </MudTd>
             <MudTd>
                 <MudButton Size="Size.Small" OnClick="@(() => OpenResetAsync(context))">@Loc["AdmResetPassword"]</MudButton>
-                <MudButton Size="Size.Small" Color="@(context.IsDisabled ? Color.Success : Color.Error)"
+                <MudButton Size="Size.Small" Color="@(context.Status == "Active" ? Color.Error : Color.Success)"
                            OnClick="@(() => ToggleDisabledAsync(context))">
-                    @(context.IsDisabled ? Loc["AdmEnableAccount"] : Loc["AdmDisableAccount"])
+                    @(context.Status == "Active" ? Loc["AdmDisableAccount"] : Loc["AdmEnableAccount"])
                 </MudButton>
             </MudTd>
         </RowTemplate>
@@ -85,9 +85,9 @@ else
 
     private async Task ToggleDisabledAsync(AdminAccountsService.AdminAccountRow row)
     {
-        var (success, error) = await AccountsService.SetDisabledAsync(row.Id, !row.IsDisabled);
+        var (success, error) = await AccountsService.SetDisabledAsync(row.Id, row.Status == "Active");
         Snackbar.Add(success
-            ? Loc[row.IsDisabled ? "AdmAccountEnabled" : "AdmAccountDisabled", row.Username].Value
+            ? Loc[row.Status == "Active" ? "AdmAccountDisabled" : "AdmAccountEnabled", row.Username].Value
             : error ?? Loc["AdmOperationFailed"].Value, success ? Severity.Success : Severity.Error);
         await LoadAsync();
     }

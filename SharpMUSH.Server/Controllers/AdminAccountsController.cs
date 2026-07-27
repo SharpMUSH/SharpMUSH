@@ -25,7 +25,7 @@ public class AdminAccountsController(
 	ILogger<AdminAccountsController> logger) : ControllerBase
 {
 	public record AdminCharacterSummary(int DbrefNumber, string Name);
-	public record AdminAccountRow(string Id, string Username, string? Email, bool IsDisabled,
+	public record AdminAccountRow(string Id, string Username, string? Email, string Status,
 		bool MustChangePassword, IReadOnlyList<AdminCharacterSummary> Characters);
 	public record ResetPasswordRequest(string NewPassword);
 
@@ -43,7 +43,7 @@ public class AdminAccountsController(
 			return (null, Unauthorized("Invalid or expired account session."));
 
 		var account = await accountService.GetByIdAsync(accountId);
-		if (account is null || account.IsDisabled)
+		if (account is null || !account.IsActive)
 			return (null, Unauthorized("Account not found or disabled."));
 		if (account.MustChangePassword)
 			return (null, StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action."));
@@ -69,7 +69,7 @@ public class AdminAccountsController(
 
 		var rows = await accounts.ToAsyncEnumerable()
 			.Select(async (account, ct) => new AdminAccountRow(KeyOf(account), account.Username, account.Email,
-				account.IsDisabled, account.MustChangePassword,
+				account.Status.ToString(), account.MustChangePassword,
 				(await accountService.GetCharactersAsync(account.Id!, ct))
 				.Select(c => new AdminCharacterSummary(c.Object.Key, c.Object.Name)).ToList()))
 			.ToListAsync();
