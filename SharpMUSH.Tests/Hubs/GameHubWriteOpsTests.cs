@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using NSubstitute;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Server.Hubs;
 
@@ -41,7 +42,7 @@ public class GameHubWriteOpsTests
 		var (ctx, _, clients) = BuildHubContext();
 		var msg = new GameOutputMessage("#42", "Hello", DateTimeOffset.UtcNow, MessageType.Normal);
 
-		await GameHub.SendToCharacterAsync(ctx, "#42", msg);
+		await GameHub.SendToCharacterAsync(ctx, new DBRef(42), msg);
 
 		clients.Received(1).Group("char:#42");
 	}
@@ -52,7 +53,7 @@ public class GameHubWriteOpsTests
 		var (ctx, groupClient, _) = BuildHubContext();
 		var msg = new GameOutputMessage("#7", "Hello", DateTimeOffset.UtcNow, MessageType.Normal);
 
-		await GameHub.SendToCharacterAsync(ctx, "#7", msg);
+		await GameHub.SendToCharacterAsync(ctx, new DBRef(7), msg);
 
 		await groupClient.Received(1).ReceiveOutput(msg);
 	}
@@ -63,8 +64,8 @@ public class GameHubWriteOpsTests
 		var (ctx, _, clients) = BuildHubContext();
 		var msg = new GameOutputMessage("#1", "hi", DateTimeOffset.UtcNow, MessageType.Normal);
 
-		await GameHub.SendToCharacterAsync(ctx, "#1", msg);
-		await GameHub.SendToCharacterAsync(ctx, "#2", msg);
+		await GameHub.SendToCharacterAsync(ctx, new DBRef(1), msg);
+		await GameHub.SendToCharacterAsync(ctx, new DBRef(2), msg);
 
 		clients.Received(1).Group("char:#1");
 		clients.Received(1).Group("char:#2");
@@ -76,7 +77,7 @@ public class GameHubWriteOpsTests
 		var (ctx, _, clients) = BuildHubContext();
 		var msg = new RoomEventMessage("#1", RoomEventType.Arrive, "Gandalf", "Gandalf arrives.");
 
-		await GameHub.SendToRoomAsync(ctx, "#1", msg);
+		await GameHub.SendToRoomAsync(ctx, new DBRef(1), msg);
 
 		clients.Received(1).Group("room:#1");
 	}
@@ -87,7 +88,7 @@ public class GameHubWriteOpsTests
 		var (ctx, groupClient, _) = BuildHubContext();
 		var msg = new RoomEventMessage("#5", RoomEventType.Say, "Aragorn", "Well met.");
 
-		await GameHub.SendToRoomAsync(ctx, "#5", msg);
+		await GameHub.SendToRoomAsync(ctx, new DBRef(5), msg);
 
 		await groupClient.Received(1).ReceiveRoomEvent(msg);
 	}
@@ -108,13 +109,13 @@ public class GameHubWriteOpsTests
 
 		await allClient.Received(1).ReceiveOutput(
 				Arg.Is<GameOutputMessage>(m =>
-						m.CharacterDbref == "*" &&
+						m.CharacterDbref == null &&
 						m.Content == "Server restart in 5 minutes." &&
 						m.MessageType == MessageType.System));
 	}
 
 	[Test]
-	public async Task BroadcastSystemMessageAsync_UsesWildcardDbref()
+	public async Task BroadcastSystemMessageAsync_HasNoRecipientCharacter()
 	{
 		var allClient = Substitute.For<IGameHubClient>();
 		allClient.ReceiveOutput(Arg.Any<GameOutputMessage>()).Returns(Task.CompletedTask);
@@ -128,6 +129,6 @@ public class GameHubWriteOpsTests
 		await GameHub.BroadcastSystemMessageAsync(ctx, "Hello all.");
 
 		await allClient.Received(1).ReceiveOutput(
-				Arg.Is<GameOutputMessage>(m => m.CharacterDbref == "*" && m.MessageType == MessageType.System));
+				Arg.Is<GameOutputMessage>(m => m.CharacterDbref == null && m.MessageType == MessageType.System));
 	}
 }

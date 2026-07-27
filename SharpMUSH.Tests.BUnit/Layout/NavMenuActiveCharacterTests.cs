@@ -36,7 +36,11 @@ file sealed class NavMenuApiHandler(IReadOnlyList<CharacterSummary> characters) 
 				{
 					accountId = "acct-1",
 					username = "headwiz",
-					characters,
+					// The login endpoint binds the session to the primary and marks it; an unmarked roster
+					// would mean "acting as nobody", which is not what a fresh login looks like.
+					characters = characters
+						.Select((c, i) => new { c.DbrefNumber, c.CreationTime, c.Name, c.Flags, isActing = i == 0 })
+						.ToList(),
 					accountSessionToken = "session-token-1",
 					mustChangePassword = false,
 					role = "Wizard",

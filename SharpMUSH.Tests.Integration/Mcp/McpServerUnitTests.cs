@@ -1,3 +1,6 @@
+using OneOf.Types;
+using System.Collections.Immutable;
+using System.Security.Claims;
 using System.Linq;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -58,12 +61,47 @@ public class McpDocumentStoreTests
 
 public class MushBasicAuthenticationHandlerTests
 {
-	private static MushBasicAuthenticationHandler CreateHandler(IMediator mediator, IPasswordService passwordService)
+	private static MushBasicAuthenticationHandler CreateHandler(
+		IMediator mediator, IPasswordService passwordService, IAccountService? accountService = null)
 	{
 		var options = Substitute.For<IOptionsMonitor<AuthenticationSchemeOptions>>();
 		options.Get(Arg.Any<string>()).Returns(new AuthenticationSchemeOptions());
+		accountService ??= Substitute.For<IAccountService>();
 		return new MushBasicAuthenticationHandler(
-			options, NullLoggerFactory.Instance, UrlEncoder.Default, mediator, passwordService);
+			options, NullLoggerFactory.Instance, UrlEncoder.Default, mediator, passwordService, accountService);
+	}
+
+	private static SharpPlayer MakePlayer(int key, string name, long creationTime, string passwordHash)
+	{
+		var obj = new SharpObject
+		{
+			Key = key,
+			CreationTime = creationTime,
+			Name = name,
+			Type = "Player",
+			Locks = ImmutableDictionary<string, SharpLockData>.Empty,
+			Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
+			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
+			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
+			AllAttributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
+			LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
+			Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
+			Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
+			Zone = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
+			Children = new(() => AsyncEnumerable.Empty<SharpObject>()),
+		};
+
+		return new SharpPlayer
+		{
+			Object = obj,
+			Aliases = [],
+			Location = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+			Home = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+			PasswordHash = passwordHash,
+			PasswordSalt = null,
+			Quota = 20,
+		};
 	}
 
 	private static async Task<AuthenticateResult> AuthenticateAsync(
@@ -94,6 +132,48 @@ public class MushBasicAuthenticationHandlerTests
 		// latency doesn't reveal that the character does not exist.
 		await Assert.That(result.Succeeded).IsFalse();
 		passwordService.Received().PasswordIsValid(Arg.Any<string>(), "guessed-password", Arg.Any<string>());
+	}
+
+	[Test]
+	public async Task ValidCharacter_WithOwningAccount_PutsAccountIdInNameIdentifier()
+	{
+		var player = MakePlayer(42, "TestChar", 1700000000L, "stored-hash");
+		var mediator = Substitute.For<IMediator>();
+		mediator.CreateStream(Arg.Any<GetPlayerQuery>()).Returns(new[] { player }.ToAsyncEnumerable());
+		var passwordService = Substitute.For<IPasswordService>();
+		passwordService.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+		var accountService = Substitute.For<IAccountService>();
+		accountService.GetAccountForCharacterAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
+			.Returns(new SharpAccount { Id = "node_accounts/7", Username = "owner", PasswordHash = "h" });
+
+		var handler = CreateHandler(mediator, passwordService, accountService);
+		var result = await AuthenticateAsync(handler, Basic("TestChar", "correct-password"));
+
+		await Assert.That(result.Succeeded).IsTrue();
+		await Assert.That(result.Principal!.FindFirstValue(ClaimTypes.NameIdentifier)).IsEqualTo("node_accounts/7");
+		await Assert.That(result.Principal!.GetActingCharacter()!.Value.Number).IsEqualTo(42);
+	}
+
+	[Test]
+	public async Task ValidCharacter_WithoutOwningAccount_SucceedsWithNoAccountId()
+	{
+		var player = MakePlayer(42, "TestChar", 1700000000L, "stored-hash");
+		var mediator = Substitute.For<IMediator>();
+		mediator.CreateStream(Arg.Any<GetPlayerQuery>()).Returns(new[] { player }.ToAsyncEnumerable());
+		var passwordService = Substitute.For<IPasswordService>();
+		passwordService.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+		var accountService = Substitute.For<IAccountService>();
+		accountService.GetAccountForCharacterAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
+			.Returns((SharpAccount?)null);
+
+		var handler = CreateHandler(mediator, passwordService, accountService);
+		var result = await AuthenticateAsync(handler, Basic("TestChar", "correct-password"));
+
+		// Character-password basic auth still authenticates; it just carries no account, so
+		// account-anchored writes reject it instead of acting as somebody.
+		await Assert.That(result.Succeeded).IsTrue();
+		await Assert.That(result.Principal!.FindFirstValue(ClaimTypes.NameIdentifier)).IsNull();
+		await Assert.That(result.Principal!.GetActingCharacter()!.Value.Number).IsEqualTo(42);
 	}
 
 	[Test]

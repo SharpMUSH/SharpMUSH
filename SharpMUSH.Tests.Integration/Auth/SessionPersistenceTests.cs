@@ -21,7 +21,7 @@ public class SessionPersistenceTests(ServerWebAppFactory factory)
 		var token = await store.CreateTokenAsync("node_accounts/1", TimeSpan.FromMinutes(15), "203.0.113.50");
 
 		var fresh = new DatabaseAccountSessionStore(db); // simulates a server restart
-		await Assert.That(await fresh.ValidateAsync(token)).IsEqualTo("node_accounts/1");
+		await Assert.That((await fresh.ValidateAsync(token))?.AccountId).IsEqualTo("node_accounts/1");
 
 		await fresh.RevokeAllForIpAsync("203.0.113.50");
 		await Assert.That(await fresh.ValidateAsync(token)).IsNull();

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
@@ -140,7 +141,7 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 	{
 		var (http, account) = await RegisterAccountAsync();
 		var database = factory.Services.GetRequiredService<ISharpDatabase>();
-		await database.UpdateAccountDisabledAsync(account.AccountId, true);
+		await database.UpdateAccountStatusAsync(account.AccountId, AccountStatus.Disabled);
 
 		using var changeRequest = new HttpRequestMessage(HttpMethod.Put, "api/account/password")
 		{

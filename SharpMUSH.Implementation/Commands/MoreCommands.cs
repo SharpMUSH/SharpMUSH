@@ -769,14 +769,10 @@ public partial class Commands
 
 		if (viewingKnown.IsPlayer || viewingKnown.IsThing)
 		{
-			var homeObj = await viewingKnown.MinusRoom().Home();
+			var homeObj = (await viewingKnown.MinusRoom().Home()).WithoutNone();
 			outputSections.Add(MModule.single($"Home: {homeObj.Object().Name}(#{homeObj.Object().DBRef.Number})"));
 
-			var locationObj = await viewingKnown.Match(
-				async player => await player.Location.WithCancellation(CancellationToken.None),
-				async room => await ValueTask.FromResult<AnySharpContainer>(room),
-				async exit => await exit.Home.WithCancellation(CancellationToken.None),
-				async thing => await thing.Location.WithCancellation(CancellationToken.None));
+			var locationObj = await viewingKnown.Where();
 			outputSections.Add(MModule.single($"Location: {locationObj.Object().Name}(#{locationObj.Object().DBRef.Number})"));
 		}
 
@@ -975,17 +971,9 @@ public partial class Commands
 
 		var objectToDrop = locateResult.WithoutError().WithoutNone();
 
-		var executorLocation = await executor.Match(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			async room => await ValueTask.FromResult<AnySharpContainer>(room),
-			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		var executorLocation = await executor.Where();
 
-		var objectLocation = await objectToDrop.Match(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			async room => await ValueTask.FromResult<AnySharpContainer>(room),
-			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		var objectLocation = await objectToDrop.Where();
 
 		bool isCarrying = objectLocation.Match(
 			player => player.Object.DBRef.Equals(executor.Object().DBRef),
@@ -1129,17 +1117,9 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var executorLocation = await executor.Match(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			async room => await ValueTask.FromResult<AnySharpContainer>(room),
-			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		var executorLocation = await executor.Where();
 
-		var objectLocation = await objectToEmpty.Match(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			async room => await ValueTask.FromResult<AnySharpContainer>(room),
-			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		var objectLocation = await objectToEmpty.Where();
 
 		bool isHolding = objectLocation.Match(
 			player => player.Object.DBRef.Equals(executor.Object().DBRef),
@@ -1415,11 +1395,7 @@ public partial class Commands
 		}
 
 		// Get old location for %0 substitution
-		var oldLocation = await executor.Match(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			async room => await ValueTask.FromResult<AnySharpContainer>(room),
-			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		var oldLocation = await executor.Where();
 
 		// Move executor into object using MoveService for proper hook triggering
 		var executorAsContent = executor.AsContent;
@@ -1594,11 +1570,7 @@ public partial class Commands
 		else
 		{
 			objectName = fullArg;
-			sourceLocation = await executor.Match<ValueTask<AnySharpContainer>>(
-				async player => await player.Location.WithCancellation(CancellationToken.None),
-				room => ValueTask.FromResult<AnySharpContainer>(room),
-				async exit => await exit.Home.WithCancellation(CancellationToken.None),
-				async thing => await thing.Location.WithCancellation(CancellationToken.None));
+			sourceLocation = await executor.Where();
 		}
 
 		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, sourceLocation.WithExitOption(), objectName, LocateFlags.All);
@@ -1611,11 +1583,7 @@ public partial class Commands
 
 		var objectToGet = locateResult.WithoutError().WithoutNone();
 
-		var objectLocation = await objectToGet.Match<ValueTask<AnySharpContainer>>(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			room => ValueTask.FromResult<AnySharpContainer>(room),
-			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		var objectLocation = await objectToGet.Where();
 
 		var alreadyCarrying = objectLocation.Match(
 			player => player.Object.DBRef.Equals(executor.Object().DBRef),
@@ -1757,11 +1725,7 @@ public partial class Commands
 
 		var objectToGive = objectResult.WithoutError().WithoutNone();
 
-		var objectLocation = await objectToGive.Match<ValueTask<AnySharpContainer>>(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			room => ValueTask.FromResult<AnySharpContainer>(room),
-			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		var objectLocation = await objectToGive.Where();
 
 		var isCarrying = objectLocation.Match(
 			player => player.Object.DBRef.Equals(executor.Object().DBRef),
@@ -1922,7 +1886,8 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var homeLocation = await executor.MinusRoom().Home();
+		// Guarded above: only players and things reach here, and both always have a home.
+		var homeLocation = (await executor.MinusRoom().Home()).WithoutNone();
 		var homeObj = homeLocation.Object();
 
 		if (homeObj.DBRef.Number < 0)
@@ -1931,11 +1896,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var currentLocation = await executor.Match(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			async room => await ValueTask.FromResult<AnySharpContainer>(room),
-			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		var currentLocation = await executor.Where();
 
 		if (currentLocation.Object().DBRef.Equals(homeObj.DBRef))
 		{
@@ -2009,11 +1970,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var currentLocation = await executor.Match(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			async room => await ValueTask.FromResult<AnySharpContainer>(room),
-			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		var currentLocation = await executor.Where();
 
 		if (!currentLocation.IsThing && !currentLocation.IsPlayer)
 		{

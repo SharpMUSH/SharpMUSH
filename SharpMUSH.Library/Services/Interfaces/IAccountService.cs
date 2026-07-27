@@ -61,7 +61,25 @@ public interface IAccountService
 	ValueTask<SharpAccount?> GetByEmailAsync(string email, CancellationToken ct = default);
 
 	ValueTask<OneOf<Success, Error<string>>> DisableAccountAsync(string accountId, CancellationToken ct = default);
-	ValueTask DeleteAccountAsync(string accountId, CancellationToken ct = default);
+	/// <summary>
+	/// Sets the account's lifecycle status. Accounts are never removed, so this is how an account is
+	/// disabled, closed, deleted, or restored. Any transition away from
+	/// <see cref="AccountStatus.Active"/> revokes live sessions.
+	/// Returns an error if the account is not found, or if it is the reserved system account.
+	/// </summary>
+	ValueTask<OneOf<Success, Error<string>>> SetAccountStatusAsync(string accountId, AccountStatus status, CancellationToken ct = default);
+
+	/// <summary>Marks the account closed — the holder has left. Reversible by an admin.</summary>
+	ValueTask<OneOf<Success, Error<string>>> CloseAccountAsync(string accountId, CancellationToken ct = default);
+
+	/// <summary>Marks the account deleted. The document is retained; see <see cref="AccountStatus"/>.</summary>
+	ValueTask<OneOf<Success, Error<string>>> MarkAccountDeletedAsync(string accountId, CancellationToken ct = default);
+
+	/// <summary>
+	/// Returns the reserved system account, creating it if absent. Idempotent — safe to call on
+	/// every startup.
+	/// </summary>
+	ValueTask<SharpAccount> GetOrCreateSystemAccountAsync(CancellationToken ct = default);
 
 	/// <summary>Admin/setup password set: no old-password proof. Optionally flags MustChangePassword.</summary>
 	ValueTask<OneOf<Success, Error<string>>> SetPasswordAsync(string accountId, string newPassword, bool mustChangePassword, CancellationToken ct = default);

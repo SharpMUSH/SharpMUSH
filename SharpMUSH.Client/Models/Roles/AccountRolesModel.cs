@@ -8,5 +8,5 @@ public sealed record AccountRolesModel(
 	string AccountId,
 	string Username,
 	string Email,
-	bool IsDisabled,
+	string Status,
 	string[] RoleSlugs);

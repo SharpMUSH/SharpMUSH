@@ -12,16 +12,24 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface IAccountSessionStore
 {
 	/// <summary>
+	/// A validated session: the account it belongs to, and the character it acts as (null when the
+	/// account owns none). Returned as a unit because the acting character is part of the credential,
+	/// not something the caller may supply alongside it.
+	/// </summary>
+	public readonly record struct SessionIdentity(string AccountId, int? CharacterKey, long? CharacterCreationTime);
+
+	/// <summary>
 	/// Create a new session token bound to <paramref name="accountId"/> with the given TTL,
 	/// recording the <paramref name="originIp"/> the session was created from.
 	/// </summary>
-	Task<string> CreateTokenAsync(string accountId, TimeSpan ttl, string originIp, CancellationToken ct = default);
+	Task<string> CreateTokenAsync(string accountId, TimeSpan ttl, string originIp,
+		int? characterKey = null, long? characterCreationTime = null, CancellationToken ct = default);
 
 	/// <summary>
-	/// Validates a token. If valid and unexpired, returns the bound account ID and slides
-	/// the expiry window by the original TTL. Returns <c>null</c> if unknown or expired.
+	/// Validates a token. If valid and unexpired, returns the bound account and acting character and
+	/// slides the expiry window by the original TTL. Returns <c>null</c> if unknown or expired.
 	/// </summary>
-	Task<string?> ValidateAsync(string token, CancellationToken ct = default);
+	Task<SessionIdentity?> ValidateAsync(string token, CancellationToken ct = default);
 
 	/// <summary>Explicitly invalidates a token (logout).</summary>
 	Task RevokeAsync(string token, CancellationToken ct = default);
