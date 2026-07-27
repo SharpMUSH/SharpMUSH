@@ -317,6 +317,10 @@ public static class ErrorMessages
 	/// </summary>
 	public static class Notifications
 	{
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AccountClosedFormat = "Account '{0}' closed; active sessions revoked.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AccountMarkedDeletedFormat = "Account '{0}' marked deleted; active sessions revoked. The account record is retained.";
 		public const string BadObjectName = "I don't understand that object name.";
 		public const string InvalidNameThing = "Invalid name for a thing.";
 		public const string NoMatch = "I don't see that here.";

@@ -2416,4 +2416,10 @@
     <value>Current locale: {0}.</value>
   </data>
 
+  <data name="AccountClosedFormat" xml:space="preserve">
+    <value>Account '{0}' closed; active sessions revoked.</value>
+  </data>
+  <data name="AccountMarkedDeletedFormat" xml:space="preserve">
+    <value>Account '{0}' marked deleted; active sessions revoked. The account record is retained.</value>
+  </data>
 </root>

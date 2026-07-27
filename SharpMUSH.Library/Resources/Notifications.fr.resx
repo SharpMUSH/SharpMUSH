@@ -71,4 +71,10 @@
     <value>{0}/{1} - Effacé.</value>
   </data>
 
+  <data name="AccountClosedFormat" xml:space="preserve">
+    <value>Compte « {0} » fermé ; sessions actives révoquées.</value>
+  </data>
+  <data name="AccountMarkedDeletedFormat" xml:space="preserve">
+    <value>Compte « {0} » marqué comme supprimé ; sessions actives révoquées. L'enregistrement du compte est conservé.</value>
+  </data>
 </root>

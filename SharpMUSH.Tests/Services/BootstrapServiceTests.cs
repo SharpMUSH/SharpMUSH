@@ -27,6 +27,8 @@ public class BootstrapServiceTests
 		accounts.GetAllAccountsAsync(Arg.Any<CancellationToken>()).Returns(existing.ToList());
 		accounts.CreateUnclaimedAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(callInfo => Account(callInfo.Arg<string>()));
+		accounts.GetOrCreateSystemAccountAsync(Arg.Any<CancellationToken>())
+			.Returns(Account(SystemAccount.Username));
 		return (new BootstrapService(accounts, NullLogger<BootstrapService>.Instance), accounts);
 	}
 
@@ -51,6 +53,18 @@ public class BootstrapServiceTests
 
 		await accounts.DidNotReceive().CreateUnclaimedAccountAsync(
 			Arg.Any<string>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async ValueTask Always_EnsuresTheSystemAccountExists()
+	{
+		var (service, accounts) = Build(Account("someplayer"));
+
+		await service.StartAsync(CancellationToken.None);
+
+		// Runs even when pre-generation is skipped: the system account is not first-run state, it
+		// is a permanent fixture that phase-2 attribution hangs off.
+		await accounts.Received(1).GetOrCreateSystemAccountAsync(Arg.Any<CancellationToken>());
 	}
 
 	[Test]
