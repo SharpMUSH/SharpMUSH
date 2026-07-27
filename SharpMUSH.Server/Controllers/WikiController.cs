@@ -25,6 +25,9 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET    /api/wiki/ns/{ns}           — list pages in a namespace
 ///   GET    /api/wiki/{slug}/revisions — revision history (newest first)
 ///   GET    /api/wiki/{slug}/revisions/{n} — single revision snapshot
+///   GET    /api/wiki/{slug}/translations — locales this reader may read the page in
+///   PUT    /api/wiki/{slug}/translations/{locale} — create/update one locale (authenticated)
+///   DELETE /api/wiki/{slug}/translations/{locale} — remove one locale (authenticated)
 ///   POST   /api/wiki                  — create page (authenticated)
 ///   PUT    /api/wiki/{slug}            — update page (authenticated)
 ///   DELETE /api/wiki/{slug}             — delete page (Wizard+)
@@ -80,6 +83,26 @@ public class WikiController(
 		public IReadOnlyList<string> AvailableLocales { get; init; } = [];
 	}
 
+	/// <summary>A translation without its body — enough for locale lists and hreflang.</summary>
+	public record WikiTranslationSummaryDto(
+		string Locale,
+		string Title,
+		bool Published,
+		DateTimeOffset UpdatedAt,
+		int RevisionNumber);
+
+	/// <summary>Request body for creating or updating one locale's translation of a page.</summary>
+	/// <param name="ExpectedRevisionNumber">
+	/// The <c>RevisionNumber</c> the editor loaded, for optimistic concurrency. Null means create-only.
+	/// A stale value is answered with 409 and must not be retried — see <see cref="PutTranslation"/>.
+	/// </param>
+	public record UpsertTranslationRequest(
+		string Title,
+		string Markdown,
+		string? EditSummary,
+		bool Published,
+		int? ExpectedRevisionNumber);
+
 	/// <summary>A single revision snapshot. MarkdownSource is the full page body at that revision.</summary>
 	public record WikiRevisionDto(
 		int RevisionNumber,
@@ -106,6 +129,9 @@ public class WikiController(
 
 	private static WikiRevisionDto ToDto(WikiRevision r) => new(
 		r.RevisionNumber, r.EditorDbref, r.Timestamp, r.EditSummary, r.MarkdownSource);
+
+	private static WikiTranslationSummaryDto ToDto(WikiTranslationSummary t) =>
+		new(t.Locale, t.Title, t.Published, t.UpdatedAt, t.RevisionNumber);
 
 	private static WikiNamespace ParseNamespace(string? ns) =>
 		Enum.TryParse<WikiNamespace>(ns, ignoreCase: true, out var result) ? result : WikiNamespace.Main;
@@ -275,19 +301,145 @@ public class WikiController(
 	}
 
 	/// <summary>
-	/// GET /api/wiki/{slug}/revisions?skip=0&amp;take=20
-	/// Returns the revision history for a page, newest first.
+	/// GET /api/wiki/{slug}/revisions?skip=&amp;take=&amp;ns=&amp;category=&amp;lang=
+	/// Revision history, newest first. Omitting <c>lang</c> (or naming the page's source locale) returns
+	/// the source-locale stream, which is exactly what this route returned before translations existed.
 	/// </summary>
 	[HttpGet("{slug}/revisions")]
-	public async Task<IActionResult> GetRevisions(string slug, [FromQuery] int skip = 0, [FromQuery] int take = 20, [FromQuery] string? ns = null, [FromQuery] string? category = null)
+	public async Task<IActionResult> GetRevisions(
+		string slug, [FromQuery] int skip = 0, [FromQuery] int take = 20,
+		[FromQuery] string? ns = null, [FromQuery] string? category = null,
+		[FromQuery] string? lang = null)
 	{
 		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
 		if (!CanSee(lookup.AsT0)) return NotFound();
 
-		var revisions = await wikiService.GetRevisionsAsync(lookup.AsT0.Id, skip, take);
+		var page = lookup.AsT0;
+		var localized = await localization.LocalizeAsync(page, lang, IncludeDrafts);
+
+		// The source page's revisions are stored with an empty Locale; a translation's carry its tag.
+		// SourceLocaleOf, not a local re-derivation: SourceLocale is materialised once and there is exactly
+		// one accessor for it, so a controller cannot start disagreeing with the resolver about what
+		// language a page was authored in.
+		var stream = string.Equals(
+			localized.Locale, localization.SourceLocaleOf(page), StringComparison.OrdinalIgnoreCase)
+			? string.Empty
+			: localized.Locale;
+
+		var revisions = await wikiService.GetRevisionsForLocaleAsync(page.Id, stream, skip, take);
 		return Ok(revisions.Select(ToDto));
+	}
+
+	/// <summary>
+	/// GET /api/wiki/{slug}/translations?ns=&amp;category=
+	/// Lists the translations of a page that this reader may see. Drafts are omitted for readers without
+	/// the edit scope, so the language chips and <c>hreflang</c> never advertise a page nobody can open.
+	/// </summary>
+	[HttpGet("{slug}/translations")]
+	public async Task<IActionResult> GetTranslations(
+		string slug, [FromQuery] string? ns = null, [FromQuery] string? category = null)
+	{
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
+		if (lookup.IsT1 || !CanSee(lookup.AsT0)) return NotFound();
+
+		var summaries = await localization.GetVisibleTranslationsAsync(lookup.AsT0.Id, IncludeDrafts);
+		return Ok(summaries.Select(ToDto));
+	}
+
+	/// <summary>
+	/// PUT /api/wiki/{slug}/translations/{locale}?ns=&amp;category=
+	/// Creates or updates one locale's translation. Gated on the page-edit scope and on the source page's
+	/// <c>IsProtected</c>, exactly as <see cref="UpdatePage"/> is: a translation is an edit to the page.
+	/// </summary>
+	[HttpPut("{slug}/translations/{locale}")]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
+	public async Task<IActionResult> PutTranslation(
+		string slug, string locale, [FromBody] UpsertTranslationRequest request,
+		[FromQuery] string? ns = null, [FromQuery] string? category = null)
+	{
+		var editorDbref = CallerDbref;
+		if (string.IsNullOrEmpty(editorDbref))
+			return Unauthorized("Missing character identity.");
+
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
+		if (lookup.IsT1) return NotFound();
+
+		if (lookup.AsT0.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
+			return Forbid();
+
+		var result = await wikiService.UpsertTranslationAsync(
+			lookup.AsT0.Id, locale, request.Title, request.Markdown,
+			editorDbref, request.EditSummary, request.Published, request.ExpectedRevisionNumber);
+
+		return result.Match<IActionResult>(
+			translation =>
+			{
+				logger.LogInformation(
+					"Wiki translation saved: slug={Slug} locale={Locale} rev={Rev} by={Editor}",
+					LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(translation.Locale),
+					translation.RevisionNumber, LogSanitizer.Sanitize(editorDbref));
+				prerenderCache.InvalidatePrefix("/wiki/");
+				return Ok(ToDto(new WikiTranslationSummary(
+					translation.Locale, translation.Title, translation.Published,
+					translation.UpdatedAt, translation.RevisionNumber)));
+			},
+			// A revision conflict is 409, not 400: the request was well-formed and the client's correct
+			// response is to reload, which is a different instruction from "your body was invalid". The
+			// endpoint does not retry — retrying would re-apply this caller's stale markdown over the
+			// winner's, which is the loss expectedRevisionNumber exists to prevent.
+			err => IsRevisionConflict(err.Value)
+				? Conflict(new { error = err.Value, reload = true })
+				: BadRequest(new { error = err.Value }));
+	}
+
+	/// <summary>
+	/// True when an upsert error is an optimistic-concurrency conflict rather than a bad request.
+	/// </summary>
+	/// <remarks>
+	/// Matched on the storage layer's wording because <c>OneOf&lt;T, Error&lt;string&gt;&gt;</c> carries no
+	/// error code. All four implementations (in-memory plus the three backends) phrase these two cases
+	/// identically, which is what makes the match reliable rather than lucky. If a third conflict phrasing
+	/// is ever added, promote this to a typed error rather than growing the string list — this is the one
+	/// place that would silently start answering 400.
+	/// </remarks>
+	private static bool IsRevisionConflict(string error) =>
+		error.Contains("changed while you were editing", StringComparison.OrdinalIgnoreCase)
+		|| error.Contains("already exists for page", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>
+	/// DELETE /api/wiki/{slug}/translations/{locale}?ns=&amp;category=
+	/// Removes one locale's translation and its revision stream. The page and every other translation are
+	/// untouched, and deleting the last translation is allowed. Gated as an edit, not a page deletion.
+	/// </summary>
+	[HttpDelete("{slug}/translations/{locale}")]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
+	public async Task<IActionResult> DeleteTranslation(
+		string slug, string locale, [FromQuery] string? ns = null, [FromQuery] string? category = null)
+	{
+		var editorDbref = CallerDbref;
+		if (string.IsNullOrEmpty(editorDbref))
+			return Unauthorized("Missing character identity.");
+
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
+		if (lookup.IsT1) return NotFound();
+
+		if (lookup.AsT0.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
+			return Forbid();
+
+		var result = await wikiService.DeleteTranslationAsync(lookup.AsT0.Id, locale, editorDbref);
+
+		return result.Match<IActionResult>(
+			_ =>
+			{
+				logger.LogInformation(
+					"Wiki translation deleted: slug={Slug} locale={Locale} by={Editor}",
+					LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(locale), LogSanitizer.Sanitize(editorDbref));
+				prerenderCache.InvalidatePrefix("/wiki/");
+				return NoContent();
+			},
+			_ => NotFound());
 	}
 
 	/// <summary>
@@ -329,7 +481,10 @@ public class WikiController(
 		if (string.IsNullOrEmpty(authorDbref))
 			return Unauthorized("Missing character identity.");
 		var ns = ParseNamespace(request.Namespace);
-		var result = await wikiService.CreateAsync(request.Title, request.Markdown, authorDbref, ns, request.Category);
+		// SourceLocale is materialised at creation. The configured default affects new pages and fallback
+		// resolution only; it never reinterprets a page that already exists.
+		var result = await wikiService.CreateAsync(
+			request.Title, request.Markdown, authorDbref, ns, request.Category, localization.DefaultLocale);
 		return result.Match<IActionResult>(
 			page =>
 			{
