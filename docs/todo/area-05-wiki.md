@@ -11,7 +11,7 @@
 - [x] Wiki CRUD: create, read, update (with revision history) — `IWikiService` + ArangoDB/Memgraph/SurrealDB/in-memory implementations
 - [x] Revision history storage (full snapshots) — `WikiRevision.cs`
 - [x] Page protection/locking (Royalty+ can protect pages) — `IsProtected` flag + `PUT /api/wiki/{slug}/protection` (Wizard role)
-- [x] @wiki in-game commands — `WikiCommands.cs` + `Commands/WikiCommand/`: view/list/search/recent/history, create/edit/append, delete/protect/unprotect/publish/unpublish/category/tag (+ `/noeval`); plus `wiki()`, `wikilist()`, `wikisearch()`, `wikirecent()` softcode functions (`WikiFunctions.cs`); helpfile `sharpwiki.md`
+- [x] @wiki in-game commands — `WikiCommands.cs` + `Commands/WikiCommand/`: view/list/search/recent/history, create/edit/append, delete/protect/unprotect/publish/unpublish/category/tag (+ `/noeval`, `/source`); plus `wiki()`, `wikilist()`, `wikisearch()`, `wikirecent()` softcode functions (`WikiFunctions.cs`); helpfile `sharpwiki.md`
 - [x] Markdown → MString custom renderer (for in-game wiki display) — `RecursiveMarkdownHelper` pipeline extended with wiki links, generic attributes, directives, task lists
 - [x] HTTP handler: serve wiki pages for portal — `WikiController.cs` (CRUD, recent, namespace listing, revisions, protection, cache invalidation)
 - [ ] NATS event on wiki edit (`portal.wiki.changes`)
@@ -35,6 +35,22 @@
 - [x] Markdown directives — `WikiDirectiveExtension.cs`: `::: category X`, `::: tag X`, `::: pagelist NS`, `::: recent N` render live listings client-side (`WikiDirectiveBlock.razor`); args validated/escaped, unknown containers keep default rendering
 - [x] SEO — `/sitemap.xml` (published pages only) + `/robots.txt` (`SeoController.cs`); JSON-LD schema.org Article in bot prerender HTML
 
+## Localization
+- [x] Per-locale content via `WikiTranslation` overlay rows keyed `(PageId, Locale)` — a translation owns Title / MarkdownSource / Published / revisions and inherits Category / Tags / IsProtected structurally; no schema migration and no content rewrite (one additive-column backfill)
+- [x] `Wiki.DefaultLocale` (`wiki_default_locale`, default `en`, validated at startup) in `/admin/config/wiki`; `WikiPage.SourceLocale` is materialised once by the migration and never re-derived, so changing the default cannot relabel existing pages
+- [x] Fallback, never 404 — `IWikiLocaleResolver` (pure, 5-step chain) + `IWikiLocalizationService` (visibility filtering, the only `LocalizedWikiPage` factory)
+- [x] Drafts do not leak — the candidate set is filtered before resolution; an unpublished translation is unreachable for readers without edit permission
+- [x] `?lang=` on the page read, all five listings and `{slug}/revisions`; translation CRUD at `/api/wiki/{slug}/translations[/{locale}]`, with `expectedRevisionNumber` optimistic concurrency answering 409 on a conflict (never retried)
+- [x] Unique `(PageId, Locale, RevisionNumber)` constraint on all three DB backends, which disagreed before this change; asserted by a cross-backend test that checks the constraint *rejects* duplicates
+- [x] Reader UI — dismissible fallback notice (per-session) + language chip row in `WikiDisplay.razor`
+- [x] Authoring — locale selector in `WikiEdit.razor` with inherited Category/Tags visibly disabled; `/wiki/{ns}/{cat}/{slug}/edit?lang=`
+- [x] Per-locale history and diff (`?lang=` on `WikiPageHistory` / `WikiPageDiff`)
+- [x] Staff — translation-coverage column and locale filter (incl. "missing only") on `/admin/wiki`
+- [x] SEO — `hreflang` alternates + `x-default` + `<html lang>` in the bot prerender, `xhtml:link` in the sitemap; canonical unchanged
+- [x] In-game — `@wiki` reads the executor's `LOCALE`, `/SOURCE` forces the source; `wiki()` takes an optional third locale argument and a `locale` field
+- [x] Seeded pages are stamped `SourceLocale = "en"`; no translations are seeded
+- [x] Tests — `WikiLocaleResolverTests`, `WikiLocalizationServiceTests` (draft visibility first-class), `WikiHelpersLocaleTests`, `LocalizedWikiPageTests`, `WikiTranslationIntegrationTests` (cross-backend, including the negative constraint and concurrency cases), `WikiDisplayFallbackTests` / `WikiEditLocaleTests` (bUnit), `WikiStartupSeedingTests` (seed stamping, seed idempotency, no seeded translations, no unstamped seeded page after the migration)
+
 ## Testing
 - [x] Markdig pipeline: all extensions render correctly — `WikiMarkdigPipelineTests.cs`
 - [x] Wiki-link resolution: existing pages, broken links (redlinks) — `WikiMarkdigPipelineTests.cs`
@@ -44,8 +60,14 @@
 - [x] Assets: `FileSystemWikiAssetServiceTests.cs`, `WikiAssetControllerTests.cs` (whitelist, SVG script rejection, cache headers)
 - [x] Directives: `WikiMarkdigPipelineTests.cs` (placeholders, arg validation, injection rejection), `WikiDirectiveBlockTests.cs` (bUnit)
 - [x] SEO: `SeoControllerTests.cs`, `SeoEndpointTests.cs` (integration)
-- [x] @wiki commands produce correct MString output — `WikiCommandTests.cs` (10 tests: create/view/list/search/append/history/protection/tags + helpfile loads), `WikiFunctionUnitTests.cs` (10 tests), `WikiSyntaxInGameRenderingTests.cs` (13 tests)
+- [x] @wiki commands produce correct MString output — `WikiCommandTests.cs` (18 tests: create/view/list/search/append/history/protection/tags + locale, `/source` and draft-translation visibility + helpfile loads), `WikiFunctionUnitTests.cs` (15 tests), `WikiSyntaxInGameRenderingTests.cs` (13 tests)
 
 ## Remaining (out of portal scope or follow-up)
 - NATS `portal.wiki.changes` event on edit
 - Owner-edit / royalty-edit-any permission tiers (currently: any authenticated user edits unprotected pages, Wizard edits everything)
+- Translating the seeded Help pages — content work needing native review, deliberately not machine-translated
+- Locale-aware wiki search (`@wiki/search`, `wikisearch()`, the omnisearch box) — matches source `PlainText` today
+- Localized category *display* names — Category is part of page identity, so it cannot be translated through the overlay
+- Listing performance: localized listings resolve per row. Measure before adding a denormalized title cache
+- `WikiEdit` collects an edit summary and a minor-edit flag and discards both (predates localization)
+- The `SourceLocale` backfill carries no rollback path, no language detection and no per-page override. That is deliberate while SharpMUSH is pre-production, because wiping and reseeding is acceptable recovery; the migration logs the locale it stamped and the row count, which is enough to notice a wrong default. **Revisit this first if a live game with existing wiki content ever adopts SharpMUSH.**

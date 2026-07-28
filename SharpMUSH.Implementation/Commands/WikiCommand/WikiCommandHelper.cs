@@ -1,8 +1,11 @@
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.WikiCommand;
 
@@ -69,5 +72,51 @@ public static class WikiCommandHelper
 	{
 		var markers = $"{(page.Published ? "" : " (draft)")}{(page.IsProtected ? " (protected)" : "")}";
 		return $"{DisplayReference(page),-30} {page.Title} (rev {page.RevisionNumber}, {page.UpdatedAt:yyyy-MM-dd}){markers}";
+	}
+
+	/// <summary>
+	/// One listing line for a page resolved into a locale. Identical to the
+	/// <see cref="FormatPageLine(WikiPage)"/> overload except that the title, revision number and
+	/// published marker are the served locale's rather than the source's.
+	/// </summary>
+	public static string FormatPageLine(LocalizedWikiPage page)
+	{
+		var markers = $"{(page.Published ? "" : " (draft)")}{(page.Page.IsProtected ? " (protected)" : "")}";
+		return $"{DisplayReference(page.Page),-30} {page.Title} (rev {page.RevisionNumber}, {page.Page.UpdatedAt:yyyy-MM-dd}){markers}";
+	}
+
+	/// <summary>
+	/// The executor's locale for wiki reads: the connection's <c>Locale</c> metadata when the command came
+	/// from a real connection, otherwise the persisted <c>LOCALE</c> attribute (the <c>@force</c> case).
+	/// Returns null when neither is set, which <c>IWikiLocalizationService</c> reads as "use the configured
+	/// default" — the same contract <c>?lang=</c> has on the web side.
+	/// </summary>
+	/// <remarks>
+	/// Mirrors the read in <c>Commands.SetLocale</c> (<c>MoreCommands.cs</c>) rather than inventing a second
+	/// source of truth for what locale a player is on.
+	/// </remarks>
+	public static async ValueTask<string?> ResolveExecutorLocaleAsync(
+		IMUSHCodeParser parser, AnySharpObject executor)
+	{
+		var handle = parser.CurrentState.Handle;
+		if (handle.HasValue)
+		{
+			var connectionService = parser.ServiceProvider.GetRequiredService<IConnectionService>();
+			var conn = connectionService.Get(handle.Value);
+			if (conn is not null
+				&& conn.Metadata.TryGetValue("Locale", out var stored)
+				&& !string.IsNullOrEmpty(stored))
+				return stored;
+		}
+
+		var database = parser.ServiceProvider.GetRequiredService<ISharpDatabase>();
+		var localeAttrs = database.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None);
+		await foreach (var attr in localeAttrs)
+		{
+			var saved = attr.Value.ToPlainText();
+			if (!string.IsNullOrEmpty(saved)) return saved;
+		}
+
+		return null;
 	}
 }

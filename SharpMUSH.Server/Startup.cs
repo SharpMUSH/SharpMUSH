@@ -316,6 +316,10 @@ public class Startup(
 		services.AddSingleton<WikiMarkdigPipeline>();
 		services.AddSingleton<IWikiService>(sp => (IWikiService)sp.GetRequiredService<ISharpDatabase>());
 
+		// Locale fallback rules (pure) and the one localized-read service every reader path goes through.
+		services.AddSingleton<IWikiLocaleResolver, WikiLocaleResolver>();
+		services.AddSingleton<IWikiLocalizationService, WikiLocalizationService>();
+
 		// Package registry — backed by whichever ISharpDatabase is active (all three DB backends implement IPackageRegistryService).
 		services.AddSingleton<IPackageRegistryService>(sp => (IPackageRegistryService)sp.GetRequiredService<ISharpDatabase>());
 
@@ -385,7 +389,10 @@ public class Startup(
 		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddKeyedSingleton(nameof(colorFile), colorFile);
 		services.AddOptions<SharpMUSHOptions>().ValidateOnStart();
-		services.AddScoped<IValidateOptions<SharpMUSHOptions>, Configuration.Generated.ValidateSharpMUSHOptions>();
+		// ValidateSharpOptions, not the generated validator directly: it delegates to the generated one and
+		// adds the checks the generator cannot express (currently Wiki.DefaultLocale being a real culture).
+		// Registering the generated validator here would silently skip those.
+		services.AddScoped<IValidateOptions<SharpMUSHOptions>, ValidateSharpOptions>();
 		services.AddOptions<ColorsOptions>().ValidateOnStart();
 		services.AddSingleton<IOptionsWrapper<SharpMUSHOptions>, Library.Services.OptionsWrapper<SharpMUSHOptions>>();
 		services.AddSingleton<IOptionsWrapper<ColorsOptions>, Library.Services.OptionsWrapper<ColorsOptions>>();

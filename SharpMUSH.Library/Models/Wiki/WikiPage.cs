@@ -45,4 +45,18 @@ public record WikiPage(
 
 	/// <summary>When false, the page is a draft hidden from non-admin listings and views.</summary>
 	public bool Published { get; init; } = true;
+
+	/// <summary>
+	/// Canonical BCP-47 locale the page was authored in. Never empty on a page read back from storage:
+	/// <c>Migration_AddWikiTranslations</c> stamps every pre-existing page once, and every create path
+	/// stamps new pages.
+	/// </summary>
+	/// <remarks>
+	/// The initializer default is <see cref="string.Empty"/> only because a property initializer cannot
+	/// read configuration. It means "not yet stamped", and it is <em>not</em> a read-time synonym for
+	/// <c>Wiki.DefaultLocale</c>: re-deriving it would let an admin changing <c>wiki_default_locale</c>
+	/// silently change the authored locale of every page that predates the field, with no migration and
+	/// nothing to alert on. Once stamped, this field is authoritative and immutable per page.
+	/// </remarks>
+	public string SourceLocale { get; init; } = string.Empty;
 }

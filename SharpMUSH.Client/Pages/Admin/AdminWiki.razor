@@ -1,7 +1,9 @@
 @page "/admin/wiki"
 @attribute [Authorize(Policy = "wiki.admin")]
 @using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Resources
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Services
 @inject WikiService Wiki
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
@@ -22,6 +24,7 @@
             (_published,  "WikiPublished",         Icons.Material.Filled.Visibility, false),
             (_drafts,     "ResWikiStatDrafts",     Icons.Material.Filled.EditNote,   true),
             (_protected_, "WikiProtected",         Icons.Material.Filled.Lock,       true),
+            (_coverage.Values.Sum(v => v.Count), "ResWikiStatTranslations", Icons.Material.Filled.Translate, false),
         })
         {
             var (val, labelKey, icon, warn) = tile;
@@ -60,6 +63,20 @@
                     <MudSelectItem T="string" Value="@("help")">help</MudSelectItem>
                     <MudSelectItem T="string" Value="@("character")">character</MudSelectItem>
                     <MudSelectItem T="string" Value="@("system")">system</MudSelectItem>
+                </MudSelect>
+                <MudSelect T="string"
+                           Value="@_localeFilter"
+                           ValueChanged="@SetLocaleFilterAsync"
+                           Label="@Loc["WikiLocaleFilter"]"
+                           Dense="true"
+                           Margin="Margin.Dense"
+                           Variant="Variant.Outlined"
+                           Style="max-width:200px;">
+                    @foreach (var option in LocaleFilterOptions)
+                    {
+                        var optionValue = option.Value;
+                        <MudSelectItem T="string" Value="@optionValue">@option.Label</MudSelectItem>
+                    }
                 </MudSelect>
                 <MudTextField @bind-Value="_searchText" Immediate="true"
                               Placeholder="@Loc["ResSearchTitlesPlaceholder"]"
@@ -132,6 +149,25 @@
                     {
                         <MudText Style="font-size:0.625rem;color:var(--text-faint);">+@(context.Item.Tags.Count - 3)</MudText>
                     }
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="@Loc["WikiTranslations"]" Sortable="false">
+                <CellTemplate>
+                    @{
+                        var locales = CoverageFor(context.Item);
+                    }
+                    <span class="@($"admin-wiki-coverage{(locales.Count == 0 ? " admin-wiki-coverage-none" : "")}")">
+                        @if (locales.Count == 0)
+                        {
+                            <MudIcon Icon="@Icons.Material.Outlined.Translate"
+                                     Size="Size.Small" Color="Color.Warning"
+                                     Style="font-size:0.8125rem;" />
+                        }
+                        else
+                        {
+                            @string.Join(" · ", locales)
+                        }
+                    </span>
                 </CellTemplate>
             </TemplateColumn>
             <TemplateColumn Sortable="false">
@@ -228,6 +264,39 @@
     private string _searchText = string.Empty;
     private bool _busy;
 
+    /// <summary>
+    /// Translation locales per page ref, loaded after paging. One extra request per visible row: the grid
+    /// pages at 25–50, and the spec is explicit that a denormalized coverage cache must be measured for
+    /// before it is added.
+    /// </summary>
+    private readonly Dictionary<string, IReadOnlyList<string>> _coverage = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Empty = every page; "fr" = pages having fr; "fr:missing" = pages lacking fr.</summary>
+    private string _localeFilter = string.Empty;
+
+    private const string MissingSuffix = ":missing";
+
+    /// <summary>The filter value selecting pages that lack <paramref name="locale"/>.</summary>
+    private static string MissingFilterValue(string locale) => $"{locale}{MissingSuffix}";
+
+    /// <summary>
+    /// The locale filter's options: "all", then each portal locale and its "missing only" companion.
+    /// </summary>
+    /// <remarks>
+    /// Public because a MudSelect does not render its items into the DOM until its popover opens, so a
+    /// component test asserting on markup cannot see them. Reading the option set directly asserts what
+    /// the filter actually offers instead of what happens to have been rendered.
+    /// </remarks>
+    public IReadOnlyList<(string Value, string Label)> LocaleFilterOptions =>
+    [
+        (string.Empty, Loc["WikiAllLocales"]),
+        .. PortalLocales.Codes.SelectMany(locale => new[]
+        {
+            (locale, PortalLocales.DisplayName(locale)),
+            (MissingFilterValue(locale), $"{PortalLocales.DisplayName(locale)} — {Loc["WikiUntranslatedOnly"]}"),
+        }),
+    ];
+
     private bool _showDeleteConfirm;
     private bool _showMetadataDialog;
     private WikiPageSummary? _metadataTarget;
@@ -265,15 +334,62 @@
             take: state.PageSize,
             ns: ns);
 
+        await LoadCoverageAsync(items);
+
         if (!string.IsNullOrWhiteSpace(_searchText))
         {
             var q = _searchText;
-            var filtered = items.Where(p => p.Title.Contains(q, StringComparison.OrdinalIgnoreCase)
-                                         || p.Slug.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+            var filtered = ApplyLocaleFilter(items.Where(p => p.Title.Contains(q, StringComparison.OrdinalIgnoreCase)
+                                         || p.Slug.Contains(q, StringComparison.OrdinalIgnoreCase))).ToList();
             return new GridData<WikiPageSummary> { Items = filtered, TotalItems = filtered.Count };
         }
 
+        if (_localeFilter.Length > 0)
+        {
+            // Filtering after paging makes the total the filtered page's own count, exactly as the search
+            // box above already does. Coverage is not on the page row, so the server cannot filter on it.
+            var byLocale = ApplyLocaleFilter(items).ToList();
+            return new GridData<WikiPageSummary> { Items = byLocale, TotalItems = byLocale.Count };
+        }
+
         return new GridData<WikiPageSummary> { Items = items, TotalItems = total };
+    }
+
+    /// <summary>Public so component tests can drive the filter without simulating MudSelect internals.</summary>
+    public async Task SetLocaleFilterAsync(string value)
+    {
+        _localeFilter = value;
+        await ReloadAsync();
+    }
+
+    private IReadOnlyList<string> CoverageFor(WikiPageSummary page) =>
+        _coverage.TryGetValue(RefFor(page), out var locales) ? locales : [];
+
+    /// <summary>Applies the locale filter to an already-paged set of rows.</summary>
+    private IEnumerable<WikiPageSummary> ApplyLocaleFilter(IEnumerable<WikiPageSummary> pages)
+    {
+        if (_localeFilter.Length == 0) return pages;
+
+        var missing = _localeFilter.EndsWith(MissingSuffix, StringComparison.Ordinal);
+        var locale = missing ? _localeFilter[..^MissingSuffix.Length] : _localeFilter;
+
+        return pages.Where(p =>
+        {
+            var has = CoverageFor(p).Any(l => WikiHelpers.SameLanguage(l, locale));
+            return missing ? !has : has;
+        });
+    }
+
+    /// <summary>Fills <see cref="_coverage"/> for the rows currently on screen.</summary>
+    private async Task LoadCoverageAsync(IEnumerable<WikiPageSummary> pages)
+    {
+        foreach (var page in pages)
+        {
+            var reference = RefFor(page);
+            if (_coverage.ContainsKey(reference)) continue;
+            var translations = await Wiki.GetTranslationsAsync(page.Slug, page.Namespace, page.Category);
+            _coverage[reference] = translations.Select(t => t.Locale).ToList();
+        }
     }
 
     /// <summary>Where the page is read — the profile alias for character biographies.</summary>

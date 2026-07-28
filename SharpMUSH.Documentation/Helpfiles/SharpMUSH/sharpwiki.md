@@ -1,5 +1,6 @@
 # WIKI
 # @WIKI
+# @WIKI/SOURCE
 
 - `@wiki <page>`
 - `@wiki/<switch> <page>[=<value>]`
@@ -34,6 +35,22 @@ Administration:
 
 The `/noeval` switch may be combined with any of the above to suppress
 softcode evaluation of the arguments.
+
+Locale:
+@wiki reads pages in your locale, the one you set with `@locale`. When a page
+has no translation in your locale you get the fallback version, and its locale
+appears in brackets next to the revision number on the header line.
+
+* `@wiki/view/source <page>` - read the page in the locale it was written in,
+  ignoring yours. Useful when translating.
+* `@wiki/history <page>` shows your locale's revision stream, which is numbered
+  separately from the source's; `@wiki/history/source <page>` shows the source
+  locale's.
+
+Like `/noeval`, `/source` is a modifier rather than an action, so it combines
+with `/view` and `/history` instead of replacing them. Unpublished translations
+are invisible to anyone who could not edit the page, and never appear in
+`@wiki/list`. `@wiki/search` matches against the source text only.
 
 Page content is Markdown; see `help markdown` or the wiki's own
 "Help:Markdown Guide" page (`@wiki help:markdown_guide`) for the supported
@@ -113,7 +130,10 @@ Categories and tags group pages for the web portal's listings and the wiki's
 live `::: category` blocks. Tags are space-separated; both are stored
 lower-case. Setting an empty category clears it.
 
-@wiki/history lists every revision with its editor, date, and edit summary.
+@wiki/history lists every revision with its editor, date, and edit summary, for
+the revision stream of your own locale. Each locale is numbered independently
+starting from 1, so "rev 3" of a French translation is unrelated to "rev 3" of
+the source; `@wiki/history/source` shows the source locale's stream.
 
 **See Also:**
 - [@wiki]
@@ -123,6 +143,7 @@ lower-case. Setting an empty category clears it.
 
 - `wiki(<page>)`
 - `wiki(<page>, <field>)`
+- `wiki(<page>, <field>, <locale>)`
 
 Returns information about a wiki page. With one argument, returns the page's
 plain-text content. The page target accepts a namespace prefix
@@ -132,12 +153,23 @@ The optional second argument selects a field:
 * `text` - plain text content (the default)
 * `markdown` - the raw Markdown source
 * `title` - the display title
+* `locale` - the locale actually served (see below)
 * `category` - the category, or an empty string
 * `tags` - space-separated tag list
 * `namespace` - main, help, character, or system
-* `revision` - the current revision number
+* `revision` - the current revision number in the served locale
 * `updated` - the last-edit time as a Unix timestamp (secs)
 * `author` - the dbref of the page's creator
+
+The optional third argument names a locale; it defaults to your `LOCALE`.
+`text`, `markdown`, `title`, `revision` and `locale` come from the translation
+in that locale; everything else is page metadata and is the same in every
+locale. When there is no translation you get the fallback version rather than
+an error, and the `locale` field is how softcode detects that: it returns the
+locale that was served, not the one you asked for. An unparseable locale is
+treated as if you had passed none.
+
+Unpublished translations are never reachable from `wiki()`.
 
 Returns #-1 NO SUCH WIKI PAGE when the page does not exist.
 
@@ -147,6 +179,8 @@ Returns #-1 NO SUCH WIKI PAGE when the page does not exist.
 Home
 > think wiki(help:markdown_guide, revision)
 1
+> think wiki(markdown_guide, locale, fr)
+en
 ```
 
 **See Also:**
@@ -162,6 +196,10 @@ Home
 Returns a space-separated list of wiki page references, optionally restricted
 to one namespace. Main-namespace pages appear as their slug; other pages as
 `namespace:slug` — both forms are valid inputs to [wiki()] and `@wiki`.
+
+A page reference is its canonical slug, which does not change between locales,
+so this list is the same whatever your `LOCALE` is. Pass a reference from it to
+[wiki()] with a locale to read that page's translation.
 
 ### Example
 ```sharp

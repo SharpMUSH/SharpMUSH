@@ -490,7 +490,14 @@ public class StartupHandler(
 		await messageBus.Publish(new MainProcessReadyMessage(DateTimeOffset.UtcNow, ServerVersion), cancellationToken);
 	}
 
-	/// <summary>Seeds the default Home, Markdown Guide, and Application Schema Guide wiki pages (idempotent — no-op if present).</summary>
+	/// <summary>
+	/// Seeds the default Home, Markdown Guide, and Application Schema Guide wiki pages (idempotent — no-op
+	/// if present). The pages are English, so they are stamped with an explicit <c>SourceLocale</c>: that
+	/// records a fact about their content rather than deferring to whatever a game configures as its
+	/// default, which is why <c>"en"</c> is literal here.
+	/// No translations are seeded: machine-quality translated help is worse than a gap the reader's
+	/// fallback notice makes actionable, so translating these is content work tracked separately.
+	/// </summary>
 	private async Task SeedWikiPagesAsync()
 	{
 		// Seed the "home" wiki page. CreateAsync is a no-op if the slug already exists, so
@@ -515,7 +522,8 @@ public class StartupHandler(
 				""",
 			authorDbref: "#1",
 			ns: WikiNamespace.Main,
-			category: "general");
+			category: "general",
+			sourceLocale: "en");
 		homeResult.Switch(
 			page => logger.LogInformation("Home wiki page seeded (id={Id}).", page.Id),
 			err => LogSeedSkip("Home", err.Value));
@@ -528,7 +536,8 @@ public class StartupHandler(
 			markdown: MarkdownGuideContent,
 			authorDbref: "#1",
 			ns: WikiNamespace.Help,
-			category: "general");
+			category: "general",
+			sourceLocale: "en");
 		guideResult.Switch(
 			page => logger.LogInformation("Markdown Guide wiki page seeded (id={Id}).", page.Id),
 			err => LogSeedSkip("Markdown Guide", err.Value));
@@ -541,7 +550,8 @@ public class StartupHandler(
 			markdown: ApplicationSchemaGuideContent,
 			authorDbref: "#1",
 			ns: WikiNamespace.Help,
-			category: "general");
+			category: "general",
+			sourceLocale: "en");
 		appSchemaResult.Switch(
 			page => logger.LogInformation("Application Schema Guide wiki page seeded (id={Id}).", page.Id),
 			err => LogSeedSkip("Application Schema Guide", err.Value));

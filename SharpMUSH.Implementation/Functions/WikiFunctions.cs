@@ -11,14 +11,15 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	/// <summary>
-	/// wiki(&lt;page&gt;[, &lt;field&gt;])
+	/// wiki(&lt;page&gt;[, &lt;field&gt;[, &lt;locale&gt;]])
 	/// Returns information about a wiki page. The page target accepts a namespace
 	/// prefix ("Help:Markdown Guide"). Fields: text (default), markdown, title,
-	/// category, tags, namespace, revision, updated, author.
+	/// locale, category, tags, namespace, revision, updated, author.
+	/// The optional third argument names a locale; it defaults to the executor's LOCALE.
 	/// </summary>
-	[SharpFunction(Name = "wiki", MinArgs = 1, MaxArgs = 2,
+	[SharpFunction(Name = "wiki", MinArgs = 1, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["page", "field"])]
+		ParameterNames = ["page", "field", "locale"])]
 	public static async ValueTask<CallState> wiki(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -35,18 +36,34 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
-		var page = lookup.AsT0;
+		var localization = parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		// Third argument wins; otherwise the executor's LOCALE, exactly as @wiki does. An unparseable tag is
+		// treated as absent by the localization service — a bad locale must not turn a read into #-1.
+		var explicitLocale = args.TryGetValue("2", out var localeArg)
+			? localeArg.Message!.ToPlainText().Trim()
+			: null;
+		var locale = string.IsNullOrWhiteSpace(explicitLocale)
+			? await WikiCommandHelper.ResolveExecutorLocaleAsync(parser, executor)
+			: explicitLocale;
+
+		// Softcode is unauthenticated with respect to translation drafts: there is no per-locale permission
+		// to check against, so an unpublished translation is never reachable from a function.
+		var localized = await localization.LocalizeAsync(lookup.AsT0, locale, includeDrafts: false);
+
 		return field switch
 		{
-			"text" => new CallState(page.PlainText),
-			"markdown" => new CallState(page.MarkdownSource),
-			"title" => new CallState(page.Title),
-			"category" => new CallState(page.Category ?? string.Empty),
-			"tags" => new CallState(string.Join(" ", page.Tags)),
-			"namespace" => new CallState(page.Namespace),
-			"revision" => new CallState(page.RevisionNumber.ToString()),
-			"updated" => new CallState(page.UpdatedAt.ToUnixTimeSeconds().ToString()),
-			"author" => new CallState(page.AuthorDbref),
+			"text" => new CallState(localized.PlainText),
+			"markdown" => new CallState(localized.MarkdownSource),
+			"title" => new CallState(localized.Title),
+			"locale" => new CallState(localized.Locale),
+			"category" => new CallState(localized.Page.Category ?? string.Empty),
+			"tags" => new CallState(string.Join(" ", localized.Page.Tags)),
+			"namespace" => new CallState(localized.Page.Namespace),
+			"revision" => new CallState(localized.RevisionNumber.ToString()),
+			"updated" => new CallState(localized.Page.UpdatedAt.ToUnixTimeSeconds().ToString()),
+			"author" => new CallState(localized.Page.AuthorDbref),
 			_ => new CallState("#-1 UNKNOWN WIKI FIELD"),
 		};
 	}

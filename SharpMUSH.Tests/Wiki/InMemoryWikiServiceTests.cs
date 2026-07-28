@@ -453,4 +453,334 @@ public class InMemoryWikiServiceTests
 		await Assert.That(after.RenderedHtml).Contains("updated");
 		await Assert.That(after.RenderedHtml).DoesNotContain("original");
 	}
+
+	// ---- Translations -------------------------------------------------------
+
+	[Test]
+	public async Task UpsertTranslationAsync_CreatesTheFirstRevisionOfATranslation()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+
+		var result = await svc.UpsertTranslationAsync(
+			page.Id, "fr", "Dragons (fr)", "corps **fr**", "#2", "première traduction",
+			published: true, expectedRevisionNumber: null);
+
+		await Assert.That(result.IsT0).IsTrue();
+		var translation = result.AsT0;
+		await Assert.That(translation.Locale).IsEqualTo("fr");
+		await Assert.That(translation.Title).IsEqualTo("Dragons (fr)");
+		await Assert.That(translation.RevisionNumber).IsEqualTo(1);
+		await Assert.That(translation.RenderedHtml).Contains("<strong>fr</strong>");
+		await Assert.That(translation.PlainText).Contains("corps");
+		await Assert.That(translation.Published).IsTrue();
+	}
+
+	[Test]
+	public async Task UpsertTranslationAsync_NormalisesTheLocaleTag()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+
+		var result = await svc.UpsertTranslationAsync(page.Id, "FR-ca", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+
+		await Assert.That(result.AsT0.Locale).IsEqualTo("fr-CA");
+	}
+
+	[Test]
+	public async Task UpsertTranslationAsync_SecondCallBumpsTheRevisionInsteadOfDuplicating()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+
+		var second = await svc.UpsertTranslationAsync(
+			page.Id, "fr", "v2", "corps v2", "#3", "révision", true, expectedRevisionNumber: 1);
+
+		await Assert.That(second.AsT0.RevisionNumber).IsEqualTo(2);
+		await Assert.That(second.AsT0.MarkdownSource).IsEqualTo("corps v2");
+		await Assert.That(second.AsT0.LastEditorDbref).IsEqualTo("#3");
+		await Assert.That((await svc.GetTranslationsAsync(page.Id)).Count)
+			.IsEqualTo(1)
+			.Because("upsert must not create a second row for the same (PageId, Locale)");
+	}
+
+	[Test]
+	public async Task UpsertTranslationAsync_NullExpectedRevisionMeansCreateOnly()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+
+		var again = await svc.UpsertTranslationAsync(
+			page.Id, "fr", "écrasé", "corps écrasé", "#3", null, true, expectedRevisionNumber: null);
+
+		await Assert.That(again.IsT1)
+			.IsTrue()
+			.Because("a caller who passed null believed it was creating a translation, not overwriting one");
+		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
+			.IsEqualTo("corps v1");
+	}
+
+	[Test]
+	public async Task UpsertTranslationAsync_RejectsAStaleExpectedRevision()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+		await svc.UpsertTranslationAsync(page.Id, "fr", "v2", "corps v2", "#3", null, true, expectedRevisionNumber: 1);
+
+		// A second translator who loaded revision 1 and is only now saving.
+		var stale = await svc.UpsertTranslationAsync(
+			page.Id, "fr", "perdu", "corps perdu", "#4", null, true, expectedRevisionNumber: 1);
+
+		await Assert.That(stale.IsT1).IsTrue();
+		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
+			.IsEqualTo("corps v2")
+			.Because("the winner's prose must survive; the loser reloads and the human decides");
+		var revisions = await svc.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
+		await Assert.That(revisions.Count).IsEqualTo(2);
+		await Assert.That(revisions.Select(r => r.MarkdownSource))
+			.DoesNotContain("corps perdu")
+			.Because("a rejected write must leave no revision behind");
+	}
+
+	[Test]
+	public async Task UpsertTranslationAsync_RejectsAnUnparseableLocale()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+
+		var result = await svc.UpsertTranslationAsync(page.Id, "not a locale", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+
+		await Assert.That(result.IsT1).IsTrue();
+	}
+
+	[Test]
+	public async Task UpsertTranslationAsync_RejectsShadowingTheSourceLocale()
+	{
+		var svc = BuildService();
+		var createResult = await svc.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en");
+		var page = createResult.AsT0;
+
+		var result = await svc.UpsertTranslationAsync(page.Id, "en", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+
+		await Assert.That(result.IsT1)
+			.IsTrue()
+			.Because("no row may shadow the source; the page itself is edited instead");
+	}
+
+	[Test]
+	public async Task UpsertTranslationAsync_RejectsAnUnknownPage()
+	{
+		var svc = BuildService();
+
+		var result = await svc.UpsertTranslationAsync("ghost", "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+
+		await Assert.That(result.IsT1).IsTrue();
+	}
+
+	[Test]
+	public async Task GetTranslationAsync_ReturnsNotFoundForAMissingLocale()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+
+		var result = await svc.GetTranslationAsync(page.Id, "de");
+
+		await Assert.That(result.IsT1).IsTrue();
+	}
+
+	[Test]
+	public async Task GetTranslationsAsync_ReturnsBodylessSummariesIncludingDrafts()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "m", "#2", null, published: true, expectedRevisionNumber: null);
+		await svc.UpsertTranslationAsync(page.Id, "de", "Drachen", "m", "#2", null, published: false, expectedRevisionNumber: null);
+
+		var summaries = await svc.GetTranslationsAsync(page.Id);
+
+		await Assert.That(summaries.Count).IsEqualTo(2);
+		await Assert.That(summaries.Select(s => s.Locale).Order()).IsEquivalentTo(new[] { "de", "fr" });
+		await Assert.That(summaries.Single(s => s.Locale == "de").Published)
+			.IsFalse()
+			.Because("storage returns every row; visibility filtering is the caller's job");
+	}
+
+	[Test]
+	public async Task GetRevisionsForLocaleAsync_IsASeparateStreamFromTheSource()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons", markdown: "v1");
+		await svc.UpdateAsync(page.Id, "v2", "#1");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "fr1", "#2", null, true, expectedRevisionNumber: null);
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "fr2", "#2", null, true, expectedRevisionNumber: 1);
+
+		var french = await svc.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
+		var source = await svc.GetRevisionsAsync(page.Id);
+
+		await Assert.That(french.Count).IsEqualTo(2);
+		await Assert.That(french.All(r => r.Locale == "fr")).IsTrue();
+		await Assert.That(source.Count)
+			.IsEqualTo(2)
+			.Because("GetRevisionsAsync must keep returning only the source stream for its five existing callers");
+		await Assert.That(source.All(r => r.Locale.Length == 0)).IsTrue();
+	}
+
+	[Test]
+	public async Task GetRevisionAsync_NeverReturnsATranslationRevision()
+	{
+		// The two rollback paths (WikiController.Rollback, @wiki/rollback) feed this method's Markdown
+		// straight back into the source page, so a translation revision leaking through here would restore
+		// French prose over an English page. Translation streams restart at 1, so r1 is the collision.
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons", markdown: "en v1");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+
+		var revision = await svc.GetRevisionAsync(page.Id, 1);
+
+		await Assert.That(revision.IsT0).IsTrue();
+		await Assert.That(revision.AsT0.Locale).IsEqualTo(string.Empty);
+		await Assert.That(revision.AsT0.MarkdownSource)
+			.IsEqualTo("en v1")
+			.Because("a rollback must restore the source body, never a translation's");
+	}
+
+	[Test]
+	public async Task GetRevisionForLocaleAsync_ReturnsTheRequestedLocalesRevisionNotTheSources()
+	{
+		// Numbering restarts at 1 per locale, so revision 1 exists in both streams with different prose.
+		// If this returned the source row the history page would diff French against English and render it
+		// as a plausible rewrite rather than an error.
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons", markdown: "en v1");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+
+		var french = await svc.GetRevisionForLocaleAsync(page.Id, "fr", 1);
+		var source = await svc.GetRevisionForLocaleAsync(page.Id, string.Empty, 1);
+
+		await Assert.That(french.IsT0).IsTrue();
+		await Assert.That(french.AsT0.Locale).IsEqualTo("fr");
+		await Assert.That(french.AsT0.MarkdownSource).IsEqualTo("corps fr");
+		await Assert.That(source.IsT0).IsTrue();
+		await Assert.That(source.AsT0.MarkdownSource)
+			.IsEqualTo("en v1")
+			.Because("the empty stream is the source's, and the two rows share a revision number");
+	}
+
+	[Test]
+	public async Task GetRevisionForLocaleAsync_IsNotFoundWhenThatStreamLacksTheNumber()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons", markdown: "en v1");
+		await svc.UpdateAsync(page.Id, "en v2", "#1");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+
+		// Source revision 2 exists; French stops at 1.
+		var result = await svc.GetRevisionForLocaleAsync(page.Id, "fr", 2);
+
+		await Assert.That(result.IsT1)
+			.IsTrue()
+			.Because("a missing revision in one locale must not fall through to another locale's row");
+	}
+
+	[Test]
+	public async Task DeleteTranslationAsync_RemovesTheRowAndItsRevisions()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+
+		var deleted = await svc.DeleteTranslationAsync(page.Id, "fr", "#2");
+
+		await Assert.That(deleted.IsT0).IsTrue();
+		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).IsT1).IsTrue();
+		await Assert.That((await svc.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20)).Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task DeleteTranslationAsync_DeletingTheLastTranslationIsAllowed()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+
+		await svc.DeleteTranslationAsync(page.Id, "fr", "#2");
+
+		await Assert.That((await svc.GetTranslationsAsync(page.Id)).Count).IsEqualTo(0);
+		await Assert.That((await svc.GetBySlugAsync(page.Slug, page.Category, WikiNamespace.Main)).IsT0)
+			.IsTrue()
+			.Because("removing the last translation must not remove the page");
+	}
+
+	[Test]
+	public async Task DeleteTranslationAsync_ReturnsNotFoundForAMissingLocale()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+
+		await Assert.That((await svc.DeleteTranslationAsync(page.Id, "fr", "#2")).IsT1).IsTrue();
+	}
+
+	[Test]
+	public async Task DeleteAsync_CascadesToTranslationsAndTheirRevisions()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+		await svc.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+
+		await svc.DeleteAsync(page.Id, "#1");
+
+		await Assert.That((await svc.GetTranslationsAsync(page.Id)).Count).IsEqualTo(0);
+		await Assert.That((await svc.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20)).Count).IsEqualTo(0);
+		await Assert.That((await svc.GetRevisionsAsync(page.Id)).Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task CreateAsync_StampsTheSourceLocaleWhenSupplied()
+	{
+		var svc = BuildService();
+
+		var result = await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "fr-CA");
+
+		await Assert.That(result.AsT0.SourceLocale).IsEqualTo("fr-CA");
+	}
+
+	[Test]
+	public async Task CreateAsync_RejectsAnUnparseableSourceLocale()
+	{
+		var svc = BuildService();
+
+		var result = await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "not a locale");
+
+		await Assert.That(result.IsT1)
+			.IsTrue()
+			.Because("SourceLocale is materialised and authoritative, so a junk tag must not reach storage");
+	}
+
+	[Test]
+	public async Task CreateAsync_CanonicalisesTheSourceLocaleItStores()
+	{
+		var svc = BuildService();
+
+		var result = await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "PT-br");
+
+		await Assert.That(result.AsT0.SourceLocale).IsEqualTo("pt-BR");
+	}
+
+	[Test]
+	public async Task CreateAsync_LeavesSourceLocaleUnstampedWhenNotSupplied()
+	{
+		var svc = BuildService();
+
+		var result = await svc.CreateAsync("Dragons", "body", "#1");
+
+		await Assert.That(result.AsT0.SourceLocale)
+			.IsEqualTo(string.Empty)
+			.Because("null means 'not stamped', a transient state the Tasks 7-9 backfill closes. It is NOT a "
+				+ "read-time synonym for Wiki.DefaultLocale — the two real create paths (Tasks 12 and 20) "
+				+ "pass IWikiLocalizationService.DefaultLocale so this branch is only reached by tests");
+	}
 }

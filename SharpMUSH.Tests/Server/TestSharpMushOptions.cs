@@ -10,26 +10,28 @@ namespace SharpMUSH.Tests.Server;
 /// </summary>
 internal static class TestSharpMushOptions
 {
-	public static SharpMUSHOptions Create(bool allowBrowserCode = false) => new()
-	{
-		Attribute = new AttributeOptions(
+	public static SharpMUSHOptions Create(
+		bool allowBrowserCode = false,
+		string wikiDefaultLocale = WikiOptions.DefaultLocaleFallback) => new()
+		{
+			Attribute = new AttributeOptions(
 			ADestroy: false, AMail: false, EmptyAttributes: false,
 			GenderAttribute: "SEX", PlayerAHear: true, PlayerListen: true,
 			ReadRemoteDesc: false, ReverseShs: true, RoomConnects: true,
 			Startups: true, ObjectivePronounAttribute: null,
 			PossessivePronounAttribute: null, SubjectivePronounAttribute: null,
 			AbsolutePossessivePronounAttribute: null),
-		Chat = new ChatOptions(
+			Chat = new ChatOptions(
 			ChannelCost: 1000, ChannelTitleLength: 80, ChatTokenAlias: '+',
 			MaxChannels: 200, MaxPlayerChannels: 0, NoisyCEmit: false, UseMuxComm: true),
-		Command = new CommandOptions(
+			Command = new CommandOptions(
 			DestroyPossessions: true, FullInvisibility: false, LinkToObject: true,
 			NoisyWhisper: false, OwnerQueues: false, PossessiveGet: true,
 			PossessiveGetD: false, ProbateJudge: 1, ReallySafe: true, WizardNoAEnter: false),
-		Compatibility = new CompatibilityOptions(
+			Compatibility = new CompatibilityOptions(
 			NullEqualsZero: true, SilentPEmit: false, TinyBooleans: false,
 			TinyMath: false, TinyTrimFun: false),
-		Cosmetic = new CosmeticOptions(
+			Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true, AnsiNames: true, ChatStripQuote: true,
 			CommaExitList: true, CountAll: false, ExaminePublicAttributes: true,
 			FlagsOnExamine: true, FloatPrecision: 15, MoneyPlural: "Pennies",
@@ -37,30 +39,30 @@ internal static class TestSharpMushOptions
 			PageAliases: false, PlayerNameSpaces: true,
 			RoyaltyWallPrefix: "Admin:", WallPrefix: "Announcement:",
 			WizardWallPrefix: "Broadcast:"),
-		Cost = new CostOptions(
+			Cost = new CostOptions(
 			ExitCost: 1, FindCost: 100, LinkCost: 1, ObjectCost: 10,
 			QueueCost: 10, QuotaCost: 1, RoomCost: 10),
-		Database = new DatabaseOptions(
+			Database = new DatabaseOptions(
 			AncestorExit: null, AncestorPlayer: null, AncestorRoom: null,
 			AncestorThing: null, BaseRoom: 0, DefaultHome: 0, EventHandler: null,
 			ExitsConnectRooms: true, HttpHandler: null, PackageManager: null,
 			HttpRequestsPerSecond: 10,
 			MasterRoom: 2, PlayerStart: 0, ZoneControlZmpOnly: true,
 			AllowBrowserCode: allowBrowserCode),
-		Debug = new DebugOptions(DebugSharpParser: false),
-		Dump = new DumpOptions(PurgeInterval: "10m1s"),
-		File = new FileOptions(
+			Debug = new DebugOptions(DebugSharpParser: false),
+			Dump = new DumpOptions(PurgeInterval: "10m1s"),
+			File = new FileOptions(
 			AccessFile: "access.cnf", ColorsFile: "colors.cnf",
 			DictionaryFile: null, NamesFile: "names.cnf",
 			SSLCADirectory: null, SSLCAFile: null,
 			SSLCertificateFile: null, SSLPrivateKeyFile: null),
-		Flag = new FlagOptions(
+			Flag = new FlagOptions(
 			ChannelFlags: ["player"], ExitFlags: ["no_command"],
 			PlayerFlags: ["enter_ok", "ansi", "no_command"],
 			RoomFlags: [""], ThingFlags: [""]),
-		Function = new FunctionOptions(
+			Function = new FunctionOptions(
 			FunctionSideEffects: true, SaferUserFunctions: true),
-		Limit = new LimitOptions(
+			Limit = new LimitOptions(
 			CallLimit: 1000, ChunkMigrate: 150, ConnectFailLimit: 10,
 			FunctionInvocationLimit: 100000, FunctionRecursionLimit: 100,
 			GuestPaycheck: 0, IdleTimeout: 0, KeepaliveTimeout: 300,
@@ -72,13 +74,13 @@ internal static class TestSharpMushOptions
 			QueueChunk: 3, QueueEntryCpuTime: 1000, QueueLoss: 63,
 			StartingMoney: 150, StartingQuota: 20,
 			UnconnectedIdleTimeout: 300, UseQuota: true, WhisperLoudness: 100),
-		Log = new LogOptions(
+			Log = new LogOptions(
 			CheckpointLog: "log/checkpoint.log", CommandLog: "log/command.log",
 			ConnectLog: "log/connect.log", ErrorLog: "log/error.log",
 			LogCommands: false, LogForces: true, MemoryCheck: false,
 			TraceLog: "log/trace.log", UseConnLog: true, UseSyslog: false,
 			WizardLog: "log/wizard.log"),
-		Message = new MessageOptions(
+			Message = new MessageOptions(
 			ConnectFile: "connect.txt", ConnectHtmlFile: "connect.html",
 			DownFile: "down.txt", DownHtmlFile: "down.html",
 			FullFile: "full.txt", FullHtmlFile: "full.html",
@@ -90,7 +92,7 @@ internal static class TestSharpMushOptions
 			RegisterCreateHtmlFile: "register.html", WhoFile: "who.txt",
 			WhoHtmlFile: "who.html", WizMessageOfTheDayFile: "wizmotd.txt",
 			WizMessageOfTheDayHtmlFile: "wizmotd.html"),
-		Net = new NetOptions(
+			Net = new NetOptions(
 			Guests: true, IpAddr: null, JsonUnsafeUnescape: false,
 			Logins: true, MudName: "SharpMUSH", MudUrl: null,
 			PlayerCreation: true, Port: 4203, PortalPort: 5117,
@@ -99,20 +101,21 @@ internal static class TestSharpMushOptions
 			SqlDatabase: null, SqlUsername: null, SslIpAddr: null,
 			SslPort: 4202, SslRequireClientCert: false, UseDns: true,
 			UseWebsockets: true, WebsocketUrl: "/wsclient"),
-		Alias = new AliasOptions(
+			Alias = new AliasOptions(
 			FunctionAliases: new Dictionary<string, string[]>(),
 			CommandAliases: new Dictionary<string, string[]>()),
-		Restriction = new RestrictionOptions(
+			Restriction = new RestrictionOptions(
 			CommandRestrictions: new Dictionary<string, string[]>(),
 			FunctionRestrictions: new Dictionary<string, string[]>()),
-		BannedNames = new BannedNamesOptions(BannedNames: ["Guest"]),
-		SitelockRules = new SitelockRulesOptions(
+			BannedNames = new BannedNamesOptions(BannedNames: ["Guest"]),
+			SitelockRules = new SitelockRulesOptions(
 			Rules: new Dictionary<string, string[]>()),
-		Warning = new WarningOptions(WarnInterval: "1h"),
-		TextFile = new TextFileOptions(
+			Warning = new WarningOptions(WarnInterval: "1h"),
+			TextFile = new TextFileOptions(
 			TextFilesDirectory: "TextFiles", EnableMarkdownRendering: true,
-			CacheOnStartup: true)
-	};
+			CacheOnStartup: true),
+			Wiki = new WikiOptions(DefaultLocale: wikiDefaultLocale)
+		};
 
 	/// <summary>A minimal <see cref="IOptionsWrapper{T}"/> returning a fixed options snapshot.</summary>
 	public sealed class FixedWrapper(SharpMUSHOptions value) : IOptionsWrapper<SharpMUSHOptions>

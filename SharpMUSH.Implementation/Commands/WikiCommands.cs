@@ -20,7 +20,7 @@ public partial class Commands
 		Switches =
 		[
 			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
-			"DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "TAG", "PUBLISH", "UNPUBLISH", "NOEVAL"
+			"DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "TAG", "PUBLISH", "UNPUBLISH", "NOEVAL", "SOURCE"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["page", "content"])]
@@ -32,8 +32,10 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		// NOEVAL only affects argument evaluation; everything else is the action.
-		var actions = switches.Where(s => s != "NOEVAL").ToArray();
+		// NOEVAL and SOURCE are modifiers, not actions: leaving either in this set would make
+		// "@wiki/view/source foo" look like two actions and trip TooManySwitches.
+		var actions = switches.Where(s => s is not ("NOEVAL" or "SOURCE")).ToArray();
+		var forceSource = switches.Contains("SOURCE");
 		if (actions.Length > 1)
 		{
 			await NotifyService!.Notify(executor, "WIKI: Too many switches passed to @wiki.");
@@ -52,6 +54,15 @@ public partial class Commands
 		}
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
+		var localization = parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
+
+		// The executor's LOCALE decides which translation a read serves, exactly as ?lang= does on the web.
+		// /SOURCE is a separate flag rather than a null locale: null means "configured default", which is
+		// the source locale on an en game but emphatically not on a fr-default one.
+		var locale = forceSource
+			? null
+			: await WikiCommandHelper.ResolveExecutorLocaleAsync(parser, executor);
+
 		var hasArg0 = (arg0?.Length ?? 0) != 0;
 		var hasArg1 = (arg1?.Length ?? 0) != 0;
 		var action = actions.Length == 1 ? actions[0] : (hasArg0 ? "VIEW" : "RECENT");
@@ -59,13 +70,13 @@ public partial class Commands
 		var response = action switch
 		{
 			"LIST" when !hasArg1
-				=> await ListWiki.List(parser, Mediator!, wikiService, NotifyService!, arg0),
+				=> await ListWiki.List(parser, Mediator!, wikiService, localization, NotifyService!, arg0, locale, forceSource),
 			"SEARCH" when hasArg0 && !hasArg1
 				=> await ListWiki.Search(parser, Mediator!, wikiService, NotifyService!, arg0!),
 			"RECENT" when !hasArg1
-				=> await ListWiki.Recent(parser, Mediator!, wikiService, NotifyService!, arg0),
+				=> await ListWiki.Recent(parser, Mediator!, wikiService, localization, NotifyService!, arg0, locale, forceSource),
 			"HISTORY" when hasArg0 && !hasArg1
-				=> await ViewWiki.History(parser, Mediator!, wikiService, NotifyService!, arg0!),
+				=> await ViewWiki.History(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource),
 			"CREATE" when hasArg0 && hasArg1
 				=> await EditWiki.Create(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1!),
 			"EDIT" when hasArg0 && hasArg1
@@ -89,7 +100,7 @@ public partial class Commands
 			"TAG" when hasArg0
 				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Tag),
 			"VIEW" when hasArg0 && !hasArg1
-				=> await ViewWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!),
+				=> await ViewWiki.Handle(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource),
 			_ => MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand),
 		};
 

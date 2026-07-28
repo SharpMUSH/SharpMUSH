@@ -6,13 +6,21 @@
 {
     <PageTitle>@Slug — Wiki — SharpMUSH</PageTitle>
 
-    <WikiView @key="@($"{Ns}:{Category}:{Slug}")" Slug="@Slug" Namespace="@Ns" Category="@Category" Mode="WikiView.WikiMode.View" />
+    <WikiView @key="@($"{Ns}:{Category}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns" Category="@Category"
+              Locale="@Lang" Mode="WikiView.WikiMode.View" />
 }
 
 @code {
     [Parameter] public required string Slug { get; set; }
     [Parameter] public required string Ns { get; set; }
     [Parameter] public required string Category { get; set; }
+
+    /// <summary>
+    /// The locale from <c>?lang=</c>. Part of the <c>WikiView</c> <c>@key</c> above: without it a language
+    /// switch reuses the same component instance and never re-fetches.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "lang")]
+    public string? Lang { get; set; }
 
     private bool _redirecting;
 

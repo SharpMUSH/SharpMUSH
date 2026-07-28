@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NSubstitute;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Controllers;
@@ -22,8 +24,12 @@ public class WikiControllerProtectionTests
 	// on the wiki.admin claim, not on a role name).
 	private static WikiController MakeController(InMemoryWikiService wiki, params string[] scopes)
 	{
+		var monitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
+		monitor.CurrentValue.Returns(TestSharpMushOptions.Create());
 		var controller = new WikiController(
 			wiki,
+			new WikiLocalizationService(
+				wiki, new WikiLocaleResolver(monitor), NullLogger<WikiLocalizationService>.Instance),
 			Substitute.For<IPrerenderCacheService>(),
 			NullLogger<WikiController>.Instance);
 

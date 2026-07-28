@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -221,5 +222,210 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/tag tagged_page=Magic FIRE magic"));
 		await ExpectNotify(player.DbRef, "set to: fire, magic");
+	}
+
+	private IWikiService WikiService => WebAppFactoryArg.Services.GetRequiredService<IWikiService>();
+
+	/// <summary>
+	/// Creates a page through the service and adds one published translation, returning the slug.
+	/// </summary>
+	/// <remarks>
+	/// <c>expectedRevisionNumber: null</c> is create-only, correct for every call here: each is the first
+	/// write for its locale, so there is no revision to compare against. A second write to the same locale
+	/// would have to pass the number it loaded rather than reuse this helper.
+	/// </remarks>
+	private async Task<string> SeedTranslatedPageAsync(
+		string title, string englishBody, string frenchTitle, string frenchBody, bool published)
+	{
+		var created = await WikiService.CreateAsync(
+			title, englishBody, "#1", WikiNamespace.Main, "general", "en");
+		await Assert.That(created.IsT0).IsTrue();
+		var page = created.AsT0;
+
+		var translated = await WikiService.UpsertTranslationAsync(
+			page.Id, "fr", frenchTitle, frenchBody, "#1", null, published, expectedRevisionNumber: null);
+		await Assert.That(translated.IsT0)
+			.IsTrue()
+			.Because(translated.IsT1 ? translated.AsT1.Value : "translation seeded");
+
+		return page.Slug;
+	}
+
+	[Test]
+	public async ValueTask WikiView_ServesTheExecutorsLocaleWhenATranslationExists()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiFrenchReader");
+		var slug = await SeedTranslatedPageAsync(
+			"Locale Dragons", "en dragon body", "Dragons Localises", "corps du dragon", published: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view {slug}"));
+
+		await ExpectNotify(player.DbRef, "corps du dragon");
+	}
+
+	[Test]
+	public async ValueTask WikiView_WithSourceSwitchForcesTheSourceLocale()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiSourceReader");
+		var slug = await SeedTranslatedPageAsync(
+			"Source Dragons", "en source body", "Dragons Sources", "corps source fr", published: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view/source {slug}"));
+
+		// The header carries the title, so asserting on the source title also proves the source row won.
+		await ExpectNotify(player.DbRef, "Wiki: Source Dragons");
+	}
+
+	[Test]
+	public async ValueTask WikiView_SourceSwitchDoesNotCountAsASecondAction()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiSwitchCounter");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/create Switch Count Page=body here"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/view/source switch_count_page"));
+
+		// SOURCE is a modifier like NOEVAL. If it stayed in the action set, this would be "too many
+		// switches" and the page would never render.
+		await ExpectNotify(player.DbRef, "Wiki: Switch Count Page");
+	}
+
+	[Test]
+	public async ValueTask WikiView_FallsBackToTheSourceWhenTheLocaleHasNoTranslation()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiGermanReader");
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale de"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/create Untranslated Page=only english body"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/view untranslated_page"));
+
+		await ExpectNotify(player.DbRef, "only english body");
+	}
+
+	[Test]
+	public async ValueTask WikiView_DraftTranslationDoesNotLeakToAReaderWhoCannotEdit()
+	{
+		// The page is protected, so a mortal cannot edit it and therefore must not see its draft
+		// translation. Without the protection there is no in-game reader who fails the edit gate.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftReader");
+		var slug = await SeedTranslatedPageAsync(
+			"Draft Locale Page", "en visible body", "Brouillon", "corps brouillon secret", published: false);
+
+		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
+		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view {slug}"));
+
+		await ExpectNotify(player.DbRef, "en visible body");
+		await NotifyService
+			.DidNotReceive()
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains("corps brouillon secret")) ||
+				(msg.IsT1 && msg.AsT1.Contains("corps brouillon secret"))),
+				TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask WikiList_ShowsLocalizedTitles()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiFrenchLister");
+		await SeedTranslatedPageAsync(
+			"Listed Dragons", "en listed body", "Dragons Listes", "corps liste", published: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@wiki/list"));
+
+		await ExpectNotify(player.DbRef, "Dragons Listes");
+	}
+
+	/// <remarks>
+	/// <c>@wiki/create</c> is the second and last create path in the codebase, and the only one reachable
+	/// from in-game. Nothing else asserted that it stamps: dropping the <c>sourceLocale</c> argument left
+	/// every unit and integration test green, because an unstamped page still renders — it just resolves
+	/// against a blank locale forever, since nothing normalises empty on read.
+	/// </remarks>
+	[Test]
+	public async ValueTask WikiCreate_StampsTheConfiguredSourceLocale()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiStampCreator");
+		var localization = WebAppFactoryArg.Services.GetRequiredService<IWikiLocalizationService>();
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/create Stamped At Birth=body of a stamped page"));
+
+		var created = await WikiService.GetBySlugAsync("stamped_at_birth", "general", WikiNamespace.Main);
+		await Assert.That(created.IsT0).IsTrue();
+		await Assert.That(created.AsT0.SourceLocale)
+			.IsEqualTo(localization.DefaultLocale)
+			.Because("a page created in-game must be stamped at birth exactly as the API path is; the "
+				+ "migration backfill is not a safety net for pages created after it ran");
+	}
+
+	[Test]
+	public async ValueTask WikiHistory_ShowsTheTranslationsOwnStream()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiHistoryFrench");
+		var slug = await SeedTranslatedPageAsync(
+			"History Dragons", "en history body", "Dragons Historiques", "corps historique", published: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/history {slug}"));
+
+		// The header names the stream, which is the only thing that distinguishes "showed the fr stream"
+		// from "showed the source stream" when both happen to hold a single revision 1.
+		await ExpectNotify(player.DbRef, "(fr)");
+	}
+
+	[Test]
+	public async ValueTask WikiHistory_FallsBackToTheSourceStreamWhenTheLocaleHasNoTranslation()
+	{
+		// Regression: resolving the *requested* locale rather than the *served* one asked the store for a
+		// "de" stream that does not exist and printed an empty history, for a page @wiki/view renders
+		// perfectly well in English. A read must not fail for locale reasons.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiHistoryGerman");
+		var slug = await SeedTranslatedPageAsync(
+			"History Gap Dragons", "en gap body", "Dragons Ecart", "corps ecart", published: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale de"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/history {slug}"));
+
+		await ExpectNotify(player.DbRef, "r1");
+	}
+
+	[Test]
+	public async ValueTask WikiHistory_SourceSwitchShowsTheSourceStreamToATranslatedReader()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiHistorySource");
+		var slug = await SeedTranslatedPageAsync(
+			"History Source Dragons", "en source-history body", "Dragons Source Hist", "corps source hist",
+			published: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/history/source {slug}"));
+
+		// The source stream carries no marker and the header keeps the source title.
+		await ExpectNotify(player.DbRef, "History Source Dragons");
+		await NotifyService
+			.DidNotReceive()
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Dragons Source Hist")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Dragons Source Hist"))),
+				TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 	}
 }

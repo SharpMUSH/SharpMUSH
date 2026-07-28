@@ -298,7 +298,8 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				TextFilesDirectory: "TextFiles",
 				EnableMarkdownRendering: true,
 				CacheOnStartup: true
-			)
+			),
+			Wiki = new WikiOptions()
 		};
 	}
 }

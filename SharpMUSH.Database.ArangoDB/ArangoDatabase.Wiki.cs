@@ -175,8 +175,22 @@ public partial class ArangoDatabase : IWikiService
 		string markdown,
 		string authorDbref,
 		WikiNamespace ns = WikiNamespace.Main,
-		string? category = null)
+		string? category = null,
+		string? sourceLocale = null)
 	{
+		// SourceLocale is materialised once and never re-derived, so a junk tag must not reach storage.
+		// Null or blank is the "not stamped" case, left to the migration backfill rather than an error;
+		// a non-blank tag that is not a locale is an error, because storing it would corrupt every later read.
+		var stampedLocale = string.Empty;
+		if (!string.IsNullOrWhiteSpace(sourceLocale))
+		{
+			var normalizedSource = WikiHelpers.NormalizeLocale(sourceLocale);
+			if (normalizedSource.IsT1)
+				return normalizedSource.AsT1;
+
+			stampedLocale = normalizedSource.AsT0;
+		}
+
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var slug = Slugify(title);
 		var cat = WikiHelpers.NormalizeCategory(category);
@@ -205,7 +219,8 @@ public partial class ArangoDatabase : IWikiService
 			RevisionNumber = 1,
 			Category = cat,
 			Tags = Array.Empty<string>(),
-			Published = true
+			Published = true,
+			SourceLocale = stampedLocale
 		};
 
 		var created = await arangoDb.Document.CreateAsync<object, JsonElement>(
@@ -270,6 +285,16 @@ public partial class ArangoDatabase : IWikiService
 			return new NotFound();
 
 		var key = ExtractKey(id);
+
+		// The revision sweep below already removes every row for the page, translation revisions
+		// included, so only the translation documents themselves need their own sweep.
+		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+			"FOR t IN @@c FILTER t.PageId == @pageId REMOVE t IN @@c",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiTranslations },
+				{ "pageId", id }
+			});
 
 		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
 			"FOR r IN @@c FILTER r.PageId == @pageId REMOVE r IN @@c",
@@ -343,7 +368,7 @@ public partial class ArangoDatabase : IWikiService
 	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
-			"FOR r IN @@c FILTER r.PageId == @pageId SORT r.RevisionNumber DESC LIMIT @skip, @take RETURN r",
+			"FOR r IN @@c FILTER r.PageId == @pageId AND (r.Locale == null OR r.Locale == \"\") SORT r.RevisionNumber DESC LIMIT @skip, @take RETURN r",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "@c", DatabaseConstants.WikiRevisions },
@@ -362,7 +387,7 @@ public partial class ArangoDatabase : IWikiService
 	public async Task<OneOf<WikiRevision, NotFound>> GetRevisionAsync(string pageId, int revisionNumber)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
-			"FOR r IN @@c FILTER r.PageId == @pageId AND r.RevisionNumber == @rev RETURN r",
+			"FOR r IN @@c FILTER r.PageId == @pageId AND r.RevisionNumber == @rev AND (r.Locale == null OR r.Locale == \"\") RETURN r",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "@c", DatabaseConstants.WikiRevisions },
@@ -377,9 +402,14 @@ public partial class ArangoDatabase : IWikiService
 
 	private async Task SaveWikiRevisionAsync(WikiPage page, string editorDbref, string? editSummary)
 	{
+		// Locale is written explicitly as the empty source-stream marker rather than left absent, matching
+		// what the migration backfill stamps on pre-existing rows. Storing it keeps every row's shape
+		// identical across the two writers and keeps the (PageId, Locale, RevisionNumber) unique index
+		// covering the source stream on the same terms as translation streams.
 		var doc = new
 		{
 			PageId = page.Id,
+			Locale = string.Empty,
 			RevisionNumber = page.RevisionNumber,
 			MarkdownSource = page.MarkdownSource,
 			EditorDbref = editorDbref,
@@ -435,6 +465,9 @@ public partial class ArangoDatabase : IWikiService
 			Category = category,
 			Tags = tags,
 			Published = published,
+			// Read straight through: a document the backfill has not reached yields empty, which means
+			// "not yet stamped". Nothing substitutes the configured default here or anywhere on the read path.
+			SourceLocale = elem.TryGetProperty("SourceLocale", out var srcLoc) ? srcLoc.GetString() ?? "" : "",
 		};
 	}
 
@@ -457,11 +490,287 @@ public partial class ArangoDatabase : IWikiService
 			EditorDbref: elem.TryGetProperty("EditorDbref", out var edProp) ? edProp.GetString() ?? "" : "",
 			Timestamp: timestamp,
 			EditSummary: editSummary
-		);
+		)
+		{
+			Locale = elem.TryGetProperty("Locale", out var revLoc) ? revLoc.GetString() ?? "" : "",
+		};
 	}
 
 	private static string Slugify(string title) =>
 		WikiHelpers.Slugify(title);
+
+	// ---- Translations -------------------------------------------------------
+
+	public async Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			"FOR t IN @@c FILTER t.PageId == @pageId SORT t.Locale ASC RETURN t",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiTranslations },
+				{ "pageId", pageId }
+			});
+
+		return result
+			.Where(e => e.ValueKind != JsonValueKind.Undefined)
+			.Select(WikiTranslationFromJson)
+			.Select(t => new WikiTranslationSummary(t.Locale, t.Title, t.Published, t.UpdatedAt, t.RevisionNumber))
+			.ToList()
+			.AsReadOnly();
+	}
+
+	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
+	{
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
+		if (normalized.Length == 0) return new NotFound();
+
+		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			"FOR t IN @@c FILTER t.PageId == @pageId AND t.Locale == @locale RETURN t",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiTranslations },
+				{ "pageId", pageId },
+				{ "locale", normalized }
+			});
+
+		return result.FirstOrDefault() is { ValueKind: not JsonValueKind.Undefined } elem
+			? OneOf<WikiTranslation, NotFound>.FromT0(WikiTranslationFromJson(elem))
+			: new NotFound();
+	}
+
+	public async Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+		string pageId, string locale, string title, string markdown,
+		string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
+	{
+		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
+		if (normalizedLocale.IsT1) return normalizedLocale.AsT1;
+
+		var normalized = normalizedLocale.AsT0;
+
+		var pageLookup = await GetByIdAsync(pageId);
+		if (pageLookup.IsT1)
+			return new Error<string>($"No wiki page with id '{pageId}'.");
+
+		var page = pageLookup.AsT0;
+		if (page.SourceLocale.Length > 0
+			&& string.Equals(page.SourceLocale, normalized, StringComparison.OrdinalIgnoreCase))
+			return new Error<string>(
+				$"'{normalized}' is the page's source locale; edit the page itself rather than adding a translation.");
+
+		var now = DateTimeOffset.UtcNow;
+		var html = _wikiRenderer.RenderToHtml(markdown);
+		var plain = _wikiRenderer.ExtractPlainText(markdown);
+
+		var bindVars = new Dictionary<string, object>
+		{
+			{ "@c", DatabaseConstants.WikiTranslations },
+			{ "pageId", pageId },
+			{ "locale", normalized },
+			{ "title", title },
+			{ "markdown", markdown },
+			{ "html", html },
+			{ "plain", plain },
+			{ "editor", editorDbref },
+			{ "now", now },
+			{ "published", published }
+		};
+
+		try
+		{
+			if (expectedRevisionNumber is null)
+			{
+				// Create-only. A plain INSERT so the (PageId, Locale) unique index — not a read-then-write
+				// race in C# — arbitrates two writers who both believe they are creating the translation.
+				var inserted = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+					"""
+					INSERT {
+						PageId: @pageId, Locale: @locale, Title: @title,
+						MarkdownSource: @markdown, RenderedHtml: @html, PlainText: @plain,
+						LastEditorDbref: @editor, CreatedAt: @now, UpdatedAt: @now,
+						Published: @published, RevisionNumber: 1
+					}
+					IN @@c
+					RETURN NEW
+					""",
+					bindVars: bindVars);
+
+				if (inserted.FirstOrDefault() is not { ValueKind: not JsonValueKind.Undefined } created)
+					return new Error<string>($"Insert of translation '{normalized}' returned no document.");
+
+				var newTranslation = WikiTranslationFromJson(created);
+				await SaveWikiTranslationRevisionAsync(newTranslation, editorDbref, editSummary);
+				return newTranslation;
+			}
+
+			// Compare-and-swap: the FILTER on RevisionNumber is the condition, and "no document returned"
+			// is the conflict signal. Never fold this back into an UPSERT — an unconditional UPDATE lets two
+			// translators who both loaded revision 4 both write 5, and one loses their prose silently.
+			bindVars["expected"] = expectedRevisionNumber.Value;
+			var updatedRows = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+				"""
+				FOR t IN @@c
+					FILTER t.PageId == @pageId AND t.Locale == @locale AND t.RevisionNumber == @expected
+					UPDATE t WITH {
+						Title: @title, MarkdownSource: @markdown, RenderedHtml: @html, PlainText: @plain,
+						LastEditorDbref: @editor, UpdatedAt: @now, Published: @published,
+						RevisionNumber: t.RevisionNumber + 1
+					}
+					IN @@c
+					RETURN NEW
+				""",
+				bindVars: bindVars);
+
+			if (updatedRows.FirstOrDefault() is not { ValueKind: not JsonValueKind.Undefined } row)
+			{
+				// Zero rows affected. Either the translation is gone or somebody else already bumped it.
+				// Do NOT retry: re-reading and re-applying would overwrite the winner with stale markdown,
+				// which is precisely the loss expectedRevisionNumber exists to prevent.
+				var current = await GetTranslationAsync(pageId, normalized);
+				return current.IsT0
+					? new Error<string>(
+						$"The '{normalized}' translation changed while you were editing "
+						+ $"(expected revision {expectedRevisionNumber.Value}, found {current.AsT0.RevisionNumber}). "
+						+ "Reload and re-apply your changes.")
+					: new Error<string>($"No '{normalized}' translation exists for page '{pageId}' to update.");
+			}
+
+			var translation = WikiTranslationFromJson(row);
+			await SaveWikiTranslationRevisionAsync(translation, editorDbref, editSummary);
+			return translation;
+		}
+		catch (Exception ex)
+		{
+			// A lost unique-index race on the create path surfaces as a driver conflict. Reading the winner
+			// back is safe there because nothing of this caller's content was meant to land. It is NOT safe
+			// on the update path, which is why that branch returns above without touching this handler.
+			if (expectedRevisionNumber is null)
+			{
+				var retry = await GetTranslationAsync(pageId, normalized);
+				if (retry.IsT0)
+					return new Error<string>(
+						$"A '{normalized}' translation already exists for page '{pageId}'. "
+						+ "Pass its current revision number to update it.");
+			}
+
+			return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");
+		}
+	}
+
+	public async Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
+	{
+		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
+		if (normalized.Length == 0) return new NotFound();
+
+		var lookup = await GetTranslationAsync(pageId, normalized);
+		if (lookup.IsT1) return new NotFound();
+
+		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+			"FOR r IN @@c FILTER r.PageId == @pageId AND r.Locale == @locale REMOVE r IN @@c",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiRevisions },
+				{ "pageId", pageId },
+				{ "locale", normalized }
+			});
+
+		await arangoDb.Document.DeleteAsync<JsonElement>(
+			handle, DatabaseConstants.WikiTranslations, ExtractKey(lookup.AsT0.Id));
+
+		return new None();
+	}
+
+	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(
+		string pageId, string locale, int skip, int take)
+	{
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
+
+		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			"""
+			FOR r IN @@c
+				FILTER r.PageId == @pageId AND (r.Locale == @locale OR (@locale == "" AND r.Locale == null))
+				SORT r.RevisionNumber DESC
+				LIMIT @skip, @take
+				RETURN r
+			""",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiRevisions },
+				{ "pageId", pageId },
+				{ "locale", wanted },
+				{ "skip", skip },
+				{ "take", take }
+			});
+
+		return result
+			.Where(e => e.ValueKind != JsonValueKind.Undefined)
+			.Select(WikiRevisionFromJson)
+			.ToList()
+			.AsReadOnly();
+	}
+
+	public async Task<OneOf<WikiRevision, NotFound>> GetRevisionForLocaleAsync(
+		string pageId, string locale, int revisionNumber)
+	{
+		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
+
+		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			"""
+			FOR r IN @@c
+				FILTER r.PageId == @pageId AND r.RevisionNumber == @rev
+					AND (r.Locale == @locale OR (@locale == "" AND r.Locale == null))
+				RETURN r
+			""",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiRevisions },
+				{ "pageId", pageId },
+				{ "rev", revisionNumber },
+				{ "locale", wanted }
+			});
+
+		return result.FirstOrDefault() is { ValueKind: not JsonValueKind.Undefined } elem
+			? OneOf<WikiRevision, NotFound>.FromT0(WikiRevisionFromJson(elem))
+			: new NotFound();
+	}
+
+	/// <summary>
+	/// Appends a revision snapshot for a translation. The document carries <c>Locale</c>, which is what
+	/// splits history into a stream per (PageId, Locale).
+	/// </summary>
+	private async Task SaveWikiTranslationRevisionAsync(
+		WikiTranslation translation, string editorDbref, string? editSummary)
+	{
+		var doc = new
+		{
+			PageId = translation.PageId,
+			Locale = translation.Locale,
+			RevisionNumber = translation.RevisionNumber,
+			MarkdownSource = translation.MarkdownSource,
+			EditorDbref = editorDbref,
+			Timestamp = translation.UpdatedAt,
+			EditSummary = editSummary
+		};
+
+		await arangoDb.Document.CreateAsync(handle, DatabaseConstants.WikiRevisions, doc);
+	}
+
+	private static WikiTranslation WikiTranslationFromJson(JsonElement elem) => new(
+		Id: elem.TryGetProperty("_id", out var id) ? id.GetString() ?? "" : "",
+		PageId: elem.TryGetProperty("PageId", out var pageId) ? pageId.GetString() ?? "" : "",
+		Locale: elem.TryGetProperty("Locale", out var locale) ? locale.GetString() ?? "" : "",
+		Title: elem.TryGetProperty("Title", out var title) ? title.GetString() ?? "" : "",
+		MarkdownSource: elem.TryGetProperty("MarkdownSource", out var md) ? md.GetString() ?? "" : "",
+		RenderedHtml: elem.TryGetProperty("RenderedHtml", out var html) ? html.GetString() ?? "" : "",
+		PlainText: elem.TryGetProperty("PlainText", out var plain) ? plain.GetString() ?? "" : "",
+		LastEditorDbref: elem.TryGetProperty("LastEditorDbref", out var editor) ? editor.GetString() ?? "" : "",
+		CreatedAt: elem.TryGetProperty("CreatedAt", out var created) && created.ValueKind != JsonValueKind.Null
+			? created.GetDateTimeOffset() : DateTimeOffset.MinValue,
+		UpdatedAt: elem.TryGetProperty("UpdatedAt", out var updated) && updated.ValueKind != JsonValueKind.Null
+			? updated.GetDateTimeOffset() : DateTimeOffset.MinValue,
+		Published: !elem.TryGetProperty("Published", out var published)
+			|| published.ValueKind != JsonValueKind.False,
+		RevisionNumber: elem.TryGetProperty("RevisionNumber", out var rev) && rev.TryGetInt32(out var revNum)
+			? revNum : 1);
 
 	#endregion
 }

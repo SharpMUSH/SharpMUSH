@@ -16,6 +16,7 @@ namespace SharpMUSH.Server.Controllers;
 /// </summary>
 public class SeoController(
 	IWikiService wikiService,
+	IWikiLocalizationService localization,
 	ILogger<SeoController> logger) : ControllerBase
 {
 	private const int PageSize = 500;
@@ -33,7 +34,7 @@ public class SeoController(
 
 		var sb = new StringBuilder();
 		sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-		sb.AppendLine("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
+		sb.AppendLine("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">");
 
 		AppendUrl(sb, $"{baseUrl}/", now);
 		AppendUrl(sb, $"{baseUrl}/wiki", now);
@@ -48,7 +49,13 @@ public class SeoController(
 				if (!page.Published)
 					continue;
 
-				AppendUrl(sb, baseUrl + PathFor(page), page.UpdatedAt.ToString("yyyy-MM-dd"));
+				// Bot-facing, so includeDrafts: false — the sitemap must never advertise a locale whose only
+				// translation is an unpublished draft.
+				AppendUrl(
+					sb,
+					baseUrl + PathFor(page),
+					page.UpdatedAt.ToString("yyyy-MM-dd"),
+					await localization.GetVisibleLocalesAsync(page, includeDrafts: false));
 				total++;
 			}
 
@@ -92,11 +99,25 @@ public class SeoController(
 	private static string PathFor(WikiPage page) =>
 		WikiRoutes.PathFor(page.Namespace, page.Category, page.Slug);
 
-	private static void AppendUrl(StringBuilder sb, string loc, string lastmod)
+	private static void AppendUrl(
+		StringBuilder sb, string loc, string lastmod, IReadOnlyList<string>? alternateLocales = null)
 	{
 		sb.AppendLine("  <url>");
 		sb.AppendLine($"    <loc>{SecurityElement.Escape(loc)}</loc>");
 		sb.AppendLine($"    <lastmod>{lastmod}</lastmod>");
+
+		// Only worth emitting when there is more than one locale to point at: a lone self-referential
+		// alternate says nothing, and the site-root entries have no locales at all.
+		if (alternateLocales is { Count: > 1 })
+		{
+			foreach (var locale in alternateLocales)
+			{
+				var href = $"{loc}{(loc.Contains('?') ? '&' : '?')}lang={Uri.EscapeDataString(locale)}";
+				sb.AppendLine(
+					$"    <xhtml:link rel=\"alternate\" hreflang=\"{SecurityElement.Escape(locale)}\" href=\"{SecurityElement.Escape(href)}\" />");
+			}
+		}
+
 		sb.AppendLine("  </url>");
 	}
 }

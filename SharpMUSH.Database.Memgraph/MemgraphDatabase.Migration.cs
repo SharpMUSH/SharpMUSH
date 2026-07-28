@@ -3,6 +3,7 @@ using MarkupString;
 using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
 using OneOf.Types;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -122,16 +123,35 @@ public partial class MemgraphDatabase
 					"CREATE INDEX ON :WikiPage(updatedAt)",
 					"CREATE CONSTRAINT ON (p:WikiPage) ASSERT p.namespace, p.category, p.slug IS UNIQUE",
 					"CREATE INDEX ON :WikiRevision(pageId)",
-					"CREATE INDEX ON :WikiRevision(revisionNumber)"
+
+					// Backfill FIRST. A composite uniqueness constraint cannot be created over a property the
+					// existing nodes do not carry, and pre-existing revisions have no locale at all.
+					// Pages get the configured default; revisions get the empty source-stream marker, because
+					// every pre-existing revision belongs to the page's own locale stream.
+					$"MATCH (p:WikiPage) WHERE p.sourceLocale IS NULL OR p.sourceLocale = '' SET p.sourceLocale = '{WikiOptions.DefaultLocaleFallback}'",
+					"MATCH (r:WikiRevision) WHERE r.locale IS NULL SET r.locale = ''",
+
+					"CREATE INDEX ON :WikiTranslation(pageId)",
+					"CREATE INDEX ON :WikiTranslation(locale)",
+					"CREATE CONSTRAINT ON (t:WikiTranslation) ASSERT t.pageId, t.locale IS UNIQUE",
+					"CREATE INDEX ON :WikiRevision(locale)",
+
+					// The real constraint, replacing two independent non-unique indexes that enforced nothing.
+					// Same syntax as the existing (namespace, category, slug) page constraint above.
+					"CREATE CONSTRAINT ON (r:WikiRevision) ASSERT r.pageId, r.locale, r.revisionNumber IS UNIQUE",
+
+					// The standalone revisionNumber index indexed a column nothing queries on its own, and its
+					// presence is part of why this backend looked constrained when it was not.
+					"DROP INDEX ON :WikiRevision(revisionNumber)"
 				};
 
 			foreach (var wq in wikiIndexQueries)
 			{
 				try { await indexSession.RunAsync(wq); }
-				catch (ClientException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
-				{ /* Index already exists — safe to ignore */ }
-				catch (DatabaseException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
-				{ /* Index already exists — safe to ignore */ }
+				catch (ClientException ex) when (IsBenignSchemaStatementFailure(ex.Message))
+				{ /* Index/constraint already in the desired state — safe to ignore */ }
+				catch (DatabaseException ex) when (IsBenignSchemaStatementFailure(ex.Message))
+				{ /* Index/constraint already in the desired state — safe to ignore */ }
 			}
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -326,6 +346,22 @@ MERGE (o)-[:HAS_FLAG]->(f)
 			MigrateLock.Release();
 		}
 	}
+
+	/// <summary>
+	/// True when a schema statement failed only because the schema is already in the state it asked for.
+	/// </summary>
+	/// <remarks>
+	/// The wiki statement list runs on <em>every</em> start-up, not once, so both directions have to be
+	/// tolerated: <c>CREATE INDEX</c>/<c>CREATE CONSTRAINT</c> on something present reports "already
+	/// exists", while <c>DROP INDEX</c> on something absent reports a not-found variant instead — which the
+	/// original "already exists"-only handlers would have rethrown, failing the whole migration on the
+	/// second boot.
+	/// </remarks>
+	private static bool IsBenignSchemaStatementFailure(string message) =>
+		message.Contains("already exists", StringComparison.OrdinalIgnoreCase)
+		|| message.Contains("doesn't exist", StringComparison.OrdinalIgnoreCase)
+		|| message.Contains("does not exist", StringComparison.OrdinalIgnoreCase)
+		|| message.Contains("not found", StringComparison.OrdinalIgnoreCase);
 
 	private async Task CreateInitialFlags(CancellationToken ct)
 	{

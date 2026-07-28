@@ -5,7 +5,8 @@
 
 <PageTitle>@Loc["WikiEdit"]: @Slug</PageTitle>
 
-<WikiView Slug="@Slug" Namespace="@Ns" Category="@Category" Mode="WikiView.WikiMode.Edit" />
+<WikiView @key="@($"{Ns}:{Category}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns" Category="@Category"
+          Locale="@Lang" Mode="WikiView.WikiMode.Edit" />
 
 @code {
     [Parameter]
@@ -16,4 +17,11 @@
 
     [Parameter]
     public required string Category { get; set; }
+
+    /// <summary>
+    /// The locale to edit, from <c>?lang=</c> — the deep link the reader's "Translate this page" points at.
+    /// Part of the <c>@key</c> above so switching locale re-creates the host and reloads that locale's row.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "lang")]
+    public string? Lang { get; set; }
 }

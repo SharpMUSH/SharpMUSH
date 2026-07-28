@@ -2542,6 +2542,73 @@
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Le schéma de l'application n'a pas pu être chargé. Le gestionnaire softcode à l'adresse {0} est peut-être absent ou renvoie du JSON invalide.</value>
   </data>
+  <data name="Wiki" xml:space="preserve">
+    <value>Wiki</value>
+  </data>
+
+  <!-- Wiki localization -->
+  <data name="WikiFallbackNotice" xml:space="preserve">
+    <value>Cette page n'est pas encore disponible en {0} — voici la version en {1}.</value>
+  </data>
+  <data name="WikiFallbackCreateTranslation" xml:space="preserve">
+    <value>Traduire cette page</value>
+  </data>
+  <data name="WikiAvailableTranslations" xml:space="preserve">
+    <value>Également disponible en</value>
+  </data>
+  <data name="WkLocaleSelector" xml:space="preserve">
+    <value>Langue</value>
+  </data>
+  <data name="WkAddTranslation" xml:space="preserve">
+    <value>Ajouter une traduction…</value>
+  </data>
+  <data name="WkSourceLocaleLabel" xml:space="preserve">
+    <value>{0} (source)</value>
+  </data>
+  <data name="WkInheritedFromSource" xml:space="preserve">
+    <value>Hérité de la langue source — modifiable sur la page source.</value>
+  </data>
+  <data name="WkTranslationSaved" xml:space="preserve">
+    <value>Traduction enregistrée.</value>
+  </data>
+  <data name="WkTranslationSaveFailed" xml:space="preserve">
+    <value>Impossible d'enregistrer la traduction : {0}</value>
+  </data>
+  <data name="WkDeleteTranslation" xml:space="preserve">
+    <value>Supprimer cette traduction</value>
+  </data>
+  <data name="WkTranslationDeleteConfirmTitle" xml:space="preserve">
+    <value>Supprimer la traduction ?</value>
+  </data>
+  <data name="WkTranslationDeleteConfirmText" xml:space="preserve">
+    <value>La traduction en {0} et son historique seront supprimés. La page et ses autres langues ne sont pas affectées.</value>
+  </data>
+  <data name="WkCustomLocalePlaceholder" xml:space="preserve">
+    <value>Étiquette de langue, par ex. es ou pt-BR</value>
+  </data>
+  <data name="WkHistoryLocale" xml:space="preserve">
+    <value>Langue</value>
+  </data>
+  <data name="WkTranslationConflict" xml:space="preserve">
+    <value>Cette traduction a été modifiée pendant votre édition. Rechargez-la pour voir la version actuelle — votre texte non enregistré reste dans l'éditeur.</value>
+  </data>
+  <data name="WkTranslationReload" xml:space="preserve">
+    <value>Recharger la traduction</value>
+  </data>
+  <data name="WikiTranslations" xml:space="preserve">
+    <value>Traductions</value>
+  </data>
+  <data name="WikiLocaleFilter" xml:space="preserve">
+    <value>Langue</value>
+  </data>
+  <data name="WikiAllLocales" xml:space="preserve">
+    <value>Toutes les langues</value>
+  </data>
+  <data name="WikiUntranslatedOnly" xml:space="preserve">
+    <value>Traductions manquantes uniquement</value>
+  </data>
+  <data name="ResWikiStatTranslations" xml:space="preserve">
+    <value>Traductions</value>
   <data name="ConfigSavedCount" xml:space="preserve">
     <value>{count, plural, one {# paramètre enregistré} other {# paramètres enregistrés}}</value>
   </data>

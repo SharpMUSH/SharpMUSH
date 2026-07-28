@@ -29,7 +29,14 @@
 - Test framework is **TUnit**: `[Test]`, `await Assert.That(x).IsEqualTo(y)`, optional `.Because("…")`.
 - Engine/unit tests: `dotnet run --project SharpMUSH.Tests`. Component tests: `dotnet run --project SharpMUSH.Tests.BUnit`. Filter: `--treenode-filter "/*/*/ClassName/*"`.
 - **Baseline that must stay green:** `SharpMUSH.Tests` = 4927 total / 4729 passed / 198 skipped / **0 failed**. `SharpMUSH.Tests.BUnit` = **271 passed**. `dotnet build` = 0 errors.
-- **Docker is NOT available in the development environment.** `SharpMUSH.Tests.Integration` requires it unconditionally (a Docker network + NATS + MySQL container start even for the embedded SurrealDB provider). Every task that adds an integration test states its verification as *"compiles locally; asserted by CI"* and names the CI job. Never claim an integration test passed locally.
+- **Integration tests DO run locally, under Podman.** An earlier revision of this plan asserted Docker was unavailable and told every integration task to defer verification to CI. That was wrong, and it was the most damaging error in the plan: Phase 2 is precisely where the three backends disagree, so deferring it turns a five-second local check into a confusing one-of-three red in CI. There is no `docker` binary, but Podman 6.x is installed with the rootless socket active and `DOCKER_HOST` already exported as `unix:///run/user/1000/podman/podman.sock`. Testcontainers reads that and works unmodified, starting its own `testcontainers-ryuk-*` reaper. Verified: `dotnet run --project SharpMUSH.Tests.Integration` → **248/248 passed** at `46610bfe`, no configuration. Diagnose container availability with `podman ps` or `echo $DOCKER_HOST`, never `which docker`.
+- **Run each backend locally, then let CI confirm all three at once.** `SHARPMUSH_DATABASE_PROVIDER` selects the provider (`arangodb` is the default), so CI's matrix is reproducible here one entry at a time:
+  ```bash
+  for db in arangodb memgraph surrealdb; do
+    SHARPMUSH_DATABASE_PROVIDER=$db dotnet run --project SharpMUSH.Tests.Integration
+  done
+  ```
+  A task that adds an integration test is **not** done until you have run it against every provider it claims to support. CI remains the acceptance gate for all three simultaneously, but it is no longer the *only* evidence, and "asserted by CI" is no longer an acceptable substitute for having run it.
 - **CI integration matrix:** `.github/workflows/_dotnet-build-test.yml`, job `test-integration`, `strategy.matrix.database: [arangodb, memgraph, surrealdb]`, command `dotnet run --project SharpMUSH.Tests.Integration --no-build --verbosity normal -- --output Detailed`. This job running green on all three backends is the acceptance gate for Tasks 6–9.
 - **Configured default locale is `Wiki.DefaultLocale`, a real parameter default of `"en"` (`WikiOptions.DefaultLocaleFallback`) rather than a `required` member**, validated at startup by `ValidateSharpOptions`. At runtime read it only through `IOptionsMonitor<SharpMUSHOptions>`; the one literal lives on `WikiOptions.DefaultLocaleFallback` and nothing else hardcodes `"en"`.
 - **`WikiPage.SourceLocale` is materialised once, never re-derived on read.** The property initializer default is `string.Empty` (an initializer cannot read configuration), but that is a *transient* state: `Migration_AddWikiTranslations` stamps every unstamped row once, and every create path stamps new pages. A page read back from storage always has a non-empty, canonical `SourceLocale`, and **nothing normalises empty → `Wiki.DefaultLocale` on read.** Re-deriving would mean an admin changing `wiki_default_locale` silently reinterprets the authored locale of every pre-existing page. The design's claim is therefore **"no schema migration and no content rewrite"**, *not* "no data migration" — there is one additive-column backfill.
@@ -1289,7 +1296,7 @@ git commit -m "feat(wiki): add the locale fallback resolver"
 
 **Sequencing note (spec Risks).** The five new CRUD methods are mechanical, but the three stores' revision indexes disagree *today* — unique on SurrealDB, non-unique on ArangoDB, absent on Memgraph — so a numbering bug fails loudly on one and passes silently on two, surfacing in CI as a one-of-three red that reads like flakiness. **The cross-backend integration test is therefore written in Task 6, before the three hand-written backends in Tasks 7–9, and it asserts the constraint rejects duplicates rather than only exercising the happy path.** A test that only writes valid data cannot tell a real constraint from a missing one, which is precisely how these three drifted apart. Because C# requires every implementer to satisfy the interface, Task 5 lands `NotSupportedException` stubs in the three DB providers so the solution compiles and the new test can be written and shown red. Tasks 7, 8 and 9 each delete their own stub. **After Task 9 no stub remains** — grep for `WikiTranslationsNotImplemented` to confirm.
 
-**Verification reality.** Docker is unavailable locally, so `SharpMUSH.Tests.Integration` cannot run here. Tasks 6–9 are verified by (a) `dotnet build` clean, (b) the mirrored unit tests in `SharpMUSH.Tests` staying green, and (c) the CI `test-integration` job green on **all three** matrix entries. Do not mark 7–9 done on a local build alone.
+**Verification reality.** `SharpMUSH.Tests.Integration` runs locally under Podman (see Global Constraints), so Tasks 6–9 are verified by (a) `dotnet build` clean, (b) the mirrored unit tests in `SharpMUSH.Tests` staying green, (c) **`SHARPMUSH_DATABASE_PROVIDER=<db> dotnet run --project SharpMUSH.Tests.Integration` green for each of `arangodb`, `memgraph` and `surrealdb` locally**, and (d) the CI `test-integration` job green on all three. Do not mark 7–9 done on a local build alone — but equally, do not defer to CI what you can prove in seconds here.
 
 ### Task 5: `IWikiService` translation CRUD + `InMemoryWikiService` reference implementation
 
@@ -2429,7 +2436,9 @@ public class WikiTranslationIntegrationTests
 Run: `dotnet build SharpMUSH.Tests.Integration`
 Expected: 0 errors. The file compiles against the Task 5 stubs.
 
-**Docker is unavailable locally, so do not attempt to run this suite here.** Its red state is the `NotSupportedException` the Task 5 stubs throw. If you want local evidence that the assertions themselves are sound, temporarily point the same assertions at `InMemoryWikiService` in a scratch file, confirm green, and delete the scratch file — do not commit it. `ConcurrentUpsertsWithTheSameExpectedRevisionLoseNoProse` is the one exception: the in-memory dictionary cannot reproduce the race, so it will not tell you anything locally either way.
+**Run this suite locally — it works under Podman.** Its red state at the end of this task is the `NotSupportedException` the Task 5 stubs throw, and you should *see* that rather than assume it: run `SHARPMUSH_DATABASE_PROVIDER=arangodb dotnet run --project SharpMUSH.Tests.Integration -- --treenode-filter "/*/*/WikiTranslationIntegrationTests/*"` and confirm the failures name `WikiTranslationsNotImplemented`. A test that fails for the wrong reason looks identical to one that fails for the right reason, and this is the task where that distinction decides whether Phase 2 means anything.
+
+`ConcurrentUpsertsWithTheSameExpectedRevisionLoseNoProse` is the one assertion whose value depends on a real store: the in-memory dictionary cannot reproduce the race, so it proves nothing against `InMemoryWikiService` — but it does run for real against each of the three providers.
 
 - [ ] **Step 3: Commit**
 
@@ -2941,7 +2950,7 @@ Expected: 4927 total / 0 failed.
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/SurrealMigrationIdempotencyTests/*"`
 Expected: PASS — confirms nothing asserts an exact index count.
 
-**Docker is unavailable locally.** The acceptance gate is CI job `test-integration` with `SHARPMUSH_DATABASE_PROVIDER=arangodb` green, which is also what proves the migration applies to a fresh database, that the backfill runs before the unique index, and that `WikiTranslationIntegrationTests` — including `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber` — passes on Arango. Never mark this task done on a local build alone. In the CI log, look for the migration's `stamped SourceLocale=…` line: absent means the migration did not run, and the negative revision test will then be passing for the wrong reason on a fresh database with nothing to stamp.
+**Verify locally, then in CI.** Run `SHARPMUSH_DATABASE_PROVIDER=arangodb dotnet run --project SharpMUSH.Tests.Integration` and require it green before committing; CI job `test-integration` with the same provider is the confirming gate. Green on Arango is also what proves the migration applies to a fresh database, that the backfill runs before the unique index, and that `WikiTranslationIntegrationTests` — including `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber` — passes on Arango. Never mark this task done on a local build alone. In the CI log, look for the migration's `stamped SourceLocale=…` line: absent means the migration did not run, and the negative revision test will then be passing for the wrong reason on a fresh database with nothing to stamp.
 
 - [ ] **Step 6: Commit**
 
@@ -3266,7 +3275,7 @@ Expected: 0 errors, and `grep -n WikiTranslationsNotImplemented SharpMUSH.Databa
 Run: `dotnet run --project SharpMUSH.Tests`
 Expected: 4927 total / 0 failed.
 
-**Docker is unavailable locally.** Acceptance gate: CI `test-integration` with `SHARPMUSH_DATABASE_PROVIDER=memgraph` green, including `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber` — which is *the* test for this backend, since it is the one that had no revision constraint at all. Watch specifically for a constraint-creation failure at startup: Memgraph rejects DDL inside managed transactions, so the new statements must be in `wikiIndexQueries` (auto-commit `indexSession`) and nowhere else, and `ASSERT … IS UNIQUE` fails if the backfill statements were placed after it rather than before.
+**Verify locally, then in CI.** Run `SHARPMUSH_DATABASE_PROVIDER=memgraph dotnet run --project SharpMUSH.Tests.Integration` and require it green before committing; CI with the same provider is the confirming gate. Either way it must include `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber` — which is *the* test for this backend, since it is the one that had no revision constraint at all. Watch specifically for a constraint-creation failure at startup: Memgraph rejects DDL inside managed transactions, so the new statements must be in `wikiIndexQueries` (auto-commit `indexSession`) and nowhere else, and `ASSERT … IS UNIQUE` fails if the backfill statements were placed after it rather than before.
 
 - [ ] **Step 5: Commit**
 
@@ -3642,7 +3651,7 @@ grep -rn "revisionNumber UNIQUE\|RevisionNumber\"\]\|IS UNIQUE" \
 
 Expected: each of the three declares a unique constraint over `(PageId/pageId, Locale/locale, RevisionNumber/revisionNumber)`, and **no** store still has a constraint over the two-field `(pageId, revisionNumber)` pair. If one backend is missing its constraint the Task 6 negative test will simply pass there, silently — that asymmetry is the whole defect this task set exists to close, so check it by reading, not by test colour.
 
-**Docker is unavailable locally.** Acceptance gate: CI `test-integration` green on **all three** matrix entries (`arangodb`, `memgraph`, `surrealdb`). Phase 2 is not complete until that is true, and specifically not until `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber` and `RevisionIndex_AcceptsATranslationRevisionOneBesideASourceRevisionOne` are green on all three rather than one.
+**Verify all three locally, then in CI.** Loop `SHARPMUSH_DATABASE_PROVIDER` over `arangodb`, `memgraph` and `surrealdb` locally and require all three green — this is the task where the three stores' disagreement either resolves or is exposed, and you can now see that here rather than inferring it from a CI matrix. CI `test-integration` green on all three entries remains the acceptance gate. Phase 2 is not complete until that is true, and specifically not until `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber` and `RevisionIndex_AcceptsATranslationRevisionOneBesideASourceRevisionOne` are green on all three rather than one.
 
 - [ ] **Step 6: Commit**
 
@@ -7350,7 +7359,7 @@ Expected: PASS (7 tests).
 Run: `dotnet build && dotnet run --project SharpMUSH.Tests`
 Expected: 0 errors; 4927 total / 0 failed. `SeoControllerTests` and `WikiControllerHtmlTests` must both be green.
 
-`SeoEndpointTests` lives in `SharpMUSH.Tests.Integration` and needs Docker — **CI-verified**, job `test-integration`, all three matrix entries.
+`SeoEndpointTests` lives in `SharpMUSH.Tests.Integration`, so it needs a container runtime — which Podman provides locally (see Global Constraints). Run it here per provider, then let CI job `test-integration` confirm all three matrix entries.
 
 - [ ] **Step 8: Commit**
 
@@ -7887,7 +7896,7 @@ Append to `SharpMUSH.Tests.Integration/Wiki/WikiStartupSeedingTests.cs` (tabs, m
 Run: `dotnet build SharpMUSH.Tests.Integration`
 Expected: 0 errors.
 
-**Docker is unavailable locally**, so this file cannot run here. Its red state is `SourceLocale` coming back empty because `SeedWikiPagesAsync` does not set it yet.
+**This file runs locally under Podman.** Confirm its red state rather than assuming it: `SourceLocale` must come back *empty* before the fix, because `SeedWikiPagesAsync` does not set it yet. Then verify green against every provider.
 
 - [ ] **Step 3: Stamp the locale on all three seeded pages**
 
@@ -8167,7 +8176,7 @@ git commit -m "docs(wiki): record the localization mechanism, ?lang= URL policy 
 - [ ] `grep -rn "WikiTranslationsNotImplemented" SharpMUSH.Database.*/` — no output.
 - [ ] `grep -rn "EffectiveSourceLocale" SharpMUSH.Library SharpMUSH.Server` — no output. Nothing re-derives `SourceLocale` on read; `IWikiLocalizationService.SourceLocaleOf` is the only accessor.
 - [ ] All three backends declare a unique constraint over `(PageId, Locale, RevisionNumber)` and none still constrains the two-field `(pageId, revisionNumber)` pair. Verified by reading the three migration files, not by test colour — a backend missing its constraint makes the negative test pass silently, which is how the three drifted apart in the first place.
-- [ ] CI `test-integration` green on **all three** matrix entries (`arangodb`, `memgraph`, `surrealdb`), specifically including `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber`, `RevisionIndex_AcceptsATranslationRevisionOneBesideASourceRevisionOne` and `ConcurrentUpsertsWithTheSameExpectedRevisionLoseNoProse`. This is the only verification for `WikiTranslationIntegrationTests`, `WikiStartupSeedingTests` and `SeoEndpointTests`; Docker is unavailable locally, so never claim these passed without the CI run.
+- [ ] CI `test-integration` green on **all three** matrix entries (`arangodb`, `memgraph`, `surrealdb`), specifically including `RevisionIndex_RejectsADuplicatePageLocaleRevisionNumber`, `RevisionIndex_AcceptsATranslationRevisionOneBesideASourceRevisionOne` and `ConcurrentUpsertsWithTheSameExpectedRevisionLoseNoProse`. CI is the confirming gate, not the only evidence: every one of these must also have been run locally per provider via `SHARPMUSH_DATABASE_PROVIDER`, which Podman makes possible. Never claim these passed without having actually run them somewhere.
 - [ ] CI `format` job green.
 - [ ] The five pre-existing `IWikiService` call sites still compile without behavioural change: `WikiController`, `SeoController`, `BotPrerenderMiddleware`, `WikiCommands`, `WikiFunctions`. (`WikiController` and `BotPrerenderMiddleware` gain the localization service by design; `SeoController` gains it for sitemap alternates; `WikiCommands` and `WikiFunctions` gain it for reads. What must not change is any *existing* method's behaviour when no locale is requested.)
 - [ ] No seeded translations exist: `WikiStartupSeedingTests.NoTranslationsAreSeeded` passes.

@@ -1,4 +1,5 @@
 @using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Resources
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services
 @using System.Net
@@ -31,6 +32,7 @@
 else if (DisplayAsHero)
 {
     <div class="WikiContent WikiContent--hero" style="text-align:center;">
+        @LocaleBanner
         <div class="mud-card-content">
             @if (Article.Image is not null)
             {
@@ -64,6 +66,8 @@ else
                     <MudIcon Icon="@Icons.Material.Filled.History" Style="font-size:0.875rem;" /> @Loc["ResHistory"]
                 </a>
             </div>
+
+            @LocaleBanner
 
             <div class="WikiContent wiki-article-body">
                 <div class="mud-card-content">
@@ -104,6 +108,10 @@ else
     /// <summary>Category segment — part of the page's identity.</summary>
     [Parameter]
     public string? Category { get; init; }
+
+    /// <summary>The locale the reader asked for via <c>?lang=</c>; null means their stored preference.</summary>
+    [Parameter]
+    public string? Locale { get; init; }
 
     [Parameter]
     public WikiArticle? Article { get; init; }
@@ -147,6 +155,73 @@ else
 
     private string HistoryHref =>
         $"{WikiRoutes.WikiPathFor(Namespace, Category, Slug)}/history";
+
+    /// <summary>
+    /// Per-session only, deliberately: a translation gap should keep nagging on the next page view, so this
+    /// is component state rather than anything persisted.
+    /// </summary>
+    private bool _fallbackDismissed;
+
+    private bool ShowFallbackNotice => Article?.IsFallback == true && !_fallbackDismissed;
+
+    /// <summary>Locales worth offering as a link — everything available except the one on screen.</summary>
+    private IEnumerable<string> OtherLocales =>
+        Article?.AvailableLocales
+            .Where(l => !string.Equals(l, Article.Locale, StringComparison.OrdinalIgnoreCase))
+        ?? [];
+
+    private string LocaleHref(string locale) =>
+        $"/wiki/{Namespace ?? "main"}/{Category ?? "general"}/{Slug}?lang={Uri.EscapeDataString(locale)}";
+
+    /// <summary>
+    /// The locale a "Translate this page" link should target. The raw <c>?lang=</c> wins over
+    /// <see cref="WikiArticle.RequestedLocale"/>: a reader who asked for a locale the server normalised
+    /// away must still land in an editor for the locale <em>they</em> asked for.
+    /// </summary>
+    private string TargetLocale =>
+        string.IsNullOrWhiteSpace(Locale) ? Article?.RequestedLocale ?? string.Empty : Locale;
+
+    /// <summary>
+    /// The fallback notice and language chips. Defined once and rendered in both the hero and grid
+    /// branches — duplicating the markup is how the home page ends up silently never showing it.
+    /// </summary>
+    private RenderFragment LocaleBanner => @<div>
+        @if (ShowFallbackNotice)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mb-2">
+                <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                    <span>
+                        @string.Format(Loc["WikiFallbackNotice"],
+                            PortalLocales.DisplayName(Article!.RequestedLocale),
+                            PortalLocales.DisplayName(Article!.Locale))
+                    </span>
+                    <AuthorizeView Policy="wiki.edit">
+                        <Authorized>
+                            <MudLink Href="@($"/wiki/{Namespace ?? "main"}/{Category ?? "general"}/{Slug}/edit?lang={Uri.EscapeDataString(TargetLocale)}")"
+                                     Typo="Typo.body2">
+                                @Loc["WikiFallbackCreateTranslation"]
+                            </MudLink>
+                        </Authorized>
+                    </AuthorizeView>
+                    <div style="flex:1;"></div>
+                    <MudIconButton Class="wiki-fallback-dismiss"
+                                   Icon="@Icons.Material.Filled.Close"
+                                   Size="Size.Small"
+                                   OnClick="@(() => _fallbackDismissed = true)" />
+                </div>
+            </MudAlert>
+        }
+        @if (OtherLocales.Any())
+        {
+            <div class="wiki-lang-chips">
+                <span class="wiki-lang-chips-label">@Loc["WikiAvailableTranslations"]</span>
+                @foreach (var locale in OtherLocales)
+                {
+                    <a href="@LocaleHref(locale)">@PortalLocales.Flag(locale) @PortalLocales.DisplayName(locale)</a>
+                }
+            </div>
+        }
+    </div>;
 
     protected override async Task OnParametersSetAsync()
     {

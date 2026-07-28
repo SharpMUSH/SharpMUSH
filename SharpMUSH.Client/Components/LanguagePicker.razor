@@ -1,4 +1,4 @@
-@using System.Globalization
+@using SharpMUSH.Client.Resources
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 
@@ -23,29 +23,8 @@
 
     private readonly record struct LanguageOption(string Code, string DisplayName, string Flag);
 
-    /// <summary>
-    /// Supported locale codes and their flag emoji. Display names are derived
-    /// automatically from <see cref="CultureInfo.NativeName"/>.
-    /// To add a new language, add its code and flag here — the display name
-    /// is resolved from the framework.
-    /// </summary>
-    private static readonly (string Code, string Flag)[] SupportedLocales =
-    [
-        ("en", "\U0001F1FA\U0001F1F8"),
-        ("fr", "\U0001F1EB\U0001F1F7")
-    ];
-
-    private static readonly LanguageOption[] _languages = SupportedLocales
-        .Select(l =>
-        {
-            var culture = CultureInfo.GetCultureInfo(l.Code);
-            // NativeName gives the language name in its own language (e.g. "français" for "fr").
-            // Capitalize the first character for display.
-            var name = culture.NativeName;
-            if (name.Length > 0 && char.IsLower(name[0]))
-                name = char.ToUpper(name[0], culture) + name[1..];
-            return new LanguageOption(l.Code, name, l.Flag);
-        })
+    private static readonly LanguageOption[] _languages = PortalLocales.Supported
+        .Select(l => new LanguageOption(l.Code, PortalLocales.DisplayName(l.Code), l.Flag))
         .ToArray();
 
     protected override async Task OnInitializedAsync()
