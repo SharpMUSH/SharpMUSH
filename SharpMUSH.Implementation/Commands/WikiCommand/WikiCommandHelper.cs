@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -41,6 +43,48 @@ public static class WikiCommandHelper
 		}
 
 		return (WikiNamespace.Main, WikiHelpers.DefaultCategory, WikiHelpers.Slugify(trimmed));
+	}
+
+	/// <summary>
+	/// Splits a <em>write</em> target of the form <c>&lt;page&gt;/&lt;lang&gt;</c> into the page reference
+	/// (still to be passed to <see cref="ResolveTarget"/>) and a canonicalised BCP-47 locale tag.
+	/// </summary>
+	/// <remarks>
+	/// The locale a translation is written into is explicit and mandatory: an absent, ambiguous or
+	/// unrecognised tag is an error naming the problem, never a silent default and never the executor's
+	/// <c>LOCALE</c>. Reads may guess — a wrong guess shows the reader the wrong translation, which is
+	/// visible and recoverable. A wrong guess on a write files English prose as the French translation,
+	/// which is neither.
+	/// <para>
+	/// <c>/</c> is the separator because it is the PennMUSH convention for naming a sub-part of a target
+	/// (<c>@set obj/attr=…</c>) and because it keeps the whole right-hand side content: nothing scans the
+	/// translated prose for a leading tag, so no French sentence opening with "De" can be mistaken for a
+	/// request to write German. A target carrying more than one <c>/</c> is refused rather than split on a
+	/// chosen occurrence, so an unexpected shape stops the write instead of guessing at it.
+	/// </para>
+	/// </remarks>
+	public static OneOf<(string PageTarget, string Locale), Error<string>> SplitLocaleTarget(string target)
+	{
+		var parts = target.Trim().Split('/');
+
+		switch (parts.Length)
+		{
+			case 1:
+				return new Error<string>(
+					"a translation needs an explicit language: @wiki/translate <page>/<lang>=<text>");
+			case > 2:
+				return new Error<string>(
+					$"'{target.Trim()}' has more than one '/'; the form is <page>/<lang>.");
+		}
+
+		var pageTarget = parts[0].Trim();
+		if (pageTarget.Length == 0)
+			return new Error<string>("that names a language but no page: @wiki/translate <page>/<lang>=<text>");
+
+		var locale = WikiHelpers.NormalizeLocale(parts[1].Trim());
+		return locale.IsT1
+			? locale.AsT1
+			: (pageTarget, locale.AsT0);
 	}
 
 	/// <summary>

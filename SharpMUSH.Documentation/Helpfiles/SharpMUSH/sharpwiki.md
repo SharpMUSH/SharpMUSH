@@ -25,6 +25,7 @@ Authoring:
 * `@wiki/edit <page>=<markdown>` - replace a page's content
 * `@wiki/append <page>=<markdown>` - add a paragraph to a page
 * `@wiki/rollback <page>=<revision #>` - restore an earlier revision
+* `@wiki/translate <page>/<lang>=<markdown>` - write one locale's translation
 
 Administration:
 * `@wiki/delete <page>` - delete a page (wizard)
@@ -46,9 +47,16 @@ appears in brackets next to the revision number on the header line.
 * `@wiki/history <page>` shows your locale's revision stream, which is numbered
   separately from the source's; `@wiki/history/source <page>` shows the source
   locale's.
+* `@wiki/translate <page>/<lang>=<markdown>` - write the `<lang>` translation.
+  See [@wiki/translate].
 
 Like `/noeval`, `/source` is a modifier rather than an action, so it combines
 with `/view`, `/history` and `/search` instead of replacing them.
+
+Your `LOCALE` decides what you *read*. It never decides what you *write*:
+`@wiki/translate` takes the language in the command and refuses to run without
+it. Getting a read wrong shows you the wrong translation, which you can see and
+undo; getting a write wrong files your English under French, which you cannot.
 
 `@wiki/search` matches every locale a page has been translated into, not just
 the one it was written in, so you find a page by whatever wording you remember.
@@ -77,11 +85,13 @@ appear in-game as a placeholder.
 # @WIKI/EDIT
 # @WIKI/APPEND
 # @WIKI/ROLLBACK
+# @WIKI/TRANSLATE
 
 - `@wiki/create <title>=<markdown>`
 - `@wiki/edit <page>=<markdown>`
 - `@wiki/append <page>=<markdown>`
 - `@wiki/rollback <page>=<revision #>`
+- `@wiki/translate <page>/<lang>=<markdown>`
 
 @wiki/create makes a new wiki page. The title may carry a namespace prefix
 (`@wiki/create Help:House Rules=# House Rules`); the page's URL slug is
@@ -98,8 +108,27 @@ revision rather than rewriting history, so a rollback can itself be rolled
 back. The web portal offers the same action via the Restore button in each
 page's history dialog.
 
-Protected pages can only be edited by wizards. Each page records its author
-and last editor by dbref.
+@wiki/translate writes one locale's translation of a page — the same rows the
+web portal's language selector edits. The language is part of the target,
+after a slash: `@wiki/translate combat_primer/fr=...`. It is required, and it
+is never taken from your `LOCALE`; without it (or with a language tag SharpMUSH
+does not recognise) the command refuses and writes nothing. `@wiki/edit` writes
+the page itself, so translating a page into the language it was written in is
+refused too.
+
+A translation keeps its own title, revision numbers and draft flag; the page's
+category, tags and protection are inherited and cannot differ. @wiki/translate
+supplies only the body, so an existing translation keeps the title and the
+draft/published state it already had, and a brand-new one starts published,
+under the source page's title. Retitle it on the web portal.
+
+If somebody else saves the same translation between your reading it and your
+sending the command, you are told so and *nothing is written* — re-read the
+page and re-apply your text. The command never retries by itself, because a
+retry would put your older text on top of theirs.
+
+Protected pages can only be edited by wizards, translations included. Each page
+records its author and last editor by dbref.
 
 ### Example
 ```sharp
@@ -107,6 +136,10 @@ and last editor by dbref.
 WIKI: Created page 'Combat Primer' (combat_primer).
 > @wiki/append combat_primer=Roll initiative with `+init`.
 WIKI: Appended to 'Combat Primer' (now rev 2).
+> @wiki/translate combat_primer/fr=# Manuel de Combat
+WIKI: Wrote the fr translation of 'Combat Primer' (now rev 1).
+> @wiki/translate combat_primer=# Manuel de Combat
+WIKI: a translation needs an explicit language: @wiki/translate <page>/<lang>=<text>
 ```
 
 **See Also:**

@@ -668,6 +668,12 @@ public partial class ArangoDatabase : IWikiService
 				// 409) instead. Nothing of this caller's landed, so it is the same lost write the zero-rows
 				// branch reports — and it must be reported as one, or the loser of a real race is told its
 				// request was malformed. Still never re-read and re-applied: that overwrites the winner.
+				//
+				// Reporting a transaction abort as a lost write is deliberately conservative, and the project
+				// owner has accepted the false positive it admits: a writer whose expectedRevisionNumber was
+				// perfectly valid and who merely lost a scheduler race is still told the row changed. The
+				// remedy, if that ever costs anything, is a retry on ABORT ONLY — never on a stale revision,
+				// which must always surface to the human. Widening it to both is the data loss.
 				var current = await GetTranslationAsync(pageId, normalized);
 				return current.IsT0 ? WikiWriteConflict.StaleRevision : WikiWriteConflict.TranslationGone;
 			}

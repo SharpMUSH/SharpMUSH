@@ -363,14 +363,21 @@ public class WikiCommandTests
 	/// from in-game. Nothing else asserted that it stamps: dropping the <c>sourceLocale</c> argument left
 	/// every unit and integration test green, because an unstamped page still renders — it just resolves
 	/// against a blank locale forever, since nothing normalises empty on read.
+	/// <para>
+	/// The creator's <c>LOCALE</c> is set to something other than the default first, which is what makes
+	/// this able to fail: with both equal, "stamps the configured default" and "stamps the creator's
+	/// locale" are the same assertion, and the second is the rule this codebase does not follow.
+	/// </para>
 	/// </remarks>
 	[Test]
-	public async ValueTask WikiCreate_StampsTheConfiguredSourceLocale()
+	public async ValueTask WikiCreate_StampsTheConfiguredSourceLocaleNotTheCreatorsLocale()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiStampCreator");
 		var localization = WebAppFactoryArg.Services.GetRequiredService<IWikiLocalizationService>();
+		await Assert.That(localization.DefaultLocale).IsNotEqualTo("de");
 
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale de"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/create Stamped At Birth=body of a stamped page"));
 
@@ -629,5 +636,217 @@ public class WikiCommandTests
 		await Parser.CommandParse(wizard.Handle, ConnectionService, MModule.single("@wiki/recent"));
 
 		await ExpectNotify(wizard.DbRef, page.Slug);
+	}
+
+	/// <summary>Creates a plain English page through the service and returns it.</summary>
+	private async Task<WikiPage> SeedSourcePageAsync(string title, string body)
+	{
+		var created = await WikiService.CreateAsync(title, body, "#1", WikiNamespace.Main, "general", "en");
+		await Assert.That(created.IsT0)
+			.IsTrue()
+			.Because(created.Match(_ => "page seeded", error => error.Value));
+		return created.AsT0;
+	}
+
+	[Test]
+	public async ValueTask WikiTranslate_WritesTheNamedLocaleAndAReaderInItSeesIt()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslator");
+		var page = await SeedSourcePageAsync("Translatable Dragons", "en dragon body");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/translate {page.Slug}/fr=corps traduit en jeu"));
+		await ExpectNotify(player.DbRef, $"Wrote the fr translation of '{page.Title}'");
+
+		// Reading it back through @wiki proves the row landed where a French reader resolves to, which a
+		// write into the source page (or into some other locale) would not satisfy...
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/view {page.Slug}"));
+		await ExpectNotify(player.DbRef, "corps traduit en jeu");
+
+		// ...and the source body being untouched is what rules out "wrote the page itself".
+		var reloaded = await WikiService.GetBySlugAsync(page.Slug, "general", WikiNamespace.Main);
+		await Assert.That(reloaded.AsT0.MarkdownSource).IsEqualTo("en dragon body");
+	}
+
+	[Test]
+	public async ValueTask WikiTranslate_WithNoLanguageRefusesAndDoesNotFallBackToLocale()
+	{
+		// The rule this command exists to keep: reads may use LOCALE, writes never may. The executor is
+		// set to fr and then omits the tag — if the write silently borrowed LOCALE it would succeed and
+		// produce exactly the French row the explicit form produces, with nobody the wiser.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorNoLang");
+		var page = await SeedSourcePageAsync("Untagged Dragons", "en untagged body");
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/translate {page.Slug}=corps sans etiquette"));
+
+		await ExpectNotify(player.DbRef, "a translation needs an explicit language");
+
+		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
+		await Assert.That(fr.IsT1)
+			.IsTrue()
+			.Because("an untagged write must produce no translation at all, least of all one in the "
+				+ "writer's own reading locale");
+
+		var reloaded = await WikiService.GetBySlugAsync(page.Slug, "general", WikiNamespace.Main);
+		await Assert.That(reloaded.AsT0.MarkdownSource).IsEqualTo("en untagged body");
+	}
+
+	[Test]
+	public async ValueTask WikiTranslate_RejectsAnUnrecognisedLanguageTag()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorBadLang");
+		var page = await SeedSourcePageAsync("Bad Tag Dragons", "en bad-tag body");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/translate {page.Slug}/zzq=corps en langue inventee"));
+
+		// The message names the offending tag rather than reporting a generic syntax error.
+		await ExpectNotify(player.DbRef, "'zzq' is not a recognised BCP-47 locale tag");
+
+		var translations = await WikiService.GetTranslationsAsync(page.Id);
+		await Assert.That(translations.Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async ValueTask WikiTranslate_RefusesTheSourceLocaleWithAnInstruction()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorSameLocale");
+		var page = await SeedSourcePageAsync("Shadowing Dragons", "en shadowing body");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/translate {page.Slug}/en=an English shadow of the source"));
+
+		// No row may shadow the source. The store enforces it; what is asserted here is that the player
+		// is told what to do instead, rather than shown a raw error naming a storage id.
+		await ExpectNotify(player.DbRef, "use @wiki/edit to change the page itself");
+		await ExpectNoNotify(player.DbRef, "rather than adding a translation");
+
+		var reloaded = await WikiService.GetBySlugAsync(page.Slug, "general", WikiNamespace.Main);
+		await Assert.That(reloaded.AsT0.MarkdownSource).IsEqualTo("en shadowing body");
+	}
+
+	[Test]
+	public async ValueTask WikiTranslate_UpdatesAnExistingTranslationInsteadOfConflictingWithIt()
+	{
+		// The second write is the point: passing a null expectedRevisionNumber would make it an
+		// AlreadyExists conflict, i.e. a translation that can be created in-game and then never updated.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRetranslator");
+		var page = await SeedSourcePageAsync("Revised Dragons", "en revised body");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/translate {page.Slug}/fr=premiere version"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/translate {page.Slug}/fr=deuxieme version"));
+
+		await ExpectNotify(player.DbRef, "now rev 2");
+
+		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
+		await Assert.That(fr.IsT0).IsTrue();
+		await Assert.That(fr.AsT0.MarkdownSource).IsEqualTo("deuxieme version");
+		await Assert.That(fr.AsT0.RevisionNumber).IsEqualTo(2);
+	}
+
+	[Test]
+	public async ValueTask WikiTranslate_ObeysThePagesProtectionGate()
+	{
+		// A translation is an edit to the page and honours the page's own gate — no new permission.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorMortal");
+		var page = await SeedSourcePageAsync("Protected Dragons", "en protected body");
+		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/translate {page.Slug}/fr=corps interdit"));
+
+		await ExpectNotify(player.DbRef, $"'{page.Title}' is protected");
+
+		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
+		await Assert.That(fr.IsT1).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask WikiTranslate_LetsAWizardTranslateAProtectedPage()
+	{
+		// Without this, "refuse every translation of a protected page" would satisfy the test above.
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorWiz");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		var page = await SeedSourcePageAsync("Wizard Protected Dragons", "en wiz protected body");
+		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
+
+		await Parser.CommandParse(wizard.Handle, ConnectionService,
+			MModule.single($"@wiki/translate {page.Slug}/fr=corps autorise"));
+
+		await ExpectNotify(wizard.DbRef, $"Wrote the fr translation of '{page.Title}'");
+
+		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
+		await Assert.That(fr.IsT0).IsTrue();
+		await Assert.That(fr.AsT0.MarkdownSource).IsEqualTo("corps autorise");
+	}
+
+	[Test]
+	public async ValueTask WikiTranslate_KeepsAnExistingTranslationsDraftStateAndTitle()
+	{
+		// The command supplies a body and nothing else. A web translator's in-progress draft must not be
+		// published, nor retitled to the source title, by somebody typing a body correction in-game.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorDraftKeeper");
+		var slug = await SeedTranslatedPageAsync(
+			"Draft Keeping Dragons", "en keeper body", "Dragons Conserves", "corps initial", published: false);
+		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/translate {slug}/fr=corps corrige"));
+
+		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
+		await Assert.That(fr.IsT0).IsTrue();
+		await Assert.That(fr.AsT0.MarkdownSource).IsEqualTo("corps corrige");
+		await Assert.That(fr.AsT0.Published).IsFalse();
+		await Assert.That(fr.AsT0.Title).IsEqualTo("Dragons Conserves");
+	}
+
+	[Test]
+	public async ValueTask WikiTranslate_MakesANewTranslationReadableRatherThanADraft()
+	{
+		// @wiki has no per-translation publish switch, so a draft created here would be unreachable
+		// in-game forever — including by the translator who wrote it.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorFresh");
+		var page = await SeedSourcePageAsync("Fresh Dragons", "en fresh body");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/translate {page.Slug}/fr=corps tout neuf"));
+
+		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
+		await Assert.That(fr.IsT0).IsTrue();
+		await Assert.That(fr.AsT0.Published).IsTrue();
+		await Assert.That(fr.AsT0.Title).IsEqualTo(page.Title);
+	}
+
+	[Test]
+	public async ValueTask WikiTranslate_RefusesATargetCarryingMoreThanOneSlash()
+	{
+		// Two slashes have no unambiguous reading, and picking one occurrence would be a guess about
+		// where a player's page name ends — the one thing this syntax exists to avoid.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorTwoSlash");
+		var page = await SeedSourcePageAsync("Ambiguous Dragons", "en ambiguous body");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/translate {page.Slug}/fr/de=corps ambigu"));
+
+		await ExpectNotify(player.DbRef, "has more than one '/'");
+
+		var translations = await WikiService.GetTranslationsAsync(page.Id);
+		await Assert.That(translations.Count).IsEqualTo(0);
 	}
 }

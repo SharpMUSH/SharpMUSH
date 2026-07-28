@@ -611,6 +611,12 @@ public partial class MemgraphDatabase : IWikiService
 				// never fires and it arrives here. Nothing of this caller's landed, making it the same lost
 				// write the zero-rows branch reports, and just as un-retryable: re-running the lambda would
 				// re-apply this caller's stale markdown over the winner's.
+				//
+				// Reporting a transaction abort as a lost write is deliberately conservative, and the project
+				// owner has accepted the false positive it admits: a writer whose expectedRevisionNumber was
+				// perfectly valid and who merely lost a scheduler race is still told the row changed. The
+				// remedy, if that ever costs anything, is a retry on ABORT ONLY — never on a stale revision,
+				// which must always surface to the human. Widening it to both is the data loss.
 				var current = await GetTranslationAsync(pageId, normalized);
 				return current.IsT0 ? WikiWriteConflict.StaleRevision : WikiWriteConflict.TranslationGone;
 			}

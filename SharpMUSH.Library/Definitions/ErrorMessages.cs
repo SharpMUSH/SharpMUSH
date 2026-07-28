@@ -217,6 +217,14 @@ public static class ErrorMessages
 		public const string BadArgumentFormatToSet = "#-1 BAD ARGUMENT FORMAT TO @SET";
 		public const string BadArgumentsToMailCommand = "#-1 BAD ARGUMENTS TO MAIL COMMAND";
 		public const string BadArgumentsToWikiCommand = "#-1 BAD ARGUMENTS TO WIKI COMMAND";
+
+		/// <summary>
+		/// A wiki write lost a race with another writer. Distinct from
+		/// <see cref="BadArgumentsToWikiCommand"/> on purpose: the request was well-formed and the answer
+		/// is "read what landed and re-apply", not "fix your syntax". Softcode has to be able to tell those
+		/// apart, and it is never a signal to retry.
+		/// </summary>
+		public const string WikiWriteConflict = "#-1 WIKI WRITE CONFLICT";
 		public const string CannotSetContentLengthHeader = "#-1 CANNOT SET CONTENT-LENGTH HEADER";
 		public const string CommandNotFound = "#-1 COMMAND NOT FOUND";
 		public const string ContentTypeCannotBeEmpty = "#-1 CONTENT-TYPE CANNOT BE EMPTY";

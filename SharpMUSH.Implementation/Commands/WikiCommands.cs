@@ -20,7 +20,8 @@ public partial class Commands
 		Switches =
 		[
 			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
-			"DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "TAG", "PUBLISH", "UNPUBLISH", "NOEVAL", "SOURCE"
+			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "TAG", "PUBLISH", "UNPUBLISH",
+			"NOEVAL", "SOURCE"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["page", "content"])]
@@ -85,6 +86,11 @@ public partial class Commands
 				=> await EditWiki.Edit(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1!, append: true),
 			"ROLLBACK" when hasArg0 && hasArg1
 				=> await EditWiki.Rollback(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1!),
+			// The one write that takes a locale, and it takes it from arg0 ("<page>/<lang>") rather than
+			// from `locale` above. That variable is the reader's LOCALE: guessing with it here would file
+			// a translator's prose under whatever language they happen to read the game in.
+			"TRANSLATE" when hasArg0 && hasArg1
+				=> await EditWiki.Translate(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, arg1!),
 			"DELETE" when hasArg0 && !hasArg1
 				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Delete),
 			"PROTECT" when hasArg0 && !hasArg1
