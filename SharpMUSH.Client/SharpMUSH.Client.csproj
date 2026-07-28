@@ -11,8 +11,15 @@
 		     SharpMUSH.Library: the browser bundle no longer pulls FSharp.Core / TelnetNegotiationCore
 		     (they reached it only transitively through Library). -->
 		<PublishTrimmed>true</PublishTrimmed>
-		<!-- Sharded ICU (default): the portal offers en and fr (LanguagePicker), both covered by the
-		     EFIGS shard the runtime loads on demand — full ICU shipped ~120 KB of dead locale data. -->
+		<!-- Full ICU. Blazor ships one of four prebuilt CLDR shards and they do not compose; the
+		     portal's target locales span all three partial sets (de/es/fr are EFIGS, most of the rest
+		     are no_CJK, zh-Hans is CJK), so no partial shard covers them. ~1 MB more than EFIGS,
+		     fetched once and cached. See docs/localization/adding-languages.md.
+		     This is not a completeness nicety: the shard governs CultureInfo, not resource lookup.
+		     Satellite assemblies resolve regardless, so on a sharded build an unshard-covered locale
+		     renders fully translated and still formats its dates and numbers in English, with no test
+		     failing. AdminRoles.razor's ToString("MMM d, yyyy HH:mm") is exactly that case. -->
+		<BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
 	</PropertyGroup>
 
 	<ItemGroup>
