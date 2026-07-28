@@ -105,7 +105,8 @@ public partial class Functions
 	/// <summary>
 	/// wikisearch(&lt;text&gt;)
 	/// Returns a space-separated list of page references whose title or body
-	/// contains the given text (case-insensitive).
+	/// contains the given text (case-insensitive), in any locale the page has been
+	/// translated into.
 	/// </summary>
 	[SharpFunction(Name = "wikisearch", MinArgs = 1, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -119,11 +120,17 @@ public partial class Functions
 		}
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
-		// Softcode has no reader to check drafts against — the same reason wiki() passes
-		// includeDrafts: false — so an unpublished page is never discoverable from a function.
-		var matches = await ListWiki.SearchPagesAsync(wikiService, needle, 100, includeDrafts: false);
+		var localization = parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
 
-		return new CallState(string.Join(" ", matches.Select(WikiCommandHelper.DisplayReference)));
+		// Softcode has no reader to check drafts against — the same reason wiki() passes
+		// includeDrafts: false — so neither an unpublished page nor an unpublished translation is ever
+		// discoverable from a function. requestedLocale is null because the matched locale only breaks
+		// display ties and this function returns references, which have no locale dimension; reading the
+		// executor's LOCALE to compute a value that is then discarded would be a query for nothing.
+		var matches = await ListWiki.SearchPagesAsync(
+			wikiService, localization, needle, 100, includeDrafts: false, requestedLocale: null);
+
+		return new CallState(string.Join(" ", matches.Select(m => WikiCommandHelper.DisplayReference(m.Page))));
 	}
 
 	/// <summary>

@@ -162,6 +162,60 @@ public class WikiTranslationIntegrationTests
 		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "de")).IsT1).IsTrue();
 	}
 
+	/// <summary>
+	/// Pages the whole translation stream and returns every row belonging to <paramref name="pageId"/>.
+	/// The session database is shared, so nothing here may assume a total count — but paging really does
+	/// have to be exercised, because a provider whose LIMIT/START (or SKIP/LIMIT) is transposed returns a
+	/// plausible-looking answer that a single unpaged fetch would never catch.
+	/// </summary>
+	private async Task<List<WikiTranslation>> ScanTranslationsAsync(string pageId)
+	{
+		var found = new List<WikiTranslation>();
+		const int window = 5;
+		for (var skip = 0; ; skip += window)
+		{
+			var batch = await Wiki.GetAllTranslationsAsync(skip, window);
+			if (batch.Count == 0) break;
+			found.AddRange(batch.Where(t => t.PageId == pageId));
+			if (batch.Count < window) break;
+		}
+
+		return found;
+	}
+
+	[Test]
+	public async Task GetAllTranslationsAsync_PagesTheWholeStreamWithBodies()
+	{
+		var page = await CreateSourcePageAsync("BulkScan");
+		await Wiki.UpsertTranslationAsync(
+			page.Id, "fr", "Titre fr", "corps bulk fr", "#2", null, true, expectedRevisionNumber: null);
+		await Wiki.UpsertTranslationAsync(
+			page.Id, "de", "Titel de", "korpus bulk de", "#2", null, true, expectedRevisionNumber: null);
+
+		var mine = await ScanTranslationsAsync(page.Id);
+
+		await Assert.That(mine.Select(t => t.Locale).Order()).IsEquivalentTo(new[] { "de", "fr" });
+		await Assert.That(mine.Single(t => t.Locale == "fr").MarkdownSource).IsEqualTo("corps bulk fr");
+		await Assert.That(mine.Single(t => t.Locale == "de").PlainText)
+			.Contains("korpus")
+			.Because("in-game search matches PlainText, so a provider returning bodyless rows here would "
+				+ "silently make every translation unsearchable rather than fail");
+	}
+
+	[Test]
+	public async Task GetAllTranslationsAsync_IncludesUnpublishedDrafts()
+	{
+		var page = await CreateSourcePageAsync("BulkDraft");
+		await Wiki.UpsertTranslationAsync(
+			page.Id, "de", "Entwurf", "korpus entwurf", "#2", null, published: false, expectedRevisionNumber: null);
+
+		var mine = await ScanTranslationsAsync(page.Id);
+
+		await Assert.That(mine.Single().Published)
+			.IsFalse()
+			.Because("this mirrors GetAllPagesAsync: storage returns every row and the caller filters");
+	}
+
 	[Test]
 	public async Task GetTranslationsAsync_IncludesUnpublishedDrafts()
 	{

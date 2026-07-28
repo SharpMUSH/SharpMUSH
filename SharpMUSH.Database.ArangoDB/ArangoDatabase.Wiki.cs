@@ -520,6 +520,24 @@ public partial class ArangoDatabase : IWikiService
 			.AsReadOnly();
 	}
 
+	public async Task<IReadOnlyList<WikiTranslation>> GetAllTranslationsAsync(int skip = 0, int take = 50)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			"FOR t IN @@c SORT t.PageId ASC, t.Locale ASC LIMIT @skip, @take RETURN t",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiTranslations },
+				{ "skip", skip },
+				{ "take", take }
+			});
+
+		return result
+			.Where(e => e.ValueKind != JsonValueKind.Undefined)
+			.Select(WikiTranslationFromJson)
+			.ToList()
+			.AsReadOnly();
+	}
+
 	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
 	{
 		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);

@@ -477,6 +477,53 @@ public class InMemoryWikiServiceTests
 	}
 
 	[Test]
+	public async Task GetAllTranslationsAsync_ReturnsEveryLocaleWithItsBody_OrderedAndPaged()
+	{
+		var svc = BuildService();
+		var first = await CreatePageAsync(svc, "Alpha");
+		var second = await CreatePageAsync(svc, "Beta");
+		foreach (var (page, locale) in new[] { (first, "fr"), (first, "de"), (second, "fr") })
+		{
+			var written = await svc.UpsertTranslationAsync(
+				page.Id, locale, $"{page.Title} ({locale})", $"corps {page.Slug} {locale}", "#2", null,
+				published: true, expectedRevisionNumber: null);
+			await Assert.That(written.IsT0).IsTrue();
+		}
+
+		var all = await svc.GetAllTranslationsAsync(0, 50);
+
+		await Assert.That(all.Count).IsEqualTo(3);
+		await Assert.That(all.Select(t => $"{t.PageId}/{t.Locale}").ToList())
+			.IsEquivalentTo(new[] { $"{first.Id}/de", $"{first.Id}/fr", $"{second.Id}/fr" })
+			.Because("the order is (page, locale) so paging through the stream is stable");
+		await Assert.That(all.All(t => t.PlainText.Contains("corps")))
+			.IsTrue()
+			.Because("search matches on bodies, so unlike GetTranslationsAsync this cannot be bodyless");
+
+		var window = await svc.GetAllTranslationsAsync(skip: 1, take: 1);
+		await Assert.That(window.Count).IsEqualTo(1);
+		await Assert.That(window[0].Locale).IsEqualTo("fr");
+		await Assert.That(window[0].PageId).IsEqualTo(first.Id);
+	}
+
+	[Test]
+	public async Task GetAllTranslationsAsync_IncludesUnpublishedDrafts()
+	{
+		// The contract says drafts are included and filtering is the caller's job. If this ever started
+		// filtering, the callers that DO filter would keep passing while the ones that forgot would too.
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Gamma");
+		await svc.UpsertTranslationAsync(
+			page.Id, "fr", "Gamma (fr)", "brouillon", "#2", null,
+			published: false, expectedRevisionNumber: null);
+
+		var all = await svc.GetAllTranslationsAsync();
+
+		await Assert.That(all.Count).IsEqualTo(1);
+		await Assert.That(all[0].Published).IsFalse();
+	}
+
+	[Test]
 	public async Task UpsertTranslationAsync_NormalisesTheLocaleTag()
 	{
 		var svc = BuildService();

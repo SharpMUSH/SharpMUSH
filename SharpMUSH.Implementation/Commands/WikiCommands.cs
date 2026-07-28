@@ -72,7 +72,7 @@ public partial class Commands
 			"LIST" when !hasArg1
 				=> await ListWiki.List(parser, Mediator!, wikiService, localization, NotifyService!, arg0, locale, forceSource),
 			"SEARCH" when hasArg0 && !hasArg1
-				=> await ListWiki.Search(parser, Mediator!, wikiService, NotifyService!, arg0!),
+				=> await ListWiki.Search(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource),
 			"RECENT" when !hasArg1
 				=> await ListWiki.Recent(parser, Mediator!, wikiService, localization, NotifyService!, arg0, locale, forceSource),
 			"HISTORY" when hasArg0 && !hasArg1

@@ -349,6 +349,17 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult(result);
 	}
 
+	public Task<IReadOnlyList<WikiTranslation>> GetAllTranslationsAsync(int skip = 0, int take = 50)
+	{
+		IReadOnlyList<WikiTranslation> result = _translations.Values
+			.OrderBy(t => t.PageId, StringComparer.Ordinal)
+			.ThenBy(t => t.Locale, StringComparer.OrdinalIgnoreCase)
+			.Skip(skip)
+			.Take(take)
+			.ToList();
+		return Task.FromResult(result);
+	}
+
 	public Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
 	{
 		var key = TranslationKey(pageId, locale);

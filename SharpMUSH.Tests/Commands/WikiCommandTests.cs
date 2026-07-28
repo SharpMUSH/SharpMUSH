@@ -487,6 +487,111 @@ public class WikiCommandTests
 	}
 
 	[Test]
+	public async ValueTask WikiSearch_FindsAPageByItsTranslationAndMarksTheLocale()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiLocaleSearcher");
+		var slug = await SeedTranslatedPageAsync(
+			"Searchable Dragons", "en searchable body", "Dragons Cherchables",
+			"le corps contient sangloterie", published: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/search sangloterie"));
+
+		// The needle appears in no English text this page holds, so finding it at all proves the
+		// translation stream was scanned; the [fr] marker is what tells the reader why.
+		await ExpectNotify(player.DbRef, "1 page(s) matching 'sangloterie'");
+		await ExpectNotify(player.DbRef, $"{slug}");
+		await ExpectNotify(player.DbRef, "[fr]");
+	}
+
+	[Test]
+	public async ValueTask WikiSearch_ReportsAPageMatchingInBothLocalesOnce()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDedupeSearcher");
+		await SeedTranslatedPageAsync(
+			"Dedupe Dragons", "en body with kadingir", "Dragons Dedupe",
+			"corps francais avec kadingir", published: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/search kadingir"));
+
+		// Two matching rows, one page. Scanning two streams without a dedupe would say "2 page(s)".
+		await ExpectNotify(player.DbRef, "1 page(s) matching 'kadingir'");
+		await ExpectNoNotify(player.DbRef, "[fr]");
+	}
+
+	[Test]
+	public async ValueTask WikiSearch_ReportsTheReadersOwnLocaleWhenSeveralMatched()
+	{
+		// Same double match as above, read by a French player. The source stream is scanned first, so
+		// without the tie-break the reader would be told [en] — the one locale they did not ask for.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTieBreakSearcher");
+		await SeedTranslatedPageAsync(
+			"Tiebreak Dragons", "en body with garabatos", "Dragons Egalite",
+			"corps francais avec garabatos", published: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/search garabatos"));
+
+		await ExpectNotify(player.DbRef, "1 page(s) matching 'garabatos'");
+		await ExpectNotify(player.DbRef, "[fr]");
+	}
+
+	[Test]
+	public async ValueTask WikiSearch_SourceSwitchIgnoresTranslations()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiSourceSearcher");
+		await SeedTranslatedPageAsync(
+			"Source Only Dragons", "en source-only body", "Dragons Source Seuls",
+			"corps avec zwiebelturm", published: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/search/source zwiebelturm"));
+
+		await ExpectNotify(player.DbRef, "0 page(s) matching 'zwiebelturm'");
+	}
+
+	[Test]
+	public async ValueTask WikiSearch_DoesNotDiscloseUnpublishedTranslationsToAMortal()
+	{
+		// Step 1 stopped draft *pages* leaking; this is the same invariant one level down. The host page is
+		// published and findable in English — only the French draft's text must be unreachable.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftTrSearcher");
+		var slug = await SeedTranslatedPageAsync(
+			"Draft Translation Dragons", "en host body", "Dragons Brouillon",
+			"corps brouillon avec quenouille", published: false);
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/search quenouille"));
+
+		await ExpectNotify(player.DbRef, "0 page(s) matching 'quenouille'");
+		await ExpectNoNotify(player.DbRef, slug);
+	}
+
+	[Test]
+	public async ValueTask WikiSearch_StillFindsUnpublishedTranslationsForAWizard()
+	{
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftTrWizard");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		var slug = await SeedTranslatedPageAsync(
+			"Wizard Draft Translation Dragons", "en wiz host body", "Dragons Brouillon Sorcier",
+			"corps brouillon avec grelinette", published: false);
+
+		await Parser.CommandParse(wizard.Handle, ConnectionService,
+			MModule.single("@wiki/search grelinette"));
+
+		await ExpectNotify(wizard.DbRef, "1 page(s) matching 'grelinette'");
+		await ExpectNotify(wizard.DbRef, slug);
+	}
+
+	[Test]
 	public async ValueTask WikiList_DoesNotDiscloseUnpublishedPagesToAMortal()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(

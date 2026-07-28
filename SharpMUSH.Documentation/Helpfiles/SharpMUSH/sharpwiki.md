@@ -16,7 +16,7 @@ the main namespace. Valid namespaces: main, help, character, system.
 Viewing and discovery:
 * `@wiki <page>` or `@wiki/view <page>` - display a page
 * `@wiki/list [<namespace>]` - list pages
-* `@wiki/search <text>` - find pages by title or content
+* `@wiki/search <text>` - find pages by title or content, in any locale
 * `@wiki/recent [<count>]` - recently edited pages (default 10)
 * `@wiki/history <page>` - revision history
 
@@ -48,9 +48,19 @@ appears in brackets next to the revision number on the header line.
   locale's.
 
 Like `/noeval`, `/source` is a modifier rather than an action, so it combines
-with `/view` and `/history` instead of replacing them. Unpublished translations
-are invisible to anyone who could not edit the page, and never appear in
-`@wiki/list`. `@wiki/search` matches against the source text only.
+with `/view`, `/history` and `/search` instead of replacing them.
+
+`@wiki/search` matches every locale a page has been translated into, not just
+the one it was written in, so you find a page by whatever wording you remember.
+Each page is listed once however many of its locales matched; when the text
+that matched was not the page's own source locale, that locale appears in
+brackets after the line, and if several locales matched, yours is the one
+shown. `@wiki/search/source <text>` matches source text only.
+
+Drafts stay out of the way: unpublished pages and unpublished translations are
+invisible to anyone but a wizard in `@wiki/list`, `@wiki/search` and
+`@wiki/recent`, and are never returned by `wikilist()`, `wikisearch()` or
+`wikirecent()`.
 
 Page content is Markdown; see `help markdown` or the wiki's own
 "Help:Markdown Guide" page (`@wiki help:markdown_guide`) for the supported
@@ -216,7 +226,10 @@ help:markdown_guide
 - `wikisearch(<text>)`
 
 Returns a space-separated list of page references whose title or content
-contains *<text>* (case-insensitive). Limited to the first 100 matches.
+contains *<text>* (case-insensitive), in any locale the page has been
+translated into. Each page appears once however many of its locales matched.
+Unpublished pages and unpublished translations are never returned. Limited to
+the first 100 matches.
 
 ### Example
 ```sharp

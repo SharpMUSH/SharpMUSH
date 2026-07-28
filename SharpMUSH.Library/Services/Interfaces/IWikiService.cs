@@ -147,6 +147,19 @@ public interface IWikiService
 	Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId);
 
 	/// <summary>
+	/// Lists ALL translations with their bodies, ordered by page then locale, with skip/take pagination.
+	/// Includes unpublished drafts — callers are responsible for visibility filtering, exactly as with
+	/// <see cref="GetAllPagesAsync"/>.
+	/// </summary>
+	/// <remarks>
+	/// Deliberately symmetric with <see cref="GetAllPagesAsync"/> and deliberately not a query: in-game
+	/// search is an in-process scan, so making the translation stream readable in bulk is the whole of what
+	/// the four backends have to provide. Bodies are included because that is what search matches on —
+	/// <see cref="GetTranslationsAsync"/> returns bodyless summaries and cannot serve this.
+	/// </remarks>
+	Task<IReadOnlyList<WikiTranslation>> GetAllTranslationsAsync(int skip = 0, int take = 50);
+
+	/// <summary>
 	/// Retrieves one translation by its <c>(pageId, locale)</c> identity. <paramref name="locale"/> is
 	/// matched case-insensitively after normalisation.
 	/// Returns <c>NotFound</c> when no translation exists for that locale.

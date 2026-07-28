@@ -470,6 +470,17 @@ public partial class MemgraphDatabase : IWikiService
 			.AsReadOnly();
 	}
 
+	public async Task<IReadOnlyList<WikiTranslation>> GetAllTranslationsAsync(int skip = 0, int take = 50)
+	{
+		await using var session = driver.AsyncSession();
+		var result = await session.RunAsync(
+			"MATCH (t:WikiTranslation) RETURN t ORDER BY t.pageId ASC, t.locale ASC SKIP $skip LIMIT $take",
+			new { skip, take });
+
+		var records = await result.ToListAsync();
+		return records.Select(r => NodeToWikiTranslation(r["t"].As<INode>())).ToList().AsReadOnly();
+	}
+
 	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
 	{
 		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);

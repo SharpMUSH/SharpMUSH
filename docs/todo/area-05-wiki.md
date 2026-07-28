@@ -49,6 +49,7 @@
 - [x] Staff — translation-coverage column and locale filter (incl. "missing only") on `/admin/wiki`
 - [x] SEO — `hreflang` alternates + `x-default` + `<html lang>` in the bot prerender, `xhtml:link` in the sitemap; canonical unchanged
 - [x] In-game — `@wiki` reads the executor's `LOCALE`, `/SOURCE` forces the source; `wiki()` takes an optional third locale argument and a `locale` field
+- [x] Locale-aware in-game search — `@wiki/search` and `wikisearch()` scan translation bodies as well as source bodies via `IWikiService.GetAllTranslationsAsync` (a plain paged bulk fetch, symmetric with `GetAllPagesAsync`, four mechanical implementations, no query-language work). Results dedupe by page, so a page matching in source *and* translation is one row; the reported locale prefers the reader's own and renders as `@wiki/view`'s `[xx]` marker when it is not the page's source locale; `/SOURCE` matches source bodies only. `wikisearch()` still returns bare references — that contract is pinned by `WikiList_ReturnsReferencesAndIsLocaleIndependent`
 - [x] Seeded pages are stamped `SourceLocale = "en"`; no translations are seeded
 - [x] Tests — `WikiLocaleResolverTests`, `WikiLocalizationServiceTests` (draft visibility first-class), `WikiHelpersLocaleTests`, `LocalizedWikiPageTests`, `WikiTranslationIntegrationTests` (cross-backend, including the negative constraint and concurrency cases), `WikiDisplayFallbackTests` / `WikiEditLocaleTests` (bUnit), `WikiStartupSeedingTests` (seed stamping, seed idempotency, no seeded translations, no unstamped seeded page after the migration)
 
@@ -67,7 +68,8 @@
 - NATS `portal.wiki.changes` event on edit
 - Owner-edit / royalty-edit-any permission tiers (currently: any authenticated user edits unprotected pages, Wizard edits everything)
 - Translating the seeded Help pages — content work needing native review, deliberately not machine-translated
-- Locale-aware wiki search (`@wiki/search`, `wikisearch()`, the omnisearch box) — matches source `PlainText` today
+- Locale-aware search for the web omnisearch box — the in-game side is done (see Localization above); the portal's search surface still matches source `PlainText` only
+- Search cost: `ListWiki.SearchPagesAsync` is a full in-process scan of both content streams, capped at 100 results, and scanning translations roughly doubles the rows read. Deliberate at in-game wiki sizes — no index, no query-language work in any of the four backends, and the same code path for all of them. Measure before replacing it with the area-14 full-text index
 - Localized category *display* names — Category is part of page identity, so it cannot be translated through the overlay
 - Listing performance: localized listings resolve per row. Measure before adding a denormalized title cache
 - `@wiki/list`'s header count still comes from `CountPagesAsync`, which counts drafts. The rows are filtered, so no draft title or reference is disclosed, but a mortal comparing "N page(s)" against the rows can infer how many drafts exist in the first 100. Fixing it properly means a published-aware `CountPagesAsync` in all four providers — a cross-cutting change wanting its own review, not a rider on the visibility fix

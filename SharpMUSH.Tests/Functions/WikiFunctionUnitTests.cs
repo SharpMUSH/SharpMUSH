@@ -128,6 +128,42 @@ public class WikiFunctionUnitTests
 	}
 
 	[Test]
+	public async Task WikiSearch_MatchesTranslationBodiesAndStillReturnsReferences()
+	{
+		var created = await WikiService.CreateAsync(
+			"Fn Translated Search Target", "en fn search body", "#1", WikiNamespace.Main, "general", "en");
+		await Assert.That(created.IsT0).IsTrue();
+		var page = created.AsT0;
+		var translated = await WikiService.UpsertTranslationAsync(
+			page.Id, "fr", "Cible fn traduite", "corps avec vertugadin", "#1", null,
+			published: true, expectedRevisionNumber: null);
+		await Assert.That(translated.IsT0).IsTrue();
+
+		var result = await Eval("wikisearch(vertugadin)");
+
+		await Assert.That(result)
+			.IsEqualTo(page.Slug)
+			.Because("wikisearch() returns references, never titles — a locale-aware search must widen what "
+				+ "is found without changing the shape of the answer");
+	}
+
+	[Test]
+	public async Task WikiSearch_DoesNotReturnPagesWhoseOnlyMatchIsADraftTranslation()
+	{
+		var created = await WikiService.CreateAsync(
+			"Fn Draft Translation Target", "en draft-tr host body", "#1", WikiNamespace.Main, "general", "en");
+		var page = created.AsT0;
+		await WikiService.UpsertTranslationAsync(
+			page.Id, "fr", "Cible brouillon", "corps avec fanfreluche", "#1", null,
+			published: false, expectedRevisionNumber: null);
+
+		await Assert.That(await Eval("wikisearch(fanfreluche)"))
+			.IsEqualTo(string.Empty)
+			.Because("softcode has no reader to gate on, so a draft translation's body is unreachable from "
+				+ "it exactly as wiki() already makes the draft itself unreachable");
+	}
+
+	[Test]
 	public async Task WikiList_DoesNotReturnUnpublishedPages()
 	{
 		var draft = await SeedUnpublishedPageAsync("Fn Draft Listed Target", "draft listing body");
