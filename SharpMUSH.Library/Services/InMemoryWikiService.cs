@@ -357,7 +357,7 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult<OneOf<WikiTranslation, NotFound>>(new NotFound());
 	}
 
-	public Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+	public Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> UpsertTranslationAsync(
 		string pageId,
 		string locale,
 		string title,
@@ -367,21 +367,22 @@ public sealed class InMemoryWikiService : IWikiService
 		bool published,
 		int? expectedRevisionNumber)
 	{
+		static Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> Result(
+			OneOf<WikiTranslation, WikiWriteConflict, Error<string>> value) => Task.FromResult(value);
+
 		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
 		if (normalizedLocale.IsT1)
-			return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(normalizedLocale.AsT1);
+			return Result(normalizedLocale.AsT1);
 
 		var normalized = normalizedLocale.AsT0;
 
 		if (!_pagesById.TryGetValue(pageId, out var page))
-			return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
-				new Error<string>($"No wiki page with id '{pageId}'."));
+			return Result(new Error<string>($"No wiki page with id '{pageId}'."));
 
 		if (page.SourceLocale.Length > 0
 			&& string.Equals(page.SourceLocale, normalized, StringComparison.OrdinalIgnoreCase))
-			return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
-				new Error<string>(
-					$"'{normalized}' is the page's source locale; edit the page itself rather than adding a translation."));
+			return Result(new Error<string>(
+				$"'{normalized}' is the page's source locale; edit the page itself rather than adding a translation."));
 
 		var key = (PageId: pageId, Locale: normalized);
 		var now = DateTimeOffset.UtcNow;
@@ -409,23 +410,17 @@ public sealed class InMemoryWikiService : IWikiService
 
 			// Create-only: an existing row is a conflict, not something to overwrite.
 			if (!_translations.TryAdd(key, updated))
-				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
-					new Error<string>(
-						$"A '{normalized}' translation already exists for page '{pageId}'. "
-						+ "Pass its current revision number to update it."));
+				return Result(WikiWriteConflict.AlreadyExists);
 		}
 		else
 		{
+			// A translation the caller loaded and somebody then deleted. Still a lost write, not a bad
+			// request: re-creating it here would resurrect a row somebody deliberately removed.
 			if (!_translations.TryGetValue(key, out var existing))
-				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
-					new Error<string>($"No '{normalized}' translation exists for page '{pageId}' to update."));
+				return Result(WikiWriteConflict.TranslationGone);
 
 			if (existing.RevisionNumber != expectedRevisionNumber.Value)
-				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
-					new Error<string>(
-						$"The '{normalized}' translation changed while you were editing "
-						+ $"(expected revision {expectedRevisionNumber.Value}, found {existing.RevisionNumber}). "
-						+ "Reload and re-apply your changes."));
+				return Result(WikiWriteConflict.StaleRevision);
 
 			updated = existing with
 			{
@@ -442,15 +437,12 @@ public sealed class InMemoryWikiService : IWikiService
 			// TryUpdate's comparison value is the CAS: a writer who won the race between TryGetValue and
 			// here has already replaced `existing`, so this fails and no revision is appended.
 			if (!_translations.TryUpdate(key, updated, existing))
-				return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(
-					new Error<string>(
-						$"The '{normalized}' translation changed while you were editing. "
-						+ "Reload and re-apply your changes."));
+				return Result(WikiWriteConflict.StaleRevision);
 		}
 
 		SaveTranslationRevisionSnapshot(updated, editorDbref, editSummary);
 
-		return Task.FromResult<OneOf<WikiTranslation, Error<string>>>(updated);
+		return Result(updated);
 	}
 
 	public Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)

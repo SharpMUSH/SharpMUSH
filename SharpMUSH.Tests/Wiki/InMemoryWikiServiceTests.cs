@@ -515,8 +515,8 @@ public class InMemoryWikiServiceTests
 		var again = await svc.UpsertTranslationAsync(
 			page.Id, "fr", "écrasé", "corps écrasé", "#3", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(again.IsT1)
-			.IsTrue()
+		await Assert.That(again.AsT1)
+			.IsEqualTo(WikiWriteConflict.AlreadyExists)
 			.Because("a caller who passed null believed it was creating a translation, not overwriting one");
 		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
 			.IsEqualTo("corps v1");
@@ -534,7 +534,7 @@ public class InMemoryWikiServiceTests
 		var stale = await svc.UpsertTranslationAsync(
 			page.Id, "fr", "perdu", "corps perdu", "#4", null, true, expectedRevisionNumber: 1);
 
-		await Assert.That(stale.IsT1).IsTrue();
+		await Assert.That(stale.AsT1).IsEqualTo(WikiWriteConflict.StaleRevision);
 		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
 			.IsEqualTo("corps v2")
 			.Because("the winner's prose must survive; the loser reloads and the human decides");
@@ -546,6 +546,26 @@ public class InMemoryWikiServiceTests
 	}
 
 	[Test]
+	public async Task UpsertTranslationAsync_ReportsAConflictWhenTheTranslationWasDeletedMidEdit()
+	{
+		// The third lost-write shape: the editor loaded revision 1 and somebody deleted the locale before
+		// they saved. It is not a malformed request — the caller must reload, exactly as for a stale
+		// revision — so it must not be classified alongside "your body was invalid".
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Dragons");
+		await svc.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+		await svc.DeleteTranslationAsync(page.Id, "fr", "#3");
+
+		var orphaned = await svc.UpsertTranslationAsync(
+			page.Id, "fr", "v2", "corps v2", "#2", null, true, expectedRevisionNumber: 1);
+
+		await Assert.That(orphaned.AsT1).IsEqualTo(WikiWriteConflict.TranslationGone);
+		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).IsT1)
+			.IsTrue()
+			.Because("a compare-and-swap must not resurrect a row somebody deliberately deleted");
+	}
+
+	[Test]
 	public async Task UpsertTranslationAsync_RejectsAnUnparseableLocale()
 	{
 		var svc = BuildService();
@@ -553,7 +573,9 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.UpsertTranslationAsync(page.Id, "not a locale", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.IsT2)
+			.IsTrue()
+			.Because("a malformed locale is the caller's mistake to fix, not a race it lost");
 	}
 
 	[Test]
@@ -565,7 +587,7 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.UpsertTranslationAsync(page.Id, "en", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(result.IsT1)
+		await Assert.That(result.IsT2)
 			.IsTrue()
 			.Because("no row may shadow the source; the page itself is edited instead");
 	}
@@ -577,7 +599,7 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.UpsertTranslationAsync("ghost", "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.IsT2).IsTrue();
 	}
 
 	[Test]

@@ -246,7 +246,10 @@ public class WikiCommandTests
 			page.Id, "fr", frenchTitle, frenchBody, "#1", null, published, expectedRevisionNumber: null);
 		await Assert.That(translated.IsT0)
 			.IsTrue()
-			.Because(translated.IsT1 ? translated.AsT1.Value : "translation seeded");
+			.Because(translated.Match(
+				_ => "translation seeded",
+				conflict => $"seeding lost a write race: {conflict}",
+				error => error.Value));
 
 		return page.Slug;
 	}

@@ -172,6 +172,30 @@ public class WikiControllerTranslationTests
 	}
 
 	[Test]
+	public async Task PutTranslation_ReturnsConflictWhenTheTranslationWasDeletedMidEdit()
+	{
+		// The third lost-write shape, and the one that used to fall through the phrase match and answer 400:
+		// the editor loaded revision 1, somebody deleted the locale, and the save arrives with an expected
+		// revision for a row that is gone. It is a race, not a malformed body, so it is a 409.
+		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		await storage.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+		await storage.DeleteTranslationAsync(page.Id, "fr", "#3");
+
+		var result = await controller.PutTranslation(
+			"dragons", "fr",
+			new WikiController.UpsertTranslationRequest("orphelin", "corps orphelin", null, true, ExpectedRevisionNumber: 1),
+			ns: "main", category: "general");
+
+		await Assert.That(result)
+			.IsTypeOf<ConflictObjectResult>()
+			.Because("a translation deleted mid-edit is a lost write; the client reloads rather than fixing its body");
+		await Assert.That((await storage.GetTranslationAsync(page.Id, "fr")).IsT1)
+			.IsTrue()
+			.Because("a 409 that also re-created the row would resurrect a deliberately deleted translation");
+	}
+
+	[Test]
 	public async Task PutTranslation_UpdatesWithTheCurrentRevisionAndBumpsIt()
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);

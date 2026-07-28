@@ -571,7 +571,7 @@ public partial class SurrealDatabase : IWikiService
 		return MapToWikiTranslation(results[0]);
 	}
 
-	public async Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+	public async Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> UpsertTranslationAsync(
 			string pageId, string locale, string title, string markdown,
 			string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
 	{
@@ -640,11 +640,9 @@ public partial class SurrealDatabase : IWikiService
 				if (createResponse.HasErrors)
 				{
 					var winner = await GetTranslationAsync(pageId, normalized);
-					return winner.IsT0
-							? new Error<string>(
-									$"A '{normalized}' translation already exists for page '{pageId}'. "
-									+ "Pass its current revision number to update it.")
-							: new Error<string>($"Could not create translation '{normalized}' for page '{pageId}'.");
+					if (winner.IsT0) return WikiWriteConflict.AlreadyExists;
+
+					return new Error<string>($"Could not create translation '{normalized}' for page '{pageId}'.");
 				}
 			}
 			else
@@ -675,12 +673,7 @@ public partial class SurrealDatabase : IWikiService
 					// Zero rows affected. Do NOT re-read and re-apply: that overwrites the winner with this
 					// caller's stale markdown, which is the loss expectedRevisionNumber exists to prevent.
 					var current = await GetTranslationAsync(pageId, normalized);
-					return current.IsT0
-							? new Error<string>(
-									$"The '{normalized}' translation changed while you were editing "
-									+ $"(expected revision {expectedRevisionNumber.Value}, found {current.AsT0.RevisionNumber}). "
-									+ "Reload and re-apply your changes.")
-							: new Error<string>($"No '{normalized}' translation exists for page '{pageId}' to update.");
+					return current.IsT0 ? WikiWriteConflict.StaleRevision : WikiWriteConflict.TranslationGone;
 				}
 			}
 		}
@@ -691,10 +684,7 @@ public partial class SurrealDatabase : IWikiService
 			if (expectedRevisionNumber is null)
 			{
 				var existing = await GetTranslationAsync(pageId, normalized);
-				if (existing.IsT0)
-					return new Error<string>(
-							$"A '{normalized}' translation already exists for page '{pageId}'. "
-							+ "Pass its current revision number to update it.");
+				if (existing.IsT0) return WikiWriteConflict.AlreadyExists;
 			}
 
 			return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");
