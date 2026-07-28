@@ -11,28 +11,25 @@ namespace SharpMUSH.Client.Resources;
 /// translate its wiki into any locale <see cref="CultureInfo.GetCultureInfo(string, bool)"/> accepts — the
 /// chrome falls back to English, the content does not — so the editor offers this list plus whatever
 /// translations already exist plus a free-text field.
-/// <para>To add a language: add its code and flag here, and add the matching
-/// <c>SharedResource.{code}.resx</c>. Display names come from the framework.</para>
+/// <para>To add a language: add its code here, add the matching <c>SharedResource.{code}.resx</c>, and add
+/// the code to <c>SatelliteResourceLanguages</c> in <c>SharpMUSH.Client.csproj</c>. Display names come from
+/// the framework. <c>DeclaredLocaleCoverageTests</c> fails a code declared without a translation, and
+/// <c>PortalSurfacesTests</c> fails one left out of the csproj.</para>
+/// <para>Languages are named, not flagged. A flag is a country and a country is not a language: 🇪🇸 for
+/// <c>es</c> privileges Spain over Latin America, <c>pt-BR</c> and <c>pt-PT</c> would need two flags for
+/// one language, and <c>zh-Hans</c> is a script with no flag at all. The native name is unambiguous in
+/// every one of those cases and is the thing a speaker actually scans for.</para>
 /// </remarks>
 public static class PortalLocales
 {
-	/// <summary>Supported locale codes with their flag emoji, in display order.</summary>
-	public static IReadOnlyList<(string Code, string Flag)> Supported { get; } =
-	[
-		("en", "\U0001F1FA\U0001F1F8"),
-		("fr", "\U0001F1EB\U0001F1F7"),
-	];
-
-	/// <summary>Just the codes, for membership tests and dropdown population.</summary>
-	public static IReadOnlyList<string> Codes { get; } = Supported.Select(l => l.Code).ToArray();
-
-	private static readonly Dictionary<string, string> _flags =
-		Supported.ToDictionary(l => l.Code, l => l.Flag, StringComparer.OrdinalIgnoreCase);
+	/// <summary>Supported locale codes, in display order: English first, then alphabetically.</summary>
+	public static IReadOnlyList<string> Codes { get; } = ["en", "de", "fr"];
 
 	/// <summary>
 	/// A locale's name in its own language, first character upper-cased ("Français"). Falls back to the
-	/// tag itself for a locale this runtime's ICU data does not know, which is expected: the WASM build
-	/// ships a sharded ICU covering only the locales in <see cref="Supported"/>.
+	/// tag itself for a locale this runtime does not know — not expected for anything in
+	/// <see cref="Codes"/> now that the client loads full ICU data, but the wiki editor accepts free-text
+	/// tags and a typo must render as itself rather than throw.
 	/// </summary>
 	public static string DisplayName(string code)
 	{
@@ -49,12 +46,4 @@ public static class PortalLocales
 			return code;
 		}
 	}
-
-	/// <summary>
-	/// The flag emoji for a supported locale, or a globe for anything else. Matched case-insensitively:
-	/// a hand-typed <c>?lang=FR</c> reaches the read path uncanonicalised, and showing it a globe would
-	/// read as "this language is not supported".
-	/// </summary>
-	public static string Flag(string code) =>
-		_flags.TryGetValue(code, out var flag) ? flag : "\U0001F310";
 }

@@ -36,7 +36,7 @@
             @foreach (var t in _translations)
             {
                 <a href="@($"/wiki/{Ns}/{Category}/{Slug}/history?lang={Uri.EscapeDataString(t.Locale)}")">
-                    @PortalLocales.Flag(t.Locale) @PortalLocales.DisplayName(t.Locale)
+                    @PortalLocales.DisplayName(t.Locale)
                 </a>
             }
         </div>

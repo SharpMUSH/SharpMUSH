@@ -20,6 +20,11 @@
 		     renders fully translated and still formats its dates and numbers in English, with no test
 		     failing. AdminRoles.razor's ToString("MMM d, yyyy HH:mm") is exactly that case. -->
 		<BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+		<!-- Satellite assemblies for every locale PortalLocales.Codes offers. Without this,
+		     PublishTrimmed can drop resources the app only reaches by culture lookup at runtime — a
+		     failure that appears only in a published build, so no Debug-configuration test sees it.
+		     PortalSurfacesTests keeps this list and PortalLocales.Codes in step. -->
+		<SatelliteResourceLanguages>en;de;fr</SatelliteResourceLanguages>
 	</PropertyGroup>
 
 	<ItemGroup>
