@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
@@ -46,7 +47,8 @@ public static class ListWiki
 			ns = parsed;
 		}
 
-		var pages = await wikiService.GetAllPagesAsync(0, MaxListed, ns);
+		var fetched = await wikiService.GetAllPagesAsync(0, MaxListed, ns);
+		var pages = await VisiblePagesAsync(executor, fetched);
 		var total = await wikiService.CountPagesAsync(ns);
 
 		var lines = new List<MString>
@@ -55,8 +57,10 @@ public static class ListWiki
 		};
 		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
 			.Select(l => MModule.single("  " + l)));
-		if (total > pages.Count)
-			lines.Add(MModule.single($"  … and {total - pages.Count} more. See the web portal for the full index."));
+		// Compared against the fetched window, not the visible one: this line means "the window did not
+		// reach the end of the store", and drafts filtered out of the window did not shorten the store.
+		if (total > fetched.Count)
+			lines.Add(MModule.single($"  … and {total - fetched.Count} more. See the web portal for the full index."));
 
 		var output = MModule.multipleWithDelimiter(MModule.single("\n"), lines);
 		await notifyService.Notify(executor, output, executor);
@@ -79,7 +83,8 @@ public static class ListWiki
 			return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
-		var matches = await SearchPagesAsync(wikiService, needle, MaxSearchResults);
+		var matches = await SearchPagesAsync(
+			wikiService, needle, MaxSearchResults, await WikiCommandHelper.CanSeeDrafts(executor));
 
 		var lines = new List<MString>
 		{
@@ -116,7 +121,9 @@ public static class ListWiki
 			return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
-		var pages = await wikiService.GetRecentChangesAsync(count);
+		// Filtered after the fetch, so a burst of draft edits shortens the answer rather than disclosing
+		// them. Asking for count+N and trimming would only move the guesswork around.
+		var pages = await VisiblePagesAsync(executor, await wikiService.GetRecentChangesAsync(count));
 
 		var lines = new List<MString> { MModule.single("WIKI: Recently edited pages:") };
 		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
@@ -126,6 +133,16 @@ public static class ListWiki
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
+
+	/// <summary>
+	/// Drops the unpublished pages this reader may not see. Every listing surface feeds its rows through
+	/// this, because <c>GetAllPagesAsync</c> and <c>GetRecentChangesAsync</c> both return drafts and say so.
+	/// </summary>
+	private static async ValueTask<IReadOnlyList<WikiPage>> VisiblePagesAsync(
+		AnySharpObject executor, IReadOnlyList<WikiPage> pages) =>
+		await WikiCommandHelper.CanSeeDrafts(executor)
+			? pages
+			: pages.Where(p => p.Published).ToList();
 
 	/// <summary>
 	/// Formats a listing, resolving each title into the reader's locale unless <paramref name="forceSource"/>.
@@ -152,8 +169,13 @@ public static class ListWiki
 	/// Case-insensitive title/plaintext substring scan, paged through the full page
 	/// list. Adequate for in-game scale; a full-text index (area 14) can replace it.
 	/// </summary>
+	/// <param name="includeDrafts">
+	/// True when this caller may see unpublished pages — see <see cref="WikiCommandHelper.CanSeeDrafts"/>.
+	/// There is no default: <c>GetAllPagesAsync</c> returns drafts, so every call site has to decide, and a
+	/// safe-looking default is how the filter went missing here in the first place.
+	/// </param>
 	internal static async Task<List<WikiPage>> SearchPagesAsync(
-		IWikiService wikiService, string needle, int maxResults)
+		IWikiService wikiService, string needle, int maxResults, bool includeDrafts)
 	{
 		var matches = new List<WikiPage>();
 		var skip = 0;
@@ -163,8 +185,9 @@ public static class ListWiki
 			if (batch.Count == 0) break;
 
 			matches.AddRange(batch.Where(p =>
-				p.Title.Contains(needle, StringComparison.OrdinalIgnoreCase)
-				|| p.PlainText.Contains(needle, StringComparison.OrdinalIgnoreCase)));
+				(includeDrafts || p.Published)
+				&& (p.Title.Contains(needle, StringComparison.OrdinalIgnoreCase)
+					|| p.PlainText.Contains(needle, StringComparison.OrdinalIgnoreCase))));
 
 			if (batch.Count < SearchScanPageSize) break;
 			skip += SearchScanPageSize;

@@ -36,6 +36,16 @@ public class WikiCommandTests
 				(msg.IsT1 && msg.AsT1.Contains(contains))), TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
 	}
 
+	/// <summary>The negative of <see cref="ExpectNotify"/>: this player was never told <paramref name="contains"/>.</summary>
+	private async Task ExpectNoNotify(SharpMUSH.Library.Models.DBRef player, string contains)
+	{
+		await NotifyService
+			.DidNotReceive()
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
+				(msg.IsT1 && msg.AsT1.Contains(contains))), TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
+	}
+
 	[Test]
 	public async ValueTask WikiCreate_ThenView_ShowsRenderedPage()
 	{
@@ -331,12 +341,7 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view {slug}"));
 
 		await ExpectNotify(player.DbRef, "en visible body");
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("corps brouillon secret")) ||
-				(msg.IsT1 && msg.AsT1.Contains("corps brouillon secret"))),
-				TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await ExpectNoNotify(player.DbRef, "corps brouillon secret");
 	}
 
 	[Test]
@@ -424,11 +429,100 @@ public class WikiCommandTests
 
 		// The source stream carries no marker and the header keeps the source title.
 		await ExpectNotify(player.DbRef, "History Source Dragons");
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Dragons Source Hist")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Dragons Source Hist"))),
-				TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await ExpectNoNotify(player.DbRef, "Dragons Source Hist");
+	}
+
+	/// <summary>Creates a page and unpublishes it through the service, returning it.</summary>
+	/// <remarks>
+	/// Unpublishing goes through <c>SetMetadataAsync</c> rather than <c>@wiki/unpublish</c> because that
+	/// switch is wizard-only and these tests need the draft to exist before a mortal ever runs a command.
+	/// </remarks>
+	private async Task<WikiPage> SeedUnpublishedPageAsync(string title, string body)
+	{
+		var created = await WikiService.CreateAsync(title, body, "#1", WikiNamespace.Main, "general", "en");
+		await Assert.That(created.IsT0).IsTrue();
+		var page = created.AsT0;
+
+		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
+		await Assert.That(unpublished.IsT0).IsTrue();
+
+		return unpublished.AsT0;
+	}
+
+	[Test]
+	public async ValueTask WikiSearch_DoesNotDiscloseUnpublishedPagesToAMortal()
+	{
+		// @wiki/view is gated, but search paged through GetAllPagesAsync — which documents that it returns
+		// unpublished pages and leaves filtering to the caller — and filtered on nothing at all, so a draft's
+		// title and reference reached any player who guessed a word from its body.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftSearcher");
+		var page = await SeedUnpublishedPageAsync(
+			"Mortal Draft Fodder", "The grue-marker phrase lives here.");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/search grue-marker"));
+
+		await ExpectNotify(player.DbRef, "0 page(s) matching 'grue-marker'");
+		await ExpectNoNotify(player.DbRef, page.Slug);
+		await ExpectNoNotify(player.DbRef, page.Title);
+	}
+
+	[Test]
+	public async ValueTask WikiSearch_StillFindsUnpublishedPagesForAWizard()
+	{
+		// Without this, "hide every draft unconditionally" — or a search that returns nothing at all —
+		// would satisfy the test above. Unpublishing is wizard-only, so a wizard must still find the draft.
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftWizard");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		var page = await SeedUnpublishedPageAsync(
+			"Wizard Draft Fodder", "The plover-marker phrase lives here.");
+
+		await Parser.CommandParse(wizard.Handle, ConnectionService,
+			MModule.single("@wiki/search plover-marker"));
+
+		await ExpectNotify(wizard.DbRef, "1 page(s) matching 'plover-marker'");
+		await ExpectNotify(wizard.DbRef, $"{page.Slug}");
+	}
+
+	[Test]
+	public async ValueTask WikiList_DoesNotDiscloseUnpublishedPagesToAMortal()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftLister");
+		var page = await SeedUnpublishedPageAsync("Mortal Draft Listing", "listing body");
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@wiki/list"));
+
+		await ExpectNoNotify(player.DbRef, page.Slug);
+		await ExpectNotify(player.DbRef, "WIKI: ");
+	}
+
+	[Test]
+	public async ValueTask WikiRecent_DoesNotDiscloseUnpublishedPagesToAMortal()
+	{
+		// Freshly written, so it heads the UpdatedAt ordering: without the filter this is the first row.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftRecent");
+		var page = await SeedUnpublishedPageAsync("Mortal Draft Recent", "recent body");
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@wiki/recent"));
+
+		await ExpectNoNotify(player.DbRef, page.Slug);
+		await ExpectNotify(player.DbRef, "Recently edited pages");
+	}
+
+	[Test]
+	public async ValueTask WikiRecent_StillShowsUnpublishedPagesToAWizard()
+	{
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftRecentWiz");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		var page = await SeedUnpublishedPageAsync("Wizard Draft Recent", "wizard recent body");
+
+		await Parser.CommandParse(wizard.Handle, ConnectionService, MModule.single("@wiki/recent"));
+
+		await ExpectNotify(wizard.DbRef, page.Slug);
 	}
 }

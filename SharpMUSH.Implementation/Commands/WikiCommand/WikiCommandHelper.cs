@@ -63,6 +63,20 @@ public static class WikiCommandHelper
 	public static async ValueTask<bool> CanEdit(AnySharpObject executor, WikiPage page) =>
 		!page.IsProtected || await executor.IsWizard();
 
+	/// <summary>
+	/// True when this reader may see unpublished (draft) pages and unpublished translations. The in-game
+	/// counterpart of the portal's <c>wiki.read</c> scope, and the <c>includeDrafts</c> argument every
+	/// <c>IWikiLocalizationService</c> read takes.
+	/// </summary>
+	/// <remarks>
+	/// Deliberately <em>not</em> <see cref="CanEdit"/>. That rule grants every player edit rights on every
+	/// unprotected page, so using it here would gate nothing: an unpublished page stays a draft precisely
+	/// because a wizard unpublished it (<c>@wiki/publish</c> and <c>@wiki/unpublish</c> are wizard-only),
+	/// and the wizard bit is therefore the only in-game distinction that tracks who is allowed to know a
+	/// draft exists.
+	/// </remarks>
+	public static ValueTask<bool> CanSeeDrafts(AnySharpObject executor) => executor.IsWizard();
+
 	/// <summary>The executor's dbref string as stored in wiki author/editor fields.</summary>
 	public static string EditorDbref(AnySharpObject executor) =>
 		$"#{executor.Object().Key}";

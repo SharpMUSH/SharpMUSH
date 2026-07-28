@@ -40,6 +40,7 @@
 - [x] `Wiki.DefaultLocale` (`wiki_default_locale`, default `en`, validated at startup) in `/admin/config/wiki`; `WikiPage.SourceLocale` is materialised once by the migration and never re-derived, so changing the default cannot relabel existing pages
 - [x] Fallback, never 404 — `IWikiLocaleResolver` (pure, 5-step chain) + `IWikiLocalizationService` (visibility filtering, the only `LocalizedWikiPage` factory)
 - [x] Drafts do not leak — the candidate set is filtered before resolution; an unpublished translation is unreachable for readers without edit permission
+- [x] Drafts do not leak **in-game either** — every discovery surface (`@wiki/list`, `@wiki/search`, `@wiki/recent`, `wikilist()`, `wikisearch()`, `wikirecent()`) filters unpublished pages. `WikiCommandHelper.CanSeeDrafts` (wizard-only, matching the wizard-only `@wiki/publish`/`@wiki/unpublish`) is the in-game counterpart of the portal's `wiki.read` scope; softcode functions never see drafts, exactly as `wiki()` never sees draft translations
 - [x] `?lang=` on the page read, all five listings and `{slug}/revisions`; translation CRUD at `/api/wiki/{slug}/translations[/{locale}]`, with `expectedRevisionNumber` optimistic concurrency answering 409 on a conflict (never retried)
 - [x] Unique `(PageId, Locale, RevisionNumber)` constraint on all three DB backends, which disagreed before this change; asserted by a cross-backend test that checks the constraint *rejects* duplicates
 - [x] Reader UI — dismissible fallback notice (per-session) + language chip row in `WikiDisplay.razor`
@@ -69,5 +70,6 @@
 - Locale-aware wiki search (`@wiki/search`, `wikisearch()`, the omnisearch box) — matches source `PlainText` today
 - Localized category *display* names — Category is part of page identity, so it cannot be translated through the overlay
 - Listing performance: localized listings resolve per row. Measure before adding a denormalized title cache
+- `@wiki/list`'s header count still comes from `CountPagesAsync`, which counts drafts. The rows are filtered, so no draft title or reference is disclosed, but a mortal comparing "N page(s)" against the rows can infer how many drafts exist in the first 100. Fixing it properly means a published-aware `CountPagesAsync` in all four providers — a cross-cutting change wanting its own review, not a rider on the visibility fix
 - `WikiEdit` collects an edit summary and a minor-edit flag and discards both (predates localization)
 - The `SourceLocale` backfill carries no rollback path, no language detection and no per-page override. That is deliberate while SharpMUSH is pre-production, because wiping and reseeding is acceptable recovery; the migration logs the locale it stamped and the row count, which is enough to notice a wrong default. **Revisit this first if a live game with existing wiki content ever adopts SharpMUSH.**
