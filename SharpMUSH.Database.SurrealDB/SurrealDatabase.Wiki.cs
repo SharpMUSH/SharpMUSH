@@ -617,6 +617,12 @@ public partial class SurrealDatabase : IWikiService
 			["published"] = published
 		};
 
+		// The row this call itself wrote. Building the result and the revision entry from the write's
+		// own return is what keeps the revision log honest: a read-back after a successful write can
+		// pick up a *later* writer's content and file it under this caller's dbref and edit summary.
+		// Arango reads its RETURN NEW and Memgraph reads its own returned node for the same reason.
+		WikiTranslation? saved = null;
+
 		try
 		{
 			if (expectedRevisionNumber is null)
@@ -654,6 +660,9 @@ public partial class SurrealDatabase : IWikiService
 
 					return new Error<string>($"Could not create translation '{normalized}' for page '{pageId}'.");
 				}
+
+				var created = createResponse.GetValue<List<WikiTranslationDbRecord>>(0);
+				if (created is { Count: > 0 }) saved = MapToWikiTranslation(created[0]);
 			}
 			else
 			{
@@ -685,6 +694,8 @@ public partial class SurrealDatabase : IWikiService
 					var current = await GetTranslationAsync(pageId, normalized);
 					return current.IsT0 ? WikiWriteConflict.StaleRevision : WikiWriteConflict.TranslationGone;
 				}
+
+				saved = MapToWikiTranslation(updated[0]);
 			}
 		}
 		catch (Exception ex)
@@ -700,12 +711,20 @@ public partial class SurrealDatabase : IWikiService
 			return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");
 		}
 
-		var written = await GetTranslationAsync(pageId, normalized);
-		if (written.IsT1)
-			return new Error<string>($"Upsert of translation '{normalized}' returned no document.");
+		// Only if the driver returned no row at all — not an expected path, and the read-back it falls
+		// to carries the misattribution risk described above, so it stays the exception rather than
+		// the rule.
+		if (saved is null)
+		{
+			var written = await GetTranslationAsync(pageId, normalized);
+			if (written.IsT1)
+				return new Error<string>($"Upsert of translation '{normalized}' returned no document.");
 
-		await SaveSurrealTranslationRevisionAsync(written.AsT0, editorDbref, editSummary, now);
-		return written.AsT0;
+			saved = written.AsT0;
+		}
+
+		await SaveSurrealTranslationRevisionAsync(saved, editorDbref, editSummary, now);
+		return saved;
 	}
 
 	public async Task<OneOf<OkNone, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
