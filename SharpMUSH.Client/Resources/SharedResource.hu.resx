@@ -1,0 +1,4507 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="About" xml:space="preserve">
+    <value>Névjegy</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AccessRulesHelper" xml:space="preserve">
+    <value>például: !connect, suspect</value>
+    <comment>MT — the rule literals are values the admin types; left in English.</comment>
+  </data>
+  <data name="AccessRulesLabel" xml:space="preserve">
+    <value>Hozzáférési szabályok (vesszővel elválasztva)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Hozzáadás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddBannedName" xml:space="preserve">
+    <value>Tiltott név hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddCategory" xml:space="preserve">
+    <value>Kategória hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddCommandRestriction" xml:space="preserve">
+    <value>Parancskorlátozás hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddEntry" xml:space="preserve">
+    <value>Bejegyzés hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddFunctionRestriction" xml:space="preserve">
+    <value>Funkciókorlátozás hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddItem" xml:space="preserve">
+    <value>Elem hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddName" xml:space="preserve">
+    <value>Név hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddNewWord" xml:space="preserve">
+    <value>Új szó hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddSitelockRule" xml:space="preserve">
+    <value>Sitelock szabály hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddValue" xml:space="preserve">
+    <value>Érték hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdditionalData" xml:space="preserve">
+    <value>További adatok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionActive" xml:space="preserve">
+    <value>Újraaktiválás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionClosed" xml:space="preserve">
+    <value>Lezárás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionDeleted" xml:space="preserve">
+    <value>Törlés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionDisabled" xml:space="preserve">
+    <value>Letiltás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountDisabled" xml:space="preserve">
+    <value>A(z) „{0}” fiók letiltva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountEnabled" xml:space="preserve">
+    <value>A(z) „{0}” fiók engedélyezve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountMustChangePasswordChip" xml:space="preserve">
+    <value>jelszócsere kell</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusActive" xml:space="preserve">
+    <value>Aktív</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusChanged" xml:space="preserve">
+    <value>A(z) „{0}” fiók állapota frissítve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusClosed" xml:space="preserve">
+    <value>Lezárt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusDeleted" xml:space="preserve">
+    <value>Törölt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusDisabled" xml:space="preserve">
+    <value>Letiltott</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountsAction" xml:space="preserve">
+    <value>Fiókok kezelése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
+    <value>Keresés felhasználónév vagy e-mail alapján…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountsTitle" xml:space="preserve">
+    <value>Fiókok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmApplicationsAction" xml:space="preserve">
+    <value>Egyéni widgetek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmApplicationsTitle" xml:space="preserve">
+    <value>Alkalmazások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAttribute" xml:space="preserve">
+    <value>Attribútum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmBreadcrumb" xml:space="preserve">
+    <value>Admin</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmCharacterUnlinked" xml:space="preserve">
+    <value>{0} leválasztva a következőről: „{1}”.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmCharactersAction" xml:space="preserve">
+    <value>Karakterek megtekintése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmCharactersComingSoon" xml:space="preserve">
+    <value>A karakteradminisztráció hamarosan elérhető.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmConfigAction" xml:space="preserve">
+    <value>Oldalbeállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDashboardTitle" xml:space="preserve">
+    <value>Adminisztrációs irányítópult</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDatabaseImportAction" xml:space="preserve">
+    <value>Adatbázis importálása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDatabaseImportTitle" xml:space="preserve">
+    <value>Adatbázis-importálás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDisableAccount" xml:space="preserve">
+    <value>Letiltás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmEmail" xml:space="preserve">
+    <value>E-mail</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmEnableAccount" xml:space="preserve">
+    <value>Engedélyezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmHelpKicker" xml:space="preserve">
+    <value>Dokumentáció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmHelpSubtitle" xml:space="preserve">
+    <value>Témák böngészése, hivatkozások keresése és a kézikönyv olvasása.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmKicker" xml:space="preserve">
+    <value>Adminisztráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmLayoutAction" xml:space="preserve">
+    <value>Elrendezésszerkesztő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmLayoutTitle" xml:space="preserve">
+    <value>Elrendezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMediaAction" xml:space="preserve">
+    <value>Médiafájlok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMediaTitle" xml:space="preserve">
+    <value>Képtár</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMissing" xml:space="preserve">
+    <value>Hiányzik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmModerationAction" xml:space="preserve">
+    <value>Bejelentések és kitiltások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmModerationComingSoon" xml:space="preserve">
+    <value>A bejelentések, a kitiltások és az auditnapló hamarosan elérhetők.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmModerationTitle" xml:space="preserve">
+    <value>Moderálás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmOperationFailed" xml:space="preserve">
+    <value>A művelet sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPackagesAction" xml:space="preserve">
+    <value>Softcode csomagok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPackagesTitle" xml:space="preserve">
+    <value>Csomagok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPasswordReset" xml:space="preserve">
+    <value>A(z) „{0}” jelszava visszaállítva a következőre: {1} — ossza meg biztonságosan; a következő bejelentkezéskor meg kell változtatnia.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
+    <value>A játékos részletes adatai hamarosan elérhetők.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayerDetailKicker" xml:space="preserve">
+    <value>Adminisztráció · Játékos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayerNumber" xml:space="preserve">
+    <value>#{0} játékos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersAction" xml:space="preserve">
+    <value>Játékosok megtekintése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersComingSoon" xml:space="preserve">
+    <value>A játékosadminisztráció hamarosan elérhető.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersTitle" xml:space="preserve">
+    <value>Játékosok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPresent" xml:space="preserve">
+    <value>Jelen van</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesAction" xml:space="preserve">
+    <value>Karakterprofilok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesConfigured" xml:space="preserve">
+    <value>Beállítva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesHandler" xml:space="preserve">
+    <value>Kezelő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesHandlerNotFound" xml:space="preserve">
+    <value>#{0} — NEM TALÁLHATÓ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesNotConfiguredValue" xml:space="preserve">
+    <value>Nem (a http_handler nincs beállítva)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetCaption" xml:space="preserve">
+    <value>Felülírja a gyári {0} és {1} attribútumot a beépített alapértelmezésekkel. A saját attribútumok érintetlenül maradnak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetComplete" xml:space="preserve">
+    <value>A visszaállítás kész: {0} attribútum kiírva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetFailedError" xml:space="preserve">
+    <value>A visszaállítás sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
+    <value>A visszaállítás sikertelen ({0}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
+    <value>A kezelő állapota nem tölthető be.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesSubtitle" xml:space="preserve">
+    <value>A karakterprofilokat a játékon belüli {0} objektum szolgálja ki a(z) {1} softcode-ján keresztül. A játékban a(z) {2} segítségével szabhatja testre, vagy alább újratelepítheti a gyári kezelőt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesTitle" xml:space="preserve">
+    <value>Profilok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetFailed" xml:space="preserve">
+    <value>A visszaállítás sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetPassword" xml:space="preserve">
+    <value>Jelszó visszaállítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetting" xml:space="preserve">
+    <value>Visszaállítás…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmRolesAction" xml:space="preserve">
+    <value>Szerepkörök és jogosultságok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmRolesTitle" xml:space="preserve">
+    <value>Szerepkörök</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerAction" xml:space="preserve">
+    <value>Szerver állapota</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerComingSoon" xml:space="preserve">
+    <value>A szerverkonfiguráció és az élő mérőszámok hamarosan elérhetők.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerGodOnly" xml:space="preserve">
+    <value>Csak God számára elérhető szerverbeállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerKicker" xml:space="preserve">
+    <value>Admin · Szerver</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmStatus" xml:space="preserve">
+    <value>Állapot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmSuggestionsAction" xml:space="preserve">
+    <value>Szójavaslatok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmUnlinkFailed" xml:space="preserve">
+    <value>A leválasztás sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmUsername" xml:space="preserve">
+    <value>Felhasználónév</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmYes" xml:space="preserve">
+    <value>Igen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdminPanel" xml:space="preserve">
+    <value>Adminisztrációs panel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Advanced" xml:space="preserve">
+    <value>Speciális</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdvancedCategoryDescription" xml:space="preserve">
+    <value>Attribútumok, jelzők, költségek és speciális beállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Aliases" xml:space="preserve">
+    <value>Aliasok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>Mind</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AppTitle" xml:space="preserve">
+    <value>SharpMUSH</value>
+    <comment>MT — product name, intentionally untranslated.</comment>
+  </data>
+  <data name="AtLeastOneAccessRule" xml:space="preserve">
+    <value>Legalább egy hozzáférési szabály megadása kötelező</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AtLeastOneRestriction" xml:space="preserve">
+    <value>Legalább egy korlátozás megadása kötelező</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Attributes" xml:space="preserve">
+    <value>Attribútumok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AttributesLabel" xml:space="preserve">
+    <value>Attribútumok:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthAccount" xml:space="preserve">
+    <value>Fiók</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthAccountManagement" xml:space="preserve">
+    <value>Fiókkezelés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthChange" xml:space="preserve">
+    <value>Módosítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthClaimAdminLead" xml:space="preserve">
+    <value>Ezt a játékot még nem vette birtokba senki. Válasszon felhasználónevet és jelszót az előre létrehozott rendszergazdai fiókhoz (amely a #1 játékoshoz, Godhoz kapcsolódik). Az első személy, aki kitölti ezt az űrlapot, lesz a rendszergazda.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthClaimAdminTitle" xml:space="preserve">
+    <value>A rendszergazdai fiók birtokbavétele</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnActions" xml:space="preserve">
+    <value>Műveletek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnDbref" xml:space="preserve">
+    <value>Dbref</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnName" xml:space="preserve">
+    <value>Név</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthConfirmPassword" xml:space="preserve">
+    <value>Jelszó megerősítése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthConnectDirectly" xml:space="preserve">
+    <value>Vagy csatlakozzon közvetlenül a következőn keresztül:</value>
+    <comment>MT — sentence fragment continued by AuthTerminalLink ("terminál"); worded so the link follows naturally.</comment>
+  </data>
+  <data name="AuthCreateAccount" xml:space="preserve">
+    <value>Fiók létrehozása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCreateAdminAccount" xml:space="preserve">
+    <value>Rendszergazdai fiók létrehozása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCreateNewCharacter" xml:space="preserve">
+    <value>+ Új karakter létrehozása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCurrentPassword" xml:space="preserve">
+    <value>Jelenlegi jelszó</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthDebugMode" xml:space="preserve">
+    <value>Hibakeresési mód</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthDebugModeBody" xml:space="preserve">
+    <value>{0} néven van hitelesítve (fejlesztői környezet). Nincs hozzá fiókmunkamenet társítva; a fiókkezelési funkciókhoz valódi fiókkal kell bejelentkezni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEdit" xml:space="preserve">
+    <value>Szerkesztés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEmailOptional" xml:space="preserve">
+    <value>E-mail (nem kötelező)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEnterCredentials" xml:space="preserve">
+    <value>Adja meg a bejelentkezési adatait.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEnterPortal" xml:space="preserve">
+    <value>Belépés a portálra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthFirstRunSetup" xml:space="preserve">
+    <value>Első indítás beállítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthGoToHome" xml:space="preserve">
+    <value>Ugrás a kezdőlapra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLogOutOfAccount" xml:space="preserve">
+    <value>Kijelentkezés a fiókból</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLoginFailed" xml:space="preserve">
+    <value>A bejelentkezés sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLogout" xml:space="preserve">
+    <value>Kijelentkezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNewPassword" xml:space="preserve">
+    <value>Új jelszó</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNoCharacter" xml:space="preserve">
+    <value>Nincs karakter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNoCharactersLinked" xml:space="preserve">
+    <value>Ehhez a fiókhoz nincs karakter kapcsolva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNotLoggedInAccount" xml:space="preserve">
+    <value>Nincs bejelentkezve fiókkal. A bejelentkezéshez használja a terminál bejelentkezési paneljét.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthOpenInNewTab" xml:space="preserve">
+    <value>{0} megnyitása új lapon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPassword" xml:space="preserve">
+    <value>Jelszó</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordChangeRequired" xml:space="preserve">
+    <value>Jelszócsere szükséges.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordChangeRequiredBody" xml:space="preserve">
+    <value>A portál többi részének használata előtt meg kell változtatnia a jelszavát.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordRequired" xml:space="preserve">
+    <value>A jelszó megadása kötelező.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordTooShort" xml:space="preserve">
+    <value>A jelszónak legalább 8 karakterből kell állnia.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordUpdated" xml:space="preserve">
+    <value>A jelszó frissítve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordsDoNotMatch" xml:space="preserve">
+    <value>A jelszavak nem egyeznek.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthProfile" xml:space="preserve">
+    <value>Profil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthRegister" xml:space="preserve">
+    <value>Regisztráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthRegistrationFailed" xml:space="preserve">
+    <value>A regisztráció sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSettingUp" xml:space="preserve">
+    <value>Beállítás…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupAdminLinked" xml:space="preserve">
+    <value>A(z) {0} rendszergazdai fiók mostantól az előre létrehozott #1 játékoshoz, Godhoz kapcsolódik.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupAlreadyCompleted" xml:space="preserve">
+    <value>A beállítást éppen most fejezte be valaki más. Ha nem Ön volt, azonnal értesítse a szerver üzemeltetőjét.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupComplete" xml:space="preserve">
+    <value>A beállítás kész. Ön a rendszergazda.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupFailed" xml:space="preserve">
+    <value>A beállítás sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupSignInToManage" xml:space="preserve">
+    <value>Jelentkezzen be a játék kezelésének megkezdéséhez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupSignedInAs" xml:space="preserve">
+    <value>{0} néven van bejelentkezve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupWelcome" xml:space="preserve">
+    <value>Üdvözöljük itt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSignIn" xml:space="preserve">
+    <value>Bejelentkezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSwitchCharacter" xml:space="preserve">
+    <value>Karakterváltás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthTerminalLink" xml:space="preserve">
+    <value>terminál</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkCharacter" xml:space="preserve">
+    <value>Karakter leválasztása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsername" xml:space="preserve">
+    <value>Felhasználónév</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameOrEmail" xml:space="preserve">
+    <value>Felhasználónév vagy e-mail</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernamePasswordRequired" xml:space="preserve">
+    <value>A felhasználónév és a jelszó megadása kötelező.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameRequired" xml:space="preserve">
+    <value>A felhasználónév megadása kötelező.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameTaken" xml:space="preserve">
+    <value>Ez a felhasználónév már foglalt — válasszon másikat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameUpdated" xml:space="preserve">
+    <value>A felhasználónév frissítve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AvgWordsPerCategory" xml:space="preserve">
+    <value>Átl. szó/kategória</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameAddFailed" xml:space="preserve">
+    <value>A(z) „{0}” tiltott név hozzáadása sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameAdded" xml:space="preserve">
+    <value>A(z) „{0}” tiltott név sikeresen hozzáadva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameRemoveFailed" xml:space="preserve">
+    <value>A(z) „{0}” tiltott név eltávolítása sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameRemoved" xml:space="preserve">
+    <value>A(z) „{0}” tiltott név sikeresen eltávolítva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNames" xml:space="preserve">
+    <value>Tiltott nevek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNamesDescription" xml:space="preserve">
+    <value>A karakterek létrehozásakor a játékosok által nem használható nevek listájának kezelése.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNamesList" xml:space="preserve">
+    <value>Tiltott nevek listája</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedPlayerNames" xml:space="preserve">
+    <value>Tiltott játékosnevek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Mégse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CancelConversion" xml:space="preserve">
+    <value>Átalakítás megszakítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Categories" xml:space="preserve">
+    <value>Kategóriák</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoriesCount" xml:space="preserve">
+    <value>Kategóriák ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryAlreadyExists" xml:space="preserve">
+    <value>A(z) „{0}” kategória már létezik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryCreateFailed" xml:space="preserve">
+    <value>A kategória létrehozása sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryCreated" xml:space="preserve">
+    <value>A(z) „{0}” kategória sikeresen létrehozva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryDeleteFailed" xml:space="preserve">
+    <value>A kategória törlése sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryDeleted" xml:space="preserve">
+    <value>A(z) „{0}” kategória törölve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryName" xml:space="preserve">
+    <value>Kategórianév</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNameEmpty" xml:space="preserve">
+    <value>A kategória neve nem lehet üres</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNameHelper" xml:space="preserve">
+    <value>Adjon nevet az új javaslatkategóriának (például: „commands”, „functions”, „help”)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNotFound" xml:space="preserve">
+    <value>A(z) „{0}” konfigurációs kategória nem található a sémában.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNotFoundShort" xml:space="preserve">
+    <value>A(z) „{0}” kategória nem található</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Characters" xml:space="preserve">
+    <value>Karakterek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Chat" xml:space="preserve">
+    <value>Csevegés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ClearSelection" xml:space="preserve">
+    <value>Kijelölés törlése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ClickMe" xml:space="preserve">
+    <value>Kattintson ide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>Hamarosan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandAndFunctionRestrictions" xml:space="preserve">
+    <value>Parancs- és funkciókorlátozások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandName" xml:space="preserve">
+    <value>Parancsnév</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandNameHelper" xml:space="preserve">
+    <value>például: pemit, force</value>
+    <comment>MT — command literals stay in English.</comment>
+  </data>
+  <data name="CommandRestrictionAddFailed" xml:space="preserve">
+    <value>A parancskorlátozás hozzáadása sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionAdded" xml:space="preserve">
+    <value>A(z) „{0}” parancskorlátozása sikeresen hozzáadva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionRemoveFailed" xml:space="preserve">
+    <value>A parancskorlátozás eltávolítása sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionRemoved" xml:space="preserve">
+    <value>A(z) „{0}” parancskorlátozása sikeresen eltávolítva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictions" xml:space="preserve">
+    <value>Parancskorlátozások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Commands" xml:space="preserve">
+    <value>Parancsok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Compatibility" xml:space="preserve">
+    <value>Kompatibilitás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Compose" xml:space="preserve">
+    <value>Új üzenet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ComposeMail" xml:space="preserve">
+    <value>Új levél írása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Config" xml:space="preserve">
+    <value>Konfiguráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigSavedCount" xml:space="preserve">
+    <value>{count, plural, one {# beállítás sikeresen mentve} other {# beállítás sikeresen mentve}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="Configuration" xml:space="preserve">
+    <value>Konfiguráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationExported" xml:space="preserve">
+    <value>A konfiguráció exportálva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationManagement" xml:space="preserve">
+    <value>Konfigurációkezelés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationSections" xml:space="preserve">
+    <value>Konfigurációs szakaszok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredCommandRestrictions" xml:space="preserve">
+    <value>Beállított parancskorlátozások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredFunctionRestrictions" xml:space="preserve">
+    <value>Beállított funkciókorlátozások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredRules" xml:space="preserve">
+    <value>Beállított szabályok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>Kapcsolódás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Connected" xml:space="preserve">
+    <value>Kapcsolódva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Content" xml:space="preserve">
+    <value>Tartalom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ContentCategoryDescription" xml:space="preserve">
+    <value>Üzenetek, megjelenési beállítások és csevegési konfiguráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionErrors" xml:space="preserve">
+    <value>Az átalakítás hibákkal fejeződött be</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionSuccess" xml:space="preserve">
+    <value>Az átalakítás sikeresen befejeződött!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConvertingDatabase" xml:space="preserve">
+    <value>Adatbázis átalakítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Cosmetic" xml:space="preserve">
+    <value>Megjelenés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Costs" xml:space="preserve">
+    <value>Költségek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Counter" xml:space="preserve">
+    <value>Számláló</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Create" xml:space="preserve">
+    <value>Létrehozás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CreateThisPage" xml:space="preserve">
+    <value>Hozza létre ezt az oldalt!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CurrentCount" xml:space="preserve">
+    <value>Jelenlegi érték: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Database" xml:space="preserve">
+    <value>Adatbázis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DatabaseDumps" xml:space="preserve">
+    <value>Adatbázis-mentések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>Dátum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>Hibakeresés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DefaultsRestored" xml:space="preserve">
+    <value>Az alapértelmezések visszaállítva — mentse az alkalmazásukhoz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Törlés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>Letiltva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disconnect" xml:space="preserve">
+    <value>Kapcsolat bontása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>Kapcsolat bontva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DropDatabaseFile" xml:space="preserve">
+    <value>Húzza ide a PennMUSH adatbázisfájlt, vagy kattintson</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DropFilesOrClick" xml:space="preserve">
+    <value>Húzza ide a fájlokat, vagy kattintson</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Duration" xml:space="preserve">
+    <value>Időtartam:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EditProfile" xml:space="preserve">
+    <value>Profil szerkesztése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Elapsed" xml:space="preserve">
+    <value>Eltelt:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>Engedélyezve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumApplicationKindPage" xml:space="preserve">
+    <value>Oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumApplicationKindWidget" xml:space="preserve">
+    <value>Widget</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeExit" xml:space="preserve">
+    <value>Kijárat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypePlayer" xml:space="preserve">
+    <value>Játékos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeRoom" xml:space="preserve">
+    <value>Szoba</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeThing" xml:space="preserve">
+    <value>Tárgy</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeUnknown" xml:space="preserve">
+    <value>Ismeretlen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermApplicationsAdmin" xml:space="preserve">
+    <value>Alkalmazások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermApplicationsAdminDesc" xml:space="preserve">
+    <value>Sémavezérelt alkalmazások regisztrálása és kezelése.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermConfigAdmin" xml:space="preserve">
+    <value>Szerverbeállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermConfigAdminDesc" xml:space="preserve">
+    <value>A szerver konfigurációjának, a sitelock szabályoknak, a tiltott neveknek és a korlátozásoknak a szerkesztése.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermGroupBuild" xml:space="preserve">
+    <value>Építés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermGroupManage" xml:space="preserve">
+    <value>Kezelés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermLayoutAdmin" xml:space="preserve">
+    <value>Elrendezésszerkesztő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermLayoutAdminDesc" xml:space="preserve">
+    <value>A portál widget-elrendezésének szerkesztése.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaAdmin" xml:space="preserve">
+    <value>Képtár · Kezelés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaAdminDesc" xml:space="preserve">
+    <value>A közös médiatár böngészése és törlése.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaUpload" xml:space="preserve">
+    <value>Képtár · Feltöltés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaUploadDesc" xml:space="preserve">
+    <value>Képek feltöltése wiki-oldalakon való felhasználásra.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPackagesAdmin" xml:space="preserve">
+    <value>Csomagok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPackagesAdminDesc" xml:space="preserve">
+    <value>Softcode csomagok telepítése, frissítése és kezelése.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersModerate" xml:space="preserve">
+    <value>Játékosok · Moderálás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersModerateDesc" xml:space="preserve">
+    <value>Játékosfiókok, karakterek és profilok letiltása, kitiltása, figyelmeztetése és szerkesztése.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersView" xml:space="preserve">
+    <value>Játékosok · Megtekintés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersViewDesc" xml:space="preserve">
+    <value>Játékosfiókok, karakterek és profilok böngészése (csak olvasható).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermRolesAdmin" xml:space="preserve">
+    <value>Szerepkörök és jogosultságok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermRolesAdminDesc" xml:space="preserve">
+    <value>Szerepkörök létrehozása, jogosultságok szerkesztése és szerepkörök hozzárendelése fiókokhoz.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermServerAdmin" xml:space="preserve">
+    <value>Szerver (God)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermServerAdminDesc" xml:space="preserve">
+    <value>Szerverszintű műveletek és adatbázis-importálás. Alapértelmezés szerint csak God számára.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermSoftcodeUse" xml:space="preserve">
+    <value>Softcode-szerkesztő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermSoftcodeUseDesc" xml:space="preserve">
+    <value>A softcode-szerkesztő megnyitása objektumattribútumok megtekintéséhez és szerkesztéséhez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiAdmin" xml:space="preserve">
+    <value>Wiki · Moderálás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiAdminDesc" xml:space="preserve">
+    <value>Oldalak védelme és feloldása, védett oldalak szerkesztése, kötegelt műveletek és a wiki adminisztrációs felülete.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiCreate" xml:space="preserve">
+    <value>Wiki · Létrehozás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiCreateDesc" xml:space="preserve">
+    <value>Új wiki-oldalak létrehozása.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDelete" xml:space="preserve">
+    <value>Wiki · Törlés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDeleteDesc" xml:space="preserve">
+    <value>Wiki-oldalak és változattörténetük törlése.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiEdit" xml:space="preserve">
+    <value>Wiki · Szerkesztés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiEditDesc" xml:space="preserve">
+    <value>Meglévő (nem védett) wiki-oldalak szerkesztése, visszaállítása és újracímkézése.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiRead" xml:space="preserve">
+    <value>Wiki · Olvasás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiReadDesc" xml:space="preserve">
+    <value>Nem publikált és piszkozat wiki-oldalak megtekintése (a közzétett oldalak mindenki számára nyilvánosak).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindInstall" xml:space="preserve">
+    <value>Telepítés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindRollback" xml:space="preserve">
+    <value>Visszaállítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindUpgrade" xml:space="preserve">
+    <value>Frissítés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitBytes" xml:space="preserve">
+    <value>{0} B</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitGigabytes" xml:space="preserve">
+    <value>{0} GB</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitKilobytes" xml:space="preserve">
+    <value>{0} KB</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitMegabytes" xml:space="preserve">
+    <value>{0} MB</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingBannedName" xml:space="preserve">
+    <value>Hiba a tiltott név hozzáadásakor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingCommandRestriction" xml:space="preserve">
+    <value>Hiba a parancskorlátozás hozzáadásakor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingFunctionRestriction" xml:space="preserve">
+    <value>Hiba a funkciókorlátozás hozzáadásakor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingSitelockRule" xml:space="preserve">
+    <value>Hiba a sitelock szabály hozzáadásakor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingWord" xml:space="preserve">
+    <value>Hiba a szó hozzáadásakor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorCount" xml:space="preserve">
+    <value>{count, plural, one {# hiba} other {# hiba}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="ErrorCreatingCategory" xml:space="preserve">
+    <value>Hiba a kategória létrehozásakor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorDeletingCategory" xml:space="preserve">
+    <value>Hiba a kategória törlésekor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorDeletingWord" xml:space="preserve">
+    <value>Hiba a szó törlésekor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingBannedNames" xml:space="preserve">
+    <value>Hiba a tiltott nevek betöltésekor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingConfig" xml:space="preserve">
+    <value>Hiba a konfiguráció betöltésekor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingRestrictions" xml:space="preserve">
+    <value>Hiba a korlátozások betöltésekor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingSitelockRules" xml:space="preserve">
+    <value>Hiba a sitelock szabályok betöltésekor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingSuggestions" xml:space="preserve">
+    <value>Hiba a javaslatok betöltésekor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingBannedName" xml:space="preserve">
+    <value>Hiba a tiltott név eltávolításakor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingCommandRestriction" xml:space="preserve">
+    <value>Hiba a parancskorlátozás eltávolításakor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingFunctionRestriction" xml:space="preserve">
+    <value>Hiba a funkciókorlátozás eltávolításakor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingSitelockRule" xml:space="preserve">
+    <value>Hiba a sitelock szabály eltávolításakor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Errors" xml:space="preserve">
+    <value>Hibák ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EstimatedRemaining" xml:space="preserve">
+    <value>Becsült hátralévő idő:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Exits" xml:space="preserve">
+    <value>Kijáratok:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Export" xml:space="preserve">
+    <value>Exportálás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ExportConfiguration" xml:space="preserve">
+    <value>Konfiguráció exportálása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ExportFailed" xml:space="preserve">
+    <value>A konfiguráció exportálása sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FailedToLoadSchema" xml:space="preserve">
+    <value>A konfigurációs séma betöltése sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FailedToLoadValues" xml:space="preserve">
+    <value>A konfigurációs értékek betöltése sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Files" xml:space="preserve">
+    <value>Fájlok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Flags" xml:space="preserve">
+    <value>Jelzők</value>
+    <comment>MT</comment>
+  </data>
+  <data name="From" xml:space="preserve">
+    <value>Feladó</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionName" xml:space="preserve">
+    <value>Funkciónév</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionNameHelper" xml:space="preserve">
+    <value>például: pemit(), sql()</value>
+    <comment>MT — function literals stay in English.</comment>
+  </data>
+  <data name="FunctionRestrictionAddFailed" xml:space="preserve">
+    <value>A funkciókorlátozás hozzáadása sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionAdded" xml:space="preserve">
+    <value>A(z) „{0}” funkciókorlátozása sikeresen hozzáadva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionRemoveFailed" xml:space="preserve">
+    <value>A funkciókorlátozás eltávolítása sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionRemoved" xml:space="preserve">
+    <value>A(z) „{0}” funkciókorlátozása sikeresen eltávolítva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictions" xml:space="preserve">
+    <value>Funkciókorlátozások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Functions" xml:space="preserve">
+    <value>Funkciók</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Gallery" xml:space="preserve">
+    <value>Galéria</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryEmpty" xml:space="preserve">
+    <value>Még nincsenek képek.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryUploadFailed" xml:space="preserve">
+    <value>A kép feltöltése sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Help" xml:space="preserve">
+    <value>Súgó</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Home" xml:space="preserve">
+    <value>Kezdőlap</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostPattern" xml:space="preserve">
+    <value>Gazdagép-minta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostPatternHelper" xml:space="preserve">
+    <value>például: *.example.com vagy 192.168.1.*</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Import" xml:space="preserve">
+    <value>Importálás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportAnotherDatabase" xml:space="preserve">
+    <value>Másik adatbázis importálása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfig" xml:space="preserve">
+    <value>Konfiguráció importálása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfigDescription" xml:space="preserve">
+    <value>Töltsön fel egy mush.cnf fájlt a konfigurációs beállítások importálásához. Támogatott formátumok: .cnf, .conf, .txt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfigFile" xml:space="preserve">
+    <value>Konfigurációs fájl importálása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfiguration" xml:space="preserve">
+    <value>Konfiguráció importálása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportDatabaseDescription" xml:space="preserve">
+    <value>Töltsön fel egy PennMUSH adatbázisfájlt a SharpMUSH-ba való átalakításhoz és importáláshoz. Az átalakítás létrehozza az összes objektumot, felépíti a kapcsolatokat, és beállítja az attribútumokat és a zárakat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportPennMUSHDatabase" xml:space="preserve">
+    <value>PennMUSH adatbázis importálása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Important" xml:space="preserve">
+    <value>Fontos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Importing" xml:space="preserve">
+    <value>Importálás...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="InThisSection" xml:space="preserve">
+    <value>ebben a szakaszban</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Issues" xml:space="preserve">
+    <value>Problémák</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Joined" xml:space="preserve">
+    <value>csatlakozott</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Key" xml:space="preserve">
+    <value>Kulcs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Nyelv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayActions" xml:space="preserve">
+    <value>Műveletek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAllLayouts" xml:space="preserve">
+    <value>Minden elrendezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppAllowedZones" xml:space="preserve">
+    <value>Engedélyezett zónák</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrl" xml:space="preserve">
+    <value>Adat-URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrlHelper" xml:space="preserve">
+    <value>Megjelenítési / űrlap-előkitöltési adatok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrlOptional" xml:space="preserve">
+    <value>Adat-URL (nem kötelező)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDisplayName" xml:space="preserve">
+    <value>Megjelenítendő név</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDisplayOrder" xml:space="preserve">
+    <value>Megjelenítési sorrend</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppEditInSoftcode" xml:space="preserve">
+    <value>Szerkesztés softcode-ban</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppEditTitle" xml:space="preserve">
+    <value>{0} szerkesztése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppIconHelper" xml:space="preserve">
+    <value>MudBlazor Material ikonazonosító</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppIconOptional" xml:space="preserve">
+    <value>Ikon (nem kötelező)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKind" xml:space="preserve">
+    <value>Típus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKindPage" xml:space="preserve">
+    <value>Oldal (/apps/{slug})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKindWidget" xml:space="preserve">
+    <value>Widget (elrendezési zóna)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppMinRole" xml:space="preserve">
+    <value>Min. szerepkör</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppMinimumRole" xml:space="preserve">
+    <value>Minimális szerepkör</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacement" xml:space="preserve">
+    <value>Navigációs elhelyezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacementHelper" xml:space="preserve">
+    <value>Állítsa be, ha egy Oldal típusú alkalmazást meg szeretne jeleníteni a navigációban</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacementOptional" xml:space="preserve">
+    <value>Navigációs elhelyezés (nem kötelező)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppOpen" xml:space="preserve">
+    <value>Alkalmazás megnyitása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppOrder" xml:space="preserve">
+    <value>Sorrend</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveConfirm" xml:space="preserve">
+    <value>Eltávolítja a következőt: „{0}” ({1})? Ez csak leválasztja a portálról; a softcode érintetlen marad.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveFailed" xml:space="preserve">
+    <value>Az alkalmazás eltávolítása sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveTitle" xml:space="preserve">
+    <value>Alkalmazás eltávolítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoved" xml:space="preserve">
+    <value>{0} eltávolítva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRequiredFields" xml:space="preserve">
+    <value>A slug, a megjelenítendő név és a séma URL megadása kötelező.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSaveFailed" xml:space="preserve">
+    <value>A mentés sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSaved" xml:space="preserve">
+    <value>{0} elmentve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSchemaUrl" xml:space="preserve">
+    <value>Séma URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSchemaUrlHelper" xml:space="preserve">
+    <value>A Portal Schema Documentet visszaadó HTTP-kezelő útvonala, például http/chargen/schema</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSlug" xml:space="preserve">
+    <value>Slug</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSlugHelper" xml:space="preserve">
+    <value>URL-kulcs — /apps/{slug}. Létrehozás után nem módosítható.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSubmitRoute" xml:space="preserve">
+    <value>Beküldési útvonal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSubmitRouteOptional" xml:space="preserve">
+    <value>Beküldési útvonal (nem kötelező)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppViewSchema" xml:space="preserve">
+    <value>Séma megtekintése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayApplications" xml:space="preserve">
+    <value>Alkalmazások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayApply" xml:space="preserve">
+    <value>Alkalmaz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsEmptyDetail" xml:space="preserve">
+    <value>Válasszon ki egy alkalmazást, vagy regisztráljon újat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsKicker" xml:space="preserve">
+    <value>Építés · Egyéni widgetek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsNew" xml:space="preserve">
+    <value>Új alkalmazás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsNoMatch" xml:space="preserve">
+    <value>Nincs egyező alkalmazás.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsPages" xml:space="preserve">
+    <value>Oldalak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsRegister" xml:space="preserve">
+    <value>Alkalmazás regisztrálása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSchemaRegistry" xml:space="preserve">
+    <value>Sémanyilvántartás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSchemas" xml:space="preserve">
+    <value>Sémák</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSearchPlaceholder" xml:space="preserve">
+    <value>Alkalmazások vagy sémák keresése…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsStatPages" xml:space="preserve">
+    <value>teljes képernyős alkalmazás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsStatRegistered" xml:space="preserve">
+    <value>regisztrálva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsStatSchemas" xml:space="preserve">
+    <value>softcode-ban megadva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsStatWidgets" xml:space="preserve">
+    <value>irányítópult-zóna</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsWidgets" xml:space="preserve">
+    <value>Widgetek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayBadgeCustomized" xml:space="preserve">
+    <value>testreszabott</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayBadgeDefault" xml:space="preserve">
+    <value>alapértelmezett</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigJsonHelp" xml:space="preserve">
+    <value>Példányonkénti konfiguráció a(z) {0} számára, JSON formátumban. Hagyja üresen, ha nincs konfiguráció.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigJsonLabel" xml:space="preserve">
+    <value>Konfigurációs JSON</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigure" xml:space="preserve">
+    <value>Beállítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigureWidget" xml:space="preserve">
+    <value>{0} beállítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayEdit" xml:space="preserve">
+    <value>Szerkesztés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayEditorPageTitle" xml:space="preserve">
+    <value>{0} elrendezése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayFlowZoneHint" xml:space="preserve">
+    <value>vízszintes — nincs szélesség</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayGridZoneHint" xml:space="preserve">
+    <value>12 oszlopos rács</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayHasConfig" xml:space="preserve">
+    <value>Van konfigurációja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayInvalidJson" xml:space="preserve">
+    <value>Érvénytelen JSON: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLayouts" xml:space="preserve">
+    <value>Elrendezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLayoutsBlurb" xml:space="preserve">
+    <value>Rendezze el az egyes oldalak widgetjeit a zónák közötti húzással. A módosítások minden látogató számára közzétételre kerülnek.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLayoutsKicker" xml:space="preserve">
+    <value>Építés · Oldalelrendezések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLivePreview" xml:space="preserve">
+    <value>Élő előnézet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPaletteHint" xml:space="preserve">
+    <value>Húzzon egy widgetet egy zónába. Az eltávolításhoz húzza vissza ide az elhelyezett widgetet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreview" xml:space="preserve">
+    <value>Előnézet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreviewNote" xml:space="preserve">
+    <value>A nem mentett módosításokat is mutatja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreviewNoteProfile" xml:space="preserve">
+    <value> · a karakterwidgetek itt általános állapotot mutatnak</value>
+    <comment>MT — leading space is deliberate; this fragment is appended to LayPreviewNote.</comment>
+  </data>
+  <data name="LayPublish" xml:space="preserve">
+    <value>Közzététel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublishFailed" xml:space="preserve">
+    <value>Az elrendezés közzététele sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublished" xml:space="preserve">
+    <value>A(z) {0} elrendezés közzétéve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublishing" xml:space="preserve">
+    <value>Közzététel…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayRemove" xml:space="preserve">
+    <value>Eltávolítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayReset" xml:space="preserve">
+    <value>Visszaállítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetConfirm" xml:space="preserve">
+    <value>Visszaállítja a(z) {0} elrendezést az alapértelmezettre? Minden testreszabás elvész.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetDone" xml:space="preserve">
+    <value>A(z) {0} elrendezés visszaállítva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetFailed" xml:space="preserve">
+    <value>Az elrendezés visszaállítása sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetLayout" xml:space="preserve">
+    <value>Elrendezés visszaállítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeGlobal" xml:space="preserve">
+    <value>Oldalkeret</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeGlobalDesc" xml:space="preserve">
+    <value>A felső sáv, az oldalsávok és a lábléc, amelyet minden oldal használ.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeHome" xml:space="preserve">
+    <value>Kezdőlap</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeHomeDesc" xml:space="preserve">
+    <value>A nyitóoldal fő tartalma.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeProfile" xml:space="preserve">
+    <value>Karakterprofil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeProfileDesc" xml:space="preserve">
+    <value>A /character/{name} oldal törzse és jobb oldali sávja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeWikiIndex" xml:space="preserve">
+    <value>Wiki tartalomjegyzék</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeWikiIndexDesc" xml:space="preserve">
+    <value>A /wiki nyitóoldal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LaySidebarsAndFooter" xml:space="preserve">
+    <value>Oldalsávok és lábléc</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LaySpacerHeight" xml:space="preserve">
+    <value>Magasság (px)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LaySpacerHelp" xml:space="preserve">
+    <value>Az üres terület magassága képpontban. A szélessége az elhelyezés oszlopszélességét követi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayUnknownScope" xml:space="preserve">
+    <value>Ismeretlen elrendezési hatókör: „{0}”.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetActiveScene" xml:space="preserve">
+    <value>Aktív jelenet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetCharacterDirectory" xml:space="preserve">
+    <value>Karakterjegyzék</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetCharacterGallery" xml:space="preserve">
+    <value>Karaktergaléria</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetGameStats" xml:space="preserve">
+    <value>Játékstatisztika</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetOnlineCharacters" xml:space="preserve">
+    <value>Online karakterek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetQuickLinks" xml:space="preserve">
+    <value>Gyorshivatkozások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetQuickstart" xml:space="preserve">
+    <value>Gyorsindítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetRecentWikiActivity" xml:space="preserve">
+    <value>Legutóbbi wiki-tevékenység</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetSchemaApplication" xml:space="preserve">
+    <value>Sémaalkalmazás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetSpacer" xml:space="preserve">
+    <value>Térköz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetWelcomeText" xml:space="preserve">
+    <value>Üdvözlőszöveg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetWikiBody" xml:space="preserve">
+    <value>Wiki törzs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetWikiIndex" xml:space="preserve">
+    <value>Wiki tartalomjegyzék</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetsPanel" xml:space="preserve">
+    <value>Widgetek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidthInColumns" xml:space="preserve">
+    <value>Szélesség oszlopokban (1–12)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Limits" xml:space="preserve">
+    <value>Korlátok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Betöltés...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Locks" xml:space="preserve">
+    <value>Zárak:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Logging" xml:space="preserve">
+    <value>Naplózás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>Bejelentkezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LogsAndFiles" xml:space="preserve">
+    <value>Naplók és fájlok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LogsCategoryDescription" xml:space="preserve">
+    <value>Naplózás, fájlútvonalak és adatbázis-mentések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mail" xml:space="preserve">
+    <value>Posta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailDeleteFailed" xml:space="preserve">
+    <value>Az üzenet nem törölhető.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailDeleted" xml:space="preserve">
+    <value>Az üzenet törölve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailEmpty" xml:space="preserve">
+    <value>Ebben a mappában nincsenek üzenetek.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailNeedsCharacter" xml:space="preserve">
+    <value>Válasszon ki vagy csatlakoztasson egy karaktert a posta olvasásához.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailNotFound" xml:space="preserve">
+    <value>Az üzenet nem található.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailSendFailed" xml:space="preserve">
+    <value>A levél elküldése sikertelen. Ellenőrizze a címzett nevét.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailSent" xml:space="preserve">
+    <value>A levél elküldve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mailbox" xml:space="preserve">
+    <value>Postaláda</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Maintenance" xml:space="preserve">
+    <value>Karbantartás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ManageAllSettings" xml:space="preserve">
+    <value>A SharpMUSH szerver összes beállításának kezelése egy helyen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ManageConfigDescription" xml:space="preserve">
+    <value>A MUSH konfigurációs beállításainak kezelése. Importálhat konfigurációs fájlokat, vagy közvetlenül módosíthatja a beállításokat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mappings" xml:space="preserve">
+    <value>Leképezések:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>Üzenet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Messages" xml:space="preserve">
+    <value>Üzenetek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MyAccount" xml:space="preserve">
+    <value>Saját fiók</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NameToBan" xml:space="preserve">
+    <value>Tiltandó név</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavAccountTag" xml:space="preserve">
+    <value>fiók</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplication" xml:space="preserve">
+    <value>Alkalmazás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplicationComponentLoadFailed" xml:space="preserve">
+    <value>Ennek az alkalmazásnak a lefordított komponensét nem sikerült betölteni. Lehet, hogy a böngészőoldali kód le van tiltva (allow_browser_code), vagy az assembly nem ment át az ellenőrzésen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
+    <value>Az alkalmazás sémáját nem sikerült betölteni. A(z) {0} címen lévő softcode-kezelő hiányzik, vagy érvénytelen JSON-t ad vissza.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterManagement" xml:space="preserve">
+    <value>Karakterkezelés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
+    <value>A karakterkezelés hamarosan elérhető.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterName" xml:space="preserve">
+    <value>Karakternév</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterRegistered" xml:space="preserve">
+    <value>{0} regisztrált karakter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharactersRegistered" xml:space="preserve">
+    <value>{0} regisztrált karakter</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so this is identical to the singular key.</comment>
+  </data>
+  <data name="NavCharsShort" xml:space="preserve">
+    <value>Karakt.</value>
+    <comment>MT — abbreviated nav chip label, matching the English "Chars".</comment>
+  </data>
+  <data name="NavCloseTerminal" xml:space="preserve">
+    <value>Terminál bezárása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCommandTerminal" xml:space="preserve">
+    <value>parancsterminál</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
+    <value>— Csatlakozzon, hogy lássa, ki van itt —</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateACharacter" xml:space="preserve">
+    <value>Karakter létrehozása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacter" xml:space="preserve">
+    <value>Karakter létrehozása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacterBlurb" xml:space="preserve">
+    <value>A karakter az a személy, akit a játékban alakít. A fiókjához kapcsolódik; később továbbiakat is létrehozhat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExitFocusMode" xml:space="preserve">
+    <value>Kilépés a fókuszmódból</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExits" xml:space="preserve">
+    <value>Kijáratok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFocusMode" xml:space="preserve">
+    <value>Fókuszmód</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGoToAccountPage" xml:space="preserve">
+    <value>Ugrás a fiókoldalra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGuestTag" xml:space="preserve">
+    <value>vendég</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavInPlay" xml:space="preserve">
+    <value>játékban</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavLoadingApplication" xml:space="preserve">
+    <value>Alkalmazás betöltése…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailFolders" xml:space="preserve">
+    <value>Mappák</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailForward" xml:space="preserve">
+    <value>Továbbítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailReadFullMessage" xml:space="preserve">
+    <value>Teljes üzenet elolvasása →</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailSelectMessage" xml:space="preserve">
+    <value>Válasszon ki egy üzenetet az olvasáshoz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMenuLabel" xml:space="preserve">
+    <value>Menü</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationAccess" xml:space="preserve">
+    <value>Nincs hozzáférése ehhez az alkalmazáshoz.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationRegistered" xml:space="preserve">
+    <value>A(z) {0} címen nincs regisztrált alkalmazás.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoExitsAvailable" xml:space="preserve">
+    <value>— Nincs elérhető kijárat —</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotConnected" xml:space="preserve">
+    <value>nincs kapcsolat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOffline" xml:space="preserve">
+    <value>offline</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOnline" xml:space="preserve">
+    <value>online</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOpenTerminal" xml:space="preserve">
+    <value>Terminál megnyitása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySessionActive" xml:space="preserve">
+    <value>Aktív játékmenet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayTerminal" xml:space="preserve">
+    <value>Játékterminál</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayUnreadActivity" xml:space="preserve">
+    <value>Olvasatlan játéktevékenység</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSearchPlaceholder" xml:space="preserve">
+    <value>Keresés…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionBuild" xml:space="preserve">
+    <value>Építés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionManage" xml:space="preserve">
+    <value>Kezelés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionWorld" xml:space="preserve">
+    <value>Világ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsAccountDescription" xml:space="preserve">
+    <value>E-mail, jelszó és bejelentkezési biztonság</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsCharactersDescription" xml:space="preserve">
+    <value>A fiókhoz kapcsolt karakterek kezelése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsThemeDescription" xml:space="preserve">
+    <value>Megjelenési és színbeállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalSettings" xml:space="preserve">
+    <value>Terminálbeállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthCols" xml:space="preserve">
+    <value>Szélesség (oszlop)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthTooltip" xml:space="preserve">
+    <value>A kívánt terminálszélesség oszlopokban (legalább 78). A betűméret automatikusan igazodik, hogy kitöltse — a nagyobb hely nagyobb betűt jelent —, és a szerver ezt kapja meg képernyőszélességként.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTheme" xml:space="preserve">
+    <value>Téma</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavThemeComingSoon" xml:space="preserve">
+    <value>A témabeállítások hamarosan elérhetők.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavToggleNavigation" xml:space="preserve">
+    <value>Navigáció be- és kikapcsolása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Network" xml:space="preserve">
+    <value>Hálózat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewEntry" xml:space="preserve">
+    <value>Új bejegyzés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewKey" xml:space="preserve">
+    <value>Új kulcs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoBannedNamesConfigured" xml:space="preserve">
+    <value>Nincsenek beállított tiltott nevek.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoChangesToSave" xml:space="preserve">
+    <value>Nincs mentendő módosítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCharactersFound" xml:space="preserve">
+    <value>Nem található karakter.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCommandRestrictions" xml:space="preserve">
+    <value>Nincsenek beállított parancskorlátozások.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoEntries" xml:space="preserve">
+    <value>Nincsenek bejegyzések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoFunctionRestrictions" xml:space="preserve">
+    <value>Nincsenek beállított funkciókorlátozások.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoGroupingNote" xml:space="preserve">
+    <value>Ez a kategória még nem kapott bővített sémametaadatokat. A tulajdonságok csoportosítás nélkül jelennek meg. Jelenleg csak a Hálózat (Net) kategória rendelkezik a teljes bővített felülettel.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoItems" xml:space="preserve">
+    <value>Nincsenek elemek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesFound" xml:space="preserve">
+    <value>A(z) „{0}” kategóriához nem található konfigurációs tulajdonság.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesHint" xml:space="preserve">
+    <value>Lehet, hogy ez a kategória még nem kapott bővített sémametaadatokat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSitelockRulesConfigured" xml:space="preserve">
+    <value>Nincsenek beállított sitelock szabályok.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSuggestionCategories" xml:space="preserve">
+    <value>Nincsenek megadott javaslatkategóriák. Kattintson a „Kategória hozzáadása” gombra az első kategória létrehozásához.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoWordsInCategory" xml:space="preserve">
+    <value>Ebben a kategóriában még nincsenek szavak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorized" xml:space="preserve">
+    <value>Nincs jogosultsága ennek az erőforrásnak az eléréséhez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>Nem található</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotFoundDescription" xml:space="preserve">
+    <value>Sajnáljuk, a keresett tartalom nem létezik.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NothingToSeeHere" xml:space="preserve">
+    <value>Itt nincs semmi látnivaló.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsConverted" xml:space="preserve">
+    <value>Átalakított objektumok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsCreated" xml:space="preserve">
+    <value>Létrehozott objektumok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PercentComplete" xml:space="preserve">
+    <value>{0:F1}% kész – {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Performance" xml:space="preserve">
+    <value>Teljesítmény</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PerformanceCategoryDescription" xml:space="preserve">
+    <value>Erőforráskorlátok, parancssorok és optimalizálás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Phase" xml:space="preserve">
+    <value>Fázis:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAction" xml:space="preserve">
+    <value>Művelet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAddRemote" xml:space="preserve">
+    <value>Távoli forrás hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAddRemoteHeading" xml:space="preserve">
+    <value>Távoli forrás hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAdminSection" xml:space="preserve">
+    <value>Admin</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgApplied" xml:space="preserve">
+    <value>{0} {1} alkalmazva ({2}. változat).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgApply" xml:space="preserve">
+    <value>Alkalmaz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAttributesCount" xml:space="preserve">
+    <value>Attribútumok ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAttributesToInclude" xml:space="preserve">
+    <value>Belefoglalandó attribútumok:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthor" xml:space="preserve">
+    <value>Szerző</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorDescription" xml:space="preserve">
+    <value>Alakítson élő objektumokat package.yaml fájllá. A kijelölésben szereplő minden dbref-nek szimbolikussá kell válnia: a kijelölésen belüli hivatkozások automatikusan feloldódnak, a többit alább kell besorolnia.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorHeading" xml:space="preserve">
+    <value>Csomag készítése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorsLabel" xml:space="preserve">
+    <value>Szerzők (vesszővel elválasztva)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAvailableFrom" xml:space="preserve">
+    <value>Elérhető innen: {0}{1}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBaseAsInstalled" xml:space="preserve">
+    <value>Alap (a telepített állapot)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBranch" xml:space="preserve">
+    <value>Ág</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBranchOptionalLabel" xml:space="preserve">
+    <value>Ág (nem kötelező)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowse" xml:space="preserve">
+    <value>Böngészés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseDescription" xml:space="preserve">
+    <value>Frissíti a távoli forrás tárolóbeli gyorsítótárát, és felsorolja a csomagjait. A verziók a kiadási címkékből származnak; az ág csúcsa a fejlesztői csatorna.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseHeading" xml:space="preserve">
+    <value>Csomagok böngészése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCheck" xml:space="preserve">
+    <value>Ellenőrzés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
+    <value>{0} besorolása: a configure hivatkozásokhoz kulcs és címke szükséges.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgClose" xml:space="preserve">
+    <value>Bezárás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommandCollision" xml:space="preserve">
+    <value>A(z) „{0}” $-parancsot már meghatározza a(z) {1} csomag ({2}/{3}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityDirectory" xml:space="preserve">
+    <value>Közösségi jegyzék</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityDirectoryHint" xml:space="preserve">
+    <value>Elfogadott közösségi tárolók, a hivatalos csomagtárolóban gondozva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityRemoteAdded" xml:space="preserve">
+    <value>A(z) „{0}” hozzáadva közösségi távoli forrásként.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigureKeyLabel" xml:space="preserve">
+    <value>Configure kulcs</value>
+    <comment>MT — "configure" is a ref-classification mode identifier, kept in English.</comment>
+  </data>
+  <data name="PkgConfigurePromptLabel" xml:space="preserve">
+    <value>A telepítőknek megjelenő kérdés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigured" xml:space="preserve">
+    <value>beállítva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfiguredRemotes" xml:space="preserve">
+    <value>Beállított távoli források</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictCount" xml:space="preserve">
+    <value>{count, plural, one {# ütközés} other {# ütközés}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="PkgConflictLabel" xml:space="preserve">
+    <value>ütközés: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictsWithInstalled" xml:space="preserve">
+    <value>Ütközik a telepítettel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCurrent" xml:space="preserve">
+    <value>jelenlegi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDbrefHelper" xml:space="preserve">
+    <value>Objektumazonosító, például #123:456</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDefaultBranch" xml:space="preserve">
+    <value>alapértelmezett</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDeleteTakeTheirs" xml:space="preserve">
+    <value>Törlés (az övék átvétele)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDependedOnBy" xml:space="preserve">
+    <value>Függ tőle: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDescriptionLabel" xml:space="preserve">
+    <value>Leírás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDetails" xml:space="preserve">
+    <value>Részletek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevChannelOption" xml:space="preserve">
+    <value>fejlesztői csatorna ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevDrift" xml:space="preserve">
+    <value>fejlesztői eltérés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDownload" xml:space="preserve">
+    <value>Letöltés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEditMergedValue" xml:space="preserve">
+    <value>Az egyesített érték szerkesztése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEnterObjectId" xml:space="preserve">
+    <value>Adjon meg legalább egy objektumazonosítót.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgExportHint" xml:space="preserve">
+    <value>Kommitolja ezt egy csomagtárolóba (csomagonként egy könyvtár), vegye fel az index.yaml fájlba, és így címkézze a kiadásokat:</value>
+    <comment>MT — the English fragment trails off into a code sample rendered after it; the Hungarian ends with a colon so the sample still reads.</comment>
+  </data>
+  <data name="PkgExportYaml" xml:space="preserve">
+    <value>package.yaml exportálása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgForceRemoval" xml:space="preserve">
+    <value>Eltávolítás kényszerítése mindenképp</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgGitUrlLabel" xml:space="preserve">
+    <value>Git URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstallHeading" xml:space="preserve">
+    <value>Telepítés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalled" xml:space="preserve">
+    <value>Telepítve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledDescription" xml:space="preserve">
+    <value>Telepített softcode csomagok. A frissítések mindig átnézett terven keresztül történnek — semmi sem lép életbe automatikusan.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledOn" xml:space="preserve">
+    <value>telepítve: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledSuffix" xml:space="preserve">
+    <value> — telepítve: {0}.</value>
+    <comment>MT — leading space is deliberate; this fragment is appended to a preceding label.</comment>
+  </data>
+  <data name="PkgKeepMine" xml:space="preserve">
+    <value>A sajátom megtartása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgKickerAuthoring" xml:space="preserve">
+    <value>Építés · Csomagkészítés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgKickerRegistry" xml:space="preserve">
+    <value>Építés · Csomagnyilvántartás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgKickerSources" xml:space="preserve">
+    <value>Építés · Csomagforrások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLicenseLabel" xml:space="preserve">
+    <value>Licenc (nem kötelező)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLiveYourVersion" xml:space="preserve">
+    <value>Élő (az Ön változata)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgManifestParseFailed" xml:space="preserve">
+    <value>Az ág csúcsán lévő manifeszt nem értelmezhető.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgManifestRefLabel" xml:space="preserve">
+    <value>Manifeszt-hivatkozás (kisbetűk, aláhúzások)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMergedValueLabel" xml:space="preserve">
+    <value>Egyesített érték</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMissingRemoteParam" xml:space="preserve">
+    <value>Hiányzik a „remote” paraméter.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgModeConfigure" xml:space="preserve">
+    <value>configure</value>
+    <comment>MT — ref-classification mode identifier, kept in English.</comment>
+  </data>
+  <data name="PkgModeWellKnown" xml:space="preserve">
+    <value>well-known</value>
+    <comment>MT — ref-classification mode identifier, kept in English.</comment>
+  </data>
+  <data name="PkgName" xml:space="preserve">
+    <value>Név</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNewVersion" xml:space="preserve">
+    <value>Új ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoCommunityRepos" xml:space="preserve">
+    <value>Még nincs elfogadott közösségi tároló.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoDescription" xml:space="preserve">
+    <value>(nincs leírás)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoReadme" xml:space="preserve">
+    <value>Nincs elérhető README.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoReleaseTags" xml:space="preserve">
+    <value>Nincsenek kiadási címkék — csak a fejlesztői csatorna érhető el.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoSearchMatch" xml:space="preserve">
+    <value>Nincs a keresésnek megfelelő csomag.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoUpdatesAvailable" xml:space="preserve">
+    <value>Egyik csomaghoz sem érhető el frissítés.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoneInstalled" xml:space="preserve">
+    <value>Még nincs telepített csomag. Állítson be egy távoli forrást, majd böngéssze át az első csomag telepítéséhez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNotInstalledSuffix" xml:space="preserve">
+    <value> — nincs telepítve.</value>
+    <comment>MT — leading space is deliberate; this fragment is appended to a preceding label.</comment>
+  </data>
+  <data name="PkgObjAttrCounts" xml:space="preserve">
+    <value>{0} obj. / {1} attr.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjectIdsLabel" xml:space="preserve">
+    <value>Objektumazonosítók (soronként egy, például #847:1778518155494)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjects" xml:space="preserve">
+    <value>Objektumok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjectsCount" xml:space="preserve">
+    <value>Objektumok ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgOccurrences" xml:space="preserve">
+    <value>{count, plural, one {# előfordulás} other {# előfordulás}}, például itt: {location}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="PkgPackageIdLabel" xml:space="preserve">
+    <value>Csomagazonosító (kisbetűk, kötőjelek)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPackages" xml:space="preserve">
+    <value>Csomagok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPlanLocation" xml:space="preserve">
+    <value>{0} / {1} itt: {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRef" xml:space="preserve">
+    <value>Hivatkozás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRefreshAndBrowse" xml:space="preserve">
+    <value>Frissítés és böngészés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteLabel" xml:space="preserve">
+    <value>Távoli forrás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteRemoved" xml:space="preserve">
+    <value>A(z) „{0}” távoli forrás eltávolítva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteSaved" xml:space="preserve">
+    <value>A(z) „{0}” távoli forrás elmentve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotes" xml:space="preserve">
+    <value>Távoli források</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesDescription" xml:space="preserve">
+    <value>Azok a Git-tárolók, amelyekből ez a játék csomagokat telepít. A bizalmi szintek megítélése az Öné — az alábbi közösségi listákat a hivatalos tároló gondozza, azok soha nem önbevallásosak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesHeading" xml:space="preserve">
+    <value>Csomagforrások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRenamedFrom" xml:space="preserve">
+    <value>átnevezve innen: {0} (megtartja: {1})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReplan" xml:space="preserve">
+    <value>Újratervezés ezekkel a válaszokkal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRequiredBy" xml:space="preserve">
+    <value>szükséges ehhez: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRequires" xml:space="preserve">
+    <value>Igényli</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolutionLabel" xml:space="preserve">
+    <value>Feloldás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolvesAtApply" xml:space="preserve">
+    <value>alkalmazáskor oldódik fel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolvesAtApplyTooltip" xml:space="preserve">
+    <value>Egyes hivatkozások az alkalmazás időpontjában oldódnak fel (új objektumok / configure)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReview" xml:space="preserve">
+    <value>Áttekintés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReviewInstall" xml:space="preserve">
+    <value>Telepítés áttekintése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionHistory" xml:space="preserve">
+    <value>Változattörténet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionLine" xml:space="preserve">
+    <value>{0}. vált. — {1} {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionsOf" xml:space="preserve">
+    <value>{0} — változatok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRollBack" xml:space="preserve">
+    <value>Visszaállítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRolledBack" xml:space="preserve">
+    <value>Visszaállítva a(z) {0}. változatra (új változat: {1}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgScanSelection" xml:space="preserve">
+    <value>Kijelölés vizsgálata</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSearchPlaceholder" xml:space="preserve">
+    <value>Csomagok keresése…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSnapshotAt" xml:space="preserve">
+    <value>{0} ekkor: {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSoftcodePackages" xml:space="preserve">
+    <value>Softcode csomagok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepClassifyExternal" xml:space="preserve">
+    <value>Külső hivatkozások besorolása ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepMetadataExport" xml:space="preserve">
+    <value>Metaadatok és exportálás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepRefsAttributes" xml:space="preserve">
+    <value>Hivatkozások és attribútumok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepSelectObjects" xml:space="preserve">
+    <value>Objektumok kiválasztása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTagMoved" xml:space="preserve">
+    <value>a címke elmozdult!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTakeTheirs" xml:space="preserve">
+    <value>Az övék átvétele</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrust" xml:space="preserve">
+    <value>Bizalom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustCommunity" xml:space="preserve">
+    <value>közösségi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustOfficial" xml:space="preserve">
+    <value>hivatalos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustUnknown" xml:space="preserve">
+    <value>ismeretlen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustWarningTagMoved" xml:space="preserve">
+    <value>BIZALMI FIGYELMEZTETÉS: a(z) {0} {1} kiadási címkéje már nem a telepített commitra mutat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgType" xml:space="preserve">
+    <value>Típus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstall" xml:space="preserve">
+    <value>Eltávolítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstallConfirmBody" xml:space="preserve">
+    <value>{objects, plural, one {# objektum} other {# objektum}} megsemmisítésre lesz jelölve, és {attributes, plural, one {# kezelt attribútumrekord} other {# kezelt attribútumrekord}} törlődik.</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="PkgUninstallConfirmTitle" xml:space="preserve">
+    <value>Eltávolítja a következőt: {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstalled" xml:space="preserve">
+    <value>{0} eltávolítva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUnreviewedSource" xml:space="preserve">
+    <value>Ezt a forrást nem ellenőrizték. Alkalmazás előtt vizsgáljon át minden kódot az áttekintő képernyőn.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdateCheckFailed" xml:space="preserve">
+    <value>A frissítés-ellenőrzés sikertelen — elérhető a forrástároló?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdates" xml:space="preserve">
+    <value>Frissítések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdatesAvailable" xml:space="preserve">
+    <value>Elérhető frissítések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradeHeading" xml:space="preserve">
+    <value>Frissítés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradingFrom" xml:space="preserve">
+    <value>— frissítés innen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUrl" xml:space="preserve">
+    <value>URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgVersionAvailable" xml:space="preserve">
+    <value>{0} elérhető</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgVersionLabel" xml:space="preserve">
+    <value>Verzió</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgWellKnownRefLabel" xml:space="preserve">
+    <value>Well-known hivatkozás</value>
+    <comment>MT — "well-known" is a ref-classification mode identifier, kept in English.</comment>
+  </data>
+  <data name="PkgWillBeMarkedGoing" xml:space="preserve">
+    <value>{0} GOING jelölést kap</value>
+    <comment>MT — GOING is the in-game object flag, kept in English.</comment>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Játék</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>Játékosok:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PreviewFileContent" xml:space="preserve">
+    <value>Fájltartalom előnézete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileHandler" xml:space="preserve">
+    <value>Profilkezelő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUnavailable" xml:space="preserve">
+    <value>Ennek a karakternek a profilja nem érhető el.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdateFailed" xml:space="preserve">
+    <value>A profilmódosítások mentése sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdated" xml:space="preserve">
+    <value>A profil frissítve ({count, plural, one {# mező} other {# mező}}).</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="Progress" xml:space="preserve">
+    <value>Folyamat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="QuickActions" xml:space="preserve">
+    <value>Gyorsműveletek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RecentChanges" xml:space="preserve">
+    <value>Legutóbbi módosítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Frissítés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RemoveEntry" xml:space="preserve">
+    <value>Bejegyzés eltávolítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Reply" xml:space="preserve">
+    <value>Válasz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResActiveScenesSubtitle" xml:space="preserve">
+    <value>Éppen most zajló jelenetek.</value>
+    <comment>MT — "sessions" read as roleplay scenes, matching the surrounding scene-archive UI.</comment>
+  </data>
+  <data name="ResAdminWikiKicker" xml:space="preserve">
+    <value>Stáb · Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResAnyoneCanEdit" xml:space="preserve">
+    <value>bárki szerkesztheti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResCategoryGeneral" xml:space="preserve">
+    <value>Általános</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResChangeCount" xml:space="preserve">
+    <value>{count, plural, one {# módosítás} other {# módosítás}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="ResChangedBadge" xml:space="preserve">
+    <value>módosítva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResConfigHomeKicker" xml:space="preserve">
+    <value>Admin · szerverkonfiguráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResConfigSectionKicker" xml:space="preserve">
+    <value>Admin · szerverbeállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDefaultValueTooltip" xml:space="preserve">
+    <value>Alapértelmezett: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDraft" xml:space="preserve">
+    <value>Piszkozat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResHistory" xml:space="preserve">
+    <value>Előzmények</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResInvalid" xml:space="preserve">
+    <value>Érvénytelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResJoin" xml:space="preserve">
+    <value>Csatlakozás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResNoScenesFound" xml:space="preserve">
+    <value>Nem található jelenet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResOnThisPage" xml:space="preserve">
+    <value>Ezen az oldalon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResRead" xml:space="preserve">
+    <value>Olvasás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResRoutingErrorHint" xml:space="preserve">
+    <value>Ez az üzenet azt jelenti, hogy az útválasztó NEM találja meg az egyéni oldalt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSaveFailedShort" xml:space="preserve">
+    <value>A mentés sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResScenesSubtitle" xml:space="preserve">
+    <value>Szerepjáték-jelenetek böngészése és megtekintése.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSearchTitlesPlaceholder" xml:space="preserve">
+    <value>Címek keresése…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResStartedAt" xml:space="preserve">
+    <value>Kezdés: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResTabLive" xml:space="preserve">
+    <value>Élő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResTabRecent" xml:space="preserve">
+    <value>Legutóbbi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResValidationFailed" xml:space="preserve">
+    <value>Az ellenőrzés sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResViewLog" xml:space="preserve">
+    <value>Napló megtekintése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatDrafts" xml:space="preserve">
+    <value>Piszkozatok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTotalPages" xml:space="preserve">
+    <value>Oldalak összesen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTranslations" xml:space="preserve">
+    <value>Fordítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsConnectFailed" xml:space="preserve">
+    <value>[Hiba] A kapcsolódás sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsConnectedTo" xml:space="preserve">
+    <value>[Rendszer] Kapcsolódva ide: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsDisconnectFailed" xml:space="preserve">
+    <value>[Hiba] A kapcsolat bontása sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsDisconnected" xml:space="preserve">
+    <value>[Rendszer] Kapcsolat bontva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsReceived" xml:space="preserve">
+    <value>[Fogadva] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsSendFailed" xml:space="preserve">
+    <value>[Hiba] A küldés sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsSent" xml:space="preserve">
+    <value>[Elküldve] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetChanges" xml:space="preserve">
+    <value>Módosítások visszavonása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefault" xml:space="preserve">
+    <value>Visszaállítás alapértelmezettre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefaults" xml:space="preserve">
+    <value>Visszaállítás az alapértelmezettekre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Restrictions" xml:space="preserve">
+    <value>Korlátozások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsBuilderHelper" xml:space="preserve">
+    <value>például: wizard, builder</value>
+    <comment>MT — the flag literals are values the admin types; left in English.</comment>
+  </data>
+  <data name="RestrictionsDescription" xml:space="preserve">
+    <value>Annak korlátozása, hogy mely játékosok használhatnak egyes parancsokat vagy funkciókat, jelzők, hatalmak vagy attribútumok alapján.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsHelper" xml:space="preserve">
+    <value>például: wizard, royalty, admin</value>
+    <comment>MT — the flag literals are values the admin types; left in English.</comment>
+  </data>
+  <data name="RestrictionsLabel" xml:space="preserve">
+    <value>Korlátozások (vesszővel elválasztva)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAddRole" xml:space="preserve">
+    <value>Szerepkör hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAllow" xml:space="preserve">
+    <value>Engedélyezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAssignFailed" xml:space="preserve">
+    <value>A szerepkör hozzárendelése sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAssigned" xml:space="preserve">
+    <value>{0} hozzárendelve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAssignedRoles" xml:space="preserve">
+    <value>Hozzárendelt szerepkörök</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolBackToActiveScenes" xml:space="preserve">
+    <value>Vissza az aktív jelenetekhez</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolBackToScenes" xml:space="preserve">
+    <value>Vissza a jelenetekhez</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolColorHelper" xml:space="preserve">
+    <value>CSS-szín, például #6cde9a</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolColorLabel" xml:space="preserve">
+    <value>Szín</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposePlaceholder" xml:space="preserve">
+    <value>Pózoljon, beszéljen vagy meséljen…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleteConfirm" xml:space="preserve">
+    <value>Törli a következőt: „{0}” ({1})? Ezzel eltávolítja minden olyan fiókból, amely rendelkezik vele.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleteFailed" xml:space="preserve">
+    <value>A szerepkör törlése sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleteTitle" xml:space="preserve">
+    <value>Szerepkör törlése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleted" xml:space="preserve">
+    <value>{0} törölve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeny" xml:space="preserve">
+    <value>Tiltás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolEditedBadge" xml:space="preserve">
+    <value>szerkesztve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolEditedTimes" xml:space="preserve">
+    <value>{count, plural, one {# alkalommal szerkesztve} other {# alkalommal szerkesztve}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="RolEnterUsername" xml:space="preserve">
+    <value>Adjon meg egy felhasználónevet a kereséshez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolHeading" xml:space="preserve">
+    <value>Szerepkörök és jogosultságok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolInherit" xml:space="preserve">
+    <value>Öröklés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolKicker" xml:space="preserve">
+    <value>Kezelés · Hozzáférés-vezérlés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLiveBadge" xml:space="preserve">
+    <value>ÉLŐ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLiveScene" xml:space="preserve">
+    <value>Élő jelenet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLookUp" xml:space="preserve">
+    <value>Keresés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolModePose" xml:space="preserve">
+    <value>Póz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolModeSay" xml:space="preserve">
+    <value>Beszéd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolModeSemipose" xml:space="preserve">
+    <value>Félpóz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNameLabel" xml:space="preserve">
+    <value>Név</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNameRequired" xml:space="preserve">
+    <value>A név megadása kötelező.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNewRole" xml:space="preserve">
+    <value>Új szerepkör</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoAccountFound" xml:space="preserve">
+    <value>Nem található fiók a következőhöz: „{0}”.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoPoses" xml:space="preserve">
+    <value>Ebben a jelenetben nincsenek pózok.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoRolesAssigned" xml:space="preserve">
+    <value>Nincs hozzárendelt szerepkör.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoRolesDefined" xml:space="preserve">
+    <value>Nincsenek megadott szerepkörök.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNotConnected" xml:space="preserve">
+    <value>Nincs kapcsolat a játékkal — csatlakozzon a pózok küldéséhez és élő fogadásához.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPageTitle" xml:space="preserve">
+    <value>Szerepkörök</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPoseCount" xml:space="preserve">
+    <value>{count, plural, one {# póz} other {# póz}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Ütközés esetén a magasabb érték nyer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPriorityLabel" xml:space="preserve">
+    <value>Prioritás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoveFailed" xml:space="preserve">
+    <value>A szerepkör eltávolítása sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoveRole" xml:space="preserve">
+    <value>Eltávolítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoved" xml:space="preserve">
+    <value>{0} eltávolítva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaveFailed" xml:space="preserve">
+    <value>A mentés sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaveRole" xml:space="preserve">
+    <value>Szerepkör mentése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaved" xml:space="preserve">
+    <value>{0} elmentve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolScene" xml:space="preserve">
+    <value>Jelenet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneIn" xml:space="preserve">
+    <value>Jelenet itt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNotFound" xml:space="preserve">
+    <value>A jelenet nem található.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSearchAccountPrompt" xml:space="preserve">
+    <value>Keressen egy fiókot a szerepköreinek kezeléséhez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSearchByUsername" xml:space="preserve">
+    <value>Keresés felhasználónév alapján…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSelectOrCreate" xml:space="preserve">
+    <value>Válasszon ki egy szerepkört, vagy hozzon létre újat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugAndNameRequired" xml:space="preserve">
+    <value>A slug és a név megadása kötelező.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugHelper" xml:space="preserve">
+    <value>Állandó gépi kulcs. Létrehozás után nem módosítható.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugLabel" xml:space="preserve">
+    <value>Slug</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSystemBadge" xml:space="preserve">
+    <value>Rendszer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabAssignments" xml:space="preserve">
+    <value>Hozzárendelések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabRoles" xml:space="preserve">
+    <value>Szerepkörök</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolUntitled" xml:space="preserve">
+    <value>Névtelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolViewArchive" xml:space="preserve">
+    <value>Archívum megtekintése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolWaitingForActivity" xml:space="preserve">
+    <value>Várakozás tevékenységre…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolWatchLive" xml:space="preserve">
+    <value>Élő megtekintés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Rooms" xml:space="preserve">
+    <value>Szobák:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingError" xml:space="preserve">
+    <value>Útválasztási hiba:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingErrorDescription" xml:space="preserve">
+    <value>A(z) „{0}” kategóriához egyéni oldal tartozik, amelynek a DynamicConfig helyett kellene megjelennie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingErrorExpected" xml:space="preserve">
+    <value>Ez az üzenet azt jelenti, hogy az útválasztó NEM találja meg az egyéni oldalt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Mentés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveConfiguration" xml:space="preserve">
+    <value>Konfiguráció mentése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>A konfiguráció mentése sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveNotImplemented" xml:space="preserve">
+    <value>A mentési funkció még nincs megvalósítva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Saving" xml:space="preserve">
+    <value>Mentés...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SceneArchive" xml:space="preserve">
+    <value>Jelenetek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SearchAllSettings" xml:space="preserve">
+    <value>Keresés az összes beállítás között</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SearchCharacters" xml:space="preserve">
+    <value>Karakterek keresése…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SearchSettings" xml:space="preserve">
+    <value>Beállítások keresése...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Security" xml:space="preserve">
+    <value>Biztonság</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SecurityCategoryDescription" xml:space="preserve">
+    <value>Hozzáférés-vezérlés, sitelock szabályok és tiltott nevek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SelectedFile" xml:space="preserve">
+    <value>Kiválasztott fájl</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Send" xml:space="preserve">
+    <value>Küldés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SendMessage" xml:space="preserve">
+    <value>Üzenet küldése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Server" xml:space="preserve">
+    <value>Szerver</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerCategoryDescription" xml:space="preserve">
+    <value>Hálózati kapcsolatok, adatbázis és alapvető szerverbeállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerConfiguration" xml:space="preserve">
+    <value>Szerverkonfiguráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerSettings" xml:space="preserve">
+    <value>Szerverbeállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerUri" xml:space="preserve">
+    <value>Szerver URI</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SetAsIcon" xml:space="preserve">
+    <value>Beállítás profilképként</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Beállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SettingsCount" xml:space="preserve">
+    <value>{0} beállítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SettingsLabel" xml:space="preserve">
+    <value>{0} beállításai</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Sitelock" xml:space="preserve">
+    <value>Sitelock</value>
+    <comment>MT — MUSH term of art, kept in English.</comment>
+  </data>
+  <data name="SitelockAccessRulesHint" xml:space="preserve">
+    <value>Hozzáférési szabályok:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockDescription" xml:space="preserve">
+    <value>Annak szabályozása, hogy mely helyekről lehet kapcsolódni, játékost létrehozni vagy vendégfiókot használni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleAddFailed" xml:space="preserve">
+    <value>A sitelock szabály hozzáadása sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleAdded" xml:space="preserve">
+    <value>A(z) „{0}” sitelock szabálya sikeresen hozzáadva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleRemoveFailed" xml:space="preserve">
+    <value>A sitelock szabály eltávolítása sikertelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleRemoved" xml:space="preserve">
+    <value>A(z) „{0}” sitelock szabálya sikeresen eltávolítva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRules" xml:space="preserve">
+    <value>Sitelock szabályok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SoftcodeEditor" xml:space="preserve">
+    <value>Softcode-szerkesztő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StaffOnlyField" xml:space="preserve">
+    <value>Csak a stáb számára — a módosítások csak akkor lépnek életbe, ha Ön a stáb tagja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StartConversion" xml:space="preserve">
+    <value>Átalakítás indítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Statistics" xml:space="preserve">
+    <value>Statisztika</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Subject" xml:space="preserve">
+    <value>Tárgy</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SuggestionManagement" xml:space="preserve">
+    <value>Javaslatok kezelése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Suggestions" xml:space="preserve">
+    <value>Javaslatok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SuggestionsDescription" xml:space="preserve">
+    <value>A helyesírás-ellenőrzési és javaslatkategóriák kezelése, amelyek alternatívákat kínálnak az elgépelt szavakra a súgóbejegyzésekben, a funkciónevekben és más felhasználói bevitelben.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Summary" xml:space="preserve">
+    <value>Összefoglaló</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SupportedFormatsConfig" xml:space="preserve">
+    <value>Támogatott formátumok: .cnf, .conf, .txt (legfeljebb 1 MB)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SupportedFormatsDb" xml:space="preserve">
+    <value>Támogatott formátumok: .db, .txt (legfeljebb 100 MB)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TempC" xml:space="preserve">
+    <value>Hőm. (C)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TempF" xml:space="preserve">
+    <value>Hőm. (F)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAddAttribute" xml:space="preserve">
+    <value>Attribútum hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrEmpty" xml:space="preserve">
+    <value>(üres)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindCommand" xml:space="preserve">
+    <value>Parancskiváltó</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindData" xml:space="preserve">
+    <value>Adat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindFunction" xml:space="preserve">
+    <value>Funkció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindListen" xml:space="preserve">
+    <value>Figyelőkiváltó</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindText" xml:space="preserve">
+    <value>Szöveg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserError" xml:space="preserve">
+    <value>Hiba: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserExampleLabel" xml:space="preserve">
+    <value>például</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserGo" xml:space="preserve">
+    <value>Ugrás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserHere" xml:space="preserve">
+    <value>Itt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserMine" xml:space="preserve">
+    <value>Sajátok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserNoObjects" xml:space="preserve">
+    <value>Nem található objektum.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserSearch" xml:space="preserve">
+    <value>Keresés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermClear" xml:space="preserve">
+    <value>Törlés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermClearTerminal" xml:space="preserve">
+    <value>Terminál törlése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCollapseAttributes" xml:space="preserve">
+    <value>Attribútumok összecsukása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCollapseObjects" xml:space="preserve">
+    <value>Objektumok összecsukása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCreateRoom" xml:space="preserve">
+    <value>Szoba létrehozása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCreateThing" xml:space="preserve">
+    <value>Tárgy létrehozása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermDeletedAttribute" xml:space="preserve">
+    <value>&amp;{0} törölve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEditor" xml:space="preserve">
+    <value>Szerkesztő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermErrorLine" xml:space="preserve">
+    <value>[Hiba] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermErrorLoadingObject" xml:space="preserve">
+    <value>Hiba az objektum betöltésekor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEvalResult" xml:space="preserve">
+    <value>Kiértékelés eredménye</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermExpandAttributes" xml:space="preserve">
+    <value>Attribútumok kibontása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermExpandObjects" xml:space="preserve">
+    <value>Objektumok kibontása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermFilterAttributes" xml:space="preserve">
+    <value>Attribútumok szűrése…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpBack" xml:space="preserve">
+    <value>Vissza</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpClose" xml:space="preserve">
+    <value>Bezárás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpEmpty" xml:space="preserve">
+    <value>Keressen fent, vagy kattintson a szerkesztőben a „📖 Show full help” elemre.</value>
+    <comment>MT — the quoted label is emitted by the Monaco hover provider and is not localized, so it is kept verbatim.</comment>
+  </data>
+  <data name="TermHelpKindCommand" xml:space="preserve">
+    <value>Parancs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpKindFunction" xml:space="preserve">
+    <value>Funkció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpSearchPlaceholder" xml:space="preserve">
+    <value>Funkciók és parancsok keresése…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpSwitches" xml:space="preserve">
+    <value>Kapcsolók: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermInputPlaceholder" xml:space="preserve">
+    <value>say hello   ·   pose integet   ·   look   ·   who</value>
+    <comment>MT — the command verbs are game syntax and stay in English; only the pose argument is localized.</comment>
+  </data>
+  <data name="TermMushHelp" xml:space="preserve">
+    <value>MUSH súgó</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoAttributeSelected" xml:space="preserve">
+    <value>Nincs kiválasztott attribútum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoAttributes" xml:space="preserve">
+    <value>Nincsenek attribútumok.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoMatch" xml:space="preserve">
+    <value>Nincs találat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoOutput" xml:space="preserve">
+    <value>(nincs kimenet)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNotLoggedIn" xml:space="preserve">
+    <value>nincs bejelentkezve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermObjectNamePlaceholder" xml:space="preserve">
+    <value>név</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermObjects" xml:space="preserve">
+    <value>Objektumok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermRefreshAttributes" xml:space="preserve">
+    <value>Attribútumok frissítése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSavedAttribute" xml:space="preserve">
+    <value>&amp;{0} elmentve a(z) #{1} objektumon.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSelectAnObject" xml:space="preserve">
+    <value>Válasszon ki egy objektumot.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSoftcodeEditorTitle" xml:space="preserve">
+    <value>Softcode-szerkesztő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermTest" xml:space="preserve">
+    <value>Teszt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermTestTooltip" xml:space="preserve">
+    <value>Teszt — kiértékelés mentés nélkül</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermUnsaved" xml:space="preserve">
+    <value>nincs mentve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Terminal" xml:space="preserve">
+    <value>Terminál</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TextFiles" xml:space="preserve">
+    <value>Szövegfájlok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Things" xml:space="preserve">
+    <value>Tárgyak:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="To" xml:space="preserve">
+    <value>Címzett</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Total" xml:space="preserve">
+    <value>Összesen:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TotalObjects" xml:space="preserve">
+    <value>Objektumok összesen:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TotalWords" xml:space="preserve">
+    <value>Szavak összesen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Type" xml:space="preserve">
+    <value>Típus: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeDecimal" xml:space="preserve">
+    <value>Tizedes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeList" xml:space="preserve">
+    <value>Lista</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeNumber" xml:space="preserve">
+    <value>Szám</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeOptional" xml:space="preserve">
+    <value>Nem kötelező {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeText" xml:space="preserve">
+    <value>Szöveg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeYesNo" xml:space="preserve">
+    <value>Igen/Nem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="UnsavedChanges" xml:space="preserve">
+    <value>Nem mentett módosítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Uploading" xml:space="preserve">
+    <value>Feltöltés...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Urgent" xml:space="preserve">
+    <value>Sürgős</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Érték</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ValuesCommaSeparated" xml:space="preserve">
+    <value>Értékek (vesszővel elválasztva)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WarningCount" xml:space="preserve">
+    <value>{count, plural, one {# figyelmeztetés} other {# figyelmeztetés}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="Warnings" xml:space="preserve">
+    <value>Figyelmeztetések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WarningsLabel" xml:space="preserve">
+    <value>Figyelmeztetések ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Weather" xml:space="preserve">
+    <value>Időjárás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WeatherDescription" xml:space="preserve">
+    <value>Ez a komponens a szerverről történő adatlekérést mutatja be.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WebSocketConnectionTest" xml:space="preserve">
+    <value>WebSocket kapcsolat tesztelése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WebSocketTest" xml:space="preserve">
+    <value>WebSocket teszt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidAction" xml:space="preserve">
+    <value>Művelet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidActionFailed" xml:space="preserve">
+    <value>A művelet sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidActiveScenes" xml:space="preserve">
+    <value>Aktív jelenetek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBack" xml:space="preserve">
+    <value>Vissza</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseArchive" xml:space="preserve">
+    <value>Archívum böngészése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseCharacters" xml:space="preserve">
+    <value>Karakterek böngészése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseScenes" xml:space="preserve">
+    <value>Jelenetek böngészése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidConfigureQuickLinks" xml:space="preserve">
+    <value>Gyorshivatkozások beállítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidCreateFirstCharacter" xml:space="preserve">
+    <value>Hozza létre az első karakterét a játék megkezdéséhez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidCreateYourCharacter" xml:space="preserve">
+    <value>Karakter létrehozása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFieldRequired" xml:space="preserve">
+    <value>A(z) {0} megadása kötelező.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFillRequiredFields" xml:space="preserve">
+    <value>Töltse ki a kiemelt kötelező mezőket.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFormNoPages" xml:space="preserve">
+    <value>Ennek az űrlapnak nincsenek oldalai.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFormStepOf" xml:space="preserve">
+    <value>Lépés: {0} / {1}</value>
+    <comment>MT — reworded to "Step: {0} / {1}" because Hungarian numeral suffixes cannot agree with an unknown placeholder value.</comment>
+  </data>
+  <data name="WidGameStartingUp" xml:space="preserve">
+    <value>A játék indul…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidJoinScene" xml:space="preserve">
+    <value>Csatlakozás a jelenethez</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidLoadingWikiPage" xml:space="preserve">
+    <value>Wiki-oldal betöltése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNewCharacter" xml:space="preserve">
+    <value>Új karakter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNewHere" xml:space="preserve">
+    <value>Új itt?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNext" xml:space="preserve">
+    <value>Tovább</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoActiveScenes" xml:space="preserve">
+    <value>Jelenleg nincs aktív jelenet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoCharacterYet" xml:space="preserve">
+    <value>Még nincs karaktere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoRecentWikiActivity" xml:space="preserve">
+    <value>Nincs legutóbbi wiki-tevékenység.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNobodyConnected" xml:space="preserve">
+    <value>Jelenleg senki sincs bejelentkezve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNothingToDisplay" xml:space="preserve">
+    <value>Nincs megjeleníthető tartalom.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidOnlineNow" xml:space="preserve">
+    <value>Most online</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidPlayersOnline" xml:space="preserve">
+    <value>Online játékosok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidPluginChangedReloading" xml:space="preserve">
+    <value>Egy bővítmény megváltozott — újratöltés…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidQuickstartIntro" xml:space="preserve">
+    <value>Kezdje a wiki elolvasásával, a karakterek böngészésével, vagy csatlakozzon egy jelenethez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidReadTheWiki" xml:space="preserve">
+    <value>A wiki elolvasása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentWikiActivity" xml:space="preserve">
+    <value>Legutóbbi wiki-tevékenység</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSceneIn" xml:space="preserve">
+    <value>Jelenet itt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSceneLive" xml:space="preserve">
+    <value>ÉLŐ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidScenePoseCount" xml:space="preserve">
+    <value>{count, plural, one {# póz} other {# póz}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="WidSchemaUnavailable" xml:space="preserve">
+    <value>A widget sémája nem érhető el.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSubmit" xml:space="preserve">
+    <value>Küldés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustCommunity" xml:space="preserve">
+    <value>Közösségi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustCommunityTooltip" xml:space="preserve">
+    <value>Ismert közösségi forrás — alkalmazás előtt tekintse át a kódot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustOfficial" xml:space="preserve">
+    <value>Hivatalos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustOfficialTooltip" xml:space="preserve">
+    <value>A SharpMUSH szervezet tartja karban</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustUnknown" xml:space="preserve">
+    <value>Ismeretlen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustUnknownTooltip" xml:space="preserve">
+    <value>Nem ellenőrzött forrás — alkalmazás előtt vizsgáljon át mindent</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidViewAllCount" xml:space="preserve">
+    <value>Mind a(z) {0} megtekintése →</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidWaitingForServer" xml:space="preserve">
+    <value>Várakozás a szerver elindulására…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidWidgetRenderFailed" xml:space="preserve">
+    <value>Ezt a widgetet nem sikerült megjeleníteni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneFooter" xml:space="preserve">
+    <value>Lábléc</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneLeftSidebar" xml:space="preserve">
+    <value>Bal oldalsáv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneMainContent" xml:space="preserve">
+    <value>Fő tartalom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneRightSidebar" xml:space="preserve">
+    <value>Jobb oldalsáv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneTopBar" xml:space="preserve">
+    <value>Felső sáv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Wiki" xml:space="preserve">
+    <value>Wiki</value>
+    <comment>MT — conventionally untranslated.</comment>
+  </data>
+  <data name="WikiAdmin" xml:space="preserve">
+    <value>Wiki adminisztráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAdminDescription" xml:space="preserve">
+    <value>Wiki-oldalak kezelése: metaadatok, védelem, közzétételi állapot és tömeges műveletek.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAllLocales" xml:space="preserve">
+    <value>Minden nyelv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAllNamespaces" xml:space="preserve">
+    <value>Minden névtér</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAvailableTranslations" xml:space="preserve">
+    <value>Elérhető még ezeken a nyelveken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiBatchFailed" xml:space="preserve">
+    <value>{count, plural, one {# oldal sikertelen} other {# oldal sikertelen}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="WikiBatchSucceeded" xml:space="preserve">
+    <value>{count, plural, one {# oldal frissítve} other {# oldal frissítve}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
+  </data>
+  <data name="WikiBrowseByNamespace" xml:space="preserve">
+    <value>Böngészés névtér szerint</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiCategory" xml:space="preserve">
+    <value>Kategória</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDelete" xml:space="preserve">
+    <value>Törlés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDeleteConfirmText" xml:space="preserve">
+    <value>{count, plural, one {# oldal} other {# oldal}} és az összes változatuk törlése? A művelet nem vonható vissza.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDeleteConfirmTitle" xml:space="preserve">
+    <value>Oldalak törlése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiEdit" xml:space="preserve">
+    <value>Szerkesztés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiEditMetadata" xml:space="preserve">
+    <value>Metaadatok szerkesztése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiFallbackCreateTranslation" xml:space="preserve">
+    <value>Az oldal lefordítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiFallbackNotice" xml:space="preserve">
+    <value>Ez az oldal még nem érhető el ezen a nyelven: {0} — a(z) {1} változat látható.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiLocaleFilter" xml:space="preserve">
+    <value>Nyelv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiMetadataSaveFailed" xml:space="preserve">
+    <value>A metaadatok mentése sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiMetadataSaved" xml:space="preserve">
+    <value>A(z) {0} metaadatai elmentve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNamespace" xml:space="preserve">
+    <value>Névtér</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNamespaceEmpty" xml:space="preserve">
+    <value>Ebben a névtérben még nincsenek oldalak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNamespaceFilter" xml:space="preserve">
+    <value>Névtérszűrő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNoPages" xml:space="preserve">
+    <value>Nem található wiki-oldal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNoRecentChanges" xml:space="preserve">
+    <value>Még egyetlen oldalt sem szerkesztettek.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiPageNotExist" xml:space="preserve">
+    <value>Ez az oldal még nem létezik. Az alábbi gombra kattintva létrehozhatja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiProtect" xml:space="preserve">
+    <value>Védelem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiProtected" xml:space="preserve">
+    <value>Védett</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiPublished" xml:space="preserve">
+    <value>Közzétéve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiRecentChanges" xml:space="preserve">
+    <value>Legutóbbi módosítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiRevision" xml:space="preserve">
+    <value>Változat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTags" xml:space="preserve">
+    <value>Címkék</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTagsHelper" xml:space="preserve">
+    <value>Címke hozzáadásához nyomjon Entert, vagy kattintson a + jelre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTitle" xml:space="preserve">
+    <value>Cím</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTranslations" xml:space="preserve">
+    <value>Fordítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUnprotect" xml:space="preserve">
+    <value>Védelem feloldása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUntranslatedOnly" xml:space="preserve">
+    <value>Csak a hiányzó fordítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUpdated" xml:space="preserve">
+    <value>Frissítve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAddTagPlaceholder" xml:space="preserve">
+    <value>címke hozzáadása…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAddTranslation" xml:space="preserve">
+    <value>Fordítás hozzáadása…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetDeleteFailed" xml:space="preserve">
+    <value>A(z) {0} nem törölhető.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetDeleted" xml:space="preserve">
+    <value>{0} törölve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetUploadHint" xml:space="preserve">
+    <value>PNG, JPEG, GIF, WebP vagy SVG — legfeljebb 10 MB.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetUploaded" xml:space="preserve">
+    <value>{0} feltöltve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkBold" xml:space="preserve">
+    <value>Félkövér</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkBytesDelta" xml:space="preserve">
+    <value>{0} bájt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColActions" xml:space="preserve">
+    <value>Műveletek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColAuthor" xml:space="preserve">
+    <value>Szerző</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColFileName" xml:space="preserve">
+    <value>Fájlnév</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColKind" xml:space="preserve">
+    <value>Típus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColNew" xml:space="preserve">
+    <value>Új</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColOld" xml:space="preserve">
+    <value>Régi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColPreview" xml:space="preserve">
+    <value>Előnézet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColSize" xml:space="preserve">
+    <value>Méret</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColTimestampSummary" xml:space="preserve">
+    <value>Időbélyeg / Összefoglaló</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColUploaded" xml:space="preserve">
+    <value>Feltöltve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColUploader" xml:space="preserve">
+    <value>Feltöltő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCompareSelected" xml:space="preserve">
+    <value>Kijelöltek összehasonlítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkComparingRevisions" xml:space="preserve">
+    <value>Változatok összehasonlítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCopyMarkdown" xml:space="preserve">
+    <value>Markdown másolása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCopyUrl" xml:space="preserve">
+    <value>URL másolása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCurrentRevision" xml:space="preserve">
+    <value>jelenlegi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCustomLocalePlaceholder" xml:space="preserve">
+    <value>Nyelvi kód, például es vagy pt-BR</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteAssetConfirm" xml:space="preserve">
+    <value>Ezzel véglegesen törlődik: {0}. Az erre a fájlra mutató hivatkozások megszakadnak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteAssetPrompt" xml:space="preserve">
+    <value>Törli a következőt: „{0}”? A beágyazó oldalakon törött kép fog megjelenni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteAssetTitle" xml:space="preserve">
+    <value>Törli a fájlt?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteFailed" xml:space="preserve">
+    <value>A törlés sikertelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteTranslation" xml:space="preserve">
+    <value>A fordítás törlése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffLoadFailed" xml:space="preserve">
+    <value>Az egyik vagy mindkét változat betöltése sikertelen. Ellenőrizze a változatszámokat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffPageTitle" xml:space="preserve">
+    <value>Eltérések: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffRevNew" xml:space="preserve">
+    <value>{0}. változat — Új</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffRevOld" xml:space="preserve">
+    <value>{0}. változat — Régi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffSideBySide" xml:space="preserve">
+    <value>Egymás mellett</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffUnified" xml:space="preserve">
+    <value>Egyesített</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveCategoryHeader" xml:space="preserve">
+    <value>Kategória: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveNoPages" xml:space="preserve">
+    <value>Még nincsenek oldalak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveTagHeader" xml:space="preserve">
+    <value>Címke: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiscard" xml:space="preserve">
+    <value>Elvetés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkEditLivePreview" xml:space="preserve">
+    <value>szerkesztés · élő előnézet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFileTooLarge" xml:space="preserve">
+    <value>A fájl meghaladja a 10 MB-os korlátot.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFormattingHelp" xml:space="preserve">
+    <value>Formázási súgó</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHeading" xml:space="preserve">
+    <value>Címsor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHistoryIntro" xml:space="preserve">
+    <value>Válasszon ki egy régebbi és egy újabb változatot, majd hasonlítsa össze őket. Összesen {0} változat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHistoryLocale" xml:space="preserve">
+    <value>Nyelv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHistoryPageTitle" xml:space="preserve">
+    <value>Előzmények: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkImageLibrary" xml:space="preserve">
+    <value>Képtár</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkImageLibraryDescription" xml:space="preserve">
+    <value>A wikiben és a portálon használt feltöltött médiafájlok kezelése.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkInheritedFromSource" xml:space="preserve">
+    <value>A forrásnyelvből örökölve — a forrásoldalon szerkeszthető.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkInsertImage" xml:space="preserve">
+    <value>Kép beszúrása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkItalic" xml:space="preserve">
+    <value>Dőlt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindDocument" xml:space="preserve">
+    <value>Dokumentum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindImage" xml:space="preserve">
+    <value>Kép</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindImagePlural" xml:space="preserve">
+    <value>Képek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindOther" xml:space="preserve">
+    <value>Egyéb</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindVideo" xml:space="preserve">
+    <value>Videó</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLinesAdded" xml:space="preserve">
+    <value>+{0} hozzáadva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLinesRemoved" xml:space="preserve">
+    <value>−{0} eltávolítva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLink" xml:space="preserve">
+    <value>Hivatkozás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkListItem" xml:space="preserve">
+    <value>Listaelem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLocaleSelector" xml:space="preserve">
+    <value>Nyelv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkMarkdownCopied" xml:space="preserve">
+    <value>A Markdown a vágólapra másolva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkMinorEdit" xml:space="preserve">
+    <value>Apró módosítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoAssets" xml:space="preserve">
+    <value>Még nincs feltöltött fájl.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoAssetsFound" xml:space="preserve">
+    <value>Nem található fájl.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoRevisionHistory" xml:space="preserve">
+    <value>Nem található változattörténet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPageFallbackTitle" xml:space="preserve">
+    <value>Oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPageTitlePlaceholder" xml:space="preserve">
+    <value>Oldalcím</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPublishChanges" xml:space="preserve">
+    <value>Módosítások közzététele</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPublishNotice" xml:space="preserve">
+    <value>A módosítások azonnal megjelennek, és mindenki számára láthatók.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkQuote" xml:space="preserve">
+    <value>Idézet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoreFailed" xml:space="preserve">
+    <value>A visszaállítás sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoreRevision" xml:space="preserve">
+    <value>Visszaállítás erre a változatra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoredToRevision" xml:space="preserve">
+    <value>Visszaállítva a(z) {0}. változatra.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRevisionHistory" xml:space="preserve">
+    <value>Változattörténet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRevisionShort" xml:space="preserve">
+    <value>{0}. vált.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkSourceLocaleLabel" xml:space="preserve">
+    <value>{0} (forrás)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkStaffMedia" xml:space="preserve">
+    <value>Stáb · Média</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkStorageUsed" xml:space="preserve">
+    <value>Felhasznált tárhely</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkSummaryPlaceholder" xml:space="preserve">
+    <value>Foglalja össze a módosítást (például „elgépelés javítva”)…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTotalAssets" xml:space="preserve">
+    <value>Fájlok összesen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationConflict" xml:space="preserve">
+    <value>Ez a fordítás módosult, miközben szerkesztette. Töltse be újra a jelenlegi változat megtekintéséhez — a nem mentett szövege megmarad a szerkesztőben.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationDeleteConfirmText" xml:space="preserve">
+    <value>A(z) {0} fordítás és annak előzményei törlődnek. Az oldalt és a többi nyelvét ez nem érinti.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationDeleteConfirmTitle" xml:space="preserve">
+    <value>Törli a fordítást?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationReload" xml:space="preserve">
+    <value>A fordítás újratöltése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationSaveFailed" xml:space="preserve">
+    <value>A fordítás mentése sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationSaved" xml:space="preserve">
+    <value>A fordítás elmentve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUploadError" xml:space="preserve">
+    <value>Feltöltési hiba: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUploadFailed" xml:space="preserve">
+    <value>A feltöltés sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUrlCopied" xml:space="preserve">
+    <value>Az URL a vágólapra másolva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkViewGrid" xml:space="preserve">
+    <value>Rács</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkViewList" xml:space="preserve">
+    <value>Lista</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkViewRevision" xml:space="preserve">
+    <value>A változat megtekintése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkWikiAssets" xml:space="preserve">
+    <value>Wiki-fájlok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordAddFailed" xml:space="preserve">
+    <value>A szó hozzáadása sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordAdded" xml:space="preserve">
+    <value>A(z) „{0}” hozzáadva a(z) „{1}” kategóriához</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordEmpty" xml:space="preserve">
+    <value>A szó nem lehet üres</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordRemoveFailed" xml:space="preserve">
+    <value>A szó törlése sikertelen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordRemoved" xml:space="preserve">
+    <value>A(z) „{0}” eltávolítva a(z) „{1}” kategóriából</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Words" xml:space="preserve">
+    <value>Szavak:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordsCount" xml:space="preserve">
+    <value>{0} szó</value>
+    <comment>MT</comment>
+  </data>
+</root>
