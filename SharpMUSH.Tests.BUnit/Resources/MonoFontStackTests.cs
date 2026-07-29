@@ -62,6 +62,23 @@ public class MonoFontStackTests
 	}
 
 	[Test]
+	public async Task TheShellFetchesNothingFromAThirdParty()
+	{
+		// Every font and script is served from wwwroot, so the portal renders identically on a LAN
+		// with no route to the internet — and no third party is handed the IP of everyone who opens
+		// the game's front page. A stylesheet from a CDN cannot carry an SRI hash either, so it is
+		// also the one asset class that could change under us without any local change.
+		var html = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "client", "index.html"));
+
+		var external = Regex.Matches(html, @"(?:src|href)\s*=\s*""(?<url>https?://[^""]+)""")
+			.Select(m => m.Groups["url"].Value)
+			.ToList();
+
+		await Assert.That(external).IsEmpty()
+			.Because("index.html should reference only same-origin assets");
+	}
+
+	[Test]
 	public async Task NoComponentPinsAMonoFontDirectly()
 	{
 		// The failure this catches is silent: a hardcoded family renders perfectly in English and only
