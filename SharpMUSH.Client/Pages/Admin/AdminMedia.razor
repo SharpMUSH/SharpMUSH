@@ -157,7 +157,7 @@
                 </TemplateColumn>
                 <TemplateColumn Title="@Loc["WkColSize"]" Sortable="false" CellStyle="width:80px;">
                     <CellTemplate>
-                        <MudText Style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:var(--text-faint);">
+                        <MudText Style="font-size:0.75rem;font-family:var(--font-mono);color:var(--text-faint);">
                             @Loc.FormatBytes(context.Item.SizeBytes)
                         </MudText>
                     </CellTemplate>
@@ -171,7 +171,7 @@
                 </TemplateColumn>
                 <TemplateColumn Title="@Loc["WkColUploader"]" Sortable="false">
                     <CellTemplate>
-                        <MudText Style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:var(--text-dim);">
+                        <MudText Style="font-size:0.75rem;font-family:var(--font-mono);color:var(--text-dim);">
                             @context.Item.UploaderDbref
                         </MudText>
                     </CellTemplate>

@@ -309,7 +309,8 @@
     <value>Configuration Sections</value>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>{0} settings</value>
+    <value>{count, plural, one {# setting} other {# settings}}</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="Enabled" xml:space="preserve">
     <value>Enabled</value>
@@ -580,7 +581,8 @@
     <value>Categories ({0})</value>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>{0} words</value>
+    <value>{count, plural, one {# word} other {# words}}</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="AddNewWord" xml:space="preserve">
     <value>Add new word</value>
@@ -1066,8 +1068,8 @@
   <data name="All" xml:space="preserve">
     <value>All</value>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>joined</value>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Member since {0}</value>
   </data>
   <data name="Wiki" xml:space="preserve">
     <value>Wiki</value>
@@ -2490,7 +2492,8 @@
     <value>Minor edit</value>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} bytes</value>
+    <value>{count, plural, one {{signed} byte} other {{signed} bytes}}</value>
+    <comment>ICU MessageFormat. Named args: count (absolute magnitude), signed (delta with its sign).</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
     <value>Discard</value>
@@ -2526,7 +2529,8 @@
     <value>Compare selected</value>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Select an older and a newer revision, then compare. {0} revisions in all.</value>
+    <value>Select an older and a newer revision, then compare. {count, plural, one {# revision} other {# revisions}} in all.</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="WkNoRevisionHistory" xml:space="preserve">
     <value>No revision history found.</value>
@@ -3385,10 +3389,8 @@
     <value>Forward</value>
   </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>{0} characters registered</value>
-  </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>{0} character registered</value>
+    <value>{count, plural, one {# character registered} other {# characters registered}}</value>
+    <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="NavCreateCharacter" xml:space="preserve">
     <value>Create character</value>

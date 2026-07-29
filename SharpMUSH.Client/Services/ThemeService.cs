@@ -125,7 +125,7 @@ public sealed class ThemeService : IThemeService
 public static class ThemePresetExtensions
 {
 	private static readonly string[] UiFontFamily = ["Hanken Grotesk", "sans-serif"];
-	private static readonly string[] MonoFontFamily = ["JetBrains Mono", "monospace"];
+	private static readonly string[] MonoFontFamily = ["var(--font-mono)"];
 
 	public static MudTheme ToMudTheme(this ThemePreset preset)
 	{

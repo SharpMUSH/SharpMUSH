@@ -26,15 +26,23 @@ None survives translation:
 | `de` `es` `fr` `nl` `sv` `da` `nb` `bg` `hu` | `one`, `other` | 2 |
 | `pt-BR` | `one`, `many`, `other` | 3 |
 | `ro` | `one`, `few`, `other` | 3 |
-| `hr` `ru` | `one`, `few`, `other` | 3 |
+| `hr` | `one`, `few`, `other` | 3 |
+| `ru` | `one`, `few`, `many`, `other` | 3 |
 | `pl` | `one`, `few`, `many`, `other` | **4** |
+
+Croatian and Russian look alike and are not. Both take `one` and `few` on the
+same digits, but Croatian's third form is `other` while Russian's is `many` —
+Russian reaches `other` only for fractions. Write `other` where Russian wants
+`many` and the value still renders, because an unmatched category falls through;
+it just stops being reviewable, since the branch a reader sees is no longer the
+branch it is named after.
 
 Russian is the clearest illustration. `поза` (pose) takes three forms driven by
 the last digits of the number:
 
 - 1, 21, 31 … → `1 поза` (`one`)
 - 2–4, 22–24 … → `2 позы` (`few`)
-- 0, 5–20, 25–30 … → `5 поз` (`many`/`other`)
+- 0, 5–20, 25–30 … → `5 поз` (`many`)
 
 A key pair cannot express that. Neither can `(s)`. And Polish adds a fourth
 category on top.
@@ -85,7 +93,7 @@ Russian supplies the categories its grammar needs, with no code change:
 
 ```xml
 <data name="RolPoseCount" xml:space="preserve">
-  <value>{count, plural, one {# поза} few {# позы} other {# поз}}</value>
+  <value>{count, plural, one {# поза} few {# позы} many {# поз} other {# позы}}</value>
 </data>
 ```
 
@@ -111,51 +119,43 @@ Each pair becomes one key. Delete the second and update its call site:
 | Delete | Keep, as MessageFormat |
 |---|---|
 | `NavCharacterRegistered` | `NavCharactersRegistered` |
-| `ResChangeCountOne` | `ResChangeCountMany` |
+| `ResChangeCountOne` | `ResChangeCount` |
 
-Prefer renaming the survivor to drop the now-misleading `Many`/`Characters`
-plural in the key name itself — e.g. `NavCharacterCount`, `ResChangeCount`.
+A pair is worse than it looks: the choice between the two keys lives at the call
+site, as `count == 1 ? … : …`. That is English's boundary compiled into C#, and
+no translation of either key can move it — which is why collapsing the pair is
+part of the conversion rather than tidying afterwards.
+
+### Participles are a related trap
+
+`Joined` ("joined Jul 2026", under a name in the character directory) carried no
+count at all and still could not be translated: a past participle agrees with its
+subject's gender in Russian and Croatian, and the directory holds no gender for
+the character. Neuter is not an escape — for a person it reads as an object or a
+small child in every Slavic language here.
+
+The fix was structural, not lexical: the key became `MemberSince`
+("Member since {0}"), a noun phrase that asks nothing of the subject. Reach for
+the same move whenever a value's grammar depends on something the caller does
+not know.
 
 ## Keys to convert
 
-Twenty-four values are genuinely count-bearing. Everything else containing
-`{0}` interpolates a name, an error message or a version, and must **not** be
-touched.
-
-```
-AdmProfilesResetComplete    Reset complete: {0} attributes written.
-ConfigSavedCount            {0} setting(s) saved successfully
-ErrorCount                  {0} error(s)
-Errors                      Errors ({0})
-NavCharacterRegistered      {0} character registered          ← collapse pair
-NavCharactersRegistered     {0} characters registered         ┘
-PkgAttributesCount          Attributes ({0})
-PkgConflictCount            {0} conflict(s)
-PkgObjectsCount             Objects ({0})
-PkgOccurrences              {0} occurrence(s), e.g. in {1}    ← also see case note
-PkgUninstallConfirmBody     {0} object(s) … {1} record(s)     ← TWO counts
-ProfileUpdated              Profile updated ({0} field(s)).
-ResChangeCountMany          {0} changes                       ← collapse pair
-ResChangeCountOne           {0} change                        ┘
-RolEditedTimes              Edited {0} time(s)
-RolPoseCount                {0} pose(s)
-SettingsCount               {0} settings
-WarningCount                {0} warning(s)
-WarningsLabel               Warnings ({0})
-WidScenePoseCount           {0} pose(s)
-WikiBatchFailed             {0} page(s) failed
-WikiBatchSucceeded          {0} page(s) updated
-WikiDeleteConfirmText       Delete {0} page(s) and all their revisions? …
-WkBytesDelta                {0} bytes
-WkHistoryIntro              … {0} revisions in all.
-WordsCount                  {0} words
-```
-
-Regenerate this list any time with:
+All count-bearing values have now been converted; the list below is no longer
+reproduced here, because a hand-maintained copy went stale the first time a key
+was added. Regenerate it instead:
 
 ```bash
 python3 tools/i18n/validate_resx.py --list-count-bearing
 ```
+
+Everything else containing `{0}` interpolates a name, an error message or a
+version, and must **not** be touched. Purely parenthesised counts
+(`Errors ({0})`, `Attributes ({0})`) are the boundary case — see below.
+
+`PkgUninstallConfirmBody` is the one to look at when writing a new pattern: it
+carries two independent counts in one sentence, which is what named arguments
+buy you over positional ones.
 
 Purely parenthesised counts (`Errors ({0})`, `Attributes ({0})`) are the
 debatable ones: many languages leave a bare parenthesised number alone. Convert

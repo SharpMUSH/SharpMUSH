@@ -2,7 +2,7 @@
 """Validate the portal's resource files.
 
 Machine-checkable invariants only. These are the gates that make an LLM-drafted
-translation trustworthy without a native reviewer reading all 1097 strings:
+translation trustworthy without a native reviewer reading all 1123 strings:
 a dropped placeholder, a stray plural category or an untranslated block are all
 mechanically detectable, and they are also the failures an LLM actually makes.
 

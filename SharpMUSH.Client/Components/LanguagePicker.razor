@@ -7,7 +7,6 @@
     {
         <MudMenuItem OnClick="@(() => SetLanguageAsync(lang.Code))">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudText>@lang.Flag</MudText>
                 <MudText Typo="Typo.body2">@lang.DisplayName</MudText>
                 @if (lang.Code == _currentLocale)
                 {
@@ -21,10 +20,10 @@
 @code {
     private string _currentLocale = "en";
 
-    private readonly record struct LanguageOption(string Code, string DisplayName, string Flag);
+    private readonly record struct LanguageOption(string Code, string DisplayName);
 
-    private static readonly LanguageOption[] _languages = PortalLocales.Supported
-        .Select(l => new LanguageOption(l.Code, PortalLocales.DisplayName(l.Code), l.Flag))
+    private static readonly LanguageOption[] _languages = PortalLocales.Codes
+        .Select(code => new LanguageOption(code, PortalLocales.DisplayName(code)))
         .ToArray();
 
     protected override async Task OnInitializedAsync()

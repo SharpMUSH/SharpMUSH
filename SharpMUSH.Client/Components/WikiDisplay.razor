@@ -217,7 +217,7 @@ else
                 <span class="wiki-lang-chips-label">@Loc["WikiAvailableTranslations"]</span>
                 @foreach (var locale in OtherLocales)
                 {
-                    <a href="@LocaleHref(locale)">@PortalLocales.Flag(locale) @PortalLocales.DisplayName(locale)</a>
+                    <a href="@LocaleHref(locale)">@PortalLocales.DisplayName(locale)</a>
                 }
             </div>
         }

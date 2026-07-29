@@ -1,0 +1,4503 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="About" xml:space="preserve">
+    <value>Despre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AccessRulesHelper" xml:space="preserve">
+    <value>de ex., !connect, suspect</value>
+    <comment>MT — example values kept in English</comment>
+  </data>
+  <data name="AccessRulesLabel" xml:space="preserve">
+    <value>Reguli de acces (separate prin virgulă)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Adăugare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddBannedName" xml:space="preserve">
+    <value>Adăugare nume interzis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddCategory" xml:space="preserve">
+    <value>Adăugare categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddCommandRestriction" xml:space="preserve">
+    <value>Adăugare restricție de comandă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddEntry" xml:space="preserve">
+    <value>Adăugare intrare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddFunctionRestriction" xml:space="preserve">
+    <value>Adăugare restricție de funcție</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddItem" xml:space="preserve">
+    <value>Adăugare element</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddName" xml:space="preserve">
+    <value>Adăugare nume</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddNewWord" xml:space="preserve">
+    <value>Adăugare cuvânt nou</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddSitelockRule" xml:space="preserve">
+    <value>Adăugare regulă sitelock</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddValue" xml:space="preserve">
+    <value>Adăugare valoare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdditionalData" xml:space="preserve">
+    <value>Date suplimentare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionActive" xml:space="preserve">
+    <value>Reactivare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionClosed" xml:space="preserve">
+    <value>Închidere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionDeleted" xml:space="preserve">
+    <value>Ștergere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionDisabled" xml:space="preserve">
+    <value>Dezactivare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountDisabled" xml:space="preserve">
+    <value>Contul „{0}” a fost dezactivat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountEnabled" xml:space="preserve">
+    <value>Contul „{0}” a fost activat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountMustChangePasswordChip" xml:space="preserve">
+    <value>trebuie schimbată parola</value>
+    <comment>MT — assumed the chip means the account is required to change its password at next sign-in</comment>
+  </data>
+  <data name="AdmAccountStatusActive" xml:space="preserve">
+    <value>Activ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusChanged" xml:space="preserve">
+    <value>Starea contului „{0}” a fost actualizată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusClosed" xml:space="preserve">
+    <value>Închis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusDeleted" xml:space="preserve">
+    <value>Șters</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusDisabled" xml:space="preserve">
+    <value>Dezactivat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountsAction" xml:space="preserve">
+    <value>Gestionare conturi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
+    <value>Căutare după nume de utilizator sau e-mail…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountsTitle" xml:space="preserve">
+    <value>Conturi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmApplicationsAction" xml:space="preserve">
+    <value>Widgeturi personalizate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmApplicationsTitle" xml:space="preserve">
+    <value>Aplicații</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAttribute" xml:space="preserve">
+    <value>Atribut</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmBreadcrumb" xml:space="preserve">
+    <value>Administrare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmCharacterUnlinked" xml:space="preserve">
+    <value>{0} a fost dezasociat de „{1}”.</value>
+    <comment>MT — assumed {0} is a character name and {1} an account</comment>
+  </data>
+  <data name="AdmCharactersAction" xml:space="preserve">
+    <value>Vizualizare personaje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmCharactersComingSoon" xml:space="preserve">
+    <value>Administrarea personajelor va fi disponibilă în curând.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmConfigAction" xml:space="preserve">
+    <value>Configurare site</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDashboardTitle" xml:space="preserve">
+    <value>Panou de administrare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDatabaseImportAction" xml:space="preserve">
+    <value>Import bază de date</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDatabaseImportTitle" xml:space="preserve">
+    <value>Import bază de date</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDisableAccount" xml:space="preserve">
+    <value>Dezactivare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmEmail" xml:space="preserve">
+    <value>E-mail</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmEnableAccount" xml:space="preserve">
+    <value>Activare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmHelpKicker" xml:space="preserve">
+    <value>Documentație</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmHelpSubtitle" xml:space="preserve">
+    <value>Răsfoiți subiectele, căutați în referințe și citiți manualul.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmKicker" xml:space="preserve">
+    <value>Administrare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmLayoutAction" xml:space="preserve">
+    <value>Editor de aspect</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmLayoutTitle" xml:space="preserve">
+    <value>Aspect</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMediaAction" xml:space="preserve">
+    <value>Fișiere media</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMediaTitle" xml:space="preserve">
+    <value>Bibliotecă de imagini</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMissing" xml:space="preserve">
+    <value>Lipsește</value>
+    <comment>MT — assumed it is a status value paired with "Present" (e.g. whether an attribute exists)</comment>
+  </data>
+  <data name="AdmModerationAction" xml:space="preserve">
+    <value>Raportări și interdicții</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmModerationComingSoon" xml:space="preserve">
+    <value>Raportările, interdicțiile și jurnalul de audit vor fi disponibile în curând.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmModerationTitle" xml:space="preserve">
+    <value>Moderare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmOperationFailed" xml:space="preserve">
+    <value>Operațiunea a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPackagesAction" xml:space="preserve">
+    <value>Pachete softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPackagesTitle" xml:space="preserve">
+    <value>Pachete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPasswordReset" xml:space="preserve">
+    <value>Parola pentru „{0}” a fost resetată la: {1} — transmiteți-o în siguranță; va trebui schimbată la următoarea autentificare.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
+    <value>Detaliile jucătorului vor fi disponibile în curând.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayerDetailKicker" xml:space="preserve">
+    <value>Administrare · Jucător</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayerNumber" xml:space="preserve">
+    <value>Jucătorul #{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersAction" xml:space="preserve">
+    <value>Vizualizare jucători</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersComingSoon" xml:space="preserve">
+    <value>Administrarea jucătorilor va fi disponibilă în curând.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersTitle" xml:space="preserve">
+    <value>Jucători</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPresent" xml:space="preserve">
+    <value>Prezent</value>
+    <comment>MT — assumed it is a status value paired with "Missing"</comment>
+  </data>
+  <data name="AdmProfilesAction" xml:space="preserve">
+    <value>Profiluri de personaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesConfigured" xml:space="preserve">
+    <value>Configurat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesHandler" xml:space="preserve">
+    <value>Handler</value>
+    <comment>MT — kept the English term; it refers to the in-game HTTP handler object, matching the untranslated http_handler attribute name</comment>
+  </data>
+  <data name="AdmProfilesHandlerNotFound" xml:space="preserve">
+    <value>#{0} — NEGĂSIT</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesNotConfiguredValue" xml:space="preserve">
+    <value>Nu (http_handler nesetat)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetCaption" xml:space="preserve">
+    <value>Suprascrie atributele standard {0} și {1} cu valorile implicite integrate. Atributele personalizate adăugate de dumneavoastră rămân neatinse.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetComplete" xml:space="preserve">
+    <value>Resetare finalizată: {0} atribute scrise.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetFailedError" xml:space="preserve">
+    <value>Resetarea a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
+    <value>Resetarea a eșuat ({0}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
+    <value>Starea handler-ului nu a putut fi încărcată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesSubtitle" xml:space="preserve">
+    <value>Profilurile de personaj sunt servite de obiectul {0} din joc prin softcode-ul său {1}. Personalizați-l în joc cu {2} sau reinstalați handler-ul standard mai jos.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesTitle" xml:space="preserve">
+    <value>Profiluri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetFailed" xml:space="preserve">
+    <value>Resetarea a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetPassword" xml:space="preserve">
+    <value>Resetare parolă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetting" xml:space="preserve">
+    <value>Se resetează…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmRolesAction" xml:space="preserve">
+    <value>Roluri și permisiuni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmRolesTitle" xml:space="preserve">
+    <value>Roluri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerAction" xml:space="preserve">
+    <value>Starea serverului</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerComingSoon" xml:space="preserve">
+    <value>Configurarea serverului și valorile în timp real vor fi disponibile în curând.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerGodOnly" xml:space="preserve">
+    <value>Setări de server exclusiv pentru God</value>
+    <comment>MT — God kept in English as a privilege-level name</comment>
+  </data>
+  <data name="AdmServerKicker" xml:space="preserve">
+    <value>Administrare · Server</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmStatus" xml:space="preserve">
+    <value>Stare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmSuggestionsAction" xml:space="preserve">
+    <value>Sugestii de cuvinte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmUnlinkFailed" xml:space="preserve">
+    <value>Dezasocierea a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmUsername" xml:space="preserve">
+    <value>Nume de utilizator</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmYes" xml:space="preserve">
+    <value>Da</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdminPanel" xml:space="preserve">
+    <value>Panou de administrare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Advanced" xml:space="preserve">
+    <value>Avansat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdvancedCategoryDescription" xml:space="preserve">
+    <value>Atribute, steaguri, costuri și setări specializate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Aliases" xml:space="preserve">
+    <value>Aliasuri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>Toate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AppTitle" xml:space="preserve">
+    <value>SharpMUSH</value>
+    <comment>MT — product name, untranslated</comment>
+  </data>
+  <data name="AtLeastOneAccessRule" xml:space="preserve">
+    <value>Este necesară cel puțin o regulă de acces</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AtLeastOneRestriction" xml:space="preserve">
+    <value>Este necesară cel puțin o restricție</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Attributes" xml:space="preserve">
+    <value>Atribute</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AttributesLabel" xml:space="preserve">
+    <value>Atribute:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthAccount" xml:space="preserve">
+    <value>Cont</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthAccountManagement" xml:space="preserve">
+    <value>Gestionare cont</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthChange" xml:space="preserve">
+    <value>Modificare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthClaimAdminLead" xml:space="preserve">
+    <value>Acest joc nu a fost încă revendicat. Alegeți un nume de utilizator și o parolă pentru contul de administrator pregenerat (asociat jucătorului #1, God). Prima persoană care completează acest formular devine administrator.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthClaimAdminTitle" xml:space="preserve">
+    <value>Revendicarea contului de administrator</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnActions" xml:space="preserve">
+    <value>Acțiuni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnDbref" xml:space="preserve">
+    <value>Dbref</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnName" xml:space="preserve">
+    <value>Nume</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthConfirmPassword" xml:space="preserve">
+    <value>Confirmare parolă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthConnectDirectly" xml:space="preserve">
+    <value>Sau conectați-vă direct prin</value>
+    <comment>MT — sentence fragment continued by the AuthTerminalLink link text</comment>
+  </data>
+  <data name="AuthCreateAccount" xml:space="preserve">
+    <value>Creare cont</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCreateAdminAccount" xml:space="preserve">
+    <value>Creare cont de administrator</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCreateNewCharacter" xml:space="preserve">
+    <value>+ Creare personaj nou</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCurrentPassword" xml:space="preserve">
+    <value>Parola actuală</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthDebugMode" xml:space="preserve">
+    <value>Mod depanare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthDebugModeBody" xml:space="preserve">
+    <value>Sunteți autentificat ca {0} (mediu de dezvoltare). Nu este asociată nicio sesiune de cont; funcțiile de gestionare a contului necesită autentificarea cu un cont real.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEdit" xml:space="preserve">
+    <value>Editare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEmailOptional" xml:space="preserve">
+    <value>E-mail (opțional)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEnterCredentials" xml:space="preserve">
+    <value>Introduceți datele de autentificare.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEnterPortal" xml:space="preserve">
+    <value>Intrare în portal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthFirstRunSetup" xml:space="preserve">
+    <value>Configurare inițială</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthGoToHome" xml:space="preserve">
+    <value>La pagina principală</value>
+    <comment>MT — assumed "Home" is the portal home page, not the MUSH `home` command</comment>
+  </data>
+  <data name="AuthLogOutOfAccount" xml:space="preserve">
+    <value>Deconectare de la cont</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLoginFailed" xml:space="preserve">
+    <value>Autentificare eșuată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLogout" xml:space="preserve">
+    <value>Deconectare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNewPassword" xml:space="preserve">
+    <value>Parolă nouă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNoCharacter" xml:space="preserve">
+    <value>Niciun personaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNoCharactersLinked" xml:space="preserve">
+    <value>Niciun personaj asociat acestui cont.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNotLoggedInAccount" xml:space="preserve">
+    <value>Nu sunteți autentificat într-un cont. Folosiți panoul de autentificare din terminal pentru a vă conecta.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthOpenInNewTab" xml:space="preserve">
+    <value>Deschideți {0} într-o filă nouă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPassword" xml:space="preserve">
+    <value>Parolă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordChangeRequired" xml:space="preserve">
+    <value>Este necesară schimbarea parolei.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordChangeRequiredBody" xml:space="preserve">
+    <value>Trebuie să vă schimbați parola înainte de a folosi restul portalului.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordRequired" xml:space="preserve">
+    <value>Parola este obligatorie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordTooShort" xml:space="preserve">
+    <value>Parola trebuie să aibă cel puțin 8 caractere.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordUpdated" xml:space="preserve">
+    <value>Parola a fost actualizată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordsDoNotMatch" xml:space="preserve">
+    <value>Parolele nu coincid.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthProfile" xml:space="preserve">
+    <value>Profil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthRegister" xml:space="preserve">
+    <value>Înregistrare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthRegistrationFailed" xml:space="preserve">
+    <value>Înregistrarea a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSettingUp" xml:space="preserve">
+    <value>Se configurează…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupAdminLinked" xml:space="preserve">
+    <value>Contul de administrator {0} este acum asociat jucătorului pregenerat #1, God.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupAlreadyCompleted" xml:space="preserve">
+    <value>Configurarea tocmai a fost finalizată de altcineva. Dacă nu ați fost dumneavoastră, contactați imediat operatorul serverului.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupComplete" xml:space="preserve">
+    <value>Configurare finalizată. Sunteți administratorul.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupFailed" xml:space="preserve">
+    <value>Configurarea a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupSignInToManage" xml:space="preserve">
+    <value>Autentificați-vă pentru a începe să vă gestionați jocul.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupSignedInAs" xml:space="preserve">
+    <value>Sunteți autentificat ca {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupWelcome" xml:space="preserve">
+    <value>Bun venit la {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSignIn" xml:space="preserve">
+    <value>Autentificare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSwitchCharacter" xml:space="preserve">
+    <value>Schimbare personaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthTerminalLink" xml:space="preserve">
+    <value>terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkCharacter" xml:space="preserve">
+    <value>Dezasociere personaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsername" xml:space="preserve">
+    <value>Nume de utilizator</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameOrEmail" xml:space="preserve">
+    <value>Nume de utilizator sau e-mail</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernamePasswordRequired" xml:space="preserve">
+    <value>Numele de utilizator și parola sunt obligatorii.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameRequired" xml:space="preserve">
+    <value>Numele de utilizator este obligatoriu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameTaken" xml:space="preserve">
+    <value>Acest nume de utilizator este deja folosit — alegeți altul.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameUpdated" xml:space="preserve">
+    <value>Numele de utilizator a fost actualizat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AvgWordsPerCategory" xml:space="preserve">
+    <value>Medie cuvinte/categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameAddFailed" xml:space="preserve">
+    <value>Adăugarea numelui interzis „{0}” a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameAdded" xml:space="preserve">
+    <value>Numele interzis „{0}” a fost adăugat cu succes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameRemoveFailed" xml:space="preserve">
+    <value>Eliminarea numelui interzis '{0}' a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameRemoved" xml:space="preserve">
+    <value>Numele interzis '{0}' a fost eliminat cu succes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNames" xml:space="preserve">
+    <value>Nume interzise</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNamesDescription" xml:space="preserve">
+    <value>Gestionați lista de nume pe care jucătorii nu le pot folosi la crearea personajelor.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNamesList" xml:space="preserve">
+    <value>Lista numelor interzise</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedPlayerNames" xml:space="preserve">
+    <value>Nume de jucători interzise</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Anulare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CancelConversion" xml:space="preserve">
+    <value>Anulare conversie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Categories" xml:space="preserve">
+    <value>Categorii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoriesCount" xml:space="preserve">
+    <value>Categorii ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryAlreadyExists" xml:space="preserve">
+    <value>Categoria '{0}' există deja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryCreateFailed" xml:space="preserve">
+    <value>Crearea categoriei a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryCreated" xml:space="preserve">
+    <value>Categoria '{0}' a fost creată cu succes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryDeleteFailed" xml:space="preserve">
+    <value>Ștergerea categoriei a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryDeleted" xml:space="preserve">
+    <value>Categoria '{0}' a fost ștearsă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryName" xml:space="preserve">
+    <value>Nume categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNameEmpty" xml:space="preserve">
+    <value>Numele categoriei nu poate fi gol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNameHelper" xml:space="preserve">
+    <value>Introduceți un nume pentru noua categorie de sugestii (de ex. 'commands', 'functions', 'help')</value>
+    <comment>MT — example values after "e.g." left in English as literal category identifiers</comment>
+  </data>
+  <data name="CategoryNotFound" xml:space="preserve">
+    <value>Categoria de configurare "{0}" nu a fost găsită în schemă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNotFoundShort" xml:space="preserve">
+    <value>Categoria '{0}' nu a fost găsită</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Characters" xml:space="preserve">
+    <value>Personaje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Chat" xml:space="preserve">
+    <value>Chat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ClearSelection" xml:space="preserve">
+    <value>Golire selecție</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ClickMe" xml:space="preserve">
+    <value>Apăsați aici</value>
+    <comment>MT — demo button; rendered as "click here" since Romanian has no idiomatic "click me"</comment>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>În curând</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandAndFunctionRestrictions" xml:space="preserve">
+    <value>Restricții pentru comenzi și funcții</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandName" xml:space="preserve">
+    <value>Nume comandă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandNameHelper" xml:space="preserve">
+    <value>de ex. pemit, force</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionAddFailed" xml:space="preserve">
+    <value>Adăugarea restricției de comandă a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionAdded" xml:space="preserve">
+    <value>Restricția de comandă pentru '{0}' a fost adăugată cu succes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionRemoveFailed" xml:space="preserve">
+    <value>Eliminarea restricției de comandă a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionRemoved" xml:space="preserve">
+    <value>Restricția de comandă pentru '{0}' a fost eliminată cu succes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictions" xml:space="preserve">
+    <value>Restricții pentru comenzi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Commands" xml:space="preserve">
+    <value>Comenzi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Compatibility" xml:space="preserve">
+    <value>Compatibilitate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Compose" xml:space="preserve">
+    <value>Redactare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ComposeMail" xml:space="preserve">
+    <value>Redactare mail</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Config" xml:space="preserve">
+    <value>Config</value>
+    <comment>MT — short nav/tab label; kept clipped as in English</comment>
+  </data>
+  <data name="ConfigSavedCount" xml:space="preserve">
+    <value>{count, plural, one {# setare salvată cu succes} few {# setări salvate cu succes} other {# de setări salvate cu succes}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Configuration" xml:space="preserve">
+    <value>Configurare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationExported" xml:space="preserve">
+    <value>Configurare exportată</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationManagement" xml:space="preserve">
+    <value>Gestionarea configurării</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationSections" xml:space="preserve">
+    <value>Secțiuni de configurare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredCommandRestrictions" xml:space="preserve">
+    <value>Restricții de comenzi configurate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredFunctionRestrictions" xml:space="preserve">
+    <value>Restricții de funcții configurate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredRules" xml:space="preserve">
+    <value>Reguli configurate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>Conectare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Connected" xml:space="preserve">
+    <value>Conectat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Content" xml:space="preserve">
+    <value>Conținut</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ContentCategoryDescription" xml:space="preserve">
+    <value>Mesaje, opțiuni cosmetice și configurarea chatului</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionErrors" xml:space="preserve">
+    <value>Conversie finalizată cu erori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionSuccess" xml:space="preserve">
+    <value>Conversie finalizată cu succes!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConvertingDatabase" xml:space="preserve">
+    <value>Se convertește baza de date</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Cosmetic" xml:space="preserve">
+    <value>Cosmetice</value>
+    <comment>MT — settings-category label; rendered as a plural noun ("cosmetic options")</comment>
+  </data>
+  <data name="Costs" xml:space="preserve">
+    <value>Costuri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Counter" xml:space="preserve">
+    <value>Contor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Create" xml:space="preserve">
+    <value>Creare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CreateThisPage" xml:space="preserve">
+    <value>Creați această pagină!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CurrentCount" xml:space="preserve">
+    <value>Număr curent: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Database" xml:space="preserve">
+    <value>Bază de date</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DatabaseDumps" xml:space="preserve">
+    <value>Dump-uri ale bazei de date</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>Dată</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>Depanare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DefaultsRestored" xml:space="preserve">
+    <value>Valori implicite restaurate — salvați pentru a aplica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Ștergere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>Dezactivat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disconnect" xml:space="preserve">
+    <value>Deconectare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>Deconectat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DropDatabaseFile" xml:space="preserve">
+    <value>Trageți aici fișierul bazei de date PennMUSH sau apăsați</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DropFilesOrClick" xml:space="preserve">
+    <value>Trageți fișierele aici sau apăsați</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Duration" xml:space="preserve">
+    <value>Durată:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EditProfile" xml:space="preserve">
+    <value>Editare profil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Elapsed" xml:space="preserve">
+    <value>Timp scurs:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>Activat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumApplicationKindPage" xml:space="preserve">
+    <value>Pagină</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumApplicationKindWidget" xml:space="preserve">
+    <value>Widget</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeExit" xml:space="preserve">
+    <value>Ieșire</value>
+    <comment>MT — object-type sense, so translated per glossary</comment>
+  </data>
+  <data name="EnumObjectTypePlayer" xml:space="preserve">
+    <value>Jucător</value>
+    <comment>MT — object-type sense, so translated per glossary</comment>
+  </data>
+  <data name="EnumObjectTypeRoom" xml:space="preserve">
+    <value>Cameră</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeThing" xml:space="preserve">
+    <value>Obiect</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeUnknown" xml:space="preserve">
+    <value>Necunoscut</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermApplicationsAdmin" xml:space="preserve">
+    <value>Aplicații</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermApplicationsAdminDesc" xml:space="preserve">
+    <value>Înregistrarea și gestionarea aplicațiilor bazate pe schemă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermConfigAdmin" xml:space="preserve">
+    <value>Configurare server</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermConfigAdminDesc" xml:space="preserve">
+    <value>Editarea configurației serverului, sitelock, nume interzise, restricții.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermGroupBuild" xml:space="preserve">
+    <value>Construire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermGroupManage" xml:space="preserve">
+    <value>Gestionare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermLayoutAdmin" xml:space="preserve">
+    <value>Editor de aspect</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermLayoutAdminDesc" xml:space="preserve">
+    <value>Editarea aspectului widgeturilor din portal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaAdmin" xml:space="preserve">
+    <value>Bibliotecă de imagini · Gestionare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaAdminDesc" xml:space="preserve">
+    <value>Explorarea și ștergerea bibliotecii media partajate.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaUpload" xml:space="preserve">
+    <value>Bibliotecă de imagini · Încărcare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaUploadDesc" xml:space="preserve">
+    <value>Încărcarea de fișiere imagine pentru utilizare în paginile wiki.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPackagesAdmin" xml:space="preserve">
+    <value>Pachete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPackagesAdminDesc" xml:space="preserve">
+    <value>Instalarea, actualizarea și gestionarea pachetelor softcode.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersModerate" xml:space="preserve">
+    <value>Jucători · Moderare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersModerateDesc" xml:space="preserve">
+    <value>Dezactivarea, interzicerea, avertizarea și editarea conturilor, personajelor și profilurilor jucătorilor.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersView" xml:space="preserve">
+    <value>Jucători · Vizualizare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersViewDesc" xml:space="preserve">
+    <value>Explorarea conturilor, personajelor și profilurilor jucătorilor (doar citire).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermRolesAdmin" xml:space="preserve">
+    <value>Roluri și permisiuni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermRolesAdminDesc" xml:space="preserve">
+    <value>Crearea rolurilor, editarea permisiunilor și atribuirea rolurilor către conturi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermServerAdmin" xml:space="preserve">
+    <value>Server (God)</value>
+    <comment>MT — God kept as a privilege-level name per glossary</comment>
+  </data>
+  <data name="EnumPermServerAdminDesc" xml:space="preserve">
+    <value>Operațiuni la nivel de server și import de bază de date. Implicit, doar pentru God.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermSoftcodeUse" xml:space="preserve">
+    <value>Editor softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermSoftcodeUseDesc" xml:space="preserve">
+    <value>Deschiderea editorului softcode pentru vizualizarea și editarea atributelor obiectelor.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiAdmin" xml:space="preserve">
+    <value>Wiki · Moderare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiAdminDesc" xml:space="preserve">
+    <value>Protejarea/deprotejarea, editarea paginilor protejate, operațiuni în masă și panoul de administrare wiki.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiCreate" xml:space="preserve">
+    <value>Wiki · Creare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiCreateDesc" xml:space="preserve">
+    <value>Crearea de pagini wiki noi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDelete" xml:space="preserve">
+    <value>Wiki · Ștergere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDeleteDesc" xml:space="preserve">
+    <value>Ștergerea paginilor wiki și a istoricului lor de revizii.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiEdit" xml:space="preserve">
+    <value>Wiki · Editare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiEditDesc" xml:space="preserve">
+    <value>Editarea, revenirea și reetichetarea paginilor wiki existente (neprotejate).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiRead" xml:space="preserve">
+    <value>Wiki · Citire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiReadDesc" xml:space="preserve">
+    <value>Vizualizarea paginilor wiki nepublicate/ciornă (paginile publicate sunt publice pentru toată lumea).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindInstall" xml:space="preserve">
+    <value>Instalare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindRollback" xml:space="preserve">
+    <value>Revenire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindUpgrade" xml:space="preserve">
+    <value>Actualizare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitBytes" xml:space="preserve">
+    <value>{0} B</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitGigabytes" xml:space="preserve">
+    <value>{0} GB</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitKilobytes" xml:space="preserve">
+    <value>{0} KB</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitMegabytes" xml:space="preserve">
+    <value>{0} MB</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingBannedName" xml:space="preserve">
+    <value>Eroare la adăugarea numelui interzis: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingCommandRestriction" xml:space="preserve">
+    <value>Eroare la adăugarea restricției de comandă: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingFunctionRestriction" xml:space="preserve">
+    <value>Eroare la adăugarea restricției de funcție: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingSitelockRule" xml:space="preserve">
+    <value>Eroare la adăugarea regulii sitelock: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingWord" xml:space="preserve">
+    <value>Eroare la adăugarea cuvântului: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorCount" xml:space="preserve">
+    <value>{count, plural, one {# eroare} few {# erori} other {# de erori}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorCreatingCategory" xml:space="preserve">
+    <value>Eroare la crearea categoriei: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorDeletingCategory" xml:space="preserve">
+    <value>Eroare la ștergerea categoriei: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorDeletingWord" xml:space="preserve">
+    <value>Eroare la ștergerea cuvântului: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingBannedNames" xml:space="preserve">
+    <value>Eroare la încărcarea numelor interzise: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingConfig" xml:space="preserve">
+    <value>Eroare la încărcarea configurării: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingRestrictions" xml:space="preserve">
+    <value>Eroare la încărcarea restricțiilor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingSitelockRules" xml:space="preserve">
+    <value>Eroare la încărcarea regulilor sitelock: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingSuggestions" xml:space="preserve">
+    <value>Eroare la încărcarea sugestiilor: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingBannedName" xml:space="preserve">
+    <value>Eroare la eliminarea numelui interzis: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingCommandRestriction" xml:space="preserve">
+    <value>Eroare la eliminarea restricției de comandă: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingFunctionRestriction" xml:space="preserve">
+    <value>Eroare la eliminarea restricției de funcție: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingSitelockRule" xml:space="preserve">
+    <value>Eroare la eliminarea regulii sitelock: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Errors" xml:space="preserve">
+    <value>Erori ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EstimatedRemaining" xml:space="preserve">
+    <value>Timp rămas estimat:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Exits" xml:space="preserve">
+    <value>Ieșiri:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Export" xml:space="preserve">
+    <value>Export</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ExportConfiguration" xml:space="preserve">
+    <value>Export configurare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ExportFailed" xml:space="preserve">
+    <value>Exportul configurării a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FailedToLoadSchema" xml:space="preserve">
+    <value>Încărcarea schemei de configurare a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FailedToLoadValues" xml:space="preserve">
+    <value>Încărcarea valorilor de configurare a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Files" xml:space="preserve">
+    <value>Fișiere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Flags" xml:space="preserve">
+    <value>Steaguri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="From" xml:space="preserve">
+    <value>De la</value>
+    <comment>MT — mail sender column</comment>
+  </data>
+  <data name="FunctionName" xml:space="preserve">
+    <value>Nume funcție</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionNameHelper" xml:space="preserve">
+    <value>de ex. pemit(), sql()</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionAddFailed" xml:space="preserve">
+    <value>Adăugarea restricției de funcție a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionAdded" xml:space="preserve">
+    <value>Restricția de funcție pentru '{0}' a fost adăugată cu succes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionRemoveFailed" xml:space="preserve">
+    <value>Eliminarea restricției de funcție a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionRemoved" xml:space="preserve">
+    <value>Restricția de funcție pentru '{0}' a fost eliminată cu succes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictions" xml:space="preserve">
+    <value>Restricții pentru funcții</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Functions" xml:space="preserve">
+    <value>Funcții</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Gallery" xml:space="preserve">
+    <value>Galerie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryEmpty" xml:space="preserve">
+    <value>Nicio imagine încă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryUploadFailed" xml:space="preserve">
+    <value>Încărcarea imaginii a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Help" xml:space="preserve">
+    <value>Ajutor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Home" xml:space="preserve">
+    <value>Acasă</value>
+    <comment>MT — nav item for the portal home page</comment>
+  </data>
+  <data name="HostPattern" xml:space="preserve">
+    <value>Model de gazdă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostPatternHelper" xml:space="preserve">
+    <value>de ex. *.example.com sau 192.168.1.*</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Import" xml:space="preserve">
+    <value>Import</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportAnotherDatabase" xml:space="preserve">
+    <value>Import altă bază de date</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfig" xml:space="preserve">
+    <value>Import config</value>
+    <comment>MT — short button label; "config" kept clipped as in English</comment>
+  </data>
+  <data name="ImportConfigDescription" xml:space="preserve">
+    <value>Încărcați un fișier mush.cnf pentru a importa setările de configurare. Formate acceptate: .cnf, .conf, .txt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfigFile" xml:space="preserve">
+    <value>Import fișier de configurare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfiguration" xml:space="preserve">
+    <value>Import configurare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportDatabaseDescription" xml:space="preserve">
+    <value>Încărcați un fișier de bază de date PennMUSH pentru a-l converti și importa în SharpMUSH. Procesul de conversie va crea toate obiectele, va stabili relațiile și va seta atributele și încuietorile.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportPennMUSHDatabase" xml:space="preserve">
+    <value>Import bază de date PennMUSH</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Important" xml:space="preserve">
+    <value>Important</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Importing" xml:space="preserve">
+    <value>Se importă...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="InThisSection" xml:space="preserve">
+    <value>în această secțiune</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Issues" xml:space="preserve">
+    <value>Probleme</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Key" xml:space="preserve">
+    <value>Cheie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Limbă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayActions" xml:space="preserve">
+    <value>Acțiuni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAllLayouts" xml:space="preserve">
+    <value>Toate aspectele</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppAllowedZones" xml:space="preserve">
+    <value>Zone permise</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrl" xml:space="preserve">
+    <value>URL de date</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrlHelper" xml:space="preserve">
+    <value>Date pentru afișarea vizualizării / precompletarea formularului</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrlOptional" xml:space="preserve">
+    <value>URL de date (opțional)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDisplayName" xml:space="preserve">
+    <value>Nume afișat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDisplayOrder" xml:space="preserve">
+    <value>Ordine de afișare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppEditInSoftcode" xml:space="preserve">
+    <value>Editare în softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppEditTitle" xml:space="preserve">
+    <value>Editare {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppIconHelper" xml:space="preserve">
+    <value>Șir de pictogramă MudBlazor Material</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppIconOptional" xml:space="preserve">
+    <value>Pictogramă (opțional)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKind" xml:space="preserve">
+    <value>Tip</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKindPage" xml:space="preserve">
+    <value>Pagină (/apps/{slug})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKindWidget" xml:space="preserve">
+    <value>Widget (zonă de aspect)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppMinRole" xml:space="preserve">
+    <value>Rol min.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppMinimumRole" xml:space="preserve">
+    <value>Rol minim</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacement" xml:space="preserve">
+    <value>Poziție în navigare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacementHelper" xml:space="preserve">
+    <value>Setați pentru a afișa în navigare o aplicație de tip Pagină</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacementOptional" xml:space="preserve">
+    <value>Poziție în navigare (opțional)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppOpen" xml:space="preserve">
+    <value>Deschidere aplicație</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppOrder" xml:space="preserve">
+    <value>Ordine</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveConfirm" xml:space="preserve">
+    <value>Eliminați „{0}” ({1})? Aceasta doar o dezasociază de portal; softcode-ul rămâne neatins.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveFailed" xml:space="preserve">
+    <value>Eliminarea aplicației a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveTitle" xml:space="preserve">
+    <value>Eliminare aplicație</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoved" xml:space="preserve">
+    <value>{0} a fost eliminată.</value>
+    <comment>MT — assumed {0} is an application name (aplicație, feminine)</comment>
+  </data>
+  <data name="LayAppRequiredFields" xml:space="preserve">
+    <value>Slug, numele afișat și URL-ul de schemă sunt obligatorii.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSaveFailed" xml:space="preserve">
+    <value>Salvarea a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSaved" xml:space="preserve">
+    <value>{0} a fost salvată.</value>
+    <comment>MT — assumed {0} is an application name (aplicație, feminine)</comment>
+  </data>
+  <data name="LayAppSchemaUrl" xml:space="preserve">
+    <value>URL de schemă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSchemaUrlHelper" xml:space="preserve">
+    <value>Ruta handler-ului HTTP care returnează Portal Schema Document, ex. http/chargen/schema</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSlug" xml:space="preserve">
+    <value>Slug</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSlugHelper" xml:space="preserve">
+    <value>Cheie URL — /apps/{slug}. Nu poate fi modificată după creare.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSubmitRoute" xml:space="preserve">
+    <value>Rută de trimitere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSubmitRouteOptional" xml:space="preserve">
+    <value>Rută de trimitere (opțional)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppViewSchema" xml:space="preserve">
+    <value>Vizualizare schemă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayApplications" xml:space="preserve">
+    <value>Aplicații</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayApply" xml:space="preserve">
+    <value>Aplicare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsEmptyDetail" xml:space="preserve">
+    <value>Selectați o aplicație sau înregistrați una nouă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsKicker" xml:space="preserve">
+    <value>Construire · Widgeturi personalizate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsNew" xml:space="preserve">
+    <value>Aplicație nouă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsNoMatch" xml:space="preserve">
+    <value>Nicio aplicație nu corespunde.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsPages" xml:space="preserve">
+    <value>Pagini</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsRegister" xml:space="preserve">
+    <value>Înregistrare aplicație</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSchemaRegistry" xml:space="preserve">
+    <value>Registru de scheme</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSchemas" xml:space="preserve">
+    <value>Scheme</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSearchPlaceholder" xml:space="preserve">
+    <value>Căutare aplicații sau scheme…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsStatPages" xml:space="preserve">
+    <value>aplicații pe tot ecranul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsStatRegistered" xml:space="preserve">
+    <value>înregistrate</value>
+    <comment>MT — assumed it labels a count of applications (feminine plural)</comment>
+  </data>
+  <data name="LayAppsStatSchemas" xml:space="preserve">
+    <value>definite în softcode</value>
+    <comment>MT — assumed it labels a count of schemas (feminine plural)</comment>
+  </data>
+  <data name="LayAppsStatWidgets" xml:space="preserve">
+    <value>zone de panou</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsWidgets" xml:space="preserve">
+    <value>Widgeturi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayBadgeCustomized" xml:space="preserve">
+    <value>personalizat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayBadgeDefault" xml:space="preserve">
+    <value>implicit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigJsonHelp" xml:space="preserve">
+    <value>Configurație pentru fiecare instanță a {0}, în format JSON. Lăsați gol pentru a nu avea configurație.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigJsonLabel" xml:space="preserve">
+    <value>Configurație JSON</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigure" xml:space="preserve">
+    <value>Configurare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigureWidget" xml:space="preserve">
+    <value>Configurare {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayEdit" xml:space="preserve">
+    <value>Editare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayEditorPageTitle" xml:space="preserve">
+    <value>Aspect {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayFlowZoneHint" xml:space="preserve">
+    <value>orizontal — fără lățime</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayGridZoneHint" xml:space="preserve">
+    <value>grilă cu 12 coloane</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayHasConfig" xml:space="preserve">
+    <value>Are configurație</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayInvalidJson" xml:space="preserve">
+    <value>JSON invalid: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLayouts" xml:space="preserve">
+    <value>Aspect</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLayoutsBlurb" xml:space="preserve">
+    <value>Aranjați widgeturile din fiecare pagină trăgându-le dintr-o zonă în alta. Modificările se publică pentru toți vizitatorii.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLayoutsKicker" xml:space="preserve">
+    <value>Construire · Aspectul paginilor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLivePreview" xml:space="preserve">
+    <value>Previzualizare în timp real</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPaletteHint" xml:space="preserve">
+    <value>Trageți un widget într-o zonă. Trageți înapoi aici un widget plasat pentru a-l elimina.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreview" xml:space="preserve">
+    <value>Previzualizare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreviewNote" xml:space="preserve">
+    <value>Reflectă modificările nesalvate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreviewNoteProfile" xml:space="preserve">
+    <value> · widgeturile de personaj afișează aici o stare generică</value>
+    <comment>MT — leading space and · separator preserved as in the English</comment>
+  </data>
+  <data name="LayPublish" xml:space="preserve">
+    <value>Publicare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublishFailed" xml:space="preserve">
+    <value>Publicarea aspectului a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublished" xml:space="preserve">
+    <value>Aspectul {0} a fost publicat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublishing" xml:space="preserve">
+    <value>Se publică…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayRemove" xml:space="preserve">
+    <value>Eliminare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayReset" xml:space="preserve">
+    <value>Resetare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetConfirm" xml:space="preserve">
+    <value>Resetați aspectul {0} la valoarea implicită? Toate personalizările vor fi pierdute.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetDone" xml:space="preserve">
+    <value>Aspectul {0} a fost resetat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetFailed" xml:space="preserve">
+    <value>Resetarea aspectului a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetLayout" xml:space="preserve">
+    <value>Resetare aspect</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeGlobal" xml:space="preserve">
+    <value>Cadrul site-ului</value>
+    <comment>MT — "Site Chrome" rendered as the site's shared frame (top bar, sidebars, footer), per its description string</comment>
+  </data>
+  <data name="LayScopeGlobalDesc" xml:space="preserve">
+    <value>Bara de sus, barele laterale și subsolul comune tuturor paginilor.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeHome" xml:space="preserve">
+    <value>Pagina principală</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeHomeDesc" xml:space="preserve">
+    <value>Conținutul principal al paginii de întâmpinare.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeProfile" xml:space="preserve">
+    <value>Profil de personaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeProfileDesc" xml:space="preserve">
+    <value>Corpul paginii /character/{name} și bara din dreapta.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeWikiIndex" xml:space="preserve">
+    <value>Index wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeWikiIndexDesc" xml:space="preserve">
+    <value>Pagina principală /wiki.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LaySidebarsAndFooter" xml:space="preserve">
+    <value>Bare laterale și subsol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LaySpacerHeight" xml:space="preserve">
+    <value>Înălțime (px)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LaySpacerHelp" xml:space="preserve">
+    <value>Înălțimea spațiului gol, în pixeli. Lățimea urmează numărul de coloane al plasării.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayUnknownScope" xml:space="preserve">
+    <value>Domeniu de aspect necunoscut „{0}”.</value>
+    <comment>MT — used Romanian quotation marks in place of the English curly quotes</comment>
+  </data>
+  <data name="LayWidgetActiveScene" xml:space="preserve">
+    <value>Scenă activă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetCharacterDirectory" xml:space="preserve">
+    <value>Director de personaje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetCharacterGallery" xml:space="preserve">
+    <value>Galerie de personaje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetGameStats" xml:space="preserve">
+    <value>Statistici joc</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetOnlineCharacters" xml:space="preserve">
+    <value>Personaje online</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetQuickLinks" xml:space="preserve">
+    <value>Linkuri rapide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetQuickstart" xml:space="preserve">
+    <value>Pornire rapidă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetRecentWikiActivity" xml:space="preserve">
+    <value>Activitate wiki recentă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetSchemaApplication" xml:space="preserve">
+    <value>Aplicație de schemă</value>
+    <comment>MT — "application" is a portal application from the app catalog (see SchemaWidgetDescriptor), not the act of applying a schema</comment>
+  </data>
+  <data name="LayWidgetSpacer" xml:space="preserve">
+    <value>Spațiere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetWelcomeText" xml:space="preserve">
+    <value>Text de întâmpinare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetWikiBody" xml:space="preserve">
+    <value>Conținut wiki</value>
+    <comment>MT — assumed the body of the current wiki page</comment>
+  </data>
+  <data name="LayWidgetWikiIndex" xml:space="preserve">
+    <value>Index wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetsPanel" xml:space="preserve">
+    <value>Widgeturi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidthInColumns" xml:space="preserve">
+    <value>Lățime în coloane (1–12)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Limits" xml:space="preserve">
+    <value>Limite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Se încarcă...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Locks" xml:space="preserve">
+    <value>Încuietori:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Logging" xml:space="preserve">
+    <value>Jurnalizare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>Autentificare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LogsAndFiles" xml:space="preserve">
+    <value>Jurnale și fișiere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LogsCategoryDescription" xml:space="preserve">
+    <value>Jurnalizare, căi de fișiere și dump-uri ale bazei de date</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mail" xml:space="preserve">
+    <value>Mail</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailDeleteFailed" xml:space="preserve">
+    <value>Mesajul nu a putut fi șters.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailDeleted" xml:space="preserve">
+    <value>Mesaj șters.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailEmpty" xml:space="preserve">
+    <value>Niciun mesaj în acest dosar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailNeedsCharacter" xml:space="preserve">
+    <value>Selectați sau conectați un personaj pentru a vă citi mailul.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailNotFound" xml:space="preserve">
+    <value>Mesajul nu a fost găsit.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailSendFailed" xml:space="preserve">
+    <value>Mailul nu a putut fi trimis. Verificați numele destinatarului.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailSent" xml:space="preserve">
+    <value>Mail trimis.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mailbox" xml:space="preserve">
+    <value>Căsuță de mail</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Maintenance" xml:space="preserve">
+    <value>Întreținere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ManageAllSettings" xml:space="preserve">
+    <value>Gestionați toate setările serverului SharpMUSH dintr-un singur loc</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ManageConfigDescription" xml:space="preserve">
+    <value>Gestionați setările de configurare ale MUSH-ului. Puteți importa fișiere de configurare sau modifica setările direct.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mappings" xml:space="preserve">
+    <value>Mapări:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Membru din {0}</value>
+    <comment>MT — nominal phrase instead of the participle 's-a alăturat', so nothing has to agree with the character's unknown gender; {0} is a pre-formatted month and year</comment>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>Mesaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Messages" xml:space="preserve">
+    <value>Mesaje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MyAccount" xml:space="preserve">
+    <value>Contul meu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NameToBan" xml:space="preserve">
+    <value>Nume de interzis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavAccountTag" xml:space="preserve">
+    <value>cont</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplication" xml:space="preserve">
+    <value>Aplicație</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplicationComponentLoadFailed" xml:space="preserve">
+    <value>Componenta compilată a acestei aplicații nu a putut fi încărcată. Este posibil ca rularea codului în browser să fie dezactivată (allow_browser_code) sau ca ansamblul să nu fi trecut verificarea.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
+    <value>Schema aplicației nu a putut fi încărcată. Handlerul softcode de la {0} poate să lipsească sau să returneze JSON invalid.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterManagement" xml:space="preserve">
+    <value>Gestionare personaje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
+    <value>Gestionarea personajelor va fi disponibilă în curând.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterName" xml:space="preserve">
+    <value>Nume personaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharactersRegistered" xml:space="preserve">
+    <value>{count, plural, one {# personaj înregistrat} few {# personaje înregistrate} other {# de personaje înregistrate}}</value>
+    <comment>MT — ICU categories one+few+other; the "de" form now covers 20+</comment>
+  </data>
+  <data name="NavCharsShort" xml:space="preserve">
+    <value>Pers.</value>
+    <comment>MT — short nav label for "characters"; abbreviated to fit fixed-width chrome</comment>
+  </data>
+  <data name="NavCloseTerminal" xml:space="preserve">
+    <value>Închidere terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCommandTerminal" xml:space="preserve">
+    <value>terminal de comenzi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
+    <value>— Conectați-vă pentru a vedea cine este aici —</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateACharacter" xml:space="preserve">
+    <value>Creați un personaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacter" xml:space="preserve">
+    <value>Creare personaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacterBlurb" xml:space="preserve">
+    <value>Un personaj este un rol pe care îl interpretați în joc. Este asociat contului dumneavoastră; puteți crea altele mai târziu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExitFocusMode" xml:space="preserve">
+    <value>Ieșire din modul focalizat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExits" xml:space="preserve">
+    <value>Ieșiri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFocusMode" xml:space="preserve">
+    <value>Mod focalizat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGoToAccountPage" xml:space="preserve">
+    <value>Accesați pagina contului dumneavoastră</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGuestTag" xml:space="preserve">
+    <value>invitat</value>
+    <comment>MT — lowercase tag next to "account", read as a descriptive badge rather than the Guest privilege level</comment>
+  </data>
+  <data name="NavInPlay" xml:space="preserve">
+    <value>în joc</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavLoadingApplication" xml:space="preserve">
+    <value>Se încarcă aplicația…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailFolders" xml:space="preserve">
+    <value>Dosare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailForward" xml:space="preserve">
+    <value>Redirecționare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailReadFullMessage" xml:space="preserve">
+    <value>Citire mesaj complet →</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailSelectMessage" xml:space="preserve">
+    <value>Selectați un mesaj pentru citire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMenuLabel" xml:space="preserve">
+    <value>Meniu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationAccess" xml:space="preserve">
+    <value>Nu aveți acces la această aplicație.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationRegistered" xml:space="preserve">
+    <value>Nicio aplicație nu este înregistrată la {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoExitsAvailable" xml:space="preserve">
+    <value>— Nicio ieșire disponibilă —</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotConnected" xml:space="preserve">
+    <value>neconectat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOffline" xml:space="preserve">
+    <value>offline</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOnline" xml:space="preserve">
+    <value>online</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOpenTerminal" xml:space="preserve">
+    <value>Deschidere terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySessionActive" xml:space="preserve">
+    <value>Sesiune de joc activă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayTerminal" xml:space="preserve">
+    <value>Terminal de joc</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayUnreadActivity" xml:space="preserve">
+    <value>Activitate de joc necitită</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSearchPlaceholder" xml:space="preserve">
+    <value>Căutare…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionBuild" xml:space="preserve">
+    <value>Construire</value>
+    <comment>MT — nav section for building the world (rooms/exits), not a software build</comment>
+  </data>
+  <data name="NavSectionManage" xml:space="preserve">
+    <value>Gestionare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionWorld" xml:space="preserve">
+    <value>Lume</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsAccountDescription" xml:space="preserve">
+    <value>E-mail, parolă și securitatea autentificării</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsCharactersDescription" xml:space="preserve">
+    <value>Gestionați personajele asociate contului dumneavoastră</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsThemeDescription" xml:space="preserve">
+    <value>Preferințe de aspect și culoare de accent</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalSettings" xml:space="preserve">
+    <value>Setări terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthCols" xml:space="preserve">
+    <value>Lățime (coloane)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthTooltip" xml:space="preserve">
+    <value>Lățimea preferată a terminalului, în coloane (minim 78). Fontul se scalează automat pentru a o umple — mai mult spațiu înseamnă un font mai mare — iar valoarea este raportată serverului ca lățime a ecranului dumneavoastră.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTheme" xml:space="preserve">
+    <value>Temă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavThemeComingSoon" xml:space="preserve">
+    <value>Preferințele de temă vor fi disponibile în curând.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavToggleNavigation" xml:space="preserve">
+    <value>Comutare navigare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Network" xml:space="preserve">
+    <value>Rețea</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewEntry" xml:space="preserve">
+    <value>Intrare nouă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewKey" xml:space="preserve">
+    <value>Cheie nouă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoBannedNamesConfigured" xml:space="preserve">
+    <value>Niciun nume interzis configurat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoChangesToSave" xml:space="preserve">
+    <value>Nicio modificare de salvat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCharactersFound" xml:space="preserve">
+    <value>Niciun personaj găsit.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCommandRestrictions" xml:space="preserve">
+    <value>Nicio restricție de comandă configurată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoEntries" xml:space="preserve">
+    <value>Nicio intrare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoFunctionRestrictions" xml:space="preserve">
+    <value>Nicio restricție de funcție configurată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoGroupingNote" xml:space="preserve">
+    <value>Această categorie nu a fost încă actualizată cu metadate extinse de schemă. Proprietățile sunt afișate fără grupare. Doar categoria Network (Net) dispune în prezent de interfața extinsă completă.</value>
+    <comment>MT — "Network (Net)" kept in English as the literal category identifier</comment>
+  </data>
+  <data name="NoItems" xml:space="preserve">
+    <value>Niciun element</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesFound" xml:space="preserve">
+    <value>Nicio proprietate de configurare găsită pentru categoria "{0}".</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesHint" xml:space="preserve">
+    <value>Este posibil ca această categorie să nu fi fost încă adnotată cu metadate extinse de schemă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSitelockRulesConfigured" xml:space="preserve">
+    <value>Nicio regulă sitelock configurată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSuggestionCategories" xml:space="preserve">
+    <value>Nicio categorie de sugestii definită. Apăsați "Adăugare categorie" pentru a crea prima categorie.</value>
+    <comment>MT — quoted text mirrors the "Add Category" button label</comment>
+  </data>
+  <data name="NoWordsInCategory" xml:space="preserve">
+    <value>Niciun cuvânt în această categorie încă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorized" xml:space="preserve">
+    <value>Nu aveți autorizația de a accesa această resursă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>Nu a fost găsit</value>
+    <comment>MT — 404 page heading</comment>
+  </data>
+  <data name="NotFoundDescription" xml:space="preserve">
+    <value>Ne pare rău, conținutul căutat nu există.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NothingToSeeHere" xml:space="preserve">
+    <value>Nimic de văzut aici.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsConverted" xml:space="preserve">
+    <value>Obiecte convertite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsCreated" xml:space="preserve">
+    <value>Obiecte create</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PercentComplete" xml:space="preserve">
+    <value>{0:F1}% finalizat - {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Performance" xml:space="preserve">
+    <value>Performanță</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PerformanceCategoryDescription" xml:space="preserve">
+    <value>Limite de resurse, cozi de comenzi și optimizare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Phase" xml:space="preserve">
+    <value>Etapă:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAction" xml:space="preserve">
+    <value>Acțiune</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAddRemote" xml:space="preserve">
+    <value>Adăugare remote</value>
+    <comment>MT — kept git term "remote" untranslated, like branch/commit/tag</comment>
+  </data>
+  <data name="PkgAddRemoteHeading" xml:space="preserve">
+    <value>Adăugarea unui remote</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAdminSection" xml:space="preserve">
+    <value>Administrare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgApplied" xml:space="preserve">
+    <value>{0} {1} aplicat (revizia {2}).</value>
+    <comment>MT — assumed {0} is a package name and {1} a version</comment>
+  </data>
+  <data name="PkgApply" xml:space="preserve">
+    <value>Aplicare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAttributesCount" xml:space="preserve">
+    <value>Atribute ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAttributesToInclude" xml:space="preserve">
+    <value>Atribute de inclus:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthor" xml:space="preserve">
+    <value>Autor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorDescription" xml:space="preserve">
+    <value>Transformați obiectele active într-un package.yaml. Fiecare dbref din selecție trebuie să ajungă simbolic: referințele din selecție se rezolvă automat; restul le clasificați mai jos.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorHeading" xml:space="preserve">
+    <value>Creare pachet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorsLabel" xml:space="preserve">
+    <value>Autori (separați prin virgulă)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAvailableFrom" xml:space="preserve">
+    <value>Disponibil de la {0}{1}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBaseAsInstalled" xml:space="preserve">
+    <value>Bază (ca la instalare)</value>
+    <comment>MT — three-way merge column: the base version as originally installed</comment>
+  </data>
+  <data name="PkgBranch" xml:space="preserve">
+    <value>Branch</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBranchOptionalLabel" xml:space="preserve">
+    <value>Branch (opțional)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowse" xml:space="preserve">
+    <value>Explorare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseDescription" xml:space="preserve">
+    <value>Reîmprospătează cache-ul repo al remote-ului și îi listează pachetele. Versiunile provin din tagurile de release; vârful branchului este canalul dev.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseHeading" xml:space="preserve">
+    <value>Explorare pachete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCheck" xml:space="preserve">
+    <value>Verificare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
+    <value>Clasificați {0}: referințele configure necesită o cheie și o etichetă.</value>
+    <comment>MT — "configure" kept as the literal package.yaml ref-mode name, as fr/de do</comment>
+  </data>
+  <data name="PkgClose" xml:space="preserve">
+    <value>Închidere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommandCollision" xml:space="preserve">
+    <value>Comanda $ „{0}” este deja definită de pachetul {1} ({2}/{3}).</value>
+    <comment>MT — "$-command" rendered as "comanda $"; the $ marker is kept</comment>
+  </data>
+  <data name="PkgCommunityDirectory" xml:space="preserve">
+    <value>Director comunitar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityDirectoryHint" xml:space="preserve">
+    <value>Repo-uri comunitare acceptate, selectate în repo-ul oficial de pachete.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityRemoteAdded" xml:space="preserve">
+    <value>„{0}” a fost adăugat ca remote comunitar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigureKeyLabel" xml:space="preserve">
+    <value>Cheie configure</value>
+    <comment>MT — the key of a "configure" ref; the mode name stays English</comment>
+  </data>
+  <data name="PkgConfigurePromptLabel" xml:space="preserve">
+    <value>Mesajul afișat celor care instalează</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigured" xml:space="preserve">
+    <value>configurat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfiguredRemotes" xml:space="preserve">
+    <value>Remote-uri configurate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictCount" xml:space="preserve">
+    <value>{count, plural, one {# conflict} few {# conflicte} other {# de conflicte}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictLabel" xml:space="preserve">
+    <value>conflict: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictsWithInstalled" xml:space="preserve">
+    <value>Conflicte cu pachetele instalate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCurrent" xml:space="preserve">
+    <value>curent</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDbrefHelper" xml:space="preserve">
+    <value>ID obiect, ex. #123:456</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDefaultBranch" xml:space="preserve">
+    <value>implicit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDeleteTakeTheirs" xml:space="preserve">
+    <value>Ștergere (varianta lor)</value>
+    <comment>MT — merge-conflict button, paired with "Varianta mea"/"Varianta lor"</comment>
+  </data>
+  <data name="PkgDependedOnBy" xml:space="preserve">
+    <value>Pachete dependente: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDescriptionLabel" xml:space="preserve">
+    <value>Descriere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDetails" xml:space="preserve">
+    <value>Detalii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevChannelOption" xml:space="preserve">
+    <value>canal dev ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevDrift" xml:space="preserve">
+    <value>derivă dev</value>
+    <comment>MT — assumed the installed dev commit has drifted from the branch tip</comment>
+  </data>
+  <data name="PkgDownload" xml:space="preserve">
+    <value>Descărcare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEditMergedValue" xml:space="preserve">
+    <value>Editare valoare îmbinată</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEnterObjectId" xml:space="preserve">
+    <value>Introduceți cel puțin un ID de obiect.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgExportHint" xml:space="preserve">
+    <value>Faceți commit cu acest fișier într-un repo de pachete (câte un director per pachet), listați-l în index.yaml și marcați release-urile cu taguri de forma</value>
+    <comment>MT — sentence is cut off in English; an example tag format presumably follows</comment>
+  </data>
+  <data name="PkgExportYaml" xml:space="preserve">
+    <value>Export package.yaml</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgForceRemoval" xml:space="preserve">
+    <value>Forțare eliminare oricum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgGitUrlLabel" xml:space="preserve">
+    <value>URL Git</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstallHeading" xml:space="preserve">
+    <value>Instalare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalled" xml:space="preserve">
+    <value>Instalat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledDescription" xml:space="preserve">
+    <value>Pachete softcode instalate. Actualizările trec întotdeauna printr-un plan revizuit — nimic nu se aplică automat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledOn" xml:space="preserve">
+    <value>instalat {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledSuffix" xml:space="preserve">
+    <value> — instalat: {0}.</value>
+    <comment>MT — leading space preserved; this is a sentence suffix</comment>
+  </data>
+  <data name="PkgKeepMine" xml:space="preserve">
+    <value>Varianta mea</value>
+    <comment>MT — merge-conflict button; rendered as the noun pair "Varianta mea"/"Varianta lor" to stay short</comment>
+  </data>
+  <data name="PkgKickerAuthoring" xml:space="preserve">
+    <value>Construcție · Creare pachete</value>
+    <comment>MT — "Build" treated as the staff nav section, not the Builder privilege level</comment>
+  </data>
+  <data name="PkgKickerRegistry" xml:space="preserve">
+    <value>Construcție · Registru de pachete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgKickerSources" xml:space="preserve">
+    <value>Construcție · Surse de pachete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLicenseLabel" xml:space="preserve">
+    <value>Licență (opțional)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLiveYourVersion" xml:space="preserve">
+    <value>Activ (versiunea dumneavoastră)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgManifestParseFailed" xml:space="preserve">
+    <value>Manifestul de la vârful branchului nu a putut fi analizat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgManifestRefLabel" xml:space="preserve">
+    <value>Ref manifest (litere mici, underscore)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMergedValueLabel" xml:space="preserve">
+    <value>Valoare îmbinată</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMissingRemoteParam" xml:space="preserve">
+    <value>Lipsește parametrul „remote”.</value>
+    <comment>MT — "remote" kept as the literal parameter name</comment>
+  </data>
+  <data name="PkgModeConfigure" xml:space="preserve">
+    <value>configure</value>
+    <comment>MT — literal package.yaml ref-mode value, bound to MudSelectItem Value="configure"; kept English as in fr/de</comment>
+  </data>
+  <data name="PkgModeWellKnown" xml:space="preserve">
+    <value>well-known</value>
+    <comment>MT — literal package.yaml ref-mode value, bound to MudSelectItem Value="wellknown"; kept English as in fr/de</comment>
+  </data>
+  <data name="PkgName" xml:space="preserve">
+    <value>Nume</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNewVersion" xml:space="preserve">
+    <value>Nou ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoCommunityRepos" xml:space="preserve">
+    <value>Niciun repo comunitar acceptat încă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoDescription" xml:space="preserve">
+    <value>(fără descriere)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoReadme" xml:space="preserve">
+    <value>Niciun README disponibil.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoReleaseTags" xml:space="preserve">
+    <value>Niciun tag de release — este disponibil doar canalul dev.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoSearchMatch" xml:space="preserve">
+    <value>Niciun pachet nu corespunde căutării.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoUpdatesAvailable" xml:space="preserve">
+    <value>Niciun pachet nu are actualizări disponibile.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoneInstalled" xml:space="preserve">
+    <value>Niciun pachet instalat încă. Configurați un remote, apoi explorați-l pentru a instala primul pachet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNotInstalledSuffix" xml:space="preserve">
+    <value> — neinstalat.</value>
+    <comment>MT — leading space preserved; this is a sentence suffix</comment>
+  </data>
+  <data name="PkgObjAttrCounts" xml:space="preserve">
+    <value>{0} ob / {1} atr</value>
+    <comment>MT — abbreviations kept short to match the English column</comment>
+  </data>
+  <data name="PkgObjectIdsLabel" xml:space="preserve">
+    <value>ID-uri de obiecte (câte unul pe linie, ex. #847:1778518155494)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjects" xml:space="preserve">
+    <value>Obiecte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjectsCount" xml:space="preserve">
+    <value>Obiecte ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgOccurrences" xml:space="preserve">
+    <value>{count, plural, one {# apariție} few {# apariții} other {# de apariții}}, ex. în {location}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPackageIdLabel" xml:space="preserve">
+    <value>ID pachet (litere mici, cratime)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPackages" xml:space="preserve">
+    <value>Pachete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPlanLocation" xml:space="preserve">
+    <value>{0} / {1} la {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRef" xml:space="preserve">
+    <value>Ref</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRefreshAndBrowse" xml:space="preserve">
+    <value>Reîmprospătare și explorare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteLabel" xml:space="preserve">
+    <value>Remote</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteRemoved" xml:space="preserve">
+    <value>Remote-ul „{0}” a fost eliminat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteSaved" xml:space="preserve">
+    <value>Remote-ul „{0}” a fost salvat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotes" xml:space="preserve">
+    <value>Remote-uri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesDescription" xml:space="preserve">
+    <value>Repo-urile Git din care acest joc instalează pachete. Nivelurile de încredere sunt la latitudinea dumneavoastră — listările comunitare de mai jos sunt selectate în repo-ul oficial, niciodată autodeclarate.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesHeading" xml:space="preserve">
+    <value>Remote-uri de pachete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRenamedFrom" xml:space="preserve">
+    <value>redenumit din {0} (păstrează {1})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReplan" xml:space="preserve">
+    <value>Replanificare cu aceste răspunsuri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRequiredBy" xml:space="preserve">
+    <value>necesar pentru {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRequires" xml:space="preserve">
+    <value>Necesită</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolutionLabel" xml:space="preserve">
+    <value>Rezolvare</value>
+    <comment>MT — assumed conflict-resolution choice, not screen resolution</comment>
+  </data>
+  <data name="PkgResolvesAtApply" xml:space="preserve">
+    <value>se rezolvă la aplicare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolvesAtApplyTooltip" xml:space="preserve">
+    <value>Unele referințe se rezolvă la momentul aplicării (obiecte noi / configure)</value>
+    <comment>MT — "configure" kept as the literal ref-mode name used elsewhere on this screen</comment>
+  </data>
+  <data name="PkgReview" xml:space="preserve">
+    <value>Revizuire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReviewInstall" xml:space="preserve">
+    <value>Revizuire instalare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionHistory" xml:space="preserve">
+    <value>Istoric revizii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionLine" xml:space="preserve">
+    <value>rev {0} — {1} {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionsOf" xml:space="preserve">
+    <value>{0} — revizii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRollBack" xml:space="preserve">
+    <value>Revenire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRolledBack" xml:space="preserve">
+    <value>S-a revenit la revizia {0} (revizie nouă {1}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgScanSelection" xml:space="preserve">
+    <value>Scanare selecție</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSearchPlaceholder" xml:space="preserve">
+    <value>Căutare pachete…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSnapshotAt" xml:space="preserve">
+    <value>{0} la {1}</value>
+    <comment>MT — assumed {1} is a commit/ref the snapshot was taken at</comment>
+  </data>
+  <data name="PkgSoftcodePackages" xml:space="preserve">
+    <value>Pachete softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepClassifyExternal" xml:space="preserve">
+    <value>Clasificarea referințelor externe ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepMetadataExport" xml:space="preserve">
+    <value>Metadate și export</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepRefsAttributes" xml:space="preserve">
+    <value>Referințe și atribute</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepSelectObjects" xml:space="preserve">
+    <value>Selectarea obiectelor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTagMoved" xml:space="preserve">
+    <value>tagul s-a mutat!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTakeTheirs" xml:space="preserve">
+    <value>Varianta lor</value>
+    <comment>MT — merge-conflict button, paired with "Varianta mea"</comment>
+  </data>
+  <data name="PkgTrust" xml:space="preserve">
+    <value>Încredere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustCommunity" xml:space="preserve">
+    <value>comunitar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustOfficial" xml:space="preserve">
+    <value>oficial</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustUnknown" xml:space="preserve">
+    <value>necunoscut</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustWarningTagMoved" xml:space="preserve">
+    <value>AVERTISMENT DE ÎNCREDERE: tagul de release pentru {0} {1} nu mai indică commitul instalat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgType" xml:space="preserve">
+    <value>Tip</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstall" xml:space="preserve">
+    <value>Dezinstalare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstallConfirmBody" xml:space="preserve">
+    <value>{objects, plural, one {# obiect va fi marcat} few {# obiecte vor fi marcate} other {# de obiecte vor fi marcate}} pentru distrugere, iar {attributes, plural, one {# înregistrare de atribut gestionat va fi eliminată} few {# înregistrări de atribute gestionate vor fi eliminate} other {# de înregistrări de atribute gestionate vor fi eliminate}}.</value>
+    <comment>MT — Romanian agreement forces the verbs inside each plural branch; the English shares them across the two clauses</comment>
+  </data>
+  <data name="PkgUninstallConfirmTitle" xml:space="preserve">
+    <value>Se dezinstalează {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstalled" xml:space="preserve">
+    <value>{0} a fost dezinstalat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUnreviewedSource" xml:space="preserve">
+    <value>Această sursă nu a fost revizuită. Inspectați tot codul în ecranul de revizuire înainte de aplicare.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdateCheckFailed" xml:space="preserve">
+    <value>Verificarea actualizărilor a eșuat — repo-ul sursă este accesibil?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdates" xml:space="preserve">
+    <value>Actualizări</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdatesAvailable" xml:space="preserve">
+    <value>Actualizări disponibile</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradeHeading" xml:space="preserve">
+    <value>Actualizare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradingFrom" xml:space="preserve">
+    <value>— actualizare de la {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUrl" xml:space="preserve">
+    <value>URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgVersionAvailable" xml:space="preserve">
+    <value>{0} disponibil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgVersionLabel" xml:space="preserve">
+    <value>Versiune</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgWellKnownRefLabel" xml:space="preserve">
+    <value>Ref. well-known</value>
+    <comment>MT — "well-known" kept as the literal ref-mode name, as fr/de do</comment>
+  </data>
+  <data name="PkgWillBeMarkedGoing" xml:space="preserve">
+    <value>{0} va fi marcat GOING</value>
+    <comment>MT — GOING kept as the MUSH object flag name</comment>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Joc</value>
+    <comment>MT — assumed a nav item leading into the game; rendered as the noun "Joc" per Romanian UI convention</comment>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>Jucători:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PreviewFileContent" xml:space="preserve">
+    <value>Previzualizare conținut fișier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileHandler" xml:space="preserve">
+    <value>Gestionar de profil</value>
+    <comment>MT — assumed a staff-facing label for the component that handles profiles</comment>
+  </data>
+  <data name="ProfileUnavailable" xml:space="preserve">
+    <value>Profilul acestui personaj nu este disponibil.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdateFailed" xml:space="preserve">
+    <value>Modificările profilului nu au putut fi salvate.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdated" xml:space="preserve">
+    <value>Profil actualizat ({count, plural, one {# câmp} few {# câmpuri} other {# de câmpuri}}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Progress" xml:space="preserve">
+    <value>Progres</value>
+    <comment>MT</comment>
+  </data>
+  <data name="QuickActions" xml:space="preserve">
+    <value>Acțiuni rapide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RecentChanges" xml:space="preserve">
+    <value>Modificări recente</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Reîmprospătare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RemoveEntry" xml:space="preserve">
+    <value>Eliminare intrare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Reply" xml:space="preserve">
+    <value>Răspuns</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResActiveScenesSubtitle" xml:space="preserve">
+    <value>Sesiuni în desfășurare chiar acum.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResAdminWikiKicker" xml:space="preserve">
+    <value>Echipă · Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResAnyoneCanEdit" xml:space="preserve">
+    <value>oricine poate edita</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResCategoryGeneral" xml:space="preserve">
+    <value>General</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResChangeCount" xml:space="preserve">
+    <value>{count, plural, one {# modificare} few {# modificări} other {# de modificări}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResChangedBadge" xml:space="preserve">
+    <value>modificat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResConfigHomeKicker" xml:space="preserve">
+    <value>Admin · configurare server</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResConfigSectionKicker" xml:space="preserve">
+    <value>Admin · setări server</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDefaultValueTooltip" xml:space="preserve">
+    <value>Implicit: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDraft" xml:space="preserve">
+    <value>Ciornă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResHistory" xml:space="preserve">
+    <value>Istoric</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResInvalid" xml:space="preserve">
+    <value>Nevalid</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResJoin" xml:space="preserve">
+    <value>Participare</value>
+    <comment>MT — assumed this is the button to join a scene</comment>
+  </data>
+  <data name="ResNoScenesFound" xml:space="preserve">
+    <value>Nu s-a găsit nicio scenă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResOnThisPage" xml:space="preserve">
+    <value>Pe această pagină</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResRead" xml:space="preserve">
+    <value>Citire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResRoutingErrorHint" xml:space="preserve">
+    <value>Acest mesaj înseamnă că pagina personalizată NU este identificată de router.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSaveFailedShort" xml:space="preserve">
+    <value>Salvarea a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResScenesSubtitle" xml:space="preserve">
+    <value>Explorați și urmăriți sesiunile de joc de rol.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSearchTitlesPlaceholder" xml:space="preserve">
+    <value>Căutare în titluri…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResStartedAt" xml:space="preserve">
+    <value>Început {0}</value>
+    <comment>MT — assumed {0} is a relative time phrase such as 'acum 2 ore'</comment>
+  </data>
+  <data name="ResTabLive" xml:space="preserve">
+    <value>În direct</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResTabRecent" xml:space="preserve">
+    <value>Recente</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResValidationFailed" xml:space="preserve">
+    <value>Validarea a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResViewLog" xml:space="preserve">
+    <value>Vizualizare jurnal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatDrafts" xml:space="preserve">
+    <value>Ciorne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTotalPages" xml:space="preserve">
+    <value>Total pagini</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTranslations" xml:space="preserve">
+    <value>Traduceri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsConnectFailed" xml:space="preserve">
+    <value>[Eroare] Conectarea a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsConnectedTo" xml:space="preserve">
+    <value>[Sistem] Conectat la {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsDisconnectFailed" xml:space="preserve">
+    <value>[Eroare] Deconectarea a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsDisconnected" xml:space="preserve">
+    <value>[Sistem] Deconectat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsReceived" xml:space="preserve">
+    <value>[Recepționat] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsSendFailed" xml:space="preserve">
+    <value>[Eroare] Trimiterea a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsSent" xml:space="preserve">
+    <value>[Trimis] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetChanges" xml:space="preserve">
+    <value>Resetare modificări</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefault" xml:space="preserve">
+    <value>Resetare la valoarea implicită</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefaults" xml:space="preserve">
+    <value>Resetare la valorile implicite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Restrictions" xml:space="preserve">
+    <value>Restricții</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsBuilderHelper" xml:space="preserve">
+    <value>ex.: wizard, builder</value>
+    <comment>MT — privilege-level values kept in English</comment>
+  </data>
+  <data name="RestrictionsDescription" xml:space="preserve">
+    <value>Restricționați jucătorii care pot folosi anumite comenzi sau funcții, în funcție de steaguri, puteri sau atribute.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsHelper" xml:space="preserve">
+    <value>ex.: wizard, royalty, admin</value>
+    <comment>MT — privilege-level values kept in English</comment>
+  </data>
+  <data name="RestrictionsLabel" xml:space="preserve">
+    <value>Restricții (separate prin virgulă)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAddRole" xml:space="preserve">
+    <value>Adăugare rol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAllow" xml:space="preserve">
+    <value>Permis</value>
+    <comment>MT — assumed Allow/Deny/Inherit is a tri-state permission value, so rendered as adjectives (Permis/Refuzat/Moștenit) rather than verbs</comment>
+  </data>
+  <data name="RolAssignFailed" xml:space="preserve">
+    <value>Atribuirea rolului a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAssigned" xml:space="preserve">
+    <value>S-a atribuit {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAssignedRoles" xml:space="preserve">
+    <value>Roluri atribuite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolBackToActiveScenes" xml:space="preserve">
+    <value>Înapoi la scenele active</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolBackToScenes" xml:space="preserve">
+    <value>Înapoi la scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolColorHelper" xml:space="preserve">
+    <value>Culoare CSS, de ex. #6cde9a</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolColorLabel" xml:space="preserve">
+    <value>Culoare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposePlaceholder" xml:space="preserve">
+    <value>Poză, replică sau narațiune…</value>
+    <comment>MT — English verbs rendered as nouns; Romanian imperatives would be awkward in a compose-box placeholder</comment>
+  </data>
+  <data name="RolDeleteConfirm" xml:space="preserve">
+    <value>Ștergeți „{0}” ({1})? Aceasta îl elimină din toate conturile care îl dețin.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleteFailed" xml:space="preserve">
+    <value>Ștergerea rolului a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleteTitle" xml:space="preserve">
+    <value>Ștergere rol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleted" xml:space="preserve">
+    <value>S-a șters {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeny" xml:space="preserve">
+    <value>Refuzat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolEditedBadge" xml:space="preserve">
+    <value>editat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolEditedTimes" xml:space="preserve">
+    <value>{count, plural, one {Editat de # dată} few {Editat de # ori} other {Editat de # de ori}}</value>
+    <comment>MT — the placeholder list also names "Edited", which is literal text inside the ICU branches rather than a placeholder, so it is translated</comment>
+  </data>
+  <data name="RolEnterUsername" xml:space="preserve">
+    <value>Introduceți un nume de utilizator pentru căutare.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolHeading" xml:space="preserve">
+    <value>Roluri și permisiuni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolInherit" xml:space="preserve">
+    <value>Moștenit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolKicker" xml:space="preserve">
+    <value>Gestionare · Control acces</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLiveBadge" xml:space="preserve">
+    <value>LIVE</value>
+    <comment>MT — "live" is used unchanged in Romanian UI</comment>
+  </data>
+  <data name="RolLiveScene" xml:space="preserve">
+    <value>Scenă live</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLookUp" xml:space="preserve">
+    <value>Căutare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolModePose" xml:space="preserve">
+    <value>Poză</value>
+    <comment>MT — compose-mode label for the RP pose; the underlying game command stays `pose`</comment>
+  </data>
+  <data name="RolModeSay" xml:space="preserve">
+    <value>Replică</value>
+    <comment>MT — compose-mode label for the RP say; the underlying game command stays `say`</comment>
+  </data>
+  <data name="RolModeSemipose" xml:space="preserve">
+    <value>Semipoză</value>
+    <comment>MT — compose-mode label; the underlying game command stays `semipose`</comment>
+  </data>
+  <data name="RolNameLabel" xml:space="preserve">
+    <value>Nume</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNameRequired" xml:space="preserve">
+    <value>Numele este obligatoriu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNewRole" xml:space="preserve">
+    <value>Rol nou</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoAccountFound" xml:space="preserve">
+    <value>Nu s-a găsit niciun cont pentru „{0}”.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoPoses" xml:space="preserve">
+    <value>Nicio poză în această scenă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoRolesAssigned" xml:space="preserve">
+    <value>Niciun rol atribuit.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoRolesDefined" xml:space="preserve">
+    <value>Niciun rol definit.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNotConnected" xml:space="preserve">
+    <value>Neconectat la joc — conectați-vă pentru a posta și a primi poze în timp real.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPageTitle" xml:space="preserve">
+    <value>Roluri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPoseCount" xml:space="preserve">
+    <value>{count, plural, one {# poză} few {# poze} other {# de poze}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>La conflict câștigă valoarea mai mare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPriorityLabel" xml:space="preserve">
+    <value>Prioritate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoveFailed" xml:space="preserve">
+    <value>Eliminarea rolului a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoveRole" xml:space="preserve">
+    <value>Eliminare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoved" xml:space="preserve">
+    <value>S-a eliminat {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaveFailed" xml:space="preserve">
+    <value>Salvarea a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaveRole" xml:space="preserve">
+    <value>Salvare rol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaved" xml:space="preserve">
+    <value>S-a salvat {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolScene" xml:space="preserve">
+    <value>Scenă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneIn" xml:space="preserve">
+    <value>Scenă în {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNotFound" xml:space="preserve">
+    <value>Scena nu a fost găsită.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSearchAccountPrompt" xml:space="preserve">
+    <value>Căutați un cont pentru a-i gestiona rolurile.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSearchByUsername" xml:space="preserve">
+    <value>Căutare după nume de utilizator…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSelectOrCreate" xml:space="preserve">
+    <value>Selectați un rol sau creați unul nou.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugAndNameRequired" xml:space="preserve">
+    <value>Slug-ul și numele sunt obligatorii.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugHelper" xml:space="preserve">
+    <value>Cheie stabilă folosită intern. Nu poate fi modificată după creare.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugLabel" xml:space="preserve">
+    <value>Slug</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSystemBadge" xml:space="preserve">
+    <value>Sistem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabAssignments" xml:space="preserve">
+    <value>Atribuiri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabRoles" xml:space="preserve">
+    <value>Roluri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolUntitled" xml:space="preserve">
+    <value>Fără titlu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolViewArchive" xml:space="preserve">
+    <value>Vizualizare arhivă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolWaitingForActivity" xml:space="preserve">
+    <value>Se așteaptă activitate…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolWatchLive" xml:space="preserve">
+    <value>Urmărire live</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Rooms" xml:space="preserve">
+    <value>Camere:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingError" xml:space="preserve">
+    <value>Eroare de rutare:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingErrorDescription" xml:space="preserve">
+    <value>Categoria "{0}" are o pagină personalizată care ar trebui să fie randată în locul DynamicConfig.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingErrorExpected" xml:space="preserve">
+    <value>Acest mesaj înseamnă că pagina personalizată NU este identificată de router.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Salvare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveConfiguration" xml:space="preserve">
+    <value>Salvare configurare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>Salvarea configurării a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveNotImplemented" xml:space="preserve">
+    <value>Funcționalitatea de salvare nu este încă implementată</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Saving" xml:space="preserve">
+    <value>Se salvează...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SceneArchive" xml:space="preserve">
+    <value>Scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SearchAllSettings" xml:space="preserve">
+    <value>Căutare în toate setările</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SearchCharacters" xml:space="preserve">
+    <value>Căutare personaje…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SearchSettings" xml:space="preserve">
+    <value>Căutare setări...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Security" xml:space="preserve">
+    <value>Securitate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SecurityCategoryDescription" xml:space="preserve">
+    <value>Control al accesului, reguli sitelock și nume interzise</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SelectedFile" xml:space="preserve">
+    <value>Fișier selectat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Send" xml:space="preserve">
+    <value>Trimitere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SendMessage" xml:space="preserve">
+    <value>Trimitere mesaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Server" xml:space="preserve">
+    <value>Server</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerCategoryDescription" xml:space="preserve">
+    <value>Conexiuni de rețea, bază de date și setări de bază ale serverului</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerConfiguration" xml:space="preserve">
+    <value>Configurare server</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerSettings" xml:space="preserve">
+    <value>Setări server</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerUri" xml:space="preserve">
+    <value>URI server</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SetAsIcon" xml:space="preserve">
+    <value>Setare ca pictogramă de profil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Setări</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SettingsCount" xml:space="preserve">
+    <value>{count, plural, one {# setare} few {# setări} other {# de setări}}</value>
+    <comment>MT — ICU categories one+few+other; the "de" form now covers 20+</comment>
+  </data>
+  <data name="SettingsLabel" xml:space="preserve">
+    <value>Setări {0}</value>
+    <comment>MT — assumed {0} is a category name; Romanian word order puts the noun first</comment>
+  </data>
+  <data name="Sitelock" xml:space="preserve">
+    <value>Sitelock</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockAccessRulesHint" xml:space="preserve">
+    <value>Reguli de acces:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockDescription" xml:space="preserve">
+    <value>Controlați ce site-uri se pot conecta, pot crea jucători sau pot folosi conturi de oaspete.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleAddFailed" xml:space="preserve">
+    <value>Adăugarea regulii sitelock a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleAdded" xml:space="preserve">
+    <value>Regula sitelock pentru '{0}' a fost adăugată cu succes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleRemoveFailed" xml:space="preserve">
+    <value>Eliminarea regulii sitelock a eșuat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleRemoved" xml:space="preserve">
+    <value>Regula sitelock pentru '{0}' a fost eliminată cu succes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRules" xml:space="preserve">
+    <value>Reguli sitelock</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SoftcodeEditor" xml:space="preserve">
+    <value>Editor softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StaffOnlyField" xml:space="preserve">
+    <value>Doar pentru echipă — modificările se aplică numai dacă faceți parte din echipă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StartConversion" xml:space="preserve">
+    <value>Pornire conversie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Statistics" xml:space="preserve">
+    <value>Statistici</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Subject" xml:space="preserve">
+    <value>Subiect</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SuggestionManagement" xml:space="preserve">
+    <value>Gestionarea sugestiilor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Suggestions" xml:space="preserve">
+    <value>Sugestii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SuggestionsDescription" xml:space="preserve">
+    <value>Gestionați categoriile de verificare ortografică și de sugestii folosite pentru a oferi alternative la cuvintele scrise greșit din intrările de ajutor, numele de funcții și alte date introduse de utilizatori.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Summary" xml:space="preserve">
+    <value>Rezumat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SupportedFormatsConfig" xml:space="preserve">
+    <value>Formate acceptate: .cnf, .conf, .txt (max. 1 MB)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SupportedFormatsDb" xml:space="preserve">
+    <value>Formate acceptate: .db, .txt (max. 100 MB)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TempC" xml:space="preserve">
+    <value>Temp. (C)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TempF" xml:space="preserve">
+    <value>Temp. (F)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAddAttribute" xml:space="preserve">
+    <value>Adăugare atribut</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrEmpty" xml:space="preserve">
+    <value>(gol)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindCommand" xml:space="preserve">
+    <value>Declanșator de comandă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindData" xml:space="preserve">
+    <value>Date</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindFunction" xml:space="preserve">
+    <value>Funcție</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindListen" xml:space="preserve">
+    <value>Declanșator de ascultare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindText" xml:space="preserve">
+    <value>Text</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserError" xml:space="preserve">
+    <value>Eroare: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserExampleLabel" xml:space="preserve">
+    <value>ex.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserGo" xml:space="preserve">
+    <value>Salt</value>
+    <comment>MT — assumed "Go" is a button that jumps to the object entered in the browser field, not the movement command</comment>
+  </data>
+  <data name="TermBrowserHere" xml:space="preserve">
+    <value>Aici</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserMine" xml:space="preserve">
+    <value>Ale mele</value>
+    <comment>MT — assumed a filter for objects owned by the current player</comment>
+  </data>
+  <data name="TermBrowserNoObjects" xml:space="preserve">
+    <value>Nu s-au găsit obiecte.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserSearch" xml:space="preserve">
+    <value>Căutare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermClear" xml:space="preserve">
+    <value>Golire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermClearTerminal" xml:space="preserve">
+    <value>Golire terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCollapseAttributes" xml:space="preserve">
+    <value>Restrângere atribute</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCollapseObjects" xml:space="preserve">
+    <value>Restrângere obiecte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCreateRoom" xml:space="preserve">
+    <value>Creare cameră</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCreateThing" xml:space="preserve">
+    <value>Creare obiect</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermDeletedAttribute" xml:space="preserve">
+    <value>S-a șters &amp;{0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEditor" xml:space="preserve">
+    <value>Editor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermErrorLine" xml:space="preserve">
+    <value>[Eroare] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermErrorLoadingObject" xml:space="preserve">
+    <value>Eroare la încărcarea obiectului: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEvalResult" xml:space="preserve">
+    <value>Rezultat evaluare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermExpandAttributes" xml:space="preserve">
+    <value>Extindere atribute</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermExpandObjects" xml:space="preserve">
+    <value>Extindere obiecte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermFilterAttributes" xml:space="preserve">
+    <value>Filtrare atribute…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpBack" xml:space="preserve">
+    <value>Înapoi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpClose" xml:space="preserve">
+    <value>Închidere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpEmpty" xml:space="preserve">
+    <value>Căutați mai sus sau faceți clic pe "📖 Show full help" în editor.</value>
+    <comment>MT — quoted label kept verbatim per context note</comment>
+  </data>
+  <data name="TermHelpKindCommand" xml:space="preserve">
+    <value>Comandă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpKindFunction" xml:space="preserve">
+    <value>Funcție</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpSearchPlaceholder" xml:space="preserve">
+    <value>Căutare funcții și comenzi…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpSwitches" xml:space="preserve">
+    <value>Comutatoare: {0}</value>
+    <comment>MT — MUSH command switches (/switch); rendered as "comutatoare"</comment>
+  </data>
+  <data name="TermInputPlaceholder" xml:space="preserve">
+    <value>say salut   ·   pose salută   ·   look   ·   who</value>
+    <comment>MT — command verbs kept in English per context; only the arguments localized</comment>
+  </data>
+  <data name="TermMushHelp" xml:space="preserve">
+    <value>Ajutor MUSH</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoAttributeSelected" xml:space="preserve">
+    <value>Niciun atribut selectat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoAttributes" xml:space="preserve">
+    <value>Fără atribute.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoMatch" xml:space="preserve">
+    <value>Nicio potrivire.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoOutput" xml:space="preserve">
+    <value>(fără rezultat)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNotLoggedIn" xml:space="preserve">
+    <value>neautentificat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermObjectNamePlaceholder" xml:space="preserve">
+    <value>nume</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermObjects" xml:space="preserve">
+    <value>Obiecte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermRefreshAttributes" xml:space="preserve">
+    <value>Reîmprospătare atribute</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSavedAttribute" xml:space="preserve">
+    <value>S-a salvat &amp;{0} pe #{1}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSelectAnObject" xml:space="preserve">
+    <value>Selectați un obiect.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSoftcodeEditorTitle" xml:space="preserve">
+    <value>Editor softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermTest" xml:space="preserve">
+    <value>Testare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermTestTooltip" xml:space="preserve">
+    <value>Testare — evaluare fără salvare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermUnsaved" xml:space="preserve">
+    <value>nesalvat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Terminal" xml:space="preserve">
+    <value>Terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TextFiles" xml:space="preserve">
+    <value>Fișiere text</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Things" xml:space="preserve">
+    <value>Obiecte:</value>
+    <comment>MT — object-type sense (db counts), per glossary thing → obiect</comment>
+  </data>
+  <data name="To" xml:space="preserve">
+    <value>Către</value>
+    <comment>MT — assumed the recipient field of a mail message (neighbouring keys look mail-related); if it is a range end, it should be "Până la"</comment>
+  </data>
+  <data name="Total" xml:space="preserve">
+    <value>Total:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TotalObjects" xml:space="preserve">
+    <value>Total obiecte:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TotalWords" xml:space="preserve">
+    <value>Total cuvinte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Type" xml:space="preserve">
+    <value>Tip: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeDecimal" xml:space="preserve">
+    <value>Zecimal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeList" xml:space="preserve">
+    <value>Listă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeNumber" xml:space="preserve">
+    <value>Număr</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeOptional" xml:space="preserve">
+    <value>Opțional: {0}</value>
+    <comment>MT — assumed {0} is a data-type name; used "Opțional: {0}" instead of an adjective so it does not have to agree in gender with the type name</comment>
+  </data>
+  <data name="TypeText" xml:space="preserve">
+    <value>Text</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeYesNo" xml:space="preserve">
+    <value>Da/Nu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="UnsavedChanges" xml:space="preserve">
+    <value>Modificări nesalvate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Uploading" xml:space="preserve">
+    <value>Se încarcă...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Urgent" xml:space="preserve">
+    <value>Urgent</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Valoare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ValuesCommaSeparated" xml:space="preserve">
+    <value>Valori (separate prin virgulă)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WarningCount" xml:space="preserve">
+    <value>{count, plural, one {# avertisment} few {# avertismente} other {# de avertismente}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Warnings" xml:space="preserve">
+    <value>Avertismente</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WarningsLabel" xml:space="preserve">
+    <value>Avertismente ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Weather" xml:space="preserve">
+    <value>Vremea</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WeatherDescription" xml:space="preserve">
+    <value>Această componentă demonstrează preluarea datelor de la server.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WebSocketConnectionTest" xml:space="preserve">
+    <value>Test de conexiune WebSocket</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WebSocketTest" xml:space="preserve">
+    <value>Test WebSocket</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidAction" xml:space="preserve">
+    <value>Acțiune</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidActionFailed" xml:space="preserve">
+    <value>Acțiunea a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidActiveScenes" xml:space="preserve">
+    <value>Scene active</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBack" xml:space="preserve">
+    <value>Înapoi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseArchive" xml:space="preserve">
+    <value>Explorare arhivă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseCharacters" xml:space="preserve">
+    <value>Explorare personaje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseScenes" xml:space="preserve">
+    <value>Explorare scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidConfigureQuickLinks" xml:space="preserve">
+    <value>Configurare linkuri rapide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidCreateFirstCharacter" xml:space="preserve">
+    <value>Creați-vă primul personaj pentru a începe să jucați.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidCreateYourCharacter" xml:space="preserve">
+    <value>Creați-vă personajul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFieldRequired" xml:space="preserve">
+    <value>Câmpul {0} este obligatoriu.</value>
+    <comment>MT — added 'Câmpul' so the sentence works with any field name's gender</comment>
+  </data>
+  <data name="WidFillRequiredFields" xml:space="preserve">
+    <value>Completați câmpurile obligatorii evidențiate.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFormNoPages" xml:space="preserve">
+    <value>Acest formular nu are pagini.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFormStepOf" xml:space="preserve">
+    <value>Pasul {0} din {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameStartingUp" xml:space="preserve">
+    <value>Jocul pornește…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidJoinScene" xml:space="preserve">
+    <value>Participare la scenă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidLoadingWikiPage" xml:space="preserve">
+    <value>Se încarcă pagina wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNewCharacter" xml:space="preserve">
+    <value>Personaj nou</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNewHere" xml:space="preserve">
+    <value>Sunteți nou aici?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNext" xml:space="preserve">
+    <value>Înainte</value>
+    <comment>MT — wizard next-step button</comment>
+  </data>
+  <data name="WidNoActiveScenes" xml:space="preserve">
+    <value>Nicio scenă activă în acest moment.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoCharacterYet" xml:space="preserve">
+    <value>Nu aveți încă un personaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoRecentWikiActivity" xml:space="preserve">
+    <value>Nicio activitate recentă în wiki.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNobodyConnected" xml:space="preserve">
+    <value>Nimeni nu este conectat în acest moment.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNothingToDisplay" xml:space="preserve">
+    <value>Nu există nimic de afișat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidOnlineNow" xml:space="preserve">
+    <value>Online acum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidPlayersOnline" xml:space="preserve">
+    <value>Jucători online</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidPluginChangedReloading" xml:space="preserve">
+    <value>Un plugin s-a modificat — se reîncarcă…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidQuickstartIntro" xml:space="preserve">
+    <value>Începeți prin a citi wiki-ul, a explora personajele sau a intra într-o scenă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidReadTheWiki" xml:space="preserve">
+    <value>Citire wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentWikiActivity" xml:space="preserve">
+    <value>Activitate recentă în wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSceneIn" xml:space="preserve">
+    <value>Scenă în {0}</value>
+    <comment>MT — assumed {0} is a room name</comment>
+  </data>
+  <data name="WidSceneLive" xml:space="preserve">
+    <value>ÎN DIRECT</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidScenePoseCount" xml:space="preserve">
+    <value>{count, plural, one {# poză} few {# poze} other {# de poze}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSchemaUnavailable" xml:space="preserve">
+    <value>Schema widgetului nu este disponibilă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSubmit" xml:space="preserve">
+    <value>Trimitere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustCommunity" xml:space="preserve">
+    <value>Comunitate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustCommunityTooltip" xml:space="preserve">
+    <value>Sursă cunoscută din comunitate — verificați codul înainte de aplicare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustOfficial" xml:space="preserve">
+    <value>Oficial</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustOfficialTooltip" xml:space="preserve">
+    <value>Întreținut de organizația SharpMUSH</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustUnknown" xml:space="preserve">
+    <value>Necunoscut</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustUnknownTooltip" xml:space="preserve">
+    <value>Sursă neverificată — inspectați totul înainte de aplicare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidViewAllCount" xml:space="preserve">
+    <value>Vedeți toate ({0}) →</value>
+    <comment>MT — Romanian needs a gender for 'all'; feminine/neuter 'toate' fits the likely items (scene, pagini, poze)</comment>
+  </data>
+  <data name="WidWaitingForServer" xml:space="preserve">
+    <value>Se așteaptă pornirea serverului…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidWidgetRenderFailed" xml:space="preserve">
+    <value>Afișarea acestui widget a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneFooter" xml:space="preserve">
+    <value>Subsol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneLeftSidebar" xml:space="preserve">
+    <value>Bară laterală stânga</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneMainContent" xml:space="preserve">
+    <value>Conținut principal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneRightSidebar" xml:space="preserve">
+    <value>Bară laterală dreapta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneTopBar" xml:space="preserve">
+    <value>Bară superioară</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Wiki" xml:space="preserve">
+    <value>Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAdmin" xml:space="preserve">
+    <value>Administrare wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAdminDescription" xml:space="preserve">
+    <value>Gestionarea paginilor wiki: metadate, protecție, stare de publicare și operațiuni în masă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAllLocales" xml:space="preserve">
+    <value>Toate limbile</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAllNamespaces" xml:space="preserve">
+    <value>Toate namespace-urile</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAvailableTranslations" xml:space="preserve">
+    <value>Disponibilă și în</value>
+    <comment>MT — assumed the implied subject is "pagina" (feminine), as this labels a list of other languages for the current page</comment>
+  </data>
+  <data name="WikiBatchFailed" xml:space="preserve">
+    <value>{count, plural, one {# pagină a eșuat} few {# pagini au eșuat} other {# de pagini au eșuat}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiBatchSucceeded" xml:space="preserve">
+    <value>{count, plural, one {# pagină actualizată} few {# pagini actualizate} other {# de pagini actualizate}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiBrowseByNamespace" xml:space="preserve">
+    <value>Răsfoire după namespace</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiCategory" xml:space="preserve">
+    <value>Categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDelete" xml:space="preserve">
+    <value>Ștergere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDeleteConfirmText" xml:space="preserve">
+    <value>Ștergeți {count, plural, one {# pagină} few {# pagini} other {# de pagini}} și toate reviziile lor? Acțiunea nu poate fi anulată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDeleteConfirmTitle" xml:space="preserve">
+    <value>Ștergere pagini</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiEdit" xml:space="preserve">
+    <value>Editare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiEditMetadata" xml:space="preserve">
+    <value>Editare metadate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiFallbackCreateTranslation" xml:space="preserve">
+    <value>Traduceți această pagină</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiFallbackNotice" xml:space="preserve">
+    <value>Această pagină nu este încă disponibilă în {0} — se afișează versiunea {1}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiLocaleFilter" xml:space="preserve">
+    <value>Limbă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiMetadataSaveFailed" xml:space="preserve">
+    <value>Salvarea metadatelor a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiMetadataSaved" xml:space="preserve">
+    <value>Metadate salvate pentru {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNamespace" xml:space="preserve">
+    <value>Namespace</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNamespaceEmpty" xml:space="preserve">
+    <value>Încă nu există pagini în acest namespace.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNamespaceFilter" xml:space="preserve">
+    <value>Filtru namespace</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNoPages" xml:space="preserve">
+    <value>Nu s-au găsit pagini wiki.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNoRecentChanges" xml:space="preserve">
+    <value>Nicio pagină nu a fost editată încă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiPageNotExist" xml:space="preserve">
+    <value>Această pagină nu există încă. O puteți crea apăsând butonul de mai jos.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiProtect" xml:space="preserve">
+    <value>Protejare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiProtected" xml:space="preserve">
+    <value>Protejată</value>
+    <comment>MT — assumed it describes a page (feminine); as a neutral status chip it would be "Protejat"</comment>
+  </data>
+  <data name="WikiPublished" xml:space="preserve">
+    <value>Publicată</value>
+    <comment>MT — assumed it describes a page (feminine)</comment>
+  </data>
+  <data name="WikiRecentChanges" xml:space="preserve">
+    <value>Modificări recente</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiRevision" xml:space="preserve">
+    <value>Revizie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTags" xml:space="preserve">
+    <value>Etichete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTagsHelper" xml:space="preserve">
+    <value>Apăsați Enter sau + pentru a adăuga o etichetă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTitle" xml:space="preserve">
+    <value>Titlu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTranslations" xml:space="preserve">
+    <value>Traduceri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUnprotect" xml:space="preserve">
+    <value>Anulare protecție</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUntranslatedOnly" xml:space="preserve">
+    <value>Doar traducerile lipsă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUpdated" xml:space="preserve">
+    <value>Actualizată</value>
+    <comment>MT — assumed it describes a page (feminine)</comment>
+  </data>
+  <data name="WkAddTagPlaceholder" xml:space="preserve">
+    <value>adăugați o etichetă…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAddTranslation" xml:space="preserve">
+    <value>Adăugare traducere…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetDeleteFailed" xml:space="preserve">
+    <value>Nu s-a putut șterge {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetDeleted" xml:space="preserve">
+    <value>S-a șters {0}.</value>
+    <comment>MT — impersonal form avoids agreeing the participle with the unknown gender of {0}</comment>
+  </data>
+  <data name="WkAssetUploadHint" xml:space="preserve">
+    <value>PNG, JPEG, GIF, WebP sau SVG — maximum 10 MB.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetUploaded" xml:space="preserve">
+    <value>S-a încărcat {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkBold" xml:space="preserve">
+    <value>Aldin</value>
+    <comment>MT — editor toolbar bold formatting</comment>
+  </data>
+  <data name="WkBytesDelta" xml:space="preserve">
+    <value>{count, plural, one {{signed} octet} few {{signed} octeți} other {{signed} de octeți}}</value>
+    <comment>MT — the visible number comes from {signed}, which carries the +/- sign; count only selects the plural category; the "de" form still lands on 20+</comment>
+  </data>
+  <data name="WkColActions" xml:space="preserve">
+    <value>Acțiuni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColAuthor" xml:space="preserve">
+    <value>Autor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColFileName" xml:space="preserve">
+    <value>Nume fișier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColKind" xml:space="preserve">
+    <value>Tip</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColNew" xml:space="preserve">
+    <value>Nou</value>
+    <comment>MT — diff column header for the newer revision</comment>
+  </data>
+  <data name="WkColOld" xml:space="preserve">
+    <value>Vechi</value>
+    <comment>MT — diff column header for the older revision</comment>
+  </data>
+  <data name="WkColPreview" xml:space="preserve">
+    <value>Previzualizare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColSize" xml:space="preserve">
+    <value>Dimensiune</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColTimestampSummary" xml:space="preserve">
+    <value>Marcaj temporal / Rezumat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColUploaded" xml:space="preserve">
+    <value>Încărcat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColUploader" xml:space="preserve">
+    <value>Încărcat de</value>
+    <comment>MT — column showing who uploaded the file</comment>
+  </data>
+  <data name="WkCompareSelected" xml:space="preserve">
+    <value>Comparare selecție</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkComparingRevisions" xml:space="preserve">
+    <value>Comparare revizii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCopyMarkdown" xml:space="preserve">
+    <value>Copiere Markdown</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCopyUrl" xml:space="preserve">
+    <value>Copiere URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCurrentRevision" xml:space="preserve">
+    <value>curentă</value>
+    <comment>MT — agrees with feminine 'revizie'</comment>
+  </data>
+  <data name="WkCustomLocalePlaceholder" xml:space="preserve">
+    <value>Etichetă de limbă, ex.: es sau pt-BR</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteAssetConfirm" xml:space="preserve">
+    <value>Aceasta va șterge definitiv {0}. Linkurile către acest fișier vor deveni invalide.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteAssetPrompt" xml:space="preserve">
+    <value>Ștergeți '{0}'? Paginile care îl includ vor afișa o imagine lipsă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteAssetTitle" xml:space="preserve">
+    <value>Ștergeți fișierul media?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteFailed" xml:space="preserve">
+    <value>Ștergerea a eșuat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteTranslation" xml:space="preserve">
+    <value>Ștergeți această traducere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffLoadFailed" xml:space="preserve">
+    <value>Nu s-au putut încărca una sau ambele revizii. Verificați numerele reviziilor.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffPageTitle" xml:space="preserve">
+    <value>Diferențe: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffRevNew" xml:space="preserve">
+    <value>Rev. {0} — Nouă</value>
+    <comment>MT — adjective agrees with feminine 'revizie'</comment>
+  </data>
+  <data name="WkDiffRevOld" xml:space="preserve">
+    <value>Rev. {0} — Veche</value>
+    <comment>MT — adjective agrees with feminine 'revizie'</comment>
+  </data>
+  <data name="WkDiffSideBySide" xml:space="preserve">
+    <value>Alăturat</value>
+    <comment>MT — diff view mode</comment>
+  </data>
+  <data name="WkDiffUnified" xml:space="preserve">
+    <value>Unificat</value>
+    <comment>MT — diff view mode</comment>
+  </data>
+  <data name="WkDirectiveCategoryHeader" xml:space="preserve">
+    <value>Categorie: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveNoPages" xml:space="preserve">
+    <value>Nicio pagină încă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveTagHeader" xml:space="preserve">
+    <value>Etichetă: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiscard" xml:space="preserve">
+    <value>Renunțare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkEditLivePreview" xml:space="preserve">
+    <value>editare · previzualizare în timp real</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFileTooLarge" xml:space="preserve">
+    <value>Fișierul depășește limita de 10 MB.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFormattingHelp" xml:space="preserve">
+    <value>Ajutor pentru formatare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHeading" xml:space="preserve">
+    <value>Titlu</value>
+    <comment>MT — Markdown heading in the editor toolbar</comment>
+  </data>
+  <data name="WkHistoryIntro" xml:space="preserve">
+    <value>Selectați o revizie mai veche și una mai nouă, apoi comparați-le. {count, plural, one {# revizie} few {# revizii} other {# de revizii}} în total.</value>
+    <comment>MT — ICU categories one+few+other; the "de" form now covers 20+</comment>
+  </data>
+  <data name="WkHistoryLocale" xml:space="preserve">
+    <value>Limbă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHistoryPageTitle" xml:space="preserve">
+    <value>Istoric: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkImageLibrary" xml:space="preserve">
+    <value>Bibliotecă de imagini</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkImageLibraryDescription" xml:space="preserve">
+    <value>Gestionarea fișierelor media încărcate, folosite în wiki și în portal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkInheritedFromSource" xml:space="preserve">
+    <value>Moștenit din limba sursă — editați-l pe pagina sursă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkInsertImage" xml:space="preserve">
+    <value>Inserare imagine</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkItalic" xml:space="preserve">
+    <value>Cursiv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindDocument" xml:space="preserve">
+    <value>Document</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindImage" xml:space="preserve">
+    <value>Imagine</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindImagePlural" xml:space="preserve">
+    <value>Imagini</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindOther" xml:space="preserve">
+    <value>Altele</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindVideo" xml:space="preserve">
+    <value>Video</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLinesAdded" xml:space="preserve">
+    <value>+{0} adăugate</value>
+    <comment>MT — assumed the unit is lines</comment>
+  </data>
+  <data name="WkLinesRemoved" xml:space="preserve">
+    <value>−{0} eliminate</value>
+    <comment>MT — assumed the unit is lines; U+2212 minus preserved</comment>
+  </data>
+  <data name="WkLink" xml:space="preserve">
+    <value>Link</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkListItem" xml:space="preserve">
+    <value>Element de listă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLocaleSelector" xml:space="preserve">
+    <value>Limbă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkMarkdownCopied" xml:space="preserve">
+    <value>Markdown copiat în clipboard.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkMinorEdit" xml:space="preserve">
+    <value>Editare minoră</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoAssets" xml:space="preserve">
+    <value>Niciun fișier încărcat încă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoAssetsFound" xml:space="preserve">
+    <value>Nu s-a găsit niciun fișier.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoRevisionHistory" xml:space="preserve">
+    <value>Nu s-a găsit niciun istoric de revizii.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPageFallbackTitle" xml:space="preserve">
+    <value>Pagină</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPageTitlePlaceholder" xml:space="preserve">
+    <value>Titlul paginii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPublishChanges" xml:space="preserve">
+    <value>Publicare modificări</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPublishNotice" xml:space="preserve">
+    <value>Modificările se publică imediat și devin vizibile pentru toată lumea.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkQuote" xml:space="preserve">
+    <value>Citat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoreFailed" xml:space="preserve">
+    <value>Restaurarea a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoreRevision" xml:space="preserve">
+    <value>Restaurare la această revizie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoredToRevision" xml:space="preserve">
+    <value>S-a restaurat revizia {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRevisionHistory" xml:space="preserve">
+    <value>Istoric de revizii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRevisionShort" xml:space="preserve">
+    <value>rev. #{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkSourceLocaleLabel" xml:space="preserve">
+    <value>{0} (sursă)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkStaffMedia" xml:space="preserve">
+    <value>Echipă · Media</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkStorageUsed" xml:space="preserve">
+    <value>Spațiu utilizat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkSummaryPlaceholder" xml:space="preserve">
+    <value>Rezumați modificarea (ex.: 'corectarea unei greșeli de tipar')…</value>
+    <comment>MT — the e.g. value is prose, not a literal value, so it is translated</comment>
+  </data>
+  <data name="WkTotalAssets" xml:space="preserve">
+    <value>Total fișiere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationConflict" xml:space="preserve">
+    <value>Această traducere s-a modificat în timp ce o editați. Reîncărcați-o pentru a vedea versiunea curentă — textul nesalvat rămâne în editor.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationDeleteConfirmText" xml:space="preserve">
+    <value>Traducerea {0} și istoricul ei vor fi eliminate. Pagina și celelalte limbi ale acesteia nu sunt afectate.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationDeleteConfirmTitle" xml:space="preserve">
+    <value>Ștergeți traducerea?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationReload" xml:space="preserve">
+    <value>Reîncărcare traducere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationSaveFailed" xml:space="preserve">
+    <value>Nu s-a putut salva traducerea: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationSaved" xml:space="preserve">
+    <value>Traducere salvată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUploadError" xml:space="preserve">
+    <value>Eroare la încărcare: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUploadFailed" xml:space="preserve">
+    <value>Încărcarea a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUrlCopied" xml:space="preserve">
+    <value>URL copiat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkViewGrid" xml:space="preserve">
+    <value>Grilă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkViewList" xml:space="preserve">
+    <value>Listă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkViewRevision" xml:space="preserve">
+    <value>Vizualizarea acestei revizii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkWikiAssets" xml:space="preserve">
+    <value>Fișiere wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordAddFailed" xml:space="preserve">
+    <value>Adăugarea cuvântului a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordAdded" xml:space="preserve">
+    <value>S-a adăugat „{0}” în categoria „{1}”</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordEmpty" xml:space="preserve">
+    <value>Cuvântul nu poate fi gol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordRemoveFailed" xml:space="preserve">
+    <value>Ștergerea cuvântului a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordRemoved" xml:space="preserve">
+    <value>S-a eliminat „{0}” din categoria „{1}”</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Words" xml:space="preserve">
+    <value>Cuvinte:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordsCount" xml:space="preserve">
+    <value>{count, plural, one {# cuvânt} few {# cuvinte} other {# de cuvinte}}</value>
+    <comment>MT — ICU categories one+few+other; the "de" form now covers 20+</comment>
+  </data>
+</root>

@@ -1,7 +1,7 @@
 # Translating with an LLM
 
 An LLM can draft all fifteen locales in an afternoon. That changes what the hard
-part is: not producing strings, but knowing which of the ~16,000 produced strings
+part is: not producing strings, but knowing which of the ~16,800 produced strings
 are wrong. This document is about the second problem.
 
 LLMs fail at resource translation in a small number of predictable ways, and
@@ -19,7 +19,7 @@ almost all of them are mechanically detectable:
 | Inconsistent terminology across batches | glossary in every prompt |
 
 What it does **not** catch is register, idiom and outright mistranslation. Budget
-a native spot-check of the ~400 player-facing keys per locale; the ~700 staff keys
+a native spot-check of the 267 player-facing keys per locale; the remaining 856
 can ship unreviewed and be corrected on report. See the surface breakdown from
 `extract_untranslated.py --stats`.
 
