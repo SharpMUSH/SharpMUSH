@@ -142,7 +142,7 @@
                 @Loc["WkMinorEdit"]
             </button>
             <span class="wiki-edit-delta" style="@(ByteDelta >= 0 ? "color:var(--accent);" : "color:#e57373;")">
-                @Loc["WkBytesDelta", SignedByteDelta]
+                @Loc.Plural("WkBytesDelta", "count", Math.Abs(ByteDelta), "signed", SignedByteDelta)
             </span>
             <div class="wiki-edit-savediv"></div>
             <button type="button" class="wiki-btn" @onclick="OnCancel" disabled="@_saving">@Loc["WkDiscard"]</button>

@@ -10,9 +10,32 @@ namespace SharpMUSH.Tests.BUnit.Resources;
 public class PortalLocalesTests
 {
 	[Test]
-	public async Task Supported_ContainsTheTwoLocalesWithSatelliteResources()
+	public async Task Codes_AreTheLocalesWithSatelliteResources()
 	{
-		await Assert.That(PortalLocales.Codes).IsEquivalentTo(new[] { "en", "fr" });
+		// This used to restate Codes as a hardcoded literal, which is a second copy of the thing under
+		// test: it failed on every locale addition without proving anything, and the obvious response
+		// was to bump the literal — the same edit that would paper over a genuinely missing resx.
+		//
+		// That a declared locale actually has translations is DeclaredLocaleCoverageTests' job, and that
+		// it reaches SatelliteResourceLanguages is PortalSurfacesTests'. What neither covers is the
+		// shape of the list itself, so that is what this asserts.
+		await Assert.That(PortalLocales.Codes.Distinct().Count())
+			.IsEqualTo(PortalLocales.Codes.Count)
+			.Because("a duplicate code would offer the same language twice in the picker");
+
+		var afterEnglish = PortalLocales.Codes.Skip(1).ToList();
+		await Assert.That(afterEnglish)
+			.IsEquivalentTo(afterEnglish.OrderBy(c => c, StringComparer.Ordinal).ToList())
+			.Because("the documented order is English first, then alphabetically — an unsorted list makes "
+				+ "a language hard to find in a picker this long");
+	}
+
+	[Test]
+	public async Task English_is_offered_first()
+	{
+		// It is the neutral resource and the fallback Program.cs resets a bad stored tag to; burying it
+		// in an alphabetical list makes the escape hatch hard to find.
+		await Assert.That(PortalLocales.Codes[0]).IsEqualTo("en");
 	}
 
 	[Test]
@@ -28,7 +51,19 @@ public class PortalLocalesTests
 	public async Task DisplayName_UsesTheNativeNameCapitalised()
 	{
 		await Assert.That(PortalLocales.DisplayName("fr")).IsEqualTo("Français");
+		await Assert.That(PortalLocales.DisplayName("de")).IsEqualTo("Deutsch");
 		await Assert.That(PortalLocales.DisplayName("en")).IsEqualTo("English");
+	}
+
+	[Test]
+	public async Task DisplayName_IsNeverEmptyForAnySupportedLocale()
+	{
+		// The language picker and the wiki chip rows render nothing but this; an empty string would
+		// read as a rendering fault rather than as a language.
+		foreach (var code in PortalLocales.Codes)
+		{
+			await Assert.That(PortalLocales.DisplayName(code)).IsNotEmpty().Because($"{code} has no display name");
+		}
 	}
 
 	[Test]
@@ -40,27 +75,27 @@ public class PortalLocalesTests
 	}
 
 	[Test]
-	public async Task Flag_IsPresentForEverySupportedLocale()
+	[Arguments("ja")]
+	[Arguments("cs")]
+	[Arguments("ko")]
+	public async Task DisplayName_NamesALocaleTheChromeShipsNoResxFor(string tag)
 	{
-		foreach (var (code, flag) in PortalLocales.Supported)
-		{
-			await Assert.That(flag).IsNotEmpty().Because($"{code} has no flag emoji");
-		}
-	}
+		// These tags are deliberately outside PortalLocales.Codes. The cases used to be pt-BR, zh-Hans
+		// and ru, which made the name a lie once those locales shipped satellites — the test still
+		// passed, but it had stopped covering the case it was written for.
+		//
+		// Wiki content may be translated into any locale the runtime knows, and the chip rows name it
+		// with nothing but this. Asserted as "not the tag" rather than against a literal native name,
+		// which is ICU-version data and would make this a test of the SDK.
+		//
+		// This says nothing about the browser: the suite runs on the desktop runtime, which always has
+		// full ICU. Whether the *WASM* build does is a csproj property, checked by PortalSurfacesTests.
+		//
+		// Asserted rather than assumed, so that adding one of these languages to the portal fails here
+		// loudly instead of quietly hollowing the test out again.
+		await Assert.That(PortalLocales.Codes).DoesNotContain(tag)
+			.Because($"{tag} must stay outside the shipped locales for this case to cover anything");
 
-	[Test]
-	public async Task Flag_FallsBackToAGlobeForAnUnsupportedLocale()
-	{
-		// The editor offers translations into locales the chrome has no flag for, and the history and admin
-		// chip rows render whatever locales exist. An empty chip would look like a rendering fault.
-		await Assert.That(PortalLocales.Flag("pt-BR")).IsEqualTo("\U0001F310");
-	}
-
-	[Test]
-	public async Task Flag_IsCaseInsensitive()
-	{
-		// Locales arrive from the server already canonicalised, but a hand-typed ?lang=FR reaches the read
-		// path unchanged, and matching that to the globe would look like the language is unsupported.
-		await Assert.That(PortalLocales.Flag("FR")).IsEqualTo(PortalLocales.Flag("fr"));
+		await Assert.That(PortalLocales.DisplayName(tag)).IsNotEqualTo(tag);
 	}
 }

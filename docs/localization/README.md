@@ -12,10 +12,19 @@ engine's separate localization layer — telnet/WebSocket messages via
 
 ## Current state
 
-- **1097 English keys** in `SharpMUSH.Client/Resources/SharedResource.resx`.
-- **833 French keys** (76%) in `SharpMUSH.Client/Resources/SharedResource.fr.resx`.
-  The 264 missing are all pre-2026-07 keys; everything added by the
-  full-client localization pass has French.
+- **1122 English keys** in `SharpMUSH.Client/Resources/SharedResource.resx`.
+- **All fifteen translations are complete** — 1122/1122 keys each. Every one is
+  machine-drafted: every value carries an `MT` comment marking that no human has
+  read it. `grep -c '<comment>MT' SharpMUSH.Client/Resources/SharedResource.de.resx`
+  is the review worklist for a given locale.
+- **All sixteen locales are declared** — `PortalLocales.Codes` and
+  `SatelliteResourceLanguages` in `SharpMUSH.Client.csproj`, kept in step by
+  `PortalSurfacesTests`. Declaring a locale with no resx would offer a language
+  that silently renders English, which is what that test exists to prevent.
+- The client loads **full ICU** (`BlazorWebAssemblyLoadAllGlobalizationData`),
+  so `CultureInfo` works for every locale, not only the declared ones.
+- `DeclaredLocaleCoverageTests` fails if a declared locale is missing any
+  **player-facing** key (267 of the 1122). Staff surfaces may lag.
 - Lookup goes through `IStringLocalizer<SharedResource>`, registered by
   `AddSharedResourceLocalization()` in `SharpMUSH.Client/Resources/LocalizationServiceCollectionExtensions.cs`.
   **`ResourcesPath` must stay unset** — setting it double-roots the manifest
@@ -26,30 +35,35 @@ engine's separate localization layer — telnet/WebSocket messages via
   `Components/LanguagePicker.razor` and read in `Program.cs`, which sets
   `CultureInfo.DefaultThreadCurrentUICulture` and reloads the app.
   Blazor WASM cannot change culture without a reload.
+- The picker names languages by `CultureInfo.NativeName` and shows **no flag**.
+  A flag is a country and a country is not a language: `es` would have to pick
+  Spain over Latin America, `pt-BR`/`pt-PT` are one language and two flags, and
+  `zh-Hans` is a script with no flag at all.
 
 ## Target locales
 
-Chosen from PennMUSH's own `pennmush/po/*.pox` files — twenty locales that MUSH
-communities actually volunteered translations for — ranked by strings genuinely
-filled in, plus Russian and Chinese for community size.
+The fifteen below were chosen from the twenty locales in PennMUSH's own
+`pennmush/po/*.pox` files — the ones MUSH communities actually volunteered
+translations for — ranked by strings genuinely filled in, plus Russian and
+Chinese for community size.
 
-| Tag | Language | Penn evidence | ICU shard |
-|---|---|---|---|
-| `de` | German | 653 strings | EFIGS |
-| `es` | Spanish | 855 | EFIGS |
-| `fr` | French | 977 *(partly done here)* | EFIGS |
-| `bg` | Bulgarian | 527 | no_CJK |
-| `da` | Danish | 557 | no_CJK |
-| `hr` | Croatian | 1597 — deepest of any locale | no_CJK |
-| `hu` | Hungarian | 1020 | no_CJK |
-| `nb` | Norwegian Bokmål | 1468 (as `no_NO`) | no_CJK |
-| `nl` | Dutch | 1572 | no_CJK |
-| `pl` | Polish | 1313 | no_CJK |
-| `pt-BR` | Portuguese (Brazil) | 261 | no_CJK |
-| `ro` | Romanian | 186 | no_CJK |
-| `ru` | Russian | 52 — barely started | no_CJK |
-| `sv` | Swedish | 960 | no_CJK |
-| `zh-Hans` | Chinese (Simplified) | 68 (as `zh_CN`) | CJK |
+| Tag | Language | Penn evidence | ICU shard | Portal status |
+|---|---|---|---|---|
+| `de` | German | 653 strings | EFIGS | **done — 1122/1122** |
+| `es` | Spanish | 855 | EFIGS | **done — 1122/1122** |
+| `fr` | French | 977 | EFIGS | **done — 1122/1122** |
+| `bg` | Bulgarian | 527 | no_CJK | **done — 1122/1122** |
+| `da` | Danish | 557 | no_CJK | **done — 1122/1122** |
+| `hr` | Croatian | 1597 — deepest of any locale | no_CJK | **done — 1122/1122** |
+| `hu` | Hungarian | 1020 | no_CJK | **done — 1122/1122** |
+| `nb` | Norwegian Bokmål | 1468 (as `no_NO`) | no_CJK | **done — 1122/1122** |
+| `nl` | Dutch | 1572 | no_CJK | **done — 1122/1122** |
+| `pl` | Polish | 1313 | no_CJK | **done — 1122/1122** |
+| `pt-BR` | Portuguese (Brazil) | 261 | no_CJK | **done — 1122/1122** |
+| `ro` | Romanian | 186 | no_CJK | **done — 1122/1122** |
+| `ru` | Russian | 52 — barely started | no_CJK | **done — 1122/1122** |
+| `sv` | Swedish | 960 | no_CJK | **done — 1122/1122** |
+| `zh-Hans` | Chinese (Simplified) | 68 (as `zh_CN`) | CJK | **done — 1122/1122** |
 
 Fifteen locales. Two tag choices differ deliberately from Penn's filenames:
 
@@ -64,8 +78,9 @@ Deliberately omitted despite appearing in Penn's `po/`: `eo` (3 strings),
 Four of those five are empty stub files — a locale created before anyone
 committed to it. Don't repeat that.
 
-Also note `it` (Italian) is free under the EFIGS shard but has **no** PennMUSH
-translation at all, which is weak evidence of demand. Add it only on request.
+Also note `it` (Italian) has **no** PennMUSH translation at all, which is weak
+evidence of demand. Add it only on request. (It used to be "free under the EFIGS
+shard"; the client loads full ICU now, so no locale is cheaper than any other.)
 
 ## The one thing that will bite you
 
@@ -73,9 +88,11 @@ Translation volume is not the hard part, especially with an LLM doing the
 drafting. The hard parts are two things an LLM cannot fix because they are
 limitations of the data model, not of the prose:
 
-1. **Plural categories.** `.resx` plus `string.Format` can express exactly two
-   forms. Russian, Polish and Croatian need three; Chinese needs one, making
-   English's two actively wrong. See [`plural-forms.md`](plural-forms.md).
+1. **Plural categories.** *(Done — the count-bearing values are ICU
+   MessageFormat and `validate_resx.py` enforces legal categories per locale.)*
+   `.resx` plus `string.Format` can express exactly two forms. Croatian and
+   Romanian need three, Russian three plus a fourth for fractions, Polish four;
+   Chinese needs one, making English's two actively wrong. See [`plural-forms.md`](plural-forms.md).
 2. **Grammatical case on interpolated nouns.** `"Scene in {0}"` requires the
    room name in the prepositional case in Russian and the locative in Polish.
    No substitution can produce agreement. The strings must be restructured

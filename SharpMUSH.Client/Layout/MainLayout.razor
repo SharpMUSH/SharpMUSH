@@ -84,8 +84,8 @@
         <div class="phosphor-terminal" style="@(_terminalOpen ? null : "display:none;")">
             <div class="phosphor-terminal-header">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:0.9375rem;color:var(--accent);margin-right:0.5625rem;" />
-                <span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;">@Loc["NavCommandTerminal"]</span>
-                <span style="font-family:'JetBrains Mono',monospace;font-size:0.6875rem;color:var(--text-faint);margin-left:0.5rem;">
+                <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;">@Loc["NavCommandTerminal"]</span>
+                <span style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text-faint);margin-left:0.5rem;">
                     · @(Terminal.IsConnected ? Loc["Connected"] : Loc["Disconnected"])
                 </span>
                 <div style="flex:1;"></div>

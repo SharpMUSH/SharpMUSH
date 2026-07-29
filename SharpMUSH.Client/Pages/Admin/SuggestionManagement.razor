@@ -77,7 +77,7 @@
                                     <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
                                         <MudIcon Icon="@Icons.Material.Filled.Category" Style="color:var(--accent);" />
                                         <span style="font-family:var(--font-display);font-weight:600;color:var(--text);">@category.Key</span>
-                                        <span class="ph-chip ph-chip-info">@string.Format(Loc["WordsCount"].Value, category.Value.Count)</span>
+                                        <span class="ph-chip ph-chip-info">@Loc.Plural("WordsCount", "count", category.Value.Count)</span>
                                         <MudSpacer />
                                         <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                        Size="Size.Small"

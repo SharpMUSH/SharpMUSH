@@ -23,13 +23,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 import xml.etree.ElementTree as ET
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from validate_resx import placeholders  # noqa: E402  the gate and the pre-flight must agree
+
 RES_DIR = os.path.join("SharpMUSH.Client", "Resources")
 NEUTRAL = os.path.join(RES_DIR, "SharedResource.resx")
-PLACEHOLDER = re.compile(r"\{(\w+)")
 
 EMPTY_RESX = """<?xml version="1.0" encoding="utf-8"?>
 <root>
@@ -108,11 +109,15 @@ def main() -> int:
             if key in incoming:
                 problems.append(f"{path}: {key}: appears in more than one reply")
                 continue
-            want = set(PLACEHOLDER.findall(neutral[key]))
-            got = set(PLACEHOLDER.findall(value))
-            if "plural" in got or "plural" in want:
-                pass  # ICU plural arity is validate_resx.py's job, not ours
-            elif want != got:
+            # Argument names only. A naive \{(\w+) also matches the prose inside an ICU category
+            # body — `one {Edited # time}` yields a bogus "Edited" — so a correct translation that
+            # worded that branch differently was rejected as a placeholder mismatch. The guard that
+            # was meant to exempt plurals never fired, because "plural" is not preceded by a brace
+            # and so was never captured either. Share validate_resx.py's parser instead: the
+            # pre-flight and the gate disagreeing about what a placeholder is helps nobody.
+            want = placeholders(neutral[key])
+            got = placeholders(value)
+            if want != got:
                 problems.append(f"{path}: {key}: placeholders {sorted(got)} "
                                 f"!= English {sorted(want)}")
                 continue

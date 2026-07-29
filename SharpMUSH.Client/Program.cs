@@ -144,4 +144,10 @@ catch (CultureNotFoundException)
 CultureInfo.DefaultThreadCurrentCulture = culture;
 CultureInfo.DefaultThreadCurrentUICulture = culture;
 
+// index.html is served with a static lang="en", so without this the document keeps
+// claiming English whichever locale was picked: custom.css selects the CJK mono stack on
+// :lang(zh), and a screen reader chooses its voice from the same attribute. The picker
+// reloads the page on switch, so stamping it once at startup is enough.
+await jsRuntime.InvokeVoidAsync("document.documentElement.setAttribute", "lang", culture.Name);
+
 await app.RunAsync();
