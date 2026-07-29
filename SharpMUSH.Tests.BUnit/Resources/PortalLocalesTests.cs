@@ -12,7 +12,22 @@ public class PortalLocalesTests
 	[Test]
 	public async Task Codes_AreTheLocalesWithSatelliteResources()
 	{
-		await Assert.That(PortalLocales.Codes).IsEquivalentTo(new[] { "en", "de", "fr" });
+		// This used to restate Codes as a hardcoded literal, which is a second copy of the thing under
+		// test: it failed on every locale addition without proving anything, and the obvious response
+		// was to bump the literal — the same edit that would paper over a genuinely missing resx.
+		//
+		// That a declared locale actually has translations is DeclaredLocaleCoverageTests' job, and that
+		// it reaches SatelliteResourceLanguages is PortalSurfacesTests'. What neither covers is the
+		// shape of the list itself, so that is what this asserts.
+		await Assert.That(PortalLocales.Codes.Distinct().Count())
+			.IsEqualTo(PortalLocales.Codes.Count)
+			.Because("a duplicate code would offer the same language twice in the picker");
+
+		var afterEnglish = PortalLocales.Codes.Skip(1).ToList();
+		await Assert.That(afterEnglish)
+			.IsEquivalentTo(afterEnglish.OrderBy(c => c, StringComparer.Ordinal).ToList())
+			.Because("the documented order is English first, then alphabetically — an unsorted list makes "
+				+ "a language hard to find in a picker this long");
 	}
 
 	[Test]

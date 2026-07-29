@@ -23,7 +23,7 @@ namespace SharpMUSH.Client.Resources;
 public static class PortalLocales
 {
 	/// <summary>Supported locale codes, in display order: English first, then alphabetically.</summary>
-	public static IReadOnlyList<string> Codes { get; } = ["en", "de", "fr"];
+	public static IReadOnlyList<string> Codes { get; } = ["en", "bg", "da", "de", "es", "fr", "hr", "hu", "nb", "nl", "pl", "pt-BR", "ro", "ru", "sv", "zh-Hans"];
 
 	/// <summary>
 	/// A locale's name in its own language, first character upper-cased ("Français"). Falls back to the

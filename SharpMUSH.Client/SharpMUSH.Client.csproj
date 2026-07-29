@@ -24,7 +24,7 @@
 		     PublishTrimmed can drop resources the app only reaches by culture lookup at runtime — a
 		     failure that appears only in a published build, so no Debug-configuration test sees it.
 		     PortalSurfacesTests keeps this list and PortalLocales.Codes in step. -->
-		<SatelliteResourceLanguages>en;de;fr</SatelliteResourceLanguages>
+		<SatelliteResourceLanguages>en;bg;da;de;es;fr;hr;hu;nb;nl;pl;pt-BR;ro;ru;sv;zh-Hans</SatelliteResourceLanguages>
 	</PropertyGroup>
 
 	<ItemGroup>
