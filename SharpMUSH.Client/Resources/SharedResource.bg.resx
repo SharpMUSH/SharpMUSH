@@ -1,0 +1,4507 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="About" xml:space="preserve">
+    <value>Относно</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AccessRulesHelper" xml:space="preserve">
+    <value>напр. !connect, suspect</value>
+    <comment>MT — rule tokens left in English: config values / machine identifiers</comment>
+  </data>
+  <data name="AccessRulesLabel" xml:space="preserve">
+    <value>Правила за достъп (разделени със запетая)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Добави</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="AddBannedName" xml:space="preserve">
+    <value>Добави забранено име</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddCategory" xml:space="preserve">
+    <value>Добави категория</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddCommandRestriction" xml:space="preserve">
+    <value>Добави ограничение за команда</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddEntry" xml:space="preserve">
+    <value>Добави запис</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddFunctionRestriction" xml:space="preserve">
+    <value>Добави ограничение за функция</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddItem" xml:space="preserve">
+    <value>Добави елемент</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddName" xml:space="preserve">
+    <value>Добави име</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddNewWord" xml:space="preserve">
+    <value>Добави нова дума</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddSitelockRule" xml:space="preserve">
+    <value>Добави правило за sitelock</value>
+    <comment>MT — `sitelock` left in English: config feature name / machine identifier</comment>
+  </data>
+  <data name="AddValue" xml:space="preserve">
+    <value>Добави стойност</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdditionalData" xml:space="preserve">
+    <value>Допълнителни данни</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionActive" xml:space="preserve">
+    <value>Реактивирай</value>
+    <comment>MT — action button for an account in the Active target state</comment>
+  </data>
+  <data name="AdmAccountActionClosed" xml:space="preserve">
+    <value>Затвори</value>
+    <comment>MT — closes the account, not a dialog</comment>
+  </data>
+  <data name="AdmAccountActionDeleted" xml:space="preserve">
+    <value>Изтрий</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionDisabled" xml:space="preserve">
+    <value>Деактивирай</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountDisabled" xml:space="preserve">
+    <value>Акаунтът „{0}“ е деактивиран.</value>
+    <comment>MT — explicit «акаунтът» fixes the gender of the participle</comment>
+  </data>
+  <data name="AdmAccountEnabled" xml:space="preserve">
+    <value>Акаунтът „{0}“ е активиран.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountMustChangePasswordChip" xml:space="preserve">
+    <value>изисква смяна на парола</value>
+    <comment>MT — lowercase chip label kept short, matching the abbreviated English</comment>
+  </data>
+  <data name="AdmAccountStatusActive" xml:space="preserve">
+    <value>Активен</value>
+    <comment>MT — account status; masculine to agree with «акаунт»</comment>
+  </data>
+  <data name="AdmAccountStatusChanged" xml:space="preserve">
+    <value>Статусът на акаунта „{0}“ е обновен.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusClosed" xml:space="preserve">
+    <value>Затворен</value>
+    <comment>MT — account status, masculine</comment>
+  </data>
+  <data name="AdmAccountStatusDeleted" xml:space="preserve">
+    <value>Изтрит</value>
+    <comment>MT — account status, masculine</comment>
+  </data>
+  <data name="AdmAccountStatusDisabled" xml:space="preserve">
+    <value>Деактивиран</value>
+    <comment>MT — account status, masculine</comment>
+  </data>
+  <data name="AdmAccountsAction" xml:space="preserve">
+    <value>Управление на акаунтите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
+    <value>Търсене по потребителско име или имейл…</value>
+    <comment>MT — U+2026 ellipsis preserved</comment>
+  </data>
+  <data name="AdmAccountsTitle" xml:space="preserve">
+    <value>Акаунти</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmApplicationsAction" xml:space="preserve">
+    <value>Персонализирани уиджети</value>
+    <comment>MT — per sheet, widget → уиджет</comment>
+  </data>
+  <data name="AdmApplicationsTitle" xml:space="preserve">
+    <value>Приложения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAttribute" xml:space="preserve">
+    <value>Атрибут</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmBreadcrumb" xml:space="preserve">
+    <value>Администриране</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmCharacterUnlinked" xml:space="preserve">
+    <value>Връзката на {0} с „{1}“ е премахната.</value>
+    <comment>MT — restructured so both names sit after prepositions; the participle agrees with «връзката», not with the interpolated names</comment>
+  </data>
+  <data name="AdmCharactersAction" xml:space="preserve">
+    <value>Преглед на персонажите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmCharactersComingSoon" xml:space="preserve">
+    <value>Администрирането на персонажи предстои.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmConfigAction" xml:space="preserve">
+    <value>Конфигурация на сайта</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDashboardTitle" xml:space="preserve">
+    <value>Административно табло</value>
+    <comment>MT — per sheet, dashboard → табло</comment>
+  </data>
+  <data name="AdmDatabaseImportAction" xml:space="preserve">
+    <value>Импортиране на база данни</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDatabaseImportTitle" xml:space="preserve">
+    <value>Импорт на база данни</value>
+    <comment>MT — noun form for the page title, verbal noun for the action button</comment>
+  </data>
+  <data name="AdmDisableAccount" xml:space="preserve">
+    <value>Деактивирай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="AdmEmail" xml:space="preserve">
+    <value>Имейл</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmEnableAccount" xml:space="preserve">
+    <value>Активирай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="AdmHelpKicker" xml:space="preserve">
+    <value>Документация</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmHelpSubtitle" xml:space="preserve">
+    <value>Разгледайте темите, търсете в справочниците и прочетете ръководството.</value>
+    <comment>MT — polite Вие-form</comment>
+  </data>
+  <data name="AdmKicker" xml:space="preserve">
+    <value>Администриране</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmLayoutAction" xml:space="preserve">
+    <value>Редактор на оформлението</value>
+    <comment>MT — per sheet, layout → оформление</comment>
+  </data>
+  <data name="AdmLayoutTitle" xml:space="preserve">
+    <value>Оформление</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMediaAction" xml:space="preserve">
+    <value>Медийни ресурси</value>
+    <comment>MT — per sheet, asset → ресурс</comment>
+  </data>
+  <data name="AdmMediaTitle" xml:space="preserve">
+    <value>Библиотека с изображения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMissing" xml:space="preserve">
+    <value>Липсва</value>
+    <comment>MT — assumed a status chip meaning the item is absent; rendered as a verb so it needs no gender agreement</comment>
+  </data>
+  <data name="AdmModerationAction" xml:space="preserve">
+    <value>Сигнали и блокирания</value>
+    <comment>MT — «reports» read as user-submitted moderation reports, not generated reports</comment>
+  </data>
+  <data name="AdmModerationComingSoon" xml:space="preserve">
+    <value>Сигналите, блокиранията и одит журналът предстоят.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmModerationTitle" xml:space="preserve">
+    <value>Модерация</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmOperationFailed" xml:space="preserve">
+    <value>Операцията е неуспешна.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPackagesAction" xml:space="preserve">
+    <value>Пакети softcode</value>
+    <comment>MT — «softcode» kept in English per glossary</comment>
+  </data>
+  <data name="AdmPackagesTitle" xml:space="preserve">
+    <value>Пакети</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPasswordReset" xml:space="preserve">
+    <value>Паролата за „{0}“ е нулирана на: {1} — споделете я по сигурен начин; тя трябва да бъде сменена при следващото влизане.</value>
+    <comment>MT — English «they must change it» made impersonal passive to avoid gendering the account holder</comment>
+  </data>
+  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
+    <value>Подробностите за играча предстоят.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayerDetailKicker" xml:space="preserve">
+    <value>Администриране · Играч</value>
+    <comment>MT — «Player» here names the admin page's entity, not the privilege level, so it is translated; if it turns out to render the privilege level it must revert to English «Player»</comment>
+  </data>
+  <data name="AdmPlayerNumber" xml:space="preserve">
+    <value>Играч #{0}</value>
+    <comment>MT — «#» kept, as it is the MUSH dbref-style number prefix</comment>
+  </data>
+  <data name="AdmPlayersAction" xml:space="preserve">
+    <value>Преглед на играчите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersComingSoon" xml:space="preserve">
+    <value>Администрирането на играчи предстои.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersTitle" xml:space="preserve">
+    <value>Играчи</value>
+    <comment>MT — plural page title for the entity, not the Player privilege level</comment>
+  </data>
+  <data name="AdmPresent" xml:space="preserve">
+    <value>Налично</value>
+    <comment>MT — assumed the counterpart of AdmMissing (a status chip); neuter, invariant</comment>
+  </data>
+  <data name="AdmProfilesAction" xml:space="preserve">
+    <value>Профили на персонажи</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesConfigured" xml:space="preserve">
+    <value>Конфигуриран</value>
+    <comment>MT — assumed a status/label for the handler (masculine «обработчик»)</comment>
+  </data>
+  <data name="AdmProfilesHandler" xml:space="preserve">
+    <value>Обработчик</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesHandlerNotFound" xml:space="preserve">
+    <value>#{0} — НЕ Е НАМЕРЕН</value>
+    <comment>MT — dbref prefix «#» preserved; capitalisation mirrors the English emphasis</comment>
+  </data>
+  <data name="AdmProfilesNotConfiguredValue" xml:space="preserve">
+    <value>Не (http_handler не е зададен)</value>
+    <comment>MT — «http_handler» is a config key name, left as-is</comment>
+  </data>
+  <data name="AdmProfilesResetCaption" xml:space="preserve">
+    <value>Презаписва стандартните атрибути {0} и {1} с вградените стойности по подразбиране. Добавените от вас персонализирани атрибути остават непроменени.</value>
+    <comment>MT — {0} and {1} are attribute names, left uninflected after the noun they qualify</comment>
+  </data>
+  <data name="AdmProfilesResetComplete" xml:space="preserve">
+    <value>Нулирането завърши. Записани атрибути: {0}.</value>
+    <comment>MT — restructured so the number does not stand before «атрибут»: the masculine count form (бройна форма) would be wrong for 1 and this string has no plural rule</comment>
+  </data>
+  <data name="AdmProfilesResetFailedError" xml:space="preserve">
+    <value>Нулирането е неуспешно: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
+    <value>Нулирането е неуспешно ({0}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
+    <value>Състоянието на обработчика не можа да бъде заредено.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesSubtitle" xml:space="preserve">
+    <value>Профилите на персонажите се обслужват от вътрешноигровия обект {0} чрез неговия softcode {1}. Персонализирайте го в играта с {2} или преинсталирайте стандартния обработчик по-долу.</value>
+    <comment>MT — all three placeholders are code identifiers (object, attribute, command) and stay uninflected</comment>
+  </data>
+  <data name="AdmProfilesTitle" xml:space="preserve">
+    <value>Профили</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetFailed" xml:space="preserve">
+    <value>Нулирането е неуспешно.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetPassword" xml:space="preserve">
+    <value>Нулирай паролата</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="AdmResetting" xml:space="preserve">
+    <value>Нулиране…</value>
+    <comment>MT — U+2026 ellipsis preserved</comment>
+  </data>
+  <data name="AdmRolesAction" xml:space="preserve">
+    <value>Роли и разрешения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmRolesTitle" xml:space="preserve">
+    <value>Роли</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerAction" xml:space="preserve">
+    <value>Състояние на сървъра</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerComingSoon" xml:space="preserve">
+    <value>Конфигурацията на сървъра и показателите на живо предстоят.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerGodOnly" xml:space="preserve">
+    <value>Настройки на сървъра само за God</value>
+    <comment>MT — «God» kept in English: privilege level / API value</comment>
+  </data>
+  <data name="AdmServerKicker" xml:space="preserve">
+    <value>Администриране · Сървър</value>
+    <comment>MT — middle dot separator preserved</comment>
+  </data>
+  <data name="AdmStatus" xml:space="preserve">
+    <value>Състояние</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmSuggestionsAction" xml:space="preserve">
+    <value>Предложения за думи</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmUnlinkFailed" xml:space="preserve">
+    <value>Премахването на връзката е неуспешно.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmUsername" xml:space="preserve">
+    <value>Потребителско име</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmYes" xml:space="preserve">
+    <value>Да</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdminPanel" xml:space="preserve">
+    <value>Административен панел</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Advanced" xml:space="preserve">
+    <value>Разширени</value>
+    <comment>MT — assumed it labels a settings category (plural «настройки»)</comment>
+  </data>
+  <data name="AdvancedCategoryDescription" xml:space="preserve">
+    <value>Атрибути, флагове, разходи и специализирани настройки</value>
+    <comment>MT — «флаг» used per the sheet's fixed choice</comment>
+  </data>
+  <data name="Aliases" xml:space="preserve">
+    <value>Псевдоними</value>
+    <comment>MT</comment>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>Всички</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AppTitle" xml:space="preserve">
+    <value>SharpMUSH</value>
+    <comment>MT — product name, kept untranslated per glossary</comment>
+  </data>
+  <data name="AtLeastOneAccessRule" xml:space="preserve">
+    <value>Изисква се поне едно правило за достъп</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AtLeastOneRestriction" xml:space="preserve">
+    <value>Изисква се поне едно ограничение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Attributes" xml:space="preserve">
+    <value>Атрибути</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AttributesLabel" xml:space="preserve">
+    <value>Атрибути:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthAccount" xml:space="preserve">
+    <value>Акаунт</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthAccountManagement" xml:space="preserve">
+    <value>Управление на акаунта</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthChange" xml:space="preserve">
+    <value>Промени</value>
+    <comment>MT — assumed the verb (change a setting), plain imperative</comment>
+  </data>
+  <data name="AuthClaimAdminLead" xml:space="preserve">
+    <value>Тази игра още не е заявена. Изберете потребителско име и парола за предварително създадения администраторски акаунт (свързан с играч #1, God). Първият, който попълни този формуляр, става администратор.</value>
+    <comment>MT — `God` kept in English per glossary; `#1` kept as a dbref</comment>
+  </data>
+  <data name="AuthClaimAdminTitle" xml:space="preserve">
+    <value>Заявете администраторския акаунт</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnActions" xml:space="preserve">
+    <value>Действия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnDbref" xml:space="preserve">
+    <value>Dbref</value>
+    <comment>MT — `dbref` kept in Latin per glossary, case copied from source</comment>
+  </data>
+  <data name="AuthColumnName" xml:space="preserve">
+    <value>Име</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthConfirmPassword" xml:space="preserve">
+    <value>Потвърдете паролата</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthConnectDirectly" xml:space="preserve">
+    <value>Или се свържете директно чрез</value>
+    <comment>MT — sentence fragment continued by a link in the UI; Bulgarian needs no article before the linked word</comment>
+  </data>
+  <data name="AuthCreateAccount" xml:space="preserve">
+    <value>Създай акаунт</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCreateAdminAccount" xml:space="preserve">
+    <value>Създай администраторски акаунт</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCreateNewCharacter" xml:space="preserve">
+    <value>+ Създай нов герой</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCurrentPassword" xml:space="preserve">
+    <value>Текуща парола</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthDebugMode" xml:space="preserve">
+    <value>Режим на отстраняване на грешки</value>
+    <comment>MT — runs well over twice the English length; no shorter accurate Bulgarian rendering exists</comment>
+  </data>
+  <data name="AuthDebugModeBody" xml:space="preserve">
+    <value>Влезли сте като {0} (среда за разработка). Няма свързана сесия на акаунт; функциите за управление на акаунта изискват вход с реален акаунт.</value>
+    <comment>MT — {0} follows «като» and needs no inflection</comment>
+  </data>
+  <data name="AuthEdit" xml:space="preserve">
+    <value>Редактирай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="AuthEmailOptional" xml:space="preserve">
+    <value>Имейл (незадължително)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEnterCredentials" xml:space="preserve">
+    <value>Моля, въведете данните си за вход.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEnterPortal" xml:space="preserve">
+    <value>Влезте в портала</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthFirstRunSetup" xml:space="preserve">
+    <value>Първоначална настройка</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthGoToHome" xml:space="preserve">
+    <value>Към началната страница</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLogOutOfAccount" xml:space="preserve">
+    <value>Излез от акаунта</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLoginFailed" xml:space="preserve">
+    <value>Неуспешен вход.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLogout" xml:space="preserve">
+    <value>Изход</value>
+    <comment>MT — «sign out» per the sheet; distinct from the game-object «изход» only by context</comment>
+  </data>
+  <data name="AuthNewPassword" xml:space="preserve">
+    <value>Нова парола</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNoCharacter" xml:space="preserve">
+    <value>Без герой</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNoCharactersLinked" xml:space="preserve">
+    <value>Няма герои, свързани с този акаунт.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNotLoggedInAccount" xml:space="preserve">
+    <value>Не сте влезли в акаунт. Използвайте панела за вход в терминала, за да влезете.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthOpenInNewTab" xml:space="preserve">
+    <value>Отвори {0} в нов раздел</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPassword" xml:space="preserve">
+    <value>Парола</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordChangeRequired" xml:space="preserve">
+    <value>Изисква се смяна на паролата.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordChangeRequiredBody" xml:space="preserve">
+    <value>Трябва да смените паролата си, преди да използвате останалата част от портала.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordRequired" xml:space="preserve">
+    <value>Паролата е задължителна.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordTooShort" xml:space="preserve">
+    <value>Паролата трябва да е поне 8 знака.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordUpdated" xml:space="preserve">
+    <value>Паролата е обновена.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordsDoNotMatch" xml:space="preserve">
+    <value>Паролите не съвпадат.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthProfile" xml:space="preserve">
+    <value>Профил</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthRegister" xml:space="preserve">
+    <value>Регистрация</value>
+    <comment>MT — noun form; reads better than an imperative on this tab/button</comment>
+  </data>
+  <data name="AuthRegistrationFailed" xml:space="preserve">
+    <value>Неуспешна регистрация.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSettingUp" xml:space="preserve">
+    <value>Настройване…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupAdminLinked" xml:space="preserve">
+    <value>Администраторският акаунт {0} вече е свързан с предварително създадения играч #1, God.</value>
+    <comment>MT — `God` kept in English per glossary; `#1` kept as a dbref</comment>
+  </data>
+  <data name="AuthSetupAlreadyCompleted" xml:space="preserve">
+    <value>Настройката току-що беше завършена от друг. Ако това не сте били вие, свържете се незабавно с оператора на сървъра.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupComplete" xml:space="preserve">
+    <value>Настройката е завършена. Вие сте администраторът.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupFailed" xml:space="preserve">
+    <value>Настройката е неуспешна.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupSignInToManage" xml:space="preserve">
+    <value>Влезте, за да започнете да управлявате играта си.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupSignedInAs" xml:space="preserve">
+    <value>Влезли сте като {0}.</value>
+    <comment>MT — {0} follows «като» and needs no inflection</comment>
+  </data>
+  <data name="AuthSetupWelcome" xml:space="preserve">
+    <value>Добре дошли в {0}</value>
+    <comment>MT — {0} is the game name; Bulgarian nouns take no case after «в»</comment>
+  </data>
+  <data name="AuthSignIn" xml:space="preserve">
+    <value>Вход</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSwitchCharacter" xml:space="preserve">
+    <value>Смени героя</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthTerminalLink" xml:space="preserve">
+    <value>терминал</value>
+    <comment>MT — link text completing AuthConnectDirectly</comment>
+  </data>
+  <data name="AuthUnlinkCharacter" xml:space="preserve">
+    <value>Отвържи героя</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsername" xml:space="preserve">
+    <value>Потребителско име</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameOrEmail" xml:space="preserve">
+    <value>Потребителско име или имейл</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernamePasswordRequired" xml:space="preserve">
+    <value>Потребителското име и паролата са задължителни.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameRequired" xml:space="preserve">
+    <value>Потребителското име е задължително.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameTaken" xml:space="preserve">
+    <value>Това потребителско име вече е заето — изберете друго.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameUpdated" xml:space="preserve">
+    <value>Потребителското име е обновено.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AvgWordsPerCategory" xml:space="preserve">
+    <value>Ср. думи/категория</value>
+    <comment>MT — abbreviated to fit the stat-tile label, as in the English</comment>
+  </data>
+  <data name="BannedNameAddFailed" xml:space="preserve">
+    <value>Неуспешно добавяне на забранено име „{0}“</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameAdded" xml:space="preserve">
+    <value>Забраненото име „{0}“ е добавено успешно</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameRemoveFailed" xml:space="preserve">
+    <value>Неуспешно премахване на забранено име „{0}“</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameRemoved" xml:space="preserve">
+    <value>Забраненото име „{0}“ е премахнато успешно</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNames" xml:space="preserve">
+    <value>Забранени имена</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNamesDescription" xml:space="preserve">
+    <value>Управлявайте списъка с имена, които играчите нямат право да използват при създаване на герои.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNamesList" xml:space="preserve">
+    <value>Списък със забранени имена</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedPlayerNames" xml:space="preserve">
+    <value>Забранени имена на играчи</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Отказ</value>
+    <comment>MT — standard button wording per the sheet</comment>
+  </data>
+  <data name="CancelConversion" xml:space="preserve">
+    <value>Отмени конвертирането</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Categories" xml:space="preserve">
+    <value>Категории</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoriesCount" xml:space="preserve">
+    <value>Категории ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryAlreadyExists" xml:space="preserve">
+    <value>Категорията „{0}“ вече съществува</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryCreateFailed" xml:space="preserve">
+    <value>Неуспешно създаване на категория: {0}</value>
+    <comment>MT — {0} is an error detail here, not a name</comment>
+  </data>
+  <data name="CategoryCreated" xml:space="preserve">
+    <value>Категорията „{0}“ е създадена успешно</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryDeleteFailed" xml:space="preserve">
+    <value>Неуспешно изтриване на категория: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryDeleted" xml:space="preserve">
+    <value>Изтрита категория „{0}“</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryName" xml:space="preserve">
+    <value>Име на категорията</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNameEmpty" xml:space="preserve">
+    <value>Името на категорията не може да е празно</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNameHelper" xml:space="preserve">
+    <value>Въведете име за новата категория с предложения (напр. „commands“, „functions“, „help“)</value>
+    <comment>MT — example category names left in English: machine identifiers</comment>
+  </data>
+  <data name="CategoryNotFound" xml:space="preserve">
+    <value>Конфигурационната категория „{0}“ не е намерена в схемата.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNotFoundShort" xml:space="preserve">
+    <value>Категорията „{0}“ не е намерена</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Characters" xml:space="preserve">
+    <value>Герои</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Chat" xml:space="preserve">
+    <value>Чат</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ClearSelection" xml:space="preserve">
+    <value>Изчисти избора</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ClickMe" xml:space="preserve">
+    <value>Щракни тук</value>
+    <comment>MT — demo button label</comment>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>Очаквайте скоро</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandAndFunctionRestrictions" xml:space="preserve">
+    <value>Ограничения за команди и функции</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandName" xml:space="preserve">
+    <value>Име на командата</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandNameHelper" xml:space="preserve">
+    <value>напр. pemit, force</value>
+    <comment>MT — command names left in English: game syntax</comment>
+  </data>
+  <data name="CommandRestrictionAddFailed" xml:space="preserve">
+    <value>Неуспешно добавяне на ограничение за команда</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionAdded" xml:space="preserve">
+    <value>Ограничението за „{0}“ е добавено успешно</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionRemoveFailed" xml:space="preserve">
+    <value>Неуспешно премахване на ограничение за команда</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionRemoved" xml:space="preserve">
+    <value>Ограничението за „{0}“ е премахнато успешно</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictions" xml:space="preserve">
+    <value>Ограничения за команди</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Commands" xml:space="preserve">
+    <value>Команди</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Compatibility" xml:space="preserve">
+    <value>Съвместимост</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Compose" xml:space="preserve">
+    <value>Напиши</value>
+    <comment>MT — assumed the mail compose action</comment>
+  </data>
+  <data name="ComposeMail" xml:space="preserve">
+    <value>Ново писмо</value>
+    <comment>MT — the mail system stays «поща» per the sheet; a single message reads «писмо» in Bulgarian</comment>
+  </data>
+  <data name="Config" xml:space="preserve">
+    <value>Конфигурация</value>
+    <comment>MT — Bulgarian has no idiomatic short form; same word as Configuration</comment>
+  </data>
+  <data name="ConfigSavedCount" xml:space="preserve">
+    <value>{count, plural, one {# настройка е запазена успешно} other {# настройки са запазени успешно}}</value>
+    <comment>MT — verbatim from the locale sheet; two categories only</comment>
+  </data>
+  <data name="Configuration" xml:space="preserve">
+    <value>Конфигурация</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationExported" xml:space="preserve">
+    <value>Конфигурацията е експортирана</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationManagement" xml:space="preserve">
+    <value>Управление на конфигурацията</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationSections" xml:space="preserve">
+    <value>Раздели на конфигурацията</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredCommandRestrictions" xml:space="preserve">
+    <value>Настроени ограничения за команди</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredFunctionRestrictions" xml:space="preserve">
+    <value>Настроени ограничения за функции</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredRules" xml:space="preserve">
+    <value>Настроени правила</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>Свържи се</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="Connected" xml:space="preserve">
+    <value>Свързано</value>
+    <comment>MT — neuter, reads as a status label</comment>
+  </data>
+  <data name="Content" xml:space="preserve">
+    <value>Съдържание</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ContentCategoryDescription" xml:space="preserve">
+    <value>Съобщения, козметични опции и настройки на чата</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionErrors" xml:space="preserve">
+    <value>Конвертирането завърши с грешки</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionSuccess" xml:space="preserve">
+    <value>Конвертирането завърши успешно!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConvertingDatabase" xml:space="preserve">
+    <value>Конвертиране на базата данни</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Cosmetic" xml:space="preserve">
+    <value>Козметични</value>
+    <comment>MT — assumed a settings-category label (plural «настройки»)</comment>
+  </data>
+  <data name="Costs" xml:space="preserve">
+    <value>Разходи</value>
+    <comment>MT — in-game object/build costs</comment>
+  </data>
+  <data name="Counter" xml:space="preserve">
+    <value>Брояч</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Create" xml:space="preserve">
+    <value>Създай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="CreateThisPage" xml:space="preserve">
+    <value>Създайте тази страница!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CurrentCount" xml:space="preserve">
+    <value>Текуща стойност: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Database" xml:space="preserve">
+    <value>База данни</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DatabaseDumps" xml:space="preserve">
+    <value>Дъмпове на базата данни</value>
+    <comment>MT — «дъмп» is the established Bulgarian technical borrowing for a database dump</comment>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>Дата</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>Отстраняване на грешки</value>
+    <comment>MT — consistent with AuthDebugMode; longer than the English label</comment>
+  </data>
+  <data name="DefaultsRestored" xml:space="preserve">
+    <value>Стойностите по подразбиране са възстановени — запазете, за да ги приложите</value>
+    <comment>MT — runs longer than the English; Bulgarian needs the explicit subject</comment>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Изтрий</value>
+    <comment>MT — plain imperative, button, per the sheet</comment>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>Изключено</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disconnect" xml:space="preserve">
+    <value>Прекъсни връзката</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>Връзката е прекъсната</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DropDatabaseFile" xml:space="preserve">
+    <value>Пуснете файла с база данни на PennMUSH тук или щракнете</value>
+    <comment>MT — `PennMUSH` kept untranslated per glossary</comment>
+  </data>
+  <data name="DropFilesOrClick" xml:space="preserve">
+    <value>Пуснете файлове тук или щракнете</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Duration" xml:space="preserve">
+    <value>Продължителност:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EditProfile" xml:space="preserve">
+    <value>Редактирай профила</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Elapsed" xml:space="preserve">
+    <value>Изминало време:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>Включено</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumApplicationKindPage" xml:space="preserve">
+    <value>Страница</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumApplicationKindWidget" xml:space="preserve">
+    <value>Уиджет</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeExit" xml:space="preserve">
+    <value>Изход</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypePlayer" xml:space="preserve">
+    <value>Играч</value>
+    <comment>MT — object-browser group heading for the MushObjectType enum, not the Player privilege level; EnumLabels.cs documents that PortalRole is deliberately excluded from these keys, so this one is translated.</comment>
+  </data>
+  <data name="EnumObjectTypeRoom" xml:space="preserve">
+    <value>Стая</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeThing" xml:space="preserve">
+    <value>Нещо</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeUnknown" xml:space="preserve">
+    <value>Неизвестно</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermApplicationsAdmin" xml:space="preserve">
+    <value>Приложения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermApplicationsAdminDesc" xml:space="preserve">
+    <value>Регистриране и управление на приложения, базирани на схема.</value>
+    <comment>MT — permission descriptions use verbal nouns throughout this batch for consistency</comment>
+  </data>
+  <data name="EnumPermConfigAdmin" xml:space="preserve">
+    <value>Конфигурация на сървъра</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermConfigAdminDesc" xml:space="preserve">
+    <value>Редактиране на конфигурацията на сървъра, sitelock, забранени имена и ограничения.</value>
+    <comment>MT — `sitelock` left in English: config key name / machine identifier</comment>
+  </data>
+  <data name="EnumPermGroupBuild" xml:space="preserve">
+    <value>Изграждане</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermGroupManage" xml:space="preserve">
+    <value>Управление</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermLayoutAdmin" xml:space="preserve">
+    <value>Редактор на оформлението</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermLayoutAdminDesc" xml:space="preserve">
+    <value>Редактиране на оформлението на уиджетите в портала.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaAdmin" xml:space="preserve">
+    <value>Библиотека с изображения · Управление</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaAdminDesc" xml:space="preserve">
+    <value>Разглеждане и изтриване на споделената медийна библиотека.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaUpload" xml:space="preserve">
+    <value>Библиотека с изображения · Качване</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaUploadDesc" xml:space="preserve">
+    <value>Качване на ресурси с изображения за използване в wiki страници.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPackagesAdmin" xml:space="preserve">
+    <value>Пакети</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPackagesAdminDesc" xml:space="preserve">
+    <value>Инсталиране, обновяване и управление на softcode пакети.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersModerate" xml:space="preserve">
+    <value>Играчи · Модериране</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersModerateDesc" xml:space="preserve">
+    <value>Деактивиране, блокиране, предупреждаване и редактиране на акаунти, герои и профили на играчи.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersView" xml:space="preserve">
+    <value>Играчи · Преглед</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersViewDesc" xml:space="preserve">
+    <value>Разглеждане на акаунти, герои и профили на играчи (само за четене).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermRolesAdmin" xml:space="preserve">
+    <value>Роли и разрешения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermRolesAdminDesc" xml:space="preserve">
+    <value>Създаване на роли, редактиране на разрешения и присвояване на роли към акаунти.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermServerAdmin" xml:space="preserve">
+    <value>Сървър (God)</value>
+    <comment>MT — `God` kept in English per glossary (privilege level / API enum value)</comment>
+  </data>
+  <data name="EnumPermServerAdminDesc" xml:space="preserve">
+    <value>Операции на ниво сървър и импортиране на база данни. По подразбиране само за God.</value>
+    <comment>MT — `God` kept in English per glossary</comment>
+  </data>
+  <data name="EnumPermSoftcodeUse" xml:space="preserve">
+    <value>Редактор на softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermSoftcodeUseDesc" xml:space="preserve">
+    <value>Отваряне на редактора на softcode за преглед и редактиране на атрибути на обекти.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiAdmin" xml:space="preserve">
+    <value>Wiki · Модериране</value>
+    <comment>MT — `Wiki` kept untranslated, case copied from source</comment>
+  </data>
+  <data name="EnumPermWikiAdminDesc" xml:space="preserve">
+    <value>Защитаване/премахване на защита, редактиране на защитени страници, групови операции и административното табло на wiki.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiCreate" xml:space="preserve">
+    <value>Wiki · Създаване</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiCreateDesc" xml:space="preserve">
+    <value>Създаване на нови wiki страници.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDelete" xml:space="preserve">
+    <value>Wiki · Изтриване</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDeleteDesc" xml:space="preserve">
+    <value>Изтриване на wiki страници и тяхната история на версиите.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiEdit" xml:space="preserve">
+    <value>Wiki · Редактиране</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiEditDesc" xml:space="preserve">
+    <value>Редактиране, връщане към предишна версия и повторно етикетиране на съществуващи (незащитени) wiki страници.</value>
+    <comment>MT — «rollback» rendered descriptively; runs longer than the English</comment>
+  </data>
+  <data name="EnumPermWikiRead" xml:space="preserve">
+    <value>Wiki · Четене</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiReadDesc" xml:space="preserve">
+    <value>Преглед на непубликувани wiki страници и чернови (публикуваните страници са достъпни за всички).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindInstall" xml:space="preserve">
+    <value>Инсталиране</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindRollback" xml:space="preserve">
+    <value>Връщане към предишна версия</value>
+    <comment>MT — no single-word Bulgarian equivalent for «rollback»; runs longer than the English</comment>
+  </data>
+  <data name="EnumRevisionKindUpgrade" xml:space="preserve">
+    <value>Обновяване</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitBytes" xml:space="preserve">
+    <value>{0} B</value>
+    <comment>MT — unit symbol kept in Latin, standard in Bulgarian technical UI</comment>
+  </data>
+  <data name="EnumUnitGigabytes" xml:space="preserve">
+    <value>{0} GB</value>
+    <comment>MT — unit symbol kept in Latin</comment>
+  </data>
+  <data name="EnumUnitKilobytes" xml:space="preserve">
+    <value>{0} KB</value>
+    <comment>MT — unit symbol kept in Latin</comment>
+  </data>
+  <data name="EnumUnitMegabytes" xml:space="preserve">
+    <value>{0} MB</value>
+    <comment>MT — unit symbol kept in Latin</comment>
+  </data>
+  <data name="ErrorAddingBannedName" xml:space="preserve">
+    <value>Грешка при добавяне на забранено име: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingCommandRestriction" xml:space="preserve">
+    <value>Грешка при добавяне на ограничение за команда: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingFunctionRestriction" xml:space="preserve">
+    <value>Грешка при добавяне на ограничение за функция: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingSitelockRule" xml:space="preserve">
+    <value>Грешка при добавяне на правило за sitelock: {0}</value>
+    <comment>MT — `sitelock` left in English: config feature name</comment>
+  </data>
+  <data name="ErrorAddingWord" xml:space="preserve">
+    <value>Грешка при добавяне на дума: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorCount" xml:space="preserve">
+    <value>{count, plural, one {# грешка} other {# грешки}}</value>
+    <comment>MT — verbatim from the locale sheet; two categories only</comment>
+  </data>
+  <data name="ErrorCreatingCategory" xml:space="preserve">
+    <value>Грешка при създаване на категория: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorDeletingCategory" xml:space="preserve">
+    <value>Грешка при изтриване на категория: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorDeletingWord" xml:space="preserve">
+    <value>Грешка при изтриване на дума: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingBannedNames" xml:space="preserve">
+    <value>Грешка при зареждане на забранените имена: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingConfig" xml:space="preserve">
+    <value>Грешка при зареждане на конфигурацията: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingRestrictions" xml:space="preserve">
+    <value>Грешка при зареждане на ограниченията: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingSitelockRules" xml:space="preserve">
+    <value>Грешка при зареждане на правилата за sitelock: {0}</value>
+    <comment>MT — `sitelock` left in English: config feature name</comment>
+  </data>
+  <data name="ErrorLoadingSuggestions" xml:space="preserve">
+    <value>Грешка при зареждане на предложенията: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingBannedName" xml:space="preserve">
+    <value>Грешка при премахване на забранено име: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingCommandRestriction" xml:space="preserve">
+    <value>Грешка при премахване на ограничение за команда: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingFunctionRestriction" xml:space="preserve">
+    <value>Грешка при премахване на ограничение за функция: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingSitelockRule" xml:space="preserve">
+    <value>Грешка при премахване на правило за sitelock: {0}</value>
+    <comment>MT — `sitelock` left in English: config feature name</comment>
+  </data>
+  <data name="Errors" xml:space="preserve">
+    <value>Грешки ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EstimatedRemaining" xml:space="preserve">
+    <value>Оставащо време (прибл.):</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Exits" xml:space="preserve">
+    <value>Изходи:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Export" xml:space="preserve">
+    <value>Експортирай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="ExportConfiguration" xml:space="preserve">
+    <value>Експортирай конфигурацията</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ExportFailed" xml:space="preserve">
+    <value>Неуспешно експортиране на конфигурацията</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FailedToLoadSchema" xml:space="preserve">
+    <value>Неуспешно зареждане на конфигурационната схема</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FailedToLoadValues" xml:space="preserve">
+    <value>Неуспешно зареждане на конфигурационните стойности</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Files" xml:space="preserve">
+    <value>Файлове</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Flags" xml:space="preserve">
+    <value>Флагове</value>
+    <comment>MT — «флаг» per the sheet's fixed choice over флагче/отметка</comment>
+  </data>
+  <data name="From" xml:space="preserve">
+    <value>От</value>
+    <comment>MT — assumed the mail sender column</comment>
+  </data>
+  <data name="FunctionName" xml:space="preserve">
+    <value>Име на функцията</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionNameHelper" xml:space="preserve">
+    <value>напр. pemit(), sql()</value>
+    <comment>MT — function names left in English: game syntax</comment>
+  </data>
+  <data name="FunctionRestrictionAddFailed" xml:space="preserve">
+    <value>Неуспешно добавяне на ограничение за функция</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionAdded" xml:space="preserve">
+    <value>Ограничението за „{0}“ е добавено успешно</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionRemoveFailed" xml:space="preserve">
+    <value>Неуспешно премахване на ограничение за функция</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionRemoved" xml:space="preserve">
+    <value>Ограничението за „{0}“ е премахнато успешно</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictions" xml:space="preserve">
+    <value>Ограничения за функции</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Functions" xml:space="preserve">
+    <value>Функции</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Gallery" xml:space="preserve">
+    <value>Галерия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryEmpty" xml:space="preserve">
+    <value>Все още няма изображения.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryUploadFailed" xml:space="preserve">
+    <value>Качването на изображението е неуспешно.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Help" xml:space="preserve">
+    <value>Помощ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Home" xml:space="preserve">
+    <value>Начало</value>
+    <comment>MT — assumed the portal home page, not the MUSH @home command</comment>
+  </data>
+  <data name="HostPattern" xml:space="preserve">
+    <value>Шаблон за хост</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostPatternHelper" xml:space="preserve">
+    <value>напр. *.example.com или 192.168.1.*</value>
+    <comment>MT — patterns left as machine identifiers</comment>
+  </data>
+  <data name="Import" xml:space="preserve">
+    <value>Импортирай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="ImportAnotherDatabase" xml:space="preserve">
+    <value>Импортирай друга база данни</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfig" xml:space="preserve">
+    <value>Импортиране на конфигурация</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfigDescription" xml:space="preserve">
+    <value>Качете файл mush.cnf, за да импортирате конфигурационни настройки. Поддържани формати: .cnf, .conf, .txt</value>
+    <comment>MT — file name and extensions left as-is (machine identifiers)</comment>
+  </data>
+  <data name="ImportConfigFile" xml:space="preserve">
+    <value>Импортиране на конфигурационен файл</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfiguration" xml:space="preserve">
+    <value>Импортиране на конфигурация</value>
+    <comment>MT — same rendering as ImportConfig; English distinguishes them only by abbreviation</comment>
+  </data>
+  <data name="ImportDatabaseDescription" xml:space="preserve">
+    <value>Качете файл с база данни на PennMUSH, за да го преобразувате и импортирате в SharpMUSH. Процесът на преобразуване ще създаде всички обекти, ще установи връзките между тях и ще зададе атрибути и ключалки.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportPennMUSHDatabase" xml:space="preserve">
+    <value>Импортиране на база данни на PennMUSH</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Important" xml:space="preserve">
+    <value>Важно</value>
+    <comment>MT — assumed a callout label, not an adjective agreeing with a noun</comment>
+  </data>
+  <data name="Importing" xml:space="preserve">
+    <value>Импортиране...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="InThisSection" xml:space="preserve">
+    <value>в този раздел</value>
+    <comment>MT — lowercase kept; appears to be a sentence fragment</comment>
+  </data>
+  <data name="Issues" xml:space="preserve">
+    <value>Проблеми</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Joined" xml:space="preserve">
+    <value>се присъедини</value>
+    <comment>MT — assumed a past-tense event verb (someone joined); if this labels a 'Joined' date column it should be «Присъединен на»</comment>
+  </data>
+  <data name="Key" xml:space="preserve">
+    <value>Ключ</value>
+    <comment>MT — assumed the config key column, not a cryptographic key</comment>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Език</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayActions" xml:space="preserve">
+    <value>Действия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAllLayouts" xml:space="preserve">
+    <value>Всички оформления</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppAllowedZones" xml:space="preserve">
+    <value>Разрешени зони</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrl" xml:space="preserve">
+    <value>URL за данни</value>
+    <comment>MT — read as «URL of the data endpoint», not the data: URI scheme</comment>
+  </data>
+  <data name="LayAppDataUrlHelper" xml:space="preserve">
+    <value>Данни за изгледа / предварително попълване на формуляра</value>
+    <comment>MT — assumed «View display / form prefill» describes what the endpoint returns</comment>
+  </data>
+  <data name="LayAppDataUrlOptional" xml:space="preserve">
+    <value>URL за данни (незадължително)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDisplayName" xml:space="preserve">
+    <value>Показвано име</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDisplayOrder" xml:space="preserve">
+    <value>Ред на показване</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppEditInSoftcode" xml:space="preserve">
+    <value>Редактиране в softcode</value>
+    <comment>MT — «softcode» kept in English per glossary</comment>
+  </data>
+  <data name="LayAppEditTitle" xml:space="preserve">
+    <value>Редактиране на {0}</value>
+    <comment>MT — {0} (an application name) follows a preposition and stays uninflected</comment>
+  </data>
+  <data name="LayAppIconHelper" xml:space="preserve">
+    <value>Идентификатор на икона от MudBlazor Material</value>
+    <comment>MT — «MudBlazor Material» is a library/icon-set name, left in English</comment>
+  </data>
+  <data name="LayAppIconOptional" xml:space="preserve">
+    <value>Икона (незадължително)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKind" xml:space="preserve">
+    <value>Вид</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKindPage" xml:space="preserve">
+    <value>Страница (/apps/{slug})</value>
+    <comment>MT — route literal and the {slug} placeholder preserved verbatim</comment>
+  </data>
+  <data name="LayAppKindWidget" xml:space="preserve">
+    <value>Уиджет (зона в оформлението)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppMinRole" xml:space="preserve">
+    <value>Мин. роля</value>
+    <comment>MT — abbreviated to match the short English column label</comment>
+  </data>
+  <data name="LayAppMinimumRole" xml:space="preserve">
+    <value>Минимална роля</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacement" xml:space="preserve">
+    <value>Място в навигацията</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacementHelper" xml:space="preserve">
+    <value>Задайте, за да се показва приложение от вид „Страница“ в навигацията</value>
+    <comment>MT — «Page» here refers to the Kind value rendered as LayAppKindPage</comment>
+  </data>
+  <data name="LayAppNavPlacementOptional" xml:space="preserve">
+    <value>Място в навигацията (незадължително)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppOpen" xml:space="preserve">
+    <value>Отвори приложението</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="LayAppOrder" xml:space="preserve">
+    <value>Ред</value>
+    <comment>MT — assumed sort order (a position), not a purchase order</comment>
+  </data>
+  <data name="LayAppRemoveConfirm" xml:space="preserve">
+    <value>Да се премахне ли „{0}“ ({1})? Това само прекратява връзката му с портала; softcode остава непроменен.</value>
+    <comment>MT — impersonal construction so the verb does not agree with the interpolated application name</comment>
+  </data>
+  <data name="LayAppRemoveFailed" xml:space="preserve">
+    <value>Приложението не можа да бъде премахнато.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveTitle" xml:space="preserve">
+    <value>Премахване на приложение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoved" xml:space="preserve">
+    <value>Премахнато: {0}.</value>
+    <comment>MT — participle placed before the colon in neuter so it need not agree with {0}</comment>
+  </data>
+  <data name="LayAppRequiredFields" xml:space="preserve">
+    <value>Задължителни са slug, показвано име и URL на схемата.</value>
+    <comment>MT — «slug» kept in English per glossary</comment>
+  </data>
+  <data name="LayAppSaveFailed" xml:space="preserve">
+    <value>Запазването е неуспешно.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSaved" xml:space="preserve">
+    <value>Запазено: {0}.</value>
+    <comment>MT — parallel with LayAppRemoved</comment>
+  </data>
+  <data name="LayAppSchemaUrl" xml:space="preserve">
+    <value>URL на схемата</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSchemaUrlHelper" xml:space="preserve">
+    <value>Маршрут на HTTP обработчик, който връща Portal Schema Document, напр. http/chargen/schema</value>
+    <comment>MT — «Portal Schema Document» and the example route left in English as machine identifiers</comment>
+  </data>
+  <data name="LayAppSlug" xml:space="preserve">
+    <value>Slug</value>
+    <comment>MT — glossary term, kept in English</comment>
+  </data>
+  <data name="LayAppSlugHelper" xml:space="preserve">
+    <value>Ключ в URL адреса — /apps/{slug}. Не може да се променя след създаване.</value>
+    <comment>MT — route and {slug} placeholder preserved verbatim</comment>
+  </data>
+  <data name="LayAppSubmitRoute" xml:space="preserve">
+    <value>Маршрут за изпращане</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSubmitRouteOptional" xml:space="preserve">
+    <value>Маршрут за изпращане (незадължително)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppViewSchema" xml:space="preserve">
+    <value>Преглед на схемата</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayApplications" xml:space="preserve">
+    <value>Приложения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayApply" xml:space="preserve">
+    <value>Приложи</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="LayAppsEmptyDetail" xml:space="preserve">
+    <value>Изберете приложение или регистрирайте ново.</value>
+    <comment>MT — polite Вие-form</comment>
+  </data>
+  <data name="LayAppsKicker" xml:space="preserve">
+    <value>Изграждане · Персонализирани уиджети</value>
+    <comment>MT — middle dot separator preserved</comment>
+  </data>
+  <data name="LayAppsNew" xml:space="preserve">
+    <value>Ново приложение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsNoMatch" xml:space="preserve">
+    <value>Няма съвпадащи приложения.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsPages" xml:space="preserve">
+    <value>Страници</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsRegister" xml:space="preserve">
+    <value>Регистриране на приложение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSchemaRegistry" xml:space="preserve">
+    <value>Регистър на схемите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSchemas" xml:space="preserve">
+    <value>Схеми</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSearchPlaceholder" xml:space="preserve">
+    <value>Търсене на приложения или схеми…</value>
+    <comment>MT — U+2026 ellipsis preserved</comment>
+  </data>
+  <data name="LayAppsStatPages" xml:space="preserve">
+    <value>приложения на цял екран</value>
+    <comment>MT — lowercase stat caption, as in the English</comment>
+  </data>
+  <data name="LayAppsStatRegistered" xml:space="preserve">
+    <value>регистрирани</value>
+    <comment>MT — lowercase stat caption; plural to match the counted apps</comment>
+  </data>
+  <data name="LayAppsStatSchemas" xml:space="preserve">
+    <value>дефинирани в softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsStatWidgets" xml:space="preserve">
+    <value>зони в таблото</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsWidgets" xml:space="preserve">
+    <value>Уиджети</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayBadgeCustomized" xml:space="preserve">
+    <value>персонализирано</value>
+    <comment>MT — badge on a layout (neuter «оформление»)</comment>
+  </data>
+  <data name="LayBadgeDefault" xml:space="preserve">
+    <value>по подразбиране</value>
+    <comment>MT — invariant phrase, safe for any noun it labels</comment>
+  </data>
+  <data name="LayConfigJsonHelp" xml:space="preserve">
+    <value>Конфигурация за конкретния екземпляр на {0} във формат JSON. Оставете празно, ако не е нужна конфигурация.</value>
+    <comment>MT — {0} follows a preposition; JSON kept per glossary</comment>
+  </data>
+  <data name="LayConfigJsonLabel" xml:space="preserve">
+    <value>Конфигурация в JSON</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigure" xml:space="preserve">
+    <value>Конфигурирай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="LayConfigureWidget" xml:space="preserve">
+    <value>Конфигуриране на {0}</value>
+    <comment>MT — verbal noun so {0} sits after a preposition; dialog title</comment>
+  </data>
+  <data name="LayEdit" xml:space="preserve">
+    <value>Редактирай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="LayEditorPageTitle" xml:space="preserve">
+    <value>Оформление: {0}</value>
+    <comment>MT — restructured: English pre-modifies with the scope name, which would require agreement in Bulgarian; moved after a colon</comment>
+  </data>
+  <data name="LayFlowZoneHint" xml:space="preserve">
+    <value>хоризонтално — без ширина</value>
+    <comment>MT — lowercase hint, as in the English</comment>
+  </data>
+  <data name="LayGridZoneHint" xml:space="preserve">
+    <value>мрежа от 12 колони</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayHasConfig" xml:space="preserve">
+    <value>Има конфигурация</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayInvalidJson" xml:space="preserve">
+    <value>Невалиден JSON: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLayouts" xml:space="preserve">
+    <value>Оформление</value>
+    <comment>MT — translates the English value «Layout» (singular), not the plural key name</comment>
+  </data>
+  <data name="LayLayoutsBlurb" xml:space="preserve">
+    <value>Подредете уиджетите на всяка страница, като ги влачите между зоните. Промените се публикуват за всички посетители.</value>
+    <comment>MT — polite Вие-form</comment>
+  </data>
+  <data name="LayLayoutsKicker" xml:space="preserve">
+    <value>Изграждане · Оформления на страници</value>
+    <comment>MT — middle dot separator preserved</comment>
+  </data>
+  <data name="LayLivePreview" xml:space="preserve">
+    <value>Преглед на живо</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPaletteHint" xml:space="preserve">
+    <value>Плъзнете уиджет в зона. Плъзнете поставен уиджет обратно тук, за да го премахнете.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreview" xml:space="preserve">
+    <value>Преглед</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreviewNote" xml:space="preserve">
+    <value>Отразява незапазените промени</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreviewNoteProfile" xml:space="preserve">
+    <value> · уиджетите за персонажи показват тук общо състояние</value>
+    <comment>MT — leading space and middle dot preserved; this string is concatenated onto LayPreviewNote</comment>
+  </data>
+  <data name="LayPublish" xml:space="preserve">
+    <value>Публикувай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="LayPublishFailed" xml:space="preserve">
+    <value>Оформлението не можа да бъде публикувано.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublished" xml:space="preserve">
+    <value>Оформлението {0} е публикувано.</value>
+    <comment>MT — {0} (a scope name) stands in apposition; the participle agrees with «оформлението»</comment>
+  </data>
+  <data name="LayPublishing" xml:space="preserve">
+    <value>Публикуване…</value>
+    <comment>MT — U+2026 ellipsis preserved</comment>
+  </data>
+  <data name="LayRemove" xml:space="preserve">
+    <value>Премахни</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="LayReset" xml:space="preserve">
+    <value>Нулирай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="LayResetConfirm" xml:space="preserve">
+    <value>Да се нулира ли оформлението {0} до състоянието му по подразбиране? Всички персонализации ще бъдат отхвърлени.</value>
+    <comment>MT — {0} in apposition after «оформлението»</comment>
+  </data>
+  <data name="LayResetDone" xml:space="preserve">
+    <value>Оформлението {0} е нулирано.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetFailed" xml:space="preserve">
+    <value>Оформлението не можа да бъде нулирано.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetLayout" xml:space="preserve">
+    <value>Нулиране на оформлението</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeGlobal" xml:space="preserve">
+    <value>Рамка на сайта</value>
+    <comment>MT — «Site Chrome» has no settled Bulgarian term; rendered as the site frame (top bar, sidebars, footer), which matches LayScopeGlobalDesc</comment>
+  </data>
+  <data name="LayScopeGlobalDesc" xml:space="preserve">
+    <value>Горна лента, странични ленти и долен колонтитул, общи за всички страници.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeHome" xml:space="preserve">
+    <value>Начална страница</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeHomeDesc" xml:space="preserve">
+    <value>Основното съдържание на началната страница.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeProfile" xml:space="preserve">
+    <value>Профил на персонаж</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeProfileDesc" xml:space="preserve">
+    <value>Тялото на страницата /character/{name} и дясната лента.</value>
+    <comment>MT — route and the {name} placeholder preserved verbatim</comment>
+  </data>
+  <data name="LayScopeWikiIndex" xml:space="preserve">
+    <value>Индекс на wiki</value>
+    <comment>MT — «wiki» kept untranslated per glossary</comment>
+  </data>
+  <data name="LayScopeWikiIndexDesc" xml:space="preserve">
+    <value>Началната страница /wiki.</value>
+    <comment>MT — route literal preserved</comment>
+  </data>
+  <data name="LaySidebarsAndFooter" xml:space="preserve">
+    <value>Странични ленти и долен колонтитул</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LaySpacerHeight" xml:space="preserve">
+    <value>Височина (px)</value>
+    <comment>MT — unit «px» left as-is</comment>
+  </data>
+  <data name="LaySpacerHelp" xml:space="preserve">
+    <value>Височина на празното пространство в пиксели. Ширината му следва броя колони на разположението.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayUnknownScope" xml:space="preserve">
+    <value>Неизвестен обхват на оформление „{0}“.</value>
+    <comment>MT — Bulgarian quotation marks substituted for the English curly quotes; {0} is quoted and needs no agreement</comment>
+  </data>
+  <data name="LayWidgetActiveScene" xml:space="preserve">
+    <value>Активна сцена</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetCharacterDirectory" xml:space="preserve">
+    <value>Указател на персонажите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetCharacterGallery" xml:space="preserve">
+    <value>Галерия с персонажи</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetGameStats" xml:space="preserve">
+    <value>Статистика на играта</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetOnlineCharacters" xml:space="preserve">
+    <value>Персонажи на линия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetQuickLinks" xml:space="preserve">
+    <value>Бързи връзки</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetQuickstart" xml:space="preserve">
+    <value>Бърз старт</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetRecentWikiActivity" xml:space="preserve">
+    <value>Скорошна активност в wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetSchemaApplication" xml:space="preserve">
+    <value>Приложение по схема</value>
+    <comment>MT — assumed «application» is the app noun (a schema-driven app), not the act of applying</comment>
+  </data>
+  <data name="LayWidgetSpacer" xml:space="preserve">
+    <value>Разделител</value>
+    <comment>MT — the widget that inserts empty space; «Разделител» is the usual layout-editor term</comment>
+  </data>
+  <data name="LayWidgetWelcomeText" xml:space="preserve">
+    <value>Приветствен текст</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetWikiBody" xml:space="preserve">
+    <value>Тяло на wiki страница</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetWikiIndex" xml:space="preserve">
+    <value>Индекс на wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetsPanel" xml:space="preserve">
+    <value>Уиджети</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidthInColumns" xml:space="preserve">
+    <value>Ширина в колони (1–12)</value>
+    <comment>MT — en dash range preserved</comment>
+  </data>
+  <data name="Limits" xml:space="preserve">
+    <value>Ограничения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Зареждане...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Locks" xml:space="preserve">
+    <value>Ключалки:</value>
+    <comment>MT — MUSH locks, per sheet «ключалка»</comment>
+  </data>
+  <data name="Logging" xml:space="preserve">
+    <value>Журналиране</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>Вход</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LogsAndFiles" xml:space="preserve">
+    <value>Журнали и файлове</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LogsCategoryDescription" xml:space="preserve">
+    <value>Журналиране, пътища до файлове и дъмпове на базата данни</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mail" xml:space="preserve">
+    <value>Поща</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailDeleteFailed" xml:space="preserve">
+    <value>Съобщението не може да бъде изтрито.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailDeleted" xml:space="preserve">
+    <value>Съобщението е изтрито.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailEmpty" xml:space="preserve">
+    <value>Няма съобщения в тази папка.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailNeedsCharacter" xml:space="preserve">
+    <value>Изберете или свържете персонаж, за да четете пощата си.</value>
+    <comment>MT — «character» rendered as «персонаж» consistently across all batches</comment>
+  </data>
+  <data name="MailNotFound" xml:space="preserve">
+    <value>Съобщението не е намерено.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailSendFailed" xml:space="preserve">
+    <value>Пощата не може да бъде изпратена. Проверете името на получателя.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailSent" xml:space="preserve">
+    <value>Пощата е изпратена.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mailbox" xml:space="preserve">
+    <value>Пощенска кутия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Maintenance" xml:space="preserve">
+    <value>Поддръжка</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ManageAllSettings" xml:space="preserve">
+    <value>Управлявайте всички настройки на сървъра SharpMUSH от едно място</value>
+    <comment>MT — polite Вие-form per sheet</comment>
+  </data>
+  <data name="ManageConfigDescription" xml:space="preserve">
+    <value>Управлявайте конфигурационните настройки на своя MUSH. Можете да импортирате конфигурационни файлове или да променяте настройките директно.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mappings" xml:space="preserve">
+    <value>Съответствия:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>Съобщение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Messages" xml:space="preserve">
+    <value>Съобщения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MyAccount" xml:space="preserve">
+    <value>Моят акаунт</value>
+    <comment>MT — «account» kept distinct from «профил» (profile)</comment>
+  </data>
+  <data name="NameToBan" xml:space="preserve">
+    <value>Име за блокиране</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavAccountTag" xml:space="preserve">
+    <value>акаунт</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplication" xml:space="preserve">
+    <value>Приложение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplicationComponentLoadFailed" xml:space="preserve">
+    <value>Компилираният компонент на това приложение не може да бъде зареден. Възможно е кодът в браузъра да е изключен (allow_browser_code) или асемблито да не е преминало проверката.</value>
+    <comment>MT — `allow_browser_code` left in English: config key name</comment>
+  </data>
+  <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
+    <value>Схемата на приложението не може да бъде заредена. Обработчикът на softcode на {0} може да липсва или да връща невалиден JSON.</value>
+    <comment>MT — {0} is a route/handler path, left uninflected</comment>
+  </data>
+  <data name="NavCharacterManagement" xml:space="preserve">
+    <value>Управление на героите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
+    <value>Управлението на героите предстои.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterName" xml:space="preserve">
+    <value>Име на героя</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterRegistered" xml:space="preserve">
+    <value>{0} регистриран герой</value>
+    <comment>MT — singular variant</comment>
+  </data>
+  <data name="NavCharactersRegistered" xml:space="preserve">
+    <value>{0} регистрирани герои</value>
+    <comment>MT — plural variant; «герой» denotes a person, so the ordinary plural is used, not the бройна форма</comment>
+  </data>
+  <data name="NavCharsShort" xml:space="preserve">
+    <value>Герои</value>
+    <comment>MT — abbreviation-length label; Bulgarian has no shorter natural form</comment>
+  </data>
+  <data name="NavCloseTerminal" xml:space="preserve">
+    <value>Затвори терминала</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCommandTerminal" xml:space="preserve">
+    <value>команден терминал</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
+    <value>— Свържете се, за да видите кой е тук —</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateACharacter" xml:space="preserve">
+    <value>Създайте герой</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacter" xml:space="preserve">
+    <value>Създай герой</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="NavCreateCharacterBlurb" xml:space="preserve">
+    <value>Героят е персонаж, с който играете в играта. Той е свързан с вашия акаунт; по-късно можете да създадете още.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExitFocusMode" xml:space="preserve">
+    <value>Изход от режим на фокус</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExits" xml:space="preserve">
+    <value>Изходи</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFocusMode" xml:space="preserve">
+    <value>Режим на фокус</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGoToAccountPage" xml:space="preserve">
+    <value>Към страницата на вашия акаунт</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGuestTag" xml:space="preserve">
+    <value>guest</value>
+    <comment>MT — kept in English: privilege level / API enum value per glossary, case copied from source</comment>
+  </data>
+  <data name="NavInPlay" xml:space="preserve">
+    <value>в игра</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavLoadingApplication" xml:space="preserve">
+    <value>Зареждане на приложението…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailFolders" xml:space="preserve">
+    <value>Папки</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailForward" xml:space="preserve">
+    <value>Препрати</value>
+    <comment>MT — assumed the verb (forward a message), not a direction</comment>
+  </data>
+  <data name="NavMailReadFullMessage" xml:space="preserve">
+    <value>Прочети цялото съобщение →</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailSelectMessage" xml:space="preserve">
+    <value>Изберете съобщение за четене</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMenuLabel" xml:space="preserve">
+    <value>Меню</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationAccess" xml:space="preserve">
+    <value>Нямате достъп до това приложение.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationRegistered" xml:space="preserve">
+    <value>Няма регистрирано приложение на {0}.</value>
+    <comment>MT — {0} is a route</comment>
+  </data>
+  <data name="NavNoExitsAvailable" xml:space="preserve">
+    <value>— Няма налични изходи —</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotConnected" xml:space="preserve">
+    <value>не сте свързани</value>
+    <comment>MT — polite Вие-form</comment>
+  </data>
+  <data name="NavOffline" xml:space="preserve">
+    <value>офлайн</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOnline" xml:space="preserve">
+    <value>онлайн</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOpenTerminal" xml:space="preserve">
+    <value>Отвори терминала</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySessionActive" xml:space="preserve">
+    <value>Активна игрална сесия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayTerminal" xml:space="preserve">
+    <value>Игрален терминал</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayUnreadActivity" xml:space="preserve">
+    <value>Непрочетена игрална активност</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSearchPlaceholder" xml:space="preserve">
+    <value>Търсене…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionBuild" xml:space="preserve">
+    <value>Изграждане</value>
+    <comment>MT — matches EnumPermGroupBuild</comment>
+  </data>
+  <data name="NavSectionManage" xml:space="preserve">
+    <value>Управление</value>
+    <comment>MT — matches EnumPermGroupManage</comment>
+  </data>
+  <data name="NavSectionWorld" xml:space="preserve">
+    <value>Свят</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsAccountDescription" xml:space="preserve">
+    <value>Имейл, парола и сигурност при вход</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsCharactersDescription" xml:space="preserve">
+    <value>Управление на героите, свързани с вашия акаунт</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsThemeDescription" xml:space="preserve">
+    <value>Предпочитания за облик и акцентен цвят</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalSettings" xml:space="preserve">
+    <value>Настройки на терминала</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthCols" xml:space="preserve">
+    <value>Ширина (колони)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthTooltip" xml:space="preserve">
+    <value>Предпочитана ширина на терминала в колони (мин. 78). Шрифтът се мащабира автоматично, за да я запълни — повече място означава по-едър шрифт — и стойността се съобщава на сървъра като ширина на вашия екран.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTheme" xml:space="preserve">
+    <value>Тема</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavThemeComingSoon" xml:space="preserve">
+    <value>Предпочитанията за тема предстоят.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavToggleNavigation" xml:space="preserve">
+    <value>Превключи навигацията</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Network" xml:space="preserve">
+    <value>Мрежа</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewEntry" xml:space="preserve">
+    <value>Нов запис</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewKey" xml:space="preserve">
+    <value>Нов ключ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoBannedNamesConfigured" xml:space="preserve">
+    <value>Няма конфигурирани блокирани имена.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoChangesToSave" xml:space="preserve">
+    <value>Няма промени за запазване</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCharactersFound" xml:space="preserve">
+    <value>Няма намерени персонажи.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCommandRestrictions" xml:space="preserve">
+    <value>Няма конфигурирани ограничения за команди.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoEntries" xml:space="preserve">
+    <value>Няма записи</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoFunctionRestrictions" xml:space="preserve">
+    <value>Няма конфигурирани ограничения за функции.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoGroupingNote" xml:space="preserve">
+    <value>Тази категория още не е обновена с разширени метаданни на схемата. Свойствата се показват без групиране. Засега само категорията Network (Net) разполага с пълния разширен интерфейс.</value>
+    <comment>MT — «Network (Net)» left in English: it is a config category identifier</comment>
+  </data>
+  <data name="NoItems" xml:space="preserve">
+    <value>Няма елементи</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesFound" xml:space="preserve">
+    <value>Не са намерени конфигурационни свойства за категория „{0}“.</value>
+    <comment>MT — {0} sits in apposition inside quotes, so no case agreement is required of it</comment>
+  </data>
+  <data name="NoPropertiesHint" xml:space="preserve">
+    <value>Възможно е тази категория още да не е анотирана с разширени метаданни на схемата.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSitelockRulesConfigured" xml:space="preserve">
+    <value>Няма конфигурирани правила за sitelock.</value>
+    <comment>MT — «sitelock» kept in English: it is the MUSH config feature name (@sitelock)</comment>
+  </data>
+  <data name="NoSuggestionCategories" xml:space="preserve">
+    <value>Няма дефинирани категории с предложения. Щракнете върху „Добавяне на категория“, за да създадете първата си категория.</value>
+    <comment>MT — quoted button label matches the AddCategory rendering</comment>
+  </data>
+  <data name="NoWordsInCategory" xml:space="preserve">
+    <value>Все още няма думи в тази категория.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorized" xml:space="preserve">
+    <value>Нямате права за достъп до този ресурс.</value>
+    <comment>MT — polite Вие-form</comment>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>Не е намерено</value>
+    <comment>MT — assumed an HTTP 404 page title, hence neuter impersonal</comment>
+  </data>
+  <data name="NotFoundDescription" xml:space="preserve">
+    <value>Съжаляваме, съдържанието, което търсите, не съществува.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NothingToSeeHere" xml:space="preserve">
+    <value>Тук няма нищо за показване.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsConverted" xml:space="preserve">
+    <value>Преобразувани обекти</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsCreated" xml:space="preserve">
+    <value>Създадени обекти</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PercentComplete" xml:space="preserve">
+    <value>{0:F1}% завършено - {1}</value>
+    <comment>MT — .NET format specifier {0:F1} preserved verbatim</comment>
+  </data>
+  <data name="Performance" xml:space="preserve">
+    <value>Производителност</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PerformanceCategoryDescription" xml:space="preserve">
+    <value>Ограничения на ресурсите, опашки от команди и оптимизация</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Phase" xml:space="preserve">
+    <value>Фаза:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAction" xml:space="preserve">
+    <value>Действие</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAddRemote" xml:space="preserve">
+    <value>Добави отдалечено хранилище</value>
+    <comment>MT — «remote» expanded to «отдалечено хранилище»; Bulgarian has no one-word equivalent, so this runs longer than the English label</comment>
+  </data>
+  <data name="PkgAddRemoteHeading" xml:space="preserve">
+    <value>Добавяне на отдалечено хранилище</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAdminSection" xml:space="preserve">
+    <value>Администриране</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgApplied" xml:space="preserve">
+    <value>Приложено: {0} {1} (версия {2}).</value>
+    <comment>MT — restructured to a neuter impersonal so the participle need not agree with the interpolated package name; per sheet revision → версия</comment>
+  </data>
+  <data name="PkgApply" xml:space="preserve">
+    <value>Приложи</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="PkgAttributesCount" xml:space="preserve">
+    <value>Атрибути ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAttributesToInclude" xml:space="preserve">
+    <value>Атрибути за включване:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthor" xml:space="preserve">
+    <value>Автор</value>
+    <comment>MT — assumed the noun (a metadata field), not the verb</comment>
+  </data>
+  <data name="PkgAuthorDescription" xml:space="preserve">
+    <value>Превърнете живите обекти в package.yaml. Всеки dbref в селекцията трябва да стане символен: препратките в рамките на селекцията се разрешават автоматично, а останалите класифицирате по-долу.</value>
+    <comment>MT — «package.yaml» and «dbref» kept per glossary</comment>
+  </data>
+  <data name="PkgAuthorHeading" xml:space="preserve">
+    <value>Създаване на пакет</value>
+    <comment>MT — «Author a Package» read as a verb heading</comment>
+  </data>
+  <data name="PkgAuthorsLabel" xml:space="preserve">
+    <value>Автори (разделени със запетая)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAvailableFrom" xml:space="preserve">
+    <value>Предлага се от {0}{1}.</value>
+    <comment>MT — verb instead of the adjective «наличен», so no gender agreement with the subject is needed; the two adjacent placeholders stay adjacent</comment>
+  </data>
+  <data name="PkgBaseAsInstalled" xml:space="preserve">
+    <value>База (както е инсталирана)</value>
+    <comment>MT — feminine agreement with «база»</comment>
+  </data>
+  <data name="PkgBranch" xml:space="preserve">
+    <value>Клон</value>
+    <comment>MT — git branch</comment>
+  </data>
+  <data name="PkgBranchOptionalLabel" xml:space="preserve">
+    <value>Клон (незадължително)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowse" xml:space="preserve">
+    <value>Разгледай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="PkgBrowseDescription" xml:space="preserve">
+    <value>Опреснява кеша на отдалеченото хранилище и показва пакетите в него. Версиите идват от етикетите на изданията; върхът на клона е каналът dev.</value>
+    <comment>MT — «remote» rendered as «отдалечено хранилище» throughout; «dev» kept as the channel identifier</comment>
+  </data>
+  <data name="PkgBrowseHeading" xml:space="preserve">
+    <value>Преглед на пакети</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCheck" xml:space="preserve">
+    <value>Провери</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
+    <value>Класифицирайте {0}: препратките от тип configure изискват ключ и етикет.</value>
+    <comment>MT — «configure» kept in English as the ref-kind enum value</comment>
+  </data>
+  <data name="PkgClose" xml:space="preserve">
+    <value>Затвори</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="PkgCommandCollision" xml:space="preserve">
+    <value>$-командата „{0}“ вече е дефинирана от пакета {1} ({2}/{3}).</value>
+    <comment>MT — «$-command» kept as the MUSH term of art; the participle agrees with «командата», not with the interpolated name</comment>
+  </data>
+  <data name="PkgCommunityDirectory" xml:space="preserve">
+    <value>Указател на общността</value>
+    <comment>MT — «directory» read as a listing, not a filesystem directory</comment>
+  </data>
+  <data name="PkgCommunityDirectoryHint" xml:space="preserve">
+    <value>Приети хранилища на общността, подбрани в официалното хранилище с пакети.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityRemoteAdded" xml:space="preserve">
+    <value>„{0}“ е добавено като отдалечено хранилище на общността.</value>
+    <comment>MT — neuter participle agreeing with the predicate «хранилище», not with the quoted name</comment>
+  </data>
+  <data name="PkgConfigureKeyLabel" xml:space="preserve">
+    <value>Ключ за конфигуриране</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigurePromptLabel" xml:space="preserve">
+    <value>Подкана, показвана на инсталиращите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigured" xml:space="preserve">
+    <value>конфигуриран</value>
+    <comment>MT — lowercase chip; masculine, assumed to label a ref/package</comment>
+  </data>
+  <data name="PkgConfiguredRemotes" xml:space="preserve">
+    <value>Конфигурирани отдалечени хранилища</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictCount" xml:space="preserve">
+    <value>{count, plural, one {# конфликт} other {# конфликта}}</value>
+    <comment>MT — verbatim from the locale sheet; masculine бройна форма in the other branch</comment>
+  </data>
+  <data name="PkgConflictLabel" xml:space="preserve">
+    <value>конфликт: {0}</value>
+    <comment>MT — lowercase as in the English</comment>
+  </data>
+  <data name="PkgConflictsWithInstalled" xml:space="preserve">
+    <value>Конфликти с инсталираните</value>
+    <comment>MT — assumed a noun heading (conflicts against installed packages), not a verb phrase</comment>
+  </data>
+  <data name="PkgCurrent" xml:space="preserve">
+    <value>текуща</value>
+    <comment>MT — lowercase chip; feminine, assumed to mark the current версия (version)</comment>
+  </data>
+  <data name="PkgDbrefHelper" xml:space="preserve">
+    <value>Идентификатор на обект, напр. #123:456</value>
+    <comment>MT — example id left as-is</comment>
+  </data>
+  <data name="PkgDefaultBranch" xml:space="preserve">
+    <value>по подразбиране</value>
+    <comment>MT — invariant phrase, safe for any noun</comment>
+  </data>
+  <data name="PkgDeleteTakeTheirs" xml:space="preserve">
+    <value>Изтрий го (приеми тяхната версия)</value>
+    <comment>MT — merge-conflict resolution option</comment>
+  </data>
+  <data name="PkgDependedOnBy" xml:space="preserve">
+    <value>Зависими от него: {0}</value>
+    <comment>MT — {0} is a list, placed after a colon</comment>
+  </data>
+  <data name="PkgDescriptionLabel" xml:space="preserve">
+    <value>Описание</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDetails" xml:space="preserve">
+    <value>Подробности</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevChannelOption" xml:space="preserve">
+    <value>канал dev ({0})</value>
+    <comment>MT — «dev» kept in English as the channel identifier and moved after the noun</comment>
+  </data>
+  <data name="PkgDevDrift" xml:space="preserve">
+    <value>отклонение в dev</value>
+    <comment>MT — lowercase chip; the dev branch has drifted from the released tag</comment>
+  </data>
+  <data name="PkgDownload" xml:space="preserve">
+    <value>Изтегли</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="PkgEditMergedValue" xml:space="preserve">
+    <value>Редактирай слятата стойност</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEnterObjectId" xml:space="preserve">
+    <value>Въведете поне един идентификатор на обект.</value>
+    <comment>MT — polite Вие-form</comment>
+  </data>
+  <data name="PkgExportHint" xml:space="preserve">
+    <value>Подайте това в хранилище с пакети (по една директория на пакет), опишете го в index.yaml и маркирайте изданията като</value>
+    <comment>MT — sentence is deliberately unterminated; the UI appends a tag example. «index.yaml» left as-is</comment>
+  </data>
+  <data name="PkgExportYaml" xml:space="preserve">
+    <value>Експортирай package.yaml</value>
+    <comment>MT — «package.yaml» kept per glossary</comment>
+  </data>
+  <data name="PkgForceRemoval" xml:space="preserve">
+    <value>Принудително премахване въпреки това</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgGitUrlLabel" xml:space="preserve">
+    <value>Git URL</value>
+    <comment>MT — machine identifier label, left in English</comment>
+  </data>
+  <data name="PkgInstallHeading" xml:space="preserve">
+    <value>Инсталиране</value>
+    <comment>MT — section heading, verbal noun</comment>
+  </data>
+  <data name="PkgInstalled" xml:space="preserve">
+    <value>Инсталирани</value>
+    <comment>MT — assumed the heading of the installed-packages section (plural); if it is a per-package status chip it should be singular «Инсталиран»</comment>
+  </data>
+  <data name="PkgInstalledDescription" xml:space="preserve">
+    <value>Инсталирани пакети softcode. Надстройките винаги минават през преглед на план — нищо не се прилага автоматично.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledOn" xml:space="preserve">
+    <value>инсталиран на {0}</value>
+    <comment>MT — {0} is a date; masculine to agree with «пакет»</comment>
+  </data>
+  <data name="PkgInstalledSuffix" xml:space="preserve">
+    <value> — инсталирано: {0}.</value>
+    <comment>MT — leading space and em dash preserved; this string is appended to another sentence, so the participle is neuter/impersonal</comment>
+  </data>
+  <data name="PkgKeepMine" xml:space="preserve">
+    <value>Запази моята версия</value>
+    <comment>MT — merge-conflict resolution option, paired with PkgDeleteTakeTheirs</comment>
+  </data>
+  <data name="PkgKickerAuthoring" xml:space="preserve">
+    <value>Изграждане · Създаване на пакети</value>
+    <comment>MT — middle dot separator preserved</comment>
+  </data>
+  <data name="PkgKickerRegistry" xml:space="preserve">
+    <value>Изграждане · Регистър на пакетите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgKickerSources" xml:space="preserve">
+    <value>Изграждане · Източници на пакети</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLicenseLabel" xml:space="preserve">
+    <value>Лиценз (незадължително)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLiveYourVersion" xml:space="preserve">
+    <value>На живо (вашата версия)</value>
+    <comment>MT — polite Вие-form possessive</comment>
+  </data>
+  <data name="PkgManifestParseFailed" xml:space="preserve">
+    <value>Манифестът на върха на клона не можа да бъде анализиран.</value>
+    <comment>MT — «the tip» expanded to «върха на клона» for clarity</comment>
+  </data>
+  <data name="PkgManifestRefLabel" xml:space="preserve">
+    <value>Ref в манифеста (малки букви, долни черти)</value>
+    <comment>MT — «ref» kept in English: it is the machine identifier written into the manifest</comment>
+  </data>
+  <data name="PkgMergedValueLabel" xml:space="preserve">
+    <value>Слята стойност</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMissingRemoteParam" xml:space="preserve">
+    <value>Липсва параметър „remote“.</value>
+    <comment>MT — «remote» kept in English: it is the query-parameter name</comment>
+  </data>
+  <data name="PkgModeConfigure" xml:space="preserve">
+    <value>configure</value>
+    <comment>MT — enum value for the ref mode, kept in English</comment>
+  </data>
+  <data name="PkgModeWellKnown" xml:space="preserve">
+    <value>well-known</value>
+    <comment>MT — enum value for the ref mode, kept in English</comment>
+  </data>
+  <data name="PkgName" xml:space="preserve">
+    <value>Име</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNewVersion" xml:space="preserve">
+    <value>Нова ({0})</value>
+    <comment>MT — feminine, agreeing with «версия»; {0} is the version string</comment>
+  </data>
+  <data name="PkgNoCommunityRepos" xml:space="preserve">
+    <value>Все още няма приети хранилища на общността.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoDescription" xml:space="preserve">
+    <value>(няма описание)</value>
+    <comment>MT — lowercase parenthetical, as in the English</comment>
+  </data>
+  <data name="PkgNoReadme" xml:space="preserve">
+    <value>Няма наличен README.</value>
+    <comment>MT — «README» is a file name, left in English</comment>
+  </data>
+  <data name="PkgNoReleaseTags" xml:space="preserve">
+    <value>Няма етикети за издания — достъпен е само каналът dev.</value>
+    <comment>MT — «dev» kept as the channel identifier</comment>
+  </data>
+  <data name="PkgNoSearchMatch" xml:space="preserve">
+    <value>Няма пакети, съответстващи на търсенето.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoUpdatesAvailable" xml:space="preserve">
+    <value>Няма пакети с налична актуализация.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoneInstalled" xml:space="preserve">
+    <value>Все още няма инсталирани пакети. Конфигурирайте отдалечено хранилище и го разгледайте, за да инсталирате първия си пакет.</value>
+    <comment>MT — polite Вие-form</comment>
+  </data>
+  <data name="PkgNotInstalledSuffix" xml:space="preserve">
+    <value> — не е инсталирано.</value>
+    <comment>MT — leading space and em dash preserved; neuter/impersonal to match PkgInstalledSuffix</comment>
+  </data>
+  <data name="PkgObjAttrCounts" xml:space="preserve">
+    <value>{0} об. / {1} атр.</value>
+    <comment>MT — abbreviations kept as short as the English «obj / attr»; abbreviating also sidesteps the masculine бройна форма, which this string has no plural rule for</comment>
+  </data>
+  <data name="PkgObjectIdsLabel" xml:space="preserve">
+    <value>Идентификатори на обекти (по един на ред, напр. #847:1778518155494)</value>
+    <comment>MT — example id left as-is</comment>
+  </data>
+  <data name="PkgObjects" xml:space="preserve">
+    <value>Обекти</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjectsCount" xml:space="preserve">
+    <value>Обекти ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgOccurrences" xml:space="preserve">
+    <value>{count, plural, one {# поява} other {# появи}}, напр. в {location}</value>
+    <comment>MT — verbatim from the locale sheet; two categories only, both placeholders preserved</comment>
+  </data>
+  <data name="PkgPackageIdLabel" xml:space="preserve">
+    <value>Идентификатор на пакет (малки букви, тирета)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPackages" xml:space="preserve">
+    <value>Пакети</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPlanLocation" xml:space="preserve">
+    <value>{0} / {1} в {2}</value>
+    <comment>MT — all three placeholders are identifiers; only the preposition is translated</comment>
+  </data>
+  <data name="PkgRef" xml:space="preserve">
+    <value>Ref</value>
+    <comment>MT — kept in English for consistency with PkgManifestRefLabel; it names the manifest ref identifier, not a generic cross-reference</comment>
+  </data>
+  <data name="PkgRefreshAndBrowse" xml:space="preserve">
+    <value>Опресни и разгледай</value>
+    <comment>MT — plain imperatives, button</comment>
+  </data>
+  <data name="PkgRemoteLabel" xml:space="preserve">
+    <value>Отдалечено хранилище</value>
+    <comment>MT — «remote» rendered consistently as «отдалечено хранилище»; longer than the English but there is no one-word equivalent</comment>
+  </data>
+  <data name="PkgRemoteRemoved" xml:space="preserve">
+    <value>Отдалеченото хранилище „{0}“ е премахнато.</value>
+    <comment>MT — explicit head noun fixes the neuter agreement, independent of the quoted name</comment>
+  </data>
+  <data name="PkgRemoteSaved" xml:space="preserve">
+    <value>Отдалеченото хранилище „{0}“ е запазено.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotes" xml:space="preserve">
+    <value>Отдалечени хранилища</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesDescription" xml:space="preserve">
+    <value>Git хранилища, от които тази игра инсталира пакети. Нивата на доверие определяте вие — списъците на общността по-долу се подбират в официалното хранилище и никога не са самопровъзгласени.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesHeading" xml:space="preserve">
+    <value>Отдалечени хранилища с пакети</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRenamedFrom" xml:space="preserve">
+    <value>предишно име: {0} (запазва {1})</value>
+    <comment>MT — restructured from the participle «renamed», which would have to agree in gender with the object or attribute it annotates; a nominal phrase avoids the guess</comment>
+  </data>
+  <data name="PkgReplan" xml:space="preserve">
+    <value>Планирай отново с тези отговори</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="PkgRequiredBy" xml:space="preserve">
+    <value>изисква се от {0}</value>
+    <comment>MT — impersonal verb form, so nothing has to agree with {0}</comment>
+  </data>
+  <data name="PkgRequires" xml:space="preserve">
+    <value>Изисква</value>
+    <comment>MT — dependency list heading</comment>
+  </data>
+  <data name="PkgResolutionLabel" xml:space="preserve">
+    <value>Разрешаване</value>
+    <comment>MT — assumed «resolution» in the merge-conflict sense (how the conflict is resolved), not image resolution</comment>
+  </data>
+  <data name="PkgResolvesAtApply" xml:space="preserve">
+    <value>разрешава се при прилагане</value>
+    <comment>MT — lowercase chip</comment>
+  </data>
+  <data name="PkgResolvesAtApplyTooltip" xml:space="preserve">
+    <value>Някои препратки се разрешават при прилагане (нови обекти / configure)</value>
+    <comment>MT — «configure» kept in English as the ref-mode enum value</comment>
+  </data>
+  <data name="PkgReview" xml:space="preserve">
+    <value>Преглед</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReviewInstall" xml:space="preserve">
+    <value>Преглед на инсталацията</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionHistory" xml:space="preserve">
+    <value>История на версиите</value>
+    <comment>MT — per sheet, revision → версия</comment>
+  </data>
+  <data name="PkgRevisionLine" xml:space="preserve">
+    <value>версия {0} — {1} {2}</value>
+    <comment>MT — English «rev» abbreviation expanded; Bulgarian has no established short form</comment>
+  </data>
+  <data name="PkgRevisionsOf" xml:space="preserve">
+    <value>{0} — версии</value>
+    <comment>MT — {0} stays at the head of the line, uninflected</comment>
+  </data>
+  <data name="PkgRollBack" xml:space="preserve">
+    <value>Върни назад</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="PkgRolledBack" xml:space="preserve">
+    <value>Върнато към версия {0} (нова версия {1}).</value>
+    <comment>MT — neuter impersonal participle</comment>
+  </data>
+  <data name="PkgScanSelection" xml:space="preserve">
+    <value>Сканирай селекцията</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="PkgSearchPlaceholder" xml:space="preserve">
+    <value>Търсене на пакети…</value>
+    <comment>MT — U+2026 ellipsis preserved</comment>
+  </data>
+  <data name="PkgSnapshotAt" xml:space="preserve">
+    <value>{0} в {1}</value>
+    <comment>MT — only the preposition is translated; both placeholders are identifiers/timestamps</comment>
+  </data>
+  <data name="PkgSoftcodePackages" xml:space="preserve">
+    <value>Пакети softcode</value>
+    <comment>MT — «softcode» kept per glossary</comment>
+  </data>
+  <data name="PkgStepClassifyExternal" xml:space="preserve">
+    <value>Класифициране на външните препратки ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepMetadataExport" xml:space="preserve">
+    <value>Метаданни и експорт</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepRefsAttributes" xml:space="preserve">
+    <value>Препратки и атрибути</value>
+    <comment>MT — «refs» translated here because it reads as ordinary prose in a wizard step; the machine identifier sense is kept in English at PkgRef/PkgManifestRefLabel</comment>
+  </data>
+  <data name="PkgStepSelectObjects" xml:space="preserve">
+    <value>Избор на обекти</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTagMoved" xml:space="preserve">
+    <value>етикетът е преместен!</value>
+    <comment>MT — lowercase chip, as in the English</comment>
+  </data>
+  <data name="PkgTakeTheirs" xml:space="preserve">
+    <value>Приеми тяхната версия</value>
+    <comment>MT — merge-conflict resolution option</comment>
+  </data>
+  <data name="PkgTrust" xml:space="preserve">
+    <value>Доверие</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustCommunity" xml:space="preserve">
+    <value>общност</value>
+    <comment>MT — trust-level chip; translated as display text. If these are also API enum values they must revert to English «community»</comment>
+  </data>
+  <data name="PkgTrustOfficial" xml:space="preserve">
+    <value>официално</value>
+    <comment>MT — trust-level chip; same caveat as PkgTrustCommunity</comment>
+  </data>
+  <data name="PkgTrustUnknown" xml:space="preserve">
+    <value>неизвестно</value>
+    <comment>MT — trust-level chip; same caveat as PkgTrustCommunity</comment>
+  </data>
+  <data name="PkgTrustWarningTagMoved" xml:space="preserve">
+    <value>ПРЕДУПРЕЖДЕНИЕ ЗА ДОВЕРИЕ: етикетът на изданието за {0} {1} вече не сочи към инсталирания комит.</value>
+    <comment>MT — capitalisation of the alert prefix mirrors the English</comment>
+  </data>
+  <data name="PkgType" xml:space="preserve">
+    <value>Тип</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstall" xml:space="preserve">
+    <value>Деинсталирай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="PkgUninstallConfirmBody" xml:space="preserve">
+    <value>{objects, plural, one {# обект ще бъде маркиран} other {# обекта ще бъдат маркирани}} за унищожаване и {attributes, plural, one {# запис за управлявани атрибути ще бъде премахнат} other {# записа за управлявани атрибути ще бъдат премахнати}}.</value>
+    <comment>MT — verbatim from the locale sheet; two categories in each plural, both placeholders preserved</comment>
+  </data>
+  <data name="PkgUninstallConfirmTitle" xml:space="preserve">
+    <value>Да се деинсталира ли {0}?</value>
+    <comment>MT — impersonal construction, so the verb does not agree with the package name</comment>
+  </data>
+  <data name="PkgUninstalled" xml:space="preserve">
+    <value>Деинсталирано: {0}.</value>
+    <comment>MT — neuter participle before the colon; {0} needs no agreement</comment>
+  </data>
+  <data name="PkgUnreviewedSource" xml:space="preserve">
+    <value>Този източник не е прегледан. Прегледайте целия код на екрана за преглед, преди да приложите промените.</value>
+    <comment>MT — polite Вие-form</comment>
+  </data>
+  <data name="PkgUpdateCheckFailed" xml:space="preserve">
+    <value>Проверката за актуализации е неуспешна — достъпно ли е изходното хранилище?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdates" xml:space="preserve">
+    <value>Актуализации</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdatesAvailable" xml:space="preserve">
+    <value>Налични актуализации</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradeHeading" xml:space="preserve">
+    <value>Надстройка</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradingFrom" xml:space="preserve">
+    <value>— надстройка от {0}</value>
+    <comment>MT — leading em dash preserved; this fragment is appended to another line</comment>
+  </data>
+  <data name="PkgUrl" xml:space="preserve">
+    <value>URL</value>
+    <comment>MT — machine identifier label, left in English</comment>
+  </data>
+  <data name="PkgVersionAvailable" xml:space="preserve">
+    <value>предлага се {0}</value>
+    <comment>MT — verb instead of the adjective «наличен», which would have to agree with an unstated noun; {0} is a version string</comment>
+  </data>
+  <data name="PkgVersionLabel" xml:space="preserve">
+    <value>Версия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgWellKnownRefLabel" xml:space="preserve">
+    <value>Ref от тип well-known</value>
+    <comment>MT — «ref» and the «well-known» mode value both kept in English as machine identifiers, consistent with PkgModeWellKnown</comment>
+  </data>
+  <data name="PkgWillBeMarkedGoing" xml:space="preserve">
+    <value>{0} ще получи флага GOING</value>
+    <comment>MT — restructured to a verb («will get the GOING flag») so no participle has to agree in gender with the interpolated object name; «GOING» is a MUSH flag name, kept in English</comment>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Играй</value>
+    <comment>MT — assumed the button that opens the game client, not media playback</comment>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>Играчи:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PreviewFileContent" xml:space="preserve">
+    <value>Преглед на съдържанието на файла</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileHandler" xml:space="preserve">
+    <value>Обработчик на профили</value>
+    <comment>MT — assumed a descriptive label; if this names a code component it should stay in English</comment>
+  </data>
+  <data name="ProfileUnavailable" xml:space="preserve">
+    <value>Профилът на този персонаж не е достъпен.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdateFailed" xml:space="preserve">
+    <value>Промените в профила не могат да бъдат запазени.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdated" xml:space="preserve">
+    <value>Профилът е обновен ({count, plural, one {# поле} other {# полета}}).</value>
+    <comment>MT — verbatim from the locale sheet; two categories only</comment>
+  </data>
+  <data name="Progress" xml:space="preserve">
+    <value>Напредък</value>
+    <comment>MT</comment>
+  </data>
+  <data name="QuickActions" xml:space="preserve">
+    <value>Бързи действия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RecentChanges" xml:space="preserve">
+    <value>Скорошни промени</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Обнови</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="RemoveEntry" xml:space="preserve">
+    <value>Премахни запис</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Reply" xml:space="preserve">
+    <value>Отговори</value>
+    <comment>MT — assumed the mail reply action (imperative), not the noun</comment>
+  </data>
+  <data name="ResActiveScenesSubtitle" xml:space="preserve">
+    <value>Сесии, които текат в момента.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResAdminWikiKicker" xml:space="preserve">
+    <value>Екип · Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResAnyoneCanEdit" xml:space="preserve">
+    <value>всеки може да редактира</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResCategoryGeneral" xml:space="preserve">
+    <value>Общи</value>
+    <comment>MT — assumed a settings category label</comment>
+  </data>
+  <data name="ResChangeCount" xml:space="preserve">
+    <value>{count, plural, one {# промяна} other {# промени}}</value>
+    <comment>MT — verbatim from the locale sheet; two categories only</comment>
+  </data>
+  <data name="ResChangedBadge" xml:space="preserve">
+    <value>променено</value>
+    <comment>MT — neuter, reads as a status badge</comment>
+  </data>
+  <data name="ResConfigHomeKicker" xml:space="preserve">
+    <value>Администрация · конфигурация на сървъра</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResConfigSectionKicker" xml:space="preserve">
+    <value>Администрация · настройки на сървъра</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDefaultValueTooltip" xml:space="preserve">
+    <value>По подразбиране: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDraft" xml:space="preserve">
+    <value>Чернова</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResHistory" xml:space="preserve">
+    <value>История</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResInvalid" xml:space="preserve">
+    <value>Невалидно</value>
+    <comment>MT — neuter, reads as a validation badge</comment>
+  </data>
+  <data name="ResJoin" xml:space="preserve">
+    <value>Присъедини се</value>
+    <comment>MT — assumed «join a scene», imperative button</comment>
+  </data>
+  <data name="ResNoScenesFound" xml:space="preserve">
+    <value>Няма намерени сцени.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResOnThisPage" xml:space="preserve">
+    <value>На тази страница</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResRead" xml:space="preserve">
+    <value>Четене</value>
+    <comment>MT — assumed a noun (view/read mode or permission), matching Wiki · Четене; if it is a button it should be «Прочети»</comment>
+  </data>
+  <data name="ResRoutingErrorHint" xml:space="preserve">
+    <value>Това съобщение означава, че персонализираната страница НЕ се съпоставя от рутера.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSaveFailedShort" xml:space="preserve">
+    <value>Неуспешно запазване</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResScenesSubtitle" xml:space="preserve">
+    <value>Разглеждайте и наблюдавайте ролеви сесии.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSearchTitlesPlaceholder" xml:space="preserve">
+    <value>Търсене в заглавията…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResStartedAt" xml:space="preserve">
+    <value>Начало: {0}</value>
+    <comment>MT — restructured to a colon: a participle would have to agree with an unknown subject gender</comment>
+  </data>
+  <data name="ResTabLive" xml:space="preserve">
+    <value>На живо</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResTabRecent" xml:space="preserve">
+    <value>Скорошни</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResValidationFailed" xml:space="preserve">
+    <value>Неуспешна валидация</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResViewLog" xml:space="preserve">
+    <value>Преглед на дневника</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatDrafts" xml:space="preserve">
+    <value>Чернови</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTotalPages" xml:space="preserve">
+    <value>Общо страници</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTranslations" xml:space="preserve">
+    <value>Преводи</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsConnectFailed" xml:space="preserve">
+    <value>[Грешка] Неуспешно свързване: {0}</value>
+    <comment>MT — terminal log tags translated; they are player-facing prose, not identifiers</comment>
+  </data>
+  <data name="ResWsConnectedTo" xml:space="preserve">
+    <value>[Система] Свързано с {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsDisconnectFailed" xml:space="preserve">
+    <value>[Грешка] Неуспешно прекъсване на връзката: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsDisconnected" xml:space="preserve">
+    <value>[Система] Връзката е прекъсната</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsReceived" xml:space="preserve">
+    <value>[Получено] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsSendFailed" xml:space="preserve">
+    <value>[Грешка] Неуспешно изпращане: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsSent" xml:space="preserve">
+    <value>[Изпратено] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetChanges" xml:space="preserve">
+    <value>Отмени промените</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="ResetToDefault" xml:space="preserve">
+    <value>Върни по подразбиране</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefaults" xml:space="preserve">
+    <value>Върни всички по подразбиране</value>
+    <comment>MT — «всички» marks the plural-scope difference from ResetToDefault</comment>
+  </data>
+  <data name="Restrictions" xml:space="preserve">
+    <value>Ограничения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsBuilderHelper" xml:space="preserve">
+    <value>напр. wizard, builder</value>
+    <comment>MT — flag names left in English: config values / privilege levels per glossary</comment>
+  </data>
+  <data name="RestrictionsDescription" xml:space="preserve">
+    <value>Ограничете кои играчи могат да използват определени команди или функции според флагове, правомощия или атрибути.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsHelper" xml:space="preserve">
+    <value>напр. wizard, royalty, admin</value>
+    <comment>MT — flag names left in English: config values / privilege levels per glossary</comment>
+  </data>
+  <data name="RestrictionsLabel" xml:space="preserve">
+    <value>Ограничения (разделени със запетая)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAddRole" xml:space="preserve">
+    <value>Добави роля</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAllow" xml:space="preserve">
+    <value>Разреши</value>
+    <comment>MT — permission tri-state value</comment>
+  </data>
+  <data name="RolAssignFailed" xml:space="preserve">
+    <value>Присвояването на ролята е неуспешно.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAssigned" xml:space="preserve">
+    <value>Присвоено: {0}</value>
+    <comment>MT — colon construction avoids participle agreement with the role name</comment>
+  </data>
+  <data name="RolAssignedRoles" xml:space="preserve">
+    <value>Присвоени роли</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolBackToActiveScenes" xml:space="preserve">
+    <value>Назад към активните сцени</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolBackToScenes" xml:space="preserve">
+    <value>Назад към сцените</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolColorHelper" xml:space="preserve">
+    <value>CSS цвят, напр. #6cde9a</value>
+    <comment>MT — `CSS` and the hex value kept as machine identifiers</comment>
+  </data>
+  <data name="RolColorLabel" xml:space="preserve">
+    <value>Цвят</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposePlaceholder" xml:space="preserve">
+    <value>Поза, реплика или разказ…</value>
+    <comment>MT — rendered as nouns; the English verbs pose/say/narrate have no compact Bulgarian imperative that fits the input hint</comment>
+  </data>
+  <data name="RolDeleteConfirm" xml:space="preserve">
+    <value>Да се изтрие ли „{0}“ ({1})? Ролята ще бъде премахната от всички акаунти, които я притежават.</value>
+    <comment>MT — second sentence names «ролята» explicitly so no pronoun agrees with the interpolated name</comment>
+  </data>
+  <data name="RolDeleteFailed" xml:space="preserve">
+    <value>Изтриването на ролята е неуспешно.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleteTitle" xml:space="preserve">
+    <value>Изтриване на роля</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleted" xml:space="preserve">
+    <value>Изтрито: {0}</value>
+    <comment>MT — colon construction avoids participle agreement with the role name</comment>
+  </data>
+  <data name="RolDeny" xml:space="preserve">
+    <value>Забрани</value>
+    <comment>MT — permission tri-state value</comment>
+  </data>
+  <data name="RolEditedBadge" xml:space="preserve">
+    <value>редактирано</value>
+    <comment>MT — neuter, reads as a status badge</comment>
+  </data>
+  <data name="RolEditedTimes" xml:space="preserve">
+    <value>{count, plural, one {Редактирано # път} other {Редактирано # пъти}}</value>
+    <comment>MT — verbatim from the locale sheet; the `Edited` entry in the placeholders list is an extractor artefact, not a real placeholder</comment>
+  </data>
+  <data name="RolEnterUsername" xml:space="preserve">
+    <value>Въведете потребителско име за търсене.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolHeading" xml:space="preserve">
+    <value>Роли и разрешения</value>
+    <comment>MT — matches EnumPermRolesAdmin</comment>
+  </data>
+  <data name="RolInherit" xml:space="preserve">
+    <value>Наследяване</value>
+    <comment>MT — permission tri-state value</comment>
+  </data>
+  <data name="RolKicker" xml:space="preserve">
+    <value>Управление · Контрол на достъпа</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLiveBadge" xml:space="preserve">
+    <value>НА ЖИВО</value>
+    <comment>MT — all-caps badge, matching the source</comment>
+  </data>
+  <data name="RolLiveScene" xml:space="preserve">
+    <value>Сцена на живо</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLookUp" xml:space="preserve">
+    <value>Потърси</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="RolModePose" xml:space="preserve">
+    <value>Поза</value>
+    <comment>MT — compose-mode label, noun to match RolModeSay</comment>
+  </data>
+  <data name="RolModeSay" xml:space="preserve">
+    <value>Реплика</value>
+    <comment>MT — compose-mode label; noun («line of speech») to pair with «Поза»</comment>
+  </data>
+  <data name="RolModeSemipose" xml:space="preserve">
+    <value>Полупоза</value>
+    <comment>MT — MUSH semipose; formed by analogy with «поза»</comment>
+  </data>
+  <data name="RolNameLabel" xml:space="preserve">
+    <value>Име</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNameRequired" xml:space="preserve">
+    <value>Името е задължително.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNewRole" xml:space="preserve">
+    <value>Нова роля</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoAccountFound" xml:space="preserve">
+    <value>Няма намерен акаунт за „{0}“.</value>
+    <comment>MT — Bulgarian quotation marks substituted for the English curly quotes</comment>
+  </data>
+  <data name="RolNoPoses" xml:space="preserve">
+    <value>Няма пози в тази сцена.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoRolesAssigned" xml:space="preserve">
+    <value>Няма присвоени роли.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoRolesDefined" xml:space="preserve">
+    <value>Няма дефинирани роли.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNotConnected" xml:space="preserve">
+    <value>Няма връзка с играта — свържете се, за да публикувате и получавате пози на живо.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPageTitle" xml:space="preserve">
+    <value>Роли</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPoseCount" xml:space="preserve">
+    <value>{count, plural, one {# поза} other {# пози}}</value>
+    <comment>MT — verbatim from the locale sheet; two categories only</comment>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>По-високата стойност има превес при конфликт</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPriorityLabel" xml:space="preserve">
+    <value>Приоритет</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoveFailed" xml:space="preserve">
+    <value>Премахването на ролята е неуспешно.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoveRole" xml:space="preserve">
+    <value>Премахни</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="RolRemoved" xml:space="preserve">
+    <value>Премахнато: {0}</value>
+    <comment>MT — colon construction avoids participle agreement with the role name</comment>
+  </data>
+  <data name="RolSaveFailed" xml:space="preserve">
+    <value>Запазването е неуспешно.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaveRole" xml:space="preserve">
+    <value>Запази ролята</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaved" xml:space="preserve">
+    <value>Запазено: {0}</value>
+    <comment>MT — colon construction avoids participle agreement with the role name</comment>
+  </data>
+  <data name="RolScene" xml:space="preserve">
+    <value>Сцена</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneIn" xml:space="preserve">
+    <value>Сцена в {0}</value>
+    <comment>MT — {0} is a room name; no inflection required after the preposition</comment>
+  </data>
+  <data name="RolSceneNotFound" xml:space="preserve">
+    <value>Сцената не е намерена.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSearchAccountPrompt" xml:space="preserve">
+    <value>Потърсете акаунт, за да управлявате ролите му.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSearchByUsername" xml:space="preserve">
+    <value>Търсене по потребителско име…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSelectOrCreate" xml:space="preserve">
+    <value>Изберете роля или създайте нова.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugAndNameRequired" xml:space="preserve">
+    <value>Slug и име са задължителни.</value>
+    <comment>MT — `slug` kept untranslated per glossary</comment>
+  </data>
+  <data name="RolSlugHelper" xml:space="preserve">
+    <value>Стабилен машинен ключ. Не може да се променя след създаване.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugLabel" xml:space="preserve">
+    <value>Slug</value>
+    <comment>MT — kept untranslated per glossary; used as an identifier in the UI</comment>
+  </data>
+  <data name="RolSystemBadge" xml:space="preserve">
+    <value>Системна</value>
+    <comment>MT — feminine, agrees with «роля» (the badge marks a built-in role)</comment>
+  </data>
+  <data name="RolTabAssignments" xml:space="preserve">
+    <value>Присвоявания</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabRoles" xml:space="preserve">
+    <value>Роли</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolUntitled" xml:space="preserve">
+    <value>Без заглавие</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolViewArchive" xml:space="preserve">
+    <value>Виж архива</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolWaitingForActivity" xml:space="preserve">
+    <value>Изчакване на активност…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolWatchLive" xml:space="preserve">
+    <value>Гледай на живо</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Rooms" xml:space="preserve">
+    <value>Стаи:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingError" xml:space="preserve">
+    <value>Грешка в маршрутизацията:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingErrorDescription" xml:space="preserve">
+    <value>Категорията „{0}“ има персонализирана страница, която трябва да се изобразява вместо DynamicConfig.</value>
+    <comment>MT — «DynamicConfig» is a component name, left in English</comment>
+  </data>
+  <data name="RoutingErrorExpected" xml:space="preserve">
+    <value>Това съобщение означава, че персонализираната страница НЕ се разпознава от маршрутизатора.</value>
+    <comment>MT — emphatic capitalised НЕ mirrors the English NOT</comment>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Запази</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="SaveConfiguration" xml:space="preserve">
+    <value>Запази конфигурацията</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>Конфигурацията не можа да бъде запазена: {0}</value>
+    <comment>MT — {0} (an error text) placed after a colon so it needs no agreement</comment>
+  </data>
+  <data name="SaveNotImplemented" xml:space="preserve">
+    <value>Функцията за запазване още не е реализирана</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Saving" xml:space="preserve">
+    <value>Запазване...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SceneArchive" xml:space="preserve">
+    <value>Сцени</value>
+    <comment>MT — translates the English value «Scenes», not the key name</comment>
+  </data>
+  <data name="SearchAllSettings" xml:space="preserve">
+    <value>Търсене във всички настройки</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SearchCharacters" xml:space="preserve">
+    <value>Търсене на персонажи…</value>
+    <comment>MT — U+2026 ellipsis preserved from the source</comment>
+  </data>
+  <data name="SearchSettings" xml:space="preserve">
+    <value>Търсене в настройките...</value>
+    <comment>MT — three ASCII dots preserved from the source</comment>
+  </data>
+  <data name="Security" xml:space="preserve">
+    <value>Сигурност</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SecurityCategoryDescription" xml:space="preserve">
+    <value>Контрол на достъпа, правила за sitelock и блокирани имена</value>
+    <comment>MT — «sitelock» kept in English (MUSH config feature name)</comment>
+  </data>
+  <data name="SelectedFile" xml:space="preserve">
+    <value>Избран файл</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Send" xml:space="preserve">
+    <value>Изпрати</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="SendMessage" xml:space="preserve">
+    <value>Изпрати съобщение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Server" xml:space="preserve">
+    <value>Сървър</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerCategoryDescription" xml:space="preserve">
+    <value>Мрежови връзки, база данни и основни настройки на сървъра</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerConfiguration" xml:space="preserve">
+    <value>Конфигурация на сървъра</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerSettings" xml:space="preserve">
+    <value>Настройки на сървъра</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerUri" xml:space="preserve">
+    <value>URI на сървъра</value>
+    <comment>MT — «URI» kept in Latin</comment>
+  </data>
+  <data name="SetAsIcon" xml:space="preserve">
+    <value>Задай като икона на профила</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Настройки</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SettingsCount" xml:space="preserve">
+    <value>{0} настройки</value>
+    <comment>MT — «настройка» is feminine, so the ordinary plural applies after the numeral, not a бройна форма</comment>
+  </data>
+  <data name="SettingsLabel" xml:space="preserve">
+    <value>Настройки за {0}</value>
+    <comment>MT — restructured so {0} (a category name) follows a preposition and stays uninflected</comment>
+  </data>
+  <data name="Sitelock" xml:space="preserve">
+    <value>Sitelock</value>
+    <comment>MT — MUSH config feature name, kept in English</comment>
+  </data>
+  <data name="SitelockAccessRulesHint" xml:space="preserve">
+    <value>Правила за достъп:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockDescription" xml:space="preserve">
+    <value>Определете кои сайтове могат да се свързват, да създават играчи или да използват гост-акаунти.</value>
+    <comment>MT — lowercase generic «guest accounts» here, not the Guest privilege level</comment>
+  </data>
+  <data name="SitelockRuleAddFailed" xml:space="preserve">
+    <value>Правилото за sitelock не можа да бъде добавено</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleAdded" xml:space="preserve">
+    <value>Успешно добавено правило за sitelock: {0}</value>
+    <comment>MT — restructured to avoid «за sitelock за {0}»; {0} moved after a colon</comment>
+  </data>
+  <data name="SitelockRuleRemoveFailed" xml:space="preserve">
+    <value>Правилото за sitelock не можа да бъде премахнато</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleRemoved" xml:space="preserve">
+    <value>Успешно премахнато правило за sitelock: {0}</value>
+    <comment>MT — parallel restructuring with SitelockRuleAdded</comment>
+  </data>
+  <data name="SitelockRules" xml:space="preserve">
+    <value>Правила за sitelock</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SoftcodeEditor" xml:space="preserve">
+    <value>Редактор на softcode</value>
+    <comment>MT — «softcode» is a glossary term, kept in English</comment>
+  </data>
+  <data name="StaffOnlyField" xml:space="preserve">
+    <value>Само за екипа — промените се прилагат само ако сте член на екипа.</value>
+    <comment>MT — «staff» rendered as «екип» consistently</comment>
+  </data>
+  <data name="StartConversion" xml:space="preserve">
+    <value>Стартирай преобразуването</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Statistics" xml:space="preserve">
+    <value>Статистика</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Subject" xml:space="preserve">
+    <value>Тема</value>
+    <comment>MT — assumed the mail subject line field</comment>
+  </data>
+  <data name="SuggestionManagement" xml:space="preserve">
+    <value>Управление на предложенията</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Suggestions" xml:space="preserve">
+    <value>Предложения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SuggestionsDescription" xml:space="preserve">
+    <value>Управлявайте категориите за проверка на правописа и предложенията, използвани за алтернативи на сгрешени думи в помощните статии, имената на функции и друг потребителски вход.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Summary" xml:space="preserve">
+    <value>Обобщение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SupportedFormatsConfig" xml:space="preserve">
+    <value>Поддържани формати: .cnf, .conf, .txt (макс. 1MB)</value>
+    <comment>MT — extensions and unit left as-is</comment>
+  </data>
+  <data name="SupportedFormatsDb" xml:space="preserve">
+    <value>Поддържани формати: .db, .txt (макс. 100MB)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TempC" xml:space="preserve">
+    <value>Темп. (C)</value>
+    <comment>MT — abbreviation kept short for a table column; unit letter left in Latin</comment>
+  </data>
+  <data name="TempF" xml:space="preserve">
+    <value>Темп. (F)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAddAttribute" xml:space="preserve">
+    <value>Добави атрибут</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrEmpty" xml:space="preserve">
+    <value>(празно)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindCommand" xml:space="preserve">
+    <value>Тригер за команда</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindData" xml:space="preserve">
+    <value>Данни</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindFunction" xml:space="preserve">
+    <value>Функция</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindListen" xml:space="preserve">
+    <value>Тригер за слушане</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindText" xml:space="preserve">
+    <value>Текст</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserError" xml:space="preserve">
+    <value>Грешка: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserExampleLabel" xml:space="preserve">
+    <value>напр.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserGo" xml:space="preserve">
+    <value>Отиди</value>
+    <comment>MT — assumed a «go to dbref» button</comment>
+  </data>
+  <data name="TermBrowserHere" xml:space="preserve">
+    <value>Тук</value>
+    <comment>MT — object-browser scope filter</comment>
+  </data>
+  <data name="TermBrowserMine" xml:space="preserve">
+    <value>Мои</value>
+    <comment>MT — object-browser scope filter (my objects)</comment>
+  </data>
+  <data name="TermBrowserNoObjects" xml:space="preserve">
+    <value>Няма намерени обекти.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserSearch" xml:space="preserve">
+    <value>Търсене</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermClear" xml:space="preserve">
+    <value>Изчисти</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermClearTerminal" xml:space="preserve">
+    <value>Изчисти терминала</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCollapseAttributes" xml:space="preserve">
+    <value>Свий атрибутите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCollapseObjects" xml:space="preserve">
+    <value>Свий обектите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCreateRoom" xml:space="preserve">
+    <value>Създай стая</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCreateThing" xml:space="preserve">
+    <value>Създай нещо</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermDeletedAttribute" xml:space="preserve">
+    <value>Изтрито: &amp;{0}</value>
+    <comment>MT — `&amp;` attribute prefix kept as MUSH syntax; colon avoids participle agreement</comment>
+  </data>
+  <data name="TermEditor" xml:space="preserve">
+    <value>Редактор</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermErrorLine" xml:space="preserve">
+    <value>[Грешка] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermErrorLoadingObject" xml:space="preserve">
+    <value>Грешка при зареждане на обекта: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEvalResult" xml:space="preserve">
+    <value>Резултат от изчислението</value>
+    <comment>MT — «eval» rendered descriptively; no established Bulgarian MUSH term</comment>
+  </data>
+  <data name="TermExpandAttributes" xml:space="preserve">
+    <value>Разгъни атрибутите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermExpandObjects" xml:space="preserve">
+    <value>Разгъни обектите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermFilterAttributes" xml:space="preserve">
+    <value>Филтриране на атрибути…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpBack" xml:space="preserve">
+    <value>Назад</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpClose" xml:space="preserve">
+    <value>Затвори</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpEmpty" xml:space="preserve">
+    <value>Потърсете по-горе или щракнете върху „📖 Show full help“ в редактора.</value>
+    <comment>MT — quoted label kept verbatim per context note (emitted unlocalized by mush-monaco.js)</comment>
+  </data>
+  <data name="TermHelpKindCommand" xml:space="preserve">
+    <value>Команда</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpKindFunction" xml:space="preserve">
+    <value>Функция</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpSearchPlaceholder" xml:space="preserve">
+    <value>Търсене на функции и команди…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpSwitches" xml:space="preserve">
+    <value>Превключватели: {0}</value>
+    <comment>MT — MUSH command switches; «ключове» avoided to prevent collision with ключалка (lock)</comment>
+  </data>
+  <data name="TermInputPlaceholder" xml:space="preserve">
+    <value>say здравей   ·   pose маха   ·   look   ·   who</value>
+    <comment>MT — command verbs kept in English as game syntax per context note; only arguments localized</comment>
+  </data>
+  <data name="TermMushHelp" xml:space="preserve">
+    <value>MUSH помощ</value>
+    <comment>MT — `MUSH` kept untranslated per glossary</comment>
+  </data>
+  <data name="TermNoAttributeSelected" xml:space="preserve">
+    <value>Няма избран атрибут</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoAttributes" xml:space="preserve">
+    <value>Няма атрибути.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoMatch" xml:space="preserve">
+    <value>Няма съвпадение.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoOutput" xml:space="preserve">
+    <value>(няма резултат)</value>
+    <comment>MT — «изход» avoided here; it is reserved for exit per the sheet</comment>
+  </data>
+  <data name="TermNotLoggedIn" xml:space="preserve">
+    <value>не сте влезли</value>
+    <comment>MT — polite Вие-form</comment>
+  </data>
+  <data name="TermObjectNamePlaceholder" xml:space="preserve">
+    <value>име</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermObjects" xml:space="preserve">
+    <value>Обекти</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermRefreshAttributes" xml:space="preserve">
+    <value>Обнови атрибутите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSavedAttribute" xml:space="preserve">
+    <value>Запазено: &amp;{0} върху #{1}.</value>
+    <comment>MT — `&amp;` and `#` kept as MUSH attribute/dbref syntax</comment>
+  </data>
+  <data name="TermSelectAnObject" xml:space="preserve">
+    <value>Изберете обект.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSoftcodeEditorTitle" xml:space="preserve">
+    <value>Редактор на softcode</value>
+    <comment>MT — `softcode` kept untranslated per glossary</comment>
+  </data>
+  <data name="TermTest" xml:space="preserve">
+    <value>Тест</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermTestTooltip" xml:space="preserve">
+    <value>Тест — изчисляване без запазване</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermUnsaved" xml:space="preserve">
+    <value>незапазено</value>
+    <comment>MT — neuter, reads as a status badge</comment>
+  </data>
+  <data name="Terminal" xml:space="preserve">
+    <value>Терминал</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TextFiles" xml:space="preserve">
+    <value>Текстови файлове</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Things" xml:space="preserve">
+    <value>Неща:</value>
+    <comment>MT — MUSH object type, per sheet «нещо»</comment>
+  </data>
+  <data name="To" xml:space="preserve">
+    <value>До</value>
+    <comment>MT — assumed the mail recipient field label, not the preposition in a range</comment>
+  </data>
+  <data name="Total" xml:space="preserve">
+    <value>Общо:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TotalObjects" xml:space="preserve">
+    <value>Общо обекти:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TotalWords" xml:space="preserve">
+    <value>Общо думи</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Type" xml:space="preserve">
+    <value>Тип: {0}</value>
+    <comment>MT — {0} follows a colon and stays uninflected</comment>
+  </data>
+  <data name="TypeDecimal" xml:space="preserve">
+    <value>Десетично число</value>
+    <comment>MT — config field data type</comment>
+  </data>
+  <data name="TypeList" xml:space="preserve">
+    <value>Списък</value>
+    <comment>MT — config field data type</comment>
+  </data>
+  <data name="TypeNumber" xml:space="preserve">
+    <value>Число</value>
+    <comment>MT — config field data type</comment>
+  </data>
+  <data name="TypeOptional" xml:space="preserve">
+    <value>{0} (незадължително)</value>
+    <comment>MT — restructured: «Optional» is an adjective that would have to agree in gender with the interpolated type name, so it is moved to an invariant parenthetical</comment>
+  </data>
+  <data name="TypeText" xml:space="preserve">
+    <value>Текст</value>
+    <comment>MT — config field data type</comment>
+  </data>
+  <data name="TypeYesNo" xml:space="preserve">
+    <value>Да/Не</value>
+    <comment>MT</comment>
+  </data>
+  <data name="UnsavedChanges" xml:space="preserve">
+    <value>Незапазени промени</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Uploading" xml:space="preserve">
+    <value>Качване...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Urgent" xml:space="preserve">
+    <value>Спешно</value>
+    <comment>MT — assumed a mail priority label (neuter, invariant)</comment>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Стойност</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ValuesCommaSeparated" xml:space="preserve">
+    <value>Стойности (разделени със запетая)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WarningCount" xml:space="preserve">
+    <value>{count, plural, one {# предупреждение} other {# предупреждения}}</value>
+    <comment>MT — verbatim from the locale sheet; two categories only</comment>
+  </data>
+  <data name="Warnings" xml:space="preserve">
+    <value>Предупреждения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WarningsLabel" xml:space="preserve">
+    <value>Предупреждения ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Weather" xml:space="preserve">
+    <value>Време</value>
+    <comment>MT — assumed meteorological weather (the Blazor sample component), not «time»</comment>
+  </data>
+  <data name="WeatherDescription" xml:space="preserve">
+    <value>Този компонент демонстрира извличане на данни от сървъра.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WebSocketConnectionTest" xml:space="preserve">
+    <value>Тест на връзката по WebSocket</value>
+    <comment>MT — «WebSocket» kept in English per glossary</comment>
+  </data>
+  <data name="WebSocketTest" xml:space="preserve">
+    <value>Тест на WebSocket</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidAction" xml:space="preserve">
+    <value>Действие</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidActionFailed" xml:space="preserve">
+    <value>Действието е неуспешно.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidActiveScenes" xml:space="preserve">
+    <value>Активни сцени</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBack" xml:space="preserve">
+    <value>Назад</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseArchive" xml:space="preserve">
+    <value>Разгледай архива</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseCharacters" xml:space="preserve">
+    <value>Разгледай героите</value>
+    <comment>MT — «character» rendered «герой» consistently across all batches</comment>
+  </data>
+  <data name="WidBrowseScenes" xml:space="preserve">
+    <value>Разгледай сцените</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidConfigureQuickLinks" xml:space="preserve">
+    <value>Настрой бързите връзки</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidCreateFirstCharacter" xml:space="preserve">
+    <value>Създайте първия си герой, за да започнете да играете.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidCreateYourCharacter" xml:space="preserve">
+    <value>Създайте своя герой</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFieldRequired" xml:space="preserve">
+    <value>Полето {0} е задължително.</value>
+    <comment>MT — «Полето» carries the agreement so the interpolated field name stays uninflected</comment>
+  </data>
+  <data name="WidFillRequiredFields" xml:space="preserve">
+    <value>Моля, попълнете маркираните задължителни полета.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFormNoPages" xml:space="preserve">
+    <value>Този формуляр няма страници.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFormStepOf" xml:space="preserve">
+    <value>Стъпка {0} от {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameStartingUp" xml:space="preserve">
+    <value>Играта се стартира…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidJoinScene" xml:space="preserve">
+    <value>Присъедини се към сцената</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidLoadingWikiPage" xml:space="preserve">
+    <value>Зареждане на wiki страницата</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNewCharacter" xml:space="preserve">
+    <value>Нов герой</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNewHere" xml:space="preserve">
+    <value>Нов ли сте тук?</value>
+    <comment>MT — polite Вие-form</comment>
+  </data>
+  <data name="WidNext" xml:space="preserve">
+    <value>Напред</value>
+    <comment>MT — wizard navigation button</comment>
+  </data>
+  <data name="WidNoActiveScenes" xml:space="preserve">
+    <value>В момента няма активни сцени.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoCharacterYet" xml:space="preserve">
+    <value>Все още нямате герой</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoRecentWikiActivity" xml:space="preserve">
+    <value>Няма скорошна активност в wiki.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNobodyConnected" xml:space="preserve">
+    <value>В момента няма свързани играчи.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNothingToDisplay" xml:space="preserve">
+    <value>Няма какво да се покаже.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidOnlineNow" xml:space="preserve">
+    <value>Онлайн сега</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidPlayersOnline" xml:space="preserve">
+    <value>Играчи онлайн</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidPluginChangedReloading" xml:space="preserve">
+    <value>Плъгин е променен — презареждане…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidQuickstartIntro" xml:space="preserve">
+    <value>Започнете, като прочетете wiki, разгледате героите или се включите в сцена.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidReadTheWiki" xml:space="preserve">
+    <value>Прочети Wiki</value>
+    <comment>MT — `Wiki` kept untranslated, case copied from source</comment>
+  </data>
+  <data name="WidRecentWikiActivity" xml:space="preserve">
+    <value>Скорошна активност в Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSceneIn" xml:space="preserve">
+    <value>Сцена в {0}</value>
+    <comment>MT — {0} is a room name; Bulgarian has no noun cases, so the preposition needs no inflection</comment>
+  </data>
+  <data name="WidSceneLive" xml:space="preserve">
+    <value>НА ЖИВО</value>
+    <comment>MT — all-caps badge, matching the source</comment>
+  </data>
+  <data name="WidScenePoseCount" xml:space="preserve">
+    <value>{count, plural, one {# поза} other {# пози}}</value>
+    <comment>MT — verbatim from the locale sheet; two categories only</comment>
+  </data>
+  <data name="WidSchemaUnavailable" xml:space="preserve">
+    <value>Схемата на уиджета не е налична.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSubmit" xml:space="preserve">
+    <value>Изпрати</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="WidTrustCommunity" xml:space="preserve">
+    <value>Общност</value>
+    <comment>MT — package trust level</comment>
+  </data>
+  <data name="WidTrustCommunityTooltip" xml:space="preserve">
+    <value>Познат източник от общността — прегледайте кода, преди да го приложите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustOfficial" xml:space="preserve">
+    <value>Официален</value>
+    <comment>MT — masculine, agrees with «източник» (source) as in the matching tooltip</comment>
+  </data>
+  <data name="WidTrustOfficialTooltip" xml:space="preserve">
+    <value>Поддържа се от организацията SharpMUSH</value>
+    <comment>MT — `SharpMUSH` kept untranslated per glossary</comment>
+  </data>
+  <data name="WidTrustUnknown" xml:space="preserve">
+    <value>Неизвестен</value>
+    <comment>MT — masculine, agrees with «източник» (source)</comment>
+  </data>
+  <data name="WidTrustUnknownTooltip" xml:space="preserve">
+    <value>Непроверен източник — проверете всичко, преди да го приложите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidViewAllCount" xml:space="preserve">
+    <value>Виж всички {0} →</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidWaitingForServer" xml:space="preserve">
+    <value>Изчакване сървърът да стане достъпен…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidWidgetRenderFailed" xml:space="preserve">
+    <value>Този уиджет не можа да се покаже.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneFooter" xml:space="preserve">
+    <value>Долен колонтитул</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneLeftSidebar" xml:space="preserve">
+    <value>Лява странична лента</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneMainContent" xml:space="preserve">
+    <value>Основно съдържание</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneRightSidebar" xml:space="preserve">
+    <value>Дясна странична лента</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneTopBar" xml:space="preserve">
+    <value>Горна лента</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Wiki" xml:space="preserve">
+    <value>Wiki</value>
+    <comment>MT — kept untranslated per glossary</comment>
+  </data>
+  <data name="WikiAdmin" xml:space="preserve">
+    <value>Администриране на wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAdminDescription" xml:space="preserve">
+    <value>Управление на wiki страниците: метаданни, защита, състояние на публикуване и групови операции.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAllLocales" xml:space="preserve">
+    <value>Всички езици</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAllNamespaces" xml:space="preserve">
+    <value>Всички namespace</value>
+    <comment>MT — «namespace» is a glossary term kept in English; left uninflected because a Cyrillic plural ending on a Latin word would read badly</comment>
+  </data>
+  <data name="WikiAvailableTranslations" xml:space="preserve">
+    <value>Налично също и на</value>
+    <comment>MT — assumed a label followed by a list of language links</comment>
+  </data>
+  <data name="WikiBatchFailed" xml:space="preserve">
+    <value>{count, plural, one {# страница е с грешка} other {# страници са с грешка}}</value>
+    <comment>MT — verbatim from the locale sheet; two categories only</comment>
+  </data>
+  <data name="WikiBatchSucceeded" xml:space="preserve">
+    <value>{count, plural, one {# страница е обновена} other {# страници са обновени}}</value>
+    <comment>MT — verbatim from the locale sheet; two categories only</comment>
+  </data>
+  <data name="WikiBrowseByNamespace" xml:space="preserve">
+    <value>Преглед по namespace</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiCategory" xml:space="preserve">
+    <value>Категория</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDelete" xml:space="preserve">
+    <value>Изтрий</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="WikiDeleteConfirmText" xml:space="preserve">
+    <value>Да се изтрият {count, plural, one {# страница} other {# страници}} и всичките им версии? Това не може да бъде отменено.</value>
+    <comment>MT — verbatim from the locale sheet; two categories only</comment>
+  </data>
+  <data name="WikiDeleteConfirmTitle" xml:space="preserve">
+    <value>Изтриване на страници</value>
+    <comment>MT — dialog title, verbal noun rather than imperative</comment>
+  </data>
+  <data name="WikiEdit" xml:space="preserve">
+    <value>Редактирай</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="WikiEditMetadata" xml:space="preserve">
+    <value>Редактиране на метаданните</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiFallbackCreateTranslation" xml:space="preserve">
+    <value>Преведете тази страница</value>
+    <comment>MT — polite Вие-form, an invitation rather than a toolbar button</comment>
+  </data>
+  <data name="WikiFallbackNotice" xml:space="preserve">
+    <value>Тази страница все още не е налична на {0} — показва се версията на {1}.</value>
+    <comment>MT — both language names sit after prepositions, so no agreement is required of them</comment>
+  </data>
+  <data name="WikiLocaleFilter" xml:space="preserve">
+    <value>Език</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiMetadataSaveFailed" xml:space="preserve">
+    <value>Метаданните не можаха да бъдат запазени: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiMetadataSaved" xml:space="preserve">
+    <value>Метаданните са запазени за {0}</value>
+    <comment>MT — {0} (a page title) follows a preposition and stays uninflected</comment>
+  </data>
+  <data name="WikiNamespace" xml:space="preserve">
+    <value>Namespace</value>
+    <comment>MT — glossary term, kept in English</comment>
+  </data>
+  <data name="WikiNamespaceEmpty" xml:space="preserve">
+    <value>Все още няма страници в този namespace.</value>
+    <comment>MT — «namespace» treated as masculine for the demonstrative</comment>
+  </data>
+  <data name="WikiNamespaceFilter" xml:space="preserve">
+    <value>Филтър по namespace</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNoPages" xml:space="preserve">
+    <value>Няма намерени wiki страници.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNoRecentChanges" xml:space="preserve">
+    <value>Все още няма редактирани страници.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiPageNotExist" xml:space="preserve">
+    <value>Тази страница още не съществува. Можете да я създадете с бутона по-долу.</value>
+    <comment>MT — polite Вие-form</comment>
+  </data>
+  <data name="WikiProtect" xml:space="preserve">
+    <value>Защити</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="WikiProtected" xml:space="preserve">
+    <value>Защитена</value>
+    <comment>MT — page status; feminine to agree with «страница»</comment>
+  </data>
+  <data name="WikiPublished" xml:space="preserve">
+    <value>Публикувана</value>
+    <comment>MT — page status; feminine to agree with «страница»</comment>
+  </data>
+  <data name="WikiRecentChanges" xml:space="preserve">
+    <value>Скорошни промени</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiRevision" xml:space="preserve">
+    <value>Версия</value>
+    <comment>MT — per sheet, revision → версия</comment>
+  </data>
+  <data name="WikiTags" xml:space="preserve">
+    <value>Етикети</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTagsHelper" xml:space="preserve">
+    <value>Натиснете Enter или +, за да добавите етикет</value>
+    <comment>MT — key name «Enter» and the + sign kept as-is</comment>
+  </data>
+  <data name="WikiTitle" xml:space="preserve">
+    <value>Заглавие</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTranslations" xml:space="preserve">
+    <value>Преводи</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUnprotect" xml:space="preserve">
+    <value>Премахни защитата</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUntranslatedOnly" xml:space="preserve">
+    <value>Само липсващи преводи</value>
+    <comment>MT — assumed a filter checkbox label</comment>
+  </data>
+  <data name="WikiUpdated" xml:space="preserve">
+    <value>Обновена</value>
+    <comment>MT — assumed a page-status/last-changed column referring to «страница» (feminine); if it labels a bare timestamp, neuter «Обновено» would be better</comment>
+  </data>
+  <data name="WkAddTagPlaceholder" xml:space="preserve">
+    <value>добавяне на етикет…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAddTranslation" xml:space="preserve">
+    <value>Добавяне на превод…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetDeleteFailed" xml:space="preserve">
+    <value>Изтриването на {0} е неуспешно.</value>
+    <comment>MT — restructured so {0} follows a preposition and needs no gender agreement</comment>
+  </data>
+  <data name="WkAssetDeleted" xml:space="preserve">
+    <value>Изтрито: {0}</value>
+    <comment>MT — colon construction avoids participle agreement with the file name</comment>
+  </data>
+  <data name="WkAssetUploadHint" xml:space="preserve">
+    <value>PNG, JPEG, GIF, WebP или SVG — макс. 10 MB.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetUploaded" xml:space="preserve">
+    <value>Качено: {0}</value>
+    <comment>MT — colon construction avoids participle agreement with the file name</comment>
+  </data>
+  <data name="WkBold" xml:space="preserve">
+    <value>Получер</value>
+    <comment>MT — standard Bulgarian typographic term for bold</comment>
+  </data>
+  <data name="WkBytesDelta" xml:space="preserve">
+    <value>{0} байта</value>
+    <comment>MT — бройна форма after a numeral; delta values are never exactly 1 in practice</comment>
+  </data>
+  <data name="WkColActions" xml:space="preserve">
+    <value>Действия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColAuthor" xml:space="preserve">
+    <value>Автор</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColFileName" xml:space="preserve">
+    <value>Име на файла</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColKind" xml:space="preserve">
+    <value>Вид</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColNew" xml:space="preserve">
+    <value>Нова версия</value>
+    <comment>MT — assumed a revision-diff column; bare adjective would need a gender it cannot take alone</comment>
+  </data>
+  <data name="WkColOld" xml:space="preserve">
+    <value>Стара версия</value>
+    <comment>MT — assumed a revision-diff column; bare adjective would need a gender it cannot take alone</comment>
+  </data>
+  <data name="WkColPreview" xml:space="preserve">
+    <value>Преглед</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColSize" xml:space="preserve">
+    <value>Размер</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColTimestampSummary" xml:space="preserve">
+    <value>Време / Обобщение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColUploaded" xml:space="preserve">
+    <value>Качено на</value>
+    <comment>MT — assumed an upload-date column</comment>
+  </data>
+  <data name="WkColUploader" xml:space="preserve">
+    <value>Качил</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCompareSelected" xml:space="preserve">
+    <value>Сравни избраните</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="WkComparingRevisions" xml:space="preserve">
+    <value>Сравняване на версии</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCopyMarkdown" xml:space="preserve">
+    <value>Копирай Markdown</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCopyUrl" xml:space="preserve">
+    <value>Копирай URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCurrentRevision" xml:space="preserve">
+    <value>текуща</value>
+    <comment>MT — assumed it modifies «версия» (feminine); reads as a badge on the current revision</comment>
+  </data>
+  <data name="WkCustomLocalePlaceholder" xml:space="preserve">
+    <value>Езиков етикет, напр. es или pt-BR</value>
+    <comment>MT — language tags kept as machine identifiers</comment>
+  </data>
+  <data name="WkDeleteAssetConfirm" xml:space="preserve">
+    <value>Това ще изтрие окончателно {0}. Връзките към този ресурс ще се счупят.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteAssetPrompt" xml:space="preserve">
+    <value>Да се изтрие ли „{0}“? Страниците с този ресурс ще показват счупено изображение.</value>
+    <comment>MT — dropped the pronoun «it» so nothing agrees with the file name</comment>
+  </data>
+  <data name="WkDeleteAssetTitle" xml:space="preserve">
+    <value>Изтриване на ресурса?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteFailed" xml:space="preserve">
+    <value>Изтриването е неуспешно.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteTranslation" xml:space="preserve">
+    <value>Изтриване на този превод</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffLoadFailed" xml:space="preserve">
+    <value>Една или и двете версии не могат да бъдат заредени. Проверете номерата на версиите.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffPageTitle" xml:space="preserve">
+    <value>Разлики: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffRevNew" xml:space="preserve">
+    <value>Версия {0} — нова</value>
+    <comment>MT — {0} is a revision number, so «версия» carries the feminine agreement</comment>
+  </data>
+  <data name="WkDiffRevOld" xml:space="preserve">
+    <value>Версия {0} — стара</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffSideBySide" xml:space="preserve">
+    <value>Успоредно</value>
+    <comment>MT — diff view mode</comment>
+  </data>
+  <data name="WkDiffUnified" xml:space="preserve">
+    <value>Обединено</value>
+    <comment>MT — diff view mode</comment>
+  </data>
+  <data name="WkDirectiveCategoryHeader" xml:space="preserve">
+    <value>Категория: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveNoPages" xml:space="preserve">
+    <value>Все още няма страници.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveTagHeader" xml:space="preserve">
+    <value>Етикет: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiscard" xml:space="preserve">
+    <value>Отхвърли</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="WkEditLivePreview" xml:space="preserve">
+    <value>редактиране · преглед на живо</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFileTooLarge" xml:space="preserve">
+    <value>Файлът надвишава ограничението от 10 MB.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFormattingHelp" xml:space="preserve">
+    <value>Помощ за форматирането</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHeading" xml:space="preserve">
+    <value>Заглавие</value>
+    <comment>MT — assumed the Markdown heading toolbar button, not a page heading</comment>
+  </data>
+  <data name="WkHistoryIntro" xml:space="preserve">
+    <value>Изберете по-стара и по-нова версия и ги сравнете. Общо {0} версии.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHistoryLocale" xml:space="preserve">
+    <value>Език</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHistoryPageTitle" xml:space="preserve">
+    <value>История: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkImageLibrary" xml:space="preserve">
+    <value>Библиотека с изображения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkImageLibraryDescription" xml:space="preserve">
+    <value>Управление на качените медийни ресурси, използвани в wiki и портала.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkInheritedFromSource" xml:space="preserve">
+    <value>Наследено от изходния език — редактирайте го в изходната страница.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkInsertImage" xml:space="preserve">
+    <value>Вмъкване на изображение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkItalic" xml:space="preserve">
+    <value>Курсив</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindDocument" xml:space="preserve">
+    <value>Документ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindImage" xml:space="preserve">
+    <value>Изображение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindImagePlural" xml:space="preserve">
+    <value>Изображения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindOther" xml:space="preserve">
+    <value>Друго</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindVideo" xml:space="preserve">
+    <value>Видео</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLinesAdded" xml:space="preserve">
+    <value>+{0} добавени</value>
+    <comment>MT — assumed «lines»; plural participle, as the counter is a diff total</comment>
+  </data>
+  <data name="WkLinesRemoved" xml:space="preserve">
+    <value>−{0} премахнати</value>
+    <comment>MT — U+2212 minus sign preserved from the source</comment>
+  </data>
+  <data name="WkLink" xml:space="preserve">
+    <value>Връзка</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkListItem" xml:space="preserve">
+    <value>Елемент от списък</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLocaleSelector" xml:space="preserve">
+    <value>Език</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkMarkdownCopied" xml:space="preserve">
+    <value>Markdown е копиран в клипборда.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkMinorEdit" xml:space="preserve">
+    <value>Дребна редакция</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoAssets" xml:space="preserve">
+    <value>Все още няма качени ресурси.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoAssetsFound" xml:space="preserve">
+    <value>Няма намерени ресурси.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoRevisionHistory" xml:space="preserve">
+    <value>Няма история на версиите.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPageFallbackTitle" xml:space="preserve">
+    <value>Страница</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPageTitlePlaceholder" xml:space="preserve">
+    <value>Заглавие на страницата</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPublishChanges" xml:space="preserve">
+    <value>Публикувай промените</value>
+    <comment>MT — plain imperative, button</comment>
+  </data>
+  <data name="WkPublishNotice" xml:space="preserve">
+    <value>Промените се публикуват веднага и са видими за всички.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkQuote" xml:space="preserve">
+    <value>Цитат</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoreFailed" xml:space="preserve">
+    <value>Възстановяването е неуспешно: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoreRevision" xml:space="preserve">
+    <value>Възстанови тази версия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoredToRevision" xml:space="preserve">
+    <value>Възстановено до версия {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRevisionHistory" xml:space="preserve">
+    <value>История на версиите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRevisionShort" xml:space="preserve">
+    <value>версия №{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkSourceLocaleLabel" xml:space="preserve">
+    <value>{0} (източник)</value>
+    <comment>MT — {0} is a language name; parenthesis keeps it at a syntactic boundary</comment>
+  </data>
+  <data name="WkStaffMedia" xml:space="preserve">
+    <value>Екип · Медия</value>
+    <comment>MT — «Staff» rendered «Екип» consistently across all batches</comment>
+  </data>
+  <data name="WkStorageUsed" xml:space="preserve">
+    <value>Използвано пространство</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkSummaryPlaceholder" xml:space="preserve">
+    <value>Обобщете промяната си (напр. „поправка на правописна грешка“)…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTotalAssets" xml:space="preserve">
+    <value>Общо ресурси</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationConflict" xml:space="preserve">
+    <value>Този превод беше променен, докато го редактирахте. Презаредете го, за да видите текущата версия — незапазеният ви текст остава в редактора.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationDeleteConfirmText" xml:space="preserve">
+    <value>Преводът ({0}) и неговата история ще бъдат премахнати. Страницата и другите ѝ езици не се засягат.</value>
+    <comment>MT — {0} is a language name; placed in apposition in parentheses so no agreement is needed</comment>
+  </data>
+  <data name="WkTranslationDeleteConfirmTitle" xml:space="preserve">
+    <value>Изтриване на превода?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationReload" xml:space="preserve">
+    <value>Презареди превода</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationSaveFailed" xml:space="preserve">
+    <value>Преводът не може да бъде запазен: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationSaved" xml:space="preserve">
+    <value>Преводът е запазен.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUploadError" xml:space="preserve">
+    <value>Грешка при качване: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUploadFailed" xml:space="preserve">
+    <value>Качването е неуспешно: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUrlCopied" xml:space="preserve">
+    <value>URL адресът е копиран.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkViewGrid" xml:space="preserve">
+    <value>Мрежа</value>
+    <comment>MT — view mode toggle</comment>
+  </data>
+  <data name="WkViewList" xml:space="preserve">
+    <value>Списък</value>
+    <comment>MT — view mode toggle</comment>
+  </data>
+  <data name="WkViewRevision" xml:space="preserve">
+    <value>Прегледай тази версия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkWikiAssets" xml:space="preserve">
+    <value>Wiki ресурси</value>
+    <comment>MT — `Wiki` kept untranslated per glossary</comment>
+  </data>
+  <data name="WordAddFailed" xml:space="preserve">
+    <value>Думата не можа да бъде добавена: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordAdded" xml:space="preserve">
+    <value>Думата „{0}“ е добавена в категория „{1}“</value>
+    <comment>MT — explicit «думата» supplies the gender so the participle does not have to agree with the interpolated string</comment>
+  </data>
+  <data name="WordEmpty" xml:space="preserve">
+    <value>Думата не може да бъде празна</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordRemoveFailed" xml:space="preserve">
+    <value>Думата не можа да бъде изтрита: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordRemoved" xml:space="preserve">
+    <value>Думата „{0}“ е премахната от категория „{1}“</value>
+    <comment>MT — parallel construction with WordAdded</comment>
+  </data>
+  <data name="Words" xml:space="preserve">
+    <value>Думи:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordsCount" xml:space="preserve">
+    <value>{0} думи</value>
+    <comment>MT — «дума» is feminine, ordinary plural after the numeral</comment>
+  </data>
+</root>
