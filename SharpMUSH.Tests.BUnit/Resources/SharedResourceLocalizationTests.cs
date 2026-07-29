@@ -36,12 +36,14 @@ public class SharedResourceLocalizationTests
 	}
 
 	[Test]
-	public async Task Translated_cultures_resolve_to_their_satellite_value()
+	[Arguments("fr", "Panneau d'administration")]
+	[Arguments("de", "Admin-Panel")]
+	public async Task Translated_cultures_resolve_to_their_satellite_value(string tag, string expected)
 	{
-		using var culture = CultureScope.For("fr");
+		using var culture = CultureScope.For(tag);
 		var loc = PortalLocalizer.Create();
 
-		await Assert.That(loc["AdminPanel"].Value).IsEqualTo("Panneau d'administration");
+		await Assert.That(loc["AdminPanel"].Value).IsEqualTo(expected);
 	}
 
 	[Test]
