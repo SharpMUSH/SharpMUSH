@@ -470,6 +470,17 @@ public partial class MemgraphDatabase : IWikiService
 			.AsReadOnly();
 	}
 
+	public async Task<IReadOnlyList<WikiTranslation>> GetAllTranslationsAsync(int skip = 0, int take = 50)
+	{
+		await using var session = driver.AsyncSession();
+		var result = await session.RunAsync(
+			"MATCH (t:WikiTranslation) RETURN t ORDER BY t.pageId ASC, t.locale ASC SKIP $skip LIMIT $take",
+			new { skip, take });
+
+		var records = await result.ToListAsync();
+		return records.Select(r => NodeToWikiTranslation(r["t"].As<INode>())).ToList().AsReadOnly();
+	}
+
 	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
 	{
 		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
@@ -485,7 +496,7 @@ public partial class MemgraphDatabase : IWikiService
 		return NodeToWikiTranslation(records[0]["t"].As<INode>());
 	}
 
-	public async Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+	public async Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> UpsertTranslationAsync(
 		string pageId, string locale, string title, string markdown,
 		string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
 	{
@@ -513,7 +524,7 @@ public partial class MemgraphDatabase : IWikiService
 			await using var session = driver.AsyncSession();
 			// ExecuteWriteAsync gives one managed transaction, so here the row write and the revision append
 			// really are atomic — the spec's preferred shape rather than the conditional-update fallback.
-			return await session.ExecuteWriteAsync<OneOf<WikiTranslation, Error<string>>>(async tx =>
+			return await session.ExecuteWriteAsync<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>>(async tx =>
 			{
 				// No MERGE. MERGE + ON MATCH SET revisionNumber = revisionNumber + 1 is an unconditional
 				// bump: two translators who both loaded revision 4 both produce a 5 and one loses their
@@ -561,10 +572,20 @@ public partial class MemgraphDatabase : IWikiService
 				var records = await result.ToListAsync();
 				if (records.Count == 0)
 				{
-					// Zero rows matched: somebody else already bumped it, or it does not exist. Not retried.
-					return new Error<string>(
-						$"The '{normalized}' translation changed while you were editing, or does not exist "
-						+ $"(expected revision {expectedRevisionNumber}). Reload and re-apply your changes.");
+					// A CREATE that returns nothing is a fault, not a race — the conflict it can lose is the
+					// uniqueness constraint, and that throws into the handler below instead.
+					if (expectedRevisionNumber is null)
+						return new Error<string>($"Insert of translation '{normalized}' returned no document.");
+
+					// Zero rows matched the compare-and-swap: somebody else already bumped it, or deleted it.
+					// Probing inside the same transaction is what tells those apart. Neither is retried.
+					var probe = await tx.RunAsync(
+						"MATCH (t:WikiTranslation {pageId: $pageId, locale: $locale}) RETURN t",
+						new { pageId, locale = normalized });
+
+					return (await probe.ToListAsync()).Count == 0
+						? WikiWriteConflict.TranslationGone
+						: WikiWriteConflict.StaleRevision;
 				}
 
 				var translation = NodeToWikiTranslation(records[0]["t"].As<INode>());
@@ -576,18 +597,32 @@ public partial class MemgraphDatabase : IWikiService
 		catch (Exception ex)
 		{
 			// On the create path a lost race against the (pageId, locale) uniqueness constraint lands here,
-			// and there is nothing of this caller's to preserve. On the update path a conflict has already
-			// returned above, so reaching this handler with a non-null expected revision is a real fault —
-			// report it, never re-read and re-apply, which would overwrite the winner with stale markdown.
+			// and there is nothing of this caller's to preserve.
 			if (expectedRevisionNumber is null)
 			{
 				var existing = await GetTranslationAsync(pageId, normalized);
-				if (existing.IsT0)
-					return new Error<string>(
-						$"A '{normalized}' translation already exists for page '{pageId}'. "
-						+ "Pass its current revision number to update it.");
+				if (existing.IsT0) return WikiWriteConflict.AlreadyExists;
+			}
+			else if (ex is Neo4jException { Code: { } code } && code.Contains("TransientError", StringComparison.Ordinal))
+			{
+				// Two overlapping compare-and-swaps do not always reach the zero-rows branch: Memgraph
+				// aborts the loser outright ("Cannot resolve conflicting transactions"), and reports it as a
+				// DatabaseException carrying a Memgraph.TransientError.* code — so the driver's managed retry
+				// never fires and it arrives here. Nothing of this caller's landed, making it the same lost
+				// write the zero-rows branch reports, and just as un-retryable: re-running the lambda would
+				// re-apply this caller's stale markdown over the winner's.
+				//
+				// Reporting a transaction abort as a lost write is deliberately conservative, and the project
+				// owner has accepted the false positive it admits: a writer whose expectedRevisionNumber was
+				// perfectly valid and who merely lost a scheduler race is still told the row changed. The
+				// remedy, if that ever costs anything, is a retry on ABORT ONLY — never on a stale revision,
+				// which must always surface to the human. Widening it to both is the data loss.
+				var current = await GetTranslationAsync(pageId, normalized);
+				return current.IsT0 ? WikiWriteConflict.StaleRevision : WikiWriteConflict.TranslationGone;
 			}
 
+			// Anything else with a non-null expected revision is a real fault: report it, and never re-read
+			// and re-apply, which would overwrite the winner with stale markdown.
 			return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");
 		}
 	}

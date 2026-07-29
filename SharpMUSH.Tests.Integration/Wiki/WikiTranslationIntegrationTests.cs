@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
@@ -140,8 +139,9 @@ public class WikiTranslationIntegrationTests
 
 		var result = await Wiki.UpsertTranslationAsync(page.Id, "en", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1).IsTypeOf<Error<string>>();
+		await Assert.That(result.IsT2)
+			.IsTrue()
+			.Because("shadowing the source locale is a malformed request, not a race the caller lost");
 	}
 
 	[Test]
@@ -151,7 +151,7 @@ public class WikiTranslationIntegrationTests
 
 		var result = await Wiki.UpsertTranslationAsync(ghost, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.IsT2).IsTrue();
 	}
 
 	[Test]
@@ -160,6 +160,60 @@ public class WikiTranslationIntegrationTests
 		var page = await CreateSourcePageAsync("MissingLocale");
 
 		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "de")).IsT1).IsTrue();
+	}
+
+	/// <summary>
+	/// Pages the whole translation stream and returns every row belonging to <paramref name="pageId"/>.
+	/// The session database is shared, so nothing here may assume a total count — but paging really does
+	/// have to be exercised, because a provider whose LIMIT/START (or SKIP/LIMIT) is transposed returns a
+	/// plausible-looking answer that a single unpaged fetch would never catch.
+	/// </summary>
+	private async Task<List<WikiTranslation>> ScanTranslationsAsync(string pageId)
+	{
+		var found = new List<WikiTranslation>();
+		const int window = 5;
+		for (var skip = 0; ; skip += window)
+		{
+			var batch = await Wiki.GetAllTranslationsAsync(skip, window);
+			if (batch.Count == 0) break;
+			found.AddRange(batch.Where(t => t.PageId == pageId));
+			if (batch.Count < window) break;
+		}
+
+		return found;
+	}
+
+	[Test]
+	public async Task GetAllTranslationsAsync_PagesTheWholeStreamWithBodies()
+	{
+		var page = await CreateSourcePageAsync("BulkScan");
+		await Wiki.UpsertTranslationAsync(
+			page.Id, "fr", "Titre fr", "corps bulk fr", "#2", null, true, expectedRevisionNumber: null);
+		await Wiki.UpsertTranslationAsync(
+			page.Id, "de", "Titel de", "korpus bulk de", "#2", null, true, expectedRevisionNumber: null);
+
+		var mine = await ScanTranslationsAsync(page.Id);
+
+		await Assert.That(mine.Select(t => t.Locale).Order()).IsEquivalentTo(new[] { "de", "fr" });
+		await Assert.That(mine.Single(t => t.Locale == "fr").MarkdownSource).IsEqualTo("corps bulk fr");
+		await Assert.That(mine.Single(t => t.Locale == "de").PlainText)
+			.Contains("korpus")
+			.Because("in-game search matches PlainText, so a provider returning bodyless rows here would "
+				+ "silently make every translation unsearchable rather than fail");
+	}
+
+	[Test]
+	public async Task GetAllTranslationsAsync_IncludesUnpublishedDrafts()
+	{
+		var page = await CreateSourcePageAsync("BulkDraft");
+		await Wiki.UpsertTranslationAsync(
+			page.Id, "de", "Entwurf", "korpus entwurf", "#2", null, published: false, expectedRevisionNumber: null);
+
+		var mine = await ScanTranslationsAsync(page.Id);
+
+		await Assert.That(mine.Single().Published)
+			.IsFalse()
+			.Because("this mirrors GetAllPagesAsync: storage returns every row and the caller filters");
 	}
 
 	[Test]
@@ -338,10 +392,9 @@ public class WikiTranslationIntegrationTests
 			page.Id, "fr", "perdu", "corps perdu", "#4", null, true, expectedRevisionNumber: 1);
 
 		await Assert.That(winner.IsT0).IsTrue();
-		await Assert.That(loser.IsT1)
-			.IsTrue()
+		await Assert.That(loser.AsT1)
+			.IsEqualTo(WikiWriteConflict.StaleRevision)
 			.Because("a second revision 2 for (PageId, Locale) must be refused, never silently accepted");
-		await Assert.That(loser.AsT1).IsTypeOf<Error<string>>();
 
 		var revisions = await Wiki.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
 		await Assert.That(revisions.Count(r => r.RevisionNumber == 2))
@@ -363,36 +416,65 @@ public class WikiTranslationIntegrationTests
 		var again = await Wiki.UpsertTranslationAsync(
 			page.Id, "fr", "écrasé", "corps écrasé", "#3", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(again.IsT1).IsTrue();
+		await Assert.That(again.AsT1).IsEqualTo(WikiWriteConflict.AlreadyExists);
 		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
 			.IsEqualTo("corps v1");
+	}
+
+	[Test]
+	public async Task UpsertTranslationAsync_ReportsAConflictWhenTheTranslationWasDeletedMidEdit()
+	{
+		// The third lost-write shape, and the one all four implementations used to phrase differently — one
+		// of them (Memgraph) folded it into the stale-revision wording, so the HTTP boundary's phrase match
+		// answered 409 there and 400 everywhere else for the same race. Pinned per provider now.
+		var page = await CreateSourcePageAsync("DeletedMidEdit");
+		await Wiki.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+		await Wiki.DeleteTranslationAsync(page.Id, "fr", "#3");
+
+		var orphaned = await Wiki.UpsertTranslationAsync(
+			page.Id, "fr", "orphelin", "corps orphelin", "#2", null, true, expectedRevisionNumber: 1);
+
+		await Assert.That(orphaned.AsT1).IsEqualTo(WikiWriteConflict.TranslationGone);
+		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).IsT1)
+			.IsTrue()
+			.Because("a compare-and-swap must not resurrect a row somebody deliberately deleted");
 	}
 
 	[Test]
 	public async Task ConcurrentUpsertsWithTheSameExpectedRevisionLoseNoProse()
 	{
 		// The spec's concurrency case. Needs a real backend: the in-memory dictionary cannot reproduce the
-		// race. Whichever ordering the store picks, exactly one writer wins, the other gets Error<string>,
-		// and the loser's markdown appears in no revision.
-		var page = await CreateSourcePageAsync("Concurrent");
-		await Wiki.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+		// race. Whichever ordering the store picks, exactly one writer wins, the other gets a
+		// WikiWriteConflict, and the loser's markdown appears in no revision.
+		//
+		// Repeated deliberately. A single attempt usually resolves through the tidy "zero rows matched"
+		// branch and never reaches the one where the store aborts the loser mid-write — on ArangoDB that
+		// second branch reported a plain error, so a genuine lost write answered 400 instead of 409, and one
+		// attempt found it perhaps one run in five. Both branches must classify the loser identically.
+		for (var attempt = 0; attempt < 10; attempt++)
+		{
+			var page = await CreateSourcePageAsync($"Concurrent{attempt}");
+			await Wiki.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
 
-		var results = await Task.WhenAll(
-			Wiki.UpsertTranslationAsync(page.Id, "fr", "A", "corps a", "#2", null, true, expectedRevisionNumber: 1),
-			Wiki.UpsertTranslationAsync(page.Id, "fr", "B", "corps b", "#3", null, true, expectedRevisionNumber: 1));
+			var results = await Task.WhenAll(
+				Wiki.UpsertTranslationAsync(page.Id, "fr", "A", "corps a", "#2", null, true, expectedRevisionNumber: 1),
+				Wiki.UpsertTranslationAsync(page.Id, "fr", "B", "corps b", "#3", null, true, expectedRevisionNumber: 1));
 
-		await Assert.That(results.Count(r => r.IsT0))
-			.IsEqualTo(1)
-			.Because("exactly one compare-and-swap on the same expected revision may succeed");
-		await Assert.That(results.Count(r => r.IsT1)).IsEqualTo(1);
+			await Assert.That(results.Count(r => r.IsT0))
+				.IsEqualTo(1)
+				.Because("exactly one compare-and-swap on the same expected revision may succeed");
+			await Assert.That(results.Single(r => !r.IsT0).AsT1)
+				.IsEqualTo(WikiWriteConflict.StaleRevision)
+				.Because("the loser lost a race, and 400 would tell it to edit a body that was never wrong");
 
-		var revisions = await Wiki.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
-		await Assert.That(revisions.Count).IsEqualTo(2);
-		var winnerMarkdown = results.Single(r => r.IsT0).AsT0.MarkdownSource;
-		var loserMarkdown = winnerMarkdown == "corps a" ? "corps b" : "corps a";
-		await Assert.That(revisions.Select(r => r.MarkdownSource))
-			.DoesNotContain(loserMarkdown)
-			.Because("the loser is never retried, so its prose must not reach the store at all");
-		await Assert.That((await Wiki.GetTranslationsAsync(page.Id)).Count).IsEqualTo(1);
+			var revisions = await Wiki.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
+			await Assert.That(revisions.Count).IsEqualTo(2);
+			var winnerMarkdown = results.Single(r => r.IsT0).AsT0.MarkdownSource;
+			var loserMarkdown = winnerMarkdown == "corps a" ? "corps b" : "corps a";
+			await Assert.That(revisions.Select(r => r.MarkdownSource))
+				.DoesNotContain(loserMarkdown)
+				.Because("the loser is never retried, so its prose must not reach the store at all");
+			await Assert.That((await Wiki.GetTranslationsAsync(page.Id)).Count).IsEqualTo(1);
+		}
 	}
 }

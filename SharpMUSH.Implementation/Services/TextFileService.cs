@@ -225,6 +225,16 @@ public class TextFileService : ITextFileService
 		return results;
 	}
 
+	/// <summary>
+	/// Rebuilds the whole entry index from disk.
+	/// </summary>
+	/// <remarks>
+	/// The replacement index is built entirely off to the side and swapped in under one lock. Clearing the
+	/// live index first and refilling it category by category — which is what this used to do — leaves it
+	/// visibly empty, then visibly partial, for as long as the file reads take, and every concurrent
+	/// <c>help</c> during that window answers from whatever happened to be indexed so far. <c>@readcache</c>
+	/// on a live game is exactly when the most people are reading help.
+	/// </remarks>
 	public async Task ReindexAsync()
 	{
 		var baseDir = _options.Value.TextFile.TextFilesDirectory;
@@ -236,29 +246,42 @@ public class TextFileService : ITextFileService
 			return;
 		}
 
-		lock (_indexLock)
-		{
-			_categoryIndexes.Clear();
-		}
-
 		var categories = await ListCategoriesAsync();
+		var rebuilt = new Dictionary<string, Dictionary<string, IndexEntry>>(StringComparer.OrdinalIgnoreCase);
 
 		foreach (var category in categories)
 		{
-			await IndexCategoryAsync(category);
+			var categoryIndex = await BuildCategoryIndexAsync(category);
+			if (categoryIndex is not null)
+			{
+				rebuilt[category] = categoryIndex;
+			}
 		}
 
-		_logger.LogInformation("Indexed {Count} categories", _categoryIndexes.Count);
+		lock (_indexLock)
+		{
+			_categoryIndexes.Clear();
+			foreach (var (category, categoryIndex) in rebuilt)
+			{
+				_categoryIndexes[category] = categoryIndex;
+			}
+		}
+
+		_logger.LogInformation("Indexed {Count} categories", rebuilt.Count);
 	}
 
-	private async Task IndexCategoryAsync(string category)
+	/// <summary>
+	/// Indexes one category's markdown files, or returns null when the directory has gone.
+	/// Publishing the result is the caller's job — see <see cref="ReindexAsync"/>.
+	/// </summary>
+	private async Task<Dictionary<string, IndexEntry>?> BuildCategoryIndexAsync(string category)
 	{
 		var baseDir = _options.Value.TextFile.TextFilesDirectory;
 		var categoryPath = Path.Combine(baseDir, category);
 
 		if (!Directory.Exists(categoryPath))
 		{
-			return;
+			return null;
 		}
 
 		var categoryIndex = new Dictionary<string, IndexEntry>(StringComparer.OrdinalIgnoreCase);
@@ -270,12 +293,8 @@ public class TextFileService : ITextFileService
 			await IndexMarkdownFileAsync(file, categoryIndex);
 		}
 
-		lock (_indexLock)
-		{
-			_categoryIndexes[category] = categoryIndex;
-		}
-
 		_logger.LogDebug("Indexed category {Category}: {Count} entries", category, categoryIndex.Count);
+		return categoryIndex;
 	}
 
 	private Task IndexMarkdownFileAsync(string filePath, Dictionary<string, IndexEntry> index)

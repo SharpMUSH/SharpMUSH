@@ -147,6 +147,19 @@ public interface IWikiService
 	Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId);
 
 	/// <summary>
+	/// Lists ALL translations with their bodies, ordered by page then locale, with skip/take pagination.
+	/// Includes unpublished drafts — callers are responsible for visibility filtering, exactly as with
+	/// <see cref="GetAllPagesAsync"/>.
+	/// </summary>
+	/// <remarks>
+	/// Deliberately symmetric with <see cref="GetAllPagesAsync"/> and deliberately not a query: in-game
+	/// search is an in-process scan, so making the translation stream readable in bulk is the whole of what
+	/// the four backends have to provide. Bodies are included because that is what search matches on —
+	/// <see cref="GetTranslationsAsync"/> returns bodyless summaries and cannot serve this.
+	/// </remarks>
+	Task<IReadOnlyList<WikiTranslation>> GetAllTranslationsAsync(int skip = 0, int take = 50);
+
+	/// <summary>
 	/// Retrieves one translation by its <c>(pageId, locale)</c> identity. <paramref name="locale"/> is
 	/// matched case-insensitively after normalisation.
 	/// Returns <c>NotFound</c> when no translation exists for that locale.
@@ -157,18 +170,20 @@ public interface IWikiService
 	/// Creates or updates a translation. Mirrors <see cref="UpdateAsync"/>: bumps the per-locale
 	/// <c>RevisionNumber</c>, writes a <see cref="WikiRevision"/> carrying the locale, and re-renders
 	/// HTML and plain text through the same <c>WikiMarkdigPipeline</c>.
-	/// Returns <c>Error&lt;string&gt;</c> when the page does not exist, when
-	/// <paramref name="locale"/> is unparseable, when it would shadow the page's own
-	/// <c>SourceLocale</c>, when a concurrent write loses the unique-index race, or when
-	/// <paramref name="expectedRevisionNumber"/> does not match what is stored.
+	/// Returns <c>Error&lt;string&gt;</c> when the request itself is wrong — the page does not exist,
+	/// <paramref name="locale"/> is unparseable, or it would shadow the page's own <c>SourceLocale</c> —
+	/// and <see cref="WikiWriteConflict"/> when the request was fine but lost a race with another writer.
+	/// The two are separate cases because they demand different answers from the caller: fix the request,
+	/// versus reload and decide. Do not re-merge them into a phrased string — see the remarks on
+	/// <see cref="WikiWriteConflict"/>.
 	/// </summary>
 	/// <param name="expectedRevisionNumber">
 	/// The <c>RevisionNumber</c> the caller loaded, making this a compare-and-swap. The update applies only
 	/// if the stored value still matches, and the revision append happens in the same transaction as the row
 	/// update (or the update is made conditional and "zero rows affected" is the conflict signal).
 	/// <para>
-	/// <see langword="null"/> means <em>create-only</em>: an existing translation is an
-	/// <c>Error&lt;string&gt;</c> rather than a blind overwrite.
+	/// <see langword="null"/> means <em>create-only</em>: an existing translation is
+	/// <see cref="WikiWriteConflict.AlreadyExists"/> rather than a blind overwrite.
 	/// </para>
 	/// <para>
 	/// A conflict is <b>never</b> retried automatically. Retrying re-applies the loser's stale markdown on
@@ -177,7 +192,7 @@ public interface IWikiService
 	/// <c>(pageId, locale)</c>, where no content can be lost.
 	/// </para>
 	/// </param>
-	Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+	Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> UpsertTranslationAsync(
 		string pageId,
 		string locale,
 		string title,

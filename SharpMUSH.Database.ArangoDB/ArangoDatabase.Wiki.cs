@@ -5,6 +5,7 @@ using OneOf.Types;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Net;
 using System.Text.Json;
 
 namespace SharpMUSH.Database.ArangoDB;
@@ -519,6 +520,24 @@ public partial class ArangoDatabase : IWikiService
 			.AsReadOnly();
 	}
 
+	public async Task<IReadOnlyList<WikiTranslation>> GetAllTranslationsAsync(int skip = 0, int take = 50)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			"FOR t IN @@c SORT t.PageId ASC, t.Locale ASC LIMIT @skip, @take RETURN t",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiTranslations },
+				{ "skip", skip },
+				{ "take", take }
+			});
+
+		return result
+			.Where(e => e.ValueKind != JsonValueKind.Undefined)
+			.Select(WikiTranslationFromJson)
+			.ToList()
+			.AsReadOnly();
+	}
+
 	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
 	{
 		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
@@ -538,7 +557,7 @@ public partial class ArangoDatabase : IWikiService
 			: new NotFound();
 	}
 
-	public async Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+	public async Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> UpsertTranslationAsync(
 		string pageId, string locale, string title, string markdown,
 		string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
 	{
@@ -626,12 +645,7 @@ public partial class ArangoDatabase : IWikiService
 				// Do NOT retry: re-reading and re-applying would overwrite the winner with stale markdown,
 				// which is precisely the loss expectedRevisionNumber exists to prevent.
 				var current = await GetTranslationAsync(pageId, normalized);
-				return current.IsT0
-					? new Error<string>(
-						$"The '{normalized}' translation changed while you were editing "
-						+ $"(expected revision {expectedRevisionNumber.Value}, found {current.AsT0.RevisionNumber}). "
-						+ "Reload and re-apply your changes.")
-					: new Error<string>($"No '{normalized}' translation exists for page '{pageId}' to update.");
+				return current.IsT0 ? WikiWriteConflict.StaleRevision : WikiWriteConflict.TranslationGone;
 			}
 
 			var translation = WikiTranslationFromJson(row);
@@ -641,15 +655,27 @@ public partial class ArangoDatabase : IWikiService
 		catch (Exception ex)
 		{
 			// A lost unique-index race on the create path surfaces as a driver conflict. Reading the winner
-			// back is safe there because nothing of this caller's content was meant to land. It is NOT safe
-			// on the update path, which is why that branch returns above without touching this handler.
+			// back is safe there because nothing of this caller's content was meant to land.
 			if (expectedRevisionNumber is null)
 			{
 				var retry = await GetTranslationAsync(pageId, normalized);
-				if (retry.IsT0)
-					return new Error<string>(
-						$"A '{normalized}' translation already exists for page '{pageId}'. "
-						+ "Pass its current revision number to update it.");
+				if (retry.IsT0) return WikiWriteConflict.AlreadyExists;
+			}
+			else if (ex is ArangoException { Code: HttpStatusCode.Conflict })
+			{
+				// A genuinely simultaneous compare-and-swap does not always reach the zero-rows branch: when
+				// both writers reach the UPDATE, ArangoDB aborts the loser with a write-write conflict (HTTP
+				// 409) instead. Nothing of this caller's landed, so it is the same lost write the zero-rows
+				// branch reports — and it must be reported as one, or the loser of a real race is told its
+				// request was malformed. Still never re-read and re-applied: that overwrites the winner.
+				//
+				// Reporting a transaction abort as a lost write is deliberately conservative, and the project
+				// owner has accepted the false positive it admits: a writer whose expectedRevisionNumber was
+				// perfectly valid and who merely lost a scheduler race is still told the row changed. The
+				// remedy, if that ever costs anything, is a retry on ABORT ONLY — never on a stale revision,
+				// which must always surface to the human. Widening it to both is the data loss.
+				var current = await GetTranslationAsync(pageId, normalized);
+				return current.IsT0 ? WikiWriteConflict.StaleRevision : WikiWriteConflict.TranslationGone;
 			}
 
 			return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");

@@ -96,13 +96,17 @@ public partial class Functions
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
 		var pages = await wikiService.GetAllPagesAsync(0, 1000, ns);
 
-		return new CallState(string.Join(" ", pages.Select(WikiCommandHelper.DisplayReference)));
+		// GetAllPagesAsync includes unpublished pages. Softcode has no reader to check drafts against,
+		// so — as in wiki() and wikisearch() — a draft is never discoverable from a function.
+		return new CallState(string.Join(" ",
+			pages.Where(p => p.Published).Select(WikiCommandHelper.DisplayReference)));
 	}
 
 	/// <summary>
 	/// wikisearch(&lt;text&gt;)
 	/// Returns a space-separated list of page references whose title or body
-	/// contains the given text (case-insensitive).
+	/// contains the given text (case-insensitive), in any locale the page has been
+	/// translated into.
 	/// </summary>
 	[SharpFunction(Name = "wikisearch", MinArgs = 1, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -116,9 +120,17 @@ public partial class Functions
 		}
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
-		var matches = await ListWiki.SearchPagesAsync(wikiService, needle, 100);
+		var localization = parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
 
-		return new CallState(string.Join(" ", matches.Select(WikiCommandHelper.DisplayReference)));
+		// Softcode has no reader to check drafts against — the same reason wiki() passes
+		// includeDrafts: false — so neither an unpublished page nor an unpublished translation is ever
+		// discoverable from a function. requestedLocale is null because the matched locale only breaks
+		// display ties and this function returns references, which have no locale dimension; reading the
+		// executor's LOCALE to compute a value that is then discarded would be a query for nothing.
+		var matches = await ListWiki.SearchPagesAsync(
+			wikiService, localization, needle, 100, includeDrafts: false, requestedLocale: null);
+
+		return new CallState(string.Join(" ", matches.Select(m => WikiCommandHelper.DisplayReference(m.Page))));
 	}
 
 	/// <summary>
@@ -144,6 +156,9 @@ public partial class Functions
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
 		var pages = await wikiService.GetRecentChangesAsync(count);
 
-		return new CallState(string.Join(" ", pages.Select(WikiCommandHelper.DisplayReference)));
+		// Same rule as wikilist(): drafts are filtered out after the fetch, so a run of recent draft edits
+		// shortens the answer rather than disclosing them. Softcode has no reader to gate on.
+		return new CallState(string.Join(" ",
+			pages.Where(p => p.Published).Select(WikiCommandHelper.DisplayReference)));
 	}
 }

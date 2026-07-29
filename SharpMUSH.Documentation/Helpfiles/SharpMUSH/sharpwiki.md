@@ -16,7 +16,7 @@ the main namespace. Valid namespaces: main, help, character, system.
 Viewing and discovery:
 * `@wiki <page>` or `@wiki/view <page>` - display a page
 * `@wiki/list [<namespace>]` - list pages
-* `@wiki/search <text>` - find pages by title or content
+* `@wiki/search <text>` - find pages by title or content, in any locale
 * `@wiki/recent [<count>]` - recently edited pages (default 10)
 * `@wiki/history <page>` - revision history
 
@@ -25,6 +25,7 @@ Authoring:
 * `@wiki/edit <page>=<markdown>` - replace a page's content
 * `@wiki/append <page>=<markdown>` - add a paragraph to a page
 * `@wiki/rollback <page>=<revision #>` - restore an earlier revision
+* `@wiki/translate <page>/<lang>=<markdown>` - write one locale's translation
 
 Administration:
 * `@wiki/delete <page>` - delete a page (wizard)
@@ -46,11 +47,33 @@ appears in brackets next to the revision number on the header line.
 * `@wiki/history <page>` shows your locale's revision stream, which is numbered
   separately from the source's; `@wiki/history/source <page>` shows the source
   locale's.
+* `@wiki/translate <page>/<lang>=<markdown>` - write the `<lang>` translation.
+  See [@wiki/translate].
 
 Like `/noeval`, `/source` is a modifier rather than an action, so it combines
-with `/view` and `/history` instead of replacing them. Unpublished translations
-are invisible to anyone who could not edit the page, and never appear in
-`@wiki/list`. `@wiki/search` matches against the source text only.
+with `/view`, `/history` and `/search` instead of replacing them.
+
+Your `LOCALE` decides what you *read*. It never decides what you *write*:
+`@wiki/translate` takes the language in the command and refuses to run without
+it. Getting a read wrong shows you the wrong translation, which you can see and
+undo; getting a write wrong files your English under French, which you cannot.
+
+`@wiki/search` matches every locale a page has been translated into, not just
+the one it was written in, so you find a page by whatever wording you remember.
+Each page is listed once however many of its locales matched; when the text
+that matched was not the page's own source locale, that locale appears in
+brackets after the line, and if several locales matched, yours is the one
+shown. `@wiki/search/source <text>` matches source text only.
+
+Drafts stay out of the way: unpublished pages and unpublished translations are
+listed only for those who can edit them — `@wiki/list`, `@wiki/search` and
+`@wiki/recent` omit them, and `wikilist()`, `wikisearch()` and `wikirecent()`
+never return them.
+
+That keeps a draft's title and text out of discovery. It does not make the page
+secret: `@wiki/list` still reports a total that counts drafts, and asking for a
+page by name tells you whether one is there. Put nothing in a draft that the
+people who can guess its name should not know exists.
 
 Page content is Markdown; see `help markdown` or the wiki's own
 "Help:Markdown Guide" page (`@wiki help:markdown_guide`) for the supported
@@ -67,11 +90,13 @@ appear in-game as a placeholder.
 # @WIKI/EDIT
 # @WIKI/APPEND
 # @WIKI/ROLLBACK
+# @WIKI/TRANSLATE
 
 - `@wiki/create <title>=<markdown>`
 - `@wiki/edit <page>=<markdown>`
 - `@wiki/append <page>=<markdown>`
 - `@wiki/rollback <page>=<revision #>`
+- `@wiki/translate <page>/<lang>=<markdown>`
 
 @wiki/create makes a new wiki page. The title may carry a namespace prefix
 (`@wiki/create Help:House Rules=# House Rules`); the page's URL slug is
@@ -88,15 +113,39 @@ revision rather than rewriting history, so a rollback can itself be rolled
 back. The web portal offers the same action via the Restore button in each
 page's history dialog.
 
-Protected pages can only be edited by wizards. Each page records its author
-and last editor by dbref.
+@wiki/translate writes one locale's translation of a page — the same rows the
+web portal's language selector edits. The language is part of the target,
+after a slash: `@wiki/translate combat_primer/fr=...`. It is required, and it
+is never taken from your `LOCALE`; without it (or with a language tag SharpMUSH
+does not recognise) the command refuses and writes nothing. `@wiki/edit` writes
+the page itself, so translating a page into the language it was written in is
+refused too.
 
-### Example
+A translation keeps its own title, revision numbers and draft flag; the page's
+category, tags and protection are inherited and cannot differ. @wiki/translate
+supplies only the body, so an existing translation keeps the title and the
+draft/published state it already had, and a brand-new one starts published,
+under the source page's title. Retitle it on the web portal.
+
+If somebody else saves the same translation between your reading it and your
+sending the command, you are told so and *nothing is written* — re-read the
+page and re-apply your text. The command never retries by itself, because a
+retry would put your older text on top of theirs.
+
+Protected pages can only be edited by wizards, translations included. Each page
+records its author and last editor by dbref.
+
+## Example
+
 ```sharp
 > @wiki/create Combat Primer=# Combat Primer
 WIKI: Created page 'Combat Primer' (combat_primer).
 > @wiki/append combat_primer=Roll initiative with `+init`.
 WIKI: Appended to 'Combat Primer' (now rev 2).
+> @wiki/translate combat_primer/fr=# Manuel de Combat
+WIKI: Wrote the fr translation of 'Combat Primer' (now rev 1).
+> @wiki/translate combat_primer=# Manuel de Combat
+WIKI: a translation needs an explicit language: @wiki/translate <page>/<lang>=<text>
 ```
 
 **See Also:**
@@ -173,7 +222,8 @@ Unpublished translations are never reachable from `wiki()`.
 
 Returns #-1 NO SUCH WIKI PAGE when the page does not exist.
 
-### Example
+## Example
+
 ```sharp
 > think wiki(home, title)
 Home
@@ -201,7 +251,8 @@ A page reference is its canonical slug, which does not change between locales,
 so this list is the same whatever your `LOCALE` is. Pass a reference from it to
 [wiki()] with a locale to read that page's translation.
 
-### Example
+## Example
+
 ```sharp
 > think wikilist(help)
 help:markdown_guide
@@ -216,9 +267,13 @@ help:markdown_guide
 - `wikisearch(<text>)`
 
 Returns a space-separated list of page references whose title or content
-contains *<text>* (case-insensitive). Limited to the first 100 matches.
+contains *<text>* (case-insensitive), in any locale the page has been
+translated into. Each page appears once however many of its locales matched.
+Unpublished pages and unpublished translations are never returned. Limited to
+the first 100 matches.
 
-### Example
+## Example
+
 ```sharp
 > think wikisearch(combat)
 combat_primer house_rules

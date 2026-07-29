@@ -557,6 +557,16 @@ public partial class SurrealDatabase : IWikiService
 			.AsReadOnly();
 	}
 
+	public async Task<IReadOnlyList<WikiTranslation>> GetAllTranslationsAsync(int skip = 0, int take = 50)
+	{
+		var parameters = new Dictionary<string, object?> { ["skip"] = skip, ["take"] = take };
+		var response = await ExecuteAsync(
+				$"SELECT {WikiTranslationFields} FROM wiki_translation ORDER BY pageId ASC, locale ASC LIMIT $take START $skip",
+				parameters);
+		var results = response.GetValue<List<WikiTranslationDbRecord>>(0);
+		return (results?.Select(MapToWikiTranslation).ToList() ?? []).AsReadOnly();
+	}
+
 	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
 	{
 		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
@@ -571,7 +581,7 @@ public partial class SurrealDatabase : IWikiService
 		return MapToWikiTranslation(results[0]);
 	}
 
-	public async Task<OneOf<WikiTranslation, Error<string>>> UpsertTranslationAsync(
+	public async Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> UpsertTranslationAsync(
 			string pageId, string locale, string title, string markdown,
 			string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
 	{
@@ -607,6 +617,12 @@ public partial class SurrealDatabase : IWikiService
 			["published"] = published
 		};
 
+		// The row this call itself wrote. Building the result and the revision entry from the write's
+		// own return is what keeps the revision log honest: a read-back after a successful write can
+		// pick up a *later* writer's content and file it under this caller's dbref and edit summary.
+		// Arango reads its RETURN NEW and Memgraph reads its own returned node for the same reason.
+		WikiTranslation? saved = null;
+
 		try
 		{
 			if (expectedRevisionNumber is null)
@@ -640,12 +656,13 @@ public partial class SurrealDatabase : IWikiService
 				if (createResponse.HasErrors)
 				{
 					var winner = await GetTranslationAsync(pageId, normalized);
-					return winner.IsT0
-							? new Error<string>(
-									$"A '{normalized}' translation already exists for page '{pageId}'. "
-									+ "Pass its current revision number to update it.")
-							: new Error<string>($"Could not create translation '{normalized}' for page '{pageId}'.");
+					if (winner.IsT0) return WikiWriteConflict.AlreadyExists;
+
+					return new Error<string>($"Could not create translation '{normalized}' for page '{pageId}'.");
 				}
+
+				var created = createResponse.GetValue<List<WikiTranslationDbRecord>>(0);
+				if (created is { Count: > 0 }) saved = MapToWikiTranslation(created[0]);
 			}
 			else
 			{
@@ -675,13 +692,10 @@ public partial class SurrealDatabase : IWikiService
 					// Zero rows affected. Do NOT re-read and re-apply: that overwrites the winner with this
 					// caller's stale markdown, which is the loss expectedRevisionNumber exists to prevent.
 					var current = await GetTranslationAsync(pageId, normalized);
-					return current.IsT0
-							? new Error<string>(
-									$"The '{normalized}' translation changed while you were editing "
-									+ $"(expected revision {expectedRevisionNumber.Value}, found {current.AsT0.RevisionNumber}). "
-									+ "Reload and re-apply your changes.")
-							: new Error<string>($"No '{normalized}' translation exists for page '{pageId}' to update.");
+					return current.IsT0 ? WikiWriteConflict.StaleRevision : WikiWriteConflict.TranslationGone;
 				}
+
+				saved = MapToWikiTranslation(updated[0]);
 			}
 		}
 		catch (Exception ex)
@@ -691,21 +705,26 @@ public partial class SurrealDatabase : IWikiService
 			if (expectedRevisionNumber is null)
 			{
 				var existing = await GetTranslationAsync(pageId, normalized);
-				if (existing.IsT0)
-					return new Error<string>(
-							$"A '{normalized}' translation already exists for page '{pageId}'. "
-							+ "Pass its current revision number to update it.");
+				if (existing.IsT0) return WikiWriteConflict.AlreadyExists;
 			}
 
 			return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");
 		}
 
-		var written = await GetTranslationAsync(pageId, normalized);
-		if (written.IsT1)
-			return new Error<string>($"Upsert of translation '{normalized}' returned no document.");
+		// Only if the driver returned no row at all — not an expected path, and the read-back it falls
+		// to carries the misattribution risk described above, so it stays the exception rather than
+		// the rule.
+		if (saved is null)
+		{
+			var written = await GetTranslationAsync(pageId, normalized);
+			if (written.IsT1)
+				return new Error<string>($"Upsert of translation '{normalized}' returned no document.");
 
-		await SaveSurrealTranslationRevisionAsync(written.AsT0, editorDbref, editSummary, now);
-		return written.AsT0;
+			saved = written.AsT0;
+		}
+
+		await SaveSurrealTranslationRevisionAsync(saved, editorDbref, editSummary, now);
+		return saved;
 	}
 
 	public async Task<OneOf<OkNone, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)

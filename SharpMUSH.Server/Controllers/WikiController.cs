@@ -399,28 +399,27 @@ public class WikiController(
 					translation.Locale, translation.Title, translation.Published,
 					translation.UpdatedAt, translation.RevisionNumber)));
 			},
-			// A revision conflict is 409, not 400: the request was well-formed and the client's correct
-			// response is to reload, which is a different instruction from "your body was invalid". The
-			// endpoint does not retry — retrying would re-apply this caller's stale markdown over the
-			// winner's, which is the loss expectedRevisionNumber exists to prevent.
-			err => IsRevisionConflict(err.Value)
-				? Conflict(new { error = err.Value, reload = true })
-				: BadRequest(new { error = err.Value }));
+			// A lost write is 409, not 400: the request was well-formed and the client's correct response is
+			// to reload, which is a different instruction from "your body was invalid". The endpoint does not
+			// retry — retrying would re-apply this caller's stale markdown over the winner's, which is the
+			// loss expectedRevisionNumber exists to prevent.
+			conflict => Conflict(new { error = ConflictMessage(conflict, locale), reload = true }),
+			err => BadRequest(new { error = err.Value }));
 	}
 
 	/// <summary>
-	/// True when an upsert error is an optimistic-concurrency conflict rather than a bad request.
+	/// Human wording for a <see cref="WikiWriteConflict"/>. Phrasing lives here rather than in the four
+	/// storage implementations: it is presentation, and when it was theirs the status code depended on all
+	/// four wording it identically.
 	/// </summary>
-	/// <remarks>
-	/// Matched on the storage layer's wording because <c>OneOf&lt;T, Error&lt;string&gt;&gt;</c> carries no
-	/// error code. All four implementations (in-memory plus the three backends) phrase these two cases
-	/// identically, which is what makes the match reliable rather than lucky. If a third conflict phrasing
-	/// is ever added, promote this to a typed error rather than growing the string list — this is the one
-	/// place that would silently start answering 400.
-	/// </remarks>
-	private static bool IsRevisionConflict(string error) =>
-		error.Contains("changed while you were editing", StringComparison.OrdinalIgnoreCase)
-		|| error.Contains("already exists for page", StringComparison.OrdinalIgnoreCase);
+	private static string ConflictMessage(WikiWriteConflict conflict, string locale) => conflict switch
+	{
+		WikiWriteConflict.AlreadyExists =>
+			$"A '{locale}' translation already exists. Pass its current revision number to update it.",
+		WikiWriteConflict.TranslationGone =>
+			$"The '{locale}' translation was deleted while you were editing. Reload and re-apply your changes.",
+		_ => $"The '{locale}' translation changed while you were editing. Reload and re-apply your changes."
+	};
 
 	/// <summary>
 	/// DELETE /api/wiki/{slug}/translations/{locale}?ns=&amp;category=

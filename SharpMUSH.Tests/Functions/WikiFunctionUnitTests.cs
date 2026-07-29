@@ -92,6 +92,99 @@ public class WikiFunctionUnitTests
 		await Assert.That(result).Contains("function_search_target");
 	}
 
+	/// <summary>Creates a page and unpublishes it, returning it.</summary>
+	private async Task<WikiPage> SeedUnpublishedPageAsync(string title, string body)
+	{
+		var created = await WikiService.CreateAsync(title, body, "#1", WikiNamespace.Main, "general", "en");
+		await Assert.That(created.IsT0).IsTrue();
+		var page = created.AsT0;
+
+		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
+		await Assert.That(unpublished.IsT0).IsTrue();
+
+		return unpublished.AsT0;
+	}
+
+	/// <remarks>
+	/// Softcode is unauthenticated with respect to drafts exactly as it is with respect to draft
+	/// translations, so <c>wikisearch()</c> must never disclose an unpublished page. The published control
+	/// page shares the marker so this cannot pass by search simply finding nothing.
+	/// </remarks>
+	[Test]
+	public async Task WikiSearch_DoesNotReturnUnpublishedPages()
+	{
+		var draft = await SeedUnpublishedPageAsync(
+			"Fn Draft Search Target", "Contains the frotz-marker token.");
+		var published = await WikiService.CreateAsync(
+			"Fn Published Search Target", "Also contains the frotz-marker token.", "#1");
+		await Assert.That(published.IsT0).IsTrue();
+
+		var result = await Eval("wikisearch(frotz-marker)");
+
+		await Assert.That(result).Contains(published.AsT0.Slug);
+		await Assert.That(result)
+			.DoesNotContain(draft.Slug)
+			.Because("a draft's reference is as much of a disclosure as its body");
+	}
+
+	[Test]
+	public async Task WikiSearch_MatchesTranslationBodiesAndStillReturnsReferences()
+	{
+		var created = await WikiService.CreateAsync(
+			"Fn Translated Search Target", "en fn search body", "#1", WikiNamespace.Main, "general", "en");
+		await Assert.That(created.IsT0).IsTrue();
+		var page = created.AsT0;
+		var translated = await WikiService.UpsertTranslationAsync(
+			page.Id, "fr", "Cible fn traduite", "corps avec vertugadin", "#1", null,
+			published: true, expectedRevisionNumber: null);
+		await Assert.That(translated.IsT0).IsTrue();
+
+		var result = await Eval("wikisearch(vertugadin)");
+
+		await Assert.That(result)
+			.IsEqualTo(page.Slug)
+			.Because("wikisearch() returns references, never titles — a locale-aware search must widen what "
+				+ "is found without changing the shape of the answer");
+	}
+
+	[Test]
+	public async Task WikiSearch_DoesNotReturnPagesWhoseOnlyMatchIsADraftTranslation()
+	{
+		var created = await WikiService.CreateAsync(
+			"Fn Draft Translation Target", "en draft-tr host body", "#1", WikiNamespace.Main, "general", "en");
+		var page = created.AsT0;
+		await WikiService.UpsertTranslationAsync(
+			page.Id, "fr", "Cible brouillon", "corps avec fanfreluche", "#1", null,
+			published: false, expectedRevisionNumber: null);
+
+		await Assert.That(await Eval("wikisearch(fanfreluche)"))
+			.IsEqualTo(string.Empty)
+			.Because("softcode has no reader to gate on, so a draft translation's body is unreachable from "
+				+ "it exactly as wiki() already makes the draft itself unreachable");
+	}
+
+	[Test]
+	public async Task WikiList_DoesNotReturnUnpublishedPages()
+	{
+		var draft = await SeedUnpublishedPageAsync("Fn Draft Listed Target", "draft listing body");
+
+		var result = await Eval("wikilist(main)");
+
+		await Assert.That(result).DoesNotContain(draft.Slug);
+	}
+
+	[Test]
+	public async Task WikiRecent_DoesNotReturnUnpublishedPages()
+	{
+		// Freshly written, so it heads the UpdatedAt ordering the recent list is built from — if the filter
+		// were missing this would be the first reference in the answer, not a borderline one.
+		var draft = await SeedUnpublishedPageAsync("Fn Draft Recent Target", "draft recent body");
+
+		var result = await Eval("wikirecent(50)");
+
+		await Assert.That(result).DoesNotContain(draft.Slug);
+	}
+
 	[Test]
 	public async Task WikiRecent_ReturnsReferences_AndValidatesCount()
 	{
