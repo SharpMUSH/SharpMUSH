@@ -9,8 +9,10 @@ Target locales and their rationale are in [`README.md`](README.md).
 
 ## Step 1 — Switch to full ICU globalization data
 
-**Required the moment you add a third language, and non-negotiable if you want
-Russian and Chinese in the same build.**
+**Done.** `SharpMUSH.Client.csproj` sets
+`BlazorWebAssemblyLoadAllGlobalizationData`, and `PortalSurfacesTests` fails if
+it is ever removed. Kept here because the reasoning is what stops someone
+"optimising" it back to a shard.
 
 Blazor WASM does not ship all of CLDR. It ships one of four prebuilt shards, and
 you pick exactly one — they do not compose:
@@ -52,53 +54,42 @@ Verify: `dotnet build SharpMUSH.Client` then confirm `icudt.dat` (not
 
 ## Step 2 — Fix plurals and interpolated-noun case
 
-**Blocking.** See [`plural-forms.md`](plural-forms.md) for the full argument, the
+**Done.** The count-bearing values are ICU MessageFormat and `validate_resx.py`
+enforces legal plural categories per locale. See [`plural-forms.md`](plural-forms.md) for the full argument, the
 24 count-bearing keys, the 13 case-risk keys and the prescribed ICU MessageFormat
 change.
 
-`python3 tools/i18n/validate_resx.py` fails until step 2 is complete. That is
+`python3 tools/i18n/validate_resx.py` failed until step 2 was complete. That was
 deliberate — it is the gate that stops fifteen locales translating a shape that
-cannot express their grammar.
+cannot express their grammar, and it still enforces legal categories per locale
+on every new translation.
 
 ## Step 3 — Declare the locales
 
-`Components/LanguagePicker.razor` derives display names from
-`CultureInfo.NativeName`, so adding a locale is one line per language in
-`SupportedLocales`:
+Display names come from `CultureInfo.NativeName`, so declaring a locale is one
+entry in `SharpMUSH.Client/Resources/PortalLocales.cs`:
 
 ```csharp
-private static readonly (string Code, string Flag)[] SupportedLocales =
-[
-    ("en", "\U0001F1FA\U0001F1F8"),
-    ("de", "\U0001F1E9\U0001F1EA"),
-    ("es", "\U0001F1EA\U0001F1F8"),
-    ("fr", "\U0001F1EB\U0001F1F7"),
-    // … one per locale from README.md's table
-    ("zh-Hans", "\U0001F1E8\U0001F1F3"),
-];
+public static IReadOnlyList<string> Codes { get; } = ["en", "de", "fr"];
 ```
 
-Two cautions:
+…**and** the matching tag in `SatelliteResourceLanguages`
+(`SharpMUSH.Client.csproj`), or `PublishTrimmed` can drop resources the app only
+reaches by culture lookup at runtime — a failure that appears only in a
+published build. `PortalSurfacesTests` fails if the two lists disagree.
 
-- **Flags are not languages.** A flag for `es` privileges Spain over Latin
-  America, and `zh-Hans` has no flag at all — it is a script. The picker already
-  shows `CultureInfo.NativeName` beside the flag, so consider dropping the emoji
-  rather than picking a country per language. Cosmetic, but it is the kind of thing
-  users write in about.
+Three things to know:
+
+- **Do not declare a locale you have not translated.** A picker entry with no
+  resx offers a language and renders English. `DeclaredLocaleCoverageTests`
+  fails on it, which is the intended answer.
+- **There are no flags.** A flag is a country and a country is not a language:
+  `es` would pick Spain over Latin America, `pt-BR`/`pt-PT` are one language and
+  two flags, and `zh-Hans` is a script with no flag at all. `PortalLocales.Flag`
+  used to exist; it was deleted rather than extended. The native name is what a
+  speaker scans for.
 - `Program.cs` already falls back to `en` and clears `localStorage["locale"]` on
   `CultureNotFoundException`, so a bad stored tag self-heals. No change needed.
-
-Also register the locales for the trimmer so satellite assemblies survive
-publishing:
-
-```xml
-<PropertyGroup>
-  <!-- Satellite assemblies for every locale the LanguagePicker offers. Without
-       this, PublishTrimmed can drop resources the app only reaches by culture
-       lookup at runtime. -->
-  <SatelliteResourceLanguages>en;de;es;fr;bg;da;hr;hu;nb;nl;pl;pt-BR;ro;ru;sv;zh-Hans</SatelliteResourceLanguages>
-</PropertyGroup>
-```
 
 ## Step 4 — Translate
 
@@ -115,54 +106,57 @@ python3 tools/i18n/validate_resx.py --locale ru
 
 Sequence the locales by risk, not alphabetically:
 
-1. **`de`** first. EFIGS-covered, well-attested in Penn's data, and the longest
+1. ~~**`de`** first. EFIGS-covered, well-attested in Penn's data, and the longest
    strings — so it shakes out UI overflow before fourteen other locales are
-   sitting on top of the same layout.
-2. **`ru`** second. First three-category plural locale and first Cyrillic script;
+   sitting on top of the same layout.~~ Done; only three short strings tripped
+   the length advisory.
+2. **`ru`** next. First three-category plural locale and first Cyrillic script;
    proves step 2 actually worked.
-3. **`zh-Hans`** third. First CJK; proves step 1, and surfaces the word-break and
+3. **`zh-Hans`** after that. First CJK; proves step 1, and surfaces the word-break and
    font-fallback problems while there is still appetite to fix them.
 4. Everything else in any order. By this point the mechanism is proven and the
    remaining work is volume.
 
-Also finish **`fr`**: 264 keys still have no French value, of which 257 are the
-legacy MUSH server configuration surfaces.
+**`de` and `fr` are done** — 1123/1123 keys each, machine-drafted, every value
+carrying an `MT` comment because no human has read them.
 
 ## Step 5 — Add the guard test per locale
 
-`SharpMUSH.Tests.BUnit/Resources/SharedResourceLocalizationTests.cs` already
-proves French resolves to its satellite value. Extend that to every declared
-locale, so "we support Russian" is a claim a test can fail:
+**Done, and generalised.** `SharpMUSH.Tests.BUnit/Resources/DeclaredLocaleCoverageTests.cs`
+takes its cases from `PortalLocales.Codes`, so a locale added to the picker is
+gated automatically — nothing to write per locale.
+
+It gates **player-facing keys only** (267 of 1123). Staff surfaces are two thirds
+of the strings and the least urgent, so they are allowed to lag; that is the
+honest position, not a concession. The split is derived from the key-prefix map
+in `tools/i18n/extract_untranslated.py`, mirrored in `PortalSurfaces` because the
+tooling is Python, and `PortalSurfacesTests` parses that Python at test time and
+fails if the two drift.
+
+**Do not gate on `IStringLocalizer.ResourceNotFound`.** An earlier draft of this
+runbook proposed exactly that, and it does not work: `ResourceManager` falls back
+to the neutral resource, so for a key the locale does not have the localizer
+returns `ResourceNotFound == false` and the English string. Verified against the
+real resx — `loc["ResetToDefault"]` under `fr`, before `fr` was finished, was
+`ResourceNotFound=False, Value="Reset to Default"`. The assertion passes for a
+locale that renders entirely in English, which is the one case it exists to
+catch.
+
+Read the locale's **own** resource set instead:
 
 ```csharp
-[Test]
-[Arguments("de")]
-[Arguments("ru")]
-[Arguments("zh-Hans")]
-// … one per declared locale
-public async Task Declared_locales_resolve_their_player_facing_keys(string tag)
-{
-    var loc = PortalLocalizer.Create();
-    var previous = CultureInfo.CurrentUICulture;
-    CultureInfo.CurrentUICulture = new CultureInfo(tag);
-    try
-    {
-        var missing = PlayerFacingKeys
-            .Where(k => loc[k].ResourceNotFound)
-            .ToList();
-        await Assert.That(missing).IsEmpty();
-    }
-    finally
-    {
-        CultureInfo.CurrentUICulture = previous;
-    }
-}
+manager.GetResourceSet(new CultureInfo(tag), createIfNotExists: true, tryParents: false)
 ```
 
-Only player-facing keys are gated. Staff surfaces are allowed to lag — which is
-the honest position, since they are two-thirds of the strings and the least
-urgent. Derive `PlayerFacingKeys` from the prefix map in
-`tools/i18n/extract_untranslated.py`, or split the resx (see below).
+That returns `null` when the locale ships no satellite at all, and `GetString`
+returns `null` for a key only the neutral resource has. A companion test then
+checks the registered `IStringLocalizer` actually serves that same value under
+that culture — the production path, and the one that broke once already via
+`ResourcesPath` double-rooting.
+
+Use `CultureScope`, which pins both `CurrentUICulture` and `CurrentCulture`: the
+latter matters because a value containing `{0}` renders through `string.Format`
+against `CurrentCulture`.
 
 ## Step 6 — Wire the validator into CI
 
@@ -183,14 +177,14 @@ Use `--strict` locally when reviewing a locale, never in CI.
 ## Optional: split the resx by surface
 
 Not required, and less compelling now that an LLM does the drafting rather than a
-volunteer facing one 1097-key file. Still worth it for two reasons:
+volunteer facing one 1123-key file. Still worth it for two reasons:
 
 - It makes step 5's `PlayerFacingKeys` a file rather than a prefix heuristic.
 - It lets a locale be *completely* translated for players while staff strings lag,
   which is a shippable state rather than an embarrassing one.
 
-Split `SharedResource` (≈400 player-facing keys) from `AdminResource` (≈700 staff
-keys), following the existing prefix boundaries. `AddSharedResourceLocalization()`
+Split `SharedResource` (267 player-facing keys) from `AdminResource` (856 staff
+and mixed keys), following the existing prefix boundaries. `AddSharedResourceLocalization()`
 registers both; `Loc` injections in admin pages switch to
 `IStringLocalizer<AdminResource>`. Mechanical, but it touches every admin page, so
 it deserves its own PR.
@@ -214,14 +208,16 @@ up front rather than reported.
 
 ## Checklist
 
-- [ ] `BlazorWebAssemblyLoadAllGlobalizationData` set; stale csproj comment removed
-- [ ] `icudt.dat` confirmed in the build output
-- [ ] 24 count-bearing values converted to ICU MessageFormat
-- [ ] `ResChangeCountOne`/`Many` and `NavCharacterRegistered`/`Characters…` collapsed
-- [ ] 13 prepositional-phrase placeholders restructured
+- [x] `BlazorWebAssemblyLoadAllGlobalizationData` set; stale csproj comment removed
+- [x] `icudt.dat` confirmed in the build output
+- [x] 24 count-bearing values converted to ICU MessageFormat
+- [x] `ResChangeCountOne`/`Many` and `NavCharacterRegistered`/`Characters…` collapsed
+- [x] 13 prepositional-phrase placeholders restructured
 - [ ] Plural render test: `RolPoseCount` gives three distinct strings for 1/2/5 under `ru`
-- [ ] `SupportedLocales` and `SatelliteResourceLanguages` list every locale
-- [ ] `validate_resx.py` reports zero hard failures
-- [ ] Per-locale guard test covers every declared locale
+      *(waits on `ru` — `de` and `fr` have no three-category plural to prove it with)*
+- [x] `PortalLocales.Codes` and `SatelliteResourceLanguages` list every declared locale
+- [x] `validate_resx.py` reports zero hard failures
+- [x] Per-locale guard test covers every declared locale
 - [ ] CI runs the validator
-- [ ] `fr` completed (264 keys outstanding)
+- [x] `fr` completed
+- [x] `de` completed
