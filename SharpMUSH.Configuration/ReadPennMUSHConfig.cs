@@ -230,7 +230,7 @@ public static partial class ReadPennMushConfig
 				String(Get(nameof(NetOptions.IpAddr)), null),
 				String(Get(nameof(NetOptions.SslIpAddr)), null),
 				UnsignedInteger(Get(nameof(NetOptions.Port)), 4203),
-				UnsignedInteger(Get(nameof(NetOptions.SslPort)), 4202),
+				UnsignedInteger(Get(nameof(NetOptions.SslPort)), 4203),
 				UnsignedInteger(Get(nameof(NetOptions.PortalPort)), 5117),
 				UnsignedInteger(Get(nameof(NetOptions.SslPortalPort)), 7296),
 				RequiredString(Get(nameof(NetOptions.SocketFile)), "netmush.sock"),

@@ -17,7 +17,7 @@ public record NetOptions(
 	uint Port = 4201,
 
 	[property: SharpConfig(Name = "ssl_port", Category = "Net", Description = "Port for SSL/TLS encrypted connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 2, Min = 0, Max = 65535, Tooltip = "Set to 0 to disable SSL")]
-	uint SslPort = 4202,
+	uint SslPort = 4203,
 
 	[property: SharpConfig(Name = "portal_port", Category = "Net", Description = "Port for portal connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 6, Min = 0, Max = 65535)]
 	uint PortalPort = 0,
@@ -81,7 +81,7 @@ public record NetOptions(
 		IpAddr: null,
 		SslIpAddr: null,
 		Port: 4201,
-		SslPort: 4202,
+		SslPort: 4203,
 		PortalPort: 0,
 		SslPortalPort: 0,
 		SocketFile: "/var/run/sharpmush.sock",

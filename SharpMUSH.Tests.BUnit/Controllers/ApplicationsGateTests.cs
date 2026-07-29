@@ -191,7 +191,7 @@ public class ApplicationsGateTests
 			Pueblo: true, SslPortalPort: 7296, SocketFile: "netmush.sock",
 			SqlHost: null, SqlPlatform: null, SqlPassword: null,
 			SqlDatabase: null, SqlUsername: null, SslIpAddr: null,
-			SslPort: 4202, SslRequireClientCert: false, UseDns: true,
+			SslPort: 4203, SslRequireClientCert: false, UseDns: true,
 			UseWebsockets: true, WebsocketUrl: "/wsclient"),
 		Alias = new AliasOptions(
 			FunctionAliases: new Dictionary<string, string[]>(),

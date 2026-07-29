@@ -233,7 +233,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				SqlDatabase: null,
 				SqlUsername: null,
 				SslIpAddr: null,
-				SslPort: 4202,
+				SslPort: 4203,
 				SslRequireClientCert: false,
 				UseDns: true,
 				UseWebsockets: true,
