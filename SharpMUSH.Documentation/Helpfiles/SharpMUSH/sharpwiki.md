@@ -67,8 +67,10 @@ appears in brackets next to the revision number on the header line.
 * `@wiki/translate <page>/<lang>=<markdown>` - write the `<lang>` translation.
   See [@wiki/translate].
 
-Like `/noeval`, `/source` and `/draft` are modifiers rather than actions, so
-they combine with `/view`, `/history` and `/search` instead of replacing them.
+Like `/noeval` and `/source`, `/draft` is a modifier rather than an action, so
+it combines with `/view` and `/history` instead of replacing them (`/draft`
+has no effect on `/search`, which already includes drafts for anyone who can
+see them).
 
 Your `LOCALE` decides what you *read*. It never decides what you *write*:
 `@wiki/translate` takes the language in the command and refuses to run without
