@@ -43,7 +43,7 @@
     }
 
     <p class="wikihist-intro">
-        @Loc["WkHistoryIntro", _revisions.Count]
+        @Loc.Plural("WkHistoryIntro", "count", _revisions.Count)
     </p>
 
     @if (_loading)
@@ -131,13 +131,13 @@
                     </div>
 
                     <div style="display:flex;flex-direction:column;gap:0.125rem;align-items:flex-start;">
-                        <MudText Style="font-size:0.6875rem;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">
+                        <MudText Style="font-size:0.6875rem;color:var(--text-faint);font-family:var(--font-mono);">
                             @rev.MarkdownSource.Length.ToString("N0") B
                         </MudText>
                         @if (deltaBytes != 0)
                         {
                             <MudChip T="string" Size="Size.Small"
-                                     Style="@($"height:16px;font-size:0.625rem;padding:0 0.25rem;font-family:'JetBrains Mono',monospace;background:{ByteDeltaBackground(deltaBytes)};color:{ByteDeltaForeground(deltaBytes)};")">
+                                     Style="@($"height:16px;font-size:0.625rem;padding:0 0.25rem;font-family:var(--font-mono);background:{ByteDeltaBackground(deltaBytes)};color:{ByteDeltaForeground(deltaBytes)};")">
                                 @(deltaBytes > 0 ? "+" : "")@deltaBytes
                             </MudChip>
                         }

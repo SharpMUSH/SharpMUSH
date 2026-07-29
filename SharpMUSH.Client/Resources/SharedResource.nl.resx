@@ -1376,10 +1376,6 @@
     <value>Problemen</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>deelgenomen</value>
-    <comment>MT — assumed this is a scene-participation badge ("X joined").</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>Sleutel</value>
     <comment>MT</comment>
@@ -1904,6 +1900,10 @@
     <value>Koppelingen:</value>
     <comment>MT — "koppelingen" chosen over "toewijzingen" to keep it distinct from the role Assignments tab.</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Lid sinds {0}</value>
+    <comment>MT — nominal phrase; "sinds" preferred over the formal "sedert"</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>Bericht</value>
     <comment>MT</comment>
@@ -1948,12 +1948,8 @@
     <value>Naam van personage</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>{0} personage geregistreerd</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>{0} personages geregistreerd</value>
+    <value>{count, plural, one {# personage geregistreerd} other {# personages geregistreerd}}</value>
     <comment>MT</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
@@ -3345,7 +3341,7 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>{0} instellingen</value>
+    <value>{count, plural, one {# instelling} other {# instellingen}}</value>
     <comment>MT</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
@@ -4125,8 +4121,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} bytes</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {{signed} byte} other {{signed} bytes}}</value>
+    <comment>MT — sign comes from {signed}; # is deliberately unused</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>Acties</value>
@@ -4273,7 +4269,7 @@
     <comment>MT</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Kies een oudere en een nieuwere revisie en vergelijk ze. {0} revisies in totaal.</value>
+    <value>Kies een oudere en een nieuwere revisie en vergelijk ze. {count, plural, one {# revisie} other {# revisies}} in totaal.</value>
     <comment>MT</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>{0} woorden</value>
+    <value>{count, plural, one {# woord} other {# woorden}}</value>
     <comment>MT</comment>
   </data>
 </root>

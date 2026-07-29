@@ -1376,10 +1376,6 @@
     <value>Проблеми</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>се присъедини</value>
-    <comment>MT — assumed a past-tense event verb (someone joined); if this labels a 'Joined' date column it should be «Присъединен на»</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>Ключ</value>
     <comment>MT — assumed the config key column, not a cryptographic key</comment>
@@ -1904,6 +1900,10 @@
     <value>Съответствия:</value>
     <comment>MT</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>В играта от {0}</value>
+    <comment>MT — nominal phrase with no participle and no personal noun, so nothing agrees with the character's gender (the old «се присъедини» is fine for gender but is a finite verb needing a subject). Bulgarian has no case, so the pre-formatted month-and-year in {0} needs no inflection.</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>Съобщение</value>
     <comment>MT</comment>
@@ -1948,13 +1948,9 @@
     <value>Име на героя</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>{0} регистриран герой</value>
-    <comment>MT — singular variant</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>{0} регистрирани герои</value>
-    <comment>MT — plural variant; «герой» denotes a person, so the ordinary plural is used, not the бройна форма</comment>
+    <value>{count, plural, one {# регистриран герой} other {# регистрирани герои}}</value>
+    <comment>MT — «герой» denotes a person, so the ordinary plural is used after the numeral, not the бройна форма</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
     <value>Герои</value>
@@ -3345,7 +3341,7 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>{0} настройки</value>
+    <value>{count, plural, one {# настройка} other {# настройки}}</value>
     <comment>MT — «настройка» is feminine, so the ordinary plural applies after the numeral, not a бройна форма</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
@@ -4125,8 +4121,8 @@
     <comment>MT — standard Bulgarian typographic term for bold</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} байта</value>
-    <comment>MT — бройна форма after a numeral; delta values are never exactly 1 in practice</comment>
+    <value>{count, plural, one {{signed} байт} other {{signed} байта}}</value>
+    <comment>MT — the visible number is {signed} (it carries the +/− sign); # is deliberately not used, since it would render the magnitude and drop the minus. Categories follow the magnitude in `count`. «байт» is a masculine non-person noun, so the plural branch takes the бройна форма «байта».</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>Действия</value>
@@ -4273,7 +4269,7 @@
     <comment>MT — assumed the Markdown heading toolbar button, not a page heading</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Изберете по-стара и по-нова версия и ги сравнете. Общо {0} версии.</value>
+    <value>Изберете по-стара и по-нова версия и ги сравнете. Общо {count, plural, one {# версия} other {# версии}}.</value>
     <comment>MT</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>{0} думи</value>
+    <value>{count, plural, one {# дума} other {# думи}}</value>
     <comment>MT — «дума» is feminine, ordinary plural after the numeral</comment>
   </data>
 </root>

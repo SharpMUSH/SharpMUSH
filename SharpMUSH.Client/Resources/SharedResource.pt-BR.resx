@@ -1376,10 +1376,6 @@
     <value>Problemas</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>entrou</value>
-    <comment>MT — assumed a chat/channel event suffix ("&lt;name&gt; joined"); kept lowercase as in the English</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>Chave</value>
     <comment>MT</comment>
@@ -1904,6 +1900,10 @@
     <value>Mapeamentos:</value>
     <comment>MT</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Membro desde {0}</value>
+    <comment>MT — nominal phrase instead of the verb 'entrou', which reads oddly with no stated subject and avoids any gender agreement; {0} is a pre-formatted month and year</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>Mensagem</value>
     <comment>MT</comment>
@@ -1948,13 +1948,9 @@
     <value>Nome do personagem</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>{0} personagem registrado</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>{0} personagens registrados</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {# personagem registrado} other {# personagens registrados}}</value>
+    <comment>MT — ICU categories one+other</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
     <value>Pers.</value>
@@ -3345,8 +3341,8 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>{0} configurações</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {# configuração} other {# configurações}}</value>
+    <comment>MT — ICU categories one+other</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
     <value>Configurações de {0}</value>
@@ -4125,8 +4121,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} bytes</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {{signed} byte} other {{signed} bytes}}</value>
+    <comment>MT — the visible number comes from {signed}, which carries the +/- sign; count only selects the plural category</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>Ações</value>
@@ -4273,8 +4269,8 @@
     <comment>MT — Markdown heading toolbar button</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Selecione uma revisão mais antiga e uma mais recente e compare-as. {0} revisões no total.</value>
-    <comment>MT</comment>
+    <value>Selecione uma revisão mais antiga e uma mais recente e compare-as. {count, plural, one {# revisão} other {# revisões}} no total.</value>
+    <comment>MT — ICU categories one+other</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
     <value>Idioma</value>
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>{0} palavras</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {# palavra} other {# palavras}}</value>
+    <comment>MT — ICU categories one+other</comment>
   </data>
 </root>

@@ -53,7 +53,7 @@
                                     <MudIcon Icon="@GetSectionIcon(section.Key)"/>
                                     <MudText Typo="Typo.h6">@(section.Key)</MudText>
                                     <MudChip T="string" Size="Size.Small" Color="Color.Info"
-                                             Text="@string.Format(Loc["SettingsCount"].Value, section.Value.Count())"></MudChip>
+                                             Text="@Loc.Plural("SettingsCount", "count", section.Value.Count())"></MudChip>
                                 </div>
                             </TitleContent>
                             <ChildContent>

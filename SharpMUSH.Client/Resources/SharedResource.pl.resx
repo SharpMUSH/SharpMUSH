@@ -1376,10 +1376,6 @@
     <value>Problemy</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>dołączono</value>
-    <comment>MT — assumed a status/label fragment, not a personal verb form; rendered impersonally to avoid gender agreement</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>Klucz</value>
     <comment>MT</comment>
@@ -1904,6 +1900,10 @@
     <value>Mapowania:</value>
     <comment>MT</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Data rejestracji: {0}</value>
+    <comment>MT — gender-invariant: no participle and no personal noun, so nothing agrees with the character («Gracz od {0}» is no good, «gracz» being masculine). Structure diverges from bg deliberately: {0} is an opaque pre-formatted year-month in the nominative («lipiec 2026») and .NET has no genitive year-month pattern, so «W grze od {0}» would render «od lipiec 2026». The colon puts {0} in a nominative slot. Terminology matches NavCharactersRegistered («Zarejestrowano»).</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>Wiadomość</value>
     <comment>MT</comment>
@@ -1948,13 +1948,9 @@
     <value>Imię postaci</value>
     <comment>MT — 'imię' per corpus for the name of a character/player</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>Zarejestrowano {0} postać</value>
-    <comment>MT — singular branch of a hand-rolled English pair; accusative singular is correct for 1</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>Zarejestrowanych postaci: {0}</value>
-    <comment>MT — the English key pair offers only two forms while Polish needs four; a count-neutral 'noun: {0}' phrasing is used so it is correct for every non-1 value. Better fixed by converting this pair to an ICU plural.</comment>
+    <value>{count, plural, one {Zarejestrowano # postać} few {Zarejestrowano # postacie} many {Zarejestrowano # postaci} other {Zarejestrowano # postaci}}</value>
+    <comment>MT</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
     <value>Postacie</value>
@@ -3345,8 +3341,8 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>Ustawienia: {0}</value>
-    <comment>MT — restructured: "{0} ustawień" would require plural agreement with a raw number that is not an ICU plural, so the count is moved after a colon</comment>
+    <value>{count, plural, one {# ustawienie} few {# ustawienia} many {# ustawień} other {# ustawienia}}</value>
+    <comment>MT</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
     <value>Ustawienia: {0}</value>
@@ -4125,8 +4121,8 @@
     <comment>MT — editor toolbar label; assumed noun (formatting name)</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} B</value>
-    <comment>MT — 'bajt' cannot agree with an uncontrolled numeric {0} (no plural form available here), so the unit symbol B is used instead</comment>
+    <value>{count, plural, one {{signed} bajt} few {{signed} bajty} many {{signed} bajtów} other {{signed} bajta}}</value>
+    <comment>MT — the visible number is {signed} (it carries the +/− sign); # is deliberately not used, since it would render the magnitude and drop the minus. Categories follow the magnitude in `count`. Now that agreement is expressible, the word «bajt» replaces the earlier fallback to the symbol B.</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>Akcje</value>
@@ -4273,8 +4269,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Proszę wybrać starszą i nowszą wersję, a następnie je porównać. Łącznie wersji: {0}.</value>
-    <comment>MT — count moved after a colon so the noun does not have to agree with {0}</comment>
+    <value>Proszę wybrać starszą i nowszą wersję, a następnie je porównać. Łącznie {count, plural, one {# wersja} few {# wersje} many {# wersji} other {# wersji}}.</value>
+    <comment>MT</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
     <value>Język</value>
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>Słowa: {0}</value>
-    <comment>MT — restructured: "{0} słów" would need plural agreement with a raw number that is not an ICU plural</comment>
+    <value>{count, plural, one {# słowo} few {# słowa} many {# słów} other {# słowa}}</value>
+    <comment>MT</comment>
   </data>
 </root>

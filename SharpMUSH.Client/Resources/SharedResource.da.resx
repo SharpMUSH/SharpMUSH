@@ -1376,10 +1376,6 @@
     <value>Problemer</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>deltog</value>
-    <comment>MT — ambiguous without the UI — read as an inline past-tense event ('X joined'); if it is a table column header for a join date it should be 'Tilmeldt'</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>Nøgle</value>
     <comment>MT</comment>
@@ -1904,6 +1900,10 @@
     <value>Tilknytninger:</value>
     <comment>MT</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Medlem siden {0}</value>
+    <comment>MT — nominal phrase, replaces the old participle</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>Besked</value>
     <comment>MT</comment>
@@ -1948,13 +1948,9 @@
     <value>Karakternavn</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>{0} karakter registreret</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>{0} karakterer registreret</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {# karakter registreret} other {# karakterer registreret}}</value>
+    <comment>MT — participle left uninflected in the plural, as in the counter idiom</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
     <value>Kar.</value>
@@ -3345,7 +3341,7 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>{0} indstillinger</value>
+    <value>{count, plural, one {# indstilling} other {# indstillinger}}</value>
     <comment>MT</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
@@ -4125,8 +4121,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} bytes</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {{signed} byte} other {{signed} bytes}}</value>
+    <comment>MT — sign comes from {signed}; # is deliberately unused</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>Handlinger</value>
@@ -4273,7 +4269,7 @@
     <comment>MT</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Vælg en ældre og en nyere revision, og sammenlign dem. {0} revisioner i alt.</value>
+    <value>Vælg en ældre og en nyere revision, og sammenlign dem. {count, plural, one {# revision} other {# revisioner}} i alt.</value>
     <comment>MT</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>{0} ord</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {# ord} other {# ord}}</value>
+    <comment>MT — 'ord' is invariant in the plural</comment>
   </data>
 </root>

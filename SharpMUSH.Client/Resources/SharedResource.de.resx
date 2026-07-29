@@ -1376,10 +1376,6 @@
     <value>Probleme</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>beigetreten</value>
-    <comment>MT — sentence fragment, lowercase as in English</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>Schlüssel</value>
     <comment>MT — read as a key/value pair key</comment>
@@ -1904,6 +1900,10 @@
     <value>Zuordnungen:</value>
     <comment>MT</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Mitglied seit {0}</value>
+    <comment>MT — nominal phrase, no participle agreement needed</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>Nachricht</value>
     <comment>MT</comment>
@@ -1948,12 +1948,8 @@
     <value>Charaktername</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>{0} Charakter registriert</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>{0} Charaktere registriert</value>
+    <value>{count, plural, one {# Charakter registriert} other {# Charaktere registriert}}</value>
     <comment>MT</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
@@ -3345,7 +3341,7 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>{0} Einstellungen</value>
+    <value>{count, plural, one {# Einstellung} other {# Einstellungen}}</value>
     <comment>MT</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
@@ -4125,8 +4121,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} Bytes</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {{signed} Byte} other {{signed} Bytes}}</value>
+    <comment>MT — sign comes from {signed}; # is deliberately unused</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>Aktionen</value>
@@ -4273,7 +4269,7 @@
     <comment>MT</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Wählen Sie eine ältere und eine neuere Revision und vergleichen Sie sie. Insgesamt {0} Revisionen.</value>
+    <value>Wählen Sie eine ältere und eine neuere Revision und vergleichen Sie sie. Insgesamt {count, plural, one {# Revision} other {# Revisionen}}.</value>
     <comment>MT</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>{0} Wörter</value>
+    <value>{count, plural, one {# Wort} other {# Wörter}}</value>
     <comment>MT</comment>
   </data>
 </root>

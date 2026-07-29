@@ -174,6 +174,46 @@ Use `--strict` locally when reviewing a locale, never in CI.
 
 ---
 
+## Step 7 — If the locale uses CJK script, check the font
+
+Only needed for Chinese, Japanese and Korean; every other locale on the list is
+covered by the fonts already shipped.
+
+The portal's monospace stack is one CSS variable, `--font-mono` in
+`wwwroot/css/custom.css`, and `custom.css` swaps that whole variable — rather than
+appending a fallback — for `:lang(zh)`, `:lang(ja)` and `:lang(ko)`:
+
+```css
+:root:lang(zh), :root:lang(ja), :root:lang(ko) {
+	--font-mono: "Sarasa Term SC", monospace;
+}
+```
+
+Swapping rather than falling back is deliberate. Per-glyph fallback would render
+Latin from Cascadia Mono and CJK from Sarasa, and Cascadia's advance width is not
+half of a CJK glyph's — so a mixed line drifts out of the character grid the
+terminal measures and reports to the server over NAWS. Sarasa Term is drawn to
+that 1:2 ratio and supplies the Latin too, so the ratio holds across the line.
+"Term" and not "Mono", because Term renders East-Asian-ambiguous characters — the
+box-drawing runs MUSH tables are framed with — one cell wide, where Mono renders
+them two and shears every framed row.
+
+Two things this depends on:
+
+- **`<html lang>` must carry the tag.** `index.html` ships a static `lang="en"`;
+  `Program.cs` overwrites it at startup from the resolved culture. Without that the
+  `:lang()` rules never match, and a screen reader also announces the page in the
+  wrong voice.
+- **Nothing may name a font directly.** Every mono surface reads `var(--font-mono)`;
+  a hardcoded `font-family:'…',monospace` in an inline style silently opts that
+  element out of the switch. That is how 24 of them were opted out before this.
+
+Adding a new CJK script means vendoring the matching Sarasa family into
+`wwwroot/fonts/` (SC covers Simplified Chinese; J and K exist for Japanese and
+Korean) and adding its `@font-face` plus a `:lang()` arm. The shipped SC subset is
+the GB2312 repertoire plus Latin, box drawing and fullwidth forms — about 1 MB per
+weight; rarer hanzi fall through to the system CJK font rather than rendering tofu.
+
 ## Optional: split the resx by surface
 
 Not required, and less compelling now that an LLM does the drafting rather than a
@@ -210,11 +250,16 @@ up front rather than reported.
 
 - [x] `BlazorWebAssemblyLoadAllGlobalizationData` set; stale csproj comment removed
 - [x] `icudt.dat` confirmed in the build output
-- [x] 24 count-bearing values converted to ICU MessageFormat
+- [x] Every count-bearing value converted to ICU MessageFormat
+      *(`validate_resx.py --list-count-bearing` is the current list; the count is not
+      restated here because a hand-kept copy went stale as soon as a key was added)*
 - [x] `ResChangeCountOne`/`Many` and `NavCharacterRegistered`/`Characters…` collapsed
+- [x] `Joined` restructured to `MemberSince` — a participle cannot agree with a
+      character whose gender the directory does not hold
 - [x] 13 prepositional-phrase placeholders restructured
-- [ ] Plural render test: `RolPoseCount` gives three distinct strings for 1/2/5 under `ru`
-      *(waits on `ru` — `de` and `fr` have no three-category plural to prove it with)*
+- [x] Plural render test: `RolPoseCount` gives three distinct strings for 1/2/5 under `ru`
+      *(`TheRussianSatelliteItselfSuppliesThreeForms` — asserts the satellite's own
+      categories, not just the mechanism an inline pattern can prove)*
 - [x] `PortalLocales.Codes` and `SatelliteResourceLanguages` list every declared locale
 - [x] `validate_resx.py` reports zero hard failures
 - [x] Per-locale guard test covers every declared locale

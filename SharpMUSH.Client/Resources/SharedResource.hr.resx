@@ -1376,10 +1376,6 @@
     <value>Problemi</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>pridružio se</value>
-    <comment>MT — assumed a fragment preceding a date ("joined &lt;when&gt;"); Croatian past participle must agree in gender with the subject, which is unknown here — reads masculine by default</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>Ključ</value>
     <comment>MT — assumed a config key/value pair label, not a cryptographic key</comment>
@@ -1904,6 +1900,10 @@
     <value>Preslikavanja:</value>
     <comment>MT</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Datum registracije: {0}</value>
+    <comment>MT — gender-invariant: replaces the participle «pridružio se», which forced a masculine subject the directory cannot know; no personal noun is used either. Structure diverges from bg deliberately: {0} is an opaque pre-formatted year-month in the nominative («srpanj 2026.») and .NET has no genitive year-month pattern, so «U igri od {0}» would render «od srpanj 2026.». The colon puts {0} in a nominative slot. Terminology matches NavCharactersRegistered («registriran»).</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>Poruka</value>
     <comment>MT</comment>
@@ -1948,13 +1948,9 @@
     <value>Ime lika</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>{0} registriran lik</value>
-    <comment>MT — singular branch of an English two-form pair</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>{0} registriranih likova</value>
-    <comment>MT — the English singular/plural key pair cannot express Croatian's three categories: counts 2–4 need 'registrirana lika'. Genitive plural used as the safest catch-all; recommend converting this pair to one ICU plural key</comment>
+    <value>{count, plural, one {# registriran lik} few {# registrirana lika} other {# registriranih likova}}</value>
+    <comment>MT</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
     <value>Likovi</value>
@@ -3345,8 +3341,8 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>postavke: {0}</value>
-    <comment>MT — this is a count string without ICU plural, so Croatian noun agreement is impossible; restructured to "postavke: {0}" (label + number) instead of picking one wrong plural form. Consider converting to an ICU plural.</comment>
+    <value>{count, plural, one {# postavka} few {# postavke} other {# postavki}}</value>
+    <comment>MT</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
     <value>Postavke: {0}</value>
@@ -4125,8 +4121,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} bajtova</value>
-    <comment>MT — genitive plural 'bajtova' used as the generic form; exact Croatian agreement varies with the number and cannot be controlled from a plain {0}</comment>
+    <value>{count, plural, one {{signed} bajt} few {{signed} bajta} other {{signed} bajtova}}</value>
+    <comment>MT — the visible number is {signed} (it carries the +/− sign); # is deliberately not used, since it would render the magnitude and drop the minus. Categories follow the magnitude in `count`.</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>Radnje</value>
@@ -4273,8 +4269,8 @@
     <comment>MT — Markdown toolbar button</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Odaberite stariju i noviju reviziju, zatim ih usporedite. Ukupno revizija: {0}.</value>
-    <comment>MT — restructured so the count sits after a colon; Croatian numeral agreement cannot be controlled from a plain {0}</comment>
+    <value>Odaberite stariju i noviju reviziju, zatim ih usporedite. Ukupno {count, plural, one {# revizija} few {# revizije} other {# revizija}}.</value>
+    <comment>MT</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
     <value>Jezik</value>
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>riječi: {0}</value>
-    <comment>MT — count string without ICU plural; restructured as label + number because Croatian cannot agree with an unknown count. Consider converting to an ICU plural.</comment>
+    <value>{count, plural, one {# riječ} few {# riječi} other {# riječi}}</value>
+    <comment>MT — «riječ» is syncretic here: the paucal (2–4) and the genitive plural are both «riječi», so few and other coincide.</comment>
   </data>
 </root>

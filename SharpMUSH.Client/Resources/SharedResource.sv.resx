@@ -1376,10 +1376,6 @@
     <value>Problem</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>gick med</value>
-    <comment>MT — assumed a past-tense activity marker (a player joined).</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>Nyckel</value>
     <comment>MT</comment>
@@ -1904,6 +1900,10 @@
     <value>Mappningar:</value>
     <comment>MT</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Medlem sedan {0}</value>
+    <comment>MT — nominal phrase, replaces the old past-tense form</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>Meddelande</value>
     <comment>MT</comment>
@@ -1948,13 +1948,9 @@
     <value>Karaktärsnamn</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>{0} karaktär registrerad</value>
-    <comment>MT — singular branch.</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>{0} karaktärer registrerade</value>
-    <comment>MT — plural branch.</comment>
+    <value>{count, plural, one {# karaktär registrerad} other {# karaktärer registrerade}}</value>
+    <comment>MT — participle agrees in number: registrerad / registrerade</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
     <value>Chars</value>
@@ -3345,7 +3341,7 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>{0} inställningar</value>
+    <value>{count, plural, one {# inställning} other {# inställningar}}</value>
     <comment>MT</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
@@ -4125,8 +4121,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} byte</value>
-    <comment>MT — Swedish 'byte' is invariant in the plural.</comment>
+    <value>{count, plural, one {{signed} byte} other {{signed} byte}}</value>
+    <comment>MT — Swedish 'byte' is invariant in the plural; sign comes from {signed}, # is deliberately unused</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>Åtgärder</value>
@@ -4273,7 +4269,7 @@
     <comment>MT</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Välj en äldre och en nyare version och jämför dem. {0} versioner totalt.</value>
+    <value>Välj en äldre och en nyare version och jämför dem. {count, plural, one {# version} other {# versioner}} totalt.</value>
     <comment>MT</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>{0} ord</value>
-    <comment>MT — 'ord' is invariant in the plural.</comment>
+    <value>{count, plural, one {# ord} other {# ord}}</value>
+    <comment>MT — 'ord' is invariant in the plural</comment>
   </data>
 </root>

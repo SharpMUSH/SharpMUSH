@@ -1376,10 +1376,6 @@
     <value>Проблемы</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>присоединился</value>
-    <comment>MT — CASE HAZARD: this is a past-tense verb that must agree in gender with the actor's name, which is not interpolated into this string and cannot be controlled; masculine singular chosen as the default. Needs human review — a gender-free rendering would require a UI change.</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>Ключ</value>
     <comment>MT</comment>
@@ -1904,6 +1900,10 @@
     <value>Сопоставления:</value>
     <comment>MT — trailing colon preserved.</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Дата регистрации: {0}</value>
+    <comment>MT — gender-invariant: no participle and no personal noun, so nothing agrees with the character (the old «присоединился» forced a masculine subject the directory cannot know; «Участник с {0}» is no better, «участник» being masculine). Structure diverges from bg deliberately: {0} is an opaque pre-formatted year-month in the nominative («июль 2026 г.») and .NET has no genitive year-month pattern, so any preposition governing an oblique case («в игре с …») would produce «с июль 2026 г.». The colon puts {0} in a nominative slot. Terminology matches NavCharactersRegistered («зарегистрирован»).</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>Сообщение</value>
     <comment>MT</comment>
@@ -1948,13 +1948,9 @@
     <value>Имя персонажа</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>зарегистрирован {0} персонаж</value>
-    <comment>MT — the English pair splits at count==1 only, which cannot express Russian's four categories; this form is correct only for 1, 21, 31… See NavCharactersRegistered.</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>зарегистрировано персонажей: {0}</value>
-    <comment>MT — restructured with a colon so the noun stays in a fixed genitive plural and the string is correct for every number the non-ICU English plural pair would route here (2–4, 5+, 0). Recommend converting this pair to an ICU plural.</comment>
+    <value>{count, plural, one {зарегистрирован # персонаж} few {зарегистрировано # персонажа} many {зарегистрировано # персонажей} other {зарегистрировано # персонажа}}</value>
+    <comment>MT</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
     <value>Перс.</value>
@@ -3345,8 +3341,8 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>настроек: {0}</value>
-    <comment>MT — restructured with a colon so the noun stays in a fixed genitive plural; the bare «{0} настроек» pattern would be wrong for 1 and for 2–4, and this string carries no ICU plural. Recommend converting it to an ICU plural.</comment>
+    <value>{count, plural, one {# настройка} few {# настройки} many {# настроек} other {# настройки}}</value>
+    <comment>MT</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
     <value>Настройки: {0}</value>
@@ -4125,8 +4121,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} байт</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {{signed} байт} few {{signed} байта} many {{signed} байт} other {{signed} байта}}</value>
+    <comment>MT — the visible number is {signed} (it carries the +/− sign); # is deliberately not used, since it would render the magnitude and drop the minus. Categories follow the magnitude in `count`. Genitive plural is the CLDR measure form «байт», not «байтов».</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>Действия</value>
@@ -4273,8 +4269,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Выберите более старую и более новую версию, затем сравните их. Всего версий: {0}.</value>
-    <comment>MT — count moved after a colon so no numeral–noun agreement is needed.</comment>
+    <value>Выберите более старую и более новую версию, затем сравните их. Всего {count, plural, one {# версия} few {# версии} many {# версий} other {# версии}}.</value>
+    <comment>MT</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
     <value>Язык</value>
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>слов: {0}</value>
-    <comment>MT — the source is a bare count with no ICU plural, so Russian agreement cannot be selected; inverted to a «label: count» form which is correct for every number. Human review may prefer converting this key to an ICU plural.</comment>
+    <value>{count, plural, one {# слово} few {# слова} many {# слов} other {# слова}}</value>
+    <comment>MT</comment>
   </data>
 </root>

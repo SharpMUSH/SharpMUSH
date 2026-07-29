@@ -1376,10 +1376,6 @@
     <value>Probleme</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>s-a alăturat</value>
-    <comment>MT — assumed a chat/channel event fragment ("&lt;name&gt; joined")</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>Cheie</value>
     <comment>MT</comment>
@@ -1904,6 +1900,10 @@
     <value>Mapări:</value>
     <comment>MT</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Membru din {0}</value>
+    <comment>MT — nominal phrase instead of the participle 's-a alăturat', so nothing has to agree with the character's unknown gender; {0} is a pre-formatted month and year</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>Mesaj</value>
     <comment>MT</comment>
@@ -1948,13 +1948,9 @@
     <value>Nume personaj</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>{0} personaj înregistrat</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>{0} personaje înregistrate</value>
-    <comment>MT — Romanian needs a third form for 20+ ("{0} de personaje înregistrate"); this hand-split pair only offers two, so 20+ will read slightly off. Consider an ICU plural key.</comment>
+    <value>{count, plural, one {# personaj înregistrat} few {# personaje înregistrate} other {# de personaje înregistrate}}</value>
+    <comment>MT — ICU categories one+few+other; the "de" form now covers 20+</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
     <value>Pers.</value>
@@ -3345,8 +3341,8 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>{0} setări</value>
-    <comment>MT — plain count label, not an ICU plural; the "de" form for 20+ cannot be expressed here</comment>
+    <value>{count, plural, one {# setare} few {# setări} other {# de setări}}</value>
+    <comment>MT — ICU categories one+few+other; the "de" form now covers 20+</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
     <value>Setări {0}</value>
@@ -4125,8 +4121,8 @@
     <comment>MT — editor toolbar bold formatting</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} octeți</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {{signed} octet} few {{signed} octeți} other {{signed} de octeți}}</value>
+    <comment>MT — the visible number comes from {signed}, which carries the +/- sign; count only selects the plural category; the "de" form still lands on 20+</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>Acțiuni</value>
@@ -4273,8 +4269,8 @@
     <comment>MT — Markdown heading in the editor toolbar</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Selectați o revizie mai veche și una mai nouă, apoi comparați-le. {0} revizii în total.</value>
-    <comment>MT</comment>
+    <value>Selectați o revizie mai veche și una mai nouă, apoi comparați-le. {count, plural, one {# revizie} few {# revizii} other {# de revizii}} în total.</value>
+    <comment>MT — ICU categories one+few+other; the "de" form now covers 20+</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
     <value>Limbă</value>
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>{0} cuvinte</value>
-    <comment>MT — plain interpolation, not an ICU plural; Romanian would need "de cuvinte" for 20+, but the source offers no plural form</comment>
+    <value>{count, plural, one {# cuvânt} few {# cuvinte} other {# de cuvinte}}</value>
+    <comment>MT — ICU categories one+few+other; the "de" form now covers 20+</comment>
   </data>
 </root>

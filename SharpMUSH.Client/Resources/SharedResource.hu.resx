@@ -1376,10 +1376,6 @@
     <value>Problémák</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>csatlakozott</value>
-    <comment>MT</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>Kulcs</value>
     <comment>MT</comment>
@@ -1904,6 +1900,10 @@
     <value>Leképezések:</value>
     <comment>MT</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Tag {0} óta</value>
+    <comment>MT — "óta" is a postposition taking the nominative, so no case suffix is attached to the pre-formatted month-year.</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>Üzenet</value>
     <comment>MT</comment>
@@ -1948,13 +1948,9 @@
     <value>Karakternév</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>{0} regisztrált karakter</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>{0} regisztrált karakter</value>
-    <comment>MT — Hungarian keeps the noun singular after a numeral, so this is identical to the singular key.</comment>
+    <value>{count, plural, one {# regisztrált karakter} other {# regisztrált karakter}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
     <value>Karakt.</value>
@@ -3345,8 +3341,8 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>{0} beállítás</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {# beállítás} other {# beállítás}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
     <value>{0} beállításai</value>
@@ -4125,8 +4121,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} bájt</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {{signed} bájt} other {{signed} bájt}}</value>
+    <comment>MT — the visible number must come from {signed} so the +/- sign survives; count only selects the category. Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>Műveletek</value>
@@ -4273,8 +4269,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Válasszon ki egy régebbi és egy újabb változatot, majd hasonlítsa össze őket. Összesen {0} változat.</value>
-    <comment>MT</comment>
+    <value>Válasszon ki egy régebbi és egy újabb változatot, majd hasonlítsa össze őket. Összesen {count, plural, one {# változat} other {# változat}}.</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
     <value>Nyelv</value>
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>{0} szó</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {# szó} other {# szó}}</value>
+    <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
   </data>
 </root>

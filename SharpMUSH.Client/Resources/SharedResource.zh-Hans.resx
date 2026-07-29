@@ -1376,10 +1376,6 @@
     <value>问题</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>已加入</value>
-    <comment>MT</comment>
-  </data>
   <data name="Key" xml:space="preserve">
     <value>键</value>
     <comment>MT</comment>
@@ -1904,6 +1900,10 @@
     <value>映射：</value>
     <comment>MT</comment>
   </data>
+  <data name="MemberSince" xml:space="preserve">
+    <value>加入于 {0}</value>
+    <comment>MT — noun-phrase caption; {0} is a pre-formatted month-year.</comment>
+  </data>
   <data name="Message" xml:space="preserve">
     <value>消息</value>
     <comment>MT</comment>
@@ -1948,13 +1948,9 @@
     <value>角色名称</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>已注册 {0} 个角色</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>已注册 {0} 个角色</value>
-    <comment>MT — Chinese does not mark plural; identical to the singular key by design.</comment>
+    <value>{count, plural, other {已注册 # 个角色}}</value>
+    <comment>MT — Chinese has a single CLDR plural category, so one `other` branch is correct.</comment>
   </data>
   <data name="NavCharsShort" xml:space="preserve">
     <value>角色</value>
@@ -3345,8 +3341,8 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>{0} 项设置</value>
-    <comment>MT</comment>
+    <value>{count, plural, other {# 项设置}}</value>
+    <comment>MT — Chinese has a single CLDR plural category, so one `other` branch is correct.</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
     <value>{0} 设置</value>
@@ -4125,8 +4121,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} 字节</value>
-    <comment>MT</comment>
+    <value>{count, plural, other {{signed} 字节}}</value>
+    <comment>MT — the visible number must come from {signed} so the +/- sign survives; count only selects the category. Chinese has a single CLDR plural category.</comment>
   </data>
   <data name="WkColActions" xml:space="preserve">
     <value>操作</value>
@@ -4273,8 +4269,8 @@
     <comment>MT</comment>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>请选择一个较旧和一个较新的修订版，然后进行比较。共 {0} 个修订版。</value>
-    <comment>MT</comment>
+    <value>请选择一个较旧和一个较新的修订版，然后进行比较。共 {count, plural, other {# 个修订版}}。</value>
+    <comment>MT — Chinese has a single CLDR plural category, so one `other` branch is correct.</comment>
   </data>
   <data name="WkHistoryLocale" xml:space="preserve">
     <value>语言</value>
@@ -4501,7 +4497,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>{0} 个词条</value>
-    <comment>MT</comment>
+    <value>{count, plural, other {# 个词条}}</value>
+    <comment>MT — Chinese has a single CLDR plural category, so one `other` branch is correct. 词条/词 are used inconsistently in this file; a reviewer should confirm the term.</comment>
   </data>
 </root>

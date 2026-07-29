@@ -1616,7 +1616,8 @@
     <value>Modification mineure</value>
   </data>
   <data name="WkBytesDelta" xml:space="preserve">
-    <value>{0} octets</value>
+    <value>{count, plural, one {{signed} octet} other {{signed} octets}}</value>
+    <comment>MT — the visible number comes from {signed}, which carries the +/- sign; count only selects the plural category</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
     <value>Abandonner</value>
@@ -1652,7 +1653,8 @@
     <value>Comparer la sélection</value>
   </data>
   <data name="WkHistoryIntro" xml:space="preserve">
-    <value>Sélectionnez une révision plus ancienne et une plus récente, puis comparez. {0} révisions en tout.</value>
+    <value>Sélectionnez une révision plus ancienne et une plus récente, puis comparez. {count, plural, one {# révision} other {# révisions}} en tout.</value>
+    <comment>MT — ICU categories one+other; French 'one' also covers 0, so 0 correctly renders the singular</comment>
   </data>
   <data name="WkNoRevisionHistory" xml:space="preserve">
     <value>Aucun historique de révision trouvé.</value>
@@ -2507,10 +2509,8 @@
     <value>Transférer</value>
   </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
-    <value>{0} personnages enregistrés</value>
-  </data>
-  <data name="NavCharacterRegistered" xml:space="preserve">
-    <value>{0} personnage enregistré</value>
+    <value>{count, plural, one {# personnage enregistré} other {# personnages enregistrés}}</value>
+    <comment>MT — ICU categories one+other; French 'one' also covers 0, so 0 correctly renders the singular</comment>
   </data>
   <data name="NavCreateCharacter" xml:space="preserve">
     <value>Créer le personnage</value>
@@ -3122,9 +3122,9 @@
     <value>Problèmes</value>
     <comment>MT</comment>
   </data>
-  <data name="Joined" xml:space="preserve">
-    <value>rejoint</value>
-    <comment>MT — ambiguous: lowercase English suggests it is appended to a name (« X joined »); rendered as a bare participle, needs human review</comment>
+  <data name="MemberSince" xml:space="preserve">
+    <value>Membre depuis {0}</value>
+    <comment>MT — nominal phrase instead of the participle 'inscrit/inscrite', which would have to agree with the character's unknown gender; {0} is a pre-formatted month and year</comment>
   </data>
   <data name="Key" xml:space="preserve">
     <value>Clé</value>
@@ -3379,8 +3379,8 @@
     <comment>MT</comment>
   </data>
   <data name="SettingsCount" xml:space="preserve">
-    <value>{0} paramètres</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {# paramètre} other {# paramètres}}</value>
+    <comment>MT — ICU categories one+other; French 'one' also covers 0, so 0 correctly renders the singular</comment>
   </data>
   <data name="SettingsLabel" xml:space="preserve">
     <value>Paramètres : {0}</value>
@@ -3679,7 +3679,7 @@
     <comment>MT</comment>
   </data>
   <data name="WordsCount" xml:space="preserve">
-    <value>{0} mots</value>
-    <comment>MT</comment>
+    <value>{count, plural, one {# mot} other {# mots}}</value>
+    <comment>MT — ICU categories one+other; French 'one' also covers 0, so 0 correctly renders the singular</comment>
   </data>
 </root>

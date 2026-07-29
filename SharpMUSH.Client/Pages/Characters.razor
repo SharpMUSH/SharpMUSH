@@ -73,7 +73,10 @@
                         {
                             <span></span>
                         }
-                        <span class="char-joined">@Loc["Joined"] @ch.CreatedAt.ToLocalTime().ToString("MMM yyyy")</span>
+                        @* "y" is the culture's YearMonthPattern, not a literal month-then-year: "MMM yyyy"
+                           would hand Chinese its own month names in English element order ("7月 2026"
+                           rather than "2026年7月"). *@
+                        <span class="char-joined">@Loc["MemberSince", ch.CreatedAt.ToLocalTime().ToString("y")]</span>
                     </div>
                 </a>
             }
@@ -92,8 +95,8 @@
 
     private string HeaderKicker =>
         _loading
-            ? Loc["Loading"]
-            : Loc[_all.Count == 1 ? "NavCharacterRegistered" : "NavCharactersRegistered", _all.Count];
+            ? Loc["Loading"].Value
+            : Loc.Plural("NavCharactersRegistered", "count", _all.Count);
 
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> Filtered
     {

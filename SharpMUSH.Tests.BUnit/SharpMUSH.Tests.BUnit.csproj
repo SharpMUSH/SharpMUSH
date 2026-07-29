@@ -33,4 +33,15 @@
     <None Include="..\SharpMUSH.Client\SharpMUSH.Client.csproj" Link="i18n\SharpMUSH.Client.csproj" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Inputs for MonoFontStackTests. The CJK font switch overrides one custom property, so it only
+         works while every mono surface reads that property; a component naming a font directly opts
+         itself out silently, which is how 24 of them were opted out before the switch existed. -->
+    <None Include="..\SharpMUSH.Client\wwwroot\css\custom.css" Link="client\custom.css" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\SharpMUSH.Client\**\*.razor" Exclude="..\SharpMUSH.Client\bin\**;..\SharpMUSH.Client\obj\**"
+          Link="client\razor\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\SharpMUSH.Client\**\*.razor.css" Exclude="..\SharpMUSH.Client\bin\**;..\SharpMUSH.Client\obj\**"
+          Link="client\razor\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
