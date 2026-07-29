@@ -1,6 +1,7 @@
 # WIKI
 # @WIKI
 # @WIKI/SOURCE
+# @WIKI/DRAFT
 
 - `@wiki <page>`
 - `@wiki/<switch> <page>[=<value>]`
@@ -19,6 +20,7 @@ Viewing and discovery:
 * `@wiki/search <text>` - find pages by title or content, in any locale
 * `@wiki/recent [<count>]` - recently edited pages (default 10)
 * `@wiki/history <page>` - revision history
+* `@wiki/view/draft <page>` - also render the page if it is a draft (wizard)
 
 Authoring:
 * `@wiki/create <title>=<markdown>` - create a page
@@ -37,6 +39,21 @@ Administration:
 The `/noeval` switch may be combined with any of the above to suppress
 softcode evaluation of the arguments.
 
+Drafts:
+An unpublished page is a draft, and `@wiki` does not render a draft's body or
+its revision history to anybody by default. You are told the page is a draft
+rather than told it does not exist — the header still names it and marks it
+`(draft)`.
+
+* `@wiki/view/draft <page>` - render the draft's body as well
+* `@wiki/history/draft <page>` - list the draft's revisions as well
+
+`/draft` is an opt-in, not a permission: only a wizard can read a draft, and
+for everybody else the answer is exactly the same with the switch as without
+it, so `/draft` can never be used to find out whether a draft exists. The same
+rule covers an unpublished *translation*: you get the published version in
+whatever language the page does have, not a withheld French draft.
+
 Locale:
 @wiki reads pages in your locale, the one you set with `@locale`. When a page
 has no translation in your locale you get the fallback version, and its locale
@@ -50,8 +67,8 @@ appears in brackets next to the revision number on the header line.
 * `@wiki/translate <page>/<lang>=<markdown>` - write the `<lang>` translation.
   See [@wiki/translate].
 
-Like `/noeval`, `/source` is a modifier rather than an action, so it combines
-with `/view`, `/history` and `/search` instead of replacing them.
+Like `/noeval`, `/source` and `/draft` are modifiers rather than actions, so
+they combine with `/view`, `/history` and `/search` instead of replacing them.
 
 Your `LOCALE` decides what you *read*. It never decides what you *write*:
 `@wiki/translate` takes the language in the command and refuses to run without
@@ -67,8 +84,8 @@ shown. `@wiki/search/source <text>` matches source text only.
 
 Drafts stay out of the way: unpublished pages and unpublished translations are
 invisible to anyone but a wizard in `@wiki/list`, `@wiki/search` and
-`@wiki/recent`, and are never returned by `wikilist()`, `wikisearch()` or
-`wikirecent()`.
+`@wiki/recent`, and are never reachable from `wiki()`, `wikilist()`,
+`wikisearch()` or `wikirecent()` at all.
 
 Page content is Markdown; see `help markdown` or the wiki's own
 "Help:Markdown Guide" page (`@wiki help:markdown_guide`) for the supported
@@ -166,8 +183,9 @@ WIKI: a translation needs an explicit language: @wiki/translate <page>/<lang>=<t
 Deleting, protecting, and publishing are wizard-only. Deletion removes the
 page and its entire revision history. Protected pages refuse edits from
 non-wizards both in-game and on the web portal. Unpublished pages are drafts:
-hidden from anonymous web visitors and from the sitemap, but still visible to
-logged-in users and in-game.
+hidden from anonymous web visitors and from the sitemap, and in-game their
+body and revision history are shown only to a wizard who asks for them with
+`/draft`. See [@wiki].
 
 Categories and tags group pages for the web portal's listings and the wiki's
 live `::: category` blocks. Tags are space-separated; both are stored
@@ -176,7 +194,9 @@ lower-case. Setting an empty category clears it.
 @wiki/history lists every revision with its editor, date, and edit summary, for
 the revision stream of your own locale. Each locale is numbered independently
 starting from 1, so "rev 3" of a French translation is unrelated to "rev 3" of
-the source; `@wiki/history/source` shows the source locale's stream.
+the source; `@wiki/history/source` shows the source locale's stream. An edit
+summary is prose about unpublished content, so a draft's revisions are withheld
+exactly as its body is: `@wiki/history/draft` shows them, to a wizard.
 
 **See Also:**
 - [@wiki]
@@ -212,9 +232,12 @@ an error, and the `locale` field is how softcode detects that: it returns the
 locale that was served, not the one you asked for. An unparseable locale is
 treated as if you had passed none.
 
-Unpublished translations are never reachable from `wiki()`.
+Unpublished pages and unpublished translations are never reachable from
+`wiki()`. Softcode has no reader to check drafts against, so a draft page
+answers exactly as a missing one does — there is no field, not even `title`,
+that reveals it. Read a draft with `@wiki/view/draft` instead.
 
-Returns #-1 NO SUCH WIKI PAGE when the page does not exist.
+Returns #-1 NO SUCH WIKI PAGE when the page does not exist, or is a draft.
 
 ### Example
 ```sharp
