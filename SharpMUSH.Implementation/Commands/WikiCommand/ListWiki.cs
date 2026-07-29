@@ -1,6 +1,5 @@
 using Mediator;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
@@ -48,9 +47,9 @@ public static class ListWiki
 			ns = parsed;
 		}
 
-		var fetched = await wikiService.GetAllPagesAsync(0, MaxListed, ns);
-		var pages = await VisiblePagesAsync(executor, fetched);
-		var total = await wikiService.CountPagesAsync(ns);
+		var canSeeDrafts = await WikiCommandHelper.CanSeeDrafts(executor);
+		var pages = VisiblePages(canSeeDrafts, await wikiService.GetAllPagesAsync(0, MaxListed, ns));
+		var total = await wikiService.CountPagesAsync(ns, canSeeDrafts);
 
 		var lines = new List<MString>
 		{
@@ -58,10 +57,12 @@ public static class ListWiki
 		};
 		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
 			.Select(l => MModule.single("  " + l)));
-		// Compared against the fetched window, not the visible one: this line means "the window did not
-		// reach the end of the store", and drafts filtered out of the window did not shorten the store.
-		if (total > fetched.Count)
-			lines.Add(MModule.single($"  … and {total - fetched.Count} more. See the web portal for the full index."));
+		// Both terms are drawn from the same population — the pages this reader may see — so the remainder
+		// is "visible pages past the window", and neither the header nor this line reveals a draft. The
+		// visible row count, not the fetched window's size, is what must be subtracted: drafts filtered out
+		// of the window still consumed window slots, so the window's size counts pages this reader cannot.
+		if (total > pages.Count)
+			lines.Add(MModule.single($"  … and {total - pages.Count} more. See the web portal for the full index."));
 
 		var output = MModule.multipleWithDelimiter(MModule.single("\n"), lines);
 		await notifyService.Notify(executor, output, executor);
@@ -136,8 +137,10 @@ public static class ListWiki
 		}
 
 		// Filtered after the fetch, so a burst of draft edits shortens the answer rather than disclosing
-		// them. Asking for count+N and trimming would only move the guesswork around.
-		var pages = await VisiblePagesAsync(executor, await wikiService.GetRecentChangesAsync(count));
+		// them. Asking for count+N and trimming would only move the guesswork around. No total is rendered
+		// beside these rows, and none should be: it would be the same disclosure @wiki/list's header was.
+		var pages = VisiblePages(
+			await WikiCommandHelper.CanSeeDrafts(executor), await wikiService.GetRecentChangesAsync(count));
 
 		var lines = new List<MString> { MModule.single("WIKI: Recently edited pages:") };
 		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
@@ -152,11 +155,13 @@ public static class ListWiki
 	/// Drops the unpublished pages this reader may not see. Every listing surface feeds its rows through
 	/// this, because <c>GetAllPagesAsync</c> and <c>GetRecentChangesAsync</c> both return drafts and say so.
 	/// </summary>
-	private static async ValueTask<IReadOnlyList<WikiPage>> VisiblePagesAsync(
-		AnySharpObject executor, IReadOnlyList<WikiPage> pages) =>
-		await WikiCommandHelper.CanSeeDrafts(executor)
-			? pages
-			: pages.Where(p => p.Published).ToList();
+	/// <param name="canSeeDrafts">
+	/// <see cref="WikiCommandHelper.CanSeeDrafts"/> for this reader, passed in rather than resolved here so
+	/// that a surface which also renders a <em>count</em> gates both on the one value. Deriving the rows
+	/// from one rule and the total from another is how the header came to disclose what the rows hid.
+	/// </param>
+	private static IReadOnlyList<WikiPage> VisiblePages(bool canSeeDrafts, IReadOnlyList<WikiPage> pages) =>
+		canSeeDrafts ? pages : pages.Where(p => p.Published).ToList();
 
 	/// <summary>
 	/// Formats a listing, resolving each title into the reader's locale unless <paramref name="forceSource"/>.
