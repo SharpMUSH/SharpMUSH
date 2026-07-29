@@ -83,9 +83,14 @@ brackets after the line, and if several locales matched, yours is the one
 shown. `@wiki/search/source <text>` matches source text only.
 
 Drafts stay out of the way: unpublished pages and unpublished translations are
-invisible to anyone but a wizard in `@wiki/list`, `@wiki/search` and
-`@wiki/recent`, and are never reachable from `wiki()`, `wikilist()`,
-`wikisearch()` or `wikirecent()` at all.
+listed only for those who can edit them — `@wiki/list`, `@wiki/search` and
+`@wiki/recent` omit them, and `wiki()`, `wikilist()`, `wikisearch()` and
+`wikirecent()` never return them. `@wiki/list`'s totals count only what you are
+allowed to see, so the count does not give a draft away either.
+
+That keeps a draft's title, text and existence out of discovery. It is still not
+a secret store: asking for a page by name tells you whether one is there. Put
+nothing in a draft that the people who can guess its name should not know exists.
 
 Page content is Markdown; see `help markdown` or the wiki's own
 "Help:Markdown Guide" page (`@wiki help:markdown_guide`) for the supported
@@ -147,7 +152,8 @@ retry would put your older text on top of theirs.
 Protected pages can only be edited by wizards, translations included. Each page
 records its author and last editor by dbref.
 
-### Example
+## Example
+
 ```sharp
 > @wiki/create Combat Primer=# Combat Primer
 WIKI: Created page 'Combat Primer' (combat_primer).
@@ -239,7 +245,8 @@ that reveals it. Read a draft with `@wiki/view/draft` instead.
 
 Returns #-1 NO SUCH WIKI PAGE when the page does not exist, or is a draft.
 
-### Example
+## Example
+
 ```sharp
 > think wiki(home, title)
 Home
@@ -267,7 +274,8 @@ A page reference is its canonical slug, which does not change between locales,
 so this list is the same whatever your `LOCALE` is. Pass a reference from it to
 [wiki()] with a locale to read that page's translation.
 
-### Example
+## Example
+
 ```sharp
 > think wikilist(help)
 help:markdown_guide
@@ -287,7 +295,8 @@ translated into. Each page appears once however many of its locales matched.
 Unpublished pages and unpublished translations are never returned. Limited to
 the first 100 matches.
 
-### Example
+## Example
+
 ```sharp
 > think wikisearch(combat)
 combat_primer house_rules
