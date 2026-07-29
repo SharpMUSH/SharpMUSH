@@ -3957,8 +3957,8 @@
     <comment>MT</comment>
   </data>
   <data name="WikiAllNamespaces" xml:space="preserve">
-    <value>Alle namespaces</value>
-    <comment>MT — glossary term "namespace" kept with the source's lower-case spelling.</comment>
+    <value>Alle Namespaces</value>
+    <comment>MT — glossary term "Namespace" left untranslated, but capitalised: German capitalises every noun, loanwords included.</comment>
   </data>
   <data name="WikiAvailableTranslations" xml:space="preserve">
     <value>Auch verfügbar in</value>
@@ -4025,7 +4025,7 @@
     <comment>MT — glossary term left as written.</comment>
   </data>
   <data name="WikiNamespaceEmpty" xml:space="preserve">
-    <value>In diesem namespace gibt es noch keine Seiten.</value>
+    <value>In diesem Namespace gibt es noch keine Seiten.</value>
     <comment>MT — glossary term kept with the source's lower-case spelling.</comment>
   </data>
   <data name="WikiNamespaceFilter" xml:space="preserve">

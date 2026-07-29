@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.BUnit.Resources;
 /// <summary>
 /// Makes "the portal supports German" a claim a test can fail.
 /// <para>
-/// Every locale <see cref="PortalLocales.Supported"/> offers must ship a satellite assembly that
+/// Every locale <see cref="PortalLocales.Codes"/> offers must ship a satellite assembly that
 /// carries its own value for every <em>player-facing</em> key. Staff surfaces are two thirds of the
 /// strings and are allowed to lag — that is the runbook's position
 /// (<c>docs/localization/adding-languages.md</c> step 5) and this test encodes exactly that much.

@@ -10,10 +10,10 @@ namespace SharpMUSH.Tests.BUnit.Resources;
 /// </summary>
 public class MonoFontStackTests
 {
-	private static string Css() => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "client", "custom.css"));
+	private static string Css() => File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "custom.css"));
 
 	private static IEnumerable<string> ComponentSources() =>
-		Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "client", "razor"), "*.*", SearchOption.AllDirectories)
+		Directory.EnumerateFiles(Path.Join(AppContext.BaseDirectory, "client", "razor"), "*.*", SearchOption.AllDirectories)
 			.Where(f => f.EndsWith(".razor", StringComparison.Ordinal) || f.EndsWith(".css", StringComparison.Ordinal));
 
 	[Test]
@@ -68,7 +68,7 @@ public class MonoFontStackTests
 		// with no route to the internet — and no third party is handed the IP of everyone who opens
 		// the game's front page. A stylesheet from a CDN cannot carry an SRI hash either, so it is
 		// also the one asset class that could change under us without any local change.
-		var html = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "client", "index.html"));
+		var html = File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "index.html"));
 
 		var external = Regex.Matches(html, @"(?:src|href)\s*=\s*""(?<url>https?://[^""]+)""")
 			.Select(m => m.Groups["url"].Value)

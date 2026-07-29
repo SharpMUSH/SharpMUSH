@@ -12,21 +12,19 @@ engine's separate localization layer — telnet/WebSocket messages via
 
 ## Current state
 
-- **1123 English keys** in `SharpMUSH.Client/Resources/SharedResource.resx`.
-- **German and French are both complete** — 1123/1123 keys each, in
-  `SharedResource.de.resx` and `SharedResource.fr.resx`. Both are
+- **1122 English keys** in `SharpMUSH.Client/Resources/SharedResource.resx`.
+- **All fifteen translations are complete** — 1122/1122 keys each. Every one is
   machine-drafted: every value carries an `MT` comment marking that no human has
   read it. `grep -c '<comment>MT' SharpMUSH.Client/Resources/SharedResource.de.resx`
-  is the review worklist.
-- **`en`, `de` and `fr` are the declared locales** — `PortalLocales.Codes` and
+  is the review worklist for a given locale.
+- **All sixteen locales are declared** — `PortalLocales.Codes` and
   `SatelliteResourceLanguages` in `SharpMUSH.Client.csproj`, kept in step by
-  `PortalSurfacesTests`. The other twelve in the table below are targets, not
-  claims: declaring a locale with no resx offers a language that silently
-  renders English.
+  `PortalSurfacesTests`. Declaring a locale with no resx would offer a language
+  that silently renders English, which is what that test exists to prevent.
 - The client loads **full ICU** (`BlazorWebAssemblyLoadAllGlobalizationData`),
   so `CultureInfo` works for every locale, not only the declared ones.
 - `DeclaredLocaleCoverageTests` fails if a declared locale is missing any
-  **player-facing** key (267 of the 1123). Staff surfaces may lag.
+  **player-facing** key (267 of the 1122). Staff surfaces may lag.
 - Lookup goes through `IStringLocalizer<SharedResource>`, registered by
   `AddSharedResourceLocalization()` in `SharpMUSH.Client/Resources/LocalizationServiceCollectionExtensions.cs`.
   **`ResourcesPath` must stay unset** — setting it double-roots the manifest
@@ -44,27 +42,28 @@ engine's separate localization layer — telnet/WebSocket messages via
 
 ## Target locales
 
-Chosen from PennMUSH's own `pennmush/po/*.pox` files — twenty locales that MUSH
-communities actually volunteered translations for — ranked by strings genuinely
-filled in, plus Russian and Chinese for community size.
+The fifteen below were chosen from the twenty locales in PennMUSH's own
+`pennmush/po/*.pox` files — the ones MUSH communities actually volunteered
+translations for — ranked by strings genuinely filled in, plus Russian and
+Chinese for community size.
 
 | Tag | Language | Penn evidence | ICU shard | Portal status |
 |---|---|---|---|---|
-| `de` | German | 653 strings | EFIGS | **done — 1123/1123** |
-| `es` | Spanish | 855 | EFIGS | |
-| `fr` | French | 977 | EFIGS | **done — 1123/1123** |
-| `bg` | Bulgarian | 527 | no_CJK | |
-| `da` | Danish | 557 | no_CJK | |
-| `hr` | Croatian | 1597 — deepest of any locale | no_CJK | |
-| `hu` | Hungarian | 1020 | no_CJK | |
-| `nb` | Norwegian Bokmål | 1468 (as `no_NO`) | no_CJK | |
-| `nl` | Dutch | 1572 | no_CJK | |
-| `pl` | Polish | 1313 | no_CJK | |
-| `pt-BR` | Portuguese (Brazil) | 261 | no_CJK | |
-| `ro` | Romanian | 186 | no_CJK | |
-| `ru` | Russian | 52 — barely started | no_CJK | |
-| `sv` | Swedish | 960 | no_CJK | |
-| `zh-Hans` | Chinese (Simplified) | 68 (as `zh_CN`) | CJK | |
+| `de` | German | 653 strings | EFIGS | **done — 1122/1122** |
+| `es` | Spanish | 855 | EFIGS | **done — 1122/1122** |
+| `fr` | French | 977 | EFIGS | **done — 1122/1122** |
+| `bg` | Bulgarian | 527 | no_CJK | **done — 1122/1122** |
+| `da` | Danish | 557 | no_CJK | **done — 1122/1122** |
+| `hr` | Croatian | 1597 — deepest of any locale | no_CJK | **done — 1122/1122** |
+| `hu` | Hungarian | 1020 | no_CJK | **done — 1122/1122** |
+| `nb` | Norwegian Bokmål | 1468 (as `no_NO`) | no_CJK | **done — 1122/1122** |
+| `nl` | Dutch | 1572 | no_CJK | **done — 1122/1122** |
+| `pl` | Polish | 1313 | no_CJK | **done — 1122/1122** |
+| `pt-BR` | Portuguese (Brazil) | 261 | no_CJK | **done — 1122/1122** |
+| `ro` | Romanian | 186 | no_CJK | **done — 1122/1122** |
+| `ru` | Russian | 52 — barely started | no_CJK | **done — 1122/1122** |
+| `sv` | Swedish | 960 | no_CJK | **done — 1122/1122** |
+| `zh-Hans` | Chinese (Simplified) | 68 (as `zh_CN`) | CJK | **done — 1122/1122** |
 
 Fifteen locales. Two tag choices differ deliberately from Penn's filenames:
 
@@ -91,9 +90,9 @@ limitations of the data model, not of the prose:
 
 1. **Plural categories.** *(Done — the count-bearing values are ICU
    MessageFormat and `validate_resx.py` enforces legal categories per locale.)*
-   `.resx` plus `string.Format` can express exactly two forms. Russian, Polish
-   and Croatian need three; Chinese needs one, making English's two actively
-   wrong. See [`plural-forms.md`](plural-forms.md).
+   `.resx` plus `string.Format` can express exactly two forms. Croatian and
+   Romanian need three, Russian three plus a fourth for fractions, Polish four;
+   Chinese needs one, making English's two actively wrong. See [`plural-forms.md`](plural-forms.md).
 2. **Grammatical case on interpolated nouns.** `"Scene in {0}"` requires the
    room name in the prepositional case in Russian and the locative in Polish.
    No substitution can produce agreement. The strings must be restructured

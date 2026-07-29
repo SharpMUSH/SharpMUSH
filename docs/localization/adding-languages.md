@@ -70,7 +70,8 @@ Display names come from `CultureInfo.NativeName`, so declaring a locale is one
 entry in `SharpMUSH.Client/Resources/PortalLocales.cs`:
 
 ```csharp
-public static IReadOnlyList<string> Codes { get; } = ["en", "de", "fr"];
+public static IReadOnlyList<string> Codes { get; } = ["en", "bg", "da", "de", "es", "fr", "hr",
+    "hu", "nb", "nl", "pl", "pt-BR", "ro", "ru", "sv", "zh-Hans"];
 ```
 
 …**and** the matching tag in `SatelliteResourceLanguages`
@@ -117,7 +118,7 @@ Sequence the locales by risk, not alphabetically:
 4. Everything else in any order. By this point the mechanism is proven and the
    remaining work is volume.
 
-**`de` and `fr` are done** — 1123/1123 keys each, machine-drafted, every value
+**All fifteen are done** — 1122/1122 keys each, machine-drafted, every value
 carrying an `MT` comment because no human has read them.
 
 ## Step 5 — Add the guard test per locale
@@ -126,7 +127,7 @@ carrying an `MT` comment because no human has read them.
 takes its cases from `PortalLocales.Codes`, so a locale added to the picker is
 gated automatically — nothing to write per locale.
 
-It gates **player-facing keys only** (267 of 1123). Staff surfaces are two thirds
+It gates **player-facing keys only** (267 of 1122). Staff surfaces are two-thirds
 of the strings and the least urgent, so they are allowed to lag; that is the
 honest position, not a concession. The split is derived from the key-prefix map
 in `tools/i18n/extract_untranslated.py`, mirrored in `PortalSurfaces` because the
@@ -217,7 +218,7 @@ weight; rarer hanzi fall through to the system CJK font rather than rendering to
 ## Optional: split the resx by surface
 
 Not required, and less compelling now that an LLM does the drafting rather than a
-volunteer facing one 1123-key file. Still worth it for two reasons:
+volunteer facing one 1122-key file. Still worth it for two reasons:
 
 - It makes step 5's `PlayerFacingKeys` a file rather than a prefix heuristic.
 - It lets a locale be *completely* translated for players while staff strings lag,

@@ -14,10 +14,10 @@ public class PortalSurfacesTests
 		RegexOptions.Multiline);
 
 	private static string ToolingSource() =>
-		File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "i18n", "extract_untranslated.py"));
+		File.ReadAllText(Path.Join(AppContext.BaseDirectory, "i18n", "extract_untranslated.py"));
 
 	private static string ClientProject() =>
-		File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "i18n", "SharpMUSH.Client.csproj"));
+		File.ReadAllText(Path.Join(AppContext.BaseDirectory, "i18n", "SharpMUSH.Client.csproj"));
 
 	[Test]
 	public async Task The_surface_map_matches_the_extraction_tool()

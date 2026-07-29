@@ -93,7 +93,7 @@ Russian supplies the categories its grammar needs, with no code change:
 
 ```xml
 <data name="RolPoseCount" xml:space="preserve">
-  <value>{count, plural, one {# поза} few {# позы} other {# поз}}</value>
+  <value>{count, plural, one {# поза} few {# позы} many {# поз} other {# позы}}</value>
 </data>
 ```
 

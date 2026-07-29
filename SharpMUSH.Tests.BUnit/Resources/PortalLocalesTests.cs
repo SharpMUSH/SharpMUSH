@@ -75,17 +75,27 @@ public class PortalLocalesTests
 	}
 
 	[Test]
-	[Arguments("pt-BR")]
-	[Arguments("zh-Hans")]
-	[Arguments("ru")]
+	[Arguments("ja")]
+	[Arguments("cs")]
+	[Arguments("ko")]
 	public async Task DisplayName_NamesALocaleTheChromeShipsNoResxFor(string tag)
 	{
+		// These tags are deliberately outside PortalLocales.Codes. The cases used to be pt-BR, zh-Hans
+		// and ru, which made the name a lie once those locales shipped satellites — the test still
+		// passed, but it had stopped covering the case it was written for.
+		//
 		// Wiki content may be translated into any locale the runtime knows, and the chip rows name it
 		// with nothing but this. Asserted as "not the tag" rather than against a literal native name,
 		// which is ICU-version data and would make this a test of the SDK.
 		//
 		// This says nothing about the browser: the suite runs on the desktop runtime, which always has
 		// full ICU. Whether the *WASM* build does is a csproj property, checked by PortalSurfacesTests.
+		//
+		// Asserted rather than assumed, so that adding one of these languages to the portal fails here
+		// loudly instead of quietly hollowing the test out again.
+		await Assert.That(PortalLocales.Codes).DoesNotContain(tag)
+			.Because($"{tag} must stay outside the shipped locales for this case to cover anything");
+
 		await Assert.That(PortalLocales.DisplayName(tag)).IsNotEqualTo(tag);
 	}
 }
