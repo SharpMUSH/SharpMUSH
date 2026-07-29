@@ -1,0 +1,4507 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="About" xml:space="preserve">
+    <value>Over</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AccessRulesHelper" xml:space="preserve">
+    <value>bijv. !connect, suspect</value>
+    <comment>MT — rule tokens are machine values, kept English.</comment>
+  </data>
+  <data name="AccessRulesLabel" xml:space="preserve">
+    <value>Toegangsregels (kommagescheiden)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddBannedName" xml:space="preserve">
+    <value>Verboden naam toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddCategory" xml:space="preserve">
+    <value>Categorie toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddCommandRestriction" xml:space="preserve">
+    <value>Commandobeperking toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddEntry" xml:space="preserve">
+    <value>Invoer toevoegen</value>
+    <comment>MT — kept distinct from AddItem ("Item toevoegen").</comment>
+  </data>
+  <data name="AddFunctionRestriction" xml:space="preserve">
+    <value>Functiebeperking toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddItem" xml:space="preserve">
+    <value>Item toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddName" xml:space="preserve">
+    <value>Naam toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddNewWord" xml:space="preserve">
+    <value>Nieuw woord toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddSitelockRule" xml:space="preserve">
+    <value>Sitelock-regel toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddValue" xml:space="preserve">
+    <value>Waarde toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdditionalData" xml:space="preserve">
+    <value>Aanvullende gegevens</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionActive" xml:space="preserve">
+    <value>Heractiveren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionClosed" xml:space="preserve">
+    <value>Sluiten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionDeleted" xml:space="preserve">
+    <value>Verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionDisabled" xml:space="preserve">
+    <value>Uitschakelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountDisabled" xml:space="preserve">
+    <value>Account '{0}' uitgeschakeld.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountEnabled" xml:space="preserve">
+    <value>Account '{0}' ingeschakeld.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountMustChangePasswordChip" xml:space="preserve">
+    <value>moet ww wijzigen</value>
+    <comment>MT — chip label; "ww" is the usual Dutch shorthand for "wachtwoord" and keeps the chip narrow.</comment>
+  </data>
+  <data name="AdmAccountStatusActive" xml:space="preserve">
+    <value>Actief</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusChanged" xml:space="preserve">
+    <value>Status van account '{0}' bijgewerkt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusClosed" xml:space="preserve">
+    <value>Gesloten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusDeleted" xml:space="preserve">
+    <value>Verwijderd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountStatusDisabled" xml:space="preserve">
+    <value>Uitgeschakeld</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountsAction" xml:space="preserve">
+    <value>Accounts beheren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
+    <value>Zoek op gebruikersnaam of e-mail…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountsTitle" xml:space="preserve">
+    <value>Accounts</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmApplicationsAction" xml:space="preserve">
+    <value>Aangepaste widgets</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmApplicationsTitle" xml:space="preserve">
+    <value>Applicaties</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAttribute" xml:space="preserve">
+    <value>Attribuut</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmBreadcrumb" xml:space="preserve">
+    <value>Beheer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmCharacterUnlinked" xml:space="preserve">
+    <value>{0} ontkoppeld van '{1}'.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmCharactersAction" xml:space="preserve">
+    <value>Personages bekijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmCharactersComingSoon" xml:space="preserve">
+    <value>Personagebeheer komt binnenkort.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmConfigAction" xml:space="preserve">
+    <value>Siteconfiguratie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDashboardTitle" xml:space="preserve">
+    <value>Beheerdersdashboard</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDatabaseImportAction" xml:space="preserve">
+    <value>Database importeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDatabaseImportTitle" xml:space="preserve">
+    <value>Database-import</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDisableAccount" xml:space="preserve">
+    <value>Uitschakelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmEmail" xml:space="preserve">
+    <value>E-mail</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmEnableAccount" xml:space="preserve">
+    <value>Inschakelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmHelpKicker" xml:space="preserve">
+    <value>Documentatie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmHelpSubtitle" xml:space="preserve">
+    <value>Blader door onderwerpen, doorzoek naslagwerken en lees de handleiding.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmKicker" xml:space="preserve">
+    <value>Beheer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmLayoutAction" xml:space="preserve">
+    <value>Lay-outeditor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmLayoutTitle" xml:space="preserve">
+    <value>Lay-out</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMediaAction" xml:space="preserve">
+    <value>Mediabestanden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMediaTitle" xml:space="preserve">
+    <value>Afbeeldingsbibliotheek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMissing" xml:space="preserve">
+    <value>Ontbreekt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmModerationAction" xml:space="preserve">
+    <value>Meldingen en verbanningen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmModerationComingSoon" xml:space="preserve">
+    <value>Meldingen, verbanningen en auditlog komen binnenkort.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmModerationTitle" xml:space="preserve">
+    <value>Moderatie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmOperationFailed" xml:space="preserve">
+    <value>Bewerking mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPackagesAction" xml:space="preserve">
+    <value>Softcode-pakketten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPackagesTitle" xml:space="preserve">
+    <value>Pakketten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPasswordReset" xml:space="preserve">
+    <value>Wachtwoord voor '{0}' opnieuw ingesteld op: {1} — deel het veilig; de gebruiker moet het bij de volgende keer inloggen wijzigen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
+    <value>Spelerdetails komen binnenkort.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayerDetailKicker" xml:space="preserve">
+    <value>Beheer · speler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayerNumber" xml:space="preserve">
+    <value>Speler #{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersAction" xml:space="preserve">
+    <value>Spelers bekijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersComingSoon" xml:space="preserve">
+    <value>Spelersbeheer komt binnenkort.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersTitle" xml:space="preserve">
+    <value>Spelers</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPresent" xml:space="preserve">
+    <value>Aanwezig</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesAction" xml:space="preserve">
+    <value>Personageprofielen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesConfigured" xml:space="preserve">
+    <value>Geconfigureerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesHandler" xml:space="preserve">
+    <value>Handler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesHandlerNotFound" xml:space="preserve">
+    <value>#{0} — NIET GEVONDEN</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesNotConfiguredValue" xml:space="preserve">
+    <value>Nee (http_handler niet ingesteld)</value>
+    <comment>MT — http_handler is a config key, kept English.</comment>
+  </data>
+  <data name="AdmProfilesResetCaption" xml:space="preserve">
+    <value>Overschrijft de standaardattributen {0} en {1} met de ingebouwde standaardwaarden. Attributen die je zelf hebt toegevoegd blijven ongemoeid.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetComplete" xml:space="preserve">
+    <value>Herstel voltooid: {0} attributen geschreven.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetFailedError" xml:space="preserve">
+    <value>Herstel mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
+    <value>Herstel mislukt ({0}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
+    <value>Handlerstatus kon niet worden geladen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesSubtitle" xml:space="preserve">
+    <value>Personageprofielen worden geleverd door het in-game object {0} via de {1}-softcode. Pas het in het spel aan met {2} of installeer de standaardhandler hieronder opnieuw.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesTitle" xml:space="preserve">
+    <value>Profielen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetFailed" xml:space="preserve">
+    <value>Herstel mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetPassword" xml:space="preserve">
+    <value>Wachtwoord opnieuw instellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetting" xml:space="preserve">
+    <value>Bezig met herstellen…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmRolesAction" xml:space="preserve">
+    <value>Rollen en permissies</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmRolesTitle" xml:space="preserve">
+    <value>Rollen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerAction" xml:space="preserve">
+    <value>Serverstatus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerComingSoon" xml:space="preserve">
+    <value>Serverconfiguratie en live meetgegevens komen binnenkort.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerGodOnly" xml:space="preserve">
+    <value>Serverinstellingen alleen voor God</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerKicker" xml:space="preserve">
+    <value>Beheer · server</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmStatus" xml:space="preserve">
+    <value>Status</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmSuggestionsAction" xml:space="preserve">
+    <value>Woordsuggesties</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmUnlinkFailed" xml:space="preserve">
+    <value>Ontkoppelen mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmUsername" xml:space="preserve">
+    <value>Gebruikersnaam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmYes" xml:space="preserve">
+    <value>Ja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdminPanel" xml:space="preserve">
+    <value>Beheerpaneel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Advanced" xml:space="preserve">
+    <value>Geavanceerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdvancedCategoryDescription" xml:space="preserve">
+    <value>Attributen, vlaggen, kosten en gespecialiseerde instellingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Aliases" xml:space="preserve">
+    <value>Aliassen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>Alles</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AppTitle" xml:space="preserve">
+    <value>SharpMUSH</value>
+    <comment>MT — product name, untranslated.</comment>
+  </data>
+  <data name="AtLeastOneAccessRule" xml:space="preserve">
+    <value>Er is minstens één toegangsregel vereist</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AtLeastOneRestriction" xml:space="preserve">
+    <value>Er is minstens één beperking vereist</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Attributes" xml:space="preserve">
+    <value>Attributen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AttributesLabel" xml:space="preserve">
+    <value>Attributen:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthAccount" xml:space="preserve">
+    <value>Account</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthAccountManagement" xml:space="preserve">
+    <value>Accountbeheer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthChange" xml:space="preserve">
+    <value>Wijzigen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthClaimAdminLead" xml:space="preserve">
+    <value>Dit spel is nog niet geclaimd. Kies een gebruikersnaam en wachtwoord voor het vooraf aangemaakte beheerdersaccount (gekoppeld aan speler #1, God). De eerste persoon die dit formulier invult, wordt de beheerder.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthClaimAdminTitle" xml:space="preserve">
+    <value>Claim het beheerdersaccount</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnActions" xml:space="preserve">
+    <value>Acties</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnDbref" xml:space="preserve">
+    <value>Dbref</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnName" xml:space="preserve">
+    <value>Naam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthConfirmPassword" xml:space="preserve">
+    <value>Wachtwoord bevestigen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthConnectDirectly" xml:space="preserve">
+    <value>Of maak rechtstreeks verbinding via de</value>
+    <comment>MT — sentence fragment; assumed it is followed by the "terminal" link (AuthTerminalLink).</comment>
+  </data>
+  <data name="AuthCreateAccount" xml:space="preserve">
+    <value>Account aanmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCreateAdminAccount" xml:space="preserve">
+    <value>Beheerdersaccount aanmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCreateNewCharacter" xml:space="preserve">
+    <value>+ Nieuw personage aanmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCurrentPassword" xml:space="preserve">
+    <value>Huidig wachtwoord</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthDebugMode" xml:space="preserve">
+    <value>Debugmodus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthDebugModeBody" xml:space="preserve">
+    <value>Je bent aangemeld als {0} (ontwikkelomgeving). Er is geen accountsessie gekoppeld; voor accountbeheer moet je met een echt account inloggen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEdit" xml:space="preserve">
+    <value>Bewerken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEmailOptional" xml:space="preserve">
+    <value>E-mail (optioneel)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEnterCredentials" xml:space="preserve">
+    <value>Voer je inloggegevens in.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEnterPortal" xml:space="preserve">
+    <value>Ga naar het portaal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthFirstRunSetup" xml:space="preserve">
+    <value>Eerste installatie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthGoToHome" xml:space="preserve">
+    <value>Naar de startpagina</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLogOutOfAccount" xml:space="preserve">
+    <value>Uitloggen bij account</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLoginFailed" xml:space="preserve">
+    <value>Inloggen mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLogout" xml:space="preserve">
+    <value>Uitloggen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNewPassword" xml:space="preserve">
+    <value>Nieuw wachtwoord</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNoCharacter" xml:space="preserve">
+    <value>Geen personage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNoCharactersLinked" xml:space="preserve">
+    <value>Er zijn geen personages aan dit account gekoppeld.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNotLoggedInAccount" xml:space="preserve">
+    <value>Je bent niet ingelogd op een account. Gebruik het inlogpaneel van de terminal om in te loggen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthOpenInNewTab" xml:space="preserve">
+    <value>{0} openen in een nieuw tabblad</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPassword" xml:space="preserve">
+    <value>Wachtwoord</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordChangeRequired" xml:space="preserve">
+    <value>Wachtwoord wijzigen vereist.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordChangeRequiredBody" xml:space="preserve">
+    <value>Je moet je wachtwoord wijzigen voordat je de rest van het portaal kunt gebruiken.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordRequired" xml:space="preserve">
+    <value>Wachtwoord is verplicht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordTooShort" xml:space="preserve">
+    <value>Wachtwoord moet minstens 8 tekens bevatten.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordUpdated" xml:space="preserve">
+    <value>Wachtwoord bijgewerkt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordsDoNotMatch" xml:space="preserve">
+    <value>Wachtwoorden komen niet overeen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthProfile" xml:space="preserve">
+    <value>Profiel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthRegister" xml:space="preserve">
+    <value>Registreren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthRegistrationFailed" xml:space="preserve">
+    <value>Registratie mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSettingUp" xml:space="preserve">
+    <value>Bezig met instellen…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupAdminLinked" xml:space="preserve">
+    <value>Het beheerdersaccount {0} is nu gekoppeld aan de vooraf aangemaakte speler #1, God.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupAlreadyCompleted" xml:space="preserve">
+    <value>De installatie is zojuist door iemand anders voltooid. Was jij dat niet, neem dan direct contact op met de serverbeheerder.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupComplete" xml:space="preserve">
+    <value>Installatie voltooid. Jij bent de beheerder.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupFailed" xml:space="preserve">
+    <value>Installatie mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupSignInToManage" xml:space="preserve">
+    <value>Log in om je spel te beheren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupSignedInAs" xml:space="preserve">
+    <value>Je bent ingelogd als {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupWelcome" xml:space="preserve">
+    <value>Welkom bij {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSignIn" xml:space="preserve">
+    <value>Inloggen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSwitchCharacter" xml:space="preserve">
+    <value>Personage wisselen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthTerminalLink" xml:space="preserve">
+    <value>terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkCharacter" xml:space="preserve">
+    <value>Personage ontkoppelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsername" xml:space="preserve">
+    <value>Gebruikersnaam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameOrEmail" xml:space="preserve">
+    <value>Gebruikersnaam of e-mail</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernamePasswordRequired" xml:space="preserve">
+    <value>Gebruikersnaam en wachtwoord zijn verplicht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameRequired" xml:space="preserve">
+    <value>Gebruikersnaam is verplicht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameTaken" xml:space="preserve">
+    <value>Die gebruikersnaam is al in gebruik — kies een andere.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameUpdated" xml:space="preserve">
+    <value>Gebruikersnaam bijgewerkt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AvgWordsPerCategory" xml:space="preserve">
+    <value>Gem. woorden/categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameAddFailed" xml:space="preserve">
+    <value>Verboden naam '{0}' toevoegen mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameAdded" xml:space="preserve">
+    <value>Verboden naam '{0}' is toegevoegd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameRemoveFailed" xml:space="preserve">
+    <value>Verboden naam '{0}' verwijderen mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNameRemoved" xml:space="preserve">
+    <value>Verboden naam '{0}' is verwijderd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNames" xml:space="preserve">
+    <value>Verboden namen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNamesDescription" xml:space="preserve">
+    <value>Beheer de lijst met namen die spelers niet mogen gebruiken bij het aanmaken van personages.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNamesList" xml:space="preserve">
+    <value>Lijst met verboden namen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedPlayerNames" xml:space="preserve">
+    <value>Verboden spelersnamen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Annuleren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CancelConversion" xml:space="preserve">
+    <value>Conversie annuleren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Categories" xml:space="preserve">
+    <value>Categorieën</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoriesCount" xml:space="preserve">
+    <value>Categorieën ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryAlreadyExists" xml:space="preserve">
+    <value>Categorie '{0}' bestaat al</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryCreateFailed" xml:space="preserve">
+    <value>Categorie aanmaken mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryCreated" xml:space="preserve">
+    <value>Categorie '{0}' is aangemaakt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryDeleteFailed" xml:space="preserve">
+    <value>Categorie verwijderen mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryDeleted" xml:space="preserve">
+    <value>Categorie '{0}' verwijderd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryName" xml:space="preserve">
+    <value>Categorienaam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNameEmpty" xml:space="preserve">
+    <value>Categorienaam mag niet leeg zijn</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNameHelper" xml:space="preserve">
+    <value>Voer een naam in voor de nieuwe suggestiecategorie (bijv. 'commands', 'functions', 'help')</value>
+    <comment>MT — the example category names are machine values, kept English.</comment>
+  </data>
+  <data name="CategoryNotFound" xml:space="preserve">
+    <value>Configuratiecategorie "{0}" niet gevonden in het schema.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNotFoundShort" xml:space="preserve">
+    <value>Categorie '{0}' niet gevonden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Characters" xml:space="preserve">
+    <value>Personages</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Chat" xml:space="preserve">
+    <value>Chat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ClearSelection" xml:space="preserve">
+    <value>Selectie wissen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ClickMe" xml:space="preserve">
+    <value>Klik hier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>Binnenkort beschikbaar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandAndFunctionRestrictions" xml:space="preserve">
+    <value>Commando- en functiebeperkingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandName" xml:space="preserve">
+    <value>Commandonaam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandNameHelper" xml:space="preserve">
+    <value>bijv. pemit, force</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionAddFailed" xml:space="preserve">
+    <value>Commandobeperking toevoegen mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionAdded" xml:space="preserve">
+    <value>Commandobeperking voor '{0}' is toegevoegd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionRemoveFailed" xml:space="preserve">
+    <value>Commandobeperking verwijderen mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionRemoved" xml:space="preserve">
+    <value>Commandobeperking voor '{0}' is verwijderd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictions" xml:space="preserve">
+    <value>Commandobeperkingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Commands" xml:space="preserve">
+    <value>Commando's</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Compatibility" xml:space="preserve">
+    <value>Compatibiliteit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Compose" xml:space="preserve">
+    <value>Opstellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ComposeMail" xml:space="preserve">
+    <value>Bericht opstellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Config" xml:space="preserve">
+    <value>Config</value>
+    <comment>MT — short nav/tab label; "Config" is current in Dutch tech UI and keeps the chrome narrow.</comment>
+  </data>
+  <data name="ConfigSavedCount" xml:space="preserve">
+    <value>{count, plural, one {# instelling opgeslagen} other {# instellingen opgeslagen}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Configuration" xml:space="preserve">
+    <value>Configuratie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationExported" xml:space="preserve">
+    <value>Configuratie geëxporteerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationManagement" xml:space="preserve">
+    <value>Configuratiebeheer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationSections" xml:space="preserve">
+    <value>Configuratieonderdelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredCommandRestrictions" xml:space="preserve">
+    <value>Ingestelde commandobeperkingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredFunctionRestrictions" xml:space="preserve">
+    <value>Ingestelde functiebeperkingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredRules" xml:space="preserve">
+    <value>Ingestelde regels</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>Verbinden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Connected" xml:space="preserve">
+    <value>Verbonden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Content" xml:space="preserve">
+    <value>Inhoud</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ContentCategoryDescription" xml:space="preserve">
+    <value>Berichten, cosmetische opties en chatconfiguratie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionErrors" xml:space="preserve">
+    <value>Conversie voltooid met fouten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionSuccess" xml:space="preserve">
+    <value>Conversie succesvol voltooid!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConvertingDatabase" xml:space="preserve">
+    <value>Database converteren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Cosmetic" xml:space="preserve">
+    <value>Cosmetisch</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Costs" xml:space="preserve">
+    <value>Kosten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Counter" xml:space="preserve">
+    <value>Teller</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Create" xml:space="preserve">
+    <value>Aanmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CreateThisPage" xml:space="preserve">
+    <value>Maak deze pagina aan!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CurrentCount" xml:space="preserve">
+    <value>Huidige telling: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Database" xml:space="preserve">
+    <value>Database</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DatabaseDumps" xml:space="preserve">
+    <value>Database-dumps</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>Datum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>Debug</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DefaultsRestored" xml:space="preserve">
+    <value>Standaardwaarden hersteld — sla op om toe te passen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>Uitgeschakeld</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disconnect" xml:space="preserve">
+    <value>Verbinding verbreken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>Verbinding verbroken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DropDatabaseFile" xml:space="preserve">
+    <value>Sleep hier een PennMUSH-databasebestand naartoe of klik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DropFilesOrClick" xml:space="preserve">
+    <value>Sleep hier bestanden naartoe of klik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Duration" xml:space="preserve">
+    <value>Duur:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EditProfile" xml:space="preserve">
+    <value>Profiel bewerken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Elapsed" xml:space="preserve">
+    <value>Verstreken:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>Ingeschakeld</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumApplicationKindPage" xml:space="preserve">
+    <value>Pagina</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumApplicationKindWidget" xml:space="preserve">
+    <value>Widget</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeExit" xml:space="preserve">
+    <value>Uitgang</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypePlayer" xml:space="preserve">
+    <value>Speler</value>
+    <comment>MT — object type here, not the "Player" privilege level, so translated (corpus: speler).</comment>
+  </data>
+  <data name="EnumObjectTypeRoom" xml:space="preserve">
+    <value>Kamer</value>
+    <comment>MT — corpus uses "kamer", not "ruimte".</comment>
+  </data>
+  <data name="EnumObjectTypeThing" xml:space="preserve">
+    <value>Ding</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeUnknown" xml:space="preserve">
+    <value>Onbekend</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermApplicationsAdmin" xml:space="preserve">
+    <value>Applicaties</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermApplicationsAdminDesc" xml:space="preserve">
+    <value>Schemagestuurde applicaties registreren en beheren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermConfigAdmin" xml:space="preserve">
+    <value>Serverconfiguratie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermConfigAdminDesc" xml:space="preserve">
+    <value>Serverconfiguratie, sitelock, verboden namen en beperkingen bewerken.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermGroupBuild" xml:space="preserve">
+    <value>Bouwen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermGroupManage" xml:space="preserve">
+    <value>Beheren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermLayoutAdmin" xml:space="preserve">
+    <value>Lay-outeditor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermLayoutAdminDesc" xml:space="preserve">
+    <value>De widgetlay-out van het portaal bewerken.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaAdmin" xml:space="preserve">
+    <value>Afbeeldingsbibliotheek · beheren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaAdminDesc" xml:space="preserve">
+    <value>De gedeelde mediabibliotheek doorbladeren en items verwijderen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaUpload" xml:space="preserve">
+    <value>Afbeeldingsbibliotheek · uploaden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaUploadDesc" xml:space="preserve">
+    <value>Afbeeldingen uploaden voor gebruik in wikipagina's.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPackagesAdmin" xml:space="preserve">
+    <value>Pakketten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPackagesAdminDesc" xml:space="preserve">
+    <value>Softcode-pakketten installeren, bijwerken en beheren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersModerate" xml:space="preserve">
+    <value>Spelers · modereren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersModerateDesc" xml:space="preserve">
+    <value>Spelersaccounts, personages en profielen uitschakelen, verbannen, waarschuwen en bewerken.</value>
+    <comment>MT — "character" rendered as "personage" throughout; corpus "karakter" only means a text character.</comment>
+  </data>
+  <data name="EnumPermPlayersView" xml:space="preserve">
+    <value>Spelers · bekijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersViewDesc" xml:space="preserve">
+    <value>Spelersaccounts, personages en profielen bekijken (alleen-lezen).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermRolesAdmin" xml:space="preserve">
+    <value>Rollen en permissies</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermRolesAdminDesc" xml:space="preserve">
+    <value>Rollen aanmaken, permissies bewerken en rollen toewijzen aan accounts.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermServerAdmin" xml:space="preserve">
+    <value>Server (God)</value>
+    <comment>MT — God is a privilege level, kept English.</comment>
+  </data>
+  <data name="EnumPermServerAdminDesc" xml:space="preserve">
+    <value>Bewerkingen op serverniveau en database-import. Standaard alleen voor God.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermSoftcodeUse" xml:space="preserve">
+    <value>Softcode-editor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermSoftcodeUseDesc" xml:space="preserve">
+    <value>De softcode-editor openen om objectattributen te bekijken en te bewerken.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiAdmin" xml:space="preserve">
+    <value>Wiki · modereren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiAdminDesc" xml:space="preserve">
+    <value>Pagina's beveiligen/vrijgeven, beveiligde pagina's bewerken, batchbewerkingen en het wikibeheerdashboard.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiCreate" xml:space="preserve">
+    <value>Wiki · aanmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiCreateDesc" xml:space="preserve">
+    <value>Nieuwe wikipagina's aanmaken.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDelete" xml:space="preserve">
+    <value>Wiki · verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDeleteDesc" xml:space="preserve">
+    <value>Wikipagina's en hun revisiegeschiedenis verwijderen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiEdit" xml:space="preserve">
+    <value>Wiki · bewerken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiEditDesc" xml:space="preserve">
+    <value>Bestaande (onbeveiligde) wikipagina's bewerken, terugdraaien en opnieuw taggen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiRead" xml:space="preserve">
+    <value>Wiki · lezen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiReadDesc" xml:space="preserve">
+    <value>Niet-gepubliceerde wikipagina's en concepten bekijken (gepubliceerde pagina's zijn voor iedereen zichtbaar).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindInstall" xml:space="preserve">
+    <value>Installeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindRollback" xml:space="preserve">
+    <value>Terugdraaien</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindUpgrade" xml:space="preserve">
+    <value>Bijwerken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitBytes" xml:space="preserve">
+    <value>{0} B</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitGigabytes" xml:space="preserve">
+    <value>{0} GB</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitKilobytes" xml:space="preserve">
+    <value>{0} KB</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumUnitMegabytes" xml:space="preserve">
+    <value>{0} MB</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingBannedName" xml:space="preserve">
+    <value>Fout bij toevoegen van verboden naam: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingCommandRestriction" xml:space="preserve">
+    <value>Fout bij toevoegen van commandobeperking: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingFunctionRestriction" xml:space="preserve">
+    <value>Fout bij toevoegen van functiebeperking: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingSitelockRule" xml:space="preserve">
+    <value>Fout bij toevoegen van sitelock-regel: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingWord" xml:space="preserve">
+    <value>Fout bij toevoegen van woord: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorCount" xml:space="preserve">
+    <value>{count, plural, one {# fout} other {# fouten}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorCreatingCategory" xml:space="preserve">
+    <value>Fout bij aanmaken van categorie: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorDeletingCategory" xml:space="preserve">
+    <value>Fout bij verwijderen van categorie: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorDeletingWord" xml:space="preserve">
+    <value>Fout bij verwijderen van woord: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingBannedNames" xml:space="preserve">
+    <value>Fout bij laden van verboden namen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingConfig" xml:space="preserve">
+    <value>Fout bij laden van configuratie: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingRestrictions" xml:space="preserve">
+    <value>Fout bij laden van beperkingen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingSitelockRules" xml:space="preserve">
+    <value>Fout bij laden van sitelock-regels: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingSuggestions" xml:space="preserve">
+    <value>Fout bij laden van suggesties: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingBannedName" xml:space="preserve">
+    <value>Fout bij verwijderen van verboden naam: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingCommandRestriction" xml:space="preserve">
+    <value>Fout bij verwijderen van commandobeperking: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingFunctionRestriction" xml:space="preserve">
+    <value>Fout bij verwijderen van functiebeperking: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingSitelockRule" xml:space="preserve">
+    <value>Fout bij verwijderen van sitelock-regel: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Errors" xml:space="preserve">
+    <value>Fouten ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EstimatedRemaining" xml:space="preserve">
+    <value>Geschat resterend:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Exits" xml:space="preserve">
+    <value>Uitgangen:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Export" xml:space="preserve">
+    <value>Exporteren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ExportConfiguration" xml:space="preserve">
+    <value>Configuratie exporteren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ExportFailed" xml:space="preserve">
+    <value>Configuratie exporteren mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FailedToLoadSchema" xml:space="preserve">
+    <value>Configuratieschema laden mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FailedToLoadValues" xml:space="preserve">
+    <value>Configuratiewaarden laden mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Files" xml:space="preserve">
+    <value>Bestanden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Flags" xml:space="preserve">
+    <value>Vlaggen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="From" xml:space="preserve">
+    <value>Van</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionName" xml:space="preserve">
+    <value>Functienaam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionNameHelper" xml:space="preserve">
+    <value>bijv. pemit(), sql()</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionAddFailed" xml:space="preserve">
+    <value>Functiebeperking toevoegen mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionAdded" xml:space="preserve">
+    <value>Functiebeperking voor '{0}' is toegevoegd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionRemoveFailed" xml:space="preserve">
+    <value>Functiebeperking verwijderen mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionRemoved" xml:space="preserve">
+    <value>Functiebeperking voor '{0}' is verwijderd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictions" xml:space="preserve">
+    <value>Functiebeperkingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Functions" xml:space="preserve">
+    <value>Functies</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Gallery" xml:space="preserve">
+    <value>Galerij</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryEmpty" xml:space="preserve">
+    <value>Nog geen afbeeldingen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryUploadFailed" xml:space="preserve">
+    <value>Afbeelding uploaden mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Help" xml:space="preserve">
+    <value>Help</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Home" xml:space="preserve">
+    <value>Start</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostPattern" xml:space="preserve">
+    <value>Hostpatroon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostPatternHelper" xml:space="preserve">
+    <value>bijv. *.example.com of 192.168.1.*</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Import" xml:space="preserve">
+    <value>Importeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportAnotherDatabase" xml:space="preserve">
+    <value>Nog een database importeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfig" xml:space="preserve">
+    <value>Config importeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfigDescription" xml:space="preserve">
+    <value>Upload een mush.cnf-bestand om configuratie-instellingen te importeren. Ondersteunde formaten: .cnf, .conf, .txt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfigFile" xml:space="preserve">
+    <value>Configuratiebestand importeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfiguration" xml:space="preserve">
+    <value>Configuratie importeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportDatabaseDescription" xml:space="preserve">
+    <value>Upload een PennMUSH-databasebestand om het te converteren en in SharpMUSH te importeren. Bij de conversie worden alle objecten aangemaakt, relaties gelegd en attributen en sloten ingesteld.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportPennMUSHDatabase" xml:space="preserve">
+    <value>PennMUSH-database importeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Important" xml:space="preserve">
+    <value>Belangrijk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Importing" xml:space="preserve">
+    <value>Importeren...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="InThisSection" xml:space="preserve">
+    <value>in dit onderdeel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Issues" xml:space="preserve">
+    <value>Problemen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Joined" xml:space="preserve">
+    <value>deelgenomen</value>
+    <comment>MT — assumed this is a scene-participation badge ("X joined").</comment>
+  </data>
+  <data name="Key" xml:space="preserve">
+    <value>Sleutel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Taal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayActions" xml:space="preserve">
+    <value>Acties</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAllLayouts" xml:space="preserve">
+    <value>Alle lay-outs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppAllowedZones" xml:space="preserve">
+    <value>Toegestane zones</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrl" xml:space="preserve">
+    <value>Data-URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrlHelper" xml:space="preserve">
+    <value>Gegevens voor weergave / vooraf ingevuld formulier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrlOptional" xml:space="preserve">
+    <value>Data-URL (optioneel)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDisplayName" xml:space="preserve">
+    <value>Weergavenaam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDisplayOrder" xml:space="preserve">
+    <value>Weergavevolgorde</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppEditInSoftcode" xml:space="preserve">
+    <value>Bewerken in softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppEditTitle" xml:space="preserve">
+    <value>{0} bewerken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppIconHelper" xml:space="preserve">
+    <value>MudBlazor Material-icoonnaam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppIconOptional" xml:space="preserve">
+    <value>Icoon (optioneel)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKind" xml:space="preserve">
+    <value>Soort</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKindPage" xml:space="preserve">
+    <value>Pagina (/apps/{slug})</value>
+    <comment>MT — route left verbatim.</comment>
+  </data>
+  <data name="LayAppKindWidget" xml:space="preserve">
+    <value>Widget (lay-outzone)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppMinRole" xml:space="preserve">
+    <value>Min. rol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppMinimumRole" xml:space="preserve">
+    <value>Minimale rol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacement" xml:space="preserve">
+    <value>Plaatsing in navigatie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacementHelper" xml:space="preserve">
+    <value>Stel in om een pagina-app in de navigatie te tonen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacementOptional" xml:space="preserve">
+    <value>Plaatsing in navigatie (optioneel)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppOpen" xml:space="preserve">
+    <value>App openen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppOrder" xml:space="preserve">
+    <value>Volgorde</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveConfirm" xml:space="preserve">
+    <value>'{0}' ({1}) verwijderen? Dit ontkoppelt de app alleen van het portaal; de softcode blijft ongemoeid.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveFailed" xml:space="preserve">
+    <value>Applicatie verwijderen mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveTitle" xml:space="preserve">
+    <value>Applicatie verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoved" xml:space="preserve">
+    <value>{0} verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRequiredFields" xml:space="preserve">
+    <value>Slug, weergavenaam en schema-URL zijn verplicht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSaveFailed" xml:space="preserve">
+    <value>Opslaan mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSaved" xml:space="preserve">
+    <value>{0} opgeslagen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSchemaUrl" xml:space="preserve">
+    <value>Schema-URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSchemaUrlHelper" xml:space="preserve">
+    <value>HTTP-handlerroute die het Portal Schema Document teruggeeft, bijv. http/chargen/schema</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSlug" xml:space="preserve">
+    <value>Slug</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSlugHelper" xml:space="preserve">
+    <value>URL-sleutel — /apps/{slug}. Kan na het aanmaken niet meer worden gewijzigd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSubmitRoute" xml:space="preserve">
+    <value>Verzendroute</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSubmitRouteOptional" xml:space="preserve">
+    <value>Verzendroute (optioneel)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppViewSchema" xml:space="preserve">
+    <value>Schema bekijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayApplications" xml:space="preserve">
+    <value>Applicaties</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayApply" xml:space="preserve">
+    <value>Toepassen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsEmptyDetail" xml:space="preserve">
+    <value>Selecteer een applicatie of registreer een nieuwe.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsKicker" xml:space="preserve">
+    <value>Bouwen · aangepaste widgets</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsNew" xml:space="preserve">
+    <value>Nieuwe applicatie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsNoMatch" xml:space="preserve">
+    <value>Geen overeenkomende applicaties.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsPages" xml:space="preserve">
+    <value>Pagina's</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsRegister" xml:space="preserve">
+    <value>Applicatie registreren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSchemaRegistry" xml:space="preserve">
+    <value>Schemaregister</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSchemas" xml:space="preserve">
+    <value>Schema's</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSearchPlaceholder" xml:space="preserve">
+    <value>Apps of schema's zoeken…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsStatPages" xml:space="preserve">
+    <value>schermvullende apps</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsStatRegistered" xml:space="preserve">
+    <value>geregistreerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsStatSchemas" xml:space="preserve">
+    <value>in softcode gedefinieerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsStatWidgets" xml:space="preserve">
+    <value>dashboardzones</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsWidgets" xml:space="preserve">
+    <value>Widgets</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayBadgeCustomized" xml:space="preserve">
+    <value>aangepast</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayBadgeDefault" xml:space="preserve">
+    <value>standaard</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigJsonHelp" xml:space="preserve">
+    <value>Configuratie per instantie voor {0}, als JSON. Laat leeg voor geen configuratie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigJsonLabel" xml:space="preserve">
+    <value>Config-JSON</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigure" xml:space="preserve">
+    <value>Instellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigureWidget" xml:space="preserve">
+    <value>{0} instellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayEdit" xml:space="preserve">
+    <value>Bewerken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayEditorPageTitle" xml:space="preserve">
+    <value>Lay-out {0}</value>
+    <comment>MT — English is "{0} Layout"; Dutch cannot compound a multi-word scope name, so the head noun leads.</comment>
+  </data>
+  <data name="LayFlowZoneHint" xml:space="preserve">
+    <value>horizontaal — geen breedte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayGridZoneHint" xml:space="preserve">
+    <value>raster van 12 kolommen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayHasConfig" xml:space="preserve">
+    <value>Heeft configuratie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayInvalidJson" xml:space="preserve">
+    <value>Ongeldige JSON: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLayouts" xml:space="preserve">
+    <value>Lay-out</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLayoutsBlurb" xml:space="preserve">
+    <value>Rangschik de widgets op elke pagina door ze tussen zones te slepen. Wijzigingen worden voor elke bezoeker gepubliceerd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLayoutsKicker" xml:space="preserve">
+    <value>Bouwen · paginalay-outs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLivePreview" xml:space="preserve">
+    <value>Live voorbeeld</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPaletteHint" xml:space="preserve">
+    <value>Sleep een widget naar een zone. Sleep een geplaatste widget hierheen terug om hem te verwijderen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreview" xml:space="preserve">
+    <value>Voorbeeld</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreviewNote" xml:space="preserve">
+    <value>Toont niet-opgeslagen wijzigingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreviewNoteProfile" xml:space="preserve">
+    <value> · personagewidgets tonen hier een algemene staat</value>
+    <comment>MT — leading space preserved; this is appended to LayPreviewNote.</comment>
+  </data>
+  <data name="LayPublish" xml:space="preserve">
+    <value>Publiceren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublishFailed" xml:space="preserve">
+    <value>Lay-out publiceren mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublished" xml:space="preserve">
+    <value>De lay-out {0} is gepubliceerd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublishing" xml:space="preserve">
+    <value>Publiceren…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayRemove" xml:space="preserve">
+    <value>Verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayReset" xml:space="preserve">
+    <value>Herstellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetConfirm" xml:space="preserve">
+    <value>De lay-out {0} terugzetten naar de standaard? Alle aanpassingen gaan verloren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetDone" xml:space="preserve">
+    <value>De lay-out {0} is teruggezet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetFailed" xml:space="preserve">
+    <value>Lay-out terugzetten mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetLayout" xml:space="preserve">
+    <value>Lay-out terugzetten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeGlobal" xml:space="preserve">
+    <value>Sitekader</value>
+    <comment>MT — "Site Chrome" has no settled Dutch equivalent; "Sitekader" reads as the frame shared by every page. Worth a native check.</comment>
+  </data>
+  <data name="LayScopeGlobalDesc" xml:space="preserve">
+    <value>Bovenbalk, zijbalken en voettekst die op elke pagina gedeeld worden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeHome" xml:space="preserve">
+    <value>Startpagina</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeHomeDesc" xml:space="preserve">
+    <value>De hoofdinhoud van de landingspagina.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeProfile" xml:space="preserve">
+    <value>Personageprofiel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeProfileDesc" xml:space="preserve">
+    <value>De hoofdinhoud en rechterkolom van de pagina /character/{name}.</value>
+    <comment>MT — route left verbatim.</comment>
+  </data>
+  <data name="LayScopeWikiIndex" xml:space="preserve">
+    <value>Wiki-index</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeWikiIndexDesc" xml:space="preserve">
+    <value>De landingspagina /wiki.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LaySidebarsAndFooter" xml:space="preserve">
+    <value>Zijbalken en voettekst</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LaySpacerHeight" xml:space="preserve">
+    <value>Hoogte (px)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LaySpacerHelp" xml:space="preserve">
+    <value>Hoogte van de lege ruimte in pixels. De breedte volgt het kolombereik van de plaatsing.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayUnknownScope" xml:space="preserve">
+    <value>Onbekend lay-outbereik “{0}”.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetActiveScene" xml:space="preserve">
+    <value>Actieve scène</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetCharacterDirectory" xml:space="preserve">
+    <value>Personagegids</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetCharacterGallery" xml:space="preserve">
+    <value>Personagegalerij</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetGameStats" xml:space="preserve">
+    <value>Spelstatistieken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetOnlineCharacters" xml:space="preserve">
+    <value>Online personages</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetQuickLinks" xml:space="preserve">
+    <value>Snelkoppelingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetQuickstart" xml:space="preserve">
+    <value>Snelstart</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetRecentWikiActivity" xml:space="preserve">
+    <value>Recente wiki-activiteit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetSchemaApplication" xml:space="preserve">
+    <value>Schema-applicatie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetSpacer" xml:space="preserve">
+    <value>Tussenruimte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetWelcomeText" xml:space="preserve">
+    <value>Welkomsttekst</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetWikiBody" xml:space="preserve">
+    <value>Wiki-inhoud</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetWikiIndex" xml:space="preserve">
+    <value>Wiki-index</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetsPanel" xml:space="preserve">
+    <value>Widgets</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidthInColumns" xml:space="preserve">
+    <value>Breedte in kolommen (1–12)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Limits" xml:space="preserve">
+    <value>Limieten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Laden...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Locks" xml:space="preserve">
+    <value>Sloten:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Logging" xml:space="preserve">
+    <value>Logging</value>
+    <comment>MT — the English loanword is standard in Dutch server config; "logboekregistratie" would be far longer.</comment>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>Inloggen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LogsAndFiles" xml:space="preserve">
+    <value>Logs en bestanden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LogsCategoryDescription" xml:space="preserve">
+    <value>Logging, bestandspaden en database-dumps</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mail" xml:space="preserve">
+    <value>Post</value>
+    <comment>MT — corpus renders the @mail system as "post".</comment>
+  </data>
+  <data name="MailDeleteFailed" xml:space="preserve">
+    <value>Bericht kon niet worden verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailDeleted" xml:space="preserve">
+    <value>Bericht verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailEmpty" xml:space="preserve">
+    <value>Geen berichten in deze map.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailNeedsCharacter" xml:space="preserve">
+    <value>Selecteer of verbind een personage om je post te lezen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailNotFound" xml:space="preserve">
+    <value>Bericht niet gevonden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailSendFailed" xml:space="preserve">
+    <value>Post kon niet worden verzonden. Controleer de naam van de ontvanger.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailSent" xml:space="preserve">
+    <value>Post verzonden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mailbox" xml:space="preserve">
+    <value>Postvak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Maintenance" xml:space="preserve">
+    <value>Onderhoud</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ManageAllSettings" xml:space="preserve">
+    <value>Beheer alle SharpMUSH-serverinstellingen op één plek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ManageConfigDescription" xml:space="preserve">
+    <value>Beheer je MUSH-configuratie-instellingen. Je kunt configuratiebestanden importeren of instellingen direct aanpassen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mappings" xml:space="preserve">
+    <value>Koppelingen:</value>
+    <comment>MT — "koppelingen" chosen over "toewijzingen" to keep it distinct from the role Assignments tab.</comment>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>Bericht</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Messages" xml:space="preserve">
+    <value>Berichten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MyAccount" xml:space="preserve">
+    <value>Mijn account</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NameToBan" xml:space="preserve">
+    <value>Naam om te verbannen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavAccountTag" xml:space="preserve">
+    <value>account</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplication" xml:space="preserve">
+    <value>Applicatie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplicationComponentLoadFailed" xml:space="preserve">
+    <value>De gecompileerde component van deze applicatie kon niet worden geladen. Browsercode is mogelijk uitgeschakeld (allow_browser_code) of de assembly is niet geverifieerd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
+    <value>Het schema van de applicatie kon niet worden geladen. De softcode-handler op {0} ontbreekt mogelijk of geeft ongeldige JSON terug.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterManagement" xml:space="preserve">
+    <value>Personagebeheer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
+    <value>Personagebeheer is in de maak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterName" xml:space="preserve">
+    <value>Naam van personage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterRegistered" xml:space="preserve">
+    <value>{0} personage geregistreerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharactersRegistered" xml:space="preserve">
+    <value>{0} personages geregistreerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharsShort" xml:space="preserve">
+    <value>Chars</value>
+    <comment>MT — abbreviation of "characters" in nav chrome; Dutch has no short form of "personages" that fits, and Dutch MU* players use the English "chars". Worth a native check.</comment>
+  </data>
+  <data name="NavCloseTerminal" xml:space="preserve">
+    <value>Terminal sluiten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCommandTerminal" xml:space="preserve">
+    <value>commandoterminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
+    <value>— Log in om te zien wie hier is —</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateACharacter" xml:space="preserve">
+    <value>Een personage aanmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacter" xml:space="preserve">
+    <value>Personage aanmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacterBlurb" xml:space="preserve">
+    <value>Een personage is een rol die je in het spel speelt. Het is gekoppeld aan je account; je kunt er later meer aanmaken.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExitFocusMode" xml:space="preserve">
+    <value>Focusmodus verlaten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExits" xml:space="preserve">
+    <value>Uitgangen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFocusMode" xml:space="preserve">
+    <value>Focusmodus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGoToAccountPage" xml:space="preserve">
+    <value>Ga naar je accountpagina</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGuestTag" xml:space="preserve">
+    <value>gast</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavInPlay" xml:space="preserve">
+    <value>in spel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavLoadingApplication" xml:space="preserve">
+    <value>Applicatie laden…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailFolders" xml:space="preserve">
+    <value>Mappen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailForward" xml:space="preserve">
+    <value>Doorsturen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailReadFullMessage" xml:space="preserve">
+    <value>Volledig bericht lezen →</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailSelectMessage" xml:space="preserve">
+    <value>Selecteer een bericht om te lezen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMenuLabel" xml:space="preserve">
+    <value>Menu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationAccess" xml:space="preserve">
+    <value>Je hebt geen toegang tot deze applicatie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationRegistered" xml:space="preserve">
+    <value>Er is geen applicatie geregistreerd op {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoExitsAvailable" xml:space="preserve">
+    <value>— Geen uitgangen beschikbaar —</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotConnected" xml:space="preserve">
+    <value>niet verbonden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOffline" xml:space="preserve">
+    <value>offline</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOnline" xml:space="preserve">
+    <value>online</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOpenTerminal" xml:space="preserve">
+    <value>Terminal openen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySessionActive" xml:space="preserve">
+    <value>Speelsessie actief</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayTerminal" xml:space="preserve">
+    <value>Speelterminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayUnreadActivity" xml:space="preserve">
+    <value>Ongelezen spelactiviteit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSearchPlaceholder" xml:space="preserve">
+    <value>Zoeken…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionBuild" xml:space="preserve">
+    <value>Bouwen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionManage" xml:space="preserve">
+    <value>Beheren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionWorld" xml:space="preserve">
+    <value>Wereld</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsAccountDescription" xml:space="preserve">
+    <value>E-mail, wachtwoord en aanmeldbeveiliging</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsCharactersDescription" xml:space="preserve">
+    <value>Beheer personages die aan je account gekoppeld zijn</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsThemeDescription" xml:space="preserve">
+    <value>Voorkeuren voor weergave en accentkleur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalSettings" xml:space="preserve">
+    <value>Terminalinstellingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthCols" xml:space="preserve">
+    <value>Breedte (kolommen)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthTooltip" xml:space="preserve">
+    <value>Gewenste terminalbreedte in kolommen (min. 78). Het lettertype schaalt automatisch mee om die breedte te vullen — meer ruimte betekent een groter lettertype — en de breedte wordt als je schermbreedte aan de server doorgegeven.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTheme" xml:space="preserve">
+    <value>Thema</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavThemeComingSoon" xml:space="preserve">
+    <value>Themavoorkeuren zijn in de maak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavToggleNavigation" xml:space="preserve">
+    <value>Navigatie in-/uitklappen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Network" xml:space="preserve">
+    <value>Netwerk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewEntry" xml:space="preserve">
+    <value>Nieuwe invoer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewKey" xml:space="preserve">
+    <value>Nieuwe sleutel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoBannedNamesConfigured" xml:space="preserve">
+    <value>Geen verboden namen ingesteld.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoChangesToSave" xml:space="preserve">
+    <value>Geen wijzigingen om op te slaan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCharactersFound" xml:space="preserve">
+    <value>Geen personages gevonden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCommandRestrictions" xml:space="preserve">
+    <value>Geen commandobeperkingen ingesteld.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoEntries" xml:space="preserve">
+    <value>Geen invoer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoFunctionRestrictions" xml:space="preserve">
+    <value>Geen functiebeperkingen ingesteld.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoGroupingNote" xml:space="preserve">
+    <value>Deze categorie is nog niet bijgewerkt met uitgebreide schemametadata. Eigenschappen worden zonder groepering weergegeven. Alleen de categorie Network (Net) heeft momenteel de volledige uitgebreide interface.</value>
+    <comment>MT — "Network (Net)" is a config category identifier, kept English.</comment>
+  </data>
+  <data name="NoItems" xml:space="preserve">
+    <value>Geen items</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesFound" xml:space="preserve">
+    <value>Geen configuratie-eigenschappen gevonden voor categorie "{0}".</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesHint" xml:space="preserve">
+    <value>Deze categorie is mogelijk nog niet voorzien van uitgebreide schemametadata.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSitelockRulesConfigured" xml:space="preserve">
+    <value>Geen sitelock-regels ingesteld.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSuggestionCategories" xml:space="preserve">
+    <value>Geen suggestiecategorieën gedefinieerd. Klik op "Categorie toevoegen" om je eerste categorie aan te maken.</value>
+    <comment>MT — quoted label matches the AddCategory translation.</comment>
+  </data>
+  <data name="NoWordsInCategory" xml:space="preserve">
+    <value>Nog geen woorden in deze categorie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorized" xml:space="preserve">
+    <value>Je hebt geen toegang tot deze bron.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>Niet gevonden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotFoundDescription" xml:space="preserve">
+    <value>Sorry, de inhoud die je zoekt bestaat niet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NothingToSeeHere" xml:space="preserve">
+    <value>Hier valt niets te zien.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsConverted" xml:space="preserve">
+    <value>Geconverteerde objecten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsCreated" xml:space="preserve">
+    <value>Aangemaakte objecten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PercentComplete" xml:space="preserve">
+    <value>{0:F1}% voltooid - {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Performance" xml:space="preserve">
+    <value>Prestaties</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PerformanceCategoryDescription" xml:space="preserve">
+    <value>Resourcelimieten, commandowachtrijen en optimalisatie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Phase" xml:space="preserve">
+    <value>Fase:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAction" xml:space="preserve">
+    <value>Actie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAddRemote" xml:space="preserve">
+    <value>Remote toevoegen</value>
+    <comment>MT — "remote" kept as the git term of art, as Dutch developers do.</comment>
+  </data>
+  <data name="PkgAddRemoteHeading" xml:space="preserve">
+    <value>Een remote toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAdminSection" xml:space="preserve">
+    <value>Beheer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgApplied" xml:space="preserve">
+    <value>{0} {1} toegepast (revisie {2}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgApply" xml:space="preserve">
+    <value>Toepassen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAttributesCount" xml:space="preserve">
+    <value>Attributen ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAttributesToInclude" xml:space="preserve">
+    <value>Op te nemen attributen:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthor" xml:space="preserve">
+    <value>Auteur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorDescription" xml:space="preserve">
+    <value>Zet levende objecten om in een package.yaml. Elke dbref in de selectie moet uiteindelijk symbolisch zijn: verwijzingen binnen de selectie worden automatisch opgelost, de rest classificeer je hieronder.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorHeading" xml:space="preserve">
+    <value>Een pakket samenstellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorsLabel" xml:space="preserve">
+    <value>Auteurs (kommagescheiden)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAvailableFrom" xml:space="preserve">
+    <value>Beschikbaar via {0}{1}.</value>
+    <comment>MT — assumed {0} is the remote name and {1} an appended suffix such as PkgInstalledSuffix.</comment>
+  </data>
+  <data name="PkgBaseAsInstalled" xml:space="preserve">
+    <value>Basis (zoals geïnstalleerd)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBranch" xml:space="preserve">
+    <value>Branch</value>
+    <comment>MT — git term of art, kept.</comment>
+  </data>
+  <data name="PkgBranchOptionalLabel" xml:space="preserve">
+    <value>Branch (optioneel)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowse" xml:space="preserve">
+    <value>Bladeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseDescription" xml:space="preserve">
+    <value>Vernieuwt de repocache van de remote en toont de pakketten ervan. Versies komen van release-tags; de tip van de branch is het dev-kanaal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseHeading" xml:space="preserve">
+    <value>Pakketten doorbladeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCheck" xml:space="preserve">
+    <value>Controleren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
+    <value>Classificeer {0}: configure-refs hebben een sleutel en een label nodig.</value>
+    <comment>MT — "configure" is a ref mode value (see PkgModeConfigure), kept English.</comment>
+  </data>
+  <data name="PkgClose" xml:space="preserve">
+    <value>Sluiten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommandCollision" xml:space="preserve">
+    <value>$-commando "{0}" is al gedefinieerd door pakket {1} ({2}/{3}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityDirectory" xml:space="preserve">
+    <value>Communitygids</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityDirectoryHint" xml:space="preserve">
+    <value>Geaccepteerde communityrepo's, samengesteld in de officiële packages-repo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityRemoteAdded" xml:space="preserve">
+    <value>'{0}' toegevoegd als communityremote.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigureKeyLabel" xml:space="preserve">
+    <value>Configuratiesleutel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigurePromptLabel" xml:space="preserve">
+    <value>Vraag die installeerders te zien krijgen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigured" xml:space="preserve">
+    <value>geconfigureerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfiguredRemotes" xml:space="preserve">
+    <value>Geconfigureerde remotes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictCount" xml:space="preserve">
+    <value>{count, plural, one {# conflict} other {# conflicten}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictLabel" xml:space="preserve">
+    <value>conflict: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictsWithInstalled" xml:space="preserve">
+    <value>Conflicteert met geïnstalleerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCurrent" xml:space="preserve">
+    <value>huidig</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDbrefHelper" xml:space="preserve">
+    <value>Object-id, bijv. #123:456</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDefaultBranch" xml:space="preserve">
+    <value>standaard</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDeleteTakeTheirs" xml:space="preserve">
+    <value>Verwijderen (die van hen nemen)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDependedOnBy" xml:space="preserve">
+    <value>Afhankelijk hiervan: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDescriptionLabel" xml:space="preserve">
+    <value>Beschrijving</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDetails" xml:space="preserve">
+    <value>Details</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevChannelOption" xml:space="preserve">
+    <value>dev-kanaal ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevDrift" xml:space="preserve">
+    <value>dev-afwijking</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDownload" xml:space="preserve">
+    <value>Downloaden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEditMergedValue" xml:space="preserve">
+    <value>Samengevoegde waarde bewerken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEnterObjectId" xml:space="preserve">
+    <value>Voer minstens één object-id in.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgExportHint" xml:space="preserve">
+    <value>Commit dit naar een pakketrepo (één map per pakket), vermeld het in index.yaml en tag releases als</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgExportYaml" xml:space="preserve">
+    <value>package.yaml exporteren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgForceRemoval" xml:space="preserve">
+    <value>Toch geforceerd verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgGitUrlLabel" xml:space="preserve">
+    <value>Git-URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstallHeading" xml:space="preserve">
+    <value>Installeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalled" xml:space="preserve">
+    <value>Geïnstalleerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledDescription" xml:space="preserve">
+    <value>Geïnstalleerde softcode-pakketten. Upgrades verlopen altijd via een beoordeeld plan — er wordt niets automatisch toegepast.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledOn" xml:space="preserve">
+    <value>geïnstalleerd op {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledSuffix" xml:space="preserve">
+    <value> — geïnstalleerd: {0}.</value>
+    <comment>MT — leading space preserved; this is appended to PkgAvailableFrom.</comment>
+  </data>
+  <data name="PkgKeepMine" xml:space="preserve">
+    <value>De mijne behouden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgKickerAuthoring" xml:space="preserve">
+    <value>Bouwen · pakketten samenstellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgKickerRegistry" xml:space="preserve">
+    <value>Bouwen · pakketregister</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgKickerSources" xml:space="preserve">
+    <value>Bouwen · pakketbronnen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLicenseLabel" xml:space="preserve">
+    <value>Licentie (optioneel)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLiveYourVersion" xml:space="preserve">
+    <value>Live (jouw versie)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgManifestParseFailed" xml:space="preserve">
+    <value>Het manifest bij de tip kon niet worden geparseerd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgManifestRefLabel" xml:space="preserve">
+    <value>Manifest-ref (kleine letters, underscores)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMergedValueLabel" xml:space="preserve">
+    <value>Samengevoegde waarde</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMissingRemoteParam" xml:space="preserve">
+    <value>Parameter 'remote' ontbreekt.</value>
+    <comment>MT — 'remote' is the literal query-parameter name, kept English.</comment>
+  </data>
+  <data name="PkgModeConfigure" xml:space="preserve">
+    <value>configure</value>
+    <comment>MT — ref-mode API value, kept English.</comment>
+  </data>
+  <data name="PkgModeWellKnown" xml:space="preserve">
+    <value>well-known</value>
+    <comment>MT — ref-mode API value, kept English.</comment>
+  </data>
+  <data name="PkgName" xml:space="preserve">
+    <value>Naam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNewVersion" xml:space="preserve">
+    <value>Nieuw ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoCommunityRepos" xml:space="preserve">
+    <value>Nog geen communityrepo's geaccepteerd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoDescription" xml:space="preserve">
+    <value>(geen beschrijving)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoReadme" xml:space="preserve">
+    <value>Geen README beschikbaar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoReleaseTags" xml:space="preserve">
+    <value>Geen release-tags — alleen het dev-kanaal is beschikbaar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoSearchMatch" xml:space="preserve">
+    <value>Geen pakketten komen overeen met je zoekopdracht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoUpdatesAvailable" xml:space="preserve">
+    <value>Voor geen enkel pakket is een update beschikbaar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoneInstalled" xml:space="preserve">
+    <value>Nog geen pakketten geïnstalleerd. Configureer een remote en blader erdoorheen om je eerste pakket te installeren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNotInstalledSuffix" xml:space="preserve">
+    <value> — niet geïnstalleerd.</value>
+    <comment>MT — leading space preserved.</comment>
+  </data>
+  <data name="PkgObjAttrCounts" xml:space="preserve">
+    <value>{0} obj / {1} attr</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjectIdsLabel" xml:space="preserve">
+    <value>Object-id's (één per regel, bijv. #847:1778518155494)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjects" xml:space="preserve">
+    <value>Objecten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjectsCount" xml:space="preserve">
+    <value>Objecten ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgOccurrences" xml:space="preserve">
+    <value>{count, plural, one {# voorkomen} other {# voorkomens}}, bijv. in {location}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPackageIdLabel" xml:space="preserve">
+    <value>Pakket-id (kleine letters, koppeltekens)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPackages" xml:space="preserve">
+    <value>Pakketten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPlanLocation" xml:space="preserve">
+    <value>{0} / {1} op {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRef" xml:space="preserve">
+    <value>Ref</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRefreshAndBrowse" xml:space="preserve">
+    <value>Vernieuwen en bladeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteLabel" xml:space="preserve">
+    <value>Remote</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteRemoved" xml:space="preserve">
+    <value>Remote '{0}' verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteSaved" xml:space="preserve">
+    <value>Remote '{0}' opgeslagen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotes" xml:space="preserve">
+    <value>Remotes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesDescription" xml:space="preserve">
+    <value>Git-repo's waaruit dit spel pakketten installeert. Vertrouwensniveaus bepaal je zelf — de communityvermeldingen hieronder worden samengesteld in de officiële repo, nooit zelf opgegeven.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesHeading" xml:space="preserve">
+    <value>Pakketremotes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRenamedFrom" xml:space="preserve">
+    <value>hernoemd van {0} (behoudt {1})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReplan" xml:space="preserve">
+    <value>Opnieuw plannen met deze antwoorden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRequiredBy" xml:space="preserve">
+    <value>vereist door {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRequires" xml:space="preserve">
+    <value>Vereist</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolutionLabel" xml:space="preserve">
+    <value>Oplossing</value>
+    <comment>MT — assumed this labels how a merge conflict is resolved, not screen resolution.</comment>
+  </data>
+  <data name="PkgResolvesAtApply" xml:space="preserve">
+    <value>wordt bij toepassen opgelost</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolvesAtApplyTooltip" xml:space="preserve">
+    <value>Sommige refs worden pas bij het toepassen opgelost (nieuwe objecten / configure)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReview" xml:space="preserve">
+    <value>Beoordelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReviewInstall" xml:space="preserve">
+    <value>Installatie beoordelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionHistory" xml:space="preserve">
+    <value>Revisiegeschiedenis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionLine" xml:space="preserve">
+    <value>rev {0} — {1} {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionsOf" xml:space="preserve">
+    <value>{0} — revisies</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRollBack" xml:space="preserve">
+    <value>Terugdraaien</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRolledBack" xml:space="preserve">
+    <value>Teruggedraaid naar revisie {0} (nieuwe revisie {1}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgScanSelection" xml:space="preserve">
+    <value>Selectie scannen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSearchPlaceholder" xml:space="preserve">
+    <value>Pakketten zoeken…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSnapshotAt" xml:space="preserve">
+    <value>{0} op {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSoftcodePackages" xml:space="preserve">
+    <value>Softcode-pakketten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepClassifyExternal" xml:space="preserve">
+    <value>Externe verwijzingen classificeren ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepMetadataExport" xml:space="preserve">
+    <value>Metadata en export</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepRefsAttributes" xml:space="preserve">
+    <value>Refs en attributen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepSelectObjects" xml:space="preserve">
+    <value>Objecten selecteren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTagMoved" xml:space="preserve">
+    <value>tag verplaatst!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTakeTheirs" xml:space="preserve">
+    <value>Die van hen nemen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrust" xml:space="preserve">
+    <value>Vertrouwen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustCommunity" xml:space="preserve">
+    <value>community</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustOfficial" xml:space="preserve">
+    <value>officieel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustUnknown" xml:space="preserve">
+    <value>onbekend</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustWarningTagMoved" xml:space="preserve">
+    <value>VERTROUWENSWAARSCHUWING: de release-tag voor {0} {1} wijst niet meer naar de geïnstalleerde commit.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgType" xml:space="preserve">
+    <value>Type</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstall" xml:space="preserve">
+    <value>Deïnstalleren</value>
+    <comment>MT — kept distinct from "Verwijderen" (Remove/Delete).</comment>
+  </data>
+  <data name="PkgUninstallConfirmBody" xml:space="preserve">
+    <value>{objects, plural, one {# object} other {# objecten}} wordt gemarkeerd voor vernietiging en {attributes, plural, one {# beheerd attribuutrecord} other {# beheerde attribuutrecords}} wordt verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstallConfirmTitle" xml:space="preserve">
+    <value>{0} deïnstalleren?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstalled" xml:space="preserve">
+    <value>{0} gedeïnstalleerd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUnreviewedSource" xml:space="preserve">
+    <value>Deze bron is niet beoordeeld. Inspecteer alle code op het beoordelingsscherm voordat je die toepast.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdateCheckFailed" xml:space="preserve">
+    <value>Controle op updates mislukt — is de bronrepo bereikbaar?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdates" xml:space="preserve">
+    <value>Updates</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdatesAvailable" xml:space="preserve">
+    <value>Updates beschikbaar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradeHeading" xml:space="preserve">
+    <value>Upgraden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradingFrom" xml:space="preserve">
+    <value>— upgraden vanaf {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUrl" xml:space="preserve">
+    <value>URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgVersionAvailable" xml:space="preserve">
+    <value>{0} beschikbaar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgVersionLabel" xml:space="preserve">
+    <value>Versie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgWellKnownRefLabel" xml:space="preserve">
+    <value>Well-known-ref</value>
+    <comment>MT — "well-known" is the ref-mode API value (PkgModeWellKnown), so only the Dutch hyphenation is added.</comment>
+  </data>
+  <data name="PkgWillBeMarkedGoing" xml:space="preserve">
+    <value>{0} wordt gemarkeerd als GOING</value>
+    <comment>MT — GOING is a MUSH flag name, kept English.</comment>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Spelen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>Spelers:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PreviewFileContent" xml:space="preserve">
+    <value>Bestandsinhoud voorvertonen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileHandler" xml:space="preserve">
+    <value>Profielhandler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUnavailable" xml:space="preserve">
+    <value>Het profiel van dit personage is niet beschikbaar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdateFailed" xml:space="preserve">
+    <value>Profielwijzigingen konden niet worden opgeslagen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdated" xml:space="preserve">
+    <value>Profiel bijgewerkt ({count, plural, one {# veld} other {# velden}}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Progress" xml:space="preserve">
+    <value>Voortgang</value>
+    <comment>MT</comment>
+  </data>
+  <data name="QuickActions" xml:space="preserve">
+    <value>Snelle acties</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RecentChanges" xml:space="preserve">
+    <value>Recente wijzigingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Vernieuwen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RemoveEntry" xml:space="preserve">
+    <value>Invoer verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Reply" xml:space="preserve">
+    <value>Beantwoorden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResActiveScenesSubtitle" xml:space="preserve">
+    <value>Sessies die nu bezig zijn.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResAdminWikiKicker" xml:space="preserve">
+    <value>Staf · wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResAnyoneCanEdit" xml:space="preserve">
+    <value>iedereen kan bewerken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResCategoryGeneral" xml:space="preserve">
+    <value>Algemeen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResChangeCount" xml:space="preserve">
+    <value>{count, plural, one {# wijziging} other {# wijzigingen}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResChangedBadge" xml:space="preserve">
+    <value>gewijzigd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResConfigHomeKicker" xml:space="preserve">
+    <value>Beheer · serverconfiguratie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResConfigSectionKicker" xml:space="preserve">
+    <value>Beheer · serverinstellingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDefaultValueTooltip" xml:space="preserve">
+    <value>Standaard: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDraft" xml:space="preserve">
+    <value>Concept</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResHistory" xml:space="preserve">
+    <value>Geschiedenis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResInvalid" xml:space="preserve">
+    <value>Ongeldig</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResJoin" xml:space="preserve">
+    <value>Deelnemen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResNoScenesFound" xml:space="preserve">
+    <value>Geen scènes gevonden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResOnThisPage" xml:space="preserve">
+    <value>Op deze pagina</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResRead" xml:space="preserve">
+    <value>Lezen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResRoutingErrorHint" xml:space="preserve">
+    <value>Dit bericht betekent dat de aangepaste pagina NIET door de router wordt gematcht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSaveFailedShort" xml:space="preserve">
+    <value>Opslaan mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResScenesSubtitle" xml:space="preserve">
+    <value>Blader door rollenspelsessies en kijk mee.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSearchTitlesPlaceholder" xml:space="preserve">
+    <value>Titels zoeken…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResStartedAt" xml:space="preserve">
+    <value>Gestart {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResTabLive" xml:space="preserve">
+    <value>Live</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResTabRecent" xml:space="preserve">
+    <value>Recent</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResValidationFailed" xml:space="preserve">
+    <value>Validatie mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResViewLog" xml:space="preserve">
+    <value>Log bekijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatDrafts" xml:space="preserve">
+    <value>Concepten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTotalPages" xml:space="preserve">
+    <value>Totaal pagina's</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTranslations" xml:space="preserve">
+    <value>Vertalingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsConnectFailed" xml:space="preserve">
+    <value>[Fout] Verbinden mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsConnectedTo" xml:space="preserve">
+    <value>[Systeem] Verbonden met {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsDisconnectFailed" xml:space="preserve">
+    <value>[Fout] Verbinding verbreken mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsDisconnected" xml:space="preserve">
+    <value>[Systeem] Verbinding verbroken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsReceived" xml:space="preserve">
+    <value>[Ontvangen] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsSendFailed" xml:space="preserve">
+    <value>[Fout] Verzenden mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsSent" xml:space="preserve">
+    <value>[Verzonden] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetChanges" xml:space="preserve">
+    <value>Wijzigingen terugzetten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefault" xml:space="preserve">
+    <value>Terug naar standaard</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefaults" xml:space="preserve">
+    <value>Terug naar standaardwaarden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Restrictions" xml:space="preserve">
+    <value>Beperkingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsBuilderHelper" xml:space="preserve">
+    <value>bijv. wizard, builder</value>
+    <comment>MT — wizard/builder are privilege levels, kept English.</comment>
+  </data>
+  <data name="RestrictionsDescription" xml:space="preserve">
+    <value>Beperk welke spelers bepaalde commando's of functies kunnen gebruiken op basis van vlaggen, powers of attributen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsHelper" xml:space="preserve">
+    <value>bijv. wizard, royalty, admin</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsLabel" xml:space="preserve">
+    <value>Beperkingen (kommagescheiden)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAddRole" xml:space="preserve">
+    <value>Rol toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAllow" xml:space="preserve">
+    <value>Toestaan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAssignFailed" xml:space="preserve">
+    <value>Rol toewijzen mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAssigned" xml:space="preserve">
+    <value>{0} toegewezen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAssignedRoles" xml:space="preserve">
+    <value>Toegewezen rollen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolBackToActiveScenes" xml:space="preserve">
+    <value>Terug naar actieve scènes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolBackToScenes" xml:space="preserve">
+    <value>Terug naar scènes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolColorHelper" xml:space="preserve">
+    <value>CSS-kleur, bijv. #6cde9a</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolColorLabel" xml:space="preserve">
+    <value>Kleur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposePlaceholder" xml:space="preserve">
+    <value>Pose, spreek of vertel…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleteConfirm" xml:space="preserve">
+    <value>'{0}' ({1}) verwijderen? De rol verdwijnt daarmee ook bij alle accounts die hem hebben.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleteFailed" xml:space="preserve">
+    <value>Rol verwijderen mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleteTitle" xml:space="preserve">
+    <value>Rol verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleted" xml:space="preserve">
+    <value>{0} verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeny" xml:space="preserve">
+    <value>Weigeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolEditedBadge" xml:space="preserve">
+    <value>bewerkt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolEditedTimes" xml:space="preserve">
+    <value>{count, plural, one {# keer bewerkt} other {# keer bewerkt}}</value>
+    <comment>MT — Dutch uses the same wording for both categories; both are kept as ICU requires.</comment>
+  </data>
+  <data name="RolEnterUsername" xml:space="preserve">
+    <value>Voer een gebruikersnaam in om op te zoeken.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolHeading" xml:space="preserve">
+    <value>Rollen en permissies</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolInherit" xml:space="preserve">
+    <value>Overnemen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolKicker" xml:space="preserve">
+    <value>Beheer · toegangsbeheer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLiveBadge" xml:space="preserve">
+    <value>LIVE</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLiveScene" xml:space="preserve">
+    <value>Live scène</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLookUp" xml:space="preserve">
+    <value>Opzoeken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolModePose" xml:space="preserve">
+    <value>Pose</value>
+    <comment>MT — RP term of art, kept; Dutch RP players use "pose" as-is.</comment>
+  </data>
+  <data name="RolModeSay" xml:space="preserve">
+    <value>Zeggen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolModeSemipose" xml:space="preserve">
+    <value>Semipose</value>
+    <comment>MT — MUSH term of art, kept untranslated.</comment>
+  </data>
+  <data name="RolNameLabel" xml:space="preserve">
+    <value>Naam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNameRequired" xml:space="preserve">
+    <value>Naam is verplicht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNewRole" xml:space="preserve">
+    <value>Nieuwe rol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoAccountFound" xml:space="preserve">
+    <value>Geen account gevonden voor “{0}”.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoPoses" xml:space="preserve">
+    <value>Geen poses in deze scène.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoRolesAssigned" xml:space="preserve">
+    <value>Geen rollen toegewezen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoRolesDefined" xml:space="preserve">
+    <value>Geen rollen gedefinieerd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNotConnected" xml:space="preserve">
+    <value>Niet verbonden met het spel — maak verbinding om te posten en live poses te ontvangen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPageTitle" xml:space="preserve">
+    <value>Rollen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPoseCount" xml:space="preserve">
+    <value>{count, plural, one {# pose} other {# poses}}</value>
+    <comment>MT — "pose"/"poses" is also the Dutch RP term; identical to English on purpose.</comment>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Hoger wint bij conflict</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPriorityLabel" xml:space="preserve">
+    <value>Prioriteit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoveFailed" xml:space="preserve">
+    <value>Rol verwijderen mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoveRole" xml:space="preserve">
+    <value>Verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoved" xml:space="preserve">
+    <value>{0} verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaveFailed" xml:space="preserve">
+    <value>Opslaan mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaveRole" xml:space="preserve">
+    <value>Rol opslaan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaved" xml:space="preserve">
+    <value>{0} opgeslagen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolScene" xml:space="preserve">
+    <value>Scène</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneIn" xml:space="preserve">
+    <value>Scène in {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNotFound" xml:space="preserve">
+    <value>Scène niet gevonden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSearchAccountPrompt" xml:space="preserve">
+    <value>Zoek een account om de rollen ervan te beheren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSearchByUsername" xml:space="preserve">
+    <value>Zoeken op gebruikersnaam…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSelectOrCreate" xml:space="preserve">
+    <value>Selecteer een rol of maak een nieuwe aan.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugAndNameRequired" xml:space="preserve">
+    <value>Slug en naam zijn verplicht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugHelper" xml:space="preserve">
+    <value>Vaste machinesleutel. Kan na het aanmaken niet meer worden gewijzigd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugLabel" xml:space="preserve">
+    <value>Slug</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSystemBadge" xml:space="preserve">
+    <value>Systeem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabAssignments" xml:space="preserve">
+    <value>Toewijzingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabRoles" xml:space="preserve">
+    <value>Rollen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolUntitled" xml:space="preserve">
+    <value>Naamloos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolViewArchive" xml:space="preserve">
+    <value>Archief bekijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolWaitingForActivity" xml:space="preserve">
+    <value>Wachten op activiteit…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolWatchLive" xml:space="preserve">
+    <value>Live meekijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Rooms" xml:space="preserve">
+    <value>Kamers:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingError" xml:space="preserve">
+    <value>Routeringsfout:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingErrorDescription" xml:space="preserve">
+    <value>De categorie "{0}" heeft een aangepaste pagina die in plaats van DynamicConfig zou moeten worden weergegeven.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingErrorExpected" xml:space="preserve">
+    <value>Dit bericht betekent dat de aangepaste pagina NIET door de router wordt gematcht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Opslaan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveConfiguration" xml:space="preserve">
+    <value>Configuratie opslaan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>Configuratie opslaan mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveNotImplemented" xml:space="preserve">
+    <value>Opslaan is nog niet geïmplementeerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Saving" xml:space="preserve">
+    <value>Opslaan...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SceneArchive" xml:space="preserve">
+    <value>Scènes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SearchAllSettings" xml:space="preserve">
+    <value>Alle instellingen doorzoeken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SearchCharacters" xml:space="preserve">
+    <value>Personages zoeken…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SearchSettings" xml:space="preserve">
+    <value>Instellingen zoeken...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Security" xml:space="preserve">
+    <value>Beveiliging</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SecurityCategoryDescription" xml:space="preserve">
+    <value>Toegangsbeheer, sitelock-regels en verboden namen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SelectedFile" xml:space="preserve">
+    <value>Geselecteerd bestand</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Send" xml:space="preserve">
+    <value>Verzenden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SendMessage" xml:space="preserve">
+    <value>Bericht verzenden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Server" xml:space="preserve">
+    <value>Server</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerCategoryDescription" xml:space="preserve">
+    <value>Netwerkverbindingen, database en kerninstellingen van de server</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerConfiguration" xml:space="preserve">
+    <value>Serverconfiguratie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerSettings" xml:space="preserve">
+    <value>Serverinstellingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerUri" xml:space="preserve">
+    <value>Server-URI</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SetAsIcon" xml:space="preserve">
+    <value>Instellen als profielicoon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Instellingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SettingsCount" xml:space="preserve">
+    <value>{0} instellingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SettingsLabel" xml:space="preserve">
+    <value>Instellingen voor {0}</value>
+    <comment>MT — English is "{0} Settings"; Dutch avoids the compound because {0} is a category name.</comment>
+  </data>
+  <data name="Sitelock" xml:space="preserve">
+    <value>Sitelock</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockAccessRulesHint" xml:space="preserve">
+    <value>Toegangsregels:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockDescription" xml:space="preserve">
+    <value>Bepaal welke sites verbinding mogen maken, spelers mogen aanmaken of gastaccounts mogen gebruiken.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleAddFailed" xml:space="preserve">
+    <value>Sitelock-regel toevoegen mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleAdded" xml:space="preserve">
+    <value>Sitelock-regel voor '{0}' is toegevoegd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleRemoveFailed" xml:space="preserve">
+    <value>Sitelock-regel verwijderen mislukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleRemoved" xml:space="preserve">
+    <value>Sitelock-regel voor '{0}' is verwijderd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRules" xml:space="preserve">
+    <value>Sitelock-regels</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SoftcodeEditor" xml:space="preserve">
+    <value>Softcode-editor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StaffOnlyField" xml:space="preserve">
+    <value>Alleen voor staf — wijzigingen worden alleen toegepast als je staf bent.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StartConversion" xml:space="preserve">
+    <value>Conversie starten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Statistics" xml:space="preserve">
+    <value>Statistieken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Subject" xml:space="preserve">
+    <value>Onderwerp</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SuggestionManagement" xml:space="preserve">
+    <value>Suggestiebeheer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Suggestions" xml:space="preserve">
+    <value>Suggesties</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SuggestionsDescription" xml:space="preserve">
+    <value>Beheer de spellingcontrole- en suggestiecategorieën die alternatieven bieden voor verkeerd gespelde woorden in helpteksten, functienamen en andere invoer van gebruikers.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Summary" xml:space="preserve">
+    <value>Samenvatting</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SupportedFormatsConfig" xml:space="preserve">
+    <value>Ondersteunde formaten: .cnf, .conf, .txt (max. 1 MB)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SupportedFormatsDb" xml:space="preserve">
+    <value>Ondersteunde formaten: .db, .txt (max. 100 MB)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TempC" xml:space="preserve">
+    <value>Temp. (C)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TempF" xml:space="preserve">
+    <value>Temp. (F)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAddAttribute" xml:space="preserve">
+    <value>Attribuut toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrEmpty" xml:space="preserve">
+    <value>(leeg)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindCommand" xml:space="preserve">
+    <value>Commandotrigger</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindData" xml:space="preserve">
+    <value>Data</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindFunction" xml:space="preserve">
+    <value>Functie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindListen" xml:space="preserve">
+    <value>Luistertrigger</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindText" xml:space="preserve">
+    <value>Tekst</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserError" xml:space="preserve">
+    <value>Fout: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserExampleLabel" xml:space="preserve">
+    <value>bijv.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserGo" xml:space="preserve">
+    <value>Ga</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserHere" xml:space="preserve">
+    <value>Hier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserMine" xml:space="preserve">
+    <value>Van mij</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserNoObjects" xml:space="preserve">
+    <value>Geen objecten gevonden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserSearch" xml:space="preserve">
+    <value>Zoeken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermClear" xml:space="preserve">
+    <value>Wissen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermClearTerminal" xml:space="preserve">
+    <value>Terminal wissen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCollapseAttributes" xml:space="preserve">
+    <value>Attributen inklappen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCollapseObjects" xml:space="preserve">
+    <value>Objecten inklappen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCreateRoom" xml:space="preserve">
+    <value>Kamer aanmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCreateThing" xml:space="preserve">
+    <value>Ding aanmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermDeletedAttribute" xml:space="preserve">
+    <value>&amp;{0} verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEditor" xml:space="preserve">
+    <value>Editor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermErrorLine" xml:space="preserve">
+    <value>[Fout] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermErrorLoadingObject" xml:space="preserve">
+    <value>Fout bij het laden van object: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEvalResult" xml:space="preserve">
+    <value>Evaluatieresultaat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermExpandAttributes" xml:space="preserve">
+    <value>Attributen uitklappen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermExpandObjects" xml:space="preserve">
+    <value>Objecten uitklappen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermFilterAttributes" xml:space="preserve">
+    <value>Attributen filteren…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpBack" xml:space="preserve">
+    <value>Terug</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpClose" xml:space="preserve">
+    <value>Sluiten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpEmpty" xml:space="preserve">
+    <value>Zoek hierboven of klik op "📖 Show full help" in de editor.</value>
+    <comment>MT — quoted label left verbatim per the resx comment.</comment>
+  </data>
+  <data name="TermHelpKindCommand" xml:space="preserve">
+    <value>Commando</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpKindFunction" xml:space="preserve">
+    <value>Functie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpSearchPlaceholder" xml:space="preserve">
+    <value>Functies en commando's zoeken…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpSwitches" xml:space="preserve">
+    <value>Switches: {0}</value>
+    <comment>MT — "switch" kept as the MUSH term of art; Dutch "schakelaar" would be wrong here.</comment>
+  </data>
+  <data name="TermInputPlaceholder" xml:space="preserve">
+    <value>say hallo   ·   pose zwaait   ·   look   ·   who</value>
+    <comment>MT — command verbs kept English per the resx comment; only the arguments localized.</comment>
+  </data>
+  <data name="TermMushHelp" xml:space="preserve">
+    <value>MUSH-help</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoAttributeSelected" xml:space="preserve">
+    <value>Geen attribuut geselecteerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoAttributes" xml:space="preserve">
+    <value>Geen attributen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoMatch" xml:space="preserve">
+    <value>Geen overeenkomst.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoOutput" xml:space="preserve">
+    <value>(geen uitvoer)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNotLoggedIn" xml:space="preserve">
+    <value>niet ingelogd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermObjectNamePlaceholder" xml:space="preserve">
+    <value>naam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermObjects" xml:space="preserve">
+    <value>Objecten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermRefreshAttributes" xml:space="preserve">
+    <value>Attributen vernieuwen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSavedAttribute" xml:space="preserve">
+    <value>&amp;{0} opgeslagen op #{1}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSelectAnObject" xml:space="preserve">
+    <value>Selecteer een object.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSoftcodeEditorTitle" xml:space="preserve">
+    <value>Softcode-editor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermTest" xml:space="preserve">
+    <value>Test</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermTestTooltip" xml:space="preserve">
+    <value>Test — evalueren zonder op te slaan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermUnsaved" xml:space="preserve">
+    <value>niet opgeslagen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Terminal" xml:space="preserve">
+    <value>Terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TextFiles" xml:space="preserve">
+    <value>Tekstbestanden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Things" xml:space="preserve">
+    <value>Dingen:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="To" xml:space="preserve">
+    <value>Aan</value>
+    <comment>MT — assumed this is the recipient field of a mail message.</comment>
+  </data>
+  <data name="Total" xml:space="preserve">
+    <value>Totaal:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TotalObjects" xml:space="preserve">
+    <value>Totaal objecten:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TotalWords" xml:space="preserve">
+    <value>Totaal woorden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Type" xml:space="preserve">
+    <value>Type: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeDecimal" xml:space="preserve">
+    <value>Decimaal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeList" xml:space="preserve">
+    <value>Lijst</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeNumber" xml:space="preserve">
+    <value>Getal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeOptional" xml:space="preserve">
+    <value>Optioneel {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeText" xml:space="preserve">
+    <value>Tekst</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TypeYesNo" xml:space="preserve">
+    <value>Ja/nee</value>
+    <comment>MT</comment>
+  </data>
+  <data name="UnsavedChanges" xml:space="preserve">
+    <value>Niet-opgeslagen wijzigingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Uploading" xml:space="preserve">
+    <value>Uploaden...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Urgent" xml:space="preserve">
+    <value>Urgent</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Waarde</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ValuesCommaSeparated" xml:space="preserve">
+    <value>Waarden (kommagescheiden)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WarningCount" xml:space="preserve">
+    <value>{count, plural, one {# waarschuwing} other {# waarschuwingen}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Warnings" xml:space="preserve">
+    <value>Waarschuwingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WarningsLabel" xml:space="preserve">
+    <value>Waarschuwingen ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Weather" xml:space="preserve">
+    <value>Weer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WeatherDescription" xml:space="preserve">
+    <value>Deze component demonstreert het ophalen van gegevens van de server.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WebSocketConnectionTest" xml:space="preserve">
+    <value>WebSocket-verbindingstest</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WebSocketTest" xml:space="preserve">
+    <value>WebSocket-test</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidAction" xml:space="preserve">
+    <value>Actie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidActionFailed" xml:space="preserve">
+    <value>De actie is mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidActiveScenes" xml:space="preserve">
+    <value>Actieve scènes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBack" xml:space="preserve">
+    <value>Terug</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseArchive" xml:space="preserve">
+    <value>Archief doorbladeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseCharacters" xml:space="preserve">
+    <value>Personages bekijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseScenes" xml:space="preserve">
+    <value>Scènes bekijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidConfigureQuickLinks" xml:space="preserve">
+    <value>Snelkoppelingen instellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidCreateFirstCharacter" xml:space="preserve">
+    <value>Maak je eerste personage aan om te gaan spelen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidCreateYourCharacter" xml:space="preserve">
+    <value>Maak je personage aan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFieldRequired" xml:space="preserve">
+    <value>{0} is verplicht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFillRequiredFields" xml:space="preserve">
+    <value>Vul de gemarkeerde verplichte velden in.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFormNoPages" xml:space="preserve">
+    <value>Dit formulier heeft geen pagina's.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFormStepOf" xml:space="preserve">
+    <value>Stap {0} van {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameStartingUp" xml:space="preserve">
+    <value>Het spel start op…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidJoinScene" xml:space="preserve">
+    <value>Deelnemen aan scène</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidLoadingWikiPage" xml:space="preserve">
+    <value>Wikipagina laden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNewCharacter" xml:space="preserve">
+    <value>Nieuw personage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNewHere" xml:space="preserve">
+    <value>Nieuw hier?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNext" xml:space="preserve">
+    <value>Volgende</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoActiveScenes" xml:space="preserve">
+    <value>Op dit moment geen actieve scènes.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoCharacterYet" xml:space="preserve">
+    <value>Je hebt nog geen personage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoRecentWikiActivity" xml:space="preserve">
+    <value>Geen recente wiki-activiteit.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNobodyConnected" xml:space="preserve">
+    <value>Er is op dit moment niemand ingelogd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNothingToDisplay" xml:space="preserve">
+    <value>Niets om weer te geven.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidOnlineNow" xml:space="preserve">
+    <value>Nu online</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidPlayersOnline" xml:space="preserve">
+    <value>Spelers online</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidPluginChangedReloading" xml:space="preserve">
+    <value>Een plug-in is gewijzigd — opnieuw laden…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidQuickstartIntro" xml:space="preserve">
+    <value>Begin met de wiki lezen, personages bekijken of meteen een scène in duiken.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidReadTheWiki" xml:space="preserve">
+    <value>Lees de wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentWikiActivity" xml:space="preserve">
+    <value>Recente wiki-activiteit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSceneIn" xml:space="preserve">
+    <value>Scène in {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSceneLive" xml:space="preserve">
+    <value>LIVE</value>
+    <comment>MT — kept as-is; "LIVE" is used unchanged in Dutch UI.</comment>
+  </data>
+  <data name="WidScenePoseCount" xml:space="preserve">
+    <value>{count, plural, one {# pose} other {# poses}}</value>
+    <comment>MT — "pose"/"poses" is also the Dutch RP term; identical to English on purpose, not untranslated.</comment>
+  </data>
+  <data name="WidSchemaUnavailable" xml:space="preserve">
+    <value>Widgetschema niet beschikbaar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSubmit" xml:space="preserve">
+    <value>Verzenden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustCommunity" xml:space="preserve">
+    <value>Community</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustCommunityTooltip" xml:space="preserve">
+    <value>Bekende communitybron — controleer de code voordat je die toepast</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustOfficial" xml:space="preserve">
+    <value>Officieel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustOfficialTooltip" xml:space="preserve">
+    <value>Onderhouden door de SharpMUSH-organisatie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustUnknown" xml:space="preserve">
+    <value>Onbekend</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustUnknownTooltip" xml:space="preserve">
+    <value>Ongecontroleerde bron — inspecteer alles voordat je die toepast</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidViewAllCount" xml:space="preserve">
+    <value>Alle {0} bekijken →</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidWaitingForServer" xml:space="preserve">
+    <value>Wachten tot de server online komt…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidWidgetRenderFailed" xml:space="preserve">
+    <value>Deze widget kon niet worden weergegeven.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneFooter" xml:space="preserve">
+    <value>Voettekst</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneLeftSidebar" xml:space="preserve">
+    <value>Linkerzijbalk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneMainContent" xml:space="preserve">
+    <value>Hoofdinhoud</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneRightSidebar" xml:space="preserve">
+    <value>Rechterzijbalk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneTopBar" xml:space="preserve">
+    <value>Bovenbalk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Wiki" xml:space="preserve">
+    <value>Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAdmin" xml:space="preserve">
+    <value>Wikibeheer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAdminDescription" xml:space="preserve">
+    <value>Beheer wikipagina's: metadata, beveiliging, publicatiestatus en bulkbewerkingen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAllLocales" xml:space="preserve">
+    <value>Alle talen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAllNamespaces" xml:space="preserve">
+    <value>Alle namespaces</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAvailableTranslations" xml:space="preserve">
+    <value>Ook beschikbaar in</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiBatchFailed" xml:space="preserve">
+    <value>{count, plural, one {# pagina mislukt} other {# pagina's mislukt}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiBatchSucceeded" xml:space="preserve">
+    <value>{count, plural, one {# pagina bijgewerkt} other {# pagina's bijgewerkt}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiBrowseByNamespace" xml:space="preserve">
+    <value>Bladeren op namespace</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiCategory" xml:space="preserve">
+    <value>Categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDelete" xml:space="preserve">
+    <value>Verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDeleteConfirmText" xml:space="preserve">
+    <value>{count, plural, one {# pagina} other {# pagina's}} en al hun revisies verwijderen? Dit kan niet ongedaan worden gemaakt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDeleteConfirmTitle" xml:space="preserve">
+    <value>Pagina's verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiEdit" xml:space="preserve">
+    <value>Bewerken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiEditMetadata" xml:space="preserve">
+    <value>Metadata bewerken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiFallbackCreateTranslation" xml:space="preserve">
+    <value>Deze pagina vertalen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiFallbackNotice" xml:space="preserve">
+    <value>Deze pagina is nog niet beschikbaar in {0} — de versie in {1} wordt getoond.</value>
+    <comment>MT — assumed {0} and {1} are language names; reworded so Dutch does not need a preposition-plus-article before them.</comment>
+  </data>
+  <data name="WikiLocaleFilter" xml:space="preserve">
+    <value>Taal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiMetadataSaveFailed" xml:space="preserve">
+    <value>Metadata opslaan mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiMetadataSaved" xml:space="preserve">
+    <value>Metadata opgeslagen voor {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNamespace" xml:space="preserve">
+    <value>Namespace</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNamespaceEmpty" xml:space="preserve">
+    <value>Nog geen pagina's in deze namespace.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNamespaceFilter" xml:space="preserve">
+    <value>Namespacefilter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNoPages" xml:space="preserve">
+    <value>Geen wikipagina's gevonden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNoRecentChanges" xml:space="preserve">
+    <value>Er zijn nog geen pagina's bewerkt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiPageNotExist" xml:space="preserve">
+    <value>Deze pagina bestaat nog niet. Je kunt hem aanmaken via de knop hieronder.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiProtect" xml:space="preserve">
+    <value>Beveiligen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiProtected" xml:space="preserve">
+    <value>Beveiligd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiPublished" xml:space="preserve">
+    <value>Gepubliceerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiRecentChanges" xml:space="preserve">
+    <value>Recente wijzigingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiRevision" xml:space="preserve">
+    <value>Revisie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTags" xml:space="preserve">
+    <value>Tags</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTagsHelper" xml:space="preserve">
+    <value>Druk op Enter of + om een tag toe te voegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTitle" xml:space="preserve">
+    <value>Titel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTranslations" xml:space="preserve">
+    <value>Vertalingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUnprotect" xml:space="preserve">
+    <value>Beveiliging opheffen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUntranslatedOnly" xml:space="preserve">
+    <value>Alleen ontbrekende vertalingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUpdated" xml:space="preserve">
+    <value>Bijgewerkt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAddTagPlaceholder" xml:space="preserve">
+    <value>tag toevoegen…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAddTranslation" xml:space="preserve">
+    <value>Een vertaling toevoegen…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetDeleteFailed" xml:space="preserve">
+    <value>{0} kon niet worden verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetDeleted" xml:space="preserve">
+    <value>{0} verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetUploadHint" xml:space="preserve">
+    <value>PNG, JPEG, GIF, WebP of SVG — max. 10 MB.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetUploaded" xml:space="preserve">
+    <value>{0} geüpload.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkBold" xml:space="preserve">
+    <value>Vet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkBytesDelta" xml:space="preserve">
+    <value>{0} bytes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColActions" xml:space="preserve">
+    <value>Acties</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColAuthor" xml:space="preserve">
+    <value>Auteur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColFileName" xml:space="preserve">
+    <value>Bestandsnaam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColKind" xml:space="preserve">
+    <value>Soort</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColNew" xml:space="preserve">
+    <value>Nieuw</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColOld" xml:space="preserve">
+    <value>Oud</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColPreview" xml:space="preserve">
+    <value>Voorbeeld</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColSize" xml:space="preserve">
+    <value>Grootte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColTimestampSummary" xml:space="preserve">
+    <value>Tijdstempel / samenvatting</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColUploaded" xml:space="preserve">
+    <value>Geüpload</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColUploader" xml:space="preserve">
+    <value>Uploader</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCompareSelected" xml:space="preserve">
+    <value>Selectie vergelijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkComparingRevisions" xml:space="preserve">
+    <value>Revisies vergelijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCopyMarkdown" xml:space="preserve">
+    <value>Markdown kopiëren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCopyUrl" xml:space="preserve">
+    <value>URL kopiëren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCurrentRevision" xml:space="preserve">
+    <value>huidig</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCustomLocalePlaceholder" xml:space="preserve">
+    <value>Taalcode, bijv. es of pt-BR</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteAssetConfirm" xml:space="preserve">
+    <value>Hiermee wordt {0} definitief verwijderd. Links naar dit bestand werken dan niet meer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteAssetPrompt" xml:space="preserve">
+    <value>'{0}' verwijderen? Pagina's die het insluiten tonen een gebroken afbeelding.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteAssetTitle" xml:space="preserve">
+    <value>Bestand verwijderen?</value>
+    <comment>MT — "asset" rendered as "bestand" throughout the media library.</comment>
+  </data>
+  <data name="WkDeleteFailed" xml:space="preserve">
+    <value>Verwijderen mislukt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteTranslation" xml:space="preserve">
+    <value>Deze vertaling verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffLoadFailed" xml:space="preserve">
+    <value>Een of beide revisies konden niet worden geladen. Controleer je revisienummers.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffPageTitle" xml:space="preserve">
+    <value>Verschil: {0}</value>
+    <comment>MT — "diff" rendered as "verschil", following Dutch Wikipedia usage.</comment>
+  </data>
+  <data name="WkDiffRevNew" xml:space="preserve">
+    <value>Rev {0} — nieuw</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffRevOld" xml:space="preserve">
+    <value>Rev {0} — oud</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffSideBySide" xml:space="preserve">
+    <value>Naast elkaar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffUnified" xml:space="preserve">
+    <value>Gecombineerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveCategoryHeader" xml:space="preserve">
+    <value>Categorie: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveNoPages" xml:space="preserve">
+    <value>Nog geen pagina's.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveTagHeader" xml:space="preserve">
+    <value>Tag: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiscard" xml:space="preserve">
+    <value>Verwerpen</value>
+    <comment>MT — assumed this discards unsaved edits.</comment>
+  </data>
+  <data name="WkEditLivePreview" xml:space="preserve">
+    <value>bewerken · live voorbeeld</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFileTooLarge" xml:space="preserve">
+    <value>Bestand overschrijdt de limiet van 10 MB.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFormattingHelp" xml:space="preserve">
+    <value>Opmaakhulp</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHeading" xml:space="preserve">
+    <value>Kop</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHistoryIntro" xml:space="preserve">
+    <value>Kies een oudere en een nieuwere revisie en vergelijk ze. {0} revisies in totaal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHistoryLocale" xml:space="preserve">
+    <value>Taal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHistoryPageTitle" xml:space="preserve">
+    <value>Geschiedenis: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkImageLibrary" xml:space="preserve">
+    <value>Afbeeldingsbibliotheek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkImageLibraryDescription" xml:space="preserve">
+    <value>Beheer geüploade mediabestanden die in de wiki en het portaal worden gebruikt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkInheritedFromSource" xml:space="preserve">
+    <value>Overgenomen uit de brontaal — bewerk dit op de bronpagina.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkInsertImage" xml:space="preserve">
+    <value>Afbeelding invoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkItalic" xml:space="preserve">
+    <value>Cursief</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindDocument" xml:space="preserve">
+    <value>Document</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindImage" xml:space="preserve">
+    <value>Afbeelding</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindImagePlural" xml:space="preserve">
+    <value>Afbeeldingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindOther" xml:space="preserve">
+    <value>Overig</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindVideo" xml:space="preserve">
+    <value>Video</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLinesAdded" xml:space="preserve">
+    <value>+{0} toegevoegd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLinesRemoved" xml:space="preserve">
+    <value>−{0} verwijderd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLink" xml:space="preserve">
+    <value>Link</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkListItem" xml:space="preserve">
+    <value>Lijstitem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLocaleSelector" xml:space="preserve">
+    <value>Taal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkMarkdownCopied" xml:space="preserve">
+    <value>Markdown gekopieerd naar het klembord.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkMinorEdit" xml:space="preserve">
+    <value>Kleine bewerking</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoAssets" xml:space="preserve">
+    <value>Nog geen bestanden geüpload.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoAssetsFound" xml:space="preserve">
+    <value>Geen bestanden gevonden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoRevisionHistory" xml:space="preserve">
+    <value>Geen revisiegeschiedenis gevonden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPageFallbackTitle" xml:space="preserve">
+    <value>Pagina</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPageTitlePlaceholder" xml:space="preserve">
+    <value>Paginatitel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPublishChanges" xml:space="preserve">
+    <value>Wijzigingen publiceren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPublishNotice" xml:space="preserve">
+    <value>Wijzigingen worden direct gepubliceerd en zijn voor iedereen zichtbaar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkQuote" xml:space="preserve">
+    <value>Citaat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoreFailed" xml:space="preserve">
+    <value>Herstellen mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoreRevision" xml:space="preserve">
+    <value>Naar deze revisie herstellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoredToRevision" xml:space="preserve">
+    <value>Hersteld naar revisie {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRevisionHistory" xml:space="preserve">
+    <value>Revisiegeschiedenis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRevisionShort" xml:space="preserve">
+    <value>rev #{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkSourceLocaleLabel" xml:space="preserve">
+    <value>{0} (bron)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkStaffMedia" xml:space="preserve">
+    <value>Staf · media</value>
+    <comment>MT — "staff" rendered as "staf"; many Dutch MU* games keep the English word, worth a native check.</comment>
+  </data>
+  <data name="WkStorageUsed" xml:space="preserve">
+    <value>Gebruikte opslag</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkSummaryPlaceholder" xml:space="preserve">
+    <value>Vat je wijziging samen (bijv. 'typfout hersteld')…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTotalAssets" xml:space="preserve">
+    <value>Totaal aantal bestanden</value>
+    <comment>MT — ~2x the English on a stat tile label; "Bestanden totaal" is a shorter fallback if it overflows.</comment>
+  </data>
+  <data name="WkTranslationConflict" xml:space="preserve">
+    <value>Deze vertaling is gewijzigd terwijl je aan het bewerken was. Herlaad hem om de huidige versie te zien — je niet-opgeslagen tekst staat nog in de editor.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationDeleteConfirmText" xml:space="preserve">
+    <value>De vertaling {0} en de bijbehorende geschiedenis worden verwijderd. De pagina en de andere talen blijven ongewijzigd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationDeleteConfirmTitle" xml:space="preserve">
+    <value>Vertaling verwijderen?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationReload" xml:space="preserve">
+    <value>De vertaling herladen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationSaveFailed" xml:space="preserve">
+    <value>De vertaling kon niet worden opgeslagen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationSaved" xml:space="preserve">
+    <value>Vertaling opgeslagen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUploadError" xml:space="preserve">
+    <value>Uploadfout: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUploadFailed" xml:space="preserve">
+    <value>Uploaden mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUrlCopied" xml:space="preserve">
+    <value>URL gekopieerd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkViewGrid" xml:space="preserve">
+    <value>Raster</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkViewList" xml:space="preserve">
+    <value>Lijst</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkViewRevision" xml:space="preserve">
+    <value>Deze revisie bekijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkWikiAssets" xml:space="preserve">
+    <value>Wikibestanden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordAddFailed" xml:space="preserve">
+    <value>Woord toevoegen mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordAdded" xml:space="preserve">
+    <value>'{0}' toegevoegd aan categorie '{1}'</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordEmpty" xml:space="preserve">
+    <value>Woord mag niet leeg zijn</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordRemoveFailed" xml:space="preserve">
+    <value>Woord verwijderen mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordRemoved" xml:space="preserve">
+    <value>'{0}' verwijderd uit categorie '{1}'</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Words" xml:space="preserve">
+    <value>Woorden:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordsCount" xml:space="preserve">
+    <value>{0} woorden</value>
+    <comment>MT</comment>
+  </data>
+</root>
