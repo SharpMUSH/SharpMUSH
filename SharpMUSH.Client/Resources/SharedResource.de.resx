@@ -973,8 +973,8 @@
     <comment>MT</comment>
   </data>
   <data name="EnumObjectTypePlayer" xml:space="preserve">
-    <value>Player</value>
-    <comment>MT — glossary-protected: Player is also the privilege level and an API value, so left untranslated even though the sibling object types are translated.</comment>
+    <value>Spieler</value>
+    <comment>MT — object-browser group heading for the MushObjectType enum. Translated: the key is generated only by EnumLabels.ResourceKey(MushObjectType) and has nothing to do with the Player privilege level, which has no resource key at all.</comment>
   </data>
   <data name="EnumObjectTypeRoom" xml:space="preserve">
     <value>Raum</value>

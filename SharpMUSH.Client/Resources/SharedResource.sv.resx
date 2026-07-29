@@ -973,8 +973,8 @@
     <comment>MT — corpus term (utgång/utgångar).</comment>
   </data>
   <data name="EnumObjectTypePlayer" xml:space="preserve">
-    <value>Player</value>
-    <comment>MT — kept English: glossary lists Player as a privilege level / API value; de.resx does the same.</comment>
+    <value>Spelare</value>
+    <comment>MT — object-browser group heading for the MushObjectType enum. Translated: the key is generated only by EnumLabels.ResourceKey(MushObjectType) and has nothing to do with the Player privilege level, which has no resource key at all.</comment>
   </data>
   <data name="EnumObjectTypeRoom" xml:space="preserve">
     <value>Rum</value>
