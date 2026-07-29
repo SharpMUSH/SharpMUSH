@@ -60,10 +60,25 @@ local development only — over HTTPS a browser will refuse a plaintext `ws://` 
 | Port | Service | Exposed to internet? |
 |------|---------|----------------------|
 | 80 / 443 | Caddy (web portal, SignalR, and `/ws` → connection server) | yes |
-| 4201 | Telnet | yes |
+| 4201 | Telnet — **plaintext** | yes |
+| 4203 | Telnet over TLS — *configured but not yet implemented* | not yet |
 | 8080 | ASP.NET server (HTTP) | no — internal, behind Caddy |
 | 4202 | Connection server HTTP / `/ws` WebSocket | no — internal, reached via Caddy's `/ws` route |
 | 4222 / 8222 | NATS client / monitoring | no — internal only |
+
+> **Telnet is unencrypted today.** Everything a player types on `4201`, including their password
+> on login, crosses the network in the clear. The web portal is HTTPS via Caddy, but MU\* clients
+> connect straight to `4201` and bypass it entirely.
+>
+> `ssl_port` (4203) exists in the configuration and **nothing listens on it** —
+> [#743](https://github.com/SharpMUSH/SharpMUSH/issues/743) is the issue to implement it, and
+> records the intended deployment shape: the Caddy stack can reuse the Let's Encrypt certificate
+> Caddy already renews into `caddy-data`, and the Cloudflare stack (which has no Caddy, and so no
+> local certificate) needs an ACME sidecar doing a DNS-01 challenge.
+>
+> Until then, if you need encrypted player connections, terminate TLS in front of `4201` yourself —
+> and be aware that doing so hides the client's IP from the game unless the proxy speaks PROXY
+> protocol, which breaks site-locks, bans and connection logs.
 
 If you **don't** use Caddy (e.g. you terminate TLS at a load balancer), remember the browser
 terminal's `/ws` endpoint lives on the connection server (`:4202`), not the main server — you must
