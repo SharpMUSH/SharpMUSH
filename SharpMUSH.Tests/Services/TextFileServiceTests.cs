@@ -20,14 +20,14 @@ public class TextFileServiceTests
 	private static (TextFileService Service, string Root) BuildServiceOverTempFiles(
 		int categories, int entriesPerCategory)
 	{
-		var root = Path.Combine(Path.GetTempPath(), $"sharpmush-textfiles-{Guid.NewGuid():N}");
+		var root = Path.Join(Path.GetTempPath(), $"sharpmush-textfiles-{Guid.NewGuid():N}");
 		for (var c = 0; c < categories; c++)
 		{
-			var dir = Path.Combine(root, $"cat{c}");
+			var dir = Path.Join(root, $"cat{c}");
 			Directory.CreateDirectory(dir);
 			var body = string.Join("\n", Enumerable.Range(0, entriesPerCategory)
 				.Select(e => $"# CAT{c}ENTRY{e}\n\nBody of entry {e} in category {c}.\n"));
-			File.WriteAllText(Path.Combine(dir, "entries.md"), body);
+			File.WriteAllText(Path.Join(dir, "entries.md"), body);
 		}
 
 		var options = BaseConfig with
