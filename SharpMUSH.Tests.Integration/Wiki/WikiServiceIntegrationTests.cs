@@ -403,6 +403,42 @@ public class WikiServiceIntegrationTests
 	}
 
 	[Test]
+	public async Task CountPagesAsync_DraftFilterComposesWithTheNamespaceFilter()
+	{
+		// @wiki/list renders this count beside a draft-filtered listing, so a total that counted drafts
+		// let a mortal difference it against the visible rows and learn how many drafts exist.
+		// The system namespace is written by nothing else, so these counts are exact — main and help are
+		// touched by test classes that may be running concurrently against the same store.
+		await Assert.That(await Wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(0);
+
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var kept = await CreatePageAsync($"Count Published {uid}", WikiNamespace.System);
+		var draft = await CreatePageAsync($"Count Draft {uid}", WikiNamespace.System);
+		var unpublished = await Wiki.SetMetadataAsync(draft.Id, draft.Category, draft.Tags, published: false);
+
+		await Assert.That(kept.Published).IsTrue();
+		await Assert.That(unpublished.IsT0).IsTrue();
+		await Assert.That(unpublished.AsT0.Published).IsFalse();
+
+		await Assert.That(await Wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
+		await Assert.That(await Wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);
+
+		// A draft in another namespace must not move these. A query in which the published condition
+		// replaced the namespace condition rather than joining it would satisfy every assertion above.
+		var elsewhere = await CreatePageAsync($"Count Elsewhere {uid}", WikiNamespace.Character);
+		await Wiki.SetMetadataAsync(elsewhere.Id, elsewhere.Category, elsewhere.Tags, published: false);
+
+		await Assert.That(await Wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
+		await Assert.That(await Wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);
+
+		// Unfiltered, both drafts are still counted when asked for — which rules out a store that simply
+		// never persisted the unpublished flag, and an implementation that always excludes drafts.
+		var allPublished = await Wiki.CountPagesAsync(null, includeDrafts: false);
+		var allTotal = await Wiki.CountPagesAsync(null, includeDrafts: true);
+		await Assert.That(allTotal - allPublished).IsGreaterThanOrEqualTo(2);
+	}
+
+	[Test]
 	public async Task GetRecentChangesAsync_UpdatedPageRisesToTop()
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];

@@ -52,7 +52,14 @@ public interface IWikiService
 	/// <summary>
 	/// Returns the total page count (optionally restricted to one namespace).
 	/// </summary>
-	Task<int> CountPagesAsync(WikiNamespace? ns = null);
+	/// <param name="includeDrafts">
+	/// True to count unpublished pages as well. There is no default, and <paramref name="ns"/> lost its
+	/// own default so that there cannot be one: a count rendered beside a draft-filtered listing is a
+	/// disclosure channel on its own — differencing "N page(s)" against the visible rows reveals how many
+	/// drafts the window holds — so every call site has to state which population it is counting.
+	/// A page whose stored flag is absent counts as published, matching how every backend reads it back.
+	/// </param>
+	Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts);
 
 	/// <summary>
 	/// Lists pages with the given category (case-insensitive), ordered by title.

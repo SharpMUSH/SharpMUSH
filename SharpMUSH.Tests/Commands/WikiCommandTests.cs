@@ -444,9 +444,10 @@ public class WikiCommandTests
 	/// Unpublishing goes through <c>SetMetadataAsync</c> rather than <c>@wiki/unpublish</c> because that
 	/// switch is wizard-only and these tests need the draft to exist before a mortal ever runs a command.
 	/// </remarks>
-	private async Task<WikiPage> SeedUnpublishedPageAsync(string title, string body)
+	private async Task<WikiPage> SeedUnpublishedPageAsync(
+		string title, string body, WikiNamespace ns = WikiNamespace.Main)
 	{
-		var created = await WikiService.CreateAsync(title, body, "#1", WikiNamespace.Main, "general", "en");
+		var created = await WikiService.CreateAsync(title, body, "#1", ns, "general", "en");
 		await Assert.That(created.IsT0).IsTrue();
 		var page = created.AsT0;
 
@@ -609,6 +610,34 @@ public class WikiCommandTests
 
 		await ExpectNoNotify(player.DbRef, page.Slug);
 		await ExpectNotify(player.DbRef, "WIKI: ");
+	}
+
+	[Test]
+	public async ValueTask WikiList_HeaderCountDoesNotDiscloseUnpublishedPages()
+	{
+		// The rows were filtered but the header total was not: it came from CountPagesAsync, which counted
+		// drafts. Differencing "N page(s)" against the rows told a mortal how many drafts the window holds.
+		// Both readers are exercised in one test because they share a store — a wizard-only assertion in a
+		// separate test would count whatever draft the mortal test had already left behind.
+		// The system namespace is used by nothing else, so both counts are exact rather than relative.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftCounter");
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftCounterWiz");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+
+		var page = await SeedUnpublishedPageAsync(
+			"Draft Counting Fodder", "counting body", WikiNamespace.System);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@wiki/list system"));
+		await ExpectNotify(player.DbRef, "WIKI: 0 page(s) in namespace 'system'");
+		await ExpectNoNotify(player.DbRef, page.Slug);
+
+		// A count hard-wired to the published total would satisfy the assertion above and hide the draft
+		// from the one reader entitled to see it, so the wizard's view has to be pinned in the same breath.
+		await Parser.CommandParse(wizard.Handle, ConnectionService, MModule.single("@wiki/list system"));
+		await ExpectNotify(wizard.DbRef, "WIKI: 1 page(s) in namespace 'system'");
+		await ExpectNotify(wizard.DbRef, page.Slug);
 	}
 
 	[Test]

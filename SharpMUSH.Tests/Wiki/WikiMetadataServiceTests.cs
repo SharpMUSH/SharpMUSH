@@ -72,9 +72,33 @@ public class WikiMetadataServiceTests
 		await CreatePageAsync(svc, "Two");
 		await CreatePageAsync(svc, "Help One", WikiNamespace.Help);
 
-		await Assert.That(await svc.CountPagesAsync()).IsEqualTo(3);
-		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Help)).IsEqualTo(1);
-		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Character)).IsEqualTo(0);
+		await Assert.That(await svc.CountPagesAsync(null, includeDrafts: true)).IsEqualTo(3);
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Help, includeDrafts: true)).IsEqualTo(1);
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Character, includeDrafts: true)).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task CountPages_WithoutDrafts_ExcludesUnpublishedPages()
+	{
+		// The count is rendered beside a draft-filtered listing, so a total that counted drafts let a
+		// reader difference it against the visible rows and learn how many drafts the store holds.
+		var svc = BuildService();
+		await CreatePageAsync(svc, "Published One");
+		var draft = await CreatePageAsync(svc, "Draft One");
+		await CreatePageAsync(svc, "Help Draft", WikiNamespace.Help);
+
+		var help = await svc.GetAllPagesAsync(ns: WikiNamespace.Help);
+		await svc.SetMetadataAsync(draft.Id, draft.Category, draft.Tags, published: false);
+		await svc.SetMetadataAsync(help[0].Id, help[0].Category, help[0].Tags, published: false);
+
+		await Assert.That(await svc.CountPagesAsync(null, includeDrafts: false)).IsEqualTo(1);
+		await Assert.That(await svc.CountPagesAsync(null, includeDrafts: true)).IsEqualTo(3);
+
+		// Per namespace too: the namespace filter and the draft filter have to compose, not replace.
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Help, includeDrafts: false)).IsEqualTo(0);
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Help, includeDrafts: true)).IsEqualTo(1);
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Main, includeDrafts: false)).IsEqualTo(1);
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Main, includeDrafts: true)).IsEqualTo(2);
 	}
 
 	[Test]

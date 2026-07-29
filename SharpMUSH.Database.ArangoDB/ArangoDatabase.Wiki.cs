@@ -115,15 +115,22 @@ public partial class ArangoDatabase : IWikiService
 			.AsReadOnly();
 	}
 
-	public async Task<int> CountPagesAsync(WikiNamespace? ns = null)
+	public async Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts)
 	{
 		var bindVars = new Dictionary<string, object> { { "@c", DatabaseConstants.WikiPages } };
-		var filter = string.Empty;
+		var conditions = new List<string>();
 		if (ns is not null)
 		{
-			filter = "FILTER p.Namespace == @ns ";
+			conditions.Add("p.Namespace == @ns");
 			bindVars["ns"] = ns.Value.ToString().ToLowerInvariant();
 		}
+
+		// `!= false` rather than `== true`, so a row written before the metadata feature — which has no
+		// Published attribute at all — counts as published, exactly as WikiPageFromJson reads it back.
+		if (!includeDrafts)
+			conditions.Add("p.Published != false");
+
+		var filter = conditions.Count > 0 ? $"FILTER {string.Join(" AND ", conditions)} " : string.Empty;
 
 		var result = await arangoDb.Query.ExecuteAsync<int>(handle,
 			$"FOR p IN @@c {filter}COLLECT WITH COUNT INTO cnt RETURN cnt",
