@@ -70,8 +70,17 @@ public class MonoFontStackTests
 		// also the one asset class that could change under us without any local change.
 		var html = File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "index.html"));
 
-		var external = Regex.Matches(html, @"(?:src|href)\s*=\s*""(?<url>https?://[^""]+)""")
-			.Select(m => m.Groups["url"].Value)
+		// Matched loosely on purpose. HTML permits double quotes, single quotes and no quotes at all,
+		// and attribute names are case-insensitive, so a pattern that only understands lowercase
+		// double-quoted attributes would wave through the exact thing this test exists to stop.
+		// Protocol-relative URLs count too: //cdn.example.com is every bit as third-party.
+		var external = Regex.Matches(html,
+				"""(?:src|href)\s*=\s*(?:"(?<url>[^"]*)"|'(?<url>[^']*)'|(?<url>[^\s>]+))""",
+				RegexOptions.IgnoreCase)
+			.Select(m => m.Groups["url"].Value.Trim())
+			.Where(u => u.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+				|| u.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+				|| u.StartsWith("//", StringComparison.Ordinal))
 			.ToList();
 
 		await Assert.That(external).IsEmpty()
