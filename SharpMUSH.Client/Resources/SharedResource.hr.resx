@@ -1,0 +1,4507 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="About" xml:space="preserve">
+    <value>O aplikaciji</value>
+    <comment>MT — assumed an 'about this application' section heading</comment>
+  </data>
+  <data name="AccessRulesHelper" xml:space="preserve">
+    <value>npr. !connect, suspect</value>
+    <comment>MT — rule tokens are literal input values, kept in English</comment>
+  </data>
+  <data name="AccessRulesLabel" xml:space="preserve">
+    <value>Pravila pristupa (odvojena zarezom)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Dodaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddBannedName" xml:space="preserve">
+    <value>Dodaj zabranjeno ime</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddCategory" xml:space="preserve">
+    <value>Dodaj kategoriju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddCommandRestriction" xml:space="preserve">
+    <value>Dodaj ograničenje naredbe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddEntry" xml:space="preserve">
+    <value>Dodaj unos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddFunctionRestriction" xml:space="preserve">
+    <value>Dodaj ograničenje funkcije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddItem" xml:space="preserve">
+    <value>Dodaj stavku</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddName" xml:space="preserve">
+    <value>Dodaj ime</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddNewWord" xml:space="preserve">
+    <value>Dodaj novu riječ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AddSitelockRule" xml:space="preserve">
+    <value>Dodaj sitelock pravilo</value>
+    <comment>MT — 'sitelock' is a config feature name, kept as-is</comment>
+  </data>
+  <data name="AddValue" xml:space="preserve">
+    <value>Dodaj vrijednost</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdditionalData" xml:space="preserve">
+    <value>Dodatni podaci</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountActionActive" xml:space="preserve">
+    <value>Ponovno aktiviraj</value>
+    <comment>MT — action that moves the account to the Active state</comment>
+  </data>
+  <data name="AdmAccountActionClosed" xml:space="preserve">
+    <value>Zatvori</value>
+    <comment>MT — action that moves the account to the Closed state</comment>
+  </data>
+  <data name="AdmAccountActionDeleted" xml:space="preserve">
+    <value>Obriši</value>
+    <comment>MT — action that moves the account to the Deleted state</comment>
+  </data>
+  <data name="AdmAccountActionDisabled" xml:space="preserve">
+    <value>Onemogući</value>
+    <comment>MT — action that moves the account to the Disabled state</comment>
+  </data>
+  <data name="AdmAccountDisabled" xml:space="preserve">
+    <value>Račun '{0}' onemogućen.</value>
+    <comment>MT — {0} is a quoted account name and stays uninflected</comment>
+  </data>
+  <data name="AdmAccountEnabled" xml:space="preserve">
+    <value>Račun '{0}' omogućen.</value>
+    <comment>MT — {0} is a quoted account name and stays uninflected</comment>
+  </data>
+  <data name="AdmAccountMustChangePasswordChip" xml:space="preserve">
+    <value>mora promijeniti lozinku</value>
+    <comment>MT — lowercase chip text preserved; "pw" expanded because Croatian has no equally short abbreviation</comment>
+  </data>
+  <data name="AdmAccountStatusActive" xml:space="preserve">
+    <value>Aktivan</value>
+    <comment>MT — account status; masculine to agree with "račun"</comment>
+  </data>
+  <data name="AdmAccountStatusChanged" xml:space="preserve">
+    <value>Status računa '{0}' ažuriran.</value>
+    <comment>MT — {0} is a quoted account name and stays uninflected</comment>
+  </data>
+  <data name="AdmAccountStatusClosed" xml:space="preserve">
+    <value>Zatvoren</value>
+    <comment>MT — account status; masculine to agree with "račun"</comment>
+  </data>
+  <data name="AdmAccountStatusDeleted" xml:space="preserve">
+    <value>Obrisan</value>
+    <comment>MT — account status; masculine to agree with "račun"</comment>
+  </data>
+  <data name="AdmAccountStatusDisabled" xml:space="preserve">
+    <value>Onemogućen</value>
+    <comment>MT — account status; masculine to agree with "račun"</comment>
+  </data>
+  <data name="AdmAccountsAction" xml:space="preserve">
+    <value>Upravljanje računima</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
+    <value>Pretraži korisničko ime ili e-poštu…</value>
+    <comment>MT — original ellipsis character preserved</comment>
+  </data>
+  <data name="AdmAccountsTitle" xml:space="preserve">
+    <value>Računi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmApplicationsAction" xml:space="preserve">
+    <value>Prilagođeni widgeti</value>
+    <comment>MT — widget kept per the locale sheet</comment>
+  </data>
+  <data name="AdmApplicationsTitle" xml:space="preserve">
+    <value>Aplikacije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmAttribute" xml:space="preserve">
+    <value>Atribut</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmBreadcrumb" xml:space="preserve">
+    <value>Admin</value>
+    <comment>MT — kept short for a breadcrumb; the full word is used for AdmKicker</comment>
+  </data>
+  <data name="AdmCharacterUnlinked" xml:space="preserve">
+    <value>Lik {0} odvojen je od '{1}'.</value>
+    <comment>MT — added the head noun "Lik" so the unquoted character name {0} can stay in the nominative</comment>
+  </data>
+  <data name="AdmCharactersAction" xml:space="preserve">
+    <value>Prikaz likova</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmCharactersComingSoon" xml:space="preserve">
+    <value>Administracija likova uskoro dolazi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmConfigAction" xml:space="preserve">
+    <value>Konfiguracija stranice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDashboardTitle" xml:space="preserve">
+    <value>Nadzorna ploča administratora</value>
+    <comment>MT — dashboard per the locale sheet</comment>
+  </data>
+  <data name="AdmDatabaseImportAction" xml:space="preserve">
+    <value>Uvezi bazu podataka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDatabaseImportTitle" xml:space="preserve">
+    <value>Uvoz baze podataka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmDisableAccount" xml:space="preserve">
+    <value>Onemogući</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmEmail" xml:space="preserve">
+    <value>E-pošta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmEnableAccount" xml:space="preserve">
+    <value>Omogući</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmHelpKicker" xml:space="preserve">
+    <value>Dokumentacija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmHelpSubtitle" xml:space="preserve">
+    <value>Pregledajte teme, pretražite reference i pročitajte priručnik.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmKicker" xml:space="preserve">
+    <value>Administracija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmLayoutAction" xml:space="preserve">
+    <value>Uređivač rasporeda</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmLayoutTitle" xml:space="preserve">
+    <value>Raspored</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMediaAction" xml:space="preserve">
+    <value>Medijski resursi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMediaTitle" xml:space="preserve">
+    <value>Biblioteka slika</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmMissing" xml:space="preserve">
+    <value>Nedostaje</value>
+    <comment>MT — assumed a status label meaning the item is absent</comment>
+  </data>
+  <data name="AdmModerationAction" xml:space="preserve">
+    <value>Prijave i zabrane</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmModerationComingSoon" xml:space="preserve">
+    <value>Prijave, zabrane i zapisnik revizije uskoro dolaze.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmModerationTitle" xml:space="preserve">
+    <value>Moderiranje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmOperationFailed" xml:space="preserve">
+    <value>Operacija nije uspjela.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPackagesAction" xml:space="preserve">
+    <value>Softcode paketi</value>
+    <comment>MT — softcode kept untranslated per the glossary</comment>
+  </data>
+  <data name="AdmPackagesTitle" xml:space="preserve">
+    <value>Paketi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPasswordReset" xml:space="preserve">
+    <value>Lozinka za '{0}' promijenjena je u: {1} — podijelite je na siguran način; korisnik je mora promijeniti pri sljedećoj prijavi.</value>
+    <comment>MT — lozinka per the locale sheet; {1} follows a colon so the generated password stays uninflected; the English "they" rendered as "korisnik" since Croatian has no neutral pronoun here</comment>
+  </data>
+  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
+    <value>Detalji o igraču uskoro dolaze.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayerDetailKicker" xml:space="preserve">
+    <value>Administracija · Igrač</value>
+    <comment>MT — assumed "Player" here names the entity (a player detail page), not the Player privilege level / API enum, so it is translated; revert to "Player" if it is in fact the level name</comment>
+  </data>
+  <data name="AdmPlayerNumber" xml:space="preserve">
+    <value>Igrač #{0}</value>
+    <comment>MT — assumed the entity (a numbered player record), not the Player privilege level</comment>
+  </data>
+  <data name="AdmPlayersAction" xml:space="preserve">
+    <value>Prikaz igrača</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersComingSoon" xml:space="preserve">
+    <value>Administracija igrača uskoro dolazi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPlayersTitle" xml:space="preserve">
+    <value>Igrači</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmPresent" xml:space="preserve">
+    <value>Postoji</value>
+    <comment>MT — assumed the status opposite of "Missing" (the item exists), not physical presence</comment>
+  </data>
+  <data name="AdmProfilesAction" xml:space="preserve">
+    <value>Profili likova</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesConfigured" xml:space="preserve">
+    <value>Konfigurirano</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesHandler" xml:space="preserve">
+    <value>Rukovatelj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesHandlerNotFound" xml:space="preserve">
+    <value>#{0} — NIJE PRONAĐEN</value>
+    <comment>MT — {0} is a dbref number; masculine agreement with "rukovatelj"</comment>
+  </data>
+  <data name="AdmProfilesNotConfiguredValue" xml:space="preserve">
+    <value>Ne (http_handler nije postavljen)</value>
+    <comment>MT — http_handler kept as a config key name</comment>
+  </data>
+  <data name="AdmProfilesResetCaption" xml:space="preserve">
+    <value>Prepisuje standardne atribute {0} i {1} ugrađenim zadanim vrijednostima. Prilagođeni atributi koje ste dodali ostaju nepromijenjeni.</value>
+    <comment>MT — {0} and {1} are attribute names, placed after the noun "atribute" so they stay uninflected</comment>
+  </data>
+  <data name="AdmProfilesResetComplete" xml:space="preserve">
+    <value>Resetiranje dovršeno. Broj zapisanih atributa: {0}.</value>
+    <comment>MT — restructured as "Broj zapisanih atributa: {0}" because Croatian noun agreement with an unknown count is impossible in a non-plural string</comment>
+  </data>
+  <data name="AdmProfilesResetFailedError" xml:space="preserve">
+    <value>Resetiranje nije uspjelo: {0}</value>
+    <comment>MT — {0} follows a colon and needs no case agreement</comment>
+  </data>
+  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
+    <value>Resetiranje nije uspjelo ({0}).</value>
+    <comment>MT — {0} is an HTTP status code in parentheses</comment>
+  </data>
+  <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
+    <value>Status rukovatelja nije moguće učitati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmProfilesSubtitle" xml:space="preserve">
+    <value>Profile likova poslužuje objekt {0} u igri putem svojeg {1} softcodea. Prilagodite ga u igri pomoću {2} ili ponovno instalirajte standardni rukovatelj u nastavku.</value>
+    <comment>MT — softcode kept untranslated; {0}, {1} and {2} are code identifiers (object, attribute, command) placed next to head nouns so they stay uninflected</comment>
+  </data>
+  <data name="AdmProfilesTitle" xml:space="preserve">
+    <value>Profili</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetFailed" xml:space="preserve">
+    <value>Resetiranje nije uspjelo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmResetPassword" xml:space="preserve">
+    <value>Resetiraj lozinku</value>
+    <comment>MT — lozinka per the locale sheet</comment>
+  </data>
+  <data name="AdmResetting" xml:space="preserve">
+    <value>Resetiranje…</value>
+    <comment>MT — original ellipsis character preserved</comment>
+  </data>
+  <data name="AdmRolesAction" xml:space="preserve">
+    <value>Uloge i dopuštenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmRolesTitle" xml:space="preserve">
+    <value>Uloge</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerAction" xml:space="preserve">
+    <value>Status poslužitelja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerComingSoon" xml:space="preserve">
+    <value>Konfiguracija poslužitelja i mjerni podaci uživo uskoro dolaze.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmServerGodOnly" xml:space="preserve">
+    <value>Postavke poslužitelja samo za God</value>
+    <comment>MT — God kept in English as a privilege level / API value</comment>
+  </data>
+  <data name="AdmServerKicker" xml:space="preserve">
+    <value>Admin · Poslužitelj</value>
+    <comment>MT — middle dot separator preserved</comment>
+  </data>
+  <data name="AdmStatus" xml:space="preserve">
+    <value>Status</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmSuggestionsAction" xml:space="preserve">
+    <value>Prijedlozi riječi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmUnlinkFailed" xml:space="preserve">
+    <value>Odvajanje nije uspjelo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmUsername" xml:space="preserve">
+    <value>Korisničko ime</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdmYes" xml:space="preserve">
+    <value>Da</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdminPanel" xml:space="preserve">
+    <value>Administratorska ploča</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Advanced" xml:space="preserve">
+    <value>Napredno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AdvancedCategoryDescription" xml:space="preserve">
+    <value>Atributi, flagovi, troškovi i posebne postavke</value>
+    <comment>MT — 'flag' kept untranslated per the sheet, pluralized as 'flagovi'</comment>
+  </data>
+  <data name="Aliases" xml:space="preserve">
+    <value>Aliasi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>Sve</value>
+    <comment>MT — assumed a filter option</comment>
+  </data>
+  <data name="AppTitle" xml:space="preserve">
+    <value>SharpMUSH</value>
+    <comment>MT — product name, untranslated per glossary</comment>
+  </data>
+  <data name="AtLeastOneAccessRule" xml:space="preserve">
+    <value>Potrebno je najmanje jedno pravilo pristupa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AtLeastOneRestriction" xml:space="preserve">
+    <value>Potrebno je najmanje jedno ograničenje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Attributes" xml:space="preserve">
+    <value>Atributi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AttributesLabel" xml:space="preserve">
+    <value>Atributi:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthAccount" xml:space="preserve">
+    <value>Račun</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthAccountManagement" xml:space="preserve">
+    <value>Upravljanje računom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthChange" xml:space="preserve">
+    <value>Promijeni</value>
+    <comment>MT — assumed a button that changes a setting</comment>
+  </data>
+  <data name="AuthClaimAdminLead" xml:space="preserve">
+    <value>Ova igra još nije preuzeta. Odaberite korisničko ime i lozinku za unaprijed stvoreni administratorski račun (povezan s igračem #1, God). Prva osoba koja ispuni ovaj obrazac postaje administrator.</value>
+    <comment>MT — 'God' kept in English as a privilege level / API value</comment>
+  </data>
+  <data name="AuthClaimAdminTitle" xml:space="preserve">
+    <value>Preuzmite administratorski račun</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnActions" xml:space="preserve">
+    <value>Radnje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthColumnDbref" xml:space="preserve">
+    <value>Dbref</value>
+    <comment>MT — 'dbref' untranslated per glossary</comment>
+  </data>
+  <data name="AuthColumnName" xml:space="preserve">
+    <value>Ime</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthConfirmPassword" xml:space="preserve">
+    <value>Potvrdite lozinku</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthConnectDirectly" xml:space="preserve">
+    <value>Ili se povežite izravno — upotrijebite</value>
+    <comment>MT — sentence fragment completed by the AuthTerminalLink label; rephrased from 'putem' (which needs the genitive) to a verb taking the accusative, which for 'terminal' is identical to the nominative, so the concatenation is grammatical</comment>
+  </data>
+  <data name="AuthCreateAccount" xml:space="preserve">
+    <value>Stvori račun</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCreateAdminAccount" xml:space="preserve">
+    <value>Stvori administratorski račun</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCreateNewCharacter" xml:space="preserve">
+    <value>+ Stvori novi lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthCurrentPassword" xml:space="preserve">
+    <value>Trenutačna lozinka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthDebugMode" xml:space="preserve">
+    <value>Način za otklanjanje pogrešaka</value>
+    <comment>MT — runs longer than the English label; no shorter standard Croatian term</comment>
+  </data>
+  <data name="AuthDebugModeBody" xml:space="preserve">
+    <value>Autentificirani ste kao {0} (razvojno okruženje). Nijedna sesija računa nije povezana; za upravljanje računom potrebna je prijava na stvarni račun.</value>
+    <comment>MT — 'kao {0}' takes the nominative, so the interpolated identity needs no inflection</comment>
+  </data>
+  <data name="AuthEdit" xml:space="preserve">
+    <value>Uredi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEmailOptional" xml:space="preserve">
+    <value>E-pošta (neobavezno)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEnterCredentials" xml:space="preserve">
+    <value>Unesite svoje podatke za prijavu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthEnterPortal" xml:space="preserve">
+    <value>Uđite u portal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthFirstRunSetup" xml:space="preserve">
+    <value>Početno postavljanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthGoToHome" xml:space="preserve">
+    <value>Idi na početnu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLogOutOfAccount" xml:space="preserve">
+    <value>Odjavi se s računa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLoginFailed" xml:space="preserve">
+    <value>Prijava nije uspjela.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthLogout" xml:space="preserve">
+    <value>Odjava</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNewPassword" xml:space="preserve">
+    <value>Nova lozinka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNoCharacter" xml:space="preserve">
+    <value>Nema lika</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNoCharactersLinked" xml:space="preserve">
+    <value>Nijedan lik nije povezan s ovim računom.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthNotLoggedInAccount" xml:space="preserve">
+    <value>Niste prijavljeni na račun. Za prijavu upotrijebite ploču za prijavu u terminalu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthOpenInNewTab" xml:space="preserve">
+    <value>Otvori u novoj kartici: {0}</value>
+    <comment>MT — restructured so the target name sits after a colon; the accusative it would otherwise need cannot be controlled</comment>
+  </data>
+  <data name="AuthPassword" xml:space="preserve">
+    <value>Lozinka</value>
+    <comment>MT — 'lozinka' per the sheet's departure from the corpus 'šifra'</comment>
+  </data>
+  <data name="AuthPasswordChangeRequired" xml:space="preserve">
+    <value>Potrebna je promjena lozinke.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordChangeRequiredBody" xml:space="preserve">
+    <value>Morate promijeniti lozinku prije korištenja ostatka portala.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordRequired" xml:space="preserve">
+    <value>Lozinka je obavezna.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordTooShort" xml:space="preserve">
+    <value>Lozinka mora imati najmanje 8 znakova.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordUpdated" xml:space="preserve">
+    <value>Lozinka je ažurirana.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasswordsDoNotMatch" xml:space="preserve">
+    <value>Lozinke se ne podudaraju.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthProfile" xml:space="preserve">
+    <value>Profil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthRegister" xml:space="preserve">
+    <value>Registriraj se</value>
+    <comment>MT — assumed a submit button, not a page title</comment>
+  </data>
+  <data name="AuthRegistrationFailed" xml:space="preserve">
+    <value>Registracija nije uspjela.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSettingUp" xml:space="preserve">
+    <value>Postavljanje…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupAdminLinked" xml:space="preserve">
+    <value>Administratorski račun {0} sada je povezan s unaprijed stvorenim igračem #1, God.</value>
+    <comment>MT — {0} sits in nominative apposition after 'račun'; 'God' kept in English as a privilege level</comment>
+  </data>
+  <data name="AuthSetupAlreadyCompleted" xml:space="preserve">
+    <value>Postavljanje je upravo dovršio netko drugi. Ako to niste bili vi, odmah se obratite operateru poslužitelja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupComplete" xml:space="preserve">
+    <value>Postavljanje je dovršeno. Vi ste administrator.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupFailed" xml:space="preserve">
+    <value>Postavljanje nije uspjelo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupSignInToManage" xml:space="preserve">
+    <value>Prijavite se kako biste počeli upravljati svojom igrom.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthSetupSignedInAs" xml:space="preserve">
+    <value>Prijavljeni ste kao {0}.</value>
+    <comment>MT — 'kao' takes the nominative, so the interpolated name needs no inflection</comment>
+  </data>
+  <data name="AuthSetupWelcome" xml:space="preserve">
+    <value>Dobro došli u {0}</value>
+    <comment>MT — CASE HAZARD: {0} must be accusative; cannot control the interpolated form. Restructuring the greeting would distort it, and Latin-script game names are normally left uninflected here</comment>
+  </data>
+  <data name="AuthSignIn" xml:space="preserve">
+    <value>Prijava</value>
+    <comment>MT — per the sheet's sign in → prijava, matching 'Odjava'</comment>
+  </data>
+  <data name="AuthSwitchCharacter" xml:space="preserve">
+    <value>Promijeni lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthTerminalLink" xml:space="preserve">
+    <value>terminal</value>
+    <comment>MT — link label appended to AuthConnectDirectly; the accusative of 'terminal' is identical to the nominative, so the concatenation reads correctly</comment>
+  </data>
+  <data name="AuthUnlinkCharacter" xml:space="preserve">
+    <value>Odspoji lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsername" xml:space="preserve">
+    <value>Korisničko ime</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameOrEmail" xml:space="preserve">
+    <value>Korisničko ime ili e-pošta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernamePasswordRequired" xml:space="preserve">
+    <value>Korisničko ime i lozinka su obavezni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameRequired" xml:space="preserve">
+    <value>Korisničko ime je obavezno.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameTaken" xml:space="preserve">
+    <value>To korisničko ime već je zauzeto — odaberite drugo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUsernameUpdated" xml:space="preserve">
+    <value>Korisničko ime je ažurirano.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AvgWordsPerCategory" xml:space="preserve">
+    <value>Pros. riječi/kategoriji</value>
+    <comment>MT — abbreviated to match the English label length</comment>
+  </data>
+  <data name="BannedNameAddFailed" xml:space="preserve">
+    <value>Dodavanje zabranjenog imena '{0}' nije uspjelo</value>
+    <comment>MT — the governing noun carries the genitive; the quoted name stays uninflected</comment>
+  </data>
+  <data name="BannedNameAdded" xml:space="preserve">
+    <value>Zabranjeno ime '{0}' uspješno je dodano</value>
+    <comment>MT — {0} sits in nominative apposition after 'ime'</comment>
+  </data>
+  <data name="BannedNameRemoveFailed" xml:space="preserve">
+    <value>Uklanjanje zabranjenog imena '{0}' nije uspjelo</value>
+    <comment>MT — the governing noun carries the genitive; the quoted name stays uninflected</comment>
+  </data>
+  <data name="BannedNameRemoved" xml:space="preserve">
+    <value>Zabranjeno ime '{0}' uspješno je uklonjeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNames" xml:space="preserve">
+    <value>Zabranjena imena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNamesDescription" xml:space="preserve">
+    <value>Upravljajte popisom imena koja igrači ne smiju koristiti pri stvaranju likova.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedNamesList" xml:space="preserve">
+    <value>Popis zabranjenih imena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="BannedPlayerNames" xml:space="preserve">
+    <value>Zabranjena imena igrača</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Odustani</value>
+    <comment>MT — button imperative per the sheet's register note</comment>
+  </data>
+  <data name="CancelConversion" xml:space="preserve">
+    <value>Odustani od pretvorbe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Categories" xml:space="preserve">
+    <value>Kategorije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoriesCount" xml:space="preserve">
+    <value>Kategorije ({0})</value>
+    <comment>MT — count in parentheses needs no numeral agreement</comment>
+  </data>
+  <data name="CategoryAlreadyExists" xml:space="preserve">
+    <value>Kategorija '{0}' već postoji</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryCreateFailed" xml:space="preserve">
+    <value>Stvaranje kategorije nije uspjelo: {0}</value>
+    <comment>MT — assumed {0} is an error detail, not a category name</comment>
+  </data>
+  <data name="CategoryCreated" xml:space="preserve">
+    <value>Kategorija '{0}' uspješno je stvorena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryDeleteFailed" xml:space="preserve">
+    <value>Brisanje kategorije nije uspjelo: {0}</value>
+    <comment>MT — assumed {0} is an error detail, not a category name</comment>
+  </data>
+  <data name="CategoryDeleted" xml:space="preserve">
+    <value>Obrisana je kategorija '{0}'</value>
+    <comment>MT — {0} sits in nominative apposition after 'kategorija'</comment>
+  </data>
+  <data name="CategoryName" xml:space="preserve">
+    <value>Naziv kategorije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNameEmpty" xml:space="preserve">
+    <value>Naziv kategorije ne može biti prazan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CategoryNameHelper" xml:space="preserve">
+    <value>Unesite naziv nove kategorije prijedloga (npr. 'commands', 'functions', 'help')</value>
+    <comment>MT — quoted examples are literal category keys, kept in English</comment>
+  </data>
+  <data name="CategoryNotFound" xml:space="preserve">
+    <value>Kategorija konfiguracije „{0}” nije pronađena u shemi.</value>
+    <comment>MT — Croatian quotation marks used</comment>
+  </data>
+  <data name="CategoryNotFoundShort" xml:space="preserve">
+    <value>Kategorija '{0}' nije pronađena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Characters" xml:space="preserve">
+    <value>Likovi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Chat" xml:space="preserve">
+    <value>Razgovor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ClearSelection" xml:space="preserve">
+    <value>Poništi odabir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ClickMe" xml:space="preserve">
+    <value>Kliknite me</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>Uskoro</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandAndFunctionRestrictions" xml:space="preserve">
+    <value>Ograničenja naredbi i funkcija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandName" xml:space="preserve">
+    <value>Naziv naredbe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandNameHelper" xml:space="preserve">
+    <value>npr. pemit, force</value>
+    <comment>MT — command names are game syntax, kept in English</comment>
+  </data>
+  <data name="CommandRestrictionAddFailed" xml:space="preserve">
+    <value>Dodavanje ograničenja naredbe nije uspjelo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionAdded" xml:space="preserve">
+    <value>Ograničenje za naredbu '{0}' uspješno je dodano</value>
+    <comment>MT — the governing noun 'naredbu' absorbs the case; the command name stays uninflected</comment>
+  </data>
+  <data name="CommandRestrictionRemoveFailed" xml:space="preserve">
+    <value>Uklanjanje ograničenja naredbe nije uspjelo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictionRemoved" xml:space="preserve">
+    <value>Ograničenje za naredbu '{0}' uspješno je uklonjeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CommandRestrictions" xml:space="preserve">
+    <value>Ograničenja naredbi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Commands" xml:space="preserve">
+    <value>Naredbe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Compatibility" xml:space="preserve">
+    <value>Kompatibilnost</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Compose" xml:space="preserve">
+    <value>Napiši</value>
+    <comment>MT — assumed the mail compose action</comment>
+  </data>
+  <data name="ComposeMail" xml:space="preserve">
+    <value>Napiši poštu</value>
+    <comment>MT — 'pošta' per the corpus term for mail</comment>
+  </data>
+  <data name="Config" xml:space="preserve">
+    <value>Konfiguracija</value>
+    <comment>MT — Croatian has no shorter idiomatic abbreviation</comment>
+  </data>
+  <data name="ConfigSavedCount" xml:space="preserve">
+    <value>{count, plural, one {Uspješno spremljena # postavka} few {Uspješno spremljene # postavke} other {Uspješno spremljeno # postavki}}</value>
+    <comment>MT — verbatim from the locale sheet</comment>
+  </data>
+  <data name="Configuration" xml:space="preserve">
+    <value>Konfiguracija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationExported" xml:space="preserve">
+    <value>Konfiguracija je izvezena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationManagement" xml:space="preserve">
+    <value>Upravljanje konfiguracijom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfigurationSections" xml:space="preserve">
+    <value>Odjeljci konfiguracije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredCommandRestrictions" xml:space="preserve">
+    <value>Postavljena ograničenja naredbi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredFunctionRestrictions" xml:space="preserve">
+    <value>Postavljena ograničenja funkcija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConfiguredRules" xml:space="preserve">
+    <value>Postavljena pravila</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>Poveži se</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Connected" xml:space="preserve">
+    <value>Povezano</value>
+    <comment>MT — status label, neuter</comment>
+  </data>
+  <data name="Content" xml:space="preserve">
+    <value>Sadržaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ContentCategoryDescription" xml:space="preserve">
+    <value>Poruke, kozmetičke opcije i konfiguracija razgovora</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionErrors" xml:space="preserve">
+    <value>Pretvorba je dovršena s greškama</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionSuccess" xml:space="preserve">
+    <value>Pretvorba je uspješno dovršena!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConvertingDatabase" xml:space="preserve">
+    <value>Pretvaranje baze podataka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Cosmetic" xml:space="preserve">
+    <value>Kozmetika</value>
+    <comment>MT — assumed a config category heading (noun)</comment>
+  </data>
+  <data name="Costs" xml:space="preserve">
+    <value>Troškovi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Counter" xml:space="preserve">
+    <value>Brojač</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Create" xml:space="preserve">
+    <value>Stvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CreateThisPage" xml:space="preserve">
+    <value>Stvorite ovu stranicu!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="CurrentCount" xml:space="preserve">
+    <value>Trenutačni broj: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Database" xml:space="preserve">
+    <value>Baza podataka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DatabaseDumps" xml:space="preserve">
+    <value>Izvozi baze podataka</value>
+    <comment>MT — assumed periodic database dumps/snapshots</comment>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>Datum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>Otklanjanje pogrešaka</value>
+    <comment>MT — runs longer than the English label; no shorter standard Croatian term</comment>
+  </data>
+  <data name="DefaultsRestored" xml:space="preserve">
+    <value>Zadane vrijednosti su vraćene — spremite da biste ih primijenili</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Obriši</value>
+    <comment>MT — button imperative per the sheet's register note</comment>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>Onemogućeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disconnect" xml:space="preserve">
+    <value>Prekini vezu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>Veza je prekinuta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DropDatabaseFile" xml:space="preserve">
+    <value>Ovdje ispustite PennMUSH datoteku baze podataka ili kliknite</value>
+    <comment>MT — 'PennMUSH' untranslated per glossary; sentence fragment completed by a following link label</comment>
+  </data>
+  <data name="DropFilesOrClick" xml:space="preserve">
+    <value>Ovdje ispustite datoteke ili kliknite</value>
+    <comment>MT — sentence fragment completed by a following link label</comment>
+  </data>
+  <data name="Duration" xml:space="preserve">
+    <value>Trajanje:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EditProfile" xml:space="preserve">
+    <value>Uredi profil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Elapsed" xml:space="preserve">
+    <value>Proteklo:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>Omogućeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumApplicationKindPage" xml:space="preserve">
+    <value>Stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumApplicationKindWidget" xml:space="preserve">
+    <value>Widget</value>
+    <comment>MT — per sheet, widget stays as 'widget' in Croatian portal UI</comment>
+  </data>
+  <data name="EnumObjectTypeExit" xml:space="preserve">
+    <value>Izlaz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypePlayer" xml:space="preserve">
+    <value>Igrač</value>
+    <comment>MT — object-browser group heading for the MushObjectType enum, not the Player privilege level; EnumLabels.cs documents that PortalRole is deliberately excluded from these keys, so this one is translated.</comment>
+  </data>
+  <data name="EnumObjectTypeRoom" xml:space="preserve">
+    <value>Soba</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeThing" xml:space="preserve">
+    <value>Predmet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumObjectTypeUnknown" xml:space="preserve">
+    <value>Nepoznato</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermApplicationsAdmin" xml:space="preserve">
+    <value>Aplikacije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermApplicationsAdminDesc" xml:space="preserve">
+    <value>Registrirajte aplikacije vođene shemom i upravljajte njima.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermConfigAdmin" xml:space="preserve">
+    <value>Konfiguracija poslužitelja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermConfigAdminDesc" xml:space="preserve">
+    <value>Uređivanje konfiguracije poslužitelja, sitelocka, zabranjenih imena i ograničenja.</value>
+    <comment>MT — 'sitelock' left as machine identifier (config key name)</comment>
+  </data>
+  <data name="EnumPermGroupBuild" xml:space="preserve">
+    <value>Gradnja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermGroupManage" xml:space="preserve">
+    <value>Upravljanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermLayoutAdmin" xml:space="preserve">
+    <value>Uređivač rasporeda</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermLayoutAdminDesc" xml:space="preserve">
+    <value>Uređivanje rasporeda widgeta portala.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaAdmin" xml:space="preserve">
+    <value>Biblioteka slika · Upravljanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaAdminDesc" xml:space="preserve">
+    <value>Pregled i brisanje zajedničke medijske biblioteke.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaUpload" xml:space="preserve">
+    <value>Biblioteka slika · Prijenos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermMediaUploadDesc" xml:space="preserve">
+    <value>Prijenos slikovnih resursa za upotrebu na wiki stranicama.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPackagesAdmin" xml:space="preserve">
+    <value>Paketi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPackagesAdminDesc" xml:space="preserve">
+    <value>Instaliranje, ažuriranje i upravljanje softcode paketima.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersModerate" xml:space="preserve">
+    <value>Igrači · Moderiranje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersModerateDesc" xml:space="preserve">
+    <value>Onemogućavanje, zabrana, upozoravanje i uređivanje igračkih računa, likova i profila.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersView" xml:space="preserve">
+    <value>Igrači · Pregled</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermPlayersViewDesc" xml:space="preserve">
+    <value>Pregled igračkih računa, likova i profila (samo za čitanje).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermRolesAdmin" xml:space="preserve">
+    <value>Uloge i dopuštenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermRolesAdminDesc" xml:space="preserve">
+    <value>Stvaranje uloga, uređivanje dopuštenja i dodjeljivanje uloga računima.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermServerAdmin" xml:space="preserve">
+    <value>Poslužitelj (God)</value>
+    <comment>MT — 'God' is a privilege level per glossary; kept in English</comment>
+  </data>
+  <data name="EnumPermServerAdminDesc" xml:space="preserve">
+    <value>Operacije na razini poslužitelja i uvoz baze podataka. Prema zadanim postavkama samo za razinu God.</value>
+    <comment>MT — 'God' kept in English as a privilege level</comment>
+  </data>
+  <data name="EnumPermSoftcodeUse" xml:space="preserve">
+    <value>Uređivač softcodea</value>
+    <comment>MT — 'softcode' untranslated per glossary, inflected with Croatian genitive ending</comment>
+  </data>
+  <data name="EnumPermSoftcodeUseDesc" xml:space="preserve">
+    <value>Otvaranje uređivača softcodea radi pregleda i uređivanja atributa objekta.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiAdmin" xml:space="preserve">
+    <value>Wiki · Moderiranje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiAdminDesc" xml:space="preserve">
+    <value>Zaštita/uklanjanje zaštite, uređivanje zaštićenih stranica, skupne operacije i administratorska nadzorna ploča wikija.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiCreate" xml:space="preserve">
+    <value>Wiki · Stvaranje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiCreateDesc" xml:space="preserve">
+    <value>Stvaranje novih wiki stranica.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDelete" xml:space="preserve">
+    <value>Wiki · Brisanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDeleteDesc" xml:space="preserve">
+    <value>Brisanje wiki stranica i njihove povijesti revizija.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiEdit" xml:space="preserve">
+    <value>Wiki · Uređivanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiEditDesc" xml:space="preserve">
+    <value>Uređivanje, vraćanje i ponovno označavanje postojećih (nezaštićenih) wiki stranica.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiRead" xml:space="preserve">
+    <value>Wiki · Čitanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiReadDesc" xml:space="preserve">
+    <value>Pregled neobjavljenih wiki stranica i skica (objavljene stranice javno su dostupne svima).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="EnumRevisionKindInstall" xml:space="preserve">
+    <value>Instalacija</value>
+    <comment>MT — assumed noun (revision kind label), not an imperative button</comment>
+  </data>
+  <data name="EnumRevisionKindRollback" xml:space="preserve">
+    <value>Vraćanje</value>
+    <comment>MT — assumed noun (revision kind label)</comment>
+  </data>
+  <data name="EnumRevisionKindUpgrade" xml:space="preserve">
+    <value>Nadogradnja</value>
+    <comment>MT — assumed noun (revision kind label)</comment>
+  </data>
+  <data name="EnumUnitBytes" xml:space="preserve">
+    <value>{0} B</value>
+    <comment>MT — unit symbol, identical in Croatian</comment>
+  </data>
+  <data name="EnumUnitGigabytes" xml:space="preserve">
+    <value>{0} GB</value>
+    <comment>MT — unit symbol, identical in Croatian</comment>
+  </data>
+  <data name="EnumUnitKilobytes" xml:space="preserve">
+    <value>{0} KB</value>
+    <comment>MT — unit symbol, identical in Croatian</comment>
+  </data>
+  <data name="EnumUnitMegabytes" xml:space="preserve">
+    <value>{0} MB</value>
+    <comment>MT — unit symbol, identical in Croatian</comment>
+  </data>
+  <data name="ErrorAddingBannedName" xml:space="preserve">
+    <value>Greška pri dodavanju zabranjenog imena: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingCommandRestriction" xml:space="preserve">
+    <value>Greška pri dodavanju ograničenja naredbe: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingFunctionRestriction" xml:space="preserve">
+    <value>Greška pri dodavanju ograničenja funkcije: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorAddingSitelockRule" xml:space="preserve">
+    <value>Greška pri dodavanju sitelock pravila: {0}</value>
+    <comment>MT — 'sitelock' is a config feature name, kept as-is</comment>
+  </data>
+  <data name="ErrorAddingWord" xml:space="preserve">
+    <value>Greška pri dodavanju riječi: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorCount" xml:space="preserve">
+    <value>{count, plural, one {# greška} few {# greške} other {# grešaka}}</value>
+    <comment>MT — verbatim from the locale sheet</comment>
+  </data>
+  <data name="ErrorCreatingCategory" xml:space="preserve">
+    <value>Greška pri stvaranju kategorije: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorDeletingCategory" xml:space="preserve">
+    <value>Greška pri brisanju kategorije: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorDeletingWord" xml:space="preserve">
+    <value>Greška pri brisanju riječi: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingBannedNames" xml:space="preserve">
+    <value>Greška pri učitavanju zabranjenih imena: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingConfig" xml:space="preserve">
+    <value>Greška pri učitavanju konfiguracije: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingRestrictions" xml:space="preserve">
+    <value>Greška pri učitavanju ograničenja: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorLoadingSitelockRules" xml:space="preserve">
+    <value>Greška pri učitavanju sitelock pravila: {0}</value>
+    <comment>MT — 'sitelock' is a config feature name, kept as-is</comment>
+  </data>
+  <data name="ErrorLoadingSuggestions" xml:space="preserve">
+    <value>Greška pri učitavanju prijedloga: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingBannedName" xml:space="preserve">
+    <value>Greška pri uklanjanju zabranjenog imena: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingCommandRestriction" xml:space="preserve">
+    <value>Greška pri uklanjanju ograničenja naredbe: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingFunctionRestriction" xml:space="preserve">
+    <value>Greška pri uklanjanju ograničenja funkcije: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ErrorRemovingSitelockRule" xml:space="preserve">
+    <value>Greška pri uklanjanju sitelock pravila: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Errors" xml:space="preserve">
+    <value>Greške ({0})</value>
+    <comment>MT — count in parentheses needs no numeral agreement</comment>
+  </data>
+  <data name="EstimatedRemaining" xml:space="preserve">
+    <value>Procijenjeno preostalo:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Exits" xml:space="preserve">
+    <value>Izlazi:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Export" xml:space="preserve">
+    <value>Izvezi</value>
+    <comment>MT — assumed a button; noun form would be 'Izvoz'</comment>
+  </data>
+  <data name="ExportConfiguration" xml:space="preserve">
+    <value>Izvezi konfiguraciju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ExportFailed" xml:space="preserve">
+    <value>Izvoz konfiguracije nije uspio</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FailedToLoadSchema" xml:space="preserve">
+    <value>Učitavanje sheme konfiguracije nije uspjelo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FailedToLoadValues" xml:space="preserve">
+    <value>Učitavanje vrijednosti konfiguracije nije uspjelo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Files" xml:space="preserve">
+    <value>Datoteke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Flags" xml:space="preserve">
+    <value>Flagovi</value>
+    <comment>MT — 'flag' kept untranslated per the sheet (corpus usage), Croatian plural ending</comment>
+  </data>
+  <data name="From" xml:space="preserve">
+    <value>Od</value>
+    <comment>MT — assumed a mail sender column header</comment>
+  </data>
+  <data name="FunctionName" xml:space="preserve">
+    <value>Naziv funkcije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionNameHelper" xml:space="preserve">
+    <value>npr. pemit(), sql()</value>
+    <comment>MT — function names are game syntax, kept in English</comment>
+  </data>
+  <data name="FunctionRestrictionAddFailed" xml:space="preserve">
+    <value>Dodavanje ograničenja funkcije nije uspjelo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionAdded" xml:space="preserve">
+    <value>Ograničenje za funkciju '{0}' uspješno je dodano</value>
+    <comment>MT — the governing noun 'funkciju' absorbs the case; the function name stays uninflected</comment>
+  </data>
+  <data name="FunctionRestrictionRemoveFailed" xml:space="preserve">
+    <value>Uklanjanje ograničenja funkcije nije uspjelo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictionRemoved" xml:space="preserve">
+    <value>Ograničenje za funkciju '{0}' uspješno je uklonjeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="FunctionRestrictions" xml:space="preserve">
+    <value>Ograničenja funkcija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Functions" xml:space="preserve">
+    <value>Funkcije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Gallery" xml:space="preserve">
+    <value>Galerija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryEmpty" xml:space="preserve">
+    <value>Još nema slika.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryUploadFailed" xml:space="preserve">
+    <value>Prijenos slike nije uspio.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Help" xml:space="preserve">
+    <value>Pomoć</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Home" xml:space="preserve">
+    <value>Početna</value>
+    <comment>MT — assumed the home page nav item</comment>
+  </data>
+  <data name="HostPattern" xml:space="preserve">
+    <value>Uzorak hosta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostPatternHelper" xml:space="preserve">
+    <value>npr. *.example.com ili 192.168.1.*</value>
+    <comment>MT — patterns are literal values, kept as-is</comment>
+  </data>
+  <data name="Import" xml:space="preserve">
+    <value>Uvezi</value>
+    <comment>MT — assumed a button; noun form would be 'Uvoz'</comment>
+  </data>
+  <data name="ImportAnotherDatabase" xml:space="preserve">
+    <value>Uvezi drugu bazu podataka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfig" xml:space="preserve">
+    <value>Uvoz konfiguracije</value>
+    <comment>MT — assumed a section/heading label; the action form is used for ImportConfiguration</comment>
+  </data>
+  <data name="ImportConfigDescription" xml:space="preserve">
+    <value>Prenesite datoteku mush.cnf za uvoz konfiguracijskih postavki. Podržani formati: .cnf, .conf, .txt</value>
+    <comment>MT — file name and extensions kept as machine identifiers</comment>
+  </data>
+  <data name="ImportConfigFile" xml:space="preserve">
+    <value>Uvezi konfiguracijsku datoteku</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportConfiguration" xml:space="preserve">
+    <value>Uvezi konfiguraciju</value>
+    <comment>MT — rendered as an imperative button action to distinguish it from ImportConfig</comment>
+  </data>
+  <data name="ImportDatabaseDescription" xml:space="preserve">
+    <value>Prenesite datoteku PennMUSH baze podataka za pretvorbu i uvoz u SharpMUSH. Postupak pretvorbe stvorit će sve objekte, uspostaviti odnose te postaviti atribute i brave.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ImportPennMUSHDatabase" xml:space="preserve">
+    <value>Uvezi PennMUSH bazu podataka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Important" xml:space="preserve">
+    <value>Važno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Importing" xml:space="preserve">
+    <value>Uvoz u tijeku...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="InThisSection" xml:space="preserve">
+    <value>u ovom odjeljku</value>
+    <comment>MT — lowercase sentence fragment preserved</comment>
+  </data>
+  <data name="Issues" xml:space="preserve">
+    <value>Problemi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Joined" xml:space="preserve">
+    <value>pridružio se</value>
+    <comment>MT — assumed a fragment preceding a date ("joined &lt;when&gt;"); Croatian past participle must agree in gender with the subject, which is unknown here — reads masculine by default</comment>
+  </data>
+  <data name="Key" xml:space="preserve">
+    <value>Ključ</value>
+    <comment>MT — assumed a config key/value pair label, not a cryptographic key</comment>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Jezik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayActions" xml:space="preserve">
+    <value>Radnje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAllLayouts" xml:space="preserve">
+    <value>Svi rasporedi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppAllowedZones" xml:space="preserve">
+    <value>Dopuštene zone</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrl" xml:space="preserve">
+    <value>URL podataka</value>
+    <comment>MT — assumed an address the widget fetches data from, not a data: URI</comment>
+  </data>
+  <data name="LayAppDataUrlHelper" xml:space="preserve">
+    <value>Podaci za prikaz pregleda / predpopunjavanje obrasca</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDataUrlOptional" xml:space="preserve">
+    <value>URL podataka (neobavezno)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDisplayName" xml:space="preserve">
+    <value>Prikazano ime</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppDisplayOrder" xml:space="preserve">
+    <value>Redoslijed prikaza</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppEditInSoftcode" xml:space="preserve">
+    <value>Uredi u softcodeu</value>
+    <comment>MT — softcode kept untranslated, Croatian locative ending attached</comment>
+  </data>
+  <data name="LayAppEditTitle" xml:space="preserve">
+    <value>Uredi: {0}</value>
+    <comment>MT — colon added so the application name {0} can stay in the nominative instead of the accusative</comment>
+  </data>
+  <data name="LayAppIconHelper" xml:space="preserve">
+    <value>Naziv MudBlazor Material ikone</value>
+    <comment>MT — MudBlazor Material kept as a library/icon-set identifier</comment>
+  </data>
+  <data name="LayAppIconOptional" xml:space="preserve">
+    <value>Ikona (neobavezno)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKind" xml:space="preserve">
+    <value>Vrsta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppKindPage" xml:space="preserve">
+    <value>Stranica (/apps/{slug})</value>
+    <comment>MT — route kept verbatim, including the {slug} placeholder</comment>
+  </data>
+  <data name="LayAppKindWidget" xml:space="preserve">
+    <value>Widget (zona rasporeda)</value>
+    <comment>MT — widget per the locale sheet</comment>
+  </data>
+  <data name="LayAppMinRole" xml:space="preserve">
+    <value>Min. uloga</value>
+    <comment>MT — abbreviated to match the short English label</comment>
+  </data>
+  <data name="LayAppMinimumRole" xml:space="preserve">
+    <value>Minimalna uloga</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacement" xml:space="preserve">
+    <value>Položaj u navigaciji</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppNavPlacementHelper" xml:space="preserve">
+    <value>Postavite za prikaz aplikacije vrste Stranica u navigaciji</value>
+    <comment>MT — "Page" refers to the app kind rendered as "Stranica" in LayAppKindPage</comment>
+  </data>
+  <data name="LayAppNavPlacementOptional" xml:space="preserve">
+    <value>Položaj u navigaciji (neobavezno)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppOpen" xml:space="preserve">
+    <value>Otvori aplikaciju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppOrder" xml:space="preserve">
+    <value>Redoslijed</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveConfirm" xml:space="preserve">
+    <value>Ukloniti '{0}' ({1})? Time se aplikacija samo odvaja od portala; softcode ostaje nepromijenjen.</value>
+    <comment>MT — softcode kept untranslated; both placeholders sit inside quotes/parentheses and stay uninflected</comment>
+  </data>
+  <data name="LayAppRemoveFailed" xml:space="preserve">
+    <value>Uklanjanje aplikacije nije uspjelo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoveTitle" xml:space="preserve">
+    <value>Uklanjanje aplikacije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppRemoved" xml:space="preserve">
+    <value>Uklonjeno: {0}.</value>
+    <comment>MT — colon added so the application name can stay in the nominative</comment>
+  </data>
+  <data name="LayAppRequiredFields" xml:space="preserve">
+    <value>Slug, prikazano ime i URL sheme su obavezni.</value>
+    <comment>MT — slug kept untranslated per the glossary</comment>
+  </data>
+  <data name="LayAppSaveFailed" xml:space="preserve">
+    <value>Spremanje nije uspjelo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSaved" xml:space="preserve">
+    <value>Spremljeno: {0}.</value>
+    <comment>MT — colon added so the application name can stay in the nominative</comment>
+  </data>
+  <data name="LayAppSchemaUrl" xml:space="preserve">
+    <value>URL sheme</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSchemaUrlHelper" xml:space="preserve">
+    <value>Ruta HTTP rukovatelja koja vraća Portal Schema Document, npr. http/chargen/schema</value>
+    <comment>MT — Portal Schema Document and the example route kept in English as machine identifiers</comment>
+  </data>
+  <data name="LayAppSlug" xml:space="preserve">
+    <value>Slug</value>
+    <comment>MT — slug kept untranslated per the glossary</comment>
+  </data>
+  <data name="LayAppSlugHelper" xml:space="preserve">
+    <value>URL ključ — /apps/{slug}. Nije moguće promijeniti nakon stvaranja.</value>
+    <comment>MT — route and {slug} placeholder kept verbatim</comment>
+  </data>
+  <data name="LayAppSubmitRoute" xml:space="preserve">
+    <value>Ruta za slanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppSubmitRouteOptional" xml:space="preserve">
+    <value>Ruta za slanje (neobavezno)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppViewSchema" xml:space="preserve">
+    <value>Prikaži shemu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayApplications" xml:space="preserve">
+    <value>Aplikacije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayApply" xml:space="preserve">
+    <value>Primijeni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsEmptyDetail" xml:space="preserve">
+    <value>Odaberite aplikaciju ili registrirajte novu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsKicker" xml:space="preserve">
+    <value>Izrada · Prilagođeni widgeti</value>
+    <comment>MT — middle dot separator preserved; widget per the locale sheet</comment>
+  </data>
+  <data name="LayAppsNew" xml:space="preserve">
+    <value>Nova aplikacija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsNoMatch" xml:space="preserve">
+    <value>Nema podudarnih aplikacija.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsPages" xml:space="preserve">
+    <value>Stranice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsRegister" xml:space="preserve">
+    <value>Registriraj aplikaciju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSchemaRegistry" xml:space="preserve">
+    <value>Registar shema</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSchemas" xml:space="preserve">
+    <value>Sheme</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayAppsSearchPlaceholder" xml:space="preserve">
+    <value>Pretraži aplikacije ili sheme…</value>
+    <comment>MT — original ellipsis character preserved</comment>
+  </data>
+  <data name="LayAppsStatPages" xml:space="preserve">
+    <value>aplikacije preko cijelog zaslona</value>
+    <comment>MT — lowercase stat caption preserved; runs longer than the English but no shorter accurate rendering exists</comment>
+  </data>
+  <data name="LayAppsStatRegistered" xml:space="preserve">
+    <value>registrirano</value>
+    <comment>MT — lowercase stat caption preserved</comment>
+  </data>
+  <data name="LayAppsStatSchemas" xml:space="preserve">
+    <value>definirano softcodeom</value>
+    <comment>MT — softcode kept untranslated, Croatian instrumental ending attached</comment>
+  </data>
+  <data name="LayAppsStatWidgets" xml:space="preserve">
+    <value>zone nadzorne ploče</value>
+    <comment>MT — dashboard per the locale sheet</comment>
+  </data>
+  <data name="LayAppsWidgets" xml:space="preserve">
+    <value>Widgeti</value>
+    <comment>MT — widget per the locale sheet</comment>
+  </data>
+  <data name="LayBadgeCustomized" xml:space="preserve">
+    <value>prilagođeno</value>
+    <comment>MT — lowercase badge text preserved</comment>
+  </data>
+  <data name="LayBadgeDefault" xml:space="preserve">
+    <value>zadano</value>
+    <comment>MT — lowercase badge text preserved</comment>
+  </data>
+  <data name="LayConfigJsonHelp" xml:space="preserve">
+    <value>Konfiguracija pojedine instance widgeta {0}, u obliku JSON-a. Ostavite prazno ako konfiguracija nije potrebna.</value>
+    <comment>MT — JSON kept untranslated; {0} follows the head noun "widgeta" as apposition so it stays in the nominative</comment>
+  </data>
+  <data name="LayConfigJsonLabel" xml:space="preserve">
+    <value>Konfiguracijski JSON</value>
+    <comment>MT — JSON kept untranslated</comment>
+  </data>
+  <data name="LayConfigure" xml:space="preserve">
+    <value>Konfiguriraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayConfigureWidget" xml:space="preserve">
+    <value>Konfiguriraj: {0}</value>
+    <comment>MT — colon added so the widget name can stay in the nominative instead of the accusative</comment>
+  </data>
+  <data name="LayEdit" xml:space="preserve">
+    <value>Uredi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayEditorPageTitle" xml:space="preserve">
+    <value>Raspored: {0}</value>
+    <comment>MT — {0} is a scope name; moved after a colon so it needs no adjectival agreement</comment>
+  </data>
+  <data name="LayFlowZoneHint" xml:space="preserve">
+    <value>vodoravno — bez širine</value>
+    <comment>MT — lowercase hint preserved</comment>
+  </data>
+  <data name="LayGridZoneHint" xml:space="preserve">
+    <value>mreža od 12 stupaca</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayHasConfig" xml:space="preserve">
+    <value>Ima konfiguraciju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayInvalidJson" xml:space="preserve">
+    <value>Neispravan JSON: {0}</value>
+    <comment>MT — JSON kept untranslated; {0} follows a colon</comment>
+  </data>
+  <data name="LayLayouts" xml:space="preserve">
+    <value>Raspored</value>
+    <comment>MT — translating the English value "Layout", not the key name</comment>
+  </data>
+  <data name="LayLayoutsBlurb" xml:space="preserve">
+    <value>Rasporedite widgete na svakoj stranici povlačenjem između zona. Promjene se objavljuju svim posjetiteljima.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayLayoutsKicker" xml:space="preserve">
+    <value>Izrada · Rasporedi stranica</value>
+    <comment>MT — middle dot separator preserved</comment>
+  </data>
+  <data name="LayLivePreview" xml:space="preserve">
+    <value>Pregled uživo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPaletteHint" xml:space="preserve">
+    <value>Povucite widget u zonu. Povucite postavljeni widget natrag ovamo da biste ga uklonili.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreview" xml:space="preserve">
+    <value>Pregled</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreviewNote" xml:space="preserve">
+    <value>Prikazuje nespremljene promjene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPreviewNoteProfile" xml:space="preserve">
+    <value> · widgeti likova ovdje prikazuju generičko stanje</value>
+    <comment>MT — leading space and middle dot preserved; this is a sentence fragment appended to LayPreviewNote</comment>
+  </data>
+  <data name="LayPublish" xml:space="preserve">
+    <value>Objavi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublishFailed" xml:space="preserve">
+    <value>Objava rasporeda nije uspjela.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayPublished" xml:space="preserve">
+    <value>Objavljen raspored: {0}.</value>
+    <comment>MT — colon added so the scope name stays in the nominative</comment>
+  </data>
+  <data name="LayPublishing" xml:space="preserve">
+    <value>Objavljivanje…</value>
+    <comment>MT — original ellipsis character preserved</comment>
+  </data>
+  <data name="LayRemove" xml:space="preserve">
+    <value>Ukloni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayReset" xml:space="preserve">
+    <value>Resetiraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetConfirm" xml:space="preserve">
+    <value>Vratiti raspored {0} na zadane postavke? Sve prilagodbe bit će odbačene.</value>
+    <comment>MT — {0} is a scope name placed as apposition after "raspored" so it stays in the nominative</comment>
+  </data>
+  <data name="LayResetDone" xml:space="preserve">
+    <value>Raspored {0} vraćen je na zadane postavke.</value>
+    <comment>MT — {0} placed as apposition after "Raspored" so it stays in the nominative</comment>
+  </data>
+  <data name="LayResetFailed" xml:space="preserve">
+    <value>Resetiranje rasporeda nije uspjelo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayResetLayout" xml:space="preserve">
+    <value>Resetiraj raspored</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeGlobal" xml:space="preserve">
+    <value>Okvir stranice</value>
+    <comment>MT — "Site Chrome" rendered as the surrounding page frame (top bar, sidebars, footer)</comment>
+  </data>
+  <data name="LayScopeGlobalDesc" xml:space="preserve">
+    <value>Gornja traka, bočne trake i podnožje zajednički svim stranicama.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeHome" xml:space="preserve">
+    <value>Početna stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeHomeDesc" xml:space="preserve">
+    <value>Glavni sadržaj odredišne stranice.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeProfile" xml:space="preserve">
+    <value>Profil lika</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayScopeProfileDesc" xml:space="preserve">
+    <value>Tijelo stranice /character/{name} i desna bočna traka.</value>
+    <comment>MT — route and {name} placeholder kept verbatim</comment>
+  </data>
+  <data name="LayScopeWikiIndex" xml:space="preserve">
+    <value>Wiki indeks</value>
+    <comment>MT — wiki kept untranslated per the glossary</comment>
+  </data>
+  <data name="LayScopeWikiIndexDesc" xml:space="preserve">
+    <value>Odredišna stranica /wiki.</value>
+    <comment>MT — route kept verbatim</comment>
+  </data>
+  <data name="LaySidebarsAndFooter" xml:space="preserve">
+    <value>Bočne trake i podnožje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LaySpacerHeight" xml:space="preserve">
+    <value>Visina (px)</value>
+    <comment>MT — unit symbol kept</comment>
+  </data>
+  <data name="LaySpacerHelp" xml:space="preserve">
+    <value>Visina praznog prostora u pikselima. Širina slijedi raspon stupaca na tom položaju.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayUnknownScope" xml:space="preserve">
+    <value>Nepoznat opseg rasporeda “{0}”.</value>
+    <comment>MT — original curly quotation marks preserved; {0} stays uninflected inside them</comment>
+  </data>
+  <data name="LayWidgetActiveScene" xml:space="preserve">
+    <value>Aktivna scena</value>
+    <comment>MT — scena per the locale sheet</comment>
+  </data>
+  <data name="LayWidgetCharacterDirectory" xml:space="preserve">
+    <value>Imenik likova</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetCharacterGallery" xml:space="preserve">
+    <value>Galerija likova</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetGameStats" xml:space="preserve">
+    <value>Statistika igre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetOnlineCharacters" xml:space="preserve">
+    <value>Likovi na mreži</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetQuickLinks" xml:space="preserve">
+    <value>Brze poveznice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetQuickstart" xml:space="preserve">
+    <value>Brzi početak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetRecentWikiActivity" xml:space="preserve">
+    <value>Nedavna aktivnost na wikiju</value>
+    <comment>MT — wiki kept untranslated, Croatian locative ending attached</comment>
+  </data>
+  <data name="LayWidgetSchemaApplication" xml:space="preserve">
+    <value>Aplikacija sheme</value>
+    <comment>MT — assumed a schema-driven application widget, not the act of applying a schema</comment>
+  </data>
+  <data name="LayWidgetSpacer" xml:space="preserve">
+    <value>Razmaknica</value>
+    <comment>MT — layout element that inserts empty space</comment>
+  </data>
+  <data name="LayWidgetWelcomeText" xml:space="preserve">
+    <value>Tekst dobrodošlice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LayWidgetWikiBody" xml:space="preserve">
+    <value>Tijelo wiki stranice</value>
+    <comment>MT — wiki kept untranslated</comment>
+  </data>
+  <data name="LayWidgetWikiIndex" xml:space="preserve">
+    <value>Wiki indeks</value>
+    <comment>MT — wiki kept untranslated</comment>
+  </data>
+  <data name="LayWidgetsPanel" xml:space="preserve">
+    <value>Widgeti</value>
+    <comment>MT — widget per the locale sheet</comment>
+  </data>
+  <data name="LayWidthInColumns" xml:space="preserve">
+    <value>Širina u stupcima (1–12)</value>
+    <comment>MT — en dash range preserved</comment>
+  </data>
+  <data name="Limits" xml:space="preserve">
+    <value>Ograničenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Učitavanje...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Locks" xml:space="preserve">
+    <value>Brave:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Logging" xml:space="preserve">
+    <value>Zapisivanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>Prijava</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LogsAndFiles" xml:space="preserve">
+    <value>Zapisi i datoteke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="LogsCategoryDescription" xml:space="preserve">
+    <value>Zapisivanje, putanje datoteka i ispisi baze podataka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mail" xml:space="preserve">
+    <value>Pošta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailDeleteFailed" xml:space="preserve">
+    <value>Poruku nije moguće obrisati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailDeleted" xml:space="preserve">
+    <value>Poruka obrisana.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailEmpty" xml:space="preserve">
+    <value>Nema poruka u ovoj mapi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailNeedsCharacter" xml:space="preserve">
+    <value>Odaberite ili povežite lik kako biste čitali poštu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailNotFound" xml:space="preserve">
+    <value>Poruka nije pronađena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailSendFailed" xml:space="preserve">
+    <value>Poštu nije moguće poslati. Provjerite ime primatelja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MailSent" xml:space="preserve">
+    <value>Pošta poslana.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Mailbox" xml:space="preserve">
+    <value>Poštanski sandučić</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Maintenance" xml:space="preserve">
+    <value>Održavanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ManageAllSettings" xml:space="preserve">
+    <value>Upravljajte svim postavkama SharpMUSH poslužitelja s jednog mjesta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ManageConfigDescription" xml:space="preserve">
+    <value>Upravljajte konfiguracijskim postavkama svojeg MUSH-a. Možete uvoziti konfiguracijske datoteke ili izravno mijenjati postavke.</value>
+    <comment>MT — MUSH kept untranslated; Croatian case suffix attached with a hyphen (MUSH-a)</comment>
+  </data>
+  <data name="Mappings" xml:space="preserve">
+    <value>Preslikavanja:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>Poruka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Messages" xml:space="preserve">
+    <value>Poruke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MyAccount" xml:space="preserve">
+    <value>Moj račun</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NameToBan" xml:space="preserve">
+    <value>Ime za zabranu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavAccountTag" xml:space="preserve">
+    <value>račun</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplication" xml:space="preserve">
+    <value>Aplikacija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavApplicationComponentLoadFailed" xml:space="preserve">
+    <value>Nije moguće učitati prevedenu komponentu ove aplikacije. Kod u pregledniku možda je onemogućen (allow_browser_code) ili provjera sklopa nije uspjela.</value>
+    <comment>MT — 'allow_browser_code' is a config key name, left as-is</comment>
+  </data>
+  <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
+    <value>Nije moguće učitati shemu aplikacije. Softcode rukovatelj na {0} možda nedostaje ili vraća neispravan JSON.</value>
+    <comment>MT — {0} is a route/attribute path, indeclinable</comment>
+  </data>
+  <data name="NavCharacterManagement" xml:space="preserve">
+    <value>Upravljanje likovima</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
+    <value>Upravljanje likovima uskoro stiže.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterName" xml:space="preserve">
+    <value>Ime lika</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterRegistered" xml:space="preserve">
+    <value>{0} registriran lik</value>
+    <comment>MT — singular branch of an English two-form pair</comment>
+  </data>
+  <data name="NavCharactersRegistered" xml:space="preserve">
+    <value>{0} registriranih likova</value>
+    <comment>MT — the English singular/plural key pair cannot express Croatian's three categories: counts 2–4 need 'registrirana lika'. Genitive plural used as the safest catch-all; recommend converting this pair to one ICU plural key</comment>
+  </data>
+  <data name="NavCharsShort" xml:space="preserve">
+    <value>Likovi</value>
+    <comment>MT — Croatian has no shorter natural abbreviation for 'characters'</comment>
+  </data>
+  <data name="NavCloseTerminal" xml:space="preserve">
+    <value>Zatvori terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCommandTerminal" xml:space="preserve">
+    <value>naredbeni terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
+    <value>— Povežite se da vidite tko je ovdje —</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateACharacter" xml:space="preserve">
+    <value>Stvorite lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacter" xml:space="preserve">
+    <value>Stvori lik</value>
+    <comment>MT — imperative button form</comment>
+  </data>
+  <data name="NavCreateCharacterBlurb" xml:space="preserve">
+    <value>Lik je persona koju igrate u igri. Povezan je s vašim računom; kasnije možete stvoriti još likova.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExitFocusMode" xml:space="preserve">
+    <value>Izađi iz načina fokusa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExits" xml:space="preserve">
+    <value>Izlazi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFocusMode" xml:space="preserve">
+    <value>Način fokusa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGoToAccountPage" xml:space="preserve">
+    <value>Idite na stranicu svog računa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGuestTag" xml:space="preserve">
+    <value>gost</value>
+    <comment>MT — assumed a descriptive nav badge paired with 'account', so translated; if it renders the Guest privilege level / API enum, revert to 'Guest'</comment>
+  </data>
+  <data name="NavInPlay" xml:space="preserve">
+    <value>u igri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavLoadingApplication" xml:space="preserve">
+    <value>Učitavanje aplikacije…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailFolders" xml:space="preserve">
+    <value>Mape</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailForward" xml:space="preserve">
+    <value>Proslijedi</value>
+    <comment>MT — mail action verb</comment>
+  </data>
+  <data name="NavMailReadFullMessage" xml:space="preserve">
+    <value>Pročitaj cijelu poruku →</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailSelectMessage" xml:space="preserve">
+    <value>Odaberite poruku za čitanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMenuLabel" xml:space="preserve">
+    <value>Izbornik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationAccess" xml:space="preserve">
+    <value>Nemate pristup ovoj aplikaciji.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationRegistered" xml:space="preserve">
+    <value>Nijedna aplikacija nije registrirana na {0}.</value>
+    <comment>MT — {0} is a route path, indeclinable</comment>
+  </data>
+  <data name="NavNoExitsAvailable" xml:space="preserve">
+    <value>— Nema dostupnih izlaza —</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotConnected" xml:space="preserve">
+    <value>niste povezani</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOffline" xml:space="preserve">
+    <value>izvan mreže</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOnline" xml:space="preserve">
+    <value>na mreži</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOpenTerminal" xml:space="preserve">
+    <value>Otvori terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySessionActive" xml:space="preserve">
+    <value>Sesija igre je aktivna</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayTerminal" xml:space="preserve">
+    <value>Terminal za igru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayUnreadActivity" xml:space="preserve">
+    <value>Nepročitana aktivnost u igri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSearchPlaceholder" xml:space="preserve">
+    <value>Pretraži…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionBuild" xml:space="preserve">
+    <value>Gradnja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionManage" xml:space="preserve">
+    <value>Upravljanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionWorld" xml:space="preserve">
+    <value>Svijet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsAccountDescription" xml:space="preserve">
+    <value>E-pošta, lozinka i sigurnost prijave</value>
+    <comment>MT — 'lozinka' per the sheet's deliberate departure from the corpus 'šifra'</comment>
+  </data>
+  <data name="NavSettingsCharactersDescription" xml:space="preserve">
+    <value>Upravljajte likovima povezanima s vašim računom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsThemeDescription" xml:space="preserve">
+    <value>Postavke izgleda i boje isticanja</value>
+    <comment>MT — assumed 'accent' means the UI accent colour</comment>
+  </data>
+  <data name="NavTerminalSettings" xml:space="preserve">
+    <value>Postavke terminala</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthCols" xml:space="preserve">
+    <value>Širina (stupci)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthTooltip" xml:space="preserve">
+    <value>Željena širina terminala u stupcima (najmanje 78). Font se automatski skalira da je ispuni — više prostora znači veći font — a poslužitelju se prijavljuje kao širina vašeg zaslona.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTheme" xml:space="preserve">
+    <value>Tema</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavThemeComingSoon" xml:space="preserve">
+    <value>Postavke teme uskoro stižu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavToggleNavigation" xml:space="preserve">
+    <value>Uključi/isključi navigaciju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Network" xml:space="preserve">
+    <value>Mreža</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewEntry" xml:space="preserve">
+    <value>Novi unos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewKey" xml:space="preserve">
+    <value>Novi ključ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoBannedNamesConfigured" xml:space="preserve">
+    <value>Nema konfiguriranih zabranjenih imena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoChangesToSave" xml:space="preserve">
+    <value>Nema promjena za spremanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCharactersFound" xml:space="preserve">
+    <value>Nije pronađen nijedan lik.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCommandRestrictions" xml:space="preserve">
+    <value>Nema konfiguriranih ograničenja naredbi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoEntries" xml:space="preserve">
+    <value>Nema unosa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoFunctionRestrictions" xml:space="preserve">
+    <value>Nema konfiguriranih ograničenja funkcija.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoGroupingNote" xml:space="preserve">
+    <value>Ova kategorija još nije ažurirana proširenim metapodacima sheme. Svojstva se prikazuju bez grupiranja. Samo kategorija Network (Net) trenutačno ima potpuno prošireno sučelje.</value>
+    <comment>MT — Network (Net) left in English as a config category identifier</comment>
+  </data>
+  <data name="NoItems" xml:space="preserve">
+    <value>Nema stavki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesFound" xml:space="preserve">
+    <value>Nema pronađenih konfiguracijskih svojstava za kategoriju "{0}".</value>
+    <comment>MT — {0} sits inside quotation marks after "kategoriju", so it stays uninflected</comment>
+  </data>
+  <data name="NoPropertiesHint" xml:space="preserve">
+    <value>Ova kategorija možda još nije označena proširenim metapodacima sheme.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSitelockRulesConfigured" xml:space="preserve">
+    <value>Nema konfiguriranih sitelock pravila.</value>
+    <comment>MT — sitelock kept in English as the config feature name</comment>
+  </data>
+  <data name="NoSuggestionCategories" xml:space="preserve">
+    <value>Nije definirana nijedna kategorija prijedloga. Kliknite "Dodaj kategoriju" za stvaranje prve kategorije.</value>
+    <comment>MT — quoted button label translated to match the Add Category button</comment>
+  </data>
+  <data name="NoWordsInCategory" xml:space="preserve">
+    <value>U ovoj kategoriji još nema riječi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorized" xml:space="preserve">
+    <value>Nemate ovlaštenje za pristup ovom resursu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>Nije pronađeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotFoundDescription" xml:space="preserve">
+    <value>Nažalost, sadržaj koji tražite ne postoji.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NothingToSeeHere" xml:space="preserve">
+    <value>Ovdje nema ničega za vidjeti.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsConverted" xml:space="preserve">
+    <value>Pretvoreni objekti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsCreated" xml:space="preserve">
+    <value>Stvoreni objekti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PercentComplete" xml:space="preserve">
+    <value>{0:F1}% dovršeno - {1}</value>
+    <comment>MT — .NET format specifier {0:F1} preserved verbatim</comment>
+  </data>
+  <data name="Performance" xml:space="preserve">
+    <value>Performanse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PerformanceCategoryDescription" xml:space="preserve">
+    <value>Ograničenja resursa, redovi naredbi i optimizacija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Phase" xml:space="preserve">
+    <value>Faza:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAction" xml:space="preserve">
+    <value>Radnja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAddRemote" xml:space="preserve">
+    <value>Dodaj udaljeni izvor</value>
+    <comment>MT — "remote" rendered as a package source repository</comment>
+  </data>
+  <data name="PkgAddRemoteHeading" xml:space="preserve">
+    <value>Dodavanje udaljenog izvora</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAdminSection" xml:space="preserve">
+    <value>Admin</value>
+    <comment>MT — kept short as a section label</comment>
+  </data>
+  <data name="PkgApplied" xml:space="preserve">
+    <value>Primijenjeno: {0} {1} (revizija {2}).</value>
+    <comment>MT — restructured with a colon so the package name/version placeholders stay in the nominative</comment>
+  </data>
+  <data name="PkgApply" xml:space="preserve">
+    <value>Primijeni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAttributesCount" xml:space="preserve">
+    <value>Atributi ({0})</value>
+    <comment>MT — count in parentheses, so no noun agreement is needed</comment>
+  </data>
+  <data name="PkgAttributesToInclude" xml:space="preserve">
+    <value>Atributi za uključivanje:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthor" xml:space="preserve">
+    <value>Izrada paketa</value>
+    <comment>MT — assumed the nav/tab label for the package-authoring page (matching PkgAuthorHeading "Author a Package"), not the metadata field "author"; if it labels a person, it should be "Autor"</comment>
+  </data>
+  <data name="PkgAuthorDescription" xml:space="preserve">
+    <value>Pretvorite žive objekte u package.yaml. Svaki dbref u odabiru mora završiti kao simbolički: reference unutar odabira razrješavaju se automatski, a ostale klasificirate u nastavku.</value>
+    <comment>MT — package.yaml and dbref kept untranslated per the glossary</comment>
+  </data>
+  <data name="PkgAuthorHeading" xml:space="preserve">
+    <value>Izrada paketa</value>
+    <comment>MT — English uses "author" as a verb; Croatian uses the verbal noun</comment>
+  </data>
+  <data name="PkgAuthorsLabel" xml:space="preserve">
+    <value>Autori (odvojeni zarezom)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAvailableFrom" xml:space="preserve">
+    <value>Dostupno od: {0}{1}.</value>
+    <comment>MT — colon added so the source name stays in the nominative; {0}{1} kept adjacent and in order</comment>
+  </data>
+  <data name="PkgBaseAsInstalled" xml:space="preserve">
+    <value>Osnova (kako je instalirana)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBranch" xml:space="preserve">
+    <value>Grana</value>
+    <comment>MT — git branch</comment>
+  </data>
+  <data name="PkgBranchOptionalLabel" xml:space="preserve">
+    <value>Grana (neobavezno)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowse" xml:space="preserve">
+    <value>Pregledaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseDescription" xml:space="preserve">
+    <value>Osvježava predmemoriju repozitorija udaljenog izvora i prikazuje njegove pakete. Verzije dolaze iz oznaka izdanja; vrh grane je dev kanal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseHeading" xml:space="preserve">
+    <value>Pregled paketa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCheck" xml:space="preserve">
+    <value>Provjeri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
+    <value>Klasificirajte {0}: konfiguracijske reference trebaju ključ i oznaku.</value>
+    <comment>MT — {0} is a dbref/identifier, which does not inflect, so it can stand as the direct object</comment>
+  </data>
+  <data name="PkgClose" xml:space="preserve">
+    <value>Zatvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommandCollision" xml:space="preserve">
+    <value>$-command "{0}" već je definiran u paketu {1} ({2}/{3}).</value>
+    <comment>MT — $-command kept untranslated as a MUSH term of art; all four placeholders sit at syntactic boundaries</comment>
+  </data>
+  <data name="PkgCommunityDirectory" xml:space="preserve">
+    <value>Imenik zajednice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityDirectoryHint" xml:space="preserve">
+    <value>Prihvaćeni repozitoriji zajednice, kurirani u službenom repozitoriju paketa.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityRemoteAdded" xml:space="preserve">
+    <value>'{0}' dodan je kao udaljeni izvor zajednice.</value>
+    <comment>MT — {0} is a quoted remote name at the head of the sentence, so it stays in the nominative</comment>
+  </data>
+  <data name="PkgConfigureKeyLabel" xml:space="preserve">
+    <value>Konfiguracijski ključ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigurePromptLabel" xml:space="preserve">
+    <value>Upit prikazan onima koji instaliraju</value>
+    <comment>MT — Croatian has no one-word equivalent of "installers" (people)</comment>
+  </data>
+  <data name="PkgConfigured" xml:space="preserve">
+    <value>konfigurirano</value>
+    <comment>MT — lowercase chip text preserved</comment>
+  </data>
+  <data name="PkgConfiguredRemotes" xml:space="preserve">
+    <value>Konfigurirani udaljeni izvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictCount" xml:space="preserve">
+    <value>{count, plural, one {# konflikt} few {# konflikta} other {# konflikata}}</value>
+    <comment>MT — plural value taken verbatim from the locale sheet</comment>
+  </data>
+  <data name="PkgConflictLabel" xml:space="preserve">
+    <value>konflikt: {0}</value>
+    <comment>MT — lowercase label preserved; {0} follows a colon</comment>
+  </data>
+  <data name="PkgConflictsWithInstalled" xml:space="preserve">
+    <value>U konfliktu s instaliranim</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCurrent" xml:space="preserve">
+    <value>trenutačno</value>
+    <comment>MT — lowercase chip text preserved</comment>
+  </data>
+  <data name="PkgDbrefHelper" xml:space="preserve">
+    <value>Id objekta, npr. #123:456</value>
+    <comment>MT — example dbref kept verbatim</comment>
+  </data>
+  <data name="PkgDefaultBranch" xml:space="preserve">
+    <value>zadano</value>
+    <comment>MT — lowercase option label preserved</comment>
+  </data>
+  <data name="PkgDeleteTakeTheirs" xml:space="preserve">
+    <value>Obriši (preuzmi njihovu verziju)</value>
+    <comment>MT — merge-conflict resolution option</comment>
+  </data>
+  <data name="PkgDependedOnBy" xml:space="preserve">
+    <value>O njemu ovise: {0}</value>
+    <comment>MT — {0} is a list of package names after a colon, so it stays in the nominative</comment>
+  </data>
+  <data name="PkgDescriptionLabel" xml:space="preserve">
+    <value>Opis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDetails" xml:space="preserve">
+    <value>Detalji</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevChannelOption" xml:space="preserve">
+    <value>dev kanal ({0})</value>
+    <comment>MT — "dev" kept as the channel identifier; lowercase preserved</comment>
+  </data>
+  <data name="PkgDevDrift" xml:space="preserve">
+    <value>dev odstupanje</value>
+    <comment>MT — lowercase chip preserved; "drift" rendered as divergence from the released version</comment>
+  </data>
+  <data name="PkgDownload" xml:space="preserve">
+    <value>Preuzmi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEditMergedValue" xml:space="preserve">
+    <value>Uredi spojenu vrijednost</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEnterObjectId" xml:space="preserve">
+    <value>Unesite barem jedan id objekta.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgExportHint" xml:space="preserve">
+    <value>Predajte ovo u repozitorij paketa (jedan direktorij po paketu), navedite ga u index.yaml i označite izdanja kao</value>
+    <comment>MT — sentence fragment continued by the following UI element; index.yaml kept as a file name</comment>
+  </data>
+  <data name="PkgExportYaml" xml:space="preserve">
+    <value>Izvezi package.yaml</value>
+    <comment>MT — package.yaml kept untranslated per the glossary</comment>
+  </data>
+  <data name="PkgForceRemoval" xml:space="preserve">
+    <value>Ipak prisilno ukloni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgGitUrlLabel" xml:space="preserve">
+    <value>Git URL</value>
+    <comment>MT — kept as a technical identifier</comment>
+  </data>
+  <data name="PkgInstallHeading" xml:space="preserve">
+    <value>Instalacija</value>
+    <comment>MT — assumed a section heading, not a button</comment>
+  </data>
+  <data name="PkgInstalled" xml:space="preserve">
+    <value>Instalirano</value>
+    <comment>MT — assumed a status/tab label</comment>
+  </data>
+  <data name="PkgInstalledDescription" xml:space="preserve">
+    <value>Instalirani softcode paketi. Nadogradnje uvijek prolaze kroz pregledani plan — ništa se ne primjenjuje automatski.</value>
+    <comment>MT — softcode kept untranslated per the glossary</comment>
+  </data>
+  <data name="PkgInstalledOn" xml:space="preserve">
+    <value>instalirano {0}</value>
+    <comment>MT — lowercase fragment preserved; {0} is a date</comment>
+  </data>
+  <data name="PkgInstalledSuffix" xml:space="preserve">
+    <value> — instalirano: {0}.</value>
+    <comment>MT — leading space and em dash preserved; this fragment is appended to another sentence</comment>
+  </data>
+  <data name="PkgKeepMine" xml:space="preserve">
+    <value>Zadrži moju verziju</value>
+    <comment>MT — merge-conflict resolution option</comment>
+  </data>
+  <data name="PkgKickerAuthoring" xml:space="preserve">
+    <value>Izrada · Stvaranje paketa</value>
+    <comment>MT — middle dot separator preserved; "Stvaranje" used for the second half to avoid repeating "Izrada"</comment>
+  </data>
+  <data name="PkgKickerRegistry" xml:space="preserve">
+    <value>Izrada · Registar paketa</value>
+    <comment>MT — middle dot separator preserved</comment>
+  </data>
+  <data name="PkgKickerSources" xml:space="preserve">
+    <value>Izrada · Izvori paketa</value>
+    <comment>MT — middle dot separator preserved</comment>
+  </data>
+  <data name="PkgLicenseLabel" xml:space="preserve">
+    <value>Licenca (neobavezno)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLiveYourVersion" xml:space="preserve">
+    <value>Uživo (vaša verzija)</value>
+    <comment>MT — the currently live in-game version, contrasted with the package's base</comment>
+  </data>
+  <data name="PkgManifestParseFailed" xml:space="preserve">
+    <value>Manifest na vrhu grane nije moguće raščlaniti.</value>
+    <comment>MT — "the tip" spelled out as the branch tip for clarity</comment>
+  </data>
+  <data name="PkgManifestRefLabel" xml:space="preserve">
+    <value>Referenca u manifestu (mala slova, podvlake)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMergedValueLabel" xml:space="preserve">
+    <value>Spojena vrijednost</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMissingRemoteParam" xml:space="preserve">
+    <value>Nedostaje parametar 'remote'.</value>
+    <comment>MT — 'remote' kept as the literal parameter name</comment>
+  </data>
+  <data name="PkgModeConfigure" xml:space="preserve">
+    <value>configure</value>
+    <comment>MT — manifest ref-classification mode kept in English as a machine enum value</comment>
+  </data>
+  <data name="PkgModeWellKnown" xml:space="preserve">
+    <value>well-known</value>
+    <comment>MT — manifest ref-classification mode kept in English as a machine enum value</comment>
+  </data>
+  <data name="PkgName" xml:space="preserve">
+    <value>Ime</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNewVersion" xml:space="preserve">
+    <value>Novo ({0})</value>
+    <comment>MT — {0} is a version string in parentheses</comment>
+  </data>
+  <data name="PkgNoCommunityRepos" xml:space="preserve">
+    <value>Još nije prihvaćen nijedan repozitorij zajednice.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoDescription" xml:space="preserve">
+    <value>(bez opisa)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoReadme" xml:space="preserve">
+    <value>README nije dostupan.</value>
+    <comment>MT — README kept as a file name</comment>
+  </data>
+  <data name="PkgNoReleaseTags" xml:space="preserve">
+    <value>Nema oznaka izdanja — dostupan je samo dev kanal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoSearchMatch" xml:space="preserve">
+    <value>Nijedan paket ne odgovara pretrazi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoUpdatesAvailable" xml:space="preserve">
+    <value>Nijedan paket nema dostupno ažuriranje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoneInstalled" xml:space="preserve">
+    <value>Još nije instaliran nijedan paket. Konfigurirajte udaljeni izvor, a zatim ga pregledajte kako biste instalirali prvi paket.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNotInstalledSuffix" xml:space="preserve">
+    <value> — nije instalirano.</value>
+    <comment>MT — leading space and em dash preserved; fragment appended to another sentence</comment>
+  </data>
+  <data name="PkgObjAttrCounts" xml:space="preserve">
+    <value>{0} obj / {1} atr</value>
+    <comment>MT — compact abbreviations kept to match the English width</comment>
+  </data>
+  <data name="PkgObjectIdsLabel" xml:space="preserve">
+    <value>Identifikatori objekata (jedan po retku, npr. #847:1778518155494)</value>
+    <comment>MT — example dbref kept verbatim</comment>
+  </data>
+  <data name="PkgObjects" xml:space="preserve">
+    <value>Objekti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjectsCount" xml:space="preserve">
+    <value>Objekti ({0})</value>
+    <comment>MT — count in parentheses, so no noun agreement is needed</comment>
+  </data>
+  <data name="PkgOccurrences" xml:space="preserve">
+    <value>{count, plural, one {# pojavljivanje} few {# pojavljivanja} other {# pojavljivanja}}, npr. u {location}</value>
+    <comment>MT — plural value taken verbatim from the locale sheet</comment>
+  </data>
+  <data name="PkgPackageIdLabel" xml:space="preserve">
+    <value>Id paketa (mala slova, crtice)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPackages" xml:space="preserve">
+    <value>Paketi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPlanLocation" xml:space="preserve">
+    <value>{0} / {1} na {2}</value>
+    <comment>MT — {2} is a dbref/location identifier, which does not inflect</comment>
+  </data>
+  <data name="PkgRef" xml:space="preserve">
+    <value>Referenca</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRefreshAndBrowse" xml:space="preserve">
+    <value>Osvježi i pregledaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteLabel" xml:space="preserve">
+    <value>Udaljeni izvor</value>
+    <comment>MT — consistent with PkgRemotes across the batch</comment>
+  </data>
+  <data name="PkgRemoteRemoved" xml:space="preserve">
+    <value>Uklonjen udaljeni izvor '{0}'.</value>
+    <comment>MT — {0} is a quoted remote name and stays uninflected</comment>
+  </data>
+  <data name="PkgRemoteSaved" xml:space="preserve">
+    <value>Udaljeni izvor '{0}' spremljen.</value>
+    <comment>MT — {0} is a quoted remote name and stays uninflected</comment>
+  </data>
+  <data name="PkgRemotes" xml:space="preserve">
+    <value>Udaljeni izvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesDescription" xml:space="preserve">
+    <value>Git repozitoriji iz kojih ova igra instalira pakete. Razine povjerenja određujete sami — popisi zajednice u nastavku kurirani su u službenom repozitoriju i nikada nisu samodeklarirani.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesHeading" xml:space="preserve">
+    <value>Udaljeni izvori paketa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRenamedFrom" xml:space="preserve">
+    <value>preimenovano iz {0} (zadržava {1})</value>
+    <comment>MT — lowercase fragment preserved; placeholders are identifiers that do not inflect</comment>
+  </data>
+  <data name="PkgReplan" xml:space="preserve">
+    <value>Ponovno izradi plan s ovim odgovorima</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRequiredBy" xml:space="preserve">
+    <value>traži ga: {0}</value>
+    <comment>MT — lowercase fragment preserved; colon added so the requiring package name stays in the nominative instead of the dative</comment>
+  </data>
+  <data name="PkgRequires" xml:space="preserve">
+    <value>Zahtijeva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolutionLabel" xml:space="preserve">
+    <value>Rješenje</value>
+    <comment>MT — assumed the chosen resolution of a merge conflict</comment>
+  </data>
+  <data name="PkgResolvesAtApply" xml:space="preserve">
+    <value>razrješava se pri primjeni</value>
+    <comment>MT — lowercase chip text preserved</comment>
+  </data>
+  <data name="PkgResolvesAtApplyTooltip" xml:space="preserve">
+    <value>Neke se reference razrješavaju pri primjeni (novi objekti / configure)</value>
+    <comment>MT — "configure" kept in English as the manifest ref mode, matching PkgModeConfigure</comment>
+  </data>
+  <data name="PkgReview" xml:space="preserve">
+    <value>Pregled</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReviewInstall" xml:space="preserve">
+    <value>Pregled instalacije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionHistory" xml:space="preserve">
+    <value>Povijest revizija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionLine" xml:space="preserve">
+    <value>rev. {0} — {1} {2}</value>
+    <comment>MT — lowercase abbreviation preserved; placeholders kept in order</comment>
+  </data>
+  <data name="PkgRevisionsOf" xml:space="preserve">
+    <value>{0} — revizije</value>
+    <comment>MT — {0} leads the string in the nominative</comment>
+  </data>
+  <data name="PkgRollBack" xml:space="preserve">
+    <value>Vrati unatrag</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRolledBack" xml:space="preserve">
+    <value>Vraćeno na reviziju {0} (nova revizija {1}).</value>
+    <comment>MT — placeholders are revision numbers and do not inflect</comment>
+  </data>
+  <data name="PkgScanSelection" xml:space="preserve">
+    <value>Skeniraj odabir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSearchPlaceholder" xml:space="preserve">
+    <value>Pretraži pakete…</value>
+    <comment>MT — original ellipsis character preserved</comment>
+  </data>
+  <data name="PkgSnapshotAt" xml:space="preserve">
+    <value>{0} u {1}</value>
+    <comment>MT — assumed {1} is a timestamp; if it is a commit hash, "na {1}" would read better</comment>
+  </data>
+  <data name="PkgSoftcodePackages" xml:space="preserve">
+    <value>Softcode paketi</value>
+    <comment>MT — softcode kept untranslated per the glossary</comment>
+  </data>
+  <data name="PkgStepClassifyExternal" xml:space="preserve">
+    <value>Klasificiraj vanjske reference ({0})</value>
+    <comment>MT — count in parentheses, so no noun agreement is needed</comment>
+  </data>
+  <data name="PkgStepMetadataExport" xml:space="preserve">
+    <value>Metapodaci i izvoz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepRefsAttributes" xml:space="preserve">
+    <value>Reference i atributi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepSelectObjects" xml:space="preserve">
+    <value>Odaberi objekte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTagMoved" xml:space="preserve">
+    <value>oznaka je pomaknuta!</value>
+    <comment>MT — lowercase warning chip preserved; refers to a git release tag</comment>
+  </data>
+  <data name="PkgTakeTheirs" xml:space="preserve">
+    <value>Preuzmi njihovu verziju</value>
+    <comment>MT — merge-conflict resolution option, consistent with PkgDeleteTakeTheirs</comment>
+  </data>
+  <data name="PkgTrust" xml:space="preserve">
+    <value>Povjerenje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustCommunity" xml:space="preserve">
+    <value>zajednica</value>
+    <comment>MT — trust level displayed as a lowercase chip; translated because it is not a privilege level</comment>
+  </data>
+  <data name="PkgTrustOfficial" xml:space="preserve">
+    <value>službeno</value>
+    <comment>MT — trust level displayed as a lowercase chip</comment>
+  </data>
+  <data name="PkgTrustUnknown" xml:space="preserve">
+    <value>nepoznato</value>
+    <comment>MT — trust level displayed as a lowercase chip</comment>
+  </data>
+  <data name="PkgTrustWarningTagMoved" xml:space="preserve">
+    <value>UPOZORENJE O POVJERENJU: oznaka izdanja za {0} {1} više ne pokazuje na instalirani commit.</value>
+    <comment>MT — {0} {1} are package name and version, kept adjacent after a preposition that does not force a visible ending on identifiers</comment>
+  </data>
+  <data name="PkgType" xml:space="preserve">
+    <value>Vrsta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstall" xml:space="preserve">
+    <value>Deinstaliraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstallConfirmBody" xml:space="preserve">
+    <value>{objects, plural, one {# objekt bit će označen} few {# objekta bit će označena} other {# objekata bit će označeno}} za uništenje, a {attributes, plural, one {# zapis upravljanih atributa bit će uklonjen} few {# zapisa upravljanih atributa bit će uklonjena} other {# zapisa upravljanih atributa bit će uklonjeno}}.</value>
+    <comment>MT — plural value taken verbatim from the locale sheet</comment>
+  </data>
+  <data name="PkgUninstallConfirmTitle" xml:space="preserve">
+    <value>Deinstalirati paket {0}?</value>
+    <comment>MT — added the head noun "paket" so the package name can stay in the nominative as apposition</comment>
+  </data>
+  <data name="PkgUninstalled" xml:space="preserve">
+    <value>Deinstalirano: {0}.</value>
+    <comment>MT — colon added so the package name stays in the nominative</comment>
+  </data>
+  <data name="PkgUnreviewedSource" xml:space="preserve">
+    <value>Ovaj izvor nije pregledan. Pregledajte sav kod na zaslonu za pregled prije primjene.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdateCheckFailed" xml:space="preserve">
+    <value>Provjera ažuriranja nije uspjela — je li izvorni repozitorij dostupan?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdates" xml:space="preserve">
+    <value>Ažuriranja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdatesAvailable" xml:space="preserve">
+    <value>Dostupna ažuriranja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradeHeading" xml:space="preserve">
+    <value>Nadogradnja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradingFrom" xml:space="preserve">
+    <value>— nadogradnja s verzije {0}</value>
+    <comment>MT — leading em dash preserved; head noun "verzije" added so the version string stays uninflected</comment>
+  </data>
+  <data name="PkgUrl" xml:space="preserve">
+    <value>URL</value>
+    <comment>MT — kept as a technical identifier</comment>
+  </data>
+  <data name="PkgVersionAvailable" xml:space="preserve">
+    <value>{0} dostupno</value>
+    <comment>MT — {0} is a version string leading the phrase, so no agreement is required</comment>
+  </data>
+  <data name="PkgVersionLabel" xml:space="preserve">
+    <value>Verzija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgWellKnownRefLabel" xml:space="preserve">
+    <value>Well-known referenca</value>
+    <comment>MT — "well-known" kept in English as the manifest ref mode, matching PkgModeWellKnown</comment>
+  </data>
+  <data name="PkgWillBeMarkedGoing" xml:space="preserve">
+    <value>{0} bit će označen flagom GOING</value>
+    <comment>MT — GOING kept as a MUSH flag name and "flag" untranslated per the locale sheet; the participle takes masculine agreement, matching "objekt", since the gender of the interpolated object name cannot be controlled</comment>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Igraj</value>
+    <comment>MT — assumed the verb (enter the game), not a media control</comment>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>Igrači:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PreviewFileContent" xml:space="preserve">
+    <value>Pregled sadržaja datoteke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileHandler" xml:space="preserve">
+    <value>Rukovatelj profilom</value>
+    <comment>MT — assumed a configurable handler component, not a code identifier</comment>
+  </data>
+  <data name="ProfileUnavailable" xml:space="preserve">
+    <value>Profil ovog lika nije dostupan.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdateFailed" xml:space="preserve">
+    <value>Promjene profila nije moguće spremiti.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdated" xml:space="preserve">
+    <value>Profil ažuriran ({count, plural, one {# polje} few {# polja} other {# polja}}).</value>
+    <comment>MT — plural value taken verbatim from the locale sheet</comment>
+  </data>
+  <data name="Progress" xml:space="preserve">
+    <value>Napredak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="QuickActions" xml:space="preserve">
+    <value>Brze radnje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RecentChanges" xml:space="preserve">
+    <value>Nedavne promjene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Osvježi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RemoveEntry" xml:space="preserve">
+    <value>Ukloni unos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Reply" xml:space="preserve">
+    <value>Odgovori</value>
+    <comment>MT — assumed the button verb (reply to a message)</comment>
+  </data>
+  <data name="ResActiveScenesSubtitle" xml:space="preserve">
+    <value>Sesije koje su trenutačno u tijeku.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResAdminWikiKicker" xml:space="preserve">
+    <value>Osoblje · Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResAnyoneCanEdit" xml:space="preserve">
+    <value>svatko može uređivati</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResCategoryGeneral" xml:space="preserve">
+    <value>Općenito</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResChangeCount" xml:space="preserve">
+    <value>{count, plural, one {# promjena} few {# promjene} other {# promjena}}</value>
+    <comment>MT — verbatim from the locale sheet</comment>
+  </data>
+  <data name="ResChangedBadge" xml:space="preserve">
+    <value>promijenjeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResConfigHomeKicker" xml:space="preserve">
+    <value>Administracija · konfiguracija poslužitelja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResConfigSectionKicker" xml:space="preserve">
+    <value>Administracija · postavke poslužitelja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDefaultValueTooltip" xml:space="preserve">
+    <value>Zadano: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDraft" xml:space="preserve">
+    <value>Skica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResHistory" xml:space="preserve">
+    <value>Povijest</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResInvalid" xml:space="preserve">
+    <value>Nevažeće</value>
+    <comment>MT — assumed a status badge on a config value; neuter form</comment>
+  </data>
+  <data name="ResJoin" xml:space="preserve">
+    <value>Pridruži se</value>
+    <comment>MT — assumed a button that joins a scene</comment>
+  </data>
+  <data name="ResNoScenesFound" xml:space="preserve">
+    <value>Nema pronađenih scena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResOnThisPage" xml:space="preserve">
+    <value>Na ovoj stranici</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResRead" xml:space="preserve">
+    <value>Čitanje</value>
+    <comment>MT — assumed a permission/access label (noun), not an imperative</comment>
+  </data>
+  <data name="ResRoutingErrorHint" xml:space="preserve">
+    <value>Ova poruka znači da usmjerivač NE pronalazi podudaranje za prilagođenu stranicu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSaveFailedShort" xml:space="preserve">
+    <value>Spremanje nije uspjelo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResScenesSubtitle" xml:space="preserve">
+    <value>Pregledajte i pratite sesije igranja uloga.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSearchTitlesPlaceholder" xml:space="preserve">
+    <value>Pretraži naslove…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResStartedAt" xml:space="preserve">
+    <value>Započeto {0}</value>
+    <comment>MT — assumed {0} is a formatted time/relative time expression</comment>
+  </data>
+  <data name="ResTabLive" xml:space="preserve">
+    <value>Uživo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResTabRecent" xml:space="preserve">
+    <value>Nedavno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResValidationFailed" xml:space="preserve">
+    <value>Provjera nije uspjela</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResViewLog" xml:space="preserve">
+    <value>Prikaži zapis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatDrafts" xml:space="preserve">
+    <value>Skice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTotalPages" xml:space="preserve">
+    <value>Ukupno stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTranslations" xml:space="preserve">
+    <value>Prijevodi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsConnectFailed" xml:space="preserve">
+    <value>[Greška] Povezivanje nije uspjelo: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsConnectedTo" xml:space="preserve">
+    <value>[Sustav] Uspostavljena veza: {0}</value>
+    <comment>MT — restructured so the host/URL sits after a colon; 'povezano s …' would demand the instrumental case</comment>
+  </data>
+  <data name="ResWsDisconnectFailed" xml:space="preserve">
+    <value>[Greška] Prekid veze nije uspio: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsDisconnected" xml:space="preserve">
+    <value>[Sustav] Veza je prekinuta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsReceived" xml:space="preserve">
+    <value>[Primljeno] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsSendFailed" xml:space="preserve">
+    <value>[Greška] Slanje nije uspjelo: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWsSent" xml:space="preserve">
+    <value>[Poslano] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetChanges" xml:space="preserve">
+    <value>Poništi promjene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefault" xml:space="preserve">
+    <value>Vrati na zadano</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefaults" xml:space="preserve">
+    <value>Vrati na zadane vrijednosti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Restrictions" xml:space="preserve">
+    <value>Ograničenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsBuilderHelper" xml:space="preserve">
+    <value>npr. wizard, builder</value>
+    <comment>MT — lowercase privilege/flag names are literal input values; kept in English</comment>
+  </data>
+  <data name="RestrictionsDescription" xml:space="preserve">
+    <value>Ograničite koji igrači mogu koristiti određene naredbe ili funkcije na temelju flagova, moći ili atributa.</value>
+    <comment>MT — 'flag' kept untranslated per the sheet (corpus usage), inflected as 'flagova'</comment>
+  </data>
+  <data name="RestrictionsHelper" xml:space="preserve">
+    <value>npr. wizard, royalty, admin</value>
+    <comment>MT — lowercase privilege/flag names are literal input values; kept in English</comment>
+  </data>
+  <data name="RestrictionsLabel" xml:space="preserve">
+    <value>Ograničenja (odvojena zarezom)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAddRole" xml:space="preserve">
+    <value>Dodaj ulogu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAllow" xml:space="preserve">
+    <value>Dopusti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAssignFailed" xml:space="preserve">
+    <value>Dodjela uloge nije uspjela.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAssigned" xml:space="preserve">
+    <value>Dodijeljeno: {0}.</value>
+    <comment>MT — restructured so the role name sits after a colon in nominative</comment>
+  </data>
+  <data name="RolAssignedRoles" xml:space="preserve">
+    <value>Dodijeljene uloge</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolBackToActiveScenes" xml:space="preserve">
+    <value>Natrag na aktivne scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolBackToScenes" xml:space="preserve">
+    <value>Natrag na scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolColorHelper" xml:space="preserve">
+    <value>CSS boja, npr. #6cde9a</value>
+    <comment>MT — hex value is a literal, kept as-is</comment>
+  </data>
+  <data name="RolColorLabel" xml:space="preserve">
+    <value>Boja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposePlaceholder" xml:space="preserve">
+    <value>Pozirajte, govorite ili pripovijedajte…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleteConfirm" xml:space="preserve">
+    <value>Obrisati ulogu '{0}' ({1})? Bit će uklonjena sa svih računa koji je imaju.</value>
+    <comment>MT — added the governing noun 'ulogu' so the role name stays uninflected</comment>
+  </data>
+  <data name="RolDeleteFailed" xml:space="preserve">
+    <value>Brisanje uloge nije uspjelo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleteTitle" xml:space="preserve">
+    <value>Obriši ulogu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDeleted" xml:space="preserve">
+    <value>Obrisano: {0}.</value>
+    <comment>MT — restructured so the role name sits after a colon in nominative</comment>
+  </data>
+  <data name="RolDeny" xml:space="preserve">
+    <value>Zabrani</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolEditedBadge" xml:space="preserve">
+    <value>uređeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolEditedTimes" xml:space="preserve">
+    <value>{count, plural, one {Uređeno # put} few {Uređeno # puta} other {Uređeno # puta}}</value>
+    <comment>MT — verbatim from the locale sheet; the extractor's 'Edited' entry in placeholders is literal text, not a placeholder</comment>
+  </data>
+  <data name="RolEnterUsername" xml:space="preserve">
+    <value>Unesite korisničko ime za pretraživanje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolHeading" xml:space="preserve">
+    <value>Uloge i dopuštenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolInherit" xml:space="preserve">
+    <value>Naslijedi</value>
+    <comment>MT — permission tri-state alongside Allow/Deny</comment>
+  </data>
+  <data name="RolKicker" xml:space="preserve">
+    <value>Upravljanje · Kontrola pristupa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLiveBadge" xml:space="preserve">
+    <value>UŽIVO</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLiveScene" xml:space="preserve">
+    <value>Scena uživo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolLookUp" xml:space="preserve">
+    <value>Pretraži</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolModePose" xml:space="preserve">
+    <value>Poza</value>
+    <comment>MT — compose-mode label (noun), per the sheet's pose → poza</comment>
+  </data>
+  <data name="RolModeSay" xml:space="preserve">
+    <value>Govor</value>
+    <comment>MT — compose-mode label rendered as a noun to parallel 'Poza'</comment>
+  </data>
+  <data name="RolModeSemipose" xml:space="preserve">
+    <value>Polupoza</value>
+    <comment>MT — compose-mode label parallel to 'Poza'</comment>
+  </data>
+  <data name="RolNameLabel" xml:space="preserve">
+    <value>Ime</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNameRequired" xml:space="preserve">
+    <value>Ime je obavezno.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNewRole" xml:space="preserve">
+    <value>Nova uloga</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoAccountFound" xml:space="preserve">
+    <value>Nije pronađen račun za „{0}”.</value>
+    <comment>MT — Croatian quotation marks used; the username stays uninflected inside them</comment>
+  </data>
+  <data name="RolNoPoses" xml:space="preserve">
+    <value>Nema poza u ovoj sceni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoRolesAssigned" xml:space="preserve">
+    <value>Nema dodijeljenih uloga.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoRolesDefined" xml:space="preserve">
+    <value>Nema definiranih uloga.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNotConnected" xml:space="preserve">
+    <value>Niste povezani s igrom — povežite se da biste objavljivali i primali poze uživo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPageTitle" xml:space="preserve">
+    <value>Uloge</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPoseCount" xml:space="preserve">
+    <value>{count, plural, one {# poza} few {# poze} other {# poza}}</value>
+    <comment>MT — verbatim from the locale sheet</comment>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Viši prioritet ima prednost u slučaju konflikta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPriorityLabel" xml:space="preserve">
+    <value>Prioritet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoveFailed" xml:space="preserve">
+    <value>Uklanjanje uloge nije uspjelo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoveRole" xml:space="preserve">
+    <value>Ukloni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRemoved" xml:space="preserve">
+    <value>Uklonjeno: {0}.</value>
+    <comment>MT — restructured so the role name sits after a colon in nominative</comment>
+  </data>
+  <data name="RolSaveFailed" xml:space="preserve">
+    <value>Spremanje nije uspjelo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaveRole" xml:space="preserve">
+    <value>Spremi ulogu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSaved" xml:space="preserve">
+    <value>Spremljeno: {0}.</value>
+    <comment>MT — restructured so the role name sits after a colon in nominative</comment>
+  </data>
+  <data name="RolScene" xml:space="preserve">
+    <value>Scena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneIn" xml:space="preserve">
+    <value>Scena · {0}</value>
+    <comment>MT — same restructure as WidSceneIn: 'scena u …' would need the locative of a room name we cannot inflect</comment>
+  </data>
+  <data name="RolSceneNotFound" xml:space="preserve">
+    <value>Scena nije pronađena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSearchAccountPrompt" xml:space="preserve">
+    <value>Pretražite račun da biste upravljali njegovim ulogama.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSearchByUsername" xml:space="preserve">
+    <value>Pretraži po korisničkom imenu…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSelectOrCreate" xml:space="preserve">
+    <value>Odaberite ulogu ili stvorite novu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugAndNameRequired" xml:space="preserve">
+    <value>Slug i ime su obavezni.</value>
+    <comment>MT — 'slug' untranslated per glossary</comment>
+  </data>
+  <data name="RolSlugHelper" xml:space="preserve">
+    <value>Stabilan strojni ključ. Ne može se promijeniti nakon stvaranja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSlugLabel" xml:space="preserve">
+    <value>Slug</value>
+    <comment>MT — untranslated per glossary (identifier in the UI)</comment>
+  </data>
+  <data name="RolSystemBadge" xml:space="preserve">
+    <value>Sustav</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabAssignments" xml:space="preserve">
+    <value>Dodjele</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabRoles" xml:space="preserve">
+    <value>Uloge</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolUntitled" xml:space="preserve">
+    <value>Bez naslova</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolViewArchive" xml:space="preserve">
+    <value>Prikaži arhivu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolWaitingForActivity" xml:space="preserve">
+    <value>Čekanje aktivnosti…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolWatchLive" xml:space="preserve">
+    <value>Gledaj uživo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Rooms" xml:space="preserve">
+    <value>Sobe:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingError" xml:space="preserve">
+    <value>Greška u usmjeravanju:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RoutingErrorDescription" xml:space="preserve">
+    <value>Kategorija "{0}" ima prilagođenu stranicu koja bi se trebala prikazivati umjesto DynamicConfig.</value>
+    <comment>MT — DynamicConfig kept as a component identifier; {0} stays in quotes at a syntactic boundary</comment>
+  </data>
+  <data name="RoutingErrorExpected" xml:space="preserve">
+    <value>Ova poruka znači da usmjerivač NE pronalazi podudaranje s prilagođenom stranicom.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Spremi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveConfiguration" xml:space="preserve">
+    <value>Spremi konfiguraciju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>Spremanje konfiguracije nije uspjelo: {0}</value>
+    <comment>MT — {0} placed after a colon so the interpolated error text needs no case agreement</comment>
+  </data>
+  <data name="SaveNotImplemented" xml:space="preserve">
+    <value>Funkcija spremanja još nije implementirana</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Saving" xml:space="preserve">
+    <value>Spremanje...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SceneArchive" xml:space="preserve">
+    <value>Scene</value>
+    <comment>MT — translating the English value "Scenes", not the key name</comment>
+  </data>
+  <data name="SearchAllSettings" xml:space="preserve">
+    <value>Pretraži sve postavke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SearchCharacters" xml:space="preserve">
+    <value>Pretraži likove…</value>
+    <comment>MT — original ellipsis character preserved</comment>
+  </data>
+  <data name="SearchSettings" xml:space="preserve">
+    <value>Pretraži postavke...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Security" xml:space="preserve">
+    <value>Sigurnost</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SecurityCategoryDescription" xml:space="preserve">
+    <value>Kontrola pristupa, sitelock pravila i zabranjena imena</value>
+    <comment>MT — sitelock kept in English as the config feature name</comment>
+  </data>
+  <data name="SelectedFile" xml:space="preserve">
+    <value>Odabrana datoteka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Send" xml:space="preserve">
+    <value>Pošalji</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SendMessage" xml:space="preserve">
+    <value>Pošalji poruku</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Server" xml:space="preserve">
+    <value>Poslužitelj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerCategoryDescription" xml:space="preserve">
+    <value>Mrežne veze, baza podataka i osnovne postavke poslužitelja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerConfiguration" xml:space="preserve">
+    <value>Konfiguracija poslužitelja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerSettings" xml:space="preserve">
+    <value>Postavke poslužitelja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ServerUri" xml:space="preserve">
+    <value>URI poslužitelja</value>
+    <comment>MT — URI kept as a technical identifier</comment>
+  </data>
+  <data name="SetAsIcon" xml:space="preserve">
+    <value>Postavi kao ikonu profila</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Postavke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SettingsCount" xml:space="preserve">
+    <value>postavke: {0}</value>
+    <comment>MT — this is a count string without ICU plural, so Croatian noun agreement is impossible; restructured to "postavke: {0}" (label + number) instead of picking one wrong plural form. Consider converting to an ICU plural.</comment>
+  </data>
+  <data name="SettingsLabel" xml:space="preserve">
+    <value>Postavke: {0}</value>
+    <comment>MT — {0} is a category name; moved after a colon so it can stay in the nominative</comment>
+  </data>
+  <data name="Sitelock" xml:space="preserve">
+    <value>Sitelock</value>
+    <comment>MT — feature name kept in English, matching the config key</comment>
+  </data>
+  <data name="SitelockAccessRulesHint" xml:space="preserve">
+    <value>Pravila pristupa:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockDescription" xml:space="preserve">
+    <value>Odredite koje se stranice mogu spajati, stvarati igrače ili koristiti Guest račune.</value>
+    <comment>MT — Guest kept in English as a privilege level / API value</comment>
+  </data>
+  <data name="SitelockRuleAddFailed" xml:space="preserve">
+    <value>Dodavanje sitelock pravila nije uspjelo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleAdded" xml:space="preserve">
+    <value>Sitelock pravilo za '{0}' uspješno je dodano</value>
+    <comment>MT — {0} is a quoted site pattern, so it stays uninflected</comment>
+  </data>
+  <data name="SitelockRuleRemoveFailed" xml:space="preserve">
+    <value>Uklanjanje sitelock pravila nije uspjelo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SitelockRuleRemoved" xml:space="preserve">
+    <value>Sitelock pravilo za '{0}' uspješno je uklonjeno</value>
+    <comment>MT — {0} is a quoted site pattern, so it stays uninflected</comment>
+  </data>
+  <data name="SitelockRules" xml:space="preserve">
+    <value>Sitelock pravila</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SoftcodeEditor" xml:space="preserve">
+    <value>Uređivač softcodea</value>
+    <comment>MT — softcode kept untranslated, Croatian genitive suffix attached</comment>
+  </data>
+  <data name="StaffOnlyField" xml:space="preserve">
+    <value>Samo za osoblje — promjene se primjenjuju samo ako ste član osoblja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StartConversion" xml:space="preserve">
+    <value>Pokreni pretvorbu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Statistics" xml:space="preserve">
+    <value>Statistika</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Subject" xml:space="preserve">
+    <value>Predmet</value>
+    <comment>MT — assumed the mail subject line</comment>
+  </data>
+  <data name="SuggestionManagement" xml:space="preserve">
+    <value>Upravljanje prijedlozima</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Suggestions" xml:space="preserve">
+    <value>Prijedlozi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SuggestionsDescription" xml:space="preserve">
+    <value>Upravljajte kategorijama provjere pravopisa i prijedloga koje se koriste za ponudu alternativa pogrešno napisanim riječima u unosima pomoći, nazivima funkcija i drugom korisničkom unosu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Summary" xml:space="preserve">
+    <value>Sažetak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="SupportedFormatsConfig" xml:space="preserve">
+    <value>Podržani formati: .cnf, .conf, .txt (najviše 1 MB)</value>
+    <comment>MT — file extensions kept as machine identifiers</comment>
+  </data>
+  <data name="SupportedFormatsDb" xml:space="preserve">
+    <value>Podržani formati: .db, .txt (najviše 100 MB)</value>
+    <comment>MT — file extensions kept as machine identifiers</comment>
+  </data>
+  <data name="TempC" xml:space="preserve">
+    <value>Temp. (C)</value>
+    <comment>MT — unit symbol kept; "Temp." is the same abbreviation in Croatian</comment>
+  </data>
+  <data name="TempF" xml:space="preserve">
+    <value>Temp. (F)</value>
+    <comment>MT — unit symbol kept; "Temp." is the same abbreviation in Croatian</comment>
+  </data>
+  <data name="TermAddAttribute" xml:space="preserve">
+    <value>Dodaj atribut</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrEmpty" xml:space="preserve">
+    <value>(prazno)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindCommand" xml:space="preserve">
+    <value>Okidač naredbe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindData" xml:space="preserve">
+    <value>Podaci</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindFunction" xml:space="preserve">
+    <value>Funkcija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindListen" xml:space="preserve">
+    <value>Okidač slušanja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermAttrKindText" xml:space="preserve">
+    <value>Tekst</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserError" xml:space="preserve">
+    <value>Greška: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserExampleLabel" xml:space="preserve">
+    <value>npr.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserGo" xml:space="preserve">
+    <value>Idi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserHere" xml:space="preserve">
+    <value>Ovdje</value>
+    <comment>MT — object browser scope filter</comment>
+  </data>
+  <data name="TermBrowserMine" xml:space="preserve">
+    <value>Moje</value>
+    <comment>MT — assumed 'objects I own', not the verb</comment>
+  </data>
+  <data name="TermBrowserNoObjects" xml:space="preserve">
+    <value>Nema pronađenih objekata.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermBrowserSearch" xml:space="preserve">
+    <value>Pretraži</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermClear" xml:space="preserve">
+    <value>Očisti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermClearTerminal" xml:space="preserve">
+    <value>Očisti terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCollapseAttributes" xml:space="preserve">
+    <value>Sažmi atribute</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCollapseObjects" xml:space="preserve">
+    <value>Sažmi objekte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCreateRoom" xml:space="preserve">
+    <value>Stvori sobu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermCreateThing" xml:space="preserve">
+    <value>Stvori predmet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermDeletedAttribute" xml:space="preserve">
+    <value>Obrisano: &amp;{0}.</value>
+    <comment>MT — restructured so the attribute name stays a bare identifier after a colon</comment>
+  </data>
+  <data name="TermEditor" xml:space="preserve">
+    <value>Uređivač</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermErrorLine" xml:space="preserve">
+    <value>[Greška] {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermErrorLoadingObject" xml:space="preserve">
+    <value>Greška pri učitavanju objekta: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEvalResult" xml:space="preserve">
+    <value>Rezultat evaluacije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermExpandAttributes" xml:space="preserve">
+    <value>Proširi atribute</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermExpandObjects" xml:space="preserve">
+    <value>Proširi objekte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermFilterAttributes" xml:space="preserve">
+    <value>Filtriraj atribute…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpBack" xml:space="preserve">
+    <value>Natrag</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpClose" xml:space="preserve">
+    <value>Zatvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpEmpty" xml:space="preserve">
+    <value>Pretražujte iznad ili u uređivaču kliknite „📖 Show full help”.</value>
+    <comment>MT — quoted label is emitted unlocalized by the Monaco hover provider; kept verbatim in English</comment>
+  </data>
+  <data name="TermHelpKindCommand" xml:space="preserve">
+    <value>Naredba</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpKindFunction" xml:space="preserve">
+    <value>Funkcija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpSearchPlaceholder" xml:space="preserve">
+    <value>Pretraži funkcije i naredbe…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermHelpSwitches" xml:space="preserve">
+    <value>Prekidači: {0}</value>
+    <comment>MT — MUSH command switches; {0} is a list of literal /switch names, left untranslated</comment>
+  </data>
+  <data name="TermInputPlaceholder" xml:space="preserve">
+    <value>say bok   ·   pose maše   ·   look   ·   who</value>
+    <comment>MT — command verbs (say, pose, look, who) are game syntax and stay in English; only their arguments localized</comment>
+  </data>
+  <data name="TermMushHelp" xml:space="preserve">
+    <value>MUSH pomoć</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoAttributeSelected" xml:space="preserve">
+    <value>Nije odabran nijedan atribut</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoAttributes" xml:space="preserve">
+    <value>Nema atributa.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoMatch" xml:space="preserve">
+    <value>Nema podudaranja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNoOutput" xml:space="preserve">
+    <value>(nema izlaza)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermNotLoggedIn" xml:space="preserve">
+    <value>niste prijavljeni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermObjectNamePlaceholder" xml:space="preserve">
+    <value>ime</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermObjects" xml:space="preserve">
+    <value>Objekti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermRefreshAttributes" xml:space="preserve">
+    <value>Osvježi atribute</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSavedAttribute" xml:space="preserve">
+    <value>Spremljeno: &amp;{0} na #{1}.</value>
+    <comment>MT — attribute name and dbref kept as bare identifiers</comment>
+  </data>
+  <data name="TermSelectAnObject" xml:space="preserve">
+    <value>Odaberite objekt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermSoftcodeEditorTitle" xml:space="preserve">
+    <value>Uređivač softcodea</value>
+    <comment>MT — 'softcode' untranslated per glossary, Croatian genitive ending attached</comment>
+  </data>
+  <data name="TermTest" xml:space="preserve">
+    <value>Testiraj</value>
+    <comment>MT — assumed a button that runs a test</comment>
+  </data>
+  <data name="TermTestTooltip" xml:space="preserve">
+    <value>Test — evaluiraj bez spremanja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermUnsaved" xml:space="preserve">
+    <value>nespremljeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Terminal" xml:space="preserve">
+    <value>Terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TextFiles" xml:space="preserve">
+    <value>Tekstualne datoteke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Things" xml:space="preserve">
+    <value>Predmeti:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="To" xml:space="preserve">
+    <value>Prima</value>
+    <comment>MT — assumed the recipient field of a mail form; "Prima" is the standard Croatian label</comment>
+  </data>
+  <data name="Total" xml:space="preserve">
+    <value>Ukupno:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TotalObjects" xml:space="preserve">
+    <value>Ukupno objekata:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TotalWords" xml:space="preserve">
+    <value>Ukupno riječi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Type" xml:space="preserve">
+    <value>Vrsta: {0}</value>
+    <comment>MT — {0} follows a colon and stays in the nominative</comment>
+  </data>
+  <data name="TypeDecimal" xml:space="preserve">
+    <value>Decimalni broj</value>
+    <comment>MT — config field data type</comment>
+  </data>
+  <data name="TypeList" xml:space="preserve">
+    <value>Popis</value>
+    <comment>MT — config field data type</comment>
+  </data>
+  <data name="TypeNumber" xml:space="preserve">
+    <value>Broj</value>
+    <comment>MT — config field data type</comment>
+  </data>
+  <data name="TypeOptional" xml:space="preserve">
+    <value>Neobavezno: {0}</value>
+    <comment>MT — {0} is a type name whose gender is unknown, so the adjective was replaced by a neuter label plus a colon rather than agreeing with the placeholder</comment>
+  </data>
+  <data name="TypeText" xml:space="preserve">
+    <value>Tekst</value>
+    <comment>MT — config field data type</comment>
+  </data>
+  <data name="TypeYesNo" xml:space="preserve">
+    <value>Da/Ne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="UnsavedChanges" xml:space="preserve">
+    <value>Nespremljene promjene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Uploading" xml:space="preserve">
+    <value>Prijenos u tijeku...</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Urgent" xml:space="preserve">
+    <value>Hitno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Vrijednost</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ValuesCommaSeparated" xml:space="preserve">
+    <value>Vrijednosti (odvojene zarezom)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WarningCount" xml:space="preserve">
+    <value>{count, plural, one {# upozorenje} few {# upozorenja} other {# upozorenja}}</value>
+    <comment>MT — plural value taken verbatim from the locale sheet</comment>
+  </data>
+  <data name="Warnings" xml:space="preserve">
+    <value>Upozorenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WarningsLabel" xml:space="preserve">
+    <value>Upozorenja ({0})</value>
+    <comment>MT — count in parentheses, so no noun agreement is needed</comment>
+  </data>
+  <data name="Weather" xml:space="preserve">
+    <value>Vrijeme</value>
+    <comment>MT — assumed meteorological weather (demo component), not clock time</comment>
+  </data>
+  <data name="WeatherDescription" xml:space="preserve">
+    <value>Ova komponenta pokazuje dohvaćanje podataka s poslužitelja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WebSocketConnectionTest" xml:space="preserve">
+    <value>Test WebSocket veze</value>
+    <comment>MT — WebSocket kept untranslated</comment>
+  </data>
+  <data name="WebSocketTest" xml:space="preserve">
+    <value>WebSocket test</value>
+    <comment>MT — WebSocket kept untranslated</comment>
+  </data>
+  <data name="WidAction" xml:space="preserve">
+    <value>Radnja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidActionFailed" xml:space="preserve">
+    <value>Radnja nije uspjela.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidActiveScenes" xml:space="preserve">
+    <value>Aktivne scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBack" xml:space="preserve">
+    <value>Natrag</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseArchive" xml:space="preserve">
+    <value>Pregledaj arhivu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseCharacters" xml:space="preserve">
+    <value>Pregledaj likove</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidBrowseScenes" xml:space="preserve">
+    <value>Pregledaj scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidConfigureQuickLinks" xml:space="preserve">
+    <value>Postavi brze poveznice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidCreateFirstCharacter" xml:space="preserve">
+    <value>Stvorite svoj prvi lik da biste počeli igrati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidCreateYourCharacter" xml:space="preserve">
+    <value>Stvorite svoj lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFieldRequired" xml:space="preserve">
+    <value>Polje {0} je obavezno.</value>
+    <comment>MT — added the governing noun 'Polje' so the field name stays uninflected and the predicate agrees with 'polje'</comment>
+  </data>
+  <data name="WidFillRequiredFields" xml:space="preserve">
+    <value>Ispunite označena obavezna polja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFormNoPages" xml:space="preserve">
+    <value>Ovaj obrazac nema stranica.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidFormStepOf" xml:space="preserve">
+    <value>Korak {0} od {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameStartingUp" xml:space="preserve">
+    <value>Igra se pokreće…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidJoinScene" xml:space="preserve">
+    <value>Pridruži se sceni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidLoadingWikiPage" xml:space="preserve">
+    <value>Učitavanje wiki stranice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNewCharacter" xml:space="preserve">
+    <value>Novi lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNewHere" xml:space="preserve">
+    <value>Novi ste ovdje?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNext" xml:space="preserve">
+    <value>Dalje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoActiveScenes" xml:space="preserve">
+    <value>Trenutačno nema aktivnih scena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoCharacterYet" xml:space="preserve">
+    <value>Još nemate lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNoRecentWikiActivity" xml:space="preserve">
+    <value>Nema nedavne aktivnosti na wikiju.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNobodyConnected" xml:space="preserve">
+    <value>Trenutačno nitko nije povezan.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidNothingToDisplay" xml:space="preserve">
+    <value>Nema ništa za prikaz.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidOnlineNow" xml:space="preserve">
+    <value>Sada na mreži</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidPlayersOnline" xml:space="preserve">
+    <value>Igrači na mreži</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidPluginChangedReloading" xml:space="preserve">
+    <value>Dodatak je promijenjen — ponovno učitavanje…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidQuickstartIntro" xml:space="preserve">
+    <value>Započnite čitanjem wikija, pregledavanjem likova ili uključivanjem u scenu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidReadTheWiki" xml:space="preserve">
+    <value>Pročitajte wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentWikiActivity" xml:space="preserve">
+    <value>Nedavna aktivnost na wikiju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSceneIn" xml:space="preserve">
+    <value>Scena · {0}</value>
+    <comment>MT — restructured: 'scena u …' would need the locative of a room name we cannot inflect, so the location follows a separator in nominative</comment>
+  </data>
+  <data name="WidSceneLive" xml:space="preserve">
+    <value>UŽIVO</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidScenePoseCount" xml:space="preserve">
+    <value>{count, plural, one {# poza} few {# poze} other {# poza}}</value>
+    <comment>MT — verbatim from the locale sheet</comment>
+  </data>
+  <data name="WidSchemaUnavailable" xml:space="preserve">
+    <value>Shema widgeta nije dostupna.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSubmit" xml:space="preserve">
+    <value>Pošalji</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustCommunity" xml:space="preserve">
+    <value>Zajednica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustCommunityTooltip" xml:space="preserve">
+    <value>Poznat izvor iz zajednice — pregledajte kod prije primjene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustOfficial" xml:space="preserve">
+    <value>Službeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustOfficialTooltip" xml:space="preserve">
+    <value>Održava ga organizacija SharpMUSH</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustUnknown" xml:space="preserve">
+    <value>Nepoznato</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTrustUnknownTooltip" xml:space="preserve">
+    <value>Nepregledani izvor — provjerite sve prije primjene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidViewAllCount" xml:space="preserve">
+    <value>Prikaži sve ({0}) →</value>
+    <comment>MT — count moved into parentheses so no Croatian numeral agreement is required</comment>
+  </data>
+  <data name="WidWaitingForServer" xml:space="preserve">
+    <value>Čekanje da se poslužitelj pokrene…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidWidgetRenderFailed" xml:space="preserve">
+    <value>Prikaz ovog widgeta nije uspio.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneFooter" xml:space="preserve">
+    <value>Podnožje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneLeftSidebar" xml:space="preserve">
+    <value>Lijeva bočna traka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneMainContent" xml:space="preserve">
+    <value>Glavni sadržaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneRightSidebar" xml:space="preserve">
+    <value>Desna bočna traka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidgetZoneTopBar" xml:space="preserve">
+    <value>Gornja traka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Wiki" xml:space="preserve">
+    <value>Wiki</value>
+    <comment>MT — wiki kept untranslated per the glossary</comment>
+  </data>
+  <data name="WikiAdmin" xml:space="preserve">
+    <value>Wiki administracija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAdminDescription" xml:space="preserve">
+    <value>Upravljajte wiki stranicama: metapodaci, zaštita, stanje objave i skupne operacije.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAllLocales" xml:space="preserve">
+    <value>Svi jezici</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiAllNamespaces" xml:space="preserve">
+    <value>Svi namespace-ovi</value>
+    <comment>MT — namespace kept untranslated per the glossary; Croatian plural ending attached with a hyphen</comment>
+  </data>
+  <data name="WikiAvailableTranslations" xml:space="preserve">
+    <value>Dostupno i na jezicima:</value>
+    <comment>MT — original "Also available in" is followed by language names that would need the locative; added "na jezicima:" so the appended list can stay in its own form</comment>
+  </data>
+  <data name="WikiBatchFailed" xml:space="preserve">
+    <value>{count, plural, one {# stranica nije ažurirana} few {# stranice nisu ažurirane} other {# stranica nije ažurirano}}</value>
+    <comment>MT — plural value taken verbatim from the locale sheet</comment>
+  </data>
+  <data name="WikiBatchSucceeded" xml:space="preserve">
+    <value>{count, plural, one {# stranica ažurirana} few {# stranice ažurirane} other {# stranica ažurirano}}</value>
+    <comment>MT — plural value taken verbatim from the locale sheet</comment>
+  </data>
+  <data name="WikiBrowseByNamespace" xml:space="preserve">
+    <value>Pregled po namespace-u</value>
+    <comment>MT — namespace kept untranslated; Croatian locative ending attached with a hyphen</comment>
+  </data>
+  <data name="WikiCategory" xml:space="preserve">
+    <value>Kategorija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDelete" xml:space="preserve">
+    <value>Obriši</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiDeleteConfirmText" xml:space="preserve">
+    <value>Obrisati {count, plural, one {# stranicu} few {# stranice} other {# stranica}} i sve njihove revizije? Ovo se ne može poništiti.</value>
+    <comment>MT — plural value taken verbatim from the locale sheet</comment>
+  </data>
+  <data name="WikiDeleteConfirmTitle" xml:space="preserve">
+    <value>Brisanje stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiEdit" xml:space="preserve">
+    <value>Uredi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiEditMetadata" xml:space="preserve">
+    <value>Uredi metapodatke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiFallbackCreateTranslation" xml:space="preserve">
+    <value>Prevedite ovu stranicu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiFallbackNotice" xml:space="preserve">
+    <value>Ova stranica još nije dostupna na jeziku {0} — prikazuje se verzija na jeziku {1}.</value>
+    <comment>MT — {0} and {1} are language names that would need the locative; inserted the head noun "jeziku" so the names can stay in the nominative as apposition</comment>
+  </data>
+  <data name="WikiLocaleFilter" xml:space="preserve">
+    <value>Jezik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiMetadataSaveFailed" xml:space="preserve">
+    <value>Spremanje metapodataka nije uspjelo: {0}</value>
+    <comment>MT — {0} follows a colon, so the interpolated error text needs no case agreement</comment>
+  </data>
+  <data name="WikiMetadataSaved" xml:space="preserve">
+    <value>Metapodaci spremljeni za: {0}</value>
+    <comment>MT — colon added so the page name after "za" can stay in the nominative</comment>
+  </data>
+  <data name="WikiNamespace" xml:space="preserve">
+    <value>Namespace</value>
+    <comment>MT — namespace kept untranslated per the glossary</comment>
+  </data>
+  <data name="WikiNamespaceEmpty" xml:space="preserve">
+    <value>U ovom namespace-u još nema stranica.</value>
+    <comment>MT — namespace kept untranslated; Croatian locative ending attached with a hyphen</comment>
+  </data>
+  <data name="WikiNamespaceFilter" xml:space="preserve">
+    <value>Filtar namespace-a</value>
+    <comment>MT — namespace kept untranslated; Croatian genitive ending attached with a hyphen</comment>
+  </data>
+  <data name="WikiNoPages" xml:space="preserve">
+    <value>Nema pronađenih wiki stranica.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiNoRecentChanges" xml:space="preserve">
+    <value>Nijedna stranica još nije uređena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiPageNotExist" xml:space="preserve">
+    <value>Ova stranica još ne postoji. Možete je stvoriti klikom na gumb ispod.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiProtect" xml:space="preserve">
+    <value>Zaštiti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiProtected" xml:space="preserve">
+    <value>Zaštićeno</value>
+    <comment>MT — assumed a status label, hence the neuter form</comment>
+  </data>
+  <data name="WikiPublished" xml:space="preserve">
+    <value>Objavljeno</value>
+    <comment>MT — assumed a status label, hence the neuter form</comment>
+  </data>
+  <data name="WikiRecentChanges" xml:space="preserve">
+    <value>Nedavne promjene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiRevision" xml:space="preserve">
+    <value>Revizija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTags" xml:space="preserve">
+    <value>Oznake</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTagsHelper" xml:space="preserve">
+    <value>Pritisnite Enter ili + za dodavanje oznake</value>
+    <comment>MT — key name Enter and the + symbol kept as-is</comment>
+  </data>
+  <data name="WikiTitle" xml:space="preserve">
+    <value>Naslov</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiTranslations" xml:space="preserve">
+    <value>Prijevodi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUnprotect" xml:space="preserve">
+    <value>Ukloni zaštitu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUntranslatedOnly" xml:space="preserve">
+    <value>Samo nedostajući prijevodi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiUpdated" xml:space="preserve">
+    <value>Ažurirano</value>
+    <comment>MT — assumed a column label for the last-modified date</comment>
+  </data>
+  <data name="WkAddTagPlaceholder" xml:space="preserve">
+    <value>dodaj oznaku…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAddTranslation" xml:space="preserve">
+    <value>Dodaj prijevod…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkAssetDeleteFailed" xml:space="preserve">
+    <value>Brisanje nije uspjelo: {0}.</value>
+    <comment>MT — restructured so the file name sits after a colon in nominative, avoiding accusative agreement</comment>
+  </data>
+  <data name="WkAssetDeleted" xml:space="preserve">
+    <value>Obrisano: {0}.</value>
+    <comment>MT — restructured so the file name sits after a colon in nominative</comment>
+  </data>
+  <data name="WkAssetUploadHint" xml:space="preserve">
+    <value>PNG, JPEG, GIF, WebP ili SVG — najviše 10 MB.</value>
+    <comment>MT — format names kept as-is</comment>
+  </data>
+  <data name="WkAssetUploaded" xml:space="preserve">
+    <value>Preneseno: {0}.</value>
+    <comment>MT — restructured so the file name sits after a colon in nominative</comment>
+  </data>
+  <data name="WkBold" xml:space="preserve">
+    <value>Podebljano</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkBytesDelta" xml:space="preserve">
+    <value>{0} bajtova</value>
+    <comment>MT — genitive plural 'bajtova' used as the generic form; exact Croatian agreement varies with the number and cannot be controlled from a plain {0}</comment>
+  </data>
+  <data name="WkColActions" xml:space="preserve">
+    <value>Radnje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColAuthor" xml:space="preserve">
+    <value>Autor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColFileName" xml:space="preserve">
+    <value>Naziv datoteke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColKind" xml:space="preserve">
+    <value>Vrsta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColNew" xml:space="preserve">
+    <value>Novo</value>
+    <comment>MT — diff column header; neuter form chosen because the compared item is unspecified</comment>
+  </data>
+  <data name="WkColOld" xml:space="preserve">
+    <value>Staro</value>
+    <comment>MT — diff column header; neuter form chosen because the compared item is unspecified</comment>
+  </data>
+  <data name="WkColPreview" xml:space="preserve">
+    <value>Pregled</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColSize" xml:space="preserve">
+    <value>Veličina</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColTimestampSummary" xml:space="preserve">
+    <value>Vremenska oznaka / sažetak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkColUploaded" xml:space="preserve">
+    <value>Preneseno</value>
+    <comment>MT — column header, assumed to be the upload date</comment>
+  </data>
+  <data name="WkColUploader" xml:space="preserve">
+    <value>Prenositelj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCompareSelected" xml:space="preserve">
+    <value>Usporedi odabrano</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkComparingRevisions" xml:space="preserve">
+    <value>Usporedba revizija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCopyMarkdown" xml:space="preserve">
+    <value>Kopiraj Markdown</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCopyUrl" xml:space="preserve">
+    <value>Kopiraj URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkCurrentRevision" xml:space="preserve">
+    <value>trenutačna</value>
+    <comment>MT — feminine to agree with 'revizija'</comment>
+  </data>
+  <data name="WkCustomLocalePlaceholder" xml:space="preserve">
+    <value>Jezična oznaka, npr. es ili pt-BR</value>
+    <comment>MT — 'es' and 'pt-BR' are machine identifiers, left as-is</comment>
+  </data>
+  <data name="WkDeleteAssetConfirm" xml:space="preserve">
+    <value>Ovime se trajno briše datoteka {0}. Poveznice na ovaj resurs prestat će raditi.</value>
+    <comment>MT — added the governing noun 'datoteka' so {0} stays in nominative apposition</comment>
+  </data>
+  <data name="WkDeleteAssetPrompt" xml:space="preserve">
+    <value>Obrisati datoteku '{0}'? Stranice koje je ugrađuju prikazivat će neispravnu sliku.</value>
+    <comment>MT — added the governing noun 'datoteku' so {0} needs no inflection</comment>
+  </data>
+  <data name="WkDeleteAssetTitle" xml:space="preserve">
+    <value>Obrisati resurs?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteFailed" xml:space="preserve">
+    <value>Brisanje nije uspjelo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDeleteTranslation" xml:space="preserve">
+    <value>Obriši ovaj prijevod</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffLoadFailed" xml:space="preserve">
+    <value>Nije moguće učitati jednu ili obje revizije. Provjerite brojeve revizija.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffPageTitle" xml:space="preserve">
+    <value>Razlike: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffRevNew" xml:space="preserve">
+    <value>Rev. {0} — nova</value>
+    <comment>MT — feminine to agree with 'revizija'</comment>
+  </data>
+  <data name="WkDiffRevOld" xml:space="preserve">
+    <value>Rev. {0} — stara</value>
+    <comment>MT — feminine to agree with 'revizija'</comment>
+  </data>
+  <data name="WkDiffSideBySide" xml:space="preserve">
+    <value>Usporedno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiffUnified" xml:space="preserve">
+    <value>Objedinjeno</value>
+    <comment>MT — diff view mode</comment>
+  </data>
+  <data name="WkDirectiveCategoryHeader" xml:space="preserve">
+    <value>Kategorija: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveNoPages" xml:space="preserve">
+    <value>Još nema stranica.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDirectiveTagHeader" xml:space="preserve">
+    <value>Oznaka: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkDiscard" xml:space="preserve">
+    <value>Odbaci</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkEditLivePreview" xml:space="preserve">
+    <value>uređivanje · pregled uživo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFileTooLarge" xml:space="preserve">
+    <value>Datoteka premašuje ograničenje od 10 MB.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFormattingHelp" xml:space="preserve">
+    <value>Pomoć za oblikovanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHeading" xml:space="preserve">
+    <value>Naslov</value>
+    <comment>MT — Markdown toolbar button</comment>
+  </data>
+  <data name="WkHistoryIntro" xml:space="preserve">
+    <value>Odaberite stariju i noviju reviziju, zatim ih usporedite. Ukupno revizija: {0}.</value>
+    <comment>MT — restructured so the count sits after a colon; Croatian numeral agreement cannot be controlled from a plain {0}</comment>
+  </data>
+  <data name="WkHistoryLocale" xml:space="preserve">
+    <value>Jezik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkHistoryPageTitle" xml:space="preserve">
+    <value>Povijest: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkImageLibrary" xml:space="preserve">
+    <value>Biblioteka slika</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkImageLibraryDescription" xml:space="preserve">
+    <value>Upravljajte prenesenim medijskim resursima koji se koriste na wikiju i portalu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkInheritedFromSource" xml:space="preserve">
+    <value>Naslijeđeno iz izvornog jezika — uredite ga na izvornoj stranici.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkInsertImage" xml:space="preserve">
+    <value>Umetni sliku</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkItalic" xml:space="preserve">
+    <value>Kurziv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindDocument" xml:space="preserve">
+    <value>Dokument</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindImage" xml:space="preserve">
+    <value>Slika</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindImagePlural" xml:space="preserve">
+    <value>Slike</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindOther" xml:space="preserve">
+    <value>Ostalo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkKindVideo" xml:space="preserve">
+    <value>Video</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLinesAdded" xml:space="preserve">
+    <value>+{0} dodano</value>
+    <comment>MT — impersonal neuter so it fits any count</comment>
+  </data>
+  <data name="WkLinesRemoved" xml:space="preserve">
+    <value>−{0} uklonjeno</value>
+    <comment>MT — impersonal neuter so it fits any count; U+2212 minus sign preserved</comment>
+  </data>
+  <data name="WkLink" xml:space="preserve">
+    <value>Poveznica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkListItem" xml:space="preserve">
+    <value>Stavka popisa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkLocaleSelector" xml:space="preserve">
+    <value>Jezik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkMarkdownCopied" xml:space="preserve">
+    <value>Markdown je kopiran u međuspremnik.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkMinorEdit" xml:space="preserve">
+    <value>Manja izmjena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoAssets" xml:space="preserve">
+    <value>Još nema prenesenih resursa.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoAssetsFound" xml:space="preserve">
+    <value>Nema pronađenih resursa.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkNoRevisionHistory" xml:space="preserve">
+    <value>Povijest revizija nije pronađena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPageFallbackTitle" xml:space="preserve">
+    <value>Stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPageTitlePlaceholder" xml:space="preserve">
+    <value>Naslov stranice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPublishChanges" xml:space="preserve">
+    <value>Objavi promjene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkPublishNotice" xml:space="preserve">
+    <value>Promjene se objavljuju odmah i vidljive su svima.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkQuote" xml:space="preserve">
+    <value>Citat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoreFailed" xml:space="preserve">
+    <value>Vraćanje nije uspjelo: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoreRevision" xml:space="preserve">
+    <value>Vrati na ovu reviziju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRestoredToRevision" xml:space="preserve">
+    <value>Vraćeno na reviziju {0}.</value>
+    <comment>MT — {0} is a revision number, so no agreement is needed</comment>
+  </data>
+  <data name="WkRevisionHistory" xml:space="preserve">
+    <value>Povijest revizija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkRevisionShort" xml:space="preserve">
+    <value>rev. #{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkSourceLocaleLabel" xml:space="preserve">
+    <value>{0} (izvor)</value>
+    <comment>MT — {0} is a language name in nominative; parenthetical keeps it uninflected</comment>
+  </data>
+  <data name="WkStaffMedia" xml:space="preserve">
+    <value>Osoblje · Mediji</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkStorageUsed" xml:space="preserve">
+    <value>Iskorišteni prostor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkSummaryPlaceholder" xml:space="preserve">
+    <value>Sažmite svoju promjenu (npr. „ispravljen tipfeler”)…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTotalAssets" xml:space="preserve">
+    <value>Ukupno resursa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationConflict" xml:space="preserve">
+    <value>Ovaj se prijevod promijenio dok ste ga uređivali. Ponovno ga učitajte da biste vidjeli trenutačnu verziju — vaš nespremljeni tekst i dalje je u uređivaču.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationDeleteConfirmText" xml:space="preserve">
+    <value>Prijevod ({0}) i njegova povijest bit će uklonjeni. Stranica i njezini ostali jezici ostaju nepromijenjeni.</value>
+    <comment>MT — restructured: the language name sits in a parenthetical apposition, avoiding the locative that 'prijevod na …' would require</comment>
+  </data>
+  <data name="WkTranslationDeleteConfirmTitle" xml:space="preserve">
+    <value>Obrisati prijevod?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationReload" xml:space="preserve">
+    <value>Ponovno učitaj prijevod</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationSaveFailed" xml:space="preserve">
+    <value>Nije moguće spremiti prijevod: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkTranslationSaved" xml:space="preserve">
+    <value>Prijevod je spremljen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUploadError" xml:space="preserve">
+    <value>Greška pri prijenosu: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUploadFailed" xml:space="preserve">
+    <value>Prijenos nije uspio: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkUrlCopied" xml:space="preserve">
+    <value>URL je kopiran.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkViewGrid" xml:space="preserve">
+    <value>Mreža</value>
+    <comment>MT — view mode toggle</comment>
+  </data>
+  <data name="WkViewList" xml:space="preserve">
+    <value>Popis</value>
+    <comment>MT — view mode toggle</comment>
+  </data>
+  <data name="WkViewRevision" xml:space="preserve">
+    <value>Prikaži ovu reviziju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkWikiAssets" xml:space="preserve">
+    <value>Wiki resursi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordAddFailed" xml:space="preserve">
+    <value>Dodavanje riječi nije uspjelo: {0}</value>
+    <comment>MT — {0} follows a colon and needs no case agreement</comment>
+  </data>
+  <data name="WordAdded" xml:space="preserve">
+    <value>Dodano '{0}' u kategoriju '{1}'</value>
+    <comment>MT — both placeholders are quoted literals, so they stay uninflected</comment>
+  </data>
+  <data name="WordEmpty" xml:space="preserve">
+    <value>Riječ ne može biti prazna</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordRemoveFailed" xml:space="preserve">
+    <value>Brisanje riječi nije uspjelo: {0}</value>
+    <comment>MT — {0} follows a colon and needs no case agreement</comment>
+  </data>
+  <data name="WordRemoved" xml:space="preserve">
+    <value>Uklonjeno '{0}' iz kategorije '{1}'</value>
+    <comment>MT — both placeholders are quoted literals, so they stay uninflected</comment>
+  </data>
+  <data name="Words" xml:space="preserve">
+    <value>Riječi:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WordsCount" xml:space="preserve">
+    <value>riječi: {0}</value>
+    <comment>MT — count string without ICU plural; restructured as label + number because Croatian cannot agree with an unknown count. Consider converting to an ICU plural.</comment>
+  </data>
+</root>
