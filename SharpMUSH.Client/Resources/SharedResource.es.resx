@@ -1797,8 +1797,8 @@
     <comment>MT</comment>
   </data>
   <data name="LayWidgetSchemaApplication" xml:space="preserve">
-    <value>Solicitud de esquema</value>
-    <comment>MT — assumed "application" here means a submitted character-sheet application (an approval request), not the act of applying a schema</comment>
+    <value>Aplicación de esquema</value>
+    <comment>MT — "application" is a portal application from the app catalog (see SchemaWidgetDescriptor), not a submitted approval request</comment>
   </data>
   <data name="LayWidgetSpacer" xml:space="preserve">
     <value>Espaciador</value>
@@ -2309,8 +2309,8 @@
     <comment>MT</comment>
   </data>
   <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
-    <value>Clasifique {0}: las referencias configurables necesitan una clave y una etiqueta.</value>
-    <comment>MT — "configure refs" rendered as refs classified in the "configure" mode</comment>
+    <value>Clasifique {0}: las referencias configure necesitan una clave y una etiqueta.</value>
+    <comment>MT — "configure" kept as the literal package.yaml ref-mode name, as fr/de do</comment>
   </data>
   <data name="PkgClose" xml:space="preserve">
     <value>Cerrar</value>
@@ -2333,8 +2333,8 @@
     <comment>MT</comment>
   </data>
   <data name="PkgConfigureKeyLabel" xml:space="preserve">
-    <value>Clave de configuración</value>
-    <comment>MT</comment>
+    <value>Clave configure</value>
+    <comment>MT — the key of a "configure" ref; the mode name stays English</comment>
   </data>
   <data name="PkgConfigurePromptLabel" xml:space="preserve">
     <value>Mensaje mostrado a quien lo instale</value>
@@ -2485,12 +2485,12 @@
     <comment>MT — 'remote' kept as the literal parameter name</comment>
   </data>
   <data name="PkgModeConfigure" xml:space="preserve">
-    <value>configurar</value>
-    <comment>MT — a ref-classification mode value</comment>
+    <value>configure</value>
+    <comment>MT — literal package.yaml ref-mode value, bound to MudSelectItem Value="configure"; kept English as in fr/de</comment>
   </data>
   <data name="PkgModeWellKnown" xml:space="preserve">
-    <value>conocida</value>
-    <comment>MT — ref-classification mode value; agrees with feminine "referencia"</comment>
+    <value>well-known</value>
+    <comment>MT — literal package.yaml ref-mode value, bound to MudSelectItem Value="wellknown"; kept English as in fr/de</comment>
   </data>
   <data name="PkgName" xml:space="preserve">
     <value>Nombre</value>
@@ -2621,8 +2621,8 @@
     <comment>MT</comment>
   </data>
   <data name="PkgResolvesAtApplyTooltip" xml:space="preserve">
-    <value>Algunas referencias se resuelven al aplicar (objetos nuevos / configurar)</value>
-    <comment>MT — "configure" kept as the ref-mode name used elsewhere in this screen</comment>
+    <value>Algunas referencias se resuelven al aplicar (objetos nuevos / configure)</value>
+    <comment>MT — "configure" kept as the literal ref-mode name used elsewhere on this screen</comment>
   </data>
   <data name="PkgReview" xml:space="preserve">
     <value>Revisar</value>
@@ -2769,8 +2769,8 @@
     <comment>MT</comment>
   </data>
   <data name="PkgWellKnownRefLabel" xml:space="preserve">
-    <value>Referencia conocida</value>
-    <comment>MT — "well-known ref", matching the ref-mode label used elsewhere in this screen</comment>
+    <value>Ref. well-known</value>
+    <comment>MT — "well-known" kept as the literal ref-mode name, as fr/de do</comment>
   </data>
   <data name="PkgWillBeMarkedGoing" xml:space="preserve">
     <value>{0} se marcará como GOING</value>
