@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -34,6 +35,20 @@ public static class ViewWiki
 	private static MString DraftWithheld(string what, bool maySeeDrafts) =>
 		MModule.single($"WIKI: This is a draft; its {what} is not shown."
 			+ (maySeeDrafts ? " Add /DRAFT to read it." : string.Empty));
+
+	/// <summary>
+	/// Whether the served content may be shown to a reader with no draft permission. Both flags have to
+	/// agree, and the page's is the one that can veto.
+	/// </summary>
+	/// <remarks>
+	/// A page and each of its translations carry independent <c>Published</c> flags, and it is the page's
+	/// that decides whether the article exists publicly at all. Reading the served row's flag alone let a
+	/// published translation speak for an unpublished page: a mortal whose locale matched was handed the
+	/// draft in full, unmarked, without asking for <c>/DRAFT</c>. The body and the revision log both call
+	/// this rather than deriving it separately — one rule, because two is how the discrepancy arose.
+	/// </remarks>
+	private static bool IsPublic(WikiPage page, LocalizedWikiPage? localized) =>
+		page.Published && (localized?.Published ?? true);
 
 	/// <param name="locale">The reader's locale, or null for the configured default.</param>
 	/// <param name="forceSource">
@@ -78,7 +93,7 @@ public static class ViewWiki
 		var title = localized?.Title ?? page.Title;
 		var markdown = localized?.MarkdownSource ?? page.MarkdownSource;
 		var revision = localized?.RevisionNumber ?? page.RevisionNumber;
-		var published = localized?.Published ?? page.Published;
+		var published = IsPublic(page, localized);
 		// Only shown when a different language was served than asked for — silently handing a reader
 		// English is how a translation gap goes unnoticed in game exactly as it does on the web.
 		var localeMarker = localized is { IsFallback: true } ? $" [{localized.Locale}]" : string.Empty;
@@ -157,7 +172,7 @@ public static class ViewWiki
 			MModule.single($"WIKI: Revision history for {localized?.Title ?? page.Title} [{page.Namespace}]{streamMarker}:"),
 		};
 
-		if ((localized?.Published ?? page.Published) || (showDraft && maySeeDrafts))
+		if (IsPublic(page, localized) || (showDraft && maySeeDrafts))
 		{
 			var revisions = stream.Length == 0
 				? await wikiService.GetRevisionsAsync(page.Id)

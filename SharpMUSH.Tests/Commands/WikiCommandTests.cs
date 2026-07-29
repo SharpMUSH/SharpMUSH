@@ -345,6 +345,52 @@ public class WikiCommandTests
 	}
 
 	[Test]
+	public async ValueTask WikiView_APublishedTranslationDoesNotPublishItsDraftPage()
+	{
+		// The two Published flags are independent, and the page's is the one that decides whether the
+		// article exists publicly at all. Deriving visibility from the *served row* let a published
+		// translation speak for an unpublished page: a mortal whose locale matched was handed the draft's
+		// content in full, with no (draft) marker and without asking for /DRAFT.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftPageTrReader");
+
+		var slug = await SeedTranslatedPageAsync(
+			"Draft Page Published Tr", "en secret host body", "Titre Publié", "corps publié secret",
+			published: true);
+
+		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
+		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
+		await Assert.That(unpublished.IsT0).IsTrue();
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view {slug}"));
+
+		await ExpectNoNotify(player.DbRef, "corps publié secret");
+		await ExpectNoNotify(player.DbRef, "en secret host body");
+	}
+
+	[Test]
+	public async ValueTask WikiHistory_APublishedTranslationDoesNotExposeADraftPagesLog()
+	{
+		// Same defect, second surface: edit summaries are author-written prose about unpublished work.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftPageTrHist");
+
+		var slug = await SeedTranslatedPageAsync(
+			"Draft Page Published Hist", "en host body", "Titre Historique", "corps historique",
+			published: true);
+
+		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
+		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
+		await Assert.That(unpublished.IsT0).IsTrue();
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/history {slug}"));
+
+		await ExpectNotify(player.DbRef, "revision history is not shown");
+	}
+
+	[Test]
 	public async ValueTask WikiList_ShowsLocalizedTitles()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(

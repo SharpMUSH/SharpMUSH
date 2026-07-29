@@ -83,10 +83,17 @@ brackets after the line, and if several locales matched, yours is the one
 shown. `@wiki/search/source <text>` matches source text only.
 
 Drafts stay out of the way: unpublished pages and unpublished translations are
-listed only for those who can edit them — `@wiki/list`, `@wiki/search` and
-`@wiki/recent` omit them, and `wiki()`, `wikilist()`, `wikisearch()` and
-`wikirecent()` never return them. `@wiki/list`'s totals count only what you are
-allowed to see, so the count does not give a draft away either.
+shown to wizards only — `@wiki/list`, `@wiki/search` and `@wiki/recent` omit
+them, and `wiki()`, `wikilist()`, `wikisearch()` and `wikirecent()` never return
+them. `@wiki/list`'s totals count only what you are allowed to see, so the count
+does not give a draft away either. Being able to *edit* a page is not enough:
+publishing is wizard-only, so the wizard bit is the one thing that tracks who
+may know a draft exists.
+
+Even a wizard reads a draft's body or history only by adding `/DRAFT` — see
+[@wiki/draft]. A page that is itself unpublished stays withheld however its
+individual translations are flagged, so publishing one language does not
+publish the article.
 
 That keeps a draft's title, text and existence out of discovery. It is still not
 a secret store: asking for a page by name tells you whether one is there. Put
