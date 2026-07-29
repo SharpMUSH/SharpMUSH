@@ -154,15 +154,23 @@ public partial class SurrealDatabase : IWikiService
 		return (results?.Select(MapToWikiPage).ToList() ?? []).AsReadOnly();
 	}
 
-	public async Task<int> CountPagesAsync(WikiNamespace? ns = null)
+	public async Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts)
 	{
 		var parameters = new Dictionary<string, object?>();
-		var where = string.Empty;
+		var conditions = new List<string>();
 		if (ns is not null)
 		{
-			where = "WHERE namespace = $ns ";
+			conditions.Add("namespace = $ns");
 			parameters["ns"] = ns.Value.ToString().ToLowerInvariant();
 		}
+
+		// `!= false` rather than `= true`, so that a row with no published field — NONE, which MapToWikiPage
+		// reads back as published via `?? true` — counts the same way here as it displays. Defence in
+		// depth: every write path in this file sets the field, so no such row is reachable today.
+		if (!includeDrafts)
+			conditions.Add("published != false");
+
+		var where = conditions.Count > 0 ? $"WHERE {string.Join(" AND ", conditions)} " : string.Empty;
 
 		var response = await ExecuteAsync(
 				$"SELECT count() FROM wiki_page {where}GROUP ALL",

@@ -325,10 +325,10 @@ public class WikiCommandTests
 	}
 
 	[Test]
-	public async ValueTask WikiView_DraftTranslationDoesNotLeakToAReaderWhoCannotEdit()
+	public async ValueTask WikiView_DraftTranslationDoesNotLeakToAMortalOnAProtectedPage()
 	{
-		// The page is protected, so a mortal cannot edit it and therefore must not see its draft
-		// translation. Without the protection there is no in-game reader who fails the edit gate.
+		// The protected companion of WikiView_DraftTranslationDoesNotLeakToAMortalOnAnUnprotectedPage:
+		// protection is irrelevant to draft visibility, and both must hold.
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftReader");
 		var slug = await SeedTranslatedPageAsync(
@@ -342,6 +342,52 @@ public class WikiCommandTests
 
 		await ExpectNotify(player.DbRef, "en visible body");
 		await ExpectNoNotify(player.DbRef, "corps brouillon secret");
+	}
+
+	[Test]
+	public async ValueTask WikiView_APublishedTranslationDoesNotPublishItsDraftPage()
+	{
+		// The two Published flags are independent, and the page's is the one that decides whether the
+		// article exists publicly at all. Deriving visibility from the *served row* let a published
+		// translation speak for an unpublished page: a mortal whose locale matched was handed the draft's
+		// content in full, with no (draft) marker and without asking for /DRAFT.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftPageTrReader");
+
+		var slug = await SeedTranslatedPageAsync(
+			"Draft Page Published Tr", "en secret host body", "Titre Publié", "corps publié secret",
+			published: true);
+
+		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
+		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
+		await Assert.That(unpublished.IsT0).IsTrue();
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view {slug}"));
+
+		await ExpectNoNotify(player.DbRef, "corps publié secret");
+		await ExpectNoNotify(player.DbRef, "en secret host body");
+	}
+
+	[Test]
+	public async ValueTask WikiHistory_APublishedTranslationDoesNotExposeADraftPagesLog()
+	{
+		// Same defect, second surface: edit summaries are author-written prose about unpublished work.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftPageTrHist");
+
+		var slug = await SeedTranslatedPageAsync(
+			"Draft Page Published Hist", "en host body", "Titre Historique", "corps historique",
+			published: true);
+
+		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
+		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
+		await Assert.That(unpublished.IsT0).IsTrue();
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/history {slug}"));
+
+		await ExpectNotify(player.DbRef, "revision history is not shown");
 	}
 
 	[Test]
@@ -444,9 +490,10 @@ public class WikiCommandTests
 	/// Unpublishing goes through <c>SetMetadataAsync</c> rather than <c>@wiki/unpublish</c> because that
 	/// switch is wizard-only and these tests need the draft to exist before a mortal ever runs a command.
 	/// </remarks>
-	private async Task<WikiPage> SeedUnpublishedPageAsync(string title, string body)
+	private async Task<WikiPage> SeedUnpublishedPageAsync(
+		string title, string body, WikiNamespace ns = WikiNamespace.Main)
 	{
-		var created = await WikiService.CreateAsync(title, body, "#1", WikiNamespace.Main, "general", "en");
+		var created = await WikiService.CreateAsync(title, body, "#1", ns, "general", "en");
 		await Assert.That(created.IsT0).IsTrue();
 		var page = created.AsT0;
 
@@ -612,6 +659,34 @@ public class WikiCommandTests
 	}
 
 	[Test]
+	public async ValueTask WikiList_HeaderCountDoesNotDiscloseUnpublishedPages()
+	{
+		// The rows were filtered but the header total was not: it came from CountPagesAsync, which counted
+		// drafts. Differencing "N page(s)" against the rows told a mortal how many drafts the window holds.
+		// Both readers are exercised in one test because they share a store — a wizard-only assertion in a
+		// separate test would count whatever draft the mortal test had already left behind.
+		// The system namespace is used by nothing else, so both counts are exact rather than relative.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftCounter");
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftCounterWiz");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+
+		var page = await SeedUnpublishedPageAsync(
+			"Draft Counting Fodder", "counting body", WikiNamespace.System);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@wiki/list system"));
+		await ExpectNotify(player.DbRef, "WIKI: 0 page(s) in namespace 'system'");
+		await ExpectNoNotify(player.DbRef, page.Slug);
+
+		// A count hard-wired to the published total would satisfy the assertion above and hide the draft
+		// from the one reader entitled to see it, so the wizard's view has to be pinned in the same breath.
+		await Parser.CommandParse(wizard.Handle, ConnectionService, MModule.single("@wiki/list system"));
+		await ExpectNotify(wizard.DbRef, "WIKI: 1 page(s) in namespace 'system'");
+		await ExpectNotify(wizard.DbRef, page.Slug);
+	}
+
+	[Test]
 	public async ValueTask WikiRecent_DoesNotDiscloseUnpublishedPagesToAMortal()
 	{
 		// Freshly written, so it heads the UpdatedAt ordering: without the filter this is the first row.
@@ -636,6 +711,141 @@ public class WikiCommandTests
 		await Parser.CommandParse(wizard.Handle, ConnectionService, MModule.single("@wiki/recent"));
 
 		await ExpectNotify(wizard.DbRef, page.Slug);
+	}
+
+	[Test]
+	public async ValueTask WikiView_DoesNotRenderAnUnpublishedBodyToAMortal()
+	{
+		// The body-read half of the draft hole: /list, /search and /recent were filtered, but naming the
+		// page outright still rendered it in full to anybody who guessed the slug.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftBodyMortal");
+		var page = await SeedUnpublishedPageAsync(
+			"Mortal Draft Body", "The zork-body-marker phrase lives here.");
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki {page.Slug}"));
+
+		await ExpectNoNotify(player.DbRef, "zork-body-marker");
+		// Not a bare "no such page": the page exists, and saying otherwise would be a lie the header
+		// already contradicts everywhere else a draft is named.
+		await ExpectNotify(player.DbRef, "This is a draft; its body is not shown.");
+	}
+
+	[Test]
+	public async ValueTask WikiView_DraftSwitchTellsAMortalNothingExtra()
+	{
+		// The switch must not become an oracle: a reader who may not see drafts gets byte-identical
+		// output with and without it, so /DRAFT can never be used to probe for a draft's existence.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftSwitchMortal");
+		var page = await SeedUnpublishedPageAsync(
+			"Mortal Draft Switch Body", "The plugh-body-marker phrase lives here.");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/view/draft {page.Slug}"));
+
+		await ExpectNoNotify(player.DbRef, "plugh-body-marker");
+		await ExpectNotify(player.DbRef, "This is a draft; its body is not shown.");
+		await ExpectNoNotify(player.DbRef, "Add /DRAFT to read it.");
+	}
+
+	[Test]
+	public async ValueTask WikiView_WithholdsAnUnpublishedBodyFromAWizardWithoutTheSwitch()
+	{
+		// "By default, it should not render unpublished bodies" applies to the wizard too — the switch is
+		// the opt-in, not the permission.
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftBodyWizDefault");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		var page = await SeedUnpublishedPageAsync(
+			"Wizard Draft Default Body", "The frotz-body-marker phrase lives here.");
+
+		await Parser.CommandParse(wizard.Handle, ConnectionService, MModule.single($"@wiki {page.Slug}"));
+
+		await ExpectNoNotify(wizard.DbRef, "frotz-body-marker");
+		await ExpectNotify(wizard.DbRef, "Add /DRAFT to read it.");
+	}
+
+	[Test]
+	public async ValueTask WikiView_DraftSwitchRendersTheBodyForAWizard()
+	{
+		// Without this, "never render an unpublished body" would satisfy every test above.
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftBodyWizShown");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		var page = await SeedUnpublishedPageAsync(
+			"Wizard Draft Shown Body", "The plover-body-marker phrase lives here.");
+
+		await Parser.CommandParse(wizard.Handle, ConnectionService,
+			MModule.single($"@wiki/view/draft {page.Slug}"));
+
+		await ExpectNotify(wizard.DbRef, "plover-body-marker");
+	}
+
+	[Test]
+	public async ValueTask WikiView_DraftSwitchLeavesAPublishedPageAlone()
+	{
+		// /DRAFT opts into unpublished bodies; it is not a display mode, so a published page reads
+		// identically with it.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftSwitchPublished");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/create Draft Switch Published=The grue-body-marker phrase lives here."));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/view/draft draft_switch_published"));
+
+		await ExpectNotify(player.DbRef, "grue-body-marker");
+		await ExpectNoNotify(player.DbRef, "is a draft");
+	}
+
+	[Test]
+	public async ValueTask WikiView_DraftTranslationDoesNotLeakToAMortalOnAnUnprotectedPage()
+	{
+		// The gate here used to be CanEdit, which every player passes on an unprotected page — so the
+		// draft translation of any unprotected page rendered in full to anyone whose LOCALE matched it.
+		// The published English body must still arrive: withholding it would lose a page they may read.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftTrUnprotected");
+		var slug = await SeedTranslatedPageAsync(
+			"Unprotected Draft Locale Page", "en unprotected visible body", "Brouillon Libre",
+			"corps brouillon libre secret", published: false);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view {slug}"));
+
+		await ExpectNotify(player.DbRef, "en unprotected visible body");
+		await ExpectNoNotify(player.DbRef, "corps brouillon libre secret");
+	}
+
+	[Test]
+	public async ValueTask WikiHistory_DoesNotDiscloseADraftsRevisionsToAMortal()
+	{
+		// Edit summaries are author-written prose about unpublished content, so the revision log is
+		// gated on the same switch as the body rather than on a rule of its own.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftHistoryMortal");
+		var page = await SeedUnpublishedPageAsync("Mortal Draft History", "draft history body");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/history {page.Slug}"));
+
+		await ExpectNotify(player.DbRef, "This is a draft; its revision history is not shown.");
+		await ExpectNoNotify(player.DbRef, "by #1");
+	}
+
+	[Test]
+	public async ValueTask WikiHistory_DraftSwitchShowsADraftsRevisionsToAWizard()
+	{
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftHistoryWiz");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		var page = await SeedUnpublishedPageAsync("Wizard Draft History", "wizard draft history body");
+
+		await Parser.CommandParse(wizard.Handle, ConnectionService,
+			MModule.single($"@wiki/history/draft {page.Slug}"));
+
+		await ExpectNotify(wizard.DbRef, "by #1");
 	}
 
 	/// <summary>Creates a plain English page through the service and returns it.</summary>

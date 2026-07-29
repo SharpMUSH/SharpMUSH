@@ -149,9 +149,13 @@ public class WikiControllerVisibilityTests
 	}
 
 	[Test]
-	public async Task ListAllPages_Anonymous_ExcludesUnpublishedAndOmitsTotalHeader()
+	public async Task ListAllPages_Anonymous_ExcludesUnpublishedFromRowsAndFromTheTotalHeader()
 	{
+		// One draft and one published page, so "1" distinguishes the published count both from the
+		// drafts-inclusive total (2) and from an empty store. The header used to be withheld entirely
+		// because the only count available was the drafts-inclusive one.
 		var (wiki, slug) = await SeedUnpublishedPage();
+		await wiki.CreateAsync("Public Page", "# public", "#1");
 		var controller = MakeController(wiki, authenticated: false);
 
 		var result = await controller.ListAllPages();
@@ -161,16 +165,21 @@ public class WikiControllerVisibilityTests
 		var pages = ((IEnumerable<WikiController.WikiPageDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsFalse();
 
-		// The total count includes drafts, so it is withheld from anonymous callers to
-		// avoid leaking how many unpublished pages exist.
 		var header = controller.Response.Headers["X-Total-Count"].ToString();
-		await Assert.That(header).IsEqualTo("");
+		await Assert.That(header)
+			.IsEqualTo("1")
+			.Because("a total that counted the draft would let an anonymous caller difference it "
+				+ "against the one row they received and learn a draft exists");
+		await Assert.That(header).IsEqualTo(pages.Count.ToString());
 	}
 
 	[Test]
-	public async Task ListAllPages_Authenticated_IncludesUnpublishedAndSetsTotalHeader()
+	public async Task ListAllPages_Authenticated_IncludesUnpublishedInRowsAndInTheTotalHeader()
 	{
+		// The mirror of the test above: hiding drafts from the count unconditionally would satisfy it
+		// while blinding the one caller entitled to see them.
 		var (wiki, slug) = await SeedUnpublishedPage();
+		await wiki.CreateAsync("Public Page", "# public", "#1");
 		var controller = MakeController(wiki, authenticated: true);
 
 		var result = await controller.ListAllPages();
@@ -181,7 +190,7 @@ public class WikiControllerVisibilityTests
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsTrue();
 
 		var header = controller.Response.Headers["X-Total-Count"].ToString();
-		await Assert.That(header).IsEqualTo("1");
+		await Assert.That(header).IsEqualTo("2");
 	}
 
 	[Test]

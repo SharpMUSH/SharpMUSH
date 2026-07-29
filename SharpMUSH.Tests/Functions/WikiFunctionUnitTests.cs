@@ -127,6 +127,26 @@ public class WikiFunctionUnitTests
 			.Because("a draft's reference is as much of a disclosure as its body");
 	}
 
+	/// <remarks>
+	/// <c>wiki()</c> already documented that softcode never sees drafts, but it only passed
+	/// <c>includeDrafts: false</c> to the localization service — which filters draft <em>translations</em>
+	/// and says nothing about the page's own published flag. Naming an unpublished page therefore returned
+	/// its whole body to any softcode that asked.
+	/// </remarks>
+	[Test]
+	public async Task Wiki_UnpublishedPageIsNotReachableFromSoftcode()
+	{
+		var draft = await SeedUnpublishedPageAsync(
+			"Fn Draft Body Target", "Contains the xyzzy-fn-marker token.");
+
+		await Assert.That(await Eval($"wiki({draft.Slug})")).IsEqualTo("#-1 NO SUCH WIKI PAGE");
+		await Assert.That(await Eval($"wiki({draft.Slug},markdown)")).IsEqualTo("#-1 NO SUCH WIKI PAGE");
+		await Assert.That(await Eval($"wiki({draft.Slug},title)"))
+			.IsEqualTo("#-1 NO SUCH WIKI PAGE")
+			.Because("a draft's metadata is as much of a disclosure as its body, which is why the answer "
+				+ "is the same one an absent page gives rather than an empty field");
+	}
+
 	[Test]
 	public async Task WikiSearch_MatchesTranslationBodiesAndStillReturnsReferences()
 	{

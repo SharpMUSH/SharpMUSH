@@ -16,6 +16,7 @@ public partial class Functions
 	/// prefix ("Help:Markdown Guide"). Fields: text (default), markdown, title,
 	/// locale, category, tags, namespace, revision, updated, author.
 	/// The optional third argument names a locale; it defaults to the executor's LOCALE.
+	/// Unpublished pages and unpublished translations are never reachable.
 	/// </summary>
 	[SharpFunction(Name = "wiki", MinArgs = 1, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -36,6 +37,16 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
+		// An unpublished page is not reachable from softcode at all, which is the same rule wikilist(),
+		// wikisearch() and wikirecent() apply — there is no reader here to gate on. includeDrafts below
+		// only filters unpublished *translations*; on its own it left every draft page's body, title and
+		// metadata one wiki() call away from anybody who could guess a slug. The answer is the one an
+		// absent page gives, because "this page exists but you may not read it" is itself the disclosure.
+		if (!lookup.AsT0.Published)
+		{
+			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
 		var localization = parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
@@ -48,8 +59,8 @@ public partial class Functions
 			? await WikiCommandHelper.ResolveExecutorLocaleAsync(parser, executor)
 			: explicitLocale;
 
-		// Softcode is unauthenticated with respect to translation drafts: there is no per-locale permission
-		// to check against, so an unpublished translation is never reachable from a function.
+		// Softcode is unauthenticated with respect to translation drafts too: there is no per-locale
+		// permission to check against, so an unpublished translation is never reachable from a function.
 		var localized = await localization.LocalizeAsync(lookup.AsT0, locale, includeDrafts: false);
 
 		return field switch

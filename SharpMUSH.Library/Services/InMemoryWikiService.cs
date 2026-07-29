@@ -86,14 +86,19 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult(result);
 	}
 
-	public Task<int> CountPagesAsync(WikiNamespace? ns = null)
+	public Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts)
 	{
-		if (ns is null)
-			return Task.FromResult(_pagesById.Count);
+		var query = _pagesById.Values.AsEnumerable();
+		if (ns is not null)
+		{
+			var nsStr = ns.Value.ToString().ToLowerInvariant();
+			query = query.Where(p => p.Namespace.Equals(nsStr, StringComparison.OrdinalIgnoreCase));
+		}
 
-		var nsStr = ns.Value.ToString().ToLowerInvariant();
-		return Task.FromResult(_pagesById.Values
-			.Count(p => p.Namespace.Equals(nsStr, StringComparison.OrdinalIgnoreCase)));
+		if (!includeDrafts)
+			query = query.Where(p => p.Published);
+
+		return Task.FromResult(query.Count());
 	}
 
 	public Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50)

@@ -21,7 +21,7 @@ public partial class Commands
 		[
 			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
 			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "TAG", "PUBLISH", "UNPUBLISH",
-			"NOEVAL", "SOURCE"
+			"NOEVAL", "SOURCE", "DRAFT"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["page", "content"])]
@@ -33,10 +33,13 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		// NOEVAL and SOURCE are modifiers, not actions: leaving either in this set would make
+		// NOEVAL, SOURCE and DRAFT are modifiers, not actions: leaving any of them in this set would make
 		// "@wiki/view/source foo" look like two actions and trip TooManySwitches.
-		var actions = switches.Where(s => s is not ("NOEVAL" or "SOURCE")).ToArray();
+		var actions = switches.Where(s => s is not ("NOEVAL" or "SOURCE" or "DRAFT")).ToArray();
 		var forceSource = switches.Contains("SOURCE");
+		// /DRAFT is an opt-in to render unpublished content, never a grant: ViewWiki still checks
+		// WikiCommandHelper.CanSeeDrafts, so a mortal passing it gets exactly what they get without it.
+		var showDraft = switches.Contains("DRAFT");
 		if (actions.Length > 1)
 		{
 			await NotifyService!.Notify(executor, "WIKI: Too many switches passed to @wiki.");
@@ -77,7 +80,7 @@ public partial class Commands
 			"RECENT" when !hasArg1
 				=> await ListWiki.Recent(parser, Mediator!, wikiService, localization, NotifyService!, arg0, locale, forceSource),
 			"HISTORY" when hasArg0 && !hasArg1
-				=> await ViewWiki.History(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource),
+				=> await ViewWiki.History(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource, showDraft),
 			"CREATE" when hasArg0 && hasArg1
 				=> await EditWiki.Create(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1!),
 			"EDIT" when hasArg0 && hasArg1
@@ -106,7 +109,7 @@ public partial class Commands
 			"TAG" when hasArg0
 				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Tag),
 			"VIEW" when hasArg0 && !hasArg1
-				=> await ViewWiki.Handle(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource),
+				=> await ViewWiki.Handle(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource, showDraft),
 			_ => MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand),
 		};
 

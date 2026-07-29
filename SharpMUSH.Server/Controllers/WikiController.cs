@@ -280,9 +280,20 @@ public class WikiController(
 	/// <summary>
 	/// GET /api/wiki/pages?skip=0&amp;take=50&amp;ns=&amp;lang=fr
 	/// Paginated listing of all pages (optionally restricted to a namespace), with localized titles.
-	/// The X-Total-Count response header carries the unpaginated page count.
+	/// The X-Total-Count response header carries the unpaginated count of the pages this caller may see.
 	/// Anonymous callers only see published pages.
 	/// </summary>
+	/// <remarks>
+	/// The header used to be withheld from callers without <c>wiki.read</c>, because the only count
+	/// available included drafts and would have disclosed how many exist. Now that the count takes the
+	/// same visibility flag the rows are filtered by, the total matches the collection and can be sent to
+	/// everyone — a paginated listing without a total cannot be paged through.
+	/// <para>
+	/// One caller is counted slightly short: <see cref="CanSee"/> also passes a caller's own drafts, which
+	/// no count can express. Such a caller sees rows the total does not include — their own, so nothing is
+	/// disclosed — where before they got no header at all and the client fell back to the page size.
+	/// </para>
+	/// </remarks>
 	[HttpGet("pages")]
 	public async Task<IActionResult> ListAllPages(
 		[FromQuery] int skip = 0, [FromQuery] int take = 50,
@@ -290,11 +301,8 @@ public class WikiController(
 	{
 		var nsFilter = ParseOptionalNamespace(ns);
 		var pages = await wikiService.GetAllPagesAsync(skip, take, nsFilter);
-		// CountPagesAsync includes drafts, so only expose the total to authenticated callers.
-		// Emitting it for anonymous users would leak how many unpublished pages exist and
-		// would not match the published-only collection they receive.
-		if (CanSeeUnpublished)
-			Response.Headers["X-Total-Count"] = (await wikiService.CountPagesAsync(nsFilter)).ToString();
+		Response.Headers["X-Total-Count"] =
+			(await wikiService.CountPagesAsync(nsFilter, CanSeeUnpublished)).ToString();
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 

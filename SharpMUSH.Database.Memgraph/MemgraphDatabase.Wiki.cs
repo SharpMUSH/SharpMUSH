@@ -84,14 +84,23 @@ public partial class MemgraphDatabase : IWikiService
 		return records.Select(r => NodeToWikiPage(r["p"].As<INode>())).ToList().AsReadOnly();
 	}
 
-	public async Task<int> CountPagesAsync(WikiNamespace? ns = null)
+	public async Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts)
 	{
+		var parameters = new Dictionary<string, object>();
+		var match = "MATCH (p:WikiPage)";
+		if (ns is not null)
+		{
+			match = "MATCH (p:WikiPage {namespace: $ns})";
+			parameters["ns"] = ns.Value.ToString().ToLowerInvariant();
+		}
+
+		// The IS NULL arm is load-bearing: a missing property is null in Cypher, and `null <> false` is
+		// itself null, which WHERE drops. Without it a row written before the metadata feature — which
+		// NodeToWikiPage reads back as published — would silently count as a draft.
+		var where = includeDrafts ? string.Empty : " WHERE p.published IS NULL OR p.published <> false";
+
 		await using var session = driver.AsyncSession();
-		var result = ns is not null
-			? await session.RunAsync(
-				"MATCH (p:WikiPage {namespace: $ns}) RETURN count(p) AS cnt",
-				new { ns = ns.Value.ToString().ToLowerInvariant() })
-			: await session.RunAsync("MATCH (p:WikiPage) RETURN count(p) AS cnt");
+		var result = await session.RunAsync($"{match}{where} RETURN count(p) AS cnt", parameters);
 
 		var records = await result.ToListAsync();
 		return records.Count > 0 ? records[0]["cnt"].As<int>() : 0;
