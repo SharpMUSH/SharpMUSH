@@ -96,7 +96,7 @@ public class ConfigurationControllerTests
 		Net = new NetOptions(
 			Guests: true, IpAddr: null, JsonUnsafeUnescape: false,
 			Logins: true, MudName: "SharpMUSH", MudUrl: null,
-			PlayerCreation: true, Port: 4203, PortalPort: 5117,
+			PlayerCreation: true, Port: 4201, PortalPort: 5117,
 			Pueblo: true, SslPortalPort: 7296, SocketFile: "netmush.sock",
 			SqlHost: null, SqlPlatform: null, SqlPassword: null,
 			SqlDatabase: null, SqlUsername: null, SslIpAddr: null,

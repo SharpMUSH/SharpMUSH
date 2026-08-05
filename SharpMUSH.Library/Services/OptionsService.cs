@@ -222,7 +222,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				MudName: "SharpMUSH",
 				MudUrl: null,
 				PlayerCreation: true,
-				Port: 4203,
+				Port: 4201,
 				PortalPort: 5117,
 				Pueblo: true,
 				SslPortalPort: 7296,

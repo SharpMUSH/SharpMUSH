@@ -76,9 +76,10 @@ local development only — over HTTPS a browser will refuse a plaintext `ws://` 
 > Caddy already renews into `caddy-data`, and the Cloudflare stack (which has no Caddy, and so no
 > local certificate) needs an ACME sidecar doing a DNS-01 challenge.
 >
-> Until then, if you need encrypted player connections, terminate TLS in front of `4201` yourself —
-> and be aware that doing so hides the client's IP from the game unless the proxy speaks PROXY
-> protocol, which breaks site-locks, bans and connection logs.
+> Until then, if you need encrypted player connections, terminate TLS in front of `4201` yourself
+> (stunnel, or a TCP-mode proxy). Be aware of the cost: the game takes a connection's IP from the
+> socket's peer address and has no PROXY-protocol support, so every player will appear to connect
+> from the proxy — site-locks, bans and connection logs all lose the real client address.
 
 If you **don't** use Caddy (e.g. you terminate TLS at a load balancer), remember the browser
 terminal's `/ws` endpoint lives on the connection server (`:4202`), not the main server — you must
