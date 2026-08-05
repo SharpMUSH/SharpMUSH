@@ -36,7 +36,7 @@
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-		<PackageReference Include="TelnetNegotiationCore" Version="2.5.0" />
+		<PackageReference Include="TelnetNegotiationCore" Version="2.8.1" />
 		<!-- FSharp.Core is a runtime transitive (via TelnetNegotiationCore) the engine never JITs, so it is
 		     normally trimmed from output. The McMaster plugin loader eagerly walks the shared SharpMUSH.Library
 		     reference closure and resolves each referenced assembly against the host's default load context,
