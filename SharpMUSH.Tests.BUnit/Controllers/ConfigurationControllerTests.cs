@@ -96,11 +96,11 @@ public class ConfigurationControllerTests
 		Net = new NetOptions(
 			Guests: true, IpAddr: null, JsonUnsafeUnescape: false,
 			Logins: true, MudName: "SharpMUSH", MudUrl: null,
-			PlayerCreation: true, Port: 4203, PortalPort: 5117,
+			PlayerCreation: true, Port: 4201, PortalPort: 5117,
 			Pueblo: true, SslPortalPort: 7296, SocketFile: "netmush.sock",
 			SqlHost: null, SqlPlatform: null, SqlPassword: null,
 			SqlDatabase: null, SqlUsername: null, SslIpAddr: null,
-			SslPort: 4202, SslRequireClientCert: false, UseDns: true,
+			SslPort: 4203, SslRequireClientCert: false, UseDns: true,
 			UseWebsockets: true, WebsocketUrl: "/wsclient"),
 		Alias = new AliasOptions(
 			FunctionAliases: new Dictionary<string, string[]>(),
