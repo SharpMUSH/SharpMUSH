@@ -10,7 +10,12 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    # Stacked pull requests target their predecessor rather than main, so a
+    # main-only filter leaves every PR above the bottom of a stack with no build
+    # or test run until its parent merges and GitHub retargets it. Matching the
+    # stack's branch prefix too means each link is verified while it is still
+    # reviewable, instead of after it has already been approved on trust.
+    branches: [ "main", "fix/portal-audit-**" ]
 
 jobs:
   build-and-test:
