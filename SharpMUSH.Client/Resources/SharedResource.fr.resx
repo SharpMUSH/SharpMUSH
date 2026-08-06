@@ -2239,27 +2239,6 @@
   <data name="ResSaveFailedShort" xml:space="preserve">
     <value>Échec de l'enregistrement</value>
   </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Système] Connecté à {0}</value>
-  </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Erreur] Échec de la connexion : {0}</value>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Système] Déconnecté</value>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Erreur] Échec de la déconnexion : {0}</value>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Envoyé] {0}</value>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Erreur] Échec de l'envoi : {0}</value>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Reçu] {0}</value>
-  </data>
   <data name="EnumPermGroupBuild" xml:space="preserve">
     <value>Construction</value>
   </data>
@@ -3370,14 +3349,6 @@
     <value>Fichier sélectionné</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Envoyer le message</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>URI du serveur</value>
-    <comment>MT</comment>
-  </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Définir comme icône de profil</value>
     <comment>MT</comment>
@@ -3540,14 +3511,6 @@
   </data>
   <data name="WeatherDescription" xml:space="preserve">
     <value>Ce composant illustre la récupération de données depuis le serveur.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>Test de connexion WebSocket</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>Test WebSocket</value>
     <comment>MT</comment>
   </data>
   <data name="WikiAdmin" xml:space="preserve">

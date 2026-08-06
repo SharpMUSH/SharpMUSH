@@ -266,17 +266,8 @@
   </data>
 
   <!-- ======================== -->
-  <!-- WebSocketTest.razor      -->
+  <!-- Connection state (shared) -->
   <!-- ======================== -->
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>WebSocket Test</value>
-  </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>WebSocket Connection Test</value>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>Server URI</value>
-  </data>
   <data name="Connect" xml:space="preserve">
     <value>Connect</value>
   </data>
@@ -291,9 +282,6 @@
   </data>
   <data name="Message" xml:space="preserve">
     <value>Message</value>
-  </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Send Message</value>
   </data>
 
   <!-- ======================== -->
@@ -3111,27 +3099,6 @@
   </data>
   <data name="ResSaveFailedShort" xml:space="preserve">
     <value>Save failed</value>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[System] Connected to {0}</value>
-  </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Error] Failed to connect: {0}</value>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[System] Disconnected</value>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Error] Failed to disconnect: {0}</value>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Sent] {0}</value>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Error] Failed to send: {0}</value>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Received] {0}</value>
   </data>
   <data name="EnumPermGroupBuild" xml:space="preserve">
     <value>Build</value>

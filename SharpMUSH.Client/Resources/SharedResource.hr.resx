@@ -2932,34 +2932,6 @@
     <value>Prijevodi</value>
     <comment>MT</comment>
   </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Greška] Povezivanje nije uspjelo: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Sustav] Uspostavljena veza: {0}</value>
-    <comment>MT — restructured so the host/URL sits after a colon; 'povezano s …' would demand the instrumental case</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Greška] Prekid veze nije uspio: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Sustav] Veza je prekinuta</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Primljeno] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Greška] Slanje nije uspjelo: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Poslano] {0}</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResetChanges" xml:space="preserve">
     <value>Poništi promjene</value>
     <comment>MT</comment>
@@ -3304,10 +3276,6 @@
     <value>Pošalji</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Pošalji poruku</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Poslužitelj</value>
     <comment>MT</comment>
@@ -3323,10 +3291,6 @@
   <data name="ServerSettings" xml:space="preserve">
     <value>Postavke poslužitelja</value>
     <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>URI poslužitelja</value>
-    <comment>MT — URI kept as a technical identifier</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Postavi kao ikonu profila</value>
@@ -3727,14 +3691,6 @@
   <data name="WeatherDescription" xml:space="preserve">
     <value>Ova komponenta pokazuje dohvaćanje podataka s poslužitelja.</value>
     <comment>MT</comment>
-  </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>Test WebSocket veze</value>
-    <comment>MT — WebSocket kept untranslated</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>WebSocket test</value>
-    <comment>MT — WebSocket kept untranslated</comment>
   </data>
   <data name="WidAction" xml:space="preserve">
     <value>Radnja</value>

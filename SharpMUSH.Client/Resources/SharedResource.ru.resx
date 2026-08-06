@@ -2932,34 +2932,6 @@
     <value>Переводы</value>
     <comment>MT</comment>
   </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Ошибка] Не удалось подключиться: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Система] Подключено к {0}</value>
-    <comment>MT — {0} is a URL/host, indeclinable, so the dative governed by «к» causes no agreement problem.</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Ошибка] Не удалось отключиться: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Система] Отключено</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Получено] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Ошибка] Не удалось отправить: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Отправлено] {0}</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResetChanges" xml:space="preserve">
     <value>Сбросить изменения</value>
     <comment>MT</comment>
@@ -3304,10 +3276,6 @@
     <value>Отправить</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Отправить сообщение</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Сервер</value>
     <comment>MT</comment>
@@ -3323,10 +3291,6 @@
   <data name="ServerSettings" xml:space="preserve">
     <value>Настройки сервера</value>
     <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>URI сервера</value>
-    <comment>MT — URI kept as-is.</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Сделать значком профиля</value>
@@ -3727,14 +3691,6 @@
   <data name="WeatherDescription" xml:space="preserve">
     <value>Этот компонент демонстрирует получение данных с сервера.</value>
     <comment>MT</comment>
-  </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>Проверка соединения WebSocket</value>
-    <comment>MT — WebSocket kept per glossary.</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>Проверка WebSocket</value>
-    <comment>MT — WebSocket kept per glossary.</comment>
   </data>
   <data name="WidAction" xml:space="preserve">
     <value>Действие</value>

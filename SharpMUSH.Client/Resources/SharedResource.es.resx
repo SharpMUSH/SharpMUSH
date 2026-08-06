@@ -2932,34 +2932,6 @@
     <value>Traducciones</value>
     <comment>MT</comment>
   </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Error] No se pudo conectar: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Sistema] Conectado a {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Error] No se pudo desconectar: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Sistema] Desconectado</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Recibido] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Error] No se pudo enviar: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Enviado] {0}</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResetChanges" xml:space="preserve">
     <value>Restablecer cambios</value>
     <comment>MT</comment>
@@ -3304,10 +3276,6 @@
     <value>Enviar</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Enviar mensaje</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Servidor</value>
     <comment>MT</comment>
@@ -3323,10 +3291,6 @@
   <data name="ServerSettings" xml:space="preserve">
     <value>Configuración del servidor</value>
     <comment>MT — same rendering as ServerConfiguration; Spanish has no useful distinction between Settings and Configuration here</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>URI del servidor</value>
-    <comment>MT</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Establecer como icono de perfil</value>
@@ -3726,14 +3690,6 @@
   </data>
   <data name="WeatherDescription" xml:space="preserve">
     <value>Este componente demuestra cómo obtener datos del servidor.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>Prueba de conexión WebSocket</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>Prueba de WebSocket</value>
     <comment>MT</comment>
   </data>
   <data name="WidAction" xml:space="preserve">

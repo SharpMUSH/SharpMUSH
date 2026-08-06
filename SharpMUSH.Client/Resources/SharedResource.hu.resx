@@ -2932,34 +2932,6 @@
     <value>Fordítások</value>
     <comment>MT</comment>
   </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Hiba] A kapcsolódás sikertelen: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Rendszer] Kapcsolódva ide: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Hiba] A kapcsolat bontása sikertelen: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Rendszer] Kapcsolat bontva</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Fogadva] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Hiba] A küldés sikertelen: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Elküldve] {0}</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResetChanges" xml:space="preserve">
     <value>Módosítások visszavonása</value>
     <comment>MT</comment>
@@ -3304,10 +3276,6 @@
     <value>Küldés</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Üzenet küldése</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Szerver</value>
     <comment>MT</comment>
@@ -3322,10 +3290,6 @@
   </data>
   <data name="ServerSettings" xml:space="preserve">
     <value>Szerverbeállítások</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>Szerver URI</value>
     <comment>MT</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
@@ -3726,14 +3690,6 @@
   </data>
   <data name="WeatherDescription" xml:space="preserve">
     <value>Ez a komponens a szerverről történő adatlekérést mutatja be.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>WebSocket kapcsolat tesztelése</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>WebSocket teszt</value>
     <comment>MT</comment>
   </data>
   <data name="WidAction" xml:space="preserve">

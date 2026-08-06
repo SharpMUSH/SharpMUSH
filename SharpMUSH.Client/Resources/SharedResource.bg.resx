@@ -2932,34 +2932,6 @@
     <value>Преводи</value>
     <comment>MT</comment>
   </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Грешка] Неуспешно свързване: {0}</value>
-    <comment>MT — terminal log tags translated; they are player-facing prose, not identifiers</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Система] Свързано с {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Грешка] Неуспешно прекъсване на връзката: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Система] Връзката е прекъсната</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Получено] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Грешка] Неуспешно изпращане: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Изпратено] {0}</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResetChanges" xml:space="preserve">
     <value>Отмени промените</value>
     <comment>MT — plain imperative, button</comment>
@@ -3304,10 +3276,6 @@
     <value>Изпрати</value>
     <comment>MT — plain imperative, button</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Изпрати съобщение</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Сървър</value>
     <comment>MT</comment>
@@ -3323,10 +3291,6 @@
   <data name="ServerSettings" xml:space="preserve">
     <value>Настройки на сървъра</value>
     <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>URI на сървъра</value>
-    <comment>MT — «URI» kept in Latin</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Задай като икона на профила</value>
@@ -3726,14 +3690,6 @@
   </data>
   <data name="WeatherDescription" xml:space="preserve">
     <value>Този компонент демонстрира извличане на данни от сървъра.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>Тест на връзката по WebSocket</value>
-    <comment>MT — «WebSocket» kept in English per glossary</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>Тест на WebSocket</value>
     <comment>MT</comment>
   </data>
   <data name="WidAction" xml:space="preserve">
