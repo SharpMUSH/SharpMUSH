@@ -37,13 +37,6 @@ namespace SharpMUSH.Plugins.Scene.Web;
 [AllowAnonymous]
 public class SceneController(ISceneService sceneService) : ControllerBase
 {
-	/// <summary>
-	/// Claim name that carries the authenticated character's dbref — mirrors the host's
-	/// <c>GameHub.CharacterDbrefClaim</c>. Inlined here so the plugin controller takes no dependency
-	/// on the Server's hub types.
-	/// </summary>
-	private const string CharacterDbrefClaim = "character_dbref";
-
 	/// <summary>Scene data returned by the API. Timestamps are UTC Unix-millis (long).</summary>
 	public record SceneDto(
 		string Id,
@@ -106,19 +99,11 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 		m.SceneId, m.MemberDbref, m.MemberName, m.Role, m.ShowAs, m.IsCurrent, m.GrantedAt);
 
 	/// <summary>
-	/// The caller's acting character, parsed from the <c>character_dbref</c> claim. Null when the caller
-	/// is anonymous, carries no character, or carries an unparseable one — such callers may only see
+	/// The caller's acting character, from the <c>character_dbref</c> claim. Null when the caller is
+	/// anonymous, carries no character, or carries an unparseable one — such callers may only see
 	/// public scenes.
 	/// </summary>
-	/// <remarks>
-	/// Parsed rather than kept as the raw claim string because the two references being compared are
-	/// spelled differently: the claim is a full objid (<c>#1:1785989066109</c>, minted from the session's
-	/// character) while a scene's owner/member dbref is resolved from a live object edge and comes back
-	/// bare (<c>#1</c>). String comparison between those two forms can never succeed, which is what used
-	/// to make every non-public scene invisible to its own owner.
-	/// </remarks>
-	private DBRef? CallerRef =>
-		DBRef.TryParse(User.FindFirst(CharacterDbrefClaim)?.Value, out var parsed) ? parsed : null;
+	private DBRef? CallerRef => SceneVisibility.ActingCharacter(User);
 
 	/// <summary>The caller's character in its canonical spelling, for the service calls that take a string.</summary>
 	private string? CallerDbref => CallerRef?.ToString();
@@ -126,26 +111,11 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	/// <summary>
 	/// True when <paramref name="scene"/> is visible to the caller: it is public, the caller owns
 	/// it, or the caller is a member of it. Non-public scenes require an authenticated character.
+	/// The rule itself lives in <see cref="SceneVisibility"/> because the scene hub asks the same
+	/// question of the same scenes, and two copies of it would drift.
 	/// </summary>
-	private async Task<bool> CanSeeAsync(Contracts.Scene scene)
-	{
-		if (scene.IsPublic) return true;
-
-		if (CallerRef is not { } me) return false;
-
-		// Owner always sees their own scene. Both sides here are resolved live in this request — the owner
-		// by dereferencing the scene's owner edge to its object vertex, the caller from the session's
-		// current character — so two live objects cannot share the number and DBRef.SameObjectAs is exact;
-		// it still compares the creation stamp on the side that has one.
-		if (scene.OwnerDbref is { } owner && DBRef.TryParse(owner, out var ownerRef) && ownerRef is { } o
-				&& o.SameObjectAs(me))
-			return true;
-
-		// Otherwise the caller must hold a membership edge on the scene. The storage resolves the reference
-		// against the live object itself (rejecting a stale objid), so hand it the same canonical spelling.
-		var member = await sceneService.GetMemberAsync(scene.Id, me.ToString());
-		return member.IsT0;
-	}
+	private Task<bool> CanSeeAsync(Contracts.Scene scene) =>
+		SceneVisibility.CanSeeAsync(sceneService, scene, CallerRef);
 
 	/// <summary>
 	/// GET /api/scenes?filter=active|recent|scheduled&amp;count=50

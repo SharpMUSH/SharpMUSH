@@ -1,9 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using OneOf;
-using OneOf.Types;
-using SharpMUSH.Library.Models;
-using SharpMUSH.Plugins.Scene.Models;
 using SharpMUSH.Plugins.Scene.Web;
 using System.Security.Claims;
 using Scene = SharpMUSH.Plugins.Scene.Models.Scene;
@@ -47,7 +43,7 @@ public class SceneControllerVisibilityTests
 		Meta: new Dictionary<string, string>());
 
 	/// <summary>Builds the controller with <paramref name="claimValue"/> as the acting character (null = anonymous).</summary>
-	private static SceneController ControllerFor(StubSceneService service, string? claimValue)
+	private static SceneController ControllerFor(FixedSceneService service, string? claimValue)
 	{
 		var identity = claimValue is null
 			? new ClaimsIdentity()
@@ -65,7 +61,7 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task GetScene_PrivateSceneOwnedByCaller_IsVisible()
 	{
-		var service = new StubSceneService(SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: false));
 		var controller = ControllerFor(service, GodObjid);
 
 		var result = await controller.GetScene("scene-1");
@@ -78,7 +74,7 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task GetScene_PrivateSceneCallerIsMember_IsVisible()
 	{
-		var service = new StubSceneService(SceneOwnedBy("#7", isPublic: false)) { MemberDbref = "#1" };
+		var service = new FixedSceneService(SceneOwnedBy("#7", isPublic: false)) { MemberDbref = "#1" };
 		var controller = ControllerFor(service, GodObjid);
 
 		var result = await controller.GetScene("scene-1");
@@ -92,7 +88,7 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task GetScene_PrivateSceneCallerIsNeitherOwnerNorMember_Is404()
 	{
-		var service = new StubSceneService(SceneOwnedBy("#7", isPublic: false));
+		var service = new FixedSceneService(SceneOwnedBy("#7", isPublic: false));
 		var controller = ControllerFor(service, GodObjid);
 
 		var result = await controller.GetScene("scene-1");
@@ -104,7 +100,7 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task GetScene_PrivateSceneOwnedByARecycledObjid_Is404()
 	{
-		var service = new StubSceneService(SceneOwnedBy("#1:1700000000000", isPublic: false));
+		var service = new FixedSceneService(SceneOwnedBy("#1:1700000000000", isPublic: false));
 		var controller = ControllerFor(service, GodObjid);
 
 		var result = await controller.GetScene("scene-1");
@@ -115,7 +111,7 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task GetScene_PrivateScene_IsHiddenFromAnonymousCallers()
 	{
-		var service = new StubSceneService(SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: false));
 		var controller = ControllerFor(service, claimValue: null);
 
 		var result = await controller.GetScene("scene-1");
@@ -128,7 +124,7 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task GetScene_PublicScene_IsVisibleToAnonymousCallers()
 	{
-		var service = new StubSceneService(SceneOwnedBy("#1", isPublic: true));
+		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: true));
 		var controller = ControllerFor(service, claimValue: null);
 
 		var result = await controller.GetScene("scene-1");
@@ -139,7 +135,7 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task ListScenes_ReturnsOnlyTheScenesTheCallerMaySee()
 	{
-		var service = new StubSceneService(
+		var service = new FixedSceneService(
 			SceneOwnedBy("#1", isPublic: false) with { Id = "mine" },
 			SceneOwnedBy("#7", isPublic: false) with { Id = "theirs" },
 			SceneOwnedBy("#7", isPublic: true) with { Id = "public" });
@@ -149,43 +145,5 @@ public class SceneControllerVisibilityTests
 
 		var listed = ((IEnumerable<SceneController.SceneDto>)((OkObjectResult)result).Value!).Select(s => s.Id);
 		await Assert.That(listed).IsEquivalentTo(new[] { "mine", "public" });
-	}
-
-	/// <summary>
-	/// Scene service returning a fixed set of scenes, recording the dbrefs it was asked to look memberships
-	/// up by (the second half of the same spelling bug — a mangled reference resolves to no object at all).
-	/// </summary>
-	private sealed class StubSceneService(params Scene[] scenes) : SceneServiceStub
-	{
-		/// <summary>The member dbref that holds a membership edge on every scene, or null for none.</summary>
-		public string? MemberDbref { get; init; }
-
-		public List<string> MemberLookups { get; } = [];
-
-		public override Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId) =>
-			Task.FromResult(scenes.FirstOrDefault(s => s.Id == sceneId) is { } scene
-				? OneOf<Scene, NotFound>.FromT0(scene)
-				: new NotFound());
-
-		public override Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null,
-			long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50) =>
-			Task.FromResult<IReadOnlyList<Scene>>(scenes);
-
-		public override Task<OneOf<SceneMember, NotFound>> GetMemberAsync(string sceneId, string playerDbref)
-		{
-			MemberLookups.Add(playerDbref);
-
-			// Match the storages, which resolve the reference through the live object rather than comparing
-			// strings: a bare dbref and its objid name the same player.
-			var matches = MemberDbref is { } member
-				&& DBRef.TryParse(member, out var expected)
-				&& DBRef.TryParse(playerDbref, out var actual)
-				&& expected!.Value.SameObjectAs(actual!.Value);
-
-			return Task.FromResult(matches
-				? OneOf<SceneMember, NotFound>.FromT0(
-					new SceneMember(sceneId, MemberDbref, "God", "participant", string.Empty, true, 3))
-				: new NotFound());
-		}
 	}
 }
