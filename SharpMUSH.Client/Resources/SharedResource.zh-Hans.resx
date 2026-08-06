@@ -532,10 +532,6 @@
     <value>此账号未关联任何角色。</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>您尚未登录账号。请使用终端登录面板登录。</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>在新标签页中打开 {0}</value>
     <comment>MT</comment>

@@ -421,9 +421,6 @@
   <data name="AuthDebugModeBody" xml:space="preserve">
     <value>Vous êtes authentifié en tant que {0} (environnement de développement). Aucune session de compte n'est associée ; la gestion du compte nécessite une connexion à un compte réel.</value>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Vous n'êtes pas connecté à un compte. Utilisez le panneau de connexion du terminal pour vous connecter.</value>
-  </data>
   <data name="AuthGoToHome" xml:space="preserve">
     <value>Aller à l'accueil</value>
   </data>

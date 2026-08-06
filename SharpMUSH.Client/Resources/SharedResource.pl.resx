@@ -532,10 +532,6 @@
     <value>Brak postaci powiązanych z tym kontem.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Brak zalogowania na konto. Aby się zalogować, należy użyć panelu logowania w terminalu.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Otwórz w nowej karcie: {0}</value>
     <comment>MT — restructured so {0} sits after a colon in the nominative instead of taking the accusative</comment>

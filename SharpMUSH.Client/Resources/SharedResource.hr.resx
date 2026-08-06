@@ -532,10 +532,6 @@
     <value>Nijedan lik nije povezan s ovim računom.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Niste prijavljeni na račun. Za prijavu upotrijebite ploču za prijavu u terminalu.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Otvori u novoj kartici: {0}</value>
     <comment>MT — restructured so the target name sits after a colon; the accusative it would otherwise need cannot be controlled</comment>

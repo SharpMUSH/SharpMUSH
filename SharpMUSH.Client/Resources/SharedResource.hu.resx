@@ -532,10 +532,6 @@
     <value>Ehhez a fiókhoz nincs karakter kapcsolva.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Nincs bejelentkezve fiókkal. A bejelentkezéshez használja a terminál bejelentkezési paneljét.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>{0} megnyitása új lapon</value>
     <comment>MT</comment>

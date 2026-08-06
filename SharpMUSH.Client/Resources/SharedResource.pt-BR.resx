@@ -532,10 +532,6 @@
     <value>Nenhum personagem vinculado a esta conta.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Você não está conectado a uma conta. Use o painel de login do terminal para entrar.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Abrir {0} em uma nova aba</value>
     <comment>MT</comment>

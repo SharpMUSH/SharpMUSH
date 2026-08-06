@@ -532,10 +532,6 @@
     <value>Er zijn geen personages aan dit account gekoppeld.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Je bent niet ingelogd op een account. Gebruik het inlogpaneel van de terminal om in te loggen.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>{0} openen in een nieuw tabblad</value>
     <comment>MT</comment>

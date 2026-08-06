@@ -532,10 +532,6 @@
     <value>Inga karaktärer är kopplade till det här kontot.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Du är inte inloggad på ett konto. Använd terminalens inloggningspanel för att logga in.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Öppna {0} i en ny flik</value>
     <comment>MT</comment>

@@ -532,10 +532,6 @@
     <value>Няма герои, свързани с този акаунт.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Не сте влезли в акаунт. Използвайте панела за вход в терминала, за да влезете.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Отвори {0} в нов раздел</value>
     <comment>MT</comment>

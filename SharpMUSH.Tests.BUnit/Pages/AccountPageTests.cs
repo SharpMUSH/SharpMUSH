@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Bunit;
 using Bunit.TestDoubles;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -131,19 +132,63 @@ public class AccountPageTests : BunitContext, IAsyncDisposable
 		await Assert.That(cut.Markup).DoesNotContain("Characters");
 	}
 
+	/// <summary>
+	/// /account used to be the only account page with no auth gate, so an anonymous visitor got a
+	/// dead-end card telling them to "use the terminal login panel". The gate is what sends them to
+	/// /login instead (via App.razor's NotAuthorized branch → RedirectToLogin), and bUnit renders a
+	/// page component directly, below AuthorizeRouteView — so the attribute itself is the thing to
+	/// assert, not a redirect the direct render can never perform.
+	/// </summary>
 	[TUnit.Core.Test]
-	public async Task Render_LoggedOut_DoesNotThrow()
+	public async Task AccountPage_IsGatedByAuthorize()
 	{
+		var authorize = typeof(SharpMUSH.Client.Pages.Account)
+			.GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
+			.Cast<AuthorizeAttribute>()
+			.SingleOrDefault();
+
+		await Assert.That(authorize).IsNotNull()
+			.Because("/account exposes the username, character list and password form of whoever is signed in");
+		// Plain [Authorize]: any signed-in account may manage its own account.
+		await Assert.That(authorize!.Roles).IsNull();
+		await Assert.That(authorize.Policy).IsNull();
+	}
+
+	/// <summary>
+	/// The one state that still reaches the page's no-account-session branch now that [Authorize]
+	/// intercepts anonymous visitors: a development DebugAuth principal whose debug-OTT never
+	/// produced an account session (here, because the fake API 404s <c>api/auth/debug-ott</c>).
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Render_DebugAuthWithoutAccountSession_ShowsDebugCard()
+	{
+		Auth.SetAuthorized("DebugAdmin");
 		SeedAuthState(loggedIn: false);
 
 		var cut = Render<SharpMUSH.Client.Pages.Account>();
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("AuthNotLoggedInAccount"))
-				throw new InvalidOperationException("logged-out card not rendered yet");
+			if (!cut.Markup.Contains("AuthDebugMode"))
+				throw new InvalidOperationException("debug-mode card not rendered yet");
 		});
-		await Assert.That(cut.Markup).Contains("AuthNotLoggedInAccount");
+		await Assert.That(cut.Markup).Contains("AuthDebugMode");
+	}
+
+	/// <summary>
+	/// Post-logout, before the redirect lands: no account session and no debug identity either.
+	/// The page must render its empty shell — not the removed "use the terminal login panel"
+	/// dead end, and not a stale Debug Mode alert.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Render_LoggedOut_RendersNoCard()
+	{
+		SeedAuthState(loggedIn: false);
+
+		var cut = Render<SharpMUSH.Client.Pages.Account>();
+
+		await Assert.That(cut.Markup).DoesNotContain("acct-card");
+		await Assert.That(cut.Markup).DoesNotContain("AuthDebugMode");
 	}
 
 	/// <summary>

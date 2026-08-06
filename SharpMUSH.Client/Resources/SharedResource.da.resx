@@ -532,10 +532,6 @@
     <value>Ingen karakterer er knyttet til denne konto.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Du er ikke logget ind på en konto. Brug terminalens loginpanel til at logge ind.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Åbn {0} i en ny fane</value>
     <comment>MT</comment>

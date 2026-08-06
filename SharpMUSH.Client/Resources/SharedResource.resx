@@ -1291,9 +1291,6 @@
   <data name="AuthDebugModeBody" xml:space="preserve">
     <value>You are authenticated as {0} (development environment). No account session is associated; account management features require a real account login.</value>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>You are not logged in to an account. Use the terminal login panel to log in.</value>
-  </data>
   <data name="AuthGoToHome" xml:space="preserve">
     <value>Go to Home</value>
   </data>

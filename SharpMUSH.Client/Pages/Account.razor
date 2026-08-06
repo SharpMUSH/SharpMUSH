@@ -1,4 +1,5 @@
 @page "/account"
+@attribute [Authorize]
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AccountAuthService AccountAuth
@@ -10,23 +11,23 @@
 
 <div class="acct-page" style="padding:var(--cpad);">
 
+    @* [Authorize] hands anonymous visitors to RedirectToLogin, so reaching this page without an
+       account session now means exactly one thing: a DebugAuth principal whose debug-OTT never
+       produced one (development only). The old "not logged in — use the terminal login panel"
+       card that stood here was the anonymous dead end, and is unreachable now. _isDebugAuth
+       still gates the card so the logged-out re-render during LogoutAsync shows nothing at all
+       rather than a stale Debug Mode alert. *@
     @if (!AccountAuth.IsLoggedIn)
     {
-        <div class="acct-card" style="max-width:560px;">
-            @if (_isDebugAuth)
-            {
+        @if (_isDebugAuth)
+        {
+            <div class="acct-card" style="max-width:560px;">
                 <MudAlert Severity="Severity.Info" Class="mb-3">
                     <strong>@Loc["AuthDebugMode"]</strong> — @Loc["AuthDebugModeBody", "DebugAdmin"]
                 </MudAlert>
-            }
-            else
-            {
-                <MudAlert Severity="Severity.Info" Class="mb-3">
-                    @Loc["AuthNotLoggedInAccount"]
-                </MudAlert>
-            }
-            <button class="acct-btn acct-btn-primary" @onclick='() => Nav.NavigateTo("/")'>@Loc["AuthGoToHome"]</button>
-        </div>
+                <button class="acct-btn acct-btn-primary" @onclick='() => Nav.NavigateTo("/")'>@Loc["AuthGoToHome"]</button>
+            </div>
+        }
     }
     else
     {
@@ -242,7 +243,8 @@
         await AccountAuth.LogoutAsync();
         // _isDebugAuth is computed once in OnInitializedAsync and otherwise stays true after
         // logout, which would keep this page's "Debug Mode" alert showing the stale DebugAdmin
-        // identity instead of the plain "not logged in" message — reset it directly here.
+        // identity during the re-render that AuthStateChanged triggers before we navigate away
+        // — reset it directly here.
         // (NavMenu's HandleLogoutAsync has no flag of its own to mirror: it just navigates away.
         // Ending the game terminals is handled inside AccountAuth.LogoutAsync for every caller.)
         // Land on "/" (the anonymous home) rather than /login:
