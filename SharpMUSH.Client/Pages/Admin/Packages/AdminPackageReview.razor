@@ -1,5 +1,5 @@
 @page "/admin/packages/review"
-@attribute [Authorize(Roles = "Wizard")]
+@attribute [Authorize(Policy = "packages.admin")]
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.API
 @using SharpMUSH.Library.Models.Packages
@@ -291,7 +291,7 @@ else
         _renders.GetValueOrDefault((change.TargetRef, change.Attribute));
 
     private static string DecisionKey(PackageAttributeChange change) =>
-        $"{change.TargetRef} {change.Attribute}";
+        $"{change.TargetRef}\0{change.Attribute}";
 
     private async Task ApplyAsync()
     {
