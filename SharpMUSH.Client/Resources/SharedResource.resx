@@ -46,6 +46,12 @@
   <data name="NotAuthorized" xml:space="preserve">
     <value>You are not authorized to access this resource.</value>
   </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Back to home</value>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>You don't have permission to view this page.</value>
+  </data>
 
   <!-- ======================== -->
   <!-- MainLayout.razor         -->

@@ -2188,6 +2188,14 @@
     <value>Nincs jogosultsága ennek az erőforrásnak az eléréséhez.</value>
     <comment>MT</comment>
   </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Vissza a kezdőlapra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Nincs jogosultsága az oldal megtekintéséhez.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NotFound" xml:space="preserve">
     <value>Nem található</value>
     <comment>MT</comment>

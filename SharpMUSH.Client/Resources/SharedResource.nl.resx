@@ -2188,6 +2188,14 @@
     <value>Je hebt geen toegang tot deze bron.</value>
     <comment>MT</comment>
   </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Terug naar de startpagina</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Je hebt geen toestemming om deze pagina te bekijken.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NotFound" xml:space="preserve">
     <value>Niet gevonden</value>
     <comment>MT</comment>

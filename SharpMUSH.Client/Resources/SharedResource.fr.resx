@@ -46,6 +46,14 @@
   <data name="NotAuthorized" xml:space="preserve">
     <value>Vous n'êtes pas autorisé à accéder à cette ressource.</value>
   </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Retour à l'accueil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Vous n'avez pas la permission de consulter cette page.</value>
+    <comment>MT</comment>
+  </data>
 
   <!-- MainLayout / NavMenu -->
   <data name="Configuration" xml:space="preserve">

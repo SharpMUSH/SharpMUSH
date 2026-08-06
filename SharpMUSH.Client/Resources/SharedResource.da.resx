@@ -2188,6 +2188,14 @@
     <value>Du har ikke tilladelse til at tilgå denne ressource.</value>
     <comment>MT</comment>
   </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Tilbage til forsiden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Du har ikke tilladelse til at se denne side.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NotFound" xml:space="preserve">
     <value>Ikke fundet</value>
     <comment>MT</comment>

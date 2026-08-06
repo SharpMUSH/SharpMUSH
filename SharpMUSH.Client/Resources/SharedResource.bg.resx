@@ -2188,6 +2188,14 @@
     <value>Нямате права за достъп до този ресурс.</value>
     <comment>MT — polite Вие-form</comment>
   </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Назад към началото</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Нямате разрешение да преглеждате тази страница.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NotFound" xml:space="preserve">
     <value>Не е намерено</value>
     <comment>MT — assumed an HTTP 404 page title, hence neuter impersonal</comment>

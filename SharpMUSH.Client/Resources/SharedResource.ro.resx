@@ -2188,6 +2188,14 @@
     <value>Nu aveți autorizația de a accesa această resursă.</value>
     <comment>MT</comment>
   </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Înapoi la pagina principală</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Nu aveți permisiunea de a vizualiza această pagină.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NotFound" xml:space="preserve">
     <value>Nu a fost găsit</value>
     <comment>MT — 404 page heading</comment>

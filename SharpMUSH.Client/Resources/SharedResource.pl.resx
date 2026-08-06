@@ -2188,6 +2188,14 @@
     <value>Brak uprawnień do tego zasobu.</value>
     <comment>MT — impersonal per register</comment>
   </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Powrót do strony głównej</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Nie masz uprawnień do wyświetlenia tej strony.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NotFound" xml:space="preserve">
     <value>Nie znaleziono</value>
     <comment>MT</comment>

@@ -2188,6 +2188,14 @@
     <value>У вас нет прав доступа к этому ресурсу.</value>
     <comment>MT — «права доступа» per the corpus.</comment>
   </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Вернуться на главную</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>У вас нет разрешения на просмотр этой страницы.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NotFound" xml:space="preserve">
     <value>Не найдено</value>
     <comment>MT — impersonal error-page heading.</comment>

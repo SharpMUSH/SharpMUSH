@@ -2188,6 +2188,14 @@
     <value>Nemate ovlaštenje za pristup ovom resursu.</value>
     <comment>MT</comment>
   </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Natrag na početnu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Nemate dopuštenje za pregled ove stranice.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NotFound" xml:space="preserve">
     <value>Nije pronađeno</value>
     <comment>MT</comment>
