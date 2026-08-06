@@ -2780,6 +2780,10 @@
     <value>Spielen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Sie haben noch keinen Charakter. Erstellen Sie einen, um das Spiel zu betreten.</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Spieler:</value>
     <comment>MT — prose/count label, so translated rather than the Player privilege level</comment>

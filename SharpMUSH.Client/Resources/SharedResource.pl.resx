@@ -2780,6 +2780,10 @@
     <value>Graj</value>
     <comment>MT — assumed a button/link into the game, not a noun</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Nie masz jeszcze postaci. Utwórz ją, aby wejść do gry.</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Gracze:</value>
     <comment>MT</comment>

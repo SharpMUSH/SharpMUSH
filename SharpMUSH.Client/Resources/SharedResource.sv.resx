@@ -2780,6 +2780,10 @@
     <value>Spela</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Du har ingen karaktär ännu. Skapa en för att kliva in i spelet.</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Spelare:</value>
     <comment>MT — corpus term; invariant plural.</comment>

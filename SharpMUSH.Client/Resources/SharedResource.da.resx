@@ -2780,6 +2780,10 @@
     <value>Spil</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Du har endnu ingen karakter. Opret en for at træde ind i spillet.</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Spillere:</value>
     <comment>MT</comment>

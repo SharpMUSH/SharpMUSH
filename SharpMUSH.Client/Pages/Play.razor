@@ -4,130 +4,156 @@
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject IPlayTerminalService PlayTerminal
+@inject AccountAuthService AccountAuth
 @inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>@Loc["Play"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="play-shell @(_focusMode ? "play-shell--focus" : "")">
-
-    <div class="play-term">
-        <div class="play-term-header">
-            <span class="play-dot @(PlayTerminal.IsConnected ? "play-dot--on" : "")"></span>
-            <span class="play-char">@(PlayTerminal.ConnectedPlayerName ?? Loc["NavPlayTerminal"])</span>
-            <span class="play-loc">@(PlayTerminal.IsConnected ? Loc["NavInPlay"] : Loc["NavNotConnected"])</span>
-            <div style="flex:1;"></div>
-            <span class="play-conn @(PlayTerminal.IsConnected ? "play-conn--on" : "")">
-                ● @(PlayTerminal.IsConnected ? Loc["Connected"] : Loc["Disconnected"])
-            </span>
-            <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
-                <ActivatorContent>
-                    <button type="button" class="play-focus-btn" @onclick="@context.ToggleAsync"
-                            title="@Loc["NavTerminalSettings"]" aria-label="@Loc["NavTerminalSettings"]">
-                        <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:1.05rem;" />
-                    </button>
-                </ActivatorContent>
-                <ChildContent>
-                    <div class="play-cfg" @onclick:stopPropagation="true">
-                        <div class="play-cfg-kicker">@Loc["Terminal"]</div>
-                        <label class="play-cfg-row"
-                               title="@Loc["NavTerminalWidthTooltip"]">
-                            <span>@Loc["NavTerminalWidthCols"]</span>
-                            <input class="play-cols-input" type="number" min="78" max="240" step="1"
-                                   value="@_targetCols" @onchange="OnColsChanged" />
-                        </label>
-                        <button type="button" class="play-cfg-item" @onclick="ToggleFocus">
-                            <MudIcon Icon="@(_focusMode ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Style="font-size:1rem;" />
-                            <span>@(_focusMode ? Loc["NavExitFocusMode"] : Loc["NavFocusMode"])</span>
-                        </button>
-                        <button type="button" class="play-cfg-item" @onclick="ClearTerminal">
-                            <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:1rem;" />
-                            <span>@Loc["TermClearTerminal"]</span>
-                        </button>
-                    </div>
-                </ChildContent>
-            </MudMenu>
-        </div>
-        <div style="flex:1;min-height:0;min-width:0;">
-            <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
-                            TargetColumns="_targetCols" ShowClearButton="false" AllowGuest="true" />
-        </div>
+@* Three states, resolved before anything mounts. An anonymous visitor and a player with a
+   character both get the terminal (the guest/character distinction is GlobalTerminal's job); an
+   account holding NO character used to get the terminal too — blank, permanently "not connected",
+   with a Connect button that could never succeed and nothing saying why. That case gets the same
+   treatment /mail already gives it: say what is missing, and offer the one action that fixes it. *@
+@if (!_rosterResolved)
+{
+    <div class="play-gate">
+        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
     </div>
+}
+else if (_needsCharacter)
+{
+    <div class="play-gate">
+        <EmptyState Class="play-gate-card">
+            <MudText>@Loc["NavPlayNeedsCharacter"]</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/characters/new" Class="mt-2">
+                @Loc["NavCreateCharacter"]
+            </MudButton>
+        </EmptyState>
+    </div>
+}
+else
+{
+    <div class="play-shell @(_focusMode ? "play-shell--focus" : "")">
 
-    <div class="play-side">
-        <div class="play-card">
-            <div class="play-fieldlabel">@Loc["TermBrowserHere"]</div>
-            @if (_here.Count == 0)
-            {
-                <div class="play-empty">@Loc["NavConnectToSeeWhoIsHere"]</div>
-            }
-            else
-            {
-                @foreach (var e in _here)
-                {
-                    @if (!string.IsNullOrWhiteSpace(e.Cmd))
-                    {
-                        <div class="play-entry play-clickable"
-                             @onclick="@(() => RunEntry(e))">
-                            @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
+        <div class="play-term">
+            <div class="play-term-header">
+                <span class="play-dot @(PlayTerminal.IsConnected ? "play-dot--on" : "")"></span>
+                <span class="play-char">@(PlayTerminal.ConnectedPlayerName ?? Loc["NavPlayTerminal"])</span>
+                <span class="play-loc">@(PlayTerminal.IsConnected ? Loc["NavInPlay"] : Loc["NavNotConnected"])</span>
+                <div style="flex:1;"></div>
+                <span class="play-conn @(PlayTerminal.IsConnected ? "play-conn--on" : "")">
+                    ● @(PlayTerminal.IsConnected ? Loc["Connected"] : Loc["Disconnected"])
+                </span>
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+                    <ActivatorContent>
+                        <button type="button" class="play-focus-btn" @onclick="@context.ToggleAsync"
+                                title="@Loc["NavTerminalSettings"]" aria-label="@Loc["NavTerminalSettings"]">
+                            <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:1.05rem;" />
+                        </button>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <div class="play-cfg" @onclick:stopPropagation="true">
+                            <div class="play-cfg-kicker">@Loc["Terminal"]</div>
+                            <label class="play-cfg-row"
+                                   title="@Loc["NavTerminalWidthTooltip"]">
+                                <span>@Loc["NavTerminalWidthCols"]</span>
+                                <input class="play-cols-input" type="number" min="78" max="240" step="1"
+                                       value="@_targetCols" @onchange="OnColsChanged" />
+                            </label>
+                            <button type="button" class="play-cfg-item" @onclick="ToggleFocus">
+                                <MudIcon Icon="@(_focusMode ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Style="font-size:1rem;" />
+                                <span>@(_focusMode ? Loc["NavExitFocusMode"] : Loc["NavFocusMode"])</span>
+                            </button>
+                            <button type="button" class="play-cfg-item" @onclick="ClearTerminal">
+                                <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:1rem;" />
+                                <span>@Loc["TermClearTerminal"]</span>
+                            </button>
                         </div>
-                    }
-                    else
-                    {
-                        <div class="play-entry">
-                            @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
-                        </div>
-                    }
-                }
-            }
+                    </ChildContent>
+                </MudMenu>
+            </div>
+            <div style="flex:1;min-height:0;min-width:0;">
+                <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
+                                TargetColumns="_targetCols" ShowClearButton="false" AllowGuest="true" />
+            </div>
         </div>
 
-        <div class="play-card">
-            <div class="play-fieldlabel">@Loc["NavExits"]</div>
-            @if (_exits.Count == 0)
-            {
-                <div class="play-empty">@Loc["NavNoExitsAvailable"]</div>
-            }
-            else
-            {
-                @foreach (var e in _exits)
+        <div class="play-side">
+            <div class="play-card">
+                <div class="play-fieldlabel">@Loc["TermBrowserHere"]</div>
+                @if (_here.Count == 0)
                 {
-                    @if (!string.IsNullOrWhiteSpace(e.Cmd))
+                    <div class="play-empty">@Loc["NavConnectToSeeWhoIsHere"]</div>
+                }
+                else
+                {
+                    @foreach (var e in _here)
                     {
-                        <div class="play-entry play-clickable"
-                             @onclick="@(() => RunEntry(e))">
-                            @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="play-entry">
-                            @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
-                        </div>
+                        @if (!string.IsNullOrWhiteSpace(e.Cmd))
+                        {
+                            <div class="play-entry play-clickable"
+                                 @onclick="@(() => RunEntry(e))">
+                                @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="play-entry">
+                                @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
+                            </div>
+                        }
                     }
                 }
-            }
-        </div>
+            </div>
 
-        <div class="play-card">
-            <div class="play-fieldlabel">@Loc["QuickActions"]</div>
-            <div class="play-actions">
-                <a class="play-action" href="/characters">
-                    <MudIcon Icon="@Icons.Material.Filled.People" Class="play-action-icon" /> @Loc["Characters"]
-                </a>
-                <a class="play-action" href="/mail">
-                    <MudIcon Icon="@Icons.Material.Filled.Mail" Class="play-action-icon" /> @Loc["Mail"]
-                </a>
-                <a class="play-action" href="/scenes">
-                    <MudIcon Icon="@Icons.Material.Filled.Movie" Class="play-action-icon" /> @Loc["SceneArchive"]
-                </a>
-                <a class="play-action" href="/help">
-                    <MudIcon Icon="@Icons.Material.Filled.Help" Class="play-action-icon" /> @Loc["Help"]
-                </a>
+            <div class="play-card">
+                <div class="play-fieldlabel">@Loc["NavExits"]</div>
+                @if (_exits.Count == 0)
+                {
+                    <div class="play-empty">@Loc["NavNoExitsAvailable"]</div>
+                }
+                else
+                {
+                    @foreach (var e in _exits)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(e.Cmd))
+                        {
+                            <div class="play-entry play-clickable"
+                                 @onclick="@(() => RunEntry(e))">
+                                @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="play-entry">
+                                @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
+                            </div>
+                        }
+                    }
+                }
+            </div>
+
+            <div class="play-card">
+                <div class="play-fieldlabel">@Loc["QuickActions"]</div>
+                <div class="play-actions">
+                    <a class="play-action" href="/characters">
+                        <MudIcon Icon="@Icons.Material.Filled.People" Class="play-action-icon" /> @Loc["Characters"]
+                    </a>
+                    <a class="play-action" href="/mail">
+                        <MudIcon Icon="@Icons.Material.Filled.Mail" Class="play-action-icon" /> @Loc["Mail"]
+                    </a>
+                    <a class="play-action" href="/scenes">
+                        <MudIcon Icon="@Icons.Material.Filled.Movie" Class="play-action-icon" /> @Loc["SceneArchive"]
+                    </a>
+                    <a class="play-action" href="/help">
+                        <MudIcon Icon="@Icons.Material.Filled.Help" Class="play-action-icon" /> @Loc["Help"]
+                    </a>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 @code {
     private IReadOnlyList<OobEntry> _here = [];
@@ -177,12 +203,37 @@
         StateHasChanged();
     }
 
+    // Whether the account-vs-roster question has been answered yet, and its answer. Both start
+    // "unknown" so the terminal is not mounted — and no dead Connect button rendered — until we
+    // know which of the three states this visitor is in.
+    private bool _rosterResolved;
+    private bool _needsCharacter;
+
     protected override void OnInitialized()
     {
         PlayTerminal.ConnectionStateChanged += OnConnectionChanged;
         PlayTerminal.OobChannels.ChannelUpdated += OnChannelUpdated;
         RefreshFromStore("room.contents");
         RefreshFromStore("room.exits");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // InitAsync is cached per tab, so this costs a task await once the session has hydrated.
+        // It restores the session token but NOT the roster (see AccountAuthService.InitCoreAsync),
+        // so a reloaded tab always has to ask the server who this account owns — exactly what
+        // GlobalTerminal does before deciding whether it can connect.
+        await AccountAuth.InitAsync();
+
+        if (AccountAuth.IsLoggedIn)
+        {
+            var characters = AccountAuth.Characters.Count > 0
+                ? AccountAuth.Characters
+                : await AccountAuth.GetCharactersAsync();
+            _needsCharacter = characters.Count == 0;
+        }
+
+        _rosterResolved = true;
     }
 
     private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);

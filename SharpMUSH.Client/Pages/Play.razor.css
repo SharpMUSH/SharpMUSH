@@ -1,3 +1,20 @@
+/* The pre-terminal states: resolving the roster, and "signed in but no character yet".
+   Centred in the play area rather than pinned to the top-left corner, because there is no
+   terminal beside it to anchor the eye. */
+.play-gate {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: var(--cpad);
+}
+
+/* ::deep — the alert element itself is rendered by EmptyState/MudAlert, so it does not carry
+   this page's scope attribute even though the class name is passed down from here. */
+.play-gate ::deep .play-gate-card {
+    max-width: 30rem;
+}
+
 .play-shell {
     display: grid;
     /* minmax(0, 1fr): a bare 1fr track refuses to shrink below its content's

@@ -2780,6 +2780,10 @@
     <value>Jogar</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Você ainda não tem um personagem. Crie um para entrar no jogo.</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Jogadores:</value>
     <comment>MT</comment>

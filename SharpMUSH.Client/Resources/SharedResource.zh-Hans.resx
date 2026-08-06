@@ -2780,6 +2780,10 @@
     <value>游戏</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>你还没有角色。创建一个角色即可进入游戏。</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>玩家：</value>
     <comment>MT</comment>

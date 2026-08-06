@@ -3334,6 +3334,9 @@
   <data name="NavNotConnected" xml:space="preserve">
     <value>not connected</value>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>You don&apos;t have a character yet. Create one to step into the game.</value>
+  </data>
   <data name="NavTerminalSettings" xml:space="preserve">
     <value>Terminal settings</value>
   </data>

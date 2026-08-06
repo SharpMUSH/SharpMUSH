@@ -71,6 +71,10 @@
   <data name="Counter" xml:space="preserve">
     <value>Compteur</value>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Vous n&apos;avez pas encore de personnage. Créez-en un pour entrer dans le jeu.</value>
+    <comment>MT</comment>
+  </data>
   <data name="Weather" xml:space="preserve">
     <value>Météo</value>
   </data>

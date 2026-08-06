@@ -2780,6 +2780,10 @@
     <value>Igraj</value>
     <comment>MT — assumed the verb (enter the game), not a media control</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Još nemate lik. Stvorite ga kako biste ušli u igru.</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Igrači:</value>
     <comment>MT</comment>

@@ -2780,6 +2780,10 @@
     <value>Joc</value>
     <comment>MT — assumed a nav item leading into the game; rendered as the noun "Joc" per Romanian UI convention</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Încă nu ai un personaj. Creează unul pentru a intra în joc.</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Jucători:</value>
     <comment>MT</comment>

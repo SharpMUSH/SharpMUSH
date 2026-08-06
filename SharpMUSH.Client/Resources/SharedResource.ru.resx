@@ -2780,6 +2780,10 @@
     <value>Играть</value>
     <comment>MT — assumed the imperative nav action that opens the play surface.</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>У вас ещё нет персонажа. Создайте его, чтобы войти в игру.</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Игроки:</value>
     <comment>MT — игрок per the corpus; trailing colon preserved.</comment>

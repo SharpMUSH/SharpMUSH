@@ -2780,6 +2780,10 @@
     <value>Играй</value>
     <comment>MT — assumed the button that opens the game client, not media playback</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Все още нямате герой. Създайте такъв, за да влезете в играта.</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Играчи:</value>
     <comment>MT</comment>

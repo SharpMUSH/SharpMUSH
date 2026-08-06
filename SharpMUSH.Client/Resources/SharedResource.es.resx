@@ -2780,6 +2780,10 @@
     <value>Jugar</value>
     <comment>MT — assumed nav item that opens the in-browser terminal to play</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Aún no tienes ningún personaje. Crea uno para entrar en el juego.</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Jugadores:</value>
     <comment>MT</comment>
