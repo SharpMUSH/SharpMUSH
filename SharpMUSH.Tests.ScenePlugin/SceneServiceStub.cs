@@ -1,5 +1,6 @@
 using OneOf;
 using OneOf.Types;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Plugins.Scene.Models;
 using SharpMUSH.Plugins.Scene.Storage;
 using Scene = SharpMUSH.Plugins.Scene.Models.Scene;
@@ -41,4 +42,52 @@ internal abstract class SceneServiceStub : ISceneService
 	public virtual Task<OneOf<None, NotFound>> UnlinkSceneFromPlotAsync(string plotId, string sceneId) => throw new NotSupportedException();
 	public virtual Task<OneOf<IReadOnlyList<string>, NotFound>> GetTagsAsync(string sceneId) => throw new NotSupportedException();
 	public virtual Task<OneOf<IReadOnlyList<string>, NotFound>> GetCastAsync(string sceneId) => throw new NotSupportedException();
+}
+
+/// <summary>
+/// Scene service over a fixed set of scenes, recording the dbrefs it was asked to look memberships up by
+/// (the second half of the dbref-spelling bug — a mangled reference resolves to no object at all).
+///
+/// <para>Shared by both authorization suites (<see cref="SceneControllerVisibilityTests"/> for REST,
+/// <see cref="SceneHubAuthorizationTests"/> for the realtime hub) on purpose: the two surfaces answer
+/// visibility through the one shared predicate, so they must be provable against the one fake.</para>
+/// </summary>
+internal sealed class FixedSceneService(params Scene[] scenes) : SceneServiceStub
+{
+	/// <summary>The member dbref that holds a membership edge on every scene, or null for none.</summary>
+	public string? MemberDbref { get; init; }
+
+	public List<string> MemberLookups { get; } = [];
+
+	public List<string> SceneLookups { get; } = [];
+
+	public override Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId)
+	{
+		SceneLookups.Add(sceneId);
+
+		return Task.FromResult(scenes.FirstOrDefault(s => s.Id == sceneId) is { } scene
+			? OneOf<Scene, NotFound>.FromT0(scene)
+			: new NotFound());
+	}
+
+	public override Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null,
+		long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50) =>
+		Task.FromResult<IReadOnlyList<Scene>>(scenes);
+
+	public override Task<OneOf<SceneMember, NotFound>> GetMemberAsync(string sceneId, string playerDbref)
+	{
+		MemberLookups.Add(playerDbref);
+
+		// Match the storages, which resolve the reference through the live object rather than comparing
+		// strings: a bare dbref and its objid name the same player.
+		var matches = MemberDbref is { } member
+			&& DBRef.TryParse(member, out var expected)
+			&& DBRef.TryParse(playerDbref, out var actual)
+			&& expected!.Value.SameObjectAs(actual!.Value);
+
+		return Task.FromResult(matches
+			? OneOf<SceneMember, NotFound>.FromT0(
+				new SceneMember(sceneId, MemberDbref, "God", "participant", string.Empty, true, 3))
+			: new NotFound());
+	}
 }
