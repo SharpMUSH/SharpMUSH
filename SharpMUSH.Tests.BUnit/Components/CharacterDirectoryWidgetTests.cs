@@ -32,6 +32,13 @@ file sealed class RosterHandler : HttpMessageHandler
 					: new HttpResponseMessage(HttpStatusCode.NotFound));
 }
 
+/// <summary>Fails the roster route outright, for the could-not-read state.</summary>
+file sealed class RosterUnreachableHandler : HttpMessageHandler
+{
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+			Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+}
+
 /// <summary>
 /// Verifies the directory widget's category grouping comes entirely from the data: named
 /// categories alphabetical, blanks pooled untitled at the bottom, no invented labels.
@@ -39,13 +46,13 @@ file sealed class RosterHandler : HttpMessageHandler
 /// </summary>
 public class CharacterDirectoryWidgetTests : BunitContext
 {
-	public CharacterDirectoryWidgetTests()
+	private static void Wire(BunitContext ctx, HttpMessageHandler handler)
 	{
-		var apiClient = new HttpClient(new RosterHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 
-		Services
+		ctx.Services
 				.AddSingleton(apiClient)
 				.AddMudServices()
 				.AddSingleton(factory)
@@ -54,12 +61,14 @@ public class CharacterDirectoryWidgetTests : BunitContext
 						NullLogger<CharacterDirectoryService>.Instance))
 				.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
-		JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
 	[TUnit.Core.Test]
 	public async Task GroupsAlphabetically_WithBlankCategoryUntitledLast()
 	{
+		Wire(this, new RosterHandler());
+
 		var cut = Render<CharacterDirectoryWidget>();
 		cut.WaitForAssertion(() =>
 		{
@@ -77,5 +86,22 @@ public class CharacterDirectoryWidgetTests : BunitContext
 				.IsLessThan(markup.IndexOf(">Pleb<", StringComparison.Ordinal));
 		// The widget invents no label for the blank category.
 		await Assert.That(markup).DoesNotContain("Player");
+	}
+
+	[TUnit.Core.Test]
+	public async Task AnUnreadableRoster_SaysUnavailable_NotNoCharactersFound()
+	{
+		Wire(this, new RosterUnreachableHandler());
+
+		var cut = Render<CharacterDirectoryWidget>();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Markup.Contains("mud-skeleton")) throw new InvalidOperationException("still loading");
+		}, TimeSpan.FromSeconds(5));
+
+		// "No characters found" describes the game; this request never got far enough to describe
+		// anything, and the empty list it degrades to must not be read as an answer.
+		await Assert.That(cut.Markup).Contains("WidUnavailable");
+		await Assert.That(cut.Markup).DoesNotContain("NoCharactersFound");
 	}
 }

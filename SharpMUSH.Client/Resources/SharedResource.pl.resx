@@ -3840,6 +3840,10 @@
     <value>Obecnie nikt nie jest połączony.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Obecnie niedostępne.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidNothingToDisplay" xml:space="preserve">
     <value>Brak elementów do wyświetlenia.</value>
     <comment>MT</comment>

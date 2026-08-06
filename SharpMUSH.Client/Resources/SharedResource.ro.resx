@@ -3840,6 +3840,10 @@
     <value>Nimeni nu este conectat în acest moment.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Indisponibil în acest moment.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidNothingToDisplay" xml:space="preserve">
     <value>Nu există nimic de afișat.</value>
     <comment>MT</comment>

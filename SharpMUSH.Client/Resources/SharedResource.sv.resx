@@ -3840,6 +3840,10 @@
     <value>Ingen är uppkopplad just nu.</value>
     <comment>MT — 'uppkopplad' is the corpus rendering of connected/online.</comment>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Inte tillgängligt just nu.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidNothingToDisplay" xml:space="preserve">
     <value>Inget att visa.</value>
     <comment>MT</comment>

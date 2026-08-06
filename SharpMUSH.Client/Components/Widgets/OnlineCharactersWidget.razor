@@ -9,6 +9,12 @@
     {
         @for (var i = 0; i < 4; i++) { <MudSkeleton Height="32px" Class="mb-1" /> }
     }
+    @* Three states, not two: the list failed to load is not the same claim as "nobody is here",
+       and saying the latter for the former is the more damaging of the two mistakes. *@
+    else if (_characters is null)
+    {
+        <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Loc["WidUnavailable"]</MudText>
+    }
     else if (_characters is { Count: > 0 })
     {
         @foreach (var c in _characters.Take(8))
@@ -43,12 +49,14 @@
     [Parameter] public JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
 
+    /// <summary>The connected characters, or null when the fetch failed. Empty means nobody is on.</summary>
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary>? _characters;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        _characters = await CharacterDirectory.ListOnlineAsync();
+        _characters = (await CharacterDirectory.ListOnlineAsync())
+            .Match(rows => rows, _ => (IReadOnlyList<CharacterDirectoryService.CharacterSummary>?)null);
         _loading = false;
     }
 }

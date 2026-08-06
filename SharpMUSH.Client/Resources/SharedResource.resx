@@ -2919,6 +2919,9 @@
   <data name="WidNobodyConnected" xml:space="preserve">
     <value>No one is connected right now.</value>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Unavailable right now.</value>
+  </data>
   <data name="WidConfigureQuickLinks" xml:space="preserve">
     <value>Configure Quick Links</value>
   </data>
