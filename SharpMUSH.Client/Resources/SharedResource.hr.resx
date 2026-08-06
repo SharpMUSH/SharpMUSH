@@ -1928,6 +1928,10 @@
     <value>Nije moguće učitati prevedenu komponentu ove aplikacije. Kod u pregledniku možda je onemogućen (allow_browser_code) ili provjera sklopa nije uspjela.</value>
     <comment>MT — 'allow_browser_code' is a config key name, left as-is</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Ova aplikacija prikazuje podatke o liku kojim igrate.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Nije moguće učitati shemu aplikacije. Softcode rukovatelj na {0} možda nedostaje ili vraća neispravan JSON.</value>
     <comment>MT — {0} is a route/attribute path, indeclinable</comment>

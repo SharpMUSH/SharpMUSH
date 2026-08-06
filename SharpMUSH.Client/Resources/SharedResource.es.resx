@@ -1928,6 +1928,10 @@
     <value>No se pudo cargar el componente compilado de esta aplicación. Puede que el código de navegador esté desactivado (allow_browser_code) o que el ensamblado no haya superado la verificación.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Esta aplicación muestra información sobre el personaje con el que estás jugando.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>No se pudo cargar el esquema de la aplicación. Puede que falte el manejador de softcode en {0} o que devuelva JSON inválido.</value>
     <comment>MT</comment>

@@ -1928,6 +1928,10 @@
     <value>无法加载此应用程序编译后的组件。浏览器端代码可能已被禁用（allow_browser_code），或程序集未通过校验。</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>此应用显示你所扮演角色的信息。</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>无法加载该应用程序的架构。位于 {0} 的 softcode 处理器可能缺失，或返回了无效的 JSON。</value>
     <comment>MT</comment>

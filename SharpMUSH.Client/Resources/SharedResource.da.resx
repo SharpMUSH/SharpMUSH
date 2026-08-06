@@ -1928,6 +1928,10 @@
     <value>Denne applikations kompilerede komponent kunne ikke indlæses. Browserkode er måske slået fra (allow_browser_code), eller assemblyen bestod ikke verifikationen.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Denne applikation viser oplysninger om den karakter, du spiller.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Applikationens skema kunne ikke indlæses. Softcode-handleren på {0} mangler måske eller returnerer ugyldig JSON.</value>
     <comment>MT</comment>

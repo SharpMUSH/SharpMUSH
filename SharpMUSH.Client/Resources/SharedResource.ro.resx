@@ -1928,6 +1928,10 @@
     <value>Componenta compilată a acestei aplicații nu a putut fi încărcată. Este posibil ca rularea codului în browser să fie dezactivată (allow_browser_code) sau ca ansamblul să nu fi trecut verificarea.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Această aplicație afișează informații despre personajul cu care joci.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Schema aplicației nu a putut fi încărcată. Handlerul softcode de la {0} poate să lipsească sau să returneze JSON invalid.</value>
     <comment>MT</comment>

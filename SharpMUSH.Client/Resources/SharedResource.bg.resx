@@ -1928,6 +1928,10 @@
     <value>Компилираният компонент на това приложение не може да бъде зареден. Възможно е кодът в браузъра да е изключен (allow_browser_code) или асемблито да не е преминало проверката.</value>
     <comment>MT — `allow_browser_code` left in English: config key name</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Това приложение показва информация за героя, с когото играете.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Схемата на приложението не може да бъде заредена. Обработчикът на softcode на {0} може да липсва или да връща невалиден JSON.</value>
     <comment>MT — {0} is a route/handler path, left uninflected</comment>

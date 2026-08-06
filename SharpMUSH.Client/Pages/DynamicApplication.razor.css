@@ -70,6 +70,17 @@
     color: var(--text);
 }
 
+/* The action offered alongside an explanatory alert (create a character / sign in). */
+.app-alert-link {
+    margin-left: 0.375rem;
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.app-alert-link:hover {
+    text-decoration: underline;
+}
+
 .app-alert-warning {
     border-left-color: var(--accent);
 }

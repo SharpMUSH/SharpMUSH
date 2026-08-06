@@ -1928,6 +1928,10 @@
     <value>Nie można wczytać skompilowanego komponentu tej aplikacji. Kod przeglądarki może być wyłączony (allow_browser_code) lub zestaw nie przeszedł weryfikacji.</value>
     <comment>MT — 'allow_browser_code' left as-is: config key name</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Ta aplikacja pokazuje informacje o postaci, którą grasz.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Nie można wczytać schematu aplikacji. Procedura obsługi softcode pod adresem {0} może nie istnieć lub zwracać nieprawidłowy JSON.</value>
     <comment>MT</comment>

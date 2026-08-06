@@ -1928,6 +1928,10 @@
     <value>Не удалось загрузить скомпилированный компонент этого приложения. Возможно, отключён код в браузере (allow_browser_code) или сборка не прошла проверку.</value>
     <comment>MT — allow_browser_code kept as-is: it is a config key name.</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Это приложение показывает сведения о персонаже, за которого вы играете.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Не удалось загрузить схему приложения. Возможно, обработчик softcode по адресу {0} отсутствует или возвращает некорректный JSON.</value>
     <comment>MT — softcode and JSON kept per the glossary; {0} placed after «по адресу», a syntactic boundary that needs no agreement.</comment>

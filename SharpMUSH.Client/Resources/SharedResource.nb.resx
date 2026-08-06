@@ -1928,6 +1928,10 @@
     <value>Den kompilerte komponenten til denne applikasjonen kunne ikke lastes. Nettleserkode kan være slått av (allow_browser_code), eller så feilet verifiseringen av assemblyen.</value>
     <comment>MT — 'allow_browser_code' is a config key, kept verbatim.</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Denne applikasjonen viser informasjon om karakteren du spiller.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Skjemaet til applikasjonen kunne ikke lastes. Softcode-håndtereren på {0} mangler kanskje, eller returnerer ugyldig JSON.</value>
     <comment>MT</comment>

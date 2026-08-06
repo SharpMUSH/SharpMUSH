@@ -7,6 +7,7 @@
 @inject ApplicationRegistryClient Registry
 @inject SchemaAppService Schema
 @inject PluginComponentLoader ComponentLoader
+@inject AccountAuthService AccountAuth
 
 <PageTitle>@(_app?.DisplayName ?? Loc["NavApplication"])</PageTitle>
 
@@ -33,6 +34,24 @@
     {
         <div class="app-alert app-alert-error">
             @Loc["NavNoApplicationAccess"]
+        </div>
+    }
+    else if (_needsCharacter)
+    {
+        @* This application's routes carry an {objid}/{character} token, and only an acting character
+           can fill it. Rendering the schema anyway is what produced the reported bug: the page
+           fetched /http/profile?objid=%7Bobjid%7D with the placeholder intact and reported the
+           inevitable empty answer as "Nothing to display." Say what is actually missing instead. *@
+        <div class="app-alert app-alert-warning">
+            @Loc["NavApplicationNeedsCharacter"]
+            @if (AccountAuth.IsLoggedIn)
+            {
+                <a class="app-alert-link" href="/characters/new">@Loc["NavCreateCharacter"]</a>
+            }
+            else
+            {
+                <a class="app-alert-link" href="/login">@Loc["AuthSignIn"]</a>
+            }
         </div>
     }
     else if (_app.IsComponent)
@@ -71,6 +90,7 @@
 
     private bool _loading = true;
     private bool _authorized;
+    private bool _needsCharacter;
     private PortalApplication? _app;
     private PortalSchemaDocument? _schema;
     private SchemaData? _data;
@@ -82,6 +102,7 @@
         _schema = null;
         _data = null;
         _componentType = null;
+        _needsCharacter = false;
         _app = await Registry.GetAsync(Slug);
 
         if (_app is not null)
@@ -102,16 +123,86 @@
                 }
                 else
                 {
-                    _schema = await Schema.GetSchemaAsync(_app.SchemaUrl);
-                    if (!string.IsNullOrWhiteSpace(_app.DataUrl))
-                    {
-                        _data = await Schema.GetDataAsync(_app.DataUrl!);
-                    }
+                    await LoadSchemaAppAsync();
                 }
             }
         }
 
         _loading = false;
+    }
+
+    /// <summary>
+    /// Fetches the schema and (optionally) the data document, filling any page-context token in
+    /// their routes first. This is the standalone-route counterpart to <c>SchemaWidget</c>: the
+    /// widget fills <c>{objid}</c>/<c>{character}</c> from the cascading <c>ProfilePageContext</c>
+    /// (the character whose profile it is being rendered on), which does not exist here — /apps/{slug}
+    /// has no character in scope but the viewer's own. Without this the seeded character-header app
+    /// requested <c>/http/profile?objid=%7Bobjid%7D</c> literally, for every persona, and reported the
+    /// empty answer as "Nothing to display."
+    /// </summary>
+    private async Task LoadSchemaAppAsync()
+    {
+        var objid = await ActingObjidAsync();
+        var schemaUrl = Substitute(_app!.SchemaUrl, objid);
+        var dataUrl = string.IsNullOrWhiteSpace(_app.DataUrl) ? null : Substitute(_app.DataUrl!, objid);
+
+        // A route we cannot fill is not a route we should fetch.
+        if (schemaUrl is null || (_app.DataUrl is { Length: > 0 } && dataUrl is null))
+        {
+            _needsCharacter = true;
+            return;
+        }
+
+        _schema = await Schema.GetSchemaAsync(schemaUrl);
+        if (dataUrl is not null)
+        {
+            _data = await Schema.GetDataAsync(dataUrl);
+        }
+    }
+
+    /// <summary>
+    /// The acting character's objid, or null when this viewer has none (anonymous, or an account
+    /// that owns no character). Built from the roster entry rather than looked up by name through
+    /// the character directory the way SchemaWidget has to: the account API hands back the dbref and
+    /// creation time that <em>are</em> the objid (<c>#N:creation</c>, see DBRef.ToString), so there
+    /// is nothing to resolve and no ambiguity if two characters ever shared a name.
+    /// </summary>
+    private async Task<string?> ActingObjidAsync()
+    {
+        await AccountAuth.InitAsync();
+        if (!AccountAuth.IsLoggedIn) return null;
+
+        // A session restored from sessionStorage carries no roster, so a reloaded tab has to ask.
+        if (AccountAuth.ActiveCharacter is null && AccountAuth.Characters.Count == 0)
+            await AccountAuth.GetCharactersAsync();
+
+        var character = AccountAuth.ActiveCharacter ?? AccountAuth.Characters.FirstOrDefault();
+        return character is null ? null : $"#{character.DbrefNumber}:{character.CreationTime}";
+    }
+
+    /// <summary>
+    /// Fills <c>{objid}</c>/<c>{character}</c> in a route; null when an <c>{objid}</c> token cannot be
+    /// filled. Mirrors <c>SchemaWidget.Substitute</c> — same tokens, same escaping, same "null means
+    /// don't fetch" contract — so an application behaves identically as a widget and standalone.
+    /// </summary>
+    private string? Substitute(string route, string? objid)
+    {
+        var result = route;
+
+        if (result.Contains("{objid}", StringComparison.Ordinal))
+        {
+            if (string.IsNullOrWhiteSpace(objid)) return null;
+            result = result.Replace("{objid}", Uri.EscapeDataString(objid), StringComparison.Ordinal);
+        }
+
+        if (result.Contains("{character}", StringComparison.Ordinal))
+        {
+            var name = AccountAuth.ActiveCharacter?.Name ?? AccountAuth.Characters.FirstOrDefault()?.Name;
+            if (string.IsNullOrWhiteSpace(name)) return null;
+            result = result.Replace("{character}", Uri.EscapeDataString(name), StringComparison.Ordinal);
+        }
+
+        return result;
     }
 
     private async Task<bool> IsAuthorizedAsync(PortalRole minimum)

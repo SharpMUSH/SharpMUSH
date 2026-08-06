@@ -1928,6 +1928,10 @@
     <value>De gecompileerde component van deze applicatie kon niet worden geladen. Browsercode is mogelijk uitgeschakeld (allow_browser_code) of de assembly is niet geverifieerd.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Deze applicatie toont informatie over het personage dat je speelt.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Het schema van de applicatie kon niet worden geladen. De softcode-handler op {0} ontbreekt mogelijk of geeft ongeldige JSON terug.</value>
     <comment>MT</comment>

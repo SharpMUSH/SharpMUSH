@@ -43,6 +43,10 @@
   <!-- French proof-of-concept: core navigation and layout strings -->
 
   <!-- App.razor -->
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Cette application affiche des informations sur le personnage que vous incarnez.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NotAuthorized" xml:space="preserve">
     <value>Vous n'êtes pas autorisé à accéder à cette ressource.</value>
   </data>

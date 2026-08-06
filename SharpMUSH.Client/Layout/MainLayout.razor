@@ -12,6 +12,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ServerInfoService ServerInfo
 @inject ILayoutService LayoutService
+@inject ApplicationCatalog Applications
 @inject IJSRuntime JS
 
 <MudPopoverProvider />
@@ -321,7 +322,11 @@
             ["mail", ..] => Loc["Mail"],
             ["wiki", ..] => Loc["Wiki"],
             ["softcode", ..] => Loc["SoftcodeEditor"],
-            ["apps", ..] => Loc["LayApplications"],
+            // An application's own display name, not the name of the ADMIN page that manages them —
+            // /apps/character-header used to put "Applications" in the topbar. The catalog is a boot
+            // snapshot, so an app registered since then falls back to its humanised slug, which is
+            // still the page you are looking at rather than a different page entirely.
+            ["apps", var slug, ..] => Applications.Get(slug)?.DisplayName ?? Capitalize(slug.Replace('-', ' ')),
             ["account"] => Loc["MyAccount"],
             ["settings"] => Loc["Settings"],
             ["help", ..] => Loc["Help"],

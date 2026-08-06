@@ -1928,6 +1928,10 @@
     <value>Den här applikationens kompilerade komponent kunde inte läsas in. Webbläsarkod kan vara avstängd (allow_browser_code), eller så klarade inte assemblyn verifieringen.</value>
     <comment>MT — allow_browser_code left as the config identifier it is.</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Den här applikationen visar information om karaktären du spelar.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Applikationens schema kunde inte läsas in. Softcode-hanteraren på {0} saknas kanske eller returnerar ogiltig JSON.</value>
     <comment>MT</comment>

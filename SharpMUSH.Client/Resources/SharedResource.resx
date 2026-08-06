@@ -3383,6 +3383,9 @@
   <data name="NavNoApplicationAccess" xml:space="preserve">
     <value>You do not have access to this application.</value>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>This application shows information about the character you are playing.</value>
+  </data>
   <data name="NavApplicationComponentLoadFailed" xml:space="preserve">
     <value>This application's compiled component could not be loaded. Browser code may be disabled (allow_browser_code), or the assembly failed verification.</value>
   </data>

@@ -1928,6 +1928,10 @@
     <value>Ennek az alkalmazásnak a lefordított komponensét nem sikerült betölteni. Lehet, hogy a böngészőoldali kód le van tiltva (allow_browser_code), vagy az assembly nem ment át az ellenőrzésen.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Ez az alkalmazás az általad játszott karakter adatait mutatja.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Az alkalmazás sémáját nem sikerült betölteni. A(z) {0} címen lévő softcode-kezelő hiányzik, vagy érvénytelen JSON-t ad vissza.</value>
     <comment>MT</comment>

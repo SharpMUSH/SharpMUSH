@@ -1928,6 +1928,10 @@
     <value>Die kompilierte Komponente dieser Anwendung konnte nicht geladen werden. Möglicherweise ist Browser-Code deaktiviert (allow_browser_code) oder die Assembly hat die Überprüfung nicht bestanden.</value>
     <comment>MT — allow_browser_code left verbatim: it is a config option identifier.</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Diese Anwendung zeigt Informationen über den Charakter an, den Sie spielen.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Das Schema der Anwendung konnte nicht geladen werden. Der Softcode-Handler unter {0} fehlt möglicherweise oder liefert ungültiges JSON.</value>
     <comment>MT</comment>
