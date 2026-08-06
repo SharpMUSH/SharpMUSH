@@ -60,4 +60,30 @@ public class DBRefParseTests
 		await Assert.That(DBRef.TryParse(original.ToString(), out var parsed)).IsTrue();
 		await Assert.That(parsed!.Value).IsEqualTo(original);
 	}
+
+	/// <summary>
+	/// <see cref="DBRef.SameObjectAs"/> exists because the two sides of an identity check are routinely
+	/// spelled differently — an auth claim carries the objid, a reference resolved from a graph edge comes
+	/// back bare — and <see cref="DBRef.Equals"/> calls those unequal. Comparing the two as strings is what
+	/// hid every non-public scene from its own owner.
+	/// </summary>
+	[Test]
+	[Arguments("#1", "#1", true)]
+	[Arguments("#1:1785989066109", "#1", true)]
+	[Arguments("#1", "#1:1785989066109", true)]
+	[Arguments("#1:1785989066109", "#1:1785989066109", true)]
+	[Arguments("#1", "#2", false)]
+	[Arguments("#1:1785989066109", "#2", false)]
+	// Both stamped and disagreeing: a recycled dbref, which must never match.
+	[Arguments("#1:1785989066109", "#1:1700000000000", false)]
+	public async ValueTask SameObjectAs_ComparesTheStampOnlyWhenBothSidesHaveOne(
+		string left, string right, bool expected)
+	{
+		DBRef.TryParse(left, out var a);
+		DBRef.TryParse(right, out var b);
+
+		await Assert.That(a!.Value.SameObjectAs(b!.Value)).IsEqualTo(expected);
+		// Symmetric, unlike Matches — an equality test must not depend on operand order.
+		await Assert.That(b.Value.SameObjectAs(a.Value)).IsEqualTo(expected);
+	}
 }
