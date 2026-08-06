@@ -1932,14 +1932,6 @@
     <value>Az alkalmazás sémáját nem sikerült betölteni. A(z) {0} címen lévő softcode-kezelő hiányzik, vagy érvénytelen JSON-t ad vissza.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Karakterkezelés</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>A karakterkezelés hamarosan elérhető.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Karakternév</value>
     <comment>MT</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Fókuszmód</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Ugrás a fiókoldalra</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">

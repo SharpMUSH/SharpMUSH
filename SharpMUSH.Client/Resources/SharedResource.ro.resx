@@ -1932,14 +1932,6 @@
     <value>Schema aplicației nu a putut fi încărcată. Handlerul softcode de la {0} poate să lipsească sau să returneze JSON invalid.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Gestionare personaje</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Gestionarea personajelor va fi disponibilă în curând.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Nume personaj</value>
     <comment>MT</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Mod focalizat</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Accesați pagina contului dumneavoastră</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">

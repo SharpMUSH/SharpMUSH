@@ -1932,14 +1932,6 @@
     <value>无法加载该应用程序的架构。位于 {0} 的 softcode 处理器可能缺失，或返回了无效的 JSON。</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>角色管理</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>角色管理功能即将推出。</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>角色名称</value>
     <comment>MT</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>专注模式</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>前往您的账号页面</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">

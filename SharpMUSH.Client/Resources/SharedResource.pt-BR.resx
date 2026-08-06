@@ -1932,14 +1932,6 @@
     <value>Não foi possível carregar o esquema do aplicativo. O manipulador de softcode em {0} pode estar ausente ou retornando JSON inválido.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Gerenciamento de personagens</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>O gerenciamento de personagens está a caminho.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Nome do personagem</value>
     <comment>MT</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Modo foco</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Ir para a página da sua conta</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">

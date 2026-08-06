@@ -1932,14 +1932,6 @@
     <value>Схемата на приложението не може да бъде заредена. Обработчикът на softcode на {0} може да липсва или да връща невалиден JSON.</value>
     <comment>MT — {0} is a route/handler path, left uninflected</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Управление на героите</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Управлението на героите предстои.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Име на героя</value>
     <comment>MT</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Режим на фокус</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Към страницата на вашия акаунт</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">

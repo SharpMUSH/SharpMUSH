@@ -1932,14 +1932,6 @@
     <value>Het schema van de applicatie kon niet worden geladen. De softcode-handler op {0} ontbreekt mogelijk of geeft ongeldige JSON terug.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Personagebeheer</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Personagebeheer is in de maak.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Naam van personage</value>
     <comment>MT</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Focusmodus</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Ga naar je accountpagina</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">

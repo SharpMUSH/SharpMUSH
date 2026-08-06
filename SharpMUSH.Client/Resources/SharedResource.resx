@@ -3376,15 +3376,6 @@
   <data name="NavThemeComingSoon" xml:space="preserve">
     <value>Theme preferences are on the way.</value>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Character Management</value>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Character management is on the way.</value>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Go to your account page</value>
-  </data>
   <data name="NavMailFolders" xml:space="preserve">
     <value>Folders</value>
   </data>

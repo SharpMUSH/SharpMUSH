@@ -1932,14 +1932,6 @@
     <value>Skjemaet til applikasjonen kunne ikke lastes. Softcode-håndtereren på {0} mangler kanskje, eller returnerer ugyldig JSON.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Karakteradministrasjon</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Karakteradministrasjon kommer snart.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Karakternavn</value>
     <comment>MT</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Fokusmodus</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Gå til kontosiden din</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">

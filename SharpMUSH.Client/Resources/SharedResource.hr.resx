@@ -1932,14 +1932,6 @@
     <value>Nije moguće učitati shemu aplikacije. Softcode rukovatelj na {0} možda nedostaje ili vraća neispravan JSON.</value>
     <comment>MT — {0} is a route/attribute path, indeclinable</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Upravljanje likovima</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Upravljanje likovima uskoro stiže.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Ime lika</value>
     <comment>MT</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Način fokusa</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Idite na stranicu svog računa</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">

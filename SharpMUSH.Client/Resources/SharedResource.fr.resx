@@ -2500,15 +2500,6 @@
   <data name="NavThemeComingSoon" xml:space="preserve">
     <value>Les préférences de thème arrivent bientôt.</value>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Gestion des personnages</value>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>La gestion des personnages arrive bientôt.</value>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Accéder à la page de votre compte</value>
-  </data>
   <data name="NavMailFolders" xml:space="preserve">
     <value>Dossiers</value>
   </data>

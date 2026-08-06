@@ -1,0 +1,14 @@
+@page "/settings/characters"
+@inject NavigationManager NavigationManager
+
+@* /settings/characters was a "Coming soon" stub whose only action was a link back to /account,
+   where real character management (list, unlink, create) has always lived. The stub is gone;
+   this keeps an existing bookmark landing somewhere useful instead of on the not-found page.
+   Same shape as the /admin/* redirects (BannedNamesRedirect and friends). *@
+
+@code {
+    protected override void OnInitialized()
+    {
+        NavigationManager.NavigateTo("/account", replace: true);
+    }
+}

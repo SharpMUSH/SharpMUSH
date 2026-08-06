@@ -1932,14 +1932,6 @@
     <value>Das Schema der Anwendung konnte nicht geladen werden. Der Softcode-Handler unter {0} fehlt möglicherweise oder liefert ungültiges JSON.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Charakterverwaltung</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Die Charakterverwaltung kommt in Kürze.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Charaktername</value>
     <comment>MT</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Fokusmodus</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Zu Ihrer Kontoseite</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">

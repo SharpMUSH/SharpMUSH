@@ -1932,14 +1932,6 @@
     <value>Applikationens skema kunne ikke indlæses. Softcode-handleren på {0} mangler måske eller returnerer ugyldig JSON.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Karakterstyring</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Karakterstyring er på vej.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Karakternavn</value>
     <comment>MT</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Fokustilstand</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Gå til din kontoside</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">

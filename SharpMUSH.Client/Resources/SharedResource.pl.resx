@@ -1932,14 +1932,6 @@
     <value>Nie można wczytać schematu aplikacji. Procedura obsługi softcode pod adresem {0} może nie istnieć lub zwracać nieprawidłowy JSON.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Zarządzanie postaciami</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Zarządzanie postaciami będzie dostępne wkrótce.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Imię postaci</value>
     <comment>MT — 'imię' per corpus for the name of a character/player</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Tryb skupienia</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Przejdź do strony konta</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">

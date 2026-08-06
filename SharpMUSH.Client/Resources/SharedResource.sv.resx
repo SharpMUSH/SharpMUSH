@@ -1932,14 +1932,6 @@
     <value>Applikationens schema kunde inte läsas in. Softcode-hanteraren på {0} saknas kanske eller returnerar ogiltig JSON.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Karaktärshantering</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Karaktärshantering är på väg.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Karaktärsnamn</value>
     <comment>MT</comment>
@@ -1986,10 +1978,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Fokusläge</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Gå till din kontosida</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">
