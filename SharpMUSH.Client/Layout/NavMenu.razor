@@ -66,6 +66,11 @@
             <div class="nav-group-label">@Loc["NavSectionWorld"]</div>
             @NavItem("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
             @NavItem("/characters", Icons.Material.Filled.Groups, Loc["Characters"])
+            @* Help sits with Wiki, not under Manage: it is reference reading for players, and it was
+               the ONLY ungated entry under Manage — which made "Manage" a one-item section holding
+               something nobody manages, for every non-admin. Manage is now purely staff tooling and
+               disappears entirely for a viewer who has none of it. *@
+            @NavItem("/help", Icons.Material.Filled.Help, Loc["Help"])
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="World" Applications="_apps" />
         </div>
 
@@ -103,7 +108,6 @@
             <AuthorizeView Policy="config.admin">
                 <Authorized>@NavItem("/admin/config", Icons.Material.Filled.Tune, Loc["Config"])</Authorized>
             </AuthorizeView>
-            @NavItem("/help", Icons.Material.Filled.Help, Loc["Help"])
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Manage" Applications="_apps" />
         </div>
 
