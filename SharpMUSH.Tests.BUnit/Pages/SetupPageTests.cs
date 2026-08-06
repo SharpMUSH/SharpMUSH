@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
+using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Layout;
@@ -223,9 +224,9 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Input("headwiz");
-		cut.Find("#setup-password").Input("password-one");
-		cut.Find("#setup-confirm").Input("password-one");
+		cut.Find("#setup-username").Change("headwiz");
+		cut.Find("#setup-password").Change("password-one");
+		cut.Find("#setup-confirm").Change("password-one");
 		cut.Find("button.setup-submit").Click();
 
 		cut.WaitForAssertion(() =>
@@ -263,9 +264,9 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true, completeSessionToken: ""));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Input("headwiz");
-		cut.Find("#setup-password").Input("password-one");
-		cut.Find("#setup-confirm").Input("password-one");
+		cut.Find("#setup-username").Change("headwiz");
+		cut.Find("#setup-password").Change("password-one");
+		cut.Find("#setup-confirm").Change("password-one");
 		cut.Find("button.setup-submit").Click();
 
 		cut.WaitForAssertion(() =>
@@ -286,15 +287,37 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 		await Assert.That(accountAuth.IsLoggedIn).IsFalse();
 	}
 
+	/// <summary>
+	/// /setup was the portal's only form page not using the shared field component: Login (5),
+	/// Account (3) and CharacterCreate (2) all use MudTextField, /setup hand-rolled three bare
+	/// &lt;input&gt; elements with uppercase micro-labels above them. It sits one click from /login
+	/// inside the same OnboardingLayout, so the difference read as an inconsistency.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_UsesTheSharedFieldComponentLikeEveryOtherFormPage()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true));
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+
+		await Assert.That(cut.FindComponents<MudTextField<string>>().Count).IsEqualTo(3);
+		await Assert.That(cut.FindAll(".setup-input")).IsEmpty();
+
+		// Both password fields stay password fields, and the leading adornment icons match /login's.
+		await Assert.That(cut.Find("#setup-password").GetAttribute("type")).IsEqualTo("password");
+		await Assert.That(cut.Find("#setup-confirm").GetAttribute("type")).IsEqualTo("password");
+		await Assert.That(cut.FindAll(".mud-input-adornment-start")).IsNotEmpty();
+	}
+
 	[TUnit.Core.Test]
 	public async Task Setup_ValidatesPasswordConfirmation()
 	{
 		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Input("headwiz");
-		cut.Find("#setup-password").Input("password-one");
-		cut.Find("#setup-confirm").Input("password-two");
+		cut.Find("#setup-username").Change("headwiz");
+		cut.Find("#setup-password").Change("password-one");
+		cut.Find("#setup-confirm").Change("password-two");
 		cut.Find("button.setup-submit").Click();
 
 		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AuthPasswordsDoNotMatch");
@@ -309,9 +332,9 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 				completeBody: "Setup has already been completed."));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Input("headwiz");
-		cut.Find("#setup-password").Input("password-one");
-		cut.Find("#setup-confirm").Input("password-one");
+		cut.Find("#setup-username").Change("headwiz");
+		cut.Find("#setup-password").Change("password-one");
+		cut.Find("#setup-confirm").Change("password-one");
 		cut.Find("button.setup-submit").Click();
 
 		cut.WaitForAssertion(() =>
@@ -332,9 +355,9 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 				completeBody: "Username is already taken."));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Input("headwiz");
-		cut.Find("#setup-password").Input("password-one");
-		cut.Find("#setup-confirm").Input("password-one");
+		cut.Find("#setup-username").Change("headwiz");
+		cut.Find("#setup-password").Change("password-one");
+		cut.Find("#setup-confirm").Change("password-one");
 		cut.Find("button.setup-submit").Click();
 
 		cut.WaitForAssertion(() =>
