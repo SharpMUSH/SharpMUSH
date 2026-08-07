@@ -150,6 +150,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = CreateClient();
 		var sceneId = await Eval($"scenecreate(,{God},PrivOwnerList {Guid.NewGuid():N})");
+		await Assert.That(await Eval($"scene({sceneId}, public)")).IsEqualTo("0");
 
 		var scenes = await http.GetFromJsonAsync<List<SceneDto>>("api/scenes?filter=recent&count=200");
 
