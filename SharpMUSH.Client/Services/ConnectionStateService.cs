@@ -217,17 +217,38 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	}
 
 	/// <inheritdoc/>
-	public Task JoinSceneAsync(string sceneId)
-	{
-		if (_sceneHub is null || _sceneHub.State != SignalRState.Connected) return Task.CompletedTask;
-		return _sceneHub.InvokeAsync("JoinScene", sceneId);
-	}
+	public Task JoinSceneAsync(string sceneId) => InvokeSceneHubAsync("JoinScene", sceneId);
 
 	/// <inheritdoc/>
-	public Task LeaveSceneAsync(string sceneId)
+	public Task LeaveSceneAsync(string sceneId) => InvokeSceneHubAsync("LeaveScene", sceneId);
+
+	/// <summary>
+	/// Invokes a scene-hub group method, treating an absent connection as the documented no-op.
+	/// <para>The state check alone cannot deliver that: the scene connection can close between the check and
+	/// the invoke, and SignalR then answers with a transport fault rather than a no-op —
+	/// <see cref="InvalidOperationException"/> ("the connection is not active"),
+	/// <see cref="ObjectDisposedException"/> for a connection torn down underneath the call, or a cancelled
+	/// invocation when the close races an in-flight one. All three mean the same thing as the check that
+	/// missed them by a hair, and the caller has nothing to do about any of them: the group membership dies
+	/// with the connection. The window is not theoretical — <c>SceneLive</c> leaves its group from
+	/// <c>DisposeAsync</c>, which is exactly when the connection is being taken down.</para>
+	/// <para>A <see cref="HubException"/> is deliberately NOT caught here. That is not a transport fault but
+	/// the hub's authorization answer (no character, or a scene the caller may not see), which the calling
+	/// page renders.</para>
+	/// </summary>
+	private async Task InvokeSceneHubAsync(string method, string sceneId)
 	{
-		if (_sceneHub is null || _sceneHub.State != SignalRState.Connected) return Task.CompletedTask;
-		return _sceneHub.InvokeAsync("LeaveScene", sceneId);
+		if (_sceneHub is not { } sceneHub || sceneHub.State != SignalRState.Connected) return;
+
+		try
+		{
+			await sceneHub.InvokeAsync(method, sceneId);
+		}
+		catch (Exception ex) when (ex is InvalidOperationException or OperationCanceledException)
+		{
+			_logger.LogDebug(ex, "[ConnectionStateService] Scene hub {Method}({SceneId}) lost the connection mid-call",
+				method, sceneId);
+		}
 	}
 
 	private void SetState(SignalRState state)
