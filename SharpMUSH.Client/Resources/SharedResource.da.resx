@@ -1929,7 +1929,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
-    <value>Denne applikation viser oplysninger om den karakter, du spiller.</value>
+    <value>Denne applikation kræver en aktiv karakter.</value>
     <comment>MT</comment>
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">

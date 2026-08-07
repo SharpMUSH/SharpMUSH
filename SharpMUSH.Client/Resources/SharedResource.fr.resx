@@ -44,7 +44,7 @@
 
   <!-- App.razor -->
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
-    <value>Cette application affiche des informations sur le personnage que vous incarnez.</value>
+    <value>Cette application nécessite un personnage actif.</value>
     <comment>MT</comment>
   </data>
   <data name="NotAuthorized" xml:space="preserve">

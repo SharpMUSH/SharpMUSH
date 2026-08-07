@@ -1929,7 +1929,7 @@
     <comment>MT — allow_browser_code left as the config identifier it is.</comment>
   </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
-    <value>Den här applikationen visar information om karaktären du spelar.</value>
+    <value>Den här applikationen kräver en aktiv karaktär.</value>
     <comment>MT</comment>
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">

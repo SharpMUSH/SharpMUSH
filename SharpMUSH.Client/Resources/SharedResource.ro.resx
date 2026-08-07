@@ -1929,7 +1929,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
-    <value>Această aplicație afișează informații despre personajul cu care joci.</value>
+    <value>Această aplicație necesită un personaj activ.</value>
     <comment>MT</comment>
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">

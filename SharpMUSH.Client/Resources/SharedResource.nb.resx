@@ -1929,7 +1929,7 @@
     <comment>MT — 'allow_browser_code' is a config key, kept verbatim.</comment>
   </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
-    <value>Denne applikasjonen viser informasjon om karakteren du spiller.</value>
+    <value>Denne applikasjonen krever en aktiv karakter.</value>
     <comment>MT</comment>
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">

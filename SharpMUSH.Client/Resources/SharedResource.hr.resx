@@ -1929,7 +1929,7 @@
     <comment>MT — 'allow_browser_code' is a config key name, left as-is</comment>
   </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
-    <value>Ova aplikacija prikazuje podatke o liku kojim igrate.</value>
+    <value>Ova aplikacija zahtijeva aktivnog lika.</value>
     <comment>MT</comment>
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">

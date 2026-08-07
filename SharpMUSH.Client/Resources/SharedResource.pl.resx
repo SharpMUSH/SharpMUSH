@@ -1929,7 +1929,7 @@
     <comment>MT — 'allow_browser_code' left as-is: config key name</comment>
   </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
-    <value>Ta aplikacja pokazuje informacje o postaci, którą grasz.</value>
+    <value>Ta aplikacja wymaga aktywnej postaci.</value>
     <comment>MT</comment>
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">

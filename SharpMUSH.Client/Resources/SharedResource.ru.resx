@@ -1929,7 +1929,7 @@
     <comment>MT — allow_browser_code kept as-is: it is a config key name.</comment>
   </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
-    <value>Это приложение показывает сведения о персонаже, за которого вы играете.</value>
+    <value>Это приложение требует активного персонажа.</value>
     <comment>MT</comment>
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">

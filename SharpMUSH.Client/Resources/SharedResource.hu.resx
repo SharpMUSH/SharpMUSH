@@ -1929,7 +1929,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
-    <value>Ez az alkalmazás az általad játszott karakter adatait mutatja.</value>
+    <value>Ez az alkalmazás aktív karaktert igényel.</value>
     <comment>MT</comment>
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
@@ -2773,7 +2773,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlayNeedsCharacter" xml:space="preserve">
-    <value>Még nincs karaktered. Hozz létre egyet, hogy beléphess a játékba.</value>
+    <value>Még nincs karaktere. Hozzon létre egyet, hogy beléphessen a játékba.</value>
     <comment>MT</comment>
   </data>
   <data name="Players" xml:space="preserve">

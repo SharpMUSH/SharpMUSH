@@ -1929,7 +1929,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
-    <value>此应用显示你所扮演角色的信息。</value>
+    <value>此应用需要一个活动角色。</value>
     <comment>MT</comment>
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
@@ -2773,7 +2773,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlayNeedsCharacter" xml:space="preserve">
-    <value>你还没有角色。创建一个角色即可进入游戏。</value>
+    <value>您还没有角色。创建一个角色即可进入游戏。</value>
     <comment>MT</comment>
   </data>
   <data name="Players" xml:space="preserve">
