@@ -86,6 +86,44 @@ public class ArangoPluginMigrationTests
 		}
 	}
 
+	/// <summary>
+	/// Two plugins shipped in one assembly each contribute that same assembly, so every migration in it is
+	/// discovered twice. That is one migration seen twice, not two migrations claiming one Id, and the
+	/// duplicate-Id guard must not refuse the boot over it.
+	/// </summary>
+	[Test]
+	public async Task PluginsSharingOneAssembly_DoNotTripTheDuplicateIdGuard()
+	{
+		if (WebAppFactory.Services.GetService<IArangoContext>() is not { } context)
+		{
+			return;
+		}
+
+		var mediator = WebAppFactory.Services.GetRequiredService<IMediator>();
+		var password = WebAppFactory.Services.GetRequiredService<IPasswordService>();
+		var handle = new ArangoHandle($"plugin_migration_{Guid.NewGuid():N}"[..24]);
+
+		try
+		{
+			await new SharpArangoDatabase(NullLogger<SharpArangoDatabase>.Instance, context, handle, mediator, password,
+					[new MarkerMigrationSource(), new MarkerMigrationSource()])
+				.Migrate();
+
+			var history = await context.Query.ExecuteAsync<string>(handle,
+				"FOR x IN MigrationHistory FILTER x._key == @key RETURN x._key",
+				new Dictionary<string, object>
+					{ { "key", MarkerMigration.MigrationId.ToString(CultureInfo.InvariantCulture) } });
+			await Assert.That(history.Count).IsEqualTo(1);
+		}
+		finally
+		{
+			if (await context.Database.ExistAsync(handle))
+			{
+				await context.Database.DropAsync(handle);
+			}
+		}
+	}
+
 	/// <summary>A plugin that contributes exactly one Arango migration, this assembly's <see cref="MarkerMigration"/>.</summary>
 	private sealed class MarkerMigrationSource : IMigrationSource
 	{

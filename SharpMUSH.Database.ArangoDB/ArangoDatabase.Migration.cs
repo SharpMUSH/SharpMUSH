@@ -152,12 +152,33 @@ public partial class ArangoDatabase
 				cancellationToken: ct))
 			.ToHashSet(StringComparer.Ordinal);
 
+		// Distinct: two plugins shipped in one assembly each contribute that assembly, and the same type
+		// discovered twice is one migration rather than an Id collision.
 		var migrations = assemblies
+			.Distinct()
 			.SelectMany(LoadableTypes)
 			.Where(type => typeof(IArangoMigration).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract)
 			.Select(type => (IArangoMigration)Activator.CreateInstance(type, nonPublic: true)!)
 			.OrderBy(migration => migration.Id)
 			.ToList();
+
+		// The Id is the history key, so two migrations claiming one means the second silently never runs
+		// (applied.Add below returns false for it) and reflection order decides which schema change goes
+		// missing. Refuse the whole pass rather than apply an unpredictable half of it.
+		var collisions = migrations
+			.GroupBy(migration => migration.Id)
+			.Where(group => group.Skip(1).Any())
+			.Select(group => $"{group.Key.ToString(CultureInfo.InvariantCulture)} claimed by " +
+				string.Join(", ", group.Select(migration =>
+					$"{migration.GetType().FullName} ({migration.GetType().Assembly.GetName().Name})")))
+			.ToList();
+
+		if (collisions.Count > 0)
+		{
+			throw new InvalidOperationException(
+				"Duplicate Arango migration Ids; each Id must be unique across the engine and every plugin. " +
+				string.Join("; ", collisions));
+		}
 
 		foreach (var migration in migrations)
 		{
