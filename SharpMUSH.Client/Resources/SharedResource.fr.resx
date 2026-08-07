@@ -79,6 +79,14 @@
     <value>Vous n&apos;avez pas encore de personnage. Créez-en un pour entrer dans le jeu.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Vos personnages n&apos;ont pas pu être chargés. Le jeu est peut-être injoignable pour le moment.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Réessayer</value>
+    <comment>MT</comment>
+  </data>
   <data name="Weather" xml:space="preserve">
     <value>Météo</value>
   </data>

@@ -2776,6 +2776,14 @@
     <value>Você ainda não tem um personagem. Crie um para entrar no jogo.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Não foi possível carregar seus personagens. O jogo pode estar indisponível no momento.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Tentar novamente</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Jogadores:</value>
     <comment>MT</comment>

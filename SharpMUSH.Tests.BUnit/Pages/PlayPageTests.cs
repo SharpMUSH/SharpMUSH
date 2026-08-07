@@ -18,19 +18,22 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// <summary>
 /// Fakes the one endpoint /play's own roster check touches: <c>api/account/characters</c>. The
 /// roster is configurable so a test can be an account that owns characters or one that owns none —
-/// which is the whole distinction the page's empty state turns on.
+/// which is the whole distinction the page's empty state turns on. <paramref name="failFirstCalls"/>
+/// errors that many roster requests before answering, which is the third distinction: an account
+/// whose roster could not be fetched at all.
 /// </summary>
-file sealed class PlayPageApiHandler(IReadOnlyList<CharacterSummary> characters) : HttpMessageHandler
+file sealed class PlayPageApiHandler(IReadOnlyList<CharacterSummary> characters, int failFirstCalls = 0) : HttpMessageHandler
 {
+	private int _rosterCalls;
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
 
 		if (request.Method == HttpMethod.Get && path == "api/account/characters")
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = JsonContent.Create(characters)
-			});
+			return Task.FromResult(_rosterCalls++ < failFirstCalls
+				? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+				: new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(characters) });
 
 		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
 	}
@@ -81,9 +84,9 @@ public class PlayPageTests : BunitContext, IAsyncDisposable
 	/// the seeded "sessionStorage", and whose roster fetch returns <paramref name="characters"/>.
 	/// Seeding a session token is what makes <c>IsLoggedIn</c> true without a login round-trip.
 	/// </summary>
-	private void SeedAccount(bool loggedIn, IReadOnlyList<CharacterSummary> characters)
+	private void SeedAccount(bool loggedIn, IReadOnlyList<CharacterSummary> characters, int rosterFailures = 0)
 	{
-		var apiClient = new HttpClient(new PlayPageApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = new HttpClient(new PlayPageApiHandler(characters, rosterFailures)) { BaseAddress = new Uri("https://localhost:8081/") };
 		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
@@ -175,6 +178,55 @@ public class PlayPageTests : BunitContext, IAsyncDisposable
 		});
 
 		await Assert.That(cut.Markup).DoesNotContain("NavPlayNeedsCharacter");
+		await Assert.That(cut.FindAll(".sharp-terminal-container")).IsNotEmpty();
+	}
+
+	/// <summary>
+	/// "You have no character, create one" is an assertion about the account. A roster request that
+	/// never came back is not evidence for it — the service used to degrade a failed fetch to an
+	/// empty list, so a game that was merely unreachable told a player with four characters that
+	/// they had none.
+	/// </summary>
+	[Test]
+	public async Task A_failed_roster_request_is_not_reported_as_having_no_character()
+	{
+		SeedAccount(loggedIn: true, characters: [new CharacterSummary(1, 1L, "Alpha", "", IsActing: true)],
+			rosterFailures: int.MaxValue);
+
+		var cut = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Play>());
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("NavPlayRosterUnavailable"))
+				throw new InvalidOperationException("failure state not rendered yet");
+		});
+
+		await Assert.That(cut.Markup).DoesNotContain("NavPlayNeedsCharacter");
+		await Assert.That(cut.FindAll(".play-shell")).IsEmpty();
+		await Assert.That(cut.Find("button.mud-button-root").TextContent).Contains("NavTryAgain");
+	}
+
+	[Test]
+	public async Task Retrying_after_the_roster_request_recovers_mounts_the_terminal()
+	{
+		SeedAccount(loggedIn: true, characters: [new CharacterSummary(1, 1L, "Alpha", "", IsActing: true)],
+			rosterFailures: 1);
+
+		var cut = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Play>());
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("NavPlayRosterUnavailable"))
+				throw new InvalidOperationException("failure state not rendered yet");
+		});
+
+		cut.Find("button.mud-button-root").Click();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".play-shell").Count == 0)
+				throw new InvalidOperationException("terminal shell not rendered yet");
+		});
+
+		await Assert.That(cut.Markup).DoesNotContain("NavPlayRosterUnavailable");
 		await Assert.That(cut.FindAll(".sharp-terminal-container")).IsNotEmpty();
 	}
 

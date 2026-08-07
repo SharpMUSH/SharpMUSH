@@ -2776,6 +2776,14 @@
     <value>Nie masz jeszcze postaci. Utwórz ją, aby wejść do gry.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Nie udało się wczytać Twoich postaci. Gra może być w tej chwili niedostępna.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Spróbuj ponownie</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Gracze:</value>
     <comment>MT</comment>

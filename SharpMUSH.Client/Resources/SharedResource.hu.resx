@@ -2776,6 +2776,14 @@
     <value>Még nincs karaktere. Hozzon létre egyet, hogy beléphessen a játékba.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>A karaktereit nem sikerült betölteni. Lehet, hogy a játék jelenleg nem érhető el.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Újrapróbálkozás</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Játékosok:</value>
     <comment>MT</comment>

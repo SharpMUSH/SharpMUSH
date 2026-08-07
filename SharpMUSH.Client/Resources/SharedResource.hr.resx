@@ -2776,6 +2776,14 @@
     <value>Još nemate lik. Stvorite ga kako biste ušli u igru.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Vaše likove nije moguće učitati. Igra trenutačno možda nije dostupna.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Pokušajte ponovno</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Igrači:</value>
     <comment>MT</comment>

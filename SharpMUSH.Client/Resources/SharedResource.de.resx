@@ -2776,6 +2776,14 @@
     <value>Sie haben noch keinen Charakter. Erstellen Sie einen, um das Spiel zu betreten.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Ihre Charaktere konnten nicht geladen werden. Das Spiel ist derzeit möglicherweise nicht erreichbar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Erneut versuchen</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Spieler:</value>
     <comment>MT — prose/count label, so translated rather than the Player privilege level</comment>

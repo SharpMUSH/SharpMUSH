@@ -2776,6 +2776,14 @@
     <value>Je hebt nog geen personage. Maak er een aan om het spel te betreden.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Je personages konden niet worden geladen. Het spel is mogelijk momenteel onbereikbaar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Opnieuw proberen</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Spelers:</value>
     <comment>MT</comment>

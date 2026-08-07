@@ -2776,6 +2776,14 @@
     <value>Du har ingen karaktär ännu. Skapa en för att kliva in i spelet.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Dina karaktärer kunde inte läsas in. Spelet kan vara otillgängligt just nu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Försök igen</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Spelare:</value>
     <comment>MT — corpus term; invariant plural.</comment>

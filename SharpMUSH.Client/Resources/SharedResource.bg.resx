@@ -2776,6 +2776,14 @@
     <value>Все още нямате герой. Създайте такъв, за да влезете в играта.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Вашите герои не можаха да бъдат заредени. Възможно е играта да е недостъпна в момента.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Опитайте отново</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Играчи:</value>
     <comment>MT</comment>

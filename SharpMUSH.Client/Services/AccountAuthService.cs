@@ -533,10 +533,22 @@ public class AccountAuthService(
 		}
 	}
 
-	public async Task<IReadOnlyList<CharacterSummary>> GetCharactersAsync()
+	/// <summary>
+	/// This account's roster, or <see cref="Error"/> when the request failed. An anonymous tab is
+	/// the empty roster, not a failure — there is nothing to ask for and no session to ask with.
+	/// </summary>
+	/// <remarks>
+	/// "This account owns no character" and "we could not find out" used to render identically,
+	/// because a failed request degraded to an empty list — the same defect this branch fixed in
+	/// <see cref="CharacterDirectoryService"/>, where a failed fetch printed a confident 0. /play
+	/// then told an account whose roster request had merely failed that it had no character and
+	/// offered to create one. The failure is in the type so a consumer has to decide what to do
+	/// with it rather than inherit the old lie by accident.
+	/// </remarks>
+	public async Task<OneOf<IReadOnlyList<CharacterSummary>, Error>> GetCharactersAsync()
 	{
 		await InitAsync();
-		if (AccountSessionToken is null) return [];
+		if (AccountSessionToken is null) return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0([]);
 
 		try
 		{
@@ -545,12 +557,12 @@ public class AccountAuthService(
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 			var characters = await http.GetFromJsonAsync<IReadOnlyList<CharacterSummary>>("api/account/characters");
 			SetCharacters(characters ?? []);
-			return Characters;
+			return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0(Characters);
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "GetCharacters failed");
-			return [];
+			return new Error();
 		}
 	}
 

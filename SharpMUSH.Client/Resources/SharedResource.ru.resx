@@ -2776,6 +2776,14 @@
     <value>У вас ещё нет персонажа. Создайте его, чтобы войти в игру.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Не удалось загрузить ваших персонажей. Возможно, игра сейчас недоступна.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Повторить попытку</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Игроки:</value>
     <comment>MT — игрок per the corpus; trailing colon preserved.</comment>

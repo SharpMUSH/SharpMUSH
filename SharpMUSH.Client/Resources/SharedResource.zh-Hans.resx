@@ -2776,6 +2776,14 @@
     <value>您还没有角色。创建一个角色即可进入游戏。</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>无法加载您的角色。游戏当前可能无法访问。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>重试</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>玩家：</value>
     <comment>MT</comment>

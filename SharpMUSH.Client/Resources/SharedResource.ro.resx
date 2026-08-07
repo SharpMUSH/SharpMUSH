@@ -2776,6 +2776,14 @@
     <value>Încă nu ai un personaj. Creează unul pentru a intra în joc.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Personajele tale nu au putut fi încărcate. Este posibil ca jocul să fie indisponibil momentan.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Încearcă din nou</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Jucători:</value>
     <comment>MT</comment>

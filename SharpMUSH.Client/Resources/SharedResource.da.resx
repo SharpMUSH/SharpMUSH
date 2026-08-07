@@ -2776,6 +2776,14 @@
     <value>Du har endnu ingen karakter. Opret en for at træde ind i spillet.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Dine karakterer kunne ikke indlæses. Spillet er muligvis utilgængeligt lige nu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Prøv igen</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Spillere:</value>
     <comment>MT</comment>

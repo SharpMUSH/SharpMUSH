@@ -10,15 +10,29 @@
 
 <PageTitle>@Loc["Play"] — @Loc["AppTitle"]</PageTitle>
 
-@* Three states, resolved before anything mounts. An anonymous visitor and a player with a
+@* Four states, resolved before anything mounts. An anonymous visitor and a player with a
    character both get the terminal (the guest/character distinction is GlobalTerminal's job); an
    account holding NO character used to get the terminal too — blank, permanently "not connected",
    with a Connect button that could never succeed and nothing saying why. That case gets the same
-   treatment /mail already gives it: say what is missing, and offer the one action that fixes it. *@
+   treatment /mail already gives it: say what is missing, and offer the one action that fixes it.
+   A roster request that FAILED is the fourth state and deliberately not folded into the third:
+   "you have no character, create one" is an assertion about the account, and a page that never got
+   an answer must not make it. *@
 @if (!_rosterResolved)
 {
     <div class="play-gate">
         <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+    </div>
+}
+else if (_rosterFailed)
+{
+    <div class="play-gate">
+        <EmptyState Class="play-gate-card">
+            <MudText>@Loc["NavPlayRosterUnavailable"]</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RetryRosterAsync" Class="mt-2">
+                @Loc["NavTryAgain"]
+            </MudButton>
+        </EmptyState>
     </div>
 }
 else if (_needsCharacter)
@@ -203,11 +217,12 @@ else
         StateHasChanged();
     }
 
-    // Whether the account-vs-roster question has been answered yet, and its answer. Both start
-    // "unknown" so the terminal is not mounted — and no dead Connect button rendered — until we
-    // know which of the three states this visitor is in.
+    // Whether the account-vs-roster question has been answered yet, and its answer. All three start
+    // "unknown"/false so the terminal is not mounted — and no dead Connect button rendered — until
+    // we know which state this visitor is in.
     private bool _rosterResolved;
     private bool _needsCharacter;
+    private bool _rosterFailed;
 
     protected override void OnInitialized()
     {
@@ -217,23 +232,38 @@ else
         RefreshFromStore("room.exits");
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => ResolveRosterAsync();
+
+    private async Task ResolveRosterAsync()
     {
+        _needsCharacter = false;
+        _rosterFailed = false;
+
         // InitAsync is cached per tab, so this costs a task await once the session has hydrated.
         // It restores the session token but NOT the roster (see AccountAuthService.InitCoreAsync),
         // so a reloaded tab always has to ask the server who this account owns — exactly what
         // GlobalTerminal does before deciding whether it can connect.
         await AccountAuth.InitAsync();
 
-        if (AccountAuth.IsLoggedIn)
+        if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
         {
-            var characters = AccountAuth.Characters.Count > 0
-                ? AccountAuth.Characters
-                : await AccountAuth.GetCharactersAsync();
-            _needsCharacter = characters.Count == 0;
+            if ((await AccountAuth.GetCharactersAsync()).TryPickT0(out var characters, out _))
+                _needsCharacter = characters.Count == 0;
+            else
+                _rosterFailed = true;
         }
 
         _rosterResolved = true;
+    }
+
+    /// <summary>Re-asks the server for the roster, back through the loading state so the failed
+    /// card cannot sit there looking answered while the retry is in flight.</summary>
+    private async Task RetryRosterAsync()
+    {
+        _rosterResolved = false;
+        StateHasChanged();
+        await ResolveRosterAsync();
+        StateHasChanged();
     }
 
     private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
