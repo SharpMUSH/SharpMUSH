@@ -1980,6 +1980,10 @@
   <data name="RolLiveScene" xml:space="preserve">
     <value>Scène en direct</value>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Les mises à jour en direct sont indisponibles — rejoindre une scène nécessite un personnage qui peut la voir. Les poses ci-dessous ne seront pas actualisées.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Scène introuvable.</value>
   </data>

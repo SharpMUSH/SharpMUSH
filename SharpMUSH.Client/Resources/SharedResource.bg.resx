@@ -3164,6 +3164,10 @@
     <value>Сцена в {0}</value>
     <comment>MT — {0} is a room name; no inflection required after the preposition</comment>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Актуализациите на живо не са достъпни — за присъединяване към сцена е необходим герой, който може да я вижда. Позите по-долу няма да се обновяват.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Сцената не е намерена.</value>
     <comment>MT</comment>

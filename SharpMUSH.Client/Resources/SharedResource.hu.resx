@@ -3164,6 +3164,10 @@
     <value>Jelenet itt: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Az élő frissítések nem érhetők el — egy jelenethez való csatlakozáshoz olyan karakter kell, amely látja azt. Az alábbi pózok nem frissülnek.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>A jelenet nem található.</value>
     <comment>MT</comment>

@@ -3164,6 +3164,10 @@
     <value>Scenă în {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Actualizările în timp real nu sunt disponibile — alăturarea la o scenă necesită un personaj care o poate vedea. Pozele de mai jos nu se vor actualiza.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Scena nu a fost găsită.</value>
     <comment>MT</comment>
