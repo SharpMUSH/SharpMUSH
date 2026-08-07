@@ -156,7 +156,7 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 	/// The shared factory logs God in, so God is the connected fixture here; a freshly created
 	/// player that never binds a connection is the unconnected one.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel("PortalPresence")]
 	public async Task Online_ListsConnectedPlayersOnly()
 	{
 		var (godName, _) = await GodIdentity();
@@ -190,7 +190,15 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 	/// for the same character adds no row — measured against a live server, this route returned the
 	/// same objid eight times for one character, and the portal reported eight people online.
 	/// </summary>
-	[Test]
+	/// <remarks>
+	/// This binds a real connection in a server shared for the whole test session, so it shares the
+	/// "PortalPresence" constraint group with <see cref="Online_ListsConnectedPlayersOnly"/>: the two
+	/// read a presence snapshot the other mutates, and only a group they both name serializes them.
+	/// A bare <c>[NotInParallel]</c> would not — measured on TUnit 1.19.16, an unkeyed not-in-parallel
+	/// test still ran alongside four unconstrained ones, so it constrains a test only against others
+	/// that are also unkeyed.
+	/// </remarks>
+	[Test, NotInParallel("PortalPresence")]
 	public async Task Online_ListsADoublyConnectedPlayerOnce()
 	{
 		var (godName, _) = await GodIdentity();
