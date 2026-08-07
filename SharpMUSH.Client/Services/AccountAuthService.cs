@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.JSInterop;
+using OneOf;
+using OneOf.Types;
 
 namespace SharpMUSH.Client.Services;
 
@@ -266,12 +268,17 @@ public class AccountAuthService(
 	}
 
 	/// <summary>
-	/// Checks whether the game still needs first-run setup.
-	/// Returns <c>null</c> (rather than a false negative) on any failure to reach or parse
-	/// the server response — a transient error must never be mistaken for "setup already
-	/// done," since that would permanently hide the first-run wizard for the session.
+	/// Whether the game still needs first-run setup, or <see cref="Error"/> when the server could
+	/// not be reached or its answer could not be parsed.
 	/// </summary>
-	public async Task<bool?> NeedsSetupAsync()
+	/// <remarks>
+	/// The failed arm is load-bearing, not decoration: a transient error mistaken for "setup already
+	/// done" permanently hides the first-run wizard for the session, which is the bug this shape
+	/// exists to prevent. It is a discriminated union rather than the <c>bool?</c> it started as
+	/// because "we could not ask" is a third answer a caller has to handle, and a null that a caller
+	/// may silently coalesce to false is exactly how the original defect got in.
+	/// </remarks>
+	public async Task<OneOf<bool, Error>> NeedsSetupAsync()
 	{
 		try
 		{
@@ -280,14 +287,14 @@ public class AccountAuthService(
 			if (!response.IsSuccessStatusCode)
 			{
 				logger.LogError("Setup status check returned {Status}", response.StatusCode);
-				return null;
+				return new Error();
 			}
 
 			var result = await response.Content.ReadFromJsonAsync<SetupStatusResponse>();
 			if (result is null)
 			{
 				logger.LogError("Setup status check returned an unparseable response");
-				return null;
+				return new Error();
 			}
 
 			return result.NeedsSetup;
@@ -295,7 +302,7 @@ public class AccountAuthService(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Failed to check setup status");
-			return null;
+			return new Error();
 		}
 	}
 

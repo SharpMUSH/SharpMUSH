@@ -14,13 +14,13 @@
         <h1 class="setup-brand-title">@Loc["AuthSetupWelcome", Loc["AppTitle"]]</h1>
     </div>
 
-    @if (!_statusResolved || _needsSetup == false)
+    @if (!_statusResolved || _alreadyClaimed)
     {
         @* Nothing about the game's claim state is knowable until api/setup/status answers, so the
            claim form is not rendered yet. On a cold load that check took ~12 seconds, during which
            an already-claimed game told every visitor it was unclaimed and invited them to become
            its administrator (the POST was safely rejected with a 409, but the copy was a lie).
-           _needsSetup == false is the same "don't render the form" case: the redirect below has
+           _alreadyClaimed is the same "don't render the form" case: the redirect below has
            fired and this component is on its way out. *@
         <div class="setup-card setup-card--resolving">
             <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
@@ -106,23 +106,24 @@
     private string _completedUsername = string.Empty;
 
     // "Have we asked yet?" and "what did the server say?" are separate questions, and the markup
-    // above needs both. NeedsSetupAsync's own answer is already tri-state — true / false / null,
-    // where null means the check couldn't reach or parse the server — so a bare bool? cannot also
-    // encode "not asked yet"; conflating the two is what rendered the claim form during the wait.
+    // above needs both. NeedsSetupAsync answers the second one three ways — needed / not needed /
+    // couldn't ask — so it cannot also carry "not asked yet"; conflating the two is what rendered
+    // the claim form during the wait.
     private bool _statusResolved;
-    private bool? _needsSetup;
+    private bool _alreadyClaimed;
 
     protected override async Task OnInitializedAsync()
     {
-        _needsSetup = await AccountAuth.NeedsSetupAsync();
+        // Only a definitive "setup already done" navigates away. The failed arm means the status
+        // check couldn't reach or parse the server — stay on the page rather than bounce the user
+        // away from the only place they can complete first-run setup; the submit button's own error
+        // handling will surface any real server problem. So unknown-yet (!_statusResolved) hides the
+        // form, but a check that came back and failed still shows it.
+        var status = await AccountAuth.NeedsSetupAsync();
+        _alreadyClaimed = status.TryPickT0(out var needsSetup, out _) && !needsSetup;
         _statusResolved = true;
 
-        // Only navigate away on a definitive "setup already done." A null result means the
-        // status check couldn't reach/parse the server — stay on the page rather than bounce
-        // the user away from the only place they can complete first-run setup; the submit
-        // button's own error handling will surface any real server problem. So unknown-yet
-        // (!_statusResolved) hides the form, but a known null still shows it.
-        if (_needsSetup == false)
+        if (_alreadyClaimed)
             Nav.NavigateTo("/", replace: true);
     }
 
