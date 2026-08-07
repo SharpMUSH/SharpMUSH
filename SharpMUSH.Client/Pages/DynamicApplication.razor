@@ -161,12 +161,21 @@
     }
 
     /// <summary>
-    /// The acting character's objid, or null when this viewer has none (anonymous, or an account
-    /// that owns no character). Built from the roster entry rather than looked up by name through
-    /// the character directory the way SchemaWidget has to: the account API hands back the dbref and
-    /// creation time that <em>are</em> the objid (<c>#N:creation</c>, see DBRef.ToString), so there
-    /// is nothing to resolve and no ambiguity if two characters ever shared a name.
+    /// The acting character's objid, or null when this viewer has none (anonymous, an account that
+    /// owns no character, or a session the server is acting as nobody for). Built from the roster
+    /// entry rather than looked up by name through the character directory the way SchemaWidget has
+    /// to: the account API hands back the dbref and creation time that <em>are</em> the objid
+    /// (<c>#N:creation</c>, see DBRef.ToString), so there is nothing to resolve and no ambiguity if
+    /// two characters ever shared a name.
     /// </summary>
+    /// <remarks>
+    /// <see cref="AccountAuthService.ActiveCharacter"/> is the only admissible answer: it is set
+    /// solely from the entry the server marked as acting, and an unmarked roster means this
+    /// session's token is bound to nobody (see AccountAuthService.SetCharacters). Falling back to
+    /// the first roster entry would fill <c>{objid}</c> with a character the server will not honour
+    /// — on an account with several characters that is somebody else's profile rendered under this
+    /// viewer's session, which is worse than the "needs a character" card the null returns.
+    /// </remarks>
     private async Task<string?> ActingObjidAsync()
     {
         await AccountAuth.InitAsync();
@@ -176,7 +185,7 @@
         if (AccountAuth.ActiveCharacter is null && AccountAuth.Characters.Count == 0)
             await AccountAuth.GetCharactersAsync();
 
-        var character = AccountAuth.ActiveCharacter ?? AccountAuth.Characters.FirstOrDefault();
+        var character = AccountAuth.ActiveCharacter;
         return character is null ? null : $"#{character.DbrefNumber}:{character.CreationTime}";
     }
 
@@ -197,7 +206,9 @@
 
         if (result.Contains("{character}", StringComparison.Ordinal))
         {
-            var name = AccountAuth.ActiveCharacter?.Name ?? AccountAuth.Characters.FirstOrDefault()?.Name;
+            // Same acting-character-only rule as ActingObjidAsync: a name the server is not acting
+            // as would address the request to the wrong persona.
+            var name = AccountAuth.ActiveCharacter?.Name;
             if (string.IsNullOrWhiteSpace(name)) return null;
             result = result.Replace("{character}", Uri.EscapeDataString(name), StringComparison.Ordinal);
         }

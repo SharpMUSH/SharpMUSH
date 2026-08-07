@@ -132,7 +132,7 @@ public class DynamicApplicationPageTests : BunitContext, IAsyncDisposable
 	public async Task The_acting_characters_objid_replaces_the_placeholder()
 	{
 		// #5 created at 1000 → objid "#5:1000", which is what DBRef.ToString() spells.
-		Seed(loggedIn: true, characters: [new CharacterSummary(5, 1000L, "Alpha", "")]);
+		Seed(loggedIn: true, characters: [new CharacterSummary(5, 1000L, "Alpha", "", IsActing: true)]);
 
 		var cut = RenderApp();
 		cut.WaitForAssertion(() =>
@@ -181,6 +181,53 @@ public class DynamicApplicationPageTests : BunitContext, IAsyncDisposable
 
 		await Assert.That(cut.Markup).DoesNotContain("WidNothingToDisplay");
 		await Assert.That(cut.Find("a.app-alert-link").GetAttribute("href")).IsEqualTo("/characters/new");
+	}
+
+	/// <summary>
+	/// The roster's acting marker is the server's answer to "who is this tab?", and an unmarked
+	/// roster means the session token is bound to nobody — so an account that owns characters can
+	/// still have no character to fill <c>{objid}</c> with. Substituting one anyway would ask the
+	/// server for a profile under an identity it will not honour.
+	/// </summary>
+	[Test]
+	public async Task A_roster_with_no_acting_character_fills_nothing_and_says_so()
+	{
+		Seed(loggedIn: true, characters: [new CharacterSummary(5, 1000L, "Alpha", "")]);
+
+		var cut = RenderApp();
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("NavApplicationNeedsCharacter"))
+				throw new InvalidOperationException("explanation not rendered yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(_requests.Any(r => r.StartsWith("/http/profile?", StringComparison.Ordinal))).IsFalse()
+			.Because("an unmarked roster is not an acting character, so there is nothing to substitute");
+	}
+
+	/// <summary>
+	/// The correctness case behind the same rule: on a multi-character account the marked entry is
+	/// the one the page renders, wherever it sits in the roster. Taking the first would show the
+	/// viewer somebody else's profile under their own session.
+	/// </summary>
+	[Test]
+	public async Task The_marked_character_wins_over_the_first_one_on_the_roster()
+	{
+		Seed(loggedIn: true, characters:
+		[
+			new CharacterSummary(7, 2000L, "Beta", ""),
+			new CharacterSummary(5, 1000L, "Alpha", "", IsActing: true),
+		]);
+
+		var cut = RenderApp();
+		cut.WaitForAssertion(() =>
+		{
+			if (!_requests.Any(r => r.StartsWith("/http/profile?", StringComparison.Ordinal)))
+				throw new InvalidOperationException("profile not requested yet");
+		}, TimeSpan.FromSeconds(5));
+
+		var profileRequest = _requests.Single(r => r.StartsWith("/http/profile?", StringComparison.Ordinal));
+		await Assert.That(profileRequest).IsEqualTo("/http/profile?objid=%235%3A1000");
 	}
 
 	/// <summary>
