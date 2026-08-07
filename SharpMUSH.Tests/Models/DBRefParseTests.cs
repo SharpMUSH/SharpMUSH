@@ -79,8 +79,8 @@ public class DBRefParseTests
 	public async ValueTask SameObjectAs_ComparesTheStampOnlyWhenBothSidesHaveOne(
 		string left, string right, bool expected)
 	{
-		DBRef.TryParse(left, out var a);
-		DBRef.TryParse(right, out var b);
+		await Assert.That(DBRef.TryParse(left, out var a)).IsTrue();
+		await Assert.That(DBRef.TryParse(right, out var b)).IsTrue();
 
 		await Assert.That(a!.Value.SameObjectAs(b!.Value)).IsEqualTo(expected);
 		// Symmetric, unlike Matches — an equality test must not depend on operand order.
