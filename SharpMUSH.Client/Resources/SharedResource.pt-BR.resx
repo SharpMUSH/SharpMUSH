@@ -3164,6 +3164,10 @@
     <value>Cena em {0}</value>
     <comment>MT — assumed {0} is a room name</comment>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>As atualizações ao vivo não estão disponíveis — entrar em uma cena exige um personagem que possa vê-la. As poses abaixo não serão atualizadas.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Cena não encontrada.</value>
     <comment>MT</comment>

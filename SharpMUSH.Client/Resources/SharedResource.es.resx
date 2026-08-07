@@ -3164,6 +3164,10 @@
     <value>Escena en {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Las actualizaciones en vivo no están disponibles — unirse a una escena requiere un personaje que pueda verla. Las poses de abajo no se actualizarán.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>No se encontró la escena.</value>
     <comment>MT</comment>

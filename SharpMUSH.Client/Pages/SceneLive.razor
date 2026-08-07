@@ -46,7 +46,13 @@ else
             </MudButton>
         </div>
 
-        @if (!Hub.IsConnected)
+        @if (_liveUnavailable)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
+                @Loc["RolSceneLiveUnavailable"]
+            </MudAlert>
+        }
+        else if (!Hub.IsConnected)
         {
             <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
                 @Loc["RolNotConnected"]
@@ -79,7 +85,7 @@ else
             <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary"
                            Size="Size.Medium" Variant="Variant.Filled"
                            OnClick="SendPoseAsync"
-                           Disabled="@(string.IsNullOrWhiteSpace(_composeText) || !Hub.IsConnected)" />
+                           Disabled="@(string.IsNullOrWhiteSpace(_composeText) || !Hub.IsConnected || _liveUnavailable)" />
         </div>
     </div>
 }
@@ -91,6 +97,7 @@ else
     private readonly List<ScenePoseView> _poses = [];
     private bool _loading = true;
     private bool _notFound;
+    private bool _liveUnavailable;
     private string _composeText = string.Empty;
     private string _mode = "pose";
     private bool _subscribed;
@@ -106,9 +113,15 @@ else
     {
         _loading = true;
         _notFound = false;
+        _liveUnavailable = false;
         _poses.Clear();
         _scene = null;
 
+        // A scene that does not exist and one that exists but is not visible to this caller BOTH land here,
+        // and both must render the one _notFound card. The REST route answers 404 to both for that reason,
+        // and the hub throws one message for both — a refusal a caller can tell apart is a way to enumerate
+        // private scene ids. Any future edit that wants to explain a not-found must keep those two cases
+        // sharing an answer.
         var scene = await SceneService.GetSceneAsync(Id);
         if (scene is null)
         {
@@ -132,14 +145,16 @@ else
             }
             catch (HubException)
             {
-                // The hub gates a join on the same visibility the REST fetch above passed, plus a character
-                // on the connection. A refusal here therefore means either this session acts as no character
-                // or the scene stopped being visible in between — in both cases the honest answer is the one
-                // the archive would give, not a live view that silently never updates.
-                _notFound = true;
-                _scene = null;
-                _loading = false;
-                return;
+                // NOT the not-found card. The fetch above already returned this scene, so the caller
+                // demonstrably may read it and its archive is about to render; calling it missing would be
+                // a plain lie, and it is the lie that costs a real user the page they are entitled to.
+                //
+                // What was refused is only the live subscription. The hub gates that on a character AND on
+                // the same visibility the fetch just passed, so this is either a session acting as no
+                // character (guests cannot join scenes) or a scene that stopped being visible in the moment
+                // between the two calls. Naming that leaks nothing: the caller learned this scene exists
+                // from the 200 they already hold, which is the enumeration boundary — not this message.
+                _liveUnavailable = true;
             }
         }
 
@@ -228,7 +243,9 @@ else
     private async Task SendPoseAsync()
     {
         var text = _composeText.Trim();
-        if (text.Length == 0 || !Hub.IsConnected) return;
+        // _liveUnavailable means this connection is not in the scene's group. Nothing renders a pose but the
+        // round-trip event, so posting from here would look like the command vanished.
+        if (text.Length == 0 || !Hub.IsConnected || _liveUnavailable) return;
 
         var command = _mode switch
         {
