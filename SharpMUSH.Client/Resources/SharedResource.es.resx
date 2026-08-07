@@ -532,10 +532,6 @@
     <value>No hay personajes vinculados a esta cuenta.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>No ha iniciado sesión en ninguna cuenta. Use el panel de inicio de sesión del terminal para acceder.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Abrir {0} en una pestaña nueva</value>
     <comment>MT</comment>
@@ -2186,6 +2182,14 @@
   </data>
   <data name="NotAuthorized" xml:space="preserve">
     <value>No tiene autorización para acceder a este recurso.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Volver al inicio</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>No tiene permiso para ver esta página.</value>
     <comment>MT</comment>
   </data>
   <data name="NotFound" xml:space="preserve">

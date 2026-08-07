@@ -532,10 +532,6 @@
     <value>Keine Charaktere mit diesem Konto verknüpft.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Sie sind nicht bei einem Konto angemeldet. Verwenden Sie das Anmeldefeld im Terminal, um sich anzumelden.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>{0} in neuem Tab öffnen</value>
     <comment>MT</comment>
@@ -2186,6 +2182,14 @@
   </data>
   <data name="NotAuthorized" xml:space="preserve">
     <value>Sie sind nicht berechtigt, auf diese Ressource zuzugreifen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Zurück zur Startseite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Sie haben keine Berechtigung, diese Seite anzuzeigen.</value>
     <comment>MT</comment>
   </data>
   <data name="NotFound" xml:space="preserve">
