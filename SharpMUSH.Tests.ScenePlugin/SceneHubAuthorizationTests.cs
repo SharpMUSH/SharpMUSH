@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Plugins.Scene.Web;
 using System.Reflection;
 using System.Security.Claims;
-using Scene = SharpMUSH.Plugins.Scene.Models.Scene;
 
 namespace SharpMUSH.Tests.ScenePlugin;
 
@@ -22,49 +21,19 @@ namespace SharpMUSH.Tests.ScenePlugin;
 /// </summary>
 public class SceneHubAuthorizationTests
 {
-	private const string CharacterDbrefClaim = "character_dbref";
-
-	/// <summary>God's claim as the auth handlers actually mint it — objid, not bare dbref.</summary>
-	private const string GodObjid = "#1:1785989066109";
-
-	/// <summary>A different, unrelated character's claim.</summary>
-	private const string StrangerObjid = "#7:1700000000000";
-
-	private static Scene SceneOwnedBy(string? ownerDbref, bool isPublic) => new(
-		Id: "scene-1",
-		Status: "active",
-		IsPublic: isPublic,
-		IsTempRoom: false,
-		ScheduledFor: null,
-		StartedAt: 1,
-		LastActivityAt: 2,
-		PoseCount: 0,
-		OwnerDbref: ownerDbref,
-		OwnerName: "God",
-		StarterDbref: ownerDbref,
-		StarterName: "God",
-		RoomDbref: null,
-		RoomName: string.Empty,
-		Meta: new Dictionary<string, string>());
-
 	/// <summary>
 	/// Builds the hub for a caller: <paramref name="claimValue"/> is the acting character, or null for a
-	/// caller with no character. <paramref name="authenticated"/> distinguishes the two null cases —
-	/// an anonymous connection (no authentication type) from a signed-in account acting as no character
-	/// (a guest, or an account whose only characters were unlinked). Both must be refused.
+	/// caller with no character. <paramref name="authenticated"/> picks which of the two null shapes
+	/// <see cref="SceneFixture.PrincipalFor"/> builds. Both must be refused.
 	/// </summary>
 	private static (SceneHub hub, RecordingGroupManager groups) HubFor(
 		FixedSceneService service, string? claimValue, bool authenticated = true)
 	{
-		var identity = claimValue is null
-			? authenticated ? new ClaimsIdentity(authenticationType: "TestScheme") : new ClaimsIdentity()
-			: new ClaimsIdentity([new Claim(CharacterDbrefClaim, claimValue)], "TestScheme");
-
 		var groups = new RecordingGroupManager();
 		var hub = new SceneHub(service, NullLogger<SceneHub>.Instance)
 		{
 			Groups = groups,
-			Context = new FakeHubCallerContext(new ClaimsPrincipal(identity)),
+			Context = new FakeHubCallerContext(SceneFixture.PrincipalFor(claimValue, authenticated)),
 		};
 
 		return (hub, groups);
@@ -89,7 +58,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_AnonymousCaller_IsRefusedAndNeverJoinsTheGroup()
 	{
-		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: true));
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
 		var (hub, groups) = HubFor(service, claimValue: null, authenticated: false);
 
 		await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
@@ -103,7 +72,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_AuthenticatedAccountWithNoCharacter_IsRefusedEvenForAPublicScene()
 	{
-		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: true));
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
 		var (hub, groups) = HubFor(service, claimValue: null);
 
 		await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
@@ -115,8 +84,8 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_PublicScene_AdmitsAnyCharacter()
 	{
-		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: true));
-		var (hub, groups) = HubFor(service, StrangerObjid);
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
+		var (hub, groups) = HubFor(service, SceneFixture.StrangerObjid);
 
 		await hub.JoinScene("scene-1");
 
@@ -126,8 +95,8 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_PrivateSceneOwnedByCaller_IsAdmitted()
 	{
-		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: false));
-		var (hub, groups) = HubFor(service, GodObjid);
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var (hub, groups) = HubFor(service, SceneFixture.GodObjid);
 
 		await hub.JoinScene("scene-1");
 
@@ -139,22 +108,22 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_PrivateSceneCallerIsMember_IsAdmitted()
 	{
-		var service = new FixedSceneService(SceneOwnedBy("#7", isPublic: false)) { MemberDbref = "#1" };
-		var (hub, groups) = HubFor(service, GodObjid);
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#7", isPublic: false)) { MemberDbref = "#1" };
+		var (hub, groups) = HubFor(service, SceneFixture.GodObjid);
 
 		await hub.JoinScene("scene-1");
 
 		await Assert.That(groups.Added).IsEquivalentTo(new[] { ("conn-001", "scene:scene-1") });
 		// The storage resolves the reference against the live object, so it must be handed a parseable
 		// dbref — the canonical objid spelling, not a hash-stripped fragment.
-		await Assert.That(service.MemberLookups).Contains(GodObjid);
+		await Assert.That(service.MemberLookups).Contains(SceneFixture.GodObjid);
 	}
 
 	[Test]
 	public async Task JoinScene_PrivateSceneCallerIsNeitherOwnerNorMember_IsRefused()
 	{
-		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: false));
-		var (hub, groups) = HubFor(service, StrangerObjid);
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var (hub, groups) = HubFor(service, SceneFixture.StrangerObjid);
 
 		await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
 		await Assert.That(groups.Added).IsEmpty();
@@ -167,8 +136,8 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_UnknownScene_IsRefusedIndistinguishablyFromAnInvisibleOne()
 	{
-		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: false));
-		var (hub, _) = HubFor(service, StrangerObjid);
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var (hub, _) = HubFor(service, SceneFixture.StrangerObjid);
 
 		var missing = await Assert.That(async () => await hub.JoinScene("no-such-scene")).Throws<HubException>();
 		var invisible = await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
@@ -179,8 +148,8 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_WithoutASceneId_IsRefused()
 	{
-		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: true));
-		var (hub, groups) = HubFor(service, GodObjid);
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
+		var (hub, groups) = HubFor(service, SceneFixture.GodObjid);
 
 		await Assert.That(async () => await hub.JoinScene(null)).Throws<HubException>();
 		await Assert.That(groups.Added).IsEmpty();
@@ -189,7 +158,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task LeaveScene_WithoutACharacter_IsRefused()
 	{
-		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: true));
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
 		var (hub, groups) = HubFor(service, claimValue: null);
 
 		await Assert.That(async () => await hub.LeaveScene("scene-1")).Throws<HubException>();
@@ -204,8 +173,8 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task LeaveScene_WithACharacter_LeavesTheGroupWithoutConsultingVisibility()
 	{
-		var service = new FixedSceneService(SceneOwnedBy("#1", isPublic: false));
-		var (hub, groups) = HubFor(service, StrangerObjid);
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var (hub, groups) = HubFor(service, SceneFixture.StrangerObjid);
 
 		await hub.LeaveScene("scene-1");
 
