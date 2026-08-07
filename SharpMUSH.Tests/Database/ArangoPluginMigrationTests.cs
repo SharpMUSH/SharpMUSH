@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Globalization;
 using System.Reflection;
 using SharpArangoDatabase = SharpMUSH.Database.ArangoDB.ArangoDatabase;
 
@@ -64,7 +65,7 @@ public class ArangoPluginMigrationTests
 
 			var history = await context.Query.ExecuteAsync<string>(handle, "FOR x IN MigrationHistory RETURN x._key",
 				new Dictionary<string, object>());
-			await Assert.That(history).Contains(MarkerMigration.MigrationId.ToString());
+			await Assert.That(history).Contains(MarkerMigration.MigrationId.ToString(CultureInfo.InvariantCulture));
 
 			// Boot 3: nothing left to do — the migration must not re-run now that it is recorded.
 			await new SharpArangoDatabase(NullLogger<SharpArangoDatabase>.Instance, context, handle, mediator, password,
@@ -73,7 +74,7 @@ public class ArangoPluginMigrationTests
 
 			var rerunHistory = await context.Query.ExecuteAsync<string>(handle,
 				"FOR x IN MigrationHistory FILTER x._key == @key RETURN x._key",
-				new Dictionary<string, object> { { "key", MarkerMigration.MigrationId.ToString() } });
+				new Dictionary<string, object> { { "key", MarkerMigration.MigrationId.ToString(CultureInfo.InvariantCulture) } });
 			await Assert.That(rerunHistory.Count).IsEqualTo(1);
 		}
 		finally
