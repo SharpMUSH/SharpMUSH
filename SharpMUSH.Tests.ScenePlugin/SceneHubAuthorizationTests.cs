@@ -55,8 +55,20 @@ public class SceneHubAuthorizationTests
 			.Because("the hub must authorize on the host's default scheme, like GameHub does");
 	}
 
+	/// <summary>
+	/// The principal an anonymous connection would carry — no authentication type, no claims — is refused by
+	/// the method body too. That is defence in depth, not the anonymous gate: these tests call the hub
+	/// directly, so no SignalR pipeline and therefore no <c>[Authorize]</c> ever runs, and
+	/// <c>SceneVisibility.ActingCharacter</c> reads only the <c>character_dbref</c> claim — it never consults
+	/// <c>Identity.IsAuthenticated</c>. The refusal below is the missing-character one, and the name says so.
+	///
+	/// <para>Rejecting an anonymous <em>connection</em> is unreachable from here and is asserted where it
+	/// lives: <see cref="SceneHub_CarriesTheAuthorizeAttribute_WithNoSchemeOverride"/> for the attribute and
+	/// its scheme, and the integration suite's <c>SceneHub_IsMappedAt_HubsScene</c> for the endpoint the
+	/// attribute is applied to.</para>
+	/// </summary>
 	[Test]
-	public async Task JoinScene_AnonymousCaller_IsRefusedAndNeverJoinsTheGroup()
+	public async Task JoinScene_UnauthenticatedIdentityWithNoCharacter_IsRefusedAndNeverJoinsTheGroup()
 	{
 		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
 		var (hub, groups) = HubFor(service, claimValue: null, authenticated: false);
