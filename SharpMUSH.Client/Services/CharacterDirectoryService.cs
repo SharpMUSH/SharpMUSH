@@ -37,22 +37,15 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// answer must not make one — so the failure is in the type, where a consumer has to decide
 	/// what to do with it rather than inherit the old lie by accident.
 	/// </remarks>
-	public async Task<OneOf<IReadOnlyList<CharacterSummary>, Error>> ListAsync()
+	public async Task<OneOf<IReadOnlyList<CharacterSummary>, Error>> ListAsync(CancellationToken cancellationToken = default)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/characters");
+			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/characters", cancellationToken);
 			return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0(Normalize(rows));
 		}
-		// These handlers are redefinable per game, so a malformed response is a configuration
-		// mistake rather than a bug here: degrade to the failed arm instead of taking the page down.
-		// JsonException covers a body that is not JSON; InvalidOperationException covers a
-		// Content-Type whose charset is unrecognised, which fails while reading the body, before
-		// any parsing. NotSupportedException is documented on ReadFromJsonAsync for an unusable
-		// content type — it does not fire on this stack today, but it is part of the API's contract.
-		catch (Exception ex) when (ex is HttpRequestException or JsonException
-			or InvalidOperationException or NotSupportedException)
+		catch (Exception ex) when (IsRequestFailure(ex, cancellationToken))
 		{
 			logger.LogWarning(ex, "Failed to load character directory.");
 			return new Error();
@@ -66,27 +59,49 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// the roster of every character that exists: a character being listed there implies nothing
 	/// about presence.
 	/// </summary>
-	public async Task<OneOf<IReadOnlyList<CharacterSummary>, Error>> ListOnlineAsync()
+	public async Task<OneOf<IReadOnlyList<CharacterSummary>, Error>> ListOnlineAsync(CancellationToken cancellationToken = default)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/online");
+			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/online", cancellationToken);
 			return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0(Normalize(rows));
 		}
-		// These handlers are redefinable per game, so a malformed response is a configuration
-		// mistake rather than a bug here: degrade to the failed arm instead of taking the page down.
-		// JsonException covers a body that is not JSON; InvalidOperationException covers a
-		// Content-Type whose charset is unrecognised, which fails while reading the body, before
-		// any parsing. NotSupportedException is documented on ReadFromJsonAsync for an unusable
-		// content type — it does not fire on this stack today, but it is part of the API's contract.
-		catch (Exception ex) when (ex is HttpRequestException or JsonException
-			or InvalidOperationException or NotSupportedException)
+		catch (Exception ex) when (IsRequestFailure(ex, cancellationToken))
 		{
 			logger.LogWarning(ex, "Failed to load the online character list.");
 			return new Error();
 		}
 	}
+
+	/// <summary>
+	/// True for a failure that belongs in the <see cref="Error"/> arm rather than up the stack.
+	/// </summary>
+	/// <remarks>
+	/// These handlers are redefinable per game, so a malformed response is a configuration mistake
+	/// rather than a bug here: degrade instead of taking the page down. JsonException covers a body
+	/// that is not JSON; InvalidOperationException covers a Content-Type whose charset is
+	/// unrecognised, which fails while reading the body, before any parsing. NotSupportedException
+	/// is documented on ReadFromJsonAsync for an unusable content type — it does not fire on this
+	/// stack today, but it is part of the API's contract.
+	/// <para>
+	/// A request that exceeds <see cref="HttpClient.Timeout"/> surfaces as a
+	/// <see cref="TaskCanceledException"/> (an <see cref="OperationCanceledException"/>, which is
+	/// not an <see cref="InvalidOperationException"/>), so it used to escape as an unhandled
+	/// exception out of a component's OnInitializedAsync — a slow game taking the page down, which
+	/// is the failure mode this service exists to avoid. A cancellation the caller actually asked
+	/// for is a different fact: it means the caller stopped wanting an answer, not that the game
+	/// could not give one, and rendering "unavailable" for a navigation the user themselves
+	/// abandoned would be a lie in the other direction. That one propagates.
+	/// </para>
+	/// </remarks>
+	private static bool IsRequestFailure(Exception ex, CancellationToken cancellationToken) =>
+		ex switch
+		{
+			OperationCanceledException => !cancellationToken.IsCancellationRequested,
+			HttpRequestException or JsonException or InvalidOperationException or NotSupportedException => true,
+			_ => false
+		};
 
 	/// <summary>
 	/// One row per character, name-sorted. A <c>null</c> body (a bare <c>null</c> literal, which is
@@ -117,9 +132,9 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// A failed directory read is also null here: the caller (a route template with an
 	/// <c>{objid}</c> hole) can do nothing with either answer but decline to fetch.
 	/// </summary>
-	public async Task<string?> ResolveObjidAsync(string name)
+	public async Task<string?> ResolveObjidAsync(string name, CancellationToken cancellationToken = default)
 	{
-		var rows = await ListAsync();
+		var rows = await ListAsync(cancellationToken);
 		return rows.Match(
 			found => found.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))?.Objid,
 			_ => null);
