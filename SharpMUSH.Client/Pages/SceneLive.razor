@@ -269,6 +269,11 @@ else
     /// during disposal, where a thrown <see cref="HubException"/> has nowhere to surface; a refused leave
     /// costs at most one subscription that the connection's own teardown drops anyway.
     /// </summary>
+    /// <remarks>
+    /// Only the refusal is caught here. A connection that closes mid-call is the hub control's problem and
+    /// is a no-op there (<see cref="ISceneHubControl.LeaveSceneAsync"/>) — which matters most on this path,
+    /// since disposal is exactly when the connection is being torn down.
+    /// </remarks>
     private async Task LeaveJoinedSceneAsync()
     {
         if (_joinedSceneId is not { } sceneId) return;
