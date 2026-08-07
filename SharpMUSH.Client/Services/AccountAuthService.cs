@@ -184,6 +184,29 @@ public class AccountAuthService(
 		// body (or its re-entrant fallout) executes.
 		await Task.Yield();
 
+		try
+		{
+			await HydrateFromStorageAsync();
+		}
+		catch (Exception ex)
+		{
+			// InitAsync caches the TASK, not its result, so a hydration that throws is latched for the
+			// life of the tab: GlobalTerminal, MainLayout, both auth-state providers and the bearer
+			// handler all await this same task, and every one of them would rethrow forever — a portal
+			// that cannot render any page rather than one page degrading. Storage that cannot be read
+			// (JSException on a blocked sessionStorage; a corrupted permissions blob) is indistinguishable
+			// from a tab with no session, and "no session" is a state the whole portal already handles.
+			logger.LogError(ex, "Account session hydration failed; treating this tab as signed out");
+			ClearSessionState();
+		}
+
+		// CascadingAuthenticationState snapshots before MainLayout's InitAsync runs; re-notify so a
+		// reloaded tab's restored session (or the cleared one above) reaches [Authorize] gates.
+		RaiseAuthStateChanged();
+	}
+
+	private async Task HydrateFromStorageAsync()
+	{
 		var loggedOutFlag = await js.InvokeAsync<string?>("sessionStorage.getItem", LoggedOutKey);
 		ExplicitlyLoggedOut = string.Equals(loggedOutFlag, bool.TrueString, StringComparison.OrdinalIgnoreCase);
 
@@ -194,12 +217,7 @@ public class AccountAuthService(
 			// Permissions from localStorage/sessionStorage — a returning user in a new tab would
 			// otherwise get a phantom identity with no live session. Nothing in the portal
 			// pre-fills the login form from Username, so there's no UX reason to keep it around.
-			Username = null;
-			MustChangePassword = false;
-			Role = null;
-			Permissions = [];
-			SetActiveCharacter(null);
-			RaiseAuthStateChanged();
+			ClearSessionState();
 			return;
 		}
 
@@ -211,8 +229,18 @@ public class AccountAuthService(
 		Permissions = permissionsJson is null
 			? []
 			: JsonSerializer.Deserialize<IReadOnlyList<string>>(permissionsJson) ?? [];
-		// CascadingAuthenticationState snapshots before MainLayout's InitAsync runs; re-notify so a reloaded tab's restored session reaches [Authorize] gates.
-		RaiseAuthStateChanged();
+	}
+
+	/// <summary>Everything a tab holding no usable session must look like. Does not raise
+	/// <see cref="AuthStateChanged"/> — the caller decides when the notification is due.</summary>
+	private void ClearSessionState()
+	{
+		AccountSessionToken = null;
+		Username = null;
+		MustChangePassword = false;
+		Role = null;
+		Permissions = [];
+		SetActiveCharacter(null);
 	}
 
 	public async Task<(bool Success, string? Error, IReadOnlyList<CharacterSummary> Characters)> LoginAsync(
