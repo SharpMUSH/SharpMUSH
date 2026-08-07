@@ -128,15 +128,25 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 				.ToList();
 
 	/// <summary>
-	/// Resolves a character's objid by (case-insensitive) name via the directory; null if absent.
-	/// A failed directory read is also null here: the caller (a route template with an
-	/// <c>{objid}</c> hole) can do nothing with either answer but decline to fetch.
+	/// Resolves a character's objid by (case-insensitive) name via the directory.
+	/// <see cref="NotFound"/> means no character answers to that name; <see cref="Error"/> means the
+	/// directory could not be read.
 	/// </summary>
-	public async Task<string?> ResolveObjidAsync(string name, CancellationToken cancellationToken = default)
+	/// <remarks>
+	/// The same two facts <see cref="ListAsync"/> keeps apart, kept apart here as well. This used to
+	/// return one null for both, justified by its only caller — a route template with an
+	/// <c>{objid}</c> hole — declining to fetch either way. That is still true of that caller, but it
+	/// is a fact about the caller, not about the answer: "there is no such character" is a 404 page
+	/// and "we could not ask the game" is not, and a caller that wants to say so should not have to
+	/// widen this signature first.
+	/// </remarks>
+	public async Task<OneOf<string, NotFound, Error>> ResolveObjidAsync(string name, CancellationToken cancellationToken = default)
 	{
 		var rows = await ListAsync(cancellationToken);
-		return rows.Match(
-			found => found.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))?.Objid,
-			_ => null);
+		return rows.Match<OneOf<string, NotFound, Error>>(
+			found => found.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match
+				? match.Objid
+				: new NotFound(),
+			error => error);
 	}
 }

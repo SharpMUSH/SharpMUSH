@@ -17,6 +17,23 @@ file sealed class HangingHandler : HttpMessageHandler
 	}
 }
 
+/// <summary>Serves a two-character roster on http/characters, for the name-resolution cases.</summary>
+file sealed class RosterHandler : HttpMessageHandler
+{
+	private record Row(string Name, string Objid, long Created, string Category);
+
+	private static readonly Row[] Roster =
+	[
+		new("Castor", "#12:1200", 1200, ""),
+		new("Solitaire", "#11:1100", 1100, ""),
+	];
+
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+		Task.FromResult(request.RequestUri!.AbsolutePath == "/http/characters"
+			? new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Roster) }
+			: new HttpResponseMessage(HttpStatusCode.NotFound));
+}
+
 /// <summary>Answers immediately with an empty list, for the caller-cancellation cases.</summary>
 file sealed class EmptyListHandler : HttpMessageHandler
 {
@@ -25,8 +42,10 @@ file sealed class EmptyListHandler : HttpMessageHandler
 }
 
 /// <summary>
-/// The two ways a directory read can end in an <see cref="OperationCanceledException"/>, which are
-/// opposite facts and must not share an answer.
+/// Directory outcomes that are different facts and must not share an answer — the service's whole
+/// reason for returning a discriminated union.
+///
+/// The two ways a read can end in an <see cref="OperationCanceledException"/> are the sharpest case.
 ///
 /// A read that outlives <see cref="HttpClient.Timeout"/> is a failed request — the game is slow or
 /// gone — and belongs in the failed arm with every other failed request. It reaches the catch as a
@@ -74,11 +93,35 @@ public class CharacterDirectoryServiceTests
 	}
 
 	[TUnit.Core.Test]
-	public async Task ResolveObjidAsync_RequestTimeout_ResolvesToNothing()
+	public async Task ResolveObjidAsync_RequestTimeout_ReportsTheFailedRead()
 	{
 		var service = Build(new HangingHandler(), TimeSpan.FromMilliseconds(50));
 
-		await Assert.That(await service.ResolveObjidAsync("Solitaire")).IsNull();
+		var result = await service.ResolveObjidAsync("Solitaire");
+
+		// The failed arm, not "no such character" — the two used to be the same null.
+		await Assert.That(result.IsT2).IsTrue();
+	}
+
+	[TUnit.Core.Test]
+	public async Task ResolveObjidAsync_KnownName_ReturnsTheObjid()
+	{
+		var service = Build(new RosterHandler());
+
+		var result = await service.ResolveObjidAsync("sOlItAiRe");
+
+		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.AsT0).IsEqualTo("#11:1100");
+	}
+
+	[TUnit.Core.Test]
+	public async Task ResolveObjidAsync_UnknownName_ReportsNotFound()
+	{
+		var service = Build(new RosterHandler());
+
+		var result = await service.ResolveObjidAsync("Nobody");
+
+		await Assert.That(result.IsT1).IsTrue();
 	}
 
 	[TUnit.Core.Test]
