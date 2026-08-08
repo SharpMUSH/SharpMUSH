@@ -1,6 +1,7 @@
 @page "/scenes/{Id}/live"
 @attribute [Authorize]
 @implements IAsyncDisposable
+@using Microsoft.AspNetCore.SignalR
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Library.Models.Portal
 @using SharpMUSH.Library.Services.Interfaces
@@ -45,7 +46,13 @@ else
             </MudButton>
         </div>
 
-        @if (!Hub.IsConnected)
+        @if (_liveUnavailable)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
+                @Loc["RolSceneLiveUnavailable"]
+            </MudAlert>
+        }
+        else if (!Hub.IsConnected)
         {
             <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
                 @Loc["RolNotConnected"]
@@ -78,7 +85,7 @@ else
             <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary"
                            Size="Size.Medium" Variant="Variant.Filled"
                            OnClick="SendPoseAsync"
-                           Disabled="@(string.IsNullOrWhiteSpace(_composeText) || !Hub.IsConnected)" />
+                           Disabled="@(string.IsNullOrWhiteSpace(_composeText) || !Hub.IsConnected || _liveUnavailable)" />
         </div>
     </div>
 }
@@ -90,6 +97,7 @@ else
     private readonly List<ScenePoseView> _poses = [];
     private bool _loading = true;
     private bool _notFound;
+    private bool _liveUnavailable;
     private string _composeText = string.Empty;
     private string _mode = "pose";
     private bool _subscribed;
@@ -105,9 +113,15 @@ else
     {
         _loading = true;
         _notFound = false;
+        _liveUnavailable = false;
         _poses.Clear();
         _scene = null;
 
+        // A scene that does not exist and one that exists but is not visible to this caller BOTH land here,
+        // and both must render the one _notFound card. The REST route answers 404 to both for that reason,
+        // and the hub throws one message for both — a refusal a caller can tell apart is a way to enumerate
+        // private scene ids. Any future edit that wants to explain a not-found must keep those two cases
+        // sharing an answer.
         var scene = await SceneService.GetSceneAsync(Id);
         if (scene is null)
         {
@@ -122,13 +136,26 @@ else
         // Join the SignalR scene group so we receive realtime ReceiveSceneMessage events.
         if (!string.Equals(_joinedSceneId, Id, StringComparison.Ordinal))
         {
-            if (_joinedSceneId is not null)
-            {
-                await SceneHub.LeaveSceneAsync(_joinedSceneId);
-            }
+            await LeaveJoinedSceneAsync();
 
-            await SceneHub.JoinSceneAsync(Id);
-            _joinedSceneId = Id;
+            try
+            {
+                await SceneHub.JoinSceneAsync(Id);
+                _joinedSceneId = Id;
+            }
+            catch (HubException)
+            {
+                // NOT the not-found card. The fetch above already returned this scene, so the caller
+                // demonstrably may read it and its archive is about to render; calling it missing would be
+                // a plain lie, and it is the lie that costs a real user the page they are entitled to.
+                //
+                // What was refused is only the live subscription. The hub gates that on a character AND on
+                // the same visibility the fetch just passed, so this is either a session acting as no
+                // character (guests cannot join scenes) or a scene that stopped being visible in the moment
+                // between the two calls. Naming that leaks nothing: the caller learned this scene exists
+                // from the 200 they already hold, which is the enumeration boundary — not this message.
+                _liveUnavailable = true;
+            }
         }
 
         _loading = false;
@@ -216,7 +243,9 @@ else
     private async Task SendPoseAsync()
     {
         var text = _composeText.Trim();
-        if (text.Length == 0 || !Hub.IsConnected) return;
+        // _liveUnavailable means this connection is not in the scene's group. Nothing renders a pose but the
+        // round-trip event, so posting from here would look like the command vanished.
+        if (text.Length == 0 || !Hub.IsConnected || _liveUnavailable) return;
 
         var command = _mode switch
         {
@@ -249,10 +278,31 @@ else
             _subscribed = false;
         }
 
-        if (_joinedSceneId is not null)
+        await LeaveJoinedSceneAsync();
+    }
+
+    /// <summary>
+    /// Leaves the joined scene group, if any, tolerating a hub refusal. This runs on navigation away and
+    /// during disposal, where a thrown <see cref="HubException"/> has nowhere to surface; a refused leave
+    /// costs at most one subscription that the connection's own teardown drops anyway.
+    /// </summary>
+    /// <remarks>
+    /// Only the refusal is caught here. A connection that closes mid-call is the hub control's problem and
+    /// is a no-op there (<see cref="ISceneHubControl.LeaveSceneAsync"/>) — which matters most on this path,
+    /// since disposal is exactly when the connection is being torn down.
+    /// </remarks>
+    private async Task LeaveJoinedSceneAsync()
+    {
+        if (_joinedSceneId is not { } sceneId) return;
+
+        _joinedSceneId = null;
+        try
         {
-            await SceneHub.LeaveSceneAsync(_joinedSceneId);
-            _joinedSceneId = null;
+            await SceneHub.LeaveSceneAsync(sceneId);
+        }
+        catch (HubException)
+        {
+            // Nothing to do and nowhere to report it: the group membership dies with the connection.
         }
     }
 

@@ -49,6 +49,26 @@ public class SceneHubRealtimeTests(ServerWebAppFactory factory)
 			.Because("the Scene plugin's IEndpointContributor must have mapped SceneHub at /hubs/scene");
 	}
 
+	/// <summary>
+	/// The hub authorizes each join against <c>ISceneService</c>, so SignalR must be able to CONSTRUCT it:
+	/// its dependencies (the plugin's own <c>ISceneService</c> and an <c>ILogger&lt;SceneHub&gt;</c> over a
+	/// collectible-ALC type) have to resolve from the host container. SignalR's default hub activator does
+	/// exactly this — <c>ActivatorUtilities.CreateInstance</c> on a request scope for a hub type that is not
+	/// itself registered — and it only runs when a client connects, so nothing else in this suite would
+	/// catch a hub that cannot be built.
+	/// </summary>
+	[Test]
+	public async Task SceneHub_CanBeActivatedFromHostDi_LikeSignalRDoes()
+	{
+		using var scope = factory.Services.CreateScope();
+
+		var hub = ActivatorUtilities.CreateInstance(scope.ServiceProvider, SceneHubType);
+
+		await Assert.That(hub).IsNotNull()
+			.Because("SignalR activates the hub per invocation; its ISceneService/ILogger dependencies must " +
+				"resolve from the host container across the plugin ALC");
+	}
+
 	[Test]
 	public async Task SceneHubContext_ResolvesAcrossPluginAlc_AndBridgeTargetIsPublished()
 	{

@@ -2826,6 +2826,9 @@
   <data name="RolLiveScene" xml:space="preserve">
     <value>Live Scene</value>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Live updates are unavailable — joining a scene requires a character who can see it. The poses below will not update.</value>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Scene not found.</value>
   </data>

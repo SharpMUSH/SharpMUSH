@@ -3164,6 +3164,10 @@
     <value>Scène in {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Live-updates zijn niet beschikbaar — deelnemen aan een scène vereist een personage dat de scène kan zien. De poses hieronder worden niet bijgewerkt.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Scène niet gevonden.</value>
     <comment>MT</comment>

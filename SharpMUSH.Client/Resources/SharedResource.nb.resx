@@ -3164,6 +3164,10 @@
     <value>Scene i {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Sanntidsoppdateringer er utilgjengelige — å bli med i en scene krever en rollefigur som kan se den. Posene nedenfor oppdateres ikke.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Fant ikke scenen.</value>
     <comment>MT</comment>
