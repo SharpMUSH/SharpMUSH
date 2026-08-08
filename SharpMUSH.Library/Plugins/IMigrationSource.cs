@@ -8,9 +8,10 @@ namespace SharpMUSH.Library.Plugins;
 /// <c>PluginCatalog</c> collects every source; each provider reads only the contribution relevant to it
 /// inside <c>Migrate()</c>, after its own built-in migration batch:
 /// <list type="bullet">
-///   <item>ArangoDB scans <see cref="ArangoMigrationAssembly"/> alongside its own and applies every
-///   migration Id the database has not recorded yet, so a plugin installed into an already-migrated world
-///   still gets its schema.</item>
+///   <item>ArangoDB treats <see cref="ArangoMigrationAssembly"/> as a migration stream of its own, tracked
+///   separately from the engine's: it applies the Ids that assembly has not recorded yet, in Id order, and
+///   nothing the engine has applied blocks them. So a plugin installed into an already-migrated world still
+///   gets its schema even though its migrations predate the engine's newest.</item>
 ///   <item>Memgraph runs each statement in <see cref="CypherStatements"/>.</item>
 ///   <item>SurrealDB runs each statement in <see cref="SurrealStatements"/>.</item>
 /// </list>
