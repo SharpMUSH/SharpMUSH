@@ -37,7 +37,7 @@ non-API routes (standard WASM hosting pattern).
 /scenes/42/live             Live scene participation
 /apps/{slug}                Dynamic Application (schema-driven; role-gated per registry)
 /settings                   Account settings
-/settings/characters        Character management
+/settings/characters        Redirect → /account (character management lives there)
 /settings/theme             Color/theme preference
 ```
 

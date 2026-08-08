@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Bunit;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.JSInterop;
 using NSubstitute;
 using SharpMUSH.Client.Services;
 
@@ -135,5 +136,62 @@ public class AccountAuthServiceInitTests : BunitContext
 
 		await Assert.That(result).IsNull();
 		await Assert.That(service.ExplicitlyLoggedOut).IsTrue();
+	}
+
+	/// <summary>
+	/// <see cref="AccountAuthService.InitAsync"/> caches the hydration TASK, not its result, so an
+	/// exception thrown while reading storage would be latched for the life of the tab and rethrown
+	/// at every later await — and GlobalTerminal, MainLayout, both auth-state providers and the
+	/// bearer handler all await that same task. The portal would stop rendering entirely rather than
+	/// one page degrading. Storage that cannot be read is a tab with no session, which the portal
+	/// already knows how to be.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task InitAsync_StorageThrows_DegradesToSignedOutAndStaysAwaitable()
+	{
+		JSInterop.Setup<string?>("sessionStorage.getItem", _ => true)
+			.SetException(new JSException("sessionStorage is not available in this context"));
+
+		var service = new AccountAuthService(
+			Substitute.For<IHttpClientFactory>(),
+			JSInterop.JSRuntime,
+			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+
+		await service.InitAsync();
+
+		await Assert.That(service.IsLoggedIn).IsFalse();
+		await Assert.That(service.Username).IsNull();
+		await Assert.That(service.Permissions).IsEmpty();
+
+		// The second await is the whole point: a faulted cached task would rethrow here forever.
+		await service.InitAsync();
+		await Assert.That(service.IsLoggedIn).IsFalse();
+	}
+
+	/// <summary>
+	/// A corrupted permissions blob is the other way hydration used to fault: the deserialize sits
+	/// after the session token is restored, so the failure poisoned a session that was otherwise
+	/// perfectly good.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task InitAsync_CorruptPermissionsBlob_DegradesToSignedOutRatherThanFaulting()
+	{
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session-token-1");
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.username").SetResult("headwiz");
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword").SetResult(bool.FalseString);
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.role").SetResult("God");
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.permissions").SetResult("{not json");
+
+		var service = new AccountAuthService(
+			Substitute.For<IHttpClientFactory>(),
+			JSInterop.JSRuntime,
+			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+
+		await service.InitAsync();
+		await service.InitAsync();
+
+		await Assert.That(service.IsLoggedIn).IsFalse();
+		await Assert.That(service.Permissions).IsEmpty();
 	}
 }

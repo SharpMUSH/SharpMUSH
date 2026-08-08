@@ -1928,16 +1928,12 @@
     <value>De gecompileerde component van deze applicatie kon niet worden geladen. Browsercode is mogelijk uitgeschakeld (allow_browser_code) of de assembly is niet geverifieerd.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Deze applicatie vereist een actief personage.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Het schema van de applicatie kon niet worden geladen. De softcode-handler op {0} ontbreekt mogelijk of geeft ongeldige JSON terug.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Personagebeheer</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Personagebeheer is in de maak.</value>
     <comment>MT</comment>
   </data>
   <data name="NavCharacterName" xml:space="preserve">
@@ -1986,10 +1982,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Focusmodus</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Ga naar je accountpagina</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">
@@ -2780,6 +2772,18 @@
     <value>Spelen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Je hebt nog geen personage. Maak er een aan om het spel te betreden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Je personages konden niet worden geladen. Het spel is mogelijk momenteel onbereikbaar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Opnieuw proberen</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Spelers:</value>
     <comment>MT</comment>
@@ -2938,34 +2942,6 @@
   </data>
   <data name="ResWikiStatTranslations" xml:space="preserve">
     <value>Vertalingen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Fout] Verbinden mislukt: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Systeem] Verbonden met {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Fout] Verbinding verbreken mislukt: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Systeem] Verbinding verbroken</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Ontvangen] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Fout] Verzenden mislukt: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Verzonden] {0}</value>
     <comment>MT</comment>
   </data>
   <data name="ResetChanges" xml:space="preserve">
@@ -3312,10 +3288,6 @@
     <value>Verzenden</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Bericht verzenden</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Server</value>
     <comment>MT</comment>
@@ -3330,10 +3302,6 @@
   </data>
   <data name="ServerSettings" xml:space="preserve">
     <value>Serverinstellingen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>Server-URI</value>
     <comment>MT</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
@@ -3734,14 +3702,6 @@
   </data>
   <data name="WeatherDescription" xml:space="preserve">
     <value>Deze component demonstreert het ophalen van gegevens van de server.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>WebSocket-verbindingstest</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>WebSocket-test</value>
     <comment>MT</comment>
   </data>
   <data name="WidAction" xml:space="preserve">

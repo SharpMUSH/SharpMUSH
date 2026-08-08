@@ -1928,17 +1928,13 @@
     <value>Nije moguće učitati prevedenu komponentu ove aplikacije. Kod u pregledniku možda je onemogućen (allow_browser_code) ili provjera sklopa nije uspjela.</value>
     <comment>MT — 'allow_browser_code' is a config key name, left as-is</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Ova aplikacija zahtijeva aktivnog lika.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Nije moguće učitati shemu aplikacije. Softcode rukovatelj na {0} možda nedostaje ili vraća neispravan JSON.</value>
     <comment>MT — {0} is a route/attribute path, indeclinable</comment>
-  </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Upravljanje likovima</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Upravljanje likovima uskoro stiže.</value>
-    <comment>MT</comment>
   </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Ime lika</value>
@@ -1986,10 +1982,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Način fokusa</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Idite na stranicu svog računa</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">
@@ -2780,6 +2772,18 @@
     <value>Igraj</value>
     <comment>MT — assumed the verb (enter the game), not a media control</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Još nemate lik. Stvorite ga kako biste ušli u igru.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Vaše likove nije moguće učitati. Igra trenutačno možda nije dostupna.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Pokušajte ponovno</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Igrači:</value>
     <comment>MT</comment>
@@ -2938,34 +2942,6 @@
   </data>
   <data name="ResWikiStatTranslations" xml:space="preserve">
     <value>Prijevodi</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Greška] Povezivanje nije uspjelo: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Sustav] Uspostavljena veza: {0}</value>
-    <comment>MT — restructured so the host/URL sits after a colon; 'povezano s …' would demand the instrumental case</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Greška] Prekid veze nije uspio: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Sustav] Veza je prekinuta</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Primljeno] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Greška] Slanje nije uspjelo: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Poslano] {0}</value>
     <comment>MT</comment>
   </data>
   <data name="ResetChanges" xml:space="preserve">
@@ -3312,10 +3288,6 @@
     <value>Pošalji</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Pošalji poruku</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Poslužitelj</value>
     <comment>MT</comment>
@@ -3331,10 +3303,6 @@
   <data name="ServerSettings" xml:space="preserve">
     <value>Postavke poslužitelja</value>
     <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>URI poslužitelja</value>
-    <comment>MT — URI kept as a technical identifier</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Postavi kao ikonu profila</value>
@@ -3735,14 +3703,6 @@
   <data name="WeatherDescription" xml:space="preserve">
     <value>Ova komponenta pokazuje dohvaćanje podataka s poslužitelja.</value>
     <comment>MT</comment>
-  </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>Test WebSocket veze</value>
-    <comment>MT — WebSocket kept untranslated</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>WebSocket test</value>
-    <comment>MT — WebSocket kept untranslated</comment>
   </data>
   <data name="WidAction" xml:space="preserve">
     <value>Radnja</value>

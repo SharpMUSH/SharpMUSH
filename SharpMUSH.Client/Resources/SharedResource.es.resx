@@ -1928,16 +1928,12 @@
     <value>No se pudo cargar el componente compilado de esta aplicación. Puede que el código de navegador esté desactivado (allow_browser_code) o que el ensamblado no haya superado la verificación.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Esta aplicación requiere un personaje activo.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>No se pudo cargar el esquema de la aplicación. Puede que falte el manejador de softcode en {0} o que devuelva JSON inválido.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Gestión de personajes</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>La gestión de personajes está en camino.</value>
     <comment>MT</comment>
   </data>
   <data name="NavCharacterName" xml:space="preserve">
@@ -1986,10 +1982,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Modo enfoque</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Ir a la página de su cuenta</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">
@@ -2780,6 +2772,18 @@
     <value>Jugar</value>
     <comment>MT — assumed nav item that opens the in-browser terminal to play</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Aún no tienes ningún personaje. Crea uno para entrar en el juego.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>No se pudieron cargar tus personajes. Puede que el juego no esté disponible ahora mismo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Reintentar</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Jugadores:</value>
     <comment>MT</comment>
@@ -2938,34 +2942,6 @@
   </data>
   <data name="ResWikiStatTranslations" xml:space="preserve">
     <value>Traducciones</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Error] No se pudo conectar: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Sistema] Conectado a {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Error] No se pudo desconectar: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Sistema] Desconectado</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Recibido] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Error] No se pudo enviar: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Enviado] {0}</value>
     <comment>MT</comment>
   </data>
   <data name="ResetChanges" xml:space="preserve">
@@ -3312,10 +3288,6 @@
     <value>Enviar</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Enviar mensaje</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Servidor</value>
     <comment>MT</comment>
@@ -3331,10 +3303,6 @@
   <data name="ServerSettings" xml:space="preserve">
     <value>Configuración del servidor</value>
     <comment>MT — same rendering as ServerConfiguration; Spanish has no useful distinction between Settings and Configuration here</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>URI del servidor</value>
-    <comment>MT</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Establecer como icono de perfil</value>
@@ -3734,14 +3702,6 @@
   </data>
   <data name="WeatherDescription" xml:space="preserve">
     <value>Este componente demuestra cómo obtener datos del servidor.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>Prueba de conexión WebSocket</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>Prueba de WebSocket</value>
     <comment>MT</comment>
   </data>
   <data name="WidAction" xml:space="preserve">

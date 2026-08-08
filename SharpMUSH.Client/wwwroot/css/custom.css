@@ -426,6 +426,16 @@ body {
 .nav-group {
 	margin-bottom: 0.875rem;
 }
+/* A section that turned out to have no links is not a section. Every child of the Build group is
+   permission- or data-gated, so an anonymous visitor and a registered account with no characters
+   both saw a "BUILD" heading with nothing under it; Manage collapses the same way once its
+   admin-only entries are gated out. Emptiness cannot be known statically — the children are
+   <AuthorizeView> blocks and data-driven <ApplicationNavLinks>, and both render zero elements
+   rather than an empty container — so this keys on the rendered result instead. Every nav entry,
+   hardcoded or data-driven, is a .phosphor-nav-link, which is what makes the test reliable. */
+.nav-group:not(:has(.phosphor-nav-link)) {
+	display: none;
+}
 .nav-group-label {
 	font-family: var(--font-mono);
 	font-size: 0.625rem;

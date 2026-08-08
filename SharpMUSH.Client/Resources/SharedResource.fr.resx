@@ -43,6 +43,10 @@
   <!-- French proof-of-concept: core navigation and layout strings -->
 
   <!-- App.razor -->
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Cette application nécessite un personnage actif.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NotAuthorized" xml:space="preserve">
     <value>Vous n'êtes pas autorisé à accéder à cette ressource.</value>
   </data>
@@ -70,6 +74,18 @@
   </data>
   <data name="Counter" xml:space="preserve">
     <value>Compteur</value>
+  </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Vous n&apos;avez pas encore de personnage. Créez-en un pour entrer dans le jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Vos personnages n&apos;ont pas pu être chargés. Le jeu est peut-être injoignable pour le moment.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Réessayer</value>
+    <comment>MT</comment>
   </data>
   <data name="Weather" xml:space="preserve">
     <value>Météo</value>
@@ -2235,27 +2251,6 @@
   <data name="ResSaveFailedShort" xml:space="preserve">
     <value>Échec de l'enregistrement</value>
   </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Système] Connecté à {0}</value>
-  </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Erreur] Échec de la connexion : {0}</value>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Système] Déconnecté</value>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Erreur] Échec de la déconnexion : {0}</value>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Envoyé] {0}</value>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Erreur] Échec de l'envoi : {0}</value>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Reçu] {0}</value>
-  </data>
   <data name="EnumPermGroupBuild" xml:space="preserve">
     <value>Construction</value>
   </data>
@@ -2495,15 +2490,6 @@
   </data>
   <data name="NavThemeComingSoon" xml:space="preserve">
     <value>Les préférences de thème arrivent bientôt.</value>
-  </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Gestion des personnages</value>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>La gestion des personnages arrive bientôt.</value>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Accéder à la page de votre compte</value>
   </data>
   <data name="NavMailFolders" xml:space="preserve">
     <value>Dossiers</value>
@@ -3375,14 +3361,6 @@
     <value>Fichier sélectionné</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Envoyer le message</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>URI du serveur</value>
-    <comment>MT</comment>
-  </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Définir comme icône de profil</value>
     <comment>MT</comment>
@@ -3545,14 +3523,6 @@
   </data>
   <data name="WeatherDescription" xml:space="preserve">
     <value>Ce composant illustre la récupération de données depuis le serveur.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>Test de connexion WebSocket</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>Test WebSocket</value>
     <comment>MT</comment>
   </data>
   <data name="WikiAdmin" xml:space="preserve">
