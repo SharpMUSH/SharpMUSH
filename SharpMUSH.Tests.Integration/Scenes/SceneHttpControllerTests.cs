@@ -127,6 +127,38 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
+	public async Task GetScene_PrivateSceneOwnedByCaller_Returns200()
+	{
+		var http = CreateClient();
+		// Private (default IsPublic=false) scene owned by the caller (#1), with NO membership edge — so the
+		// only thing that can make it visible is the owner check. Creating a scene does not add its owner as
+		// a member, which is what isolates that path here.
+		var sceneId = await Eval($"scenecreate(,{God},PrivOwner {Guid.NewGuid():N})");
+		await Assert.That(await Eval($"scene({sceneId}, public)")).IsEqualTo("0");
+
+		var response = await http.GetAsync($"api/scenes/{sceneId}");
+
+		// Regression: the claim carries the objid (#1:creation) while the owner edge resolves to a bare #1,
+		// so comparing the two as strings hid EVERY non-public scene from its own owner.
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var dto = await response.Content.ReadFromJsonAsync<SceneDto>();
+		await Assert.That(dto!.OwnerDbref).IsEqualTo(God);
+	}
+
+	[Test]
+	public async Task ListScenes_IncludesPrivateSceneOwnedByCaller()
+	{
+		var http = CreateClient();
+		var sceneId = await Eval($"scenecreate(,{God},PrivOwnerList {Guid.NewGuid():N})");
+		await Assert.That(await Eval($"scene({sceneId}, public)")).IsEqualTo("0");
+
+		var scenes = await http.GetFromJsonAsync<List<SceneDto>>("api/scenes?filter=recent&count=200");
+
+		await Assert.That(scenes).IsNotNull();
+		await Assert.That(scenes!.Any(s => s.Id == sceneId)).IsTrue();
+	}
+
+	[Test]
 	public async Task GetScene_PrivateSceneNotOwnedByCaller_Returns404()
 	{
 		var http = CreateClient();

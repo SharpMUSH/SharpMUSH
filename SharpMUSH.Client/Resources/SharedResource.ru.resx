@@ -1928,17 +1928,13 @@
     <value>Не удалось загрузить скомпилированный компонент этого приложения. Возможно, отключён код в браузере (allow_browser_code) или сборка не прошла проверку.</value>
     <comment>MT — allow_browser_code kept as-is: it is a config key name.</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Это приложение требует активного персонажа.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Не удалось загрузить схему приложения. Возможно, обработчик softcode по адресу {0} отсутствует или возвращает некорректный JSON.</value>
     <comment>MT — softcode and JSON kept per the glossary; {0} placed after «по адресу», a syntactic boundary that needs no agreement.</comment>
-  </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Управление персонажами</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Управление персонажами скоро появится.</value>
-    <comment>MT</comment>
   </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Имя персонажа</value>
@@ -1986,10 +1982,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Режим фокусировки</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Перейти на страницу аккаунта</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">
@@ -2780,6 +2772,18 @@
     <value>Играть</value>
     <comment>MT — assumed the imperative nav action that opens the play surface.</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>У вас ещё нет персонажа. Создайте его, чтобы войти в игру.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Не удалось загрузить ваших персонажей. Возможно, игра сейчас недоступна.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Повторить попытку</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Игроки:</value>
     <comment>MT — игрок per the corpus; trailing colon preserved.</comment>
@@ -2938,34 +2942,6 @@
   </data>
   <data name="ResWikiStatTranslations" xml:space="preserve">
     <value>Переводы</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Ошибка] Не удалось подключиться: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Система] Подключено к {0}</value>
-    <comment>MT — {0} is a URL/host, indeclinable, so the dative governed by «к» causes no agreement problem.</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Ошибка] Не удалось отключиться: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Система] Отключено</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Получено] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Ошибка] Не удалось отправить: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Отправлено] {0}</value>
     <comment>MT</comment>
   </data>
   <data name="ResetChanges" xml:space="preserve">
@@ -3312,10 +3288,6 @@
     <value>Отправить</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Отправить сообщение</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Сервер</value>
     <comment>MT</comment>
@@ -3331,10 +3303,6 @@
   <data name="ServerSettings" xml:space="preserve">
     <value>Настройки сервера</value>
     <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>URI сервера</value>
-    <comment>MT — URI kept as-is.</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Сделать значком профиля</value>
@@ -3736,14 +3704,6 @@
     <value>Этот компонент демонстрирует получение данных с сервера.</value>
     <comment>MT</comment>
   </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>Проверка соединения WebSocket</value>
-    <comment>MT — WebSocket kept per glossary.</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>Проверка WebSocket</value>
-    <comment>MT — WebSocket kept per glossary.</comment>
-  </data>
   <data name="WidAction" xml:space="preserve">
     <value>Действие</value>
     <comment>MT</comment>
@@ -3838,6 +3798,10 @@
   </data>
   <data name="WidNobodyConnected" xml:space="preserve">
     <value>Сейчас никого нет в игре.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Сейчас недоступно.</value>
     <comment>MT</comment>
   </data>
   <data name="WidNothingToDisplay" xml:space="preserve">

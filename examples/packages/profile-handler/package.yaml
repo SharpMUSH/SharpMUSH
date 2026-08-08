@@ -55,9 +55,11 @@ objects:
       GET`CHARACTERS: |-
         @respond/type application/json; think json_array(iter(filter(me/FN`CHARVIS,lsearch(all,type,player)),u(me/FN`CHARROW,%i0),,%r),%r)
       # GET /http/online — connected, visible players, same row shape as GET`CHARACTERS. mwho() is
-      # the mortal connection list: caller-independent (this handler is wizard-flagged), so it hides
-      # DARK players and portal-class background connections. Objects that never bind a connection
-      # can't appear.
+      # the mortal who-list: caller-independent (this handler is wizard-flagged), so it hides DARK
+      # players and portal-class background connections. Objects that never bind a connection can't
+      # appear. It lists PLAYERS, one entry each — someone logged in twice is one row, so this route
+      # answers "who is here", not "how many sockets are open". A redefinition built on lwho()/
+      # ports() would reintroduce per-connection rows and make the portal's presence counts wrong.
       GET`ONLINE: |-
         @respond/type application/json; think json_array(iter(filter(me/FN`ONLINEVIS,mwho()),u(me/FN`CHARROW,%i0),,%r),%r)
       # GET /http/profile?objid=#1:123 — one character's public profile.

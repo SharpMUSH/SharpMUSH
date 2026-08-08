@@ -21,7 +21,10 @@
             <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="settings-nav-arrow" />
         </button>
 
-        <button type="button" class="settings-nav-item" @onclick='() => Nav.NavigateTo("/settings/characters")'>
+        @* Characters land on /account, which is where linking, unlinking and creating them has
+           always actually happened. This row used to point at a /settings/characters stub that
+           said "Coming soon" and offered a link back to /account. *@
+        <button type="button" class="settings-nav-item" @onclick='() => Nav.NavigateTo("/account")'>
             <MudIcon Icon="@Icons.Material.Filled.People" Class="settings-nav-icon" />
             <div class="settings-nav-body">
                 <span class="settings-nav-label">@Loc["Characters"]</span>

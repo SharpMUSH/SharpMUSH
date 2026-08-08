@@ -1928,16 +1928,12 @@
     <value>Nie można wczytać skompilowanego komponentu tej aplikacji. Kod przeglądarki może być wyłączony (allow_browser_code) lub zestaw nie przeszedł weryfikacji.</value>
     <comment>MT — 'allow_browser_code' left as-is: config key name</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Ta aplikacja wymaga aktywnej postaci.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Nie można wczytać schematu aplikacji. Procedura obsługi softcode pod adresem {0} może nie istnieć lub zwracać nieprawidłowy JSON.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Zarządzanie postaciami</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Zarządzanie postaciami będzie dostępne wkrótce.</value>
     <comment>MT</comment>
   </data>
   <data name="NavCharacterName" xml:space="preserve">
@@ -1986,10 +1982,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Tryb skupienia</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Przejdź do strony konta</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">
@@ -2780,6 +2772,18 @@
     <value>Graj</value>
     <comment>MT — assumed a button/link into the game, not a noun</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Nie masz jeszcze postaci. Utwórz ją, aby wejść do gry.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Nie udało się wczytać Twoich postaci. Gra może być w tej chwili niedostępna.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Spróbuj ponownie</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Gracze:</value>
     <comment>MT</comment>
@@ -2938,34 +2942,6 @@
   </data>
   <data name="ResWikiStatTranslations" xml:space="preserve">
     <value>Tłumaczenia</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Błąd] Nie udało się połączyć: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[System] Połączono z: {0}</value>
-    <comment>MT — colon added so the endpoint {0} does not have to take the instrumental case</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Błąd] Nie udało się rozłączyć: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[System] Rozłączono</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Odebrano] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Błąd] Nie udało się wysłać: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Wysłano] {0}</value>
     <comment>MT</comment>
   </data>
   <data name="ResetChanges" xml:space="preserve">
@@ -3312,10 +3288,6 @@
     <value>Wyślij</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Wyślij wiadomość</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Serwer</value>
     <comment>MT</comment>
@@ -3331,10 +3303,6 @@
   <data name="ServerSettings" xml:space="preserve">
     <value>Ustawienia serwera</value>
     <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>URI serwera</value>
-    <comment>MT — URI kept as a technical acronym</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Ustaw jako ikonę profilu</value>
@@ -3736,14 +3704,6 @@
     <value>Ten komponent demonstruje pobieranie danych z serwera.</value>
     <comment>MT</comment>
   </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>Test połączenia WebSocket</value>
-    <comment>MT — WebSocket kept per glossary</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>Test WebSocket</value>
-    <comment>MT — WebSocket kept per glossary</comment>
-  </data>
   <data name="WidAction" xml:space="preserve">
     <value>Akcja</value>
     <comment>MT</comment>
@@ -3838,6 +3798,10 @@
   </data>
   <data name="WidNobodyConnected" xml:space="preserve">
     <value>Obecnie nikt nie jest połączony.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Obecnie niedostępne.</value>
     <comment>MT</comment>
   </data>
   <data name="WidNothingToDisplay" xml:space="preserve">

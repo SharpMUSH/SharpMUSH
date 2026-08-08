@@ -39,6 +39,27 @@ public readonly struct DBRef : IEquatable<DBRef>
 		=> Number == search.Number &&
 			(!search.CreationMilliseconds.HasValue || CreationMilliseconds == search.CreationMilliseconds);
 
+	/// <summary>
+	/// Whether this and <paramref name="other"/> name the same object, tolerating either side being a
+	/// bare dbref: the numbers must always agree, and the creation stamps only when BOTH carry one.
+	/// </summary>
+	/// <remarks>
+	/// <para>Unlike <see cref="Matches"/> this is symmetric. <c>Matches</c> is search-shaped — it treats
+	/// its argument as the query and this instance as the candidate — so for one bare and one stamped
+	/// reference it answers differently depending on which way round it is called, which is never what an
+	/// equality test between two independently-produced references wants.</para>
+	/// <para>Only sound when both sides were resolved from the LIVE object in the same request (a graph
+	/// edge dereferenced to its object vertex, a claim minted from the session's current character): two
+	/// live objects cannot share a dbref number, so the number alone is exact and the stamp is a bonus.
+	/// A <em>stored</em> reference — a persisted dbref string that can outlive the object it names — must
+	/// keep comparing full objids (see <see cref="IsObjid"/>), since a recycled number would otherwise
+	/// match the wrong object.</para>
+	/// </remarks>
+	public bool SameObjectAs(DBRef other)
+		=> Number == other.Number
+			&& (CreationMilliseconds is null || other.CreationMilliseconds is null
+				|| CreationMilliseconds == other.CreationMilliseconds);
+
 	public override int GetHashCode()
 		=> HashCode.Combine(Number, CreationMilliseconds);
 

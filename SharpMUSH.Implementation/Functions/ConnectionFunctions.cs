@@ -732,46 +732,73 @@ public partial class Functions
 		return new CallState(string.Join(" ", resultId));
 	}
 
-	[SharpFunction(Name = "mwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
-	public static async ValueTask<CallState> MortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		// The mortal (public) view: never lists DARK players or portal-class connections, independent of caller.
-		var nonHiddenConnections = ConnectionService!
+	/// <summary>
+	/// The mortal (public) WHO list, as <em>players</em>: never DARK, never portal-class, and
+	/// independent of the caller.
+	/// </summary>
+	/// <remarks>
+	/// The distinct step is load-bearing. <see cref="IConnectionService.GetAll"/> yields one row per
+	/// open socket, so a player connected twice was listed twice — but help mwho defines mwho() as
+	/// "exactly the same as lwho() used by a mortal", and lwho() walks the player table, so the
+	/// connection-shaped answer disagreed with both its own documentation and its privileged twin.
+	/// Everything downstream inherited the duplicate: nmwho() over-counted, and the portal's
+	/// "Players online" tile — which reads this through the profile-handler's GET`ONLINE route —
+	/// counted sockets while claiming to count people. Deduplicating before the object lookup also
+	/// costs one query per player rather than one per connection. The per-connection view is what
+	/// ports()/lports() and WHO are for.
+	/// <para>
+	/// On <see cref="DBRef.Number"/> and not on the whole <see cref="DBRef"/>: the bound reference
+	/// is a bare <c>#N</c> on some login paths and a full <c>#N:creation</c> objid on others, and
+	/// those two compare unequal, so a player holding one connection of each kind would still have
+	/// been listed twice. Two live connections sharing a dbref number are the same player — the
+	/// number cannot be reused while an object still holds it.
+	/// </para>
+	/// </remarks>
+	private static IAsyncEnumerable<AnySharpObject> MortalWhoPlayers() =>
+		ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
 				&& x.PresenceClass != PresenceClasses.Portal)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => !await x.HasFlag("DARK"))
-			.Select(player => $"#{player.Object().DBRef.Number}");
+			.Select(x => x.Ref!.Value)
+			.DistinctBy(x => x.Number)
+			.Select(async (dbref, ct) => (await Mediator!.Send(new GetObjectNodeQuery(dbref), ct)).Known)
+			.Where(async (x, _) => !await x.HasFlag("DARK"));
 
-		return new CallState(string.Join(" ", await nonHiddenConnections.ToArrayAsync()));
+	/// <summary>
+	/// The caller-visible WHO list, as <em>players</em>: everyone logged in whom
+	/// <paramref name="looker"/> can see. The counterpart to <see cref="MortalWhoPlayers"/> for the
+	/// nwho()/xwho() family, and distinct for the same reason — help nwho documents it as
+	/// <c>words(lwho(&lt;viewer&gt;))</c>, and lwho() lists each player once.
+	/// </summary>
+	private static IAsyncEnumerable<AnySharpObject> VisibleWhoPlayers(AnySharpObject looker) =>
+		ConnectionService!
+			.GetAll()
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Select(x => x.Ref!.Value)
+			.DistinctBy(x => x.Number)
+			.Select(async (dbref, ct) => (await Mediator!.Send(new GetObjectNodeQuery(dbref), ct)).Known)
+			.Where(async (x, _) => await PermissionService!.CanSee(looker, x));
+
+	[SharpFunction(Name = "mwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
+	public static async ValueTask<CallState> MortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var nonHiddenPlayers = MortalWhoPlayers().Select(player => $"#{player.Object().DBRef.Number}");
+
+		return new CallState(string.Join(" ", await nonHiddenPlayers.ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "mwhoid", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public static async ValueTask<CallState> MortalWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// The mortal (public) view: never lists DARK players or portal-class connections, independent of caller.
-		var nonHiddenConnectionsObjIds = ConnectionService!
-			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& x.PresenceClass != PresenceClasses.Portal)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => !await x.HasFlag("DARK"))
-			.Select(x => x.Object().DBRef);
+		var nonHiddenPlayerObjIds = MortalWhoPlayers().Select(x => x.Object().DBRef);
 
-		return new CallState(string.Join(" ", await nonHiddenConnectionsObjIds.ToArrayAsync()));
+		return new CallState(string.Join(" ", await nonHiddenPlayerObjIds.ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "nmwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static async ValueTask<CallState> NumberMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var count = await ConnectionService!
-			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& x.PresenceClass != PresenceClasses.Portal)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => !await x.HasFlag("DARK"))
-			.CountAsync();
+		var count = await MortalWhoPlayers().CountAsync();
 
 		return new CallState(count.ToString(CultureInfo.InvariantCulture));
 	}
@@ -800,12 +827,7 @@ public partial class Functions
 			}
 		}
 
-		var count = await ConnectionService!
-			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.CountAsync();
+		var count = await VisibleWhoPlayers(looker).CountAsync();
 
 		return new CallState(count.ToString(CultureInfo.InvariantCulture));
 	}
@@ -1038,13 +1060,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
-		var allDbrefs = ConnectionService!
-			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& x.PresenceClass != PresenceClasses.Portal)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => !await x.HasFlag("DARK"))
-			.Select(x => $"#{x.Object().DBRef.Number}");
+		var allDbrefs = MortalWhoPlayers().Select(x => $"#{x.Object().DBRef.Number}");
 
 		var result = allDbrefs.Skip(start - 1).Take(count);
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
@@ -1067,13 +1083,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
-		var allObjIds = ConnectionService!
-			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& x.PresenceClass != PresenceClasses.Portal)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => !await x.HasFlag("DARK"))
-			.Select(x => x.Object().DBRef);
+		var allObjIds = MortalWhoPlayers().Select(x => x.Object().DBRef);
 
 		var result = allObjIds.Skip(start - 1).Take(count);
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
@@ -1123,12 +1133,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
-		var allDbrefs = ConnectionService!
-			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.Select(x => $"#{x.Object().DBRef.Number}");
+		var allDbrefs = VisibleWhoPlayers(looker).Select(x => $"#{x.Object().DBRef.Number}");
 
 		var result = allDbrefs.Skip(start - 1).Take(count);
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
@@ -1178,12 +1183,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
-		var allObjIds = ConnectionService!
-			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.Select(x => x.Object().DBRef);
+		var allObjIds = VisibleWhoPlayers(looker).Select(x => x.Object().DBRef);
 
 		var result = allObjIds.Skip(start - 1).Take(count);
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));

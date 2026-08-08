@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.JSInterop;
+using OneOf;
+using OneOf.Types;
 
 namespace SharpMUSH.Client.Services;
 
@@ -182,6 +184,29 @@ public class AccountAuthService(
 		// body (or its re-entrant fallout) executes.
 		await Task.Yield();
 
+		try
+		{
+			await HydrateFromStorageAsync();
+		}
+		catch (Exception ex)
+		{
+			// InitAsync caches the TASK, not its result, so a hydration that throws is latched for the
+			// life of the tab: GlobalTerminal, MainLayout, both auth-state providers and the bearer
+			// handler all await this same task, and every one of them would rethrow forever — a portal
+			// that cannot render any page rather than one page degrading. Storage that cannot be read
+			// (JSException on a blocked sessionStorage; a corrupted permissions blob) is indistinguishable
+			// from a tab with no session, and "no session" is a state the whole portal already handles.
+			logger.LogError(ex, "Account session hydration failed; treating this tab as signed out");
+			ClearSessionState();
+		}
+
+		// CascadingAuthenticationState snapshots before MainLayout's InitAsync runs; re-notify so a
+		// reloaded tab's restored session (or the cleared one above) reaches [Authorize] gates.
+		RaiseAuthStateChanged();
+	}
+
+	private async Task HydrateFromStorageAsync()
+	{
 		var loggedOutFlag = await js.InvokeAsync<string?>("sessionStorage.getItem", LoggedOutKey);
 		ExplicitlyLoggedOut = string.Equals(loggedOutFlag, bool.TrueString, StringComparison.OrdinalIgnoreCase);
 
@@ -192,12 +217,7 @@ public class AccountAuthService(
 			// Permissions from localStorage/sessionStorage — a returning user in a new tab would
 			// otherwise get a phantom identity with no live session. Nothing in the portal
 			// pre-fills the login form from Username, so there's no UX reason to keep it around.
-			Username = null;
-			MustChangePassword = false;
-			Role = null;
-			Permissions = [];
-			SetActiveCharacter(null);
-			RaiseAuthStateChanged();
+			ClearSessionState();
 			return;
 		}
 
@@ -209,8 +229,18 @@ public class AccountAuthService(
 		Permissions = permissionsJson is null
 			? []
 			: JsonSerializer.Deserialize<IReadOnlyList<string>>(permissionsJson) ?? [];
-		// CascadingAuthenticationState snapshots before MainLayout's InitAsync runs; re-notify so a reloaded tab's restored session reaches [Authorize] gates.
-		RaiseAuthStateChanged();
+	}
+
+	/// <summary>Everything a tab holding no usable session must look like. Does not raise
+	/// <see cref="AuthStateChanged"/> — the caller decides when the notification is due.</summary>
+	private void ClearSessionState()
+	{
+		AccountSessionToken = null;
+		Username = null;
+		MustChangePassword = false;
+		Role = null;
+		Permissions = [];
+		SetActiveCharacter(null);
 	}
 
 	public async Task<(bool Success, string? Error, IReadOnlyList<CharacterSummary> Characters)> LoginAsync(
@@ -266,12 +296,17 @@ public class AccountAuthService(
 	}
 
 	/// <summary>
-	/// Checks whether the game still needs first-run setup.
-	/// Returns <c>null</c> (rather than a false negative) on any failure to reach or parse
-	/// the server response — a transient error must never be mistaken for "setup already
-	/// done," since that would permanently hide the first-run wizard for the session.
+	/// Whether the game still needs first-run setup, or <see cref="Error"/> when the server could
+	/// not be reached or its answer could not be parsed.
 	/// </summary>
-	public async Task<bool?> NeedsSetupAsync()
+	/// <remarks>
+	/// The failed arm is load-bearing, not decoration: a transient error mistaken for "setup already
+	/// done" permanently hides the first-run wizard for the session, which is the bug this shape
+	/// exists to prevent. It is a discriminated union rather than the <c>bool?</c> it started as
+	/// because "we could not ask" is a third answer a caller has to handle, and a null that a caller
+	/// may silently coalesce to false is exactly how the original defect got in.
+	/// </remarks>
+	public async Task<OneOf<bool, Error>> NeedsSetupAsync()
 	{
 		try
 		{
@@ -280,14 +315,14 @@ public class AccountAuthService(
 			if (!response.IsSuccessStatusCode)
 			{
 				logger.LogError("Setup status check returned {Status}", response.StatusCode);
-				return null;
+				return new Error();
 			}
 
 			var result = await response.Content.ReadFromJsonAsync<SetupStatusResponse>();
 			if (result is null)
 			{
 				logger.LogError("Setup status check returned an unparseable response");
-				return null;
+				return new Error();
 			}
 
 			return result.NeedsSetup;
@@ -295,7 +330,7 @@ public class AccountAuthService(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Failed to check setup status");
-			return null;
+			return new Error();
 		}
 	}
 
@@ -498,10 +533,22 @@ public class AccountAuthService(
 		}
 	}
 
-	public async Task<IReadOnlyList<CharacterSummary>> GetCharactersAsync()
+	/// <summary>
+	/// This account's roster, or <see cref="Error"/> when the request failed. An anonymous tab is
+	/// the empty roster, not a failure — there is nothing to ask for and no session to ask with.
+	/// </summary>
+	/// <remarks>
+	/// "This account owns no character" and "we could not find out" used to render identically,
+	/// because a failed request degraded to an empty list — the same defect this branch fixed in
+	/// <see cref="CharacterDirectoryService"/>, where a failed fetch printed a confident 0. /play
+	/// then told an account whose roster request had merely failed that it had no character and
+	/// offered to create one. The failure is in the type so a consumer has to decide what to do
+	/// with it rather than inherit the old lie by accident.
+	/// </remarks>
+	public async Task<OneOf<IReadOnlyList<CharacterSummary>, Error>> GetCharactersAsync()
 	{
 		await InitAsync();
-		if (AccountSessionToken is null) return [];
+		if (AccountSessionToken is null) return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0([]);
 
 		try
 		{
@@ -510,12 +557,12 @@ public class AccountAuthService(
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 			var characters = await http.GetFromJsonAsync<IReadOnlyList<CharacterSummary>>("api/account/characters");
 			SetCharacters(characters ?? []);
-			return Characters;
+			return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0(Characters);
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "GetCharacters failed");
-			return [];
+			return new Error();
 		}
 	}
 

@@ -14,7 +14,21 @@
         <h1 class="setup-brand-title">@Loc["AuthSetupWelcome", Loc["AppTitle"]]</h1>
     </div>
 
-    @if (_success)
+    @if (!_statusResolved || _alreadyClaimed)
+    {
+        @* Nothing about the game's claim state is knowable until api/setup/status answers, so the
+           claim form is not rendered yet. On a cold load that check took ~12 seconds, during which
+           an already-claimed game told every visitor it was unclaimed and invited them to become
+           its administrator (the POST was safely rejected with a 409, but the copy was a lie).
+           _alreadyClaimed is the same "don't render the form" case: the redirect below has
+           fired and this component is on its way out. *@
+        <div class="setup-card setup-card--resolving">
+            <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            <p class="setup-lead">@Loc["Loading"]</p>
+        </div>
+    }
+    else if (_success)
     {
         <div class="setup-card">
             <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
@@ -52,23 +66,27 @@
                 <div class="setup-error" role="alert">@_error</div>
             }
 
-            <div class="setup-field">
-                <label class="setup-label" for="setup-username">@Loc["AuthUsername"]</label>
-                <input id="setup-username" class="setup-input" type="text"
-                       @bind="_username" @bind:event="oninput" disabled="@_busy" autocomplete="username" />
-            </div>
+            @* Same field treatment as /login, which is one click away inside the same
+               OnboardingLayout: outlined + dense MudTextField, floating label, leading adornment
+               icon, real password inputs. These three were the portal's only hand-rolled <input>
+               elements, with uppercase micro-labels stacked above them — a visible inconsistency
+               rather than a deliberate variation. *@
+            <MudTextField id="setup-username" @bind-Value="_username" Label="@Loc["AuthUsername"]"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
+                          Disabled="_busy" autocomplete="username" />
 
-            <div class="setup-field">
-                <label class="setup-label" for="setup-password">@Loc["AuthPassword"]</label>
-                <input id="setup-password" class="setup-input" type="password"
-                       @bind="_password" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
-            </div>
+            <MudTextField id="setup-password" @bind-Value="_password" Label="@Loc["AuthPassword"]"
+                          InputType="InputType.Password"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                          Disabled="_busy" autocomplete="new-password" />
 
-            <div class="setup-field">
-                <label class="setup-label" for="setup-confirm">@Loc["AuthConfirmPassword"]</label>
-                <input id="setup-confirm" class="setup-input" type="password"
-                       @bind="_confirm" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
-            </div>
+            <MudTextField id="setup-confirm" @bind-Value="_confirm" Label="@Loc["AuthConfirmPassword"]"
+                          InputType="InputType.Password"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                          Disabled="_busy" autocomplete="new-password" />
 
             <button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
                 @(_busy ? Loc["AuthSettingUp"] : Loc["AuthCreateAdminAccount"])
@@ -87,13 +105,25 @@
     private bool _autoLoggedIn;
     private string _completedUsername = string.Empty;
 
+    // "Have we asked yet?" and "what did the server say?" are separate questions, and the markup
+    // above needs both. NeedsSetupAsync answers the second one three ways — needed / not needed /
+    // couldn't ask — so it cannot also carry "not asked yet"; conflating the two is what rendered
+    // the claim form during the wait.
+    private bool _statusResolved;
+    private bool _alreadyClaimed;
+
     protected override async Task OnInitializedAsync()
     {
-        // Only navigate away on a definitive "setup already done." A null result means the
-        // status check couldn't reach/parse the server — stay on the page rather than bounce
-        // the user away from the only place they can complete first-run setup; the submit
-        // button's own error handling will surface any real server problem.
-        if (await AccountAuth.NeedsSetupAsync() == false)
+        // Only a definitive "setup already done" navigates away. The failed arm means the status
+        // check couldn't reach or parse the server — stay on the page rather than bounce the user
+        // away from the only place they can complete first-run setup; the submit button's own error
+        // handling will surface any real server problem. So unknown-yet (!_statusResolved) hides the
+        // form, but a check that came back and failed still shows it.
+        var status = await AccountAuth.NeedsSetupAsync();
+        _alreadyClaimed = status.TryPickT0(out var needsSetup, out _) && !needsSetup;
+        _statusResolved = true;
+
+        if (_alreadyClaimed)
             Nav.NavigateTo("/", replace: true);
     }
 
