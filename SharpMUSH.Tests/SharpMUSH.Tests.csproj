@@ -9,6 +9,13 @@
     <LangVersion>default</LangVersion>
 		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
 		<NoWarn>TUnit0038;TUnitAssertions0002;ASPDEPR004;ASPDEPR008</NoWarn>
+		<!-- The Fixtures/ plugin projects are deliberately not in SharpMUSH.sln. When MSBuild builds a
+		     solution it unsets Configuration for ProjectReferences outside that solution, so those fixtures
+		     fell back to their own default (Debug) even under `dotnet build -c Release`, while the copy
+		     targets below looked in bin/$(Configuration) — the MSB3030 failures. Keeping the parent's
+		     Configuration makes the reference build where the copy expects it. Building either .csproj
+		     directly always worked, which is why only the solution-level Release build ever broke. -->
+		<ShouldUnsetParentConfigurationAndPlatform>false</ShouldUnsetParentConfigurationAndPlatform>
 	</PropertyGroup>
 
   <ItemGroup>
