@@ -4,10 +4,13 @@
 
     protected override void OnInitialized()
     {
-        // OIDC wiring was removed; NavigateToLogin("authentication/login") pointed at a route
-        // that no longer exists, dead-ending anonymous users who hit an [Authorize] page (see
-        // App.razor's NotAuthorized branch). Send them to our real login page instead, carrying
-        // a returnUrl so a successful sign-in lands back where they were headed.
+        // OIDC wiring was removed, but NavigateToLogin("authentication/login") kept pointing at
+        // the RemoteAuthenticatorView page, which needs the AddRemoteAuthentication registration
+        // that went with it — so that route crashed the SPA rather than merely dead-ending the
+        // anonymous users who hit an [Authorize] page (see App.razor's NotAuthorized branch,
+        // which renders this component). The page has since been deleted. Send them to our real
+        // login page instead, carrying a returnUrl so a successful sign-in lands back where they
+        // were headed.
         var returnUrl = new Uri(Navigation.Uri).PathAndQuery;
         Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
     }

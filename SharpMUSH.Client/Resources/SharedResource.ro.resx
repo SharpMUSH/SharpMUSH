@@ -532,10 +532,6 @@
     <value>Niciun personaj asociat acestui cont.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Nu sunteți autentificat într-un cont. Folosiți panoul de autentificare din terminal pentru a vă conecta.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Deschideți {0} într-o filă nouă</value>
     <comment>MT</comment>
@@ -2186,6 +2182,14 @@
   </data>
   <data name="NotAuthorized" xml:space="preserve">
     <value>Nu aveți autorizația de a accesa această resursă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Înapoi la pagina principală</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Nu aveți permisiunea de a vizualiza această pagină.</value>
     <comment>MT</comment>
   </data>
   <data name="NotFound" xml:space="preserve">

@@ -532,10 +532,6 @@
     <value>К этому аккаунту не привязано ни одного персонажа.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Вы не вошли в аккаунт. Используйте панель входа в терминале.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Открыть в новой вкладке: {0}</value>
     <comment>MT — restructured: the direct object would need the accusative, so {0} was moved after a colon where it stays in its supplied form.</comment>
@@ -2187,6 +2183,14 @@
   <data name="NotAuthorized" xml:space="preserve">
     <value>У вас нет прав доступа к этому ресурсу.</value>
     <comment>MT — «права доступа» per the corpus.</comment>
+  </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Вернуться на главную</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>У вас нет разрешения на просмотр этой страницы.</value>
+    <comment>MT</comment>
   </data>
   <data name="NotFound" xml:space="preserve">
     <value>Не найдено</value>

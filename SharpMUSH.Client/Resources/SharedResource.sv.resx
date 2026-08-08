@@ -532,10 +532,6 @@
     <value>Inga karaktärer är kopplade till det här kontot.</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>Du är inte inloggad på ett konto. Använd terminalens inloggningspanel för att logga in.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Öppna {0} i en ny flik</value>
     <comment>MT</comment>
@@ -2186,6 +2182,14 @@
   </data>
   <data name="NotAuthorized" xml:space="preserve">
     <value>Du har inte behörighet att komma åt den här resursen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Tillbaka till startsidan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Du har inte behörighet att visa den här sidan.</value>
     <comment>MT</comment>
   </data>
   <data name="NotFound" xml:space="preserve">

@@ -46,6 +46,12 @@
   <data name="NotAuthorized" xml:space="preserve">
     <value>You are not authorized to access this resource.</value>
   </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Back to home</value>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>You don't have permission to view this page.</value>
+  </data>
 
   <!-- ======================== -->
   <!-- MainLayout.razor         -->
@@ -1284,9 +1290,6 @@
   </data>
   <data name="AuthDebugModeBody" xml:space="preserve">
     <value>You are authenticated as {0} (development environment). No account session is associated; account management features require a real account login.</value>
-  </data>
-  <data name="AuthNotLoggedInAccount" xml:space="preserve">
-    <value>You are not logged in to an account. Use the terminal login panel to log in.</value>
   </data>
   <data name="AuthGoToHome" xml:space="preserve">
     <value>Go to Home</value>
