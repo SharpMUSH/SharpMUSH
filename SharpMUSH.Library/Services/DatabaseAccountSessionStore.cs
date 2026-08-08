@@ -54,7 +54,8 @@ public sealed class DatabaseAccountSessionStore(ISharpDatabase database) : IAcco
 		if (s is null) return null;
 
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-		if (now > s.ExpiryUnixMs)
+		// ExpiryUnixMs is the instant the session expires at, not the last instant it is usable.
+		if (now >= s.ExpiryUnixMs)
 		{
 			await database.DeleteSessionAsync(token, ct);
 			return null;
