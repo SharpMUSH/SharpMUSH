@@ -3840,6 +3840,10 @@
     <value>Der er ingen online lige nu.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Ikke tilgængeligt lige nu.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidNothingToDisplay" xml:space="preserve">
     <value>Intet at vise.</value>
     <comment>MT</comment>

@@ -3840,6 +3840,10 @@
     <value>Сейчас никого нет в игре.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Сейчас недоступно.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidNothingToDisplay" xml:space="preserve">
     <value>Нечего показать.</value>
     <comment>MT</comment>

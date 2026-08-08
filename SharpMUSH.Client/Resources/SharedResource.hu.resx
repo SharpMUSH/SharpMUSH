@@ -3840,6 +3840,10 @@
     <value>Jelenleg senki sincs bejelentkezve.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Jelenleg nem érhető el.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidNothingToDisplay" xml:space="preserve">
     <value>Nincs megjeleníthető tartalom.</value>
     <comment>MT</comment>

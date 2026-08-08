@@ -2042,6 +2042,10 @@
   <data name="WidNobodyConnected" xml:space="preserve">
     <value>Personne n'est connecté pour le moment.</value>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Indisponible pour le moment.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidConfigureQuickLinks" xml:space="preserve">
     <value>Configurer les liens rapides</value>
   </data>

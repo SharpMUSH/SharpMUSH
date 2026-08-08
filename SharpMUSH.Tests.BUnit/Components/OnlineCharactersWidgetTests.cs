@@ -58,6 +58,29 @@ file sealed class PresenceHandler : HttpMessageHandler
 	}
 }
 
+/// <summary>
+/// Serves the same character on several rows, which is what a connection-shaped online route
+/// produces for anyone logged in twice — the shape measured live against GET`ONLINE, where one
+/// character came back eight times under one objid. The widget must render people, not sockets.
+/// </summary>
+file sealed class DoubledConnectionHandler : HttpMessageHandler
+{
+	private record Row(string Name, string Objid, long Created, string Category);
+
+	private static readonly Row[] Online =
+	[
+		new("Solitaire", "#11:1100", 1100, ""),
+		new("Solitaire", "#11:1100", 1100, ""),
+		new("Solitaire", "#11:1100", 1100, ""),
+		new("Castor", "#12:1200", 1200, ""),
+	];
+
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+		Task.FromResult(request.RequestUri!.AbsolutePath == "/http/online"
+			? new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Online) }
+			: new HttpResponseMessage(HttpStatusCode.NotFound));
+}
+
 /// <summary>Serves an empty connection list, for the nobody-connected state.</summary>
 file sealed class NobodyOnlineHandler : HttpMessageHandler
 {
@@ -70,8 +93,9 @@ file sealed class NobodyOnlineHandler : HttpMessageHandler
 /// <summary>
 /// Serves 200 with a completely empty body — what the route emits if the softcode ever loses its
 /// firstof() guard, because fold() drops its base case on an empty list. The widget must degrade
-/// to the empty state rather than throwing out of OnInitializedAsync (the service only catches
-/// HttpRequestException, and a blank body raises JsonException).
+/// to the unavailable state rather than throwing out of OnInitializedAsync (a blank body raises
+/// JsonException) — and specifically not to the nobody-connected state, which is a claim about the
+/// game that a failed read cannot support.
 /// </summary>
 file sealed class EmptyBodyHandler : HttpMessageHandler
 {
@@ -155,11 +179,28 @@ public class OnlineCharactersWidgetTests : BunitContext
 		await Assert.That(cut.Markup).Contains("WidNobodyConnected");
 	}
 
+	[TUnit.Core.Test]
+	public async Task ACharacterConnectedTwice_IsListedOnce()
+	{
+		Wire(this, new DoubledConnectionHandler());
+
+		var cut = Render<OnlineCharactersWidget>();
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("Castor")) throw new InvalidOperationException("online list not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+
+		var rows = cut.FindAll("a[href^='/characters/']").Select(a => a.TextContent.Trim()).ToList();
+
+		// Name ordering survives the deduplication: Castor before Solitaire, each exactly once.
+		await Assert.That(rows).IsEquivalentTo(new[] { "Castor", "Solitaire" });
+	}
+
 	// An unrecognised charset makes reading the body throw InvalidOperationException before the
 	// JSON parser is ever reached, so the JsonException filter does not cover it. Reachable from a
 	// typo in a redefined handler's `@respond/type`.
 	[TUnit.Core.Test]
-	public async Task BadCharsetHeader_DegradesToEmptyState_RatherThanThrowing()
+	public async Task BadCharsetHeader_SaysUnavailable_NotNobodyConnected()
 	{
 		Wire(this, new BadCharsetHandler());
 
@@ -169,11 +210,14 @@ public class OnlineCharactersWidgetTests : BunitContext
 			if (cut.Markup.Contains("mud-skeleton")) throw new InvalidOperationException("still loading");
 		}, TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Markup).Contains("WidNobodyConnected");
+		// Still degrades instead of throwing out of OnInitializedAsync — but a request that failed
+		// is not evidence that the game is empty, and it used to be reported as exactly that.
+		await Assert.That(cut.Markup).Contains("WidUnavailable");
+		await Assert.That(cut.Markup).DoesNotContain("WidNobodyConnected");
 	}
 
 	[TUnit.Core.Test]
-	public async Task EmptyResponseBody_DegradesToEmptyState_RatherThanThrowing()
+	public async Task EmptyResponseBody_SaysUnavailable_NotNobodyConnected()
 	{
 		Wire(this, new EmptyBodyHandler());
 
@@ -183,6 +227,7 @@ public class OnlineCharactersWidgetTests : BunitContext
 			if (cut.Markup.Contains("mud-skeleton")) throw new InvalidOperationException("still loading");
 		}, TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Markup).Contains("WidNobodyConnected");
+		await Assert.That(cut.Markup).Contains("WidUnavailable");
+		await Assert.That(cut.Markup).DoesNotContain("WidNobodyConnected");
 	}
 }

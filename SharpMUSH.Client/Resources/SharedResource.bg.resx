@@ -3840,6 +3840,10 @@
     <value>В момента няма свързани играчи.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>В момента не е налично.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidNothingToDisplay" xml:space="preserve">
     <value>Няма какво да се покаже.</value>
     <comment>MT</comment>

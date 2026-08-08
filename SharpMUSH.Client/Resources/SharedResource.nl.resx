@@ -3840,6 +3840,10 @@
     <value>Er is op dit moment niemand ingelogd.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Momenteel niet beschikbaar.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidNothingToDisplay" xml:space="preserve">
     <value>Niets om weer te geven.</value>
     <comment>MT</comment>

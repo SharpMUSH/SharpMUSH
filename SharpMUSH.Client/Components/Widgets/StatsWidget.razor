@@ -12,7 +12,10 @@
         <MudItem xs="6" sm="3">
             <MudPaper Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
                 <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:var(--font-mono);">@Loc[tile.LabelKey]</MudText>
-                <MudText Style="font-size:1.75rem;font-weight:700;color:var(--accent);line-height:1.2;margin-top:0.25rem;">@tile.Value</MudText>
+                @* The placeholder is the same dash whether the value is still loading or could not
+                   be fetched; the title says which, without a banner or a spinner that never ends. *@
+                <MudText title="@(tile.Failed ? Loc["WidUnavailable"].Value : null)"
+                         Style="font-size:1.75rem;font-weight:700;color:var(--accent);line-height:1.2;margin-top:0.25rem;">@tile.Value</MudText>
             </MudPaper>
         </MudItem>
     }
@@ -22,17 +25,22 @@
     [Parameter] public JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
 
+    /// <summary>A count once it is known; null both while loading and when the fetch failed.</summary>
     private int? _recent;
     private int? _characters;
     private int? _online;
     private int? _activeScenes;
 
-    private (string LabelKey, string Value)[] Tiles =>
+    /// <summary>Which counts failed to load, so their dash can be explained rather than left ambiguous.</summary>
+    private bool _charactersFailed;
+    private bool _onlineFailed;
+
+    private (string LabelKey, string Value, bool Failed)[] Tiles =>
     [
-        ("WidPlayersOnline", _online?.ToString() ?? "—"),
-        ("WidActiveScenes",  _activeScenes?.ToString() ?? "—"),
-        ("RecentChanges",    _recent?.ToString() ?? "—"),
-        ("Characters",       _characters?.ToString() ?? "—"),
+        ("WidPlayersOnline", _online?.ToString() ?? "—", _onlineFailed),
+        ("WidActiveScenes",  _activeScenes?.ToString() ?? "—", false),
+        ("RecentChanges",    _recent?.ToString() ?? "—", false),
+        ("Characters",       _characters?.ToString() ?? "—", _charactersFailed),
     ];
 
     protected override async Task OnInitializedAsync()
@@ -47,8 +55,14 @@
         await Task.WhenAll(recentTask, charsTask, onlineTask, scenesTask);
 
         _recent = (await recentTask).Count;
-        _characters = (await charsTask).Count;
-        _online = (await onlineTask).Count;
         _activeScenes = (await scenesTask).Count;
+
+        // A tile that could not be fetched keeps the loading placeholder instead of printing 0:
+        // "the game has no characters" and "the request never arrived" look identical as a count,
+        // and only one of them is something the portal actually knows.
+        _characters = (await charsTask).Match(rows => rows.Count, _ => (int?)null);
+        _charactersFailed = _characters is null;
+        _online = (await onlineTask).Match(rows => rows.Count, _ => (int?)null);
+        _onlineFailed = _online is null;
     }
 }

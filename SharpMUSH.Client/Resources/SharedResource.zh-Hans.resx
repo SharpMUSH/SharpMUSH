@@ -3840,6 +3840,10 @@
     <value>当前没有人在线。</value>
     <comment>MT</comment>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>当前不可用。</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidNothingToDisplay" xml:space="preserve">
     <value>没有可显示的内容。</value>
     <comment>MT</comment>

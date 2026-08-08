@@ -3840,6 +3840,10 @@
     <value>Trenutačno nitko nije povezan.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Trenutačno nedostupno.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidNothingToDisplay" xml:space="preserve">
     <value>Nema ništa za prikaz.</value>
     <comment>MT</comment>
