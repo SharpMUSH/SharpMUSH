@@ -62,6 +62,33 @@ public class SurrealSessionStoreTests
 		await Assert.That(await db.GetSessionAsync("tok-rt-1")).IsNull();
 	}
 
+	/// <summary>
+	/// The ArangoDB provider needed an exclusive transaction because concurrent upserts of one session
+	/// document lost the race with a 409 that surfaced as an HTTP 500. This pins the answer to the same
+	/// question for SurrealDB: the embedded engine serialises the statement itself, so the same fan-out
+	/// that broke ArangoDB completes here without conflict and no provider-side change is warranted.
+	/// </summary>
+	[Test]
+	public async Task ConcurrentUpsertsOfOneSession_DoNotConflict()
+	{
+		var db = await CreateFreshMigratedSurrealDatabaseAsync("concurrent");
+		const int writers = 32;
+
+		var gate = new SemaphoreSlim(0, writers);
+		var writes = Enumerable.Range(0, writers).Select(async i =>
+		{
+			await gate.WaitAsync();
+			var s = Make("tok-conc", "acctZ", "10.0.0.9");
+			s.ExpiryUnixMs += i;
+			await db.UpsertSessionAsync(s);
+		}).ToArray();
+
+		gate.Release(writers);
+		await Task.WhenAll(writes);
+
+		await Assert.That(await db.GetSessionAsync("tok-conc")).IsNotNull();
+	}
+
 	[Test]
 	public async Task DeleteForAccount_And_ForIp()
 	{
