@@ -3164,6 +3164,10 @@
     <value>Scen i {0}</value>
     <comment>MT — {0} is a room name.</comment>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Liveuppdateringar är inte tillgängliga — att gå med i en scen kräver en rollfigur som kan se den. Poserna nedan uppdateras inte.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Scenen hittades inte.</value>
     <comment>MT</comment>

@@ -3164,6 +3164,10 @@
     <value>Сцена в комнате «{0}»</value>
     <comment>MT — restructured: the head noun «комнате» carries the prepositional case and the room name stays nominative inside guillemets, so the interpolated {0} never has to inflect.</comment>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Обновления в реальном времени недоступны — чтобы присоединиться к сцене, нужен персонаж, который её видит. Позы ниже обновляться не будут.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Сцена не найдена.</value>
     <comment>MT</comment>

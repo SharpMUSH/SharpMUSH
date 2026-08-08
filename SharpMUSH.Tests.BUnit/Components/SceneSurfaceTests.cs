@@ -3,6 +3,7 @@ using System.Text;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -102,6 +103,9 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	public List<string> Joined { get; } = [];
 	public List<string> Left { get; } = [];
 
+	/// <summary>Set to make <see cref="JoinSceneAsync"/> refuse, as the hub does for a caller with no character.</summary>
+	public HubException? JoinRefusal { get; set; }
+
 	public bool IsConnected => true;
 	public HubConnectionState ConnectionState => HubConnectionState.Connected;
 
@@ -123,6 +127,8 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 
 	public Task JoinSceneAsync(string sceneId)
 	{
+		if (JoinRefusal is { } refusal) return Task.FromException(refusal);
+
 		Joined.Add(sceneId);
 		return Task.CompletedTask;
 	}
@@ -265,6 +271,62 @@ public class SceneSurfaceTests : BunitContext
 
 		// No optimistic insert: the author's pose only appears after the round-trip event.
 		await Assert.That(cut.Markup).DoesNotContain("waves hello");
+	}
+
+	/// <summary>
+	/// A refused join is not a missing scene. The REST fetch already returned this scene, so the caller may
+	/// read it and its archive renders; only the live subscription was refused (no character, or visibility
+	/// revoked in the moment between the two calls). Reporting that as "scene not found" told a user with a
+	/// perfectly readable scene that it does not exist.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_WhenTheHubRefusesTheJoin_KeepsTheSceneAndSaysLiveIsUnavailable()
+	{
+		_hub.JoinRefusal = new HubException("Joining a scene requires a character; guests cannot join scenes.");
+
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("RolSceneLiveUnavailable"))
+				throw new InvalidOperationException("join refusal not handled yet");
+		}, TimeSpan.FromSeconds(5));
+
+		var markup = cut.Markup;
+		await Assert.That(markup).Contains("RolSceneLiveUnavailable");
+		await Assert.That(markup).DoesNotContain("RolSceneNotFound")
+			.Because("the scene was fetched successfully; calling it missing is false");
+		// The archive the caller is entitled to is still on screen.
+		await Assert.That(markup).Contains("Barroom Brawl");
+		await Assert.That(markup).Contains("draws a blade");
+		// Nothing renders a pose but the round-trip event, and this connection is in no scene group.
+		await Assert.That(cut.Find("button.mud-icon-button").HasAttribute("disabled")).IsTrue();
+		await Assert.That(_hub.Joined).IsEmpty();
+	}
+
+	/// <summary>
+	/// The other half of the same split, and the one with the security property: a scene that does not exist
+	/// and a scene that exists but is not visible to this caller are BOTH a 404 from the REST route, so both
+	/// reach this one card with this one message. A refusal a caller can tell apart is a way to enumerate
+	/// private scene ids, which is why the server refuses to distinguish them and why the page must not
+	/// invent a distinction the server withheld.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_WhenTheSceneIsNotFetchable_SaysNotFound_WithoutNamingWhy()
+	{
+		// The fake API answers 404 for any id it does not serve — exactly as the real route answers 404 for
+		// a missing scene and for a private one the caller may not see, indistinguishably.
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S404"));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("RolSceneNotFound"))
+				throw new InvalidOperationException("not-found state not reached yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Markup).Contains("RolSceneNotFound");
+		await Assert.That(cut.Markup).DoesNotContain("RolSceneLiveUnavailable")
+			.Because("naming the live-subscription reason here would tell a stranger the scene exists");
 	}
 
 	[TUnit.Core.Test]

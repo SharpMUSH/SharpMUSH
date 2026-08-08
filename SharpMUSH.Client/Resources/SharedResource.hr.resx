@@ -3164,6 +3164,10 @@
     <value>Scena · {0}</value>
     <comment>MT — same restructure as WidSceneIn: 'scena u …' would need the locative of a room name we cannot inflect</comment>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Ažuriranja uživo nisu dostupna — za pridruživanje sceni potreban je lik koji je može vidjeti. Poze u nastavku neće se ažurirati.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Scena nije pronađena.</value>
     <comment>MT</comment>

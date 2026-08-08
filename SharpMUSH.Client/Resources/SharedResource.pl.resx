@@ -3164,6 +3164,10 @@
     <value>Scena w pokoju: {0}</value>
     <comment>MT — head noun 'pokój' carries the locative so the room name {0} stays in the nominative; matches WidSceneIn</comment>
   </data>
+  <data name="RolSceneLiveUnavailable" xml:space="preserve">
+    <value>Aktualizacje na żywo są niedostępne — dołączenie do sceny wymaga postaci, która może ją zobaczyć. Pozy poniżej nie będą aktualizowane.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Nie znaleziono sceny.</value>
     <comment>MT</comment>

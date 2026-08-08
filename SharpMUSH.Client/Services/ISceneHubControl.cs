@@ -16,12 +16,19 @@ public interface ISceneHubControl
 
 	/// <summary>
 	/// Joins the SignalR <c>scene:{sceneId}</c> group so this client receives the
-	/// scene's realtime <c>ReceiveSceneMessage</c> events. No-ops when not connected.
+	/// scene's realtime <c>ReceiveSceneMessage</c> events. No-ops when not connected, and when the
+	/// connection drops mid-call — see <see cref="LeaveSceneAsync"/>.
 	/// </summary>
+	/// <exception cref="Microsoft.AspNetCore.SignalR.HubException">The hub refused the join: this
+	/// connection acts as no character, or the scene does not exist / is not visible to it.</exception>
 	Task JoinSceneAsync(string sceneId);
 
 	/// <summary>
-	/// Leaves the SignalR <c>scene:{sceneId}</c> group. No-ops when not connected.
+	/// Leaves the SignalR <c>scene:{sceneId}</c> group. No-ops when not connected — including when the
+	/// connection closes between the state check and the invoke, which callers cannot pre-empt and have
+	/// nothing to do about: the group membership dies with the connection either way.
 	/// </summary>
+	/// <exception cref="Microsoft.AspNetCore.SignalR.HubException">The hub refused the leave: this
+	/// connection acts as no character.</exception>
 	Task LeaveSceneAsync(string sceneId);
 }
