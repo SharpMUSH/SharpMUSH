@@ -198,77 +198,11 @@ public class ArangoPluginMigrationTests
 	/// migrations under a bare Id — indistinguishable from an engine row. Those rows are adopted into the
 	/// plugin's stream rather than re-applied: the row keeps the Name the older build wrote, which the
 	/// migration would have overwritten with its own had it run again.
-	/// </summary>
-	[Test]
-	public async Task PluginHistoryWrittenBeforeSourcesWereTracked_IsAdopted()
-	{
-		if (WebAppFactory.Services.GetService<IArangoContext>() is not { } context)
-		{
-			return;
-		}
-
-		var handle = NewHandle();
-
-		try
-		{
-			await SeedHistoryAsync(context, handle,
-				MarkerMigration.MigrationId.ToString(CultureInfo.InvariantCulture), "recorded_by_an_older_build");
-
-			await Database(context, handle, new MarkerMigrationSource()).Migrate();
-
-			var keys = await HistoryKeys(context, handle);
-			await Assert.That(keys).Contains(MarkerMigrationKey);
-			await Assert.That(keys).DoesNotContain(MarkerMigration.MigrationId.ToString(CultureInfo.InvariantCulture));
-
-			var name = (await context.Query.ExecuteAsync<string>(handle,
-				$"FOR x IN {HistoryCollection} FILTER x._key == @key RETURN x.Name",
-				new Dictionary<string, object> { { "key", MarkerMigrationKey } })).Single();
-			await Assert.That(name)
-				.IsEqualTo("recorded_by_an_older_build")
-				.Because("the row was re-keyed, not written afresh by a re-run of the migration");
-		}
-		finally
-		{
-			await DropAsync(context, handle);
-		}
-	}
-
 	/// <summary>
 	/// The reason adoption is not optional. An older build wrote a plugin migration dated after every engine
 	/// migration under a bare Id, so this build would read it as the engine's newest applied Id and refuse the
 	/// engine's own migrations — see <see cref="EngineMigrationDatedBeforeOneAlreadyApplied_IsRefused"/>,
 	/// which is this exact database without the plugin installed.
-	/// </summary>
-	[Test]
-	public async Task EngineIsNotBlockedByAPluginRowWrittenBeforeSourcesWereTracked()
-	{
-		if (WebAppFactory.Services.GetService<IArangoContext>() is not { } context)
-		{
-			return;
-		}
-
-		var handle = NewHandle();
-
-		try
-		{
-			await SeedHistoryAsync(context, handle, FutureId.ToString(CultureInfo.InvariantCulture), "from_the_future");
-
-			await Database(context, handle, new EmittedMigrationSource("FutureIdPlugin", typeof(FutureIdEmittedMigration)))
-				.Migrate();
-
-			var keys = await HistoryKeys(context, handle);
-			await Assert.That(keys).Contains($"FutureIdPlugin:{FutureId.ToString(CultureInfo.InvariantCulture)}");
-			await Assert.That(keys).DoesNotContain(FutureId.ToString(CultureInfo.InvariantCulture));
-			await Assert.That(keys)
-				.Contains("20240304001")
-				.Because("the engine's own stream is empty and must migrate from scratch");
-		}
-		finally
-		{
-			await DropAsync(context, handle);
-		}
-	}
-
 	/// <summary>
 	/// Two plugins shipped in one assembly each contribute that same assembly, so every migration in it is
 	/// discovered twice. That is one migration seen twice, not two migrations claiming one Id, and the

@@ -196,16 +196,11 @@ public partial class ArangoDatabase
 			GuardDuplicateIds(stream);
 		}
 
-		var engineIds = streams
-			.Where(stream => stream.KeyPrefix.Length == 0)
-			.SelectMany(stream => stream.Migrations.Select(migration => migration.Id))
-			.ToHashSet();
-
-		foreach (var stream in streams.Where(stream => stream.KeyPrefix.Length > 0))
-		{
-			await AdoptUnsourcedHistoryAsync(stream, engineIds, applied, ct);
-		}
-
+		// An unprefixed history key is the engine's, with no ambiguity: every key written under per-source
+		// tracking carries its source's prefix, and the one database shape that could hold an unprefixed
+		// PLUGIN key — a world migrated before this tracking existed — is not supported. SharpMUSH is
+		// pre-production; such a database is dropped and re-migrated rather than repaired, so no adoption
+		// or history-rewriting path exists here to guess an owner and get it wrong.
 		foreach (var stream in streams)
 		{
 			await ApplyStreamAsync(migrator, stream, applied, ct);
@@ -309,62 +304,6 @@ public partial class ArangoDatabase
 		return id.Contains(SourceSeparator)
 			? null
 			: long.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
-	}
-
-	/// <summary>
-	/// Re-keys history rows a build without per-source streams wrote for <paramref name="stream"/>. A world
-	/// migrated from empty WITH a plugin present recorded that plugin's migrations under a bare Id, which
-	/// this build would otherwise read as the ENGINE's — leaving the plugin's stream apparently empty, and
-	/// worse, inflating the engine's newest-applied Id with an Id the engine never issued, which would refuse
-	/// the engine's next legitimate migration. Rows are matched conservatively: only an Id this plugin
-	/// actually ships and the engine does not, so a genuine engine row is never claimed.
-	/// </summary>
-	private async Task AdoptUnsourcedHistoryAsync(
-		MigrationStream stream, IReadOnlySet<long> engineIds, HashSet<string> applied, CancellationToken ct)
-	{
-		var unsourced = stream.Migrations
-			.Select(migration => migration.Id)
-			.Where(id => !engineIds.Contains(id))
-			.Select(id => id.ToString(CultureInfo.InvariantCulture))
-			.Where(id => applied.Contains(id) && !applied.Contains(stream.KeyPrefix + id))
-			.ToList();
-
-		if (unsourced.Count == 0)
-		{
-			return;
-		}
-
-		logger.LogInformation(
-			"Adopting {Count} migration history row(s) recorded for {Source} before sources were tracked.",
-			unsourced.Count, stream.Source);
-
-		// Two statements because AQL permits one data-modification operation per query. The copy keeps the
-		// original Name and Created, so the history still says when the migration actually ran.
-		await arangoDb.Query.ExecuteAsync<object>(handle,
-			"FOR x IN @@c FILTER x._key IN @keys " +
-			"INSERT MERGE(UNSET(x, '_key', '_id', '_rev'), { _key: CONCAT(@prefix, x._key) }) INTO @@c",
-			new Dictionary<string, object>
-			{
-				{ "@c", MigrationHistoryCollection },
-				{ "keys", unsourced },
-				{ "prefix", stream.KeyPrefix }
-			},
-			cancellationToken: ct);
-
-		await arangoDb.Query.ExecuteAsync<object>(handle,
-			"FOR k IN @keys REMOVE k IN @@c",
-			new Dictionary<string, object>
-			{
-				{ "@c", MigrationHistoryCollection },
-				{ "keys", unsourced }
-			},
-			cancellationToken: ct);
-
-		foreach (var id in unsourced)
-		{
-			applied.Remove(id);
-			applied.Add(stream.KeyPrefix + id);
-		}
 	}
 
 	/// <summary>
