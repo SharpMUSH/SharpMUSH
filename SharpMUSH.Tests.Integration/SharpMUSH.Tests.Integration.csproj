@@ -9,6 +9,10 @@
 		<LangVersion>default</LangVersion>
 		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
 		<NoWarn>TUnit0038</NoWarn>
+		<!-- SamplePlugin is not in SharpMUSH.sln; without this a solution build unsets Configuration for it
+		     and it lands in bin/Debug while the copy target looks in bin/$(Configuration). See the matching
+		     note in SharpMUSH.Tests.csproj. -->
+		<ShouldUnsetParentConfigurationAndPlatform>false</ShouldUnsetParentConfigurationAndPlatform>
 		<RootNamespace>SharpMUSH.Tests.Integration</RootNamespace>
 	</PropertyGroup>
 
@@ -30,7 +34,9 @@
 		<!-- Shared test infrastructure (ServerWebAppFactory, test containers, etc.) -->
 		<ProjectReference Include="..\SharpMUSH.Tests.Infrastructure\SharpMUSH.Tests.Infrastructure.csproj" />
 		<!-- Build the SamplePlugin fixture before this project so its DLL exists to copy into plugins/.
-		     ReferenceOutputAssembly=false: we do NOT link the plugin; we load it at runtime from plugins/. -->
+		     ReferenceOutputAssembly=false: we do NOT link the plugin; we load it at runtime from plugins/.
+		     This one is outside the solution, so it depends on ShouldUnsetParentConfigurationAndPlatform
+		     above to build into bin/$(Configuration) rather than its own default. -->
 		<ProjectReference Include="..\SharpMUSH.Tests\Fixtures\SamplePlugin\SamplePlugin.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
 		<!-- Build the Scene plugin (the Phase-5 reference plugin) before this project so its DLL exists to
 		     copy into plugins/scene/. ReferenceOutputAssembly=false: it is loaded at runtime, not linked. -->
