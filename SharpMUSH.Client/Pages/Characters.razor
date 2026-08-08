@@ -42,6 +42,12 @@
             }
         </div>
     }
+    else if (_failed)
+    {
+        @* The directory request failed. "No characters found" would state something about the game
+           that this page has no evidence for. *@
+        <div class="char-empty">@Loc["WidUnavailable"]</div>
+    }
     else if (Filtered.Count == 0)
     {
         <div class="char-empty">@Loc["NoCharactersFound"]</div>
@@ -87,16 +93,21 @@
 @code {
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _all = [];
     private bool _loading = true;
+    private bool _failed;
     private string _search = string.Empty;
     private string? _selectedCategory;
     private List<string> _categories = [];
 
     private static readonly int[] AvHues = [168, 28, 264, 210, 340, 130, 50];
 
+    // "0 characters registered" is the same lie as the 0 on the dashboard tile when the directory
+    // request is what failed, so the count is only claimed for a roster that actually arrived.
     private string HeaderKicker =>
         _loading
             ? Loc["Loading"].Value
-            : Loc.Plural("NavCharactersRegistered", "count", _all.Count);
+            : _failed
+                ? Loc["WidUnavailable"].Value
+                : Loc.Plural("NavCharactersRegistered", "count", _all.Count);
 
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> Filtered
     {
@@ -113,7 +124,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _all = await Directory.ListAsync();
+        var result = await Directory.ListAsync();
+        _failed = result.IsT1;
+        _all = result.Match(rows => rows, _ => (IReadOnlyList<CharacterDirectoryService.CharacterSummary>)[]);
         _categories = _all
             .Select(c => c.Category?.Trim() ?? string.Empty)
             .Distinct()

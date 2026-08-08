@@ -245,10 +245,12 @@
             }
             else if (AccountAuth.IsLoggedIn)
             {
-                var chars = AccountAuth.Characters.Count > 0
-                    ? AccountAuth.Characters
-                    : await AccountAuth.GetCharactersAsync();
-                var target = AccountAuth.ActiveCharacter ?? chars.FirstOrDefault();
+                // Read the roster off the service rather than the call's result: it assigns
+                // Characters on success and leaves it untouched on failure, so a failed fetch
+                // leaves nothing to connect as — which is what should happen.
+                if (AccountAuth.Characters.Count == 0)
+                    await AccountAuth.GetCharactersAsync();
+                var target = AccountAuth.ActiveCharacter ?? AccountAuth.Characters.FirstOrDefault();
                 if (target is not null)
                     await ConnectAsCharacterAsync(target);
             }

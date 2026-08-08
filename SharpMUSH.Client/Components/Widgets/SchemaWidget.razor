@@ -110,7 +110,11 @@ else
             return null;
         }
 
-        return await Directory.ResolveObjidAsync(PageContext.CharacterName);
+        // No such character and an unreadable directory are different facts, but this widget's
+        // answer to an unfillable {objid} hole is the same either way: don't fetch. The failed read
+        // is already logged by the directory service, so nothing is lost by not distinguishing here.
+        var resolved = await Directory.ResolveObjidAsync(PageContext.CharacterName);
+        return resolved.TryPickT0(out var objid, out _) ? objid : null;
     }
 
     /// <summary>Replaces {objid}/{character} tokens. Returns null if an {objid} token can't be filled.</summary>

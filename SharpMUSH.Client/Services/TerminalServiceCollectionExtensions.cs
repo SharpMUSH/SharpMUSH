@@ -20,20 +20,16 @@ public static class TerminalServiceCollectionExtensions
 	/// </summary>
 	public static IServiceCollection AddTerminalServices(this IServiceCollection services)
 	{
-		// The transient interface registration is kept for Pages/WebSocketTest.razor, which injects
-		// IWebSocketClientService directly as a standalone diagnostic tool independent of the terminal
-		// facades below.
-		//
-		// The terminal factories deliberately do NOT resolve through those registrations — they build
-		// the websocket client via ActivatorUtilities.CreateInstance instead of
-		// sp.GetRequiredService<...>(). MS DI tracks every transient IAsyncDisposable it resolves for
-		// the life of the scope that resolved it; in WASM the root scope lives until page unload, so
-		// resolving through the container on every RecreateAsync() would permanently root one
-		// already-disposed WebSocketClientService per character switch. ActivatorUtilities constructs
-		// the object (resolving its own constructor dependencies from the provider) without the
-		// container ever tracking the result, so recreated clients are free to be collected once the
-		// facade drops its reference.
-		services.AddTransient<IWebSocketClientService, WebSocketClientService>();
+		// IWebSocketClientService is deliberately NOT registered. Nothing resolves it from the
+		// container: the terminal factories below build their websocket client via
+		// ActivatorUtilities.CreateInstance rather than sp.GetRequiredService<...>(). MS DI tracks
+		// every transient IAsyncDisposable it resolves for the life of the scope that resolved it; in
+		// WASM the root scope lives until page unload, so resolving through the container on every
+		// RecreateAsync() would permanently root one already-disposed WebSocketClientService per
+		// character switch. ActivatorUtilities constructs the object (resolving its own constructor
+		// dependencies from the provider) without the container ever tracking the result, so recreated
+		// clients are free to be collected once the facade drops its reference. The one component that
+		// did inject the interface — the /websocket-test dev harness — is gone.
 		services.AddSingleton(sp => new TerminalServiceHost(
 			() =>
 			{

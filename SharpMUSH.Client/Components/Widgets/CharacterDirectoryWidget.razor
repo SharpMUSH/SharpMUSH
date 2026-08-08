@@ -46,6 +46,12 @@
             }
         </div>
     }
+    else if (_failed)
+    {
+        @* The roster could not be read at all. "No characters found" would be a claim about the
+           game rather than about this request. *@
+        <EmptyState>@Loc["WidUnavailable"]</EmptyState>
+    }
     else if (Filtered.Count == 0)
     {
         <EmptyState>@Loc["NoCharactersFound"]</EmptyState>
@@ -93,6 +99,7 @@
 
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _all = [];
     private bool _loading = true;
+    private bool _failed;
     private string _search = string.Empty;
     private string? _selectedCategory;
     private List<string> _categories = [];
@@ -117,7 +124,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _all = await Directory.ListAsync();
+        var result = await Directory.ListAsync();
+        _failed = result.IsT1;
+        _all = result.Match(rows => rows, _ => (IReadOnlyList<CharacterDirectoryService.CharacterSummary>)[]);
         _categories = _all
             .Select(c => c.Category?.Trim() ?? string.Empty)
             .Distinct()

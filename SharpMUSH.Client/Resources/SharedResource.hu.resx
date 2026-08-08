@@ -1928,16 +1928,12 @@
     <value>Ennek az alkalmazásnak a lefordított komponensét nem sikerült betölteni. Lehet, hogy a böngészőoldali kód le van tiltva (allow_browser_code), vagy az assembly nem ment át az ellenőrzésen.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Ez az alkalmazás aktív karaktert igényel.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Az alkalmazás sémáját nem sikerült betölteni. A(z) {0} címen lévő softcode-kezelő hiányzik, vagy érvénytelen JSON-t ad vissza.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Karakterkezelés</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>A karakterkezelés hamarosan elérhető.</value>
     <comment>MT</comment>
   </data>
   <data name="NavCharacterName" xml:space="preserve">
@@ -1986,10 +1982,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Fókuszmód</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Ugrás a fiókoldalra</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">
@@ -2780,6 +2772,18 @@
     <value>Játék</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Még nincs karaktere. Hozzon létre egyet, hogy beléphessen a játékba.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>A karaktereit nem sikerült betölteni. Lehet, hogy a játék jelenleg nem érhető el.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Újrapróbálkozás</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Játékosok:</value>
     <comment>MT</comment>
@@ -2938,34 +2942,6 @@
   </data>
   <data name="ResWikiStatTranslations" xml:space="preserve">
     <value>Fordítások</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Hiba] A kapcsolódás sikertelen: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Rendszer] Kapcsolódva ide: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Hiba] A kapcsolat bontása sikertelen: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Rendszer] Kapcsolat bontva</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Fogadva] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Hiba] A küldés sikertelen: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Elküldve] {0}</value>
     <comment>MT</comment>
   </data>
   <data name="ResetChanges" xml:space="preserve">
@@ -3312,10 +3288,6 @@
     <value>Küldés</value>
     <comment>MT</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Üzenet küldése</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Szerver</value>
     <comment>MT</comment>
@@ -3330,10 +3302,6 @@
   </data>
   <data name="ServerSettings" xml:space="preserve">
     <value>Szerverbeállítások</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>Szerver URI</value>
     <comment>MT</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
@@ -3736,14 +3704,6 @@
     <value>Ez a komponens a szerverről történő adatlekérést mutatja be.</value>
     <comment>MT</comment>
   </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>WebSocket kapcsolat tesztelése</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>WebSocket teszt</value>
-    <comment>MT</comment>
-  </data>
   <data name="WidAction" xml:space="preserve">
     <value>Művelet</value>
     <comment>MT</comment>
@@ -3838,6 +3798,10 @@
   </data>
   <data name="WidNobodyConnected" xml:space="preserve">
     <value>Jelenleg senki sincs bejelentkezve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>Jelenleg nem érhető el.</value>
     <comment>MT</comment>
   </data>
   <data name="WidNothingToDisplay" xml:space="preserve">

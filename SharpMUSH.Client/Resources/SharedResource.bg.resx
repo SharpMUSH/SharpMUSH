@@ -1928,17 +1928,13 @@
     <value>Компилираният компонент на това приложение не може да бъде зареден. Възможно е кодът в браузъра да е изключен (allow_browser_code) или асемблито да не е преминало проверката.</value>
     <comment>MT — `allow_browser_code` left in English: config key name</comment>
   </data>
+  <data name="NavApplicationNeedsCharacter" xml:space="preserve">
+    <value>Това приложение изисква активен герой.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Схемата на приложението не може да бъде заредена. Обработчикът на softcode на {0} може да липсва или да връща невалиден JSON.</value>
     <comment>MT — {0} is a route/handler path, left uninflected</comment>
-  </data>
-  <data name="NavCharacterManagement" xml:space="preserve">
-    <value>Управление на героите</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCharacterManagementComingSoon" xml:space="preserve">
-    <value>Управлението на героите предстои.</value>
-    <comment>MT</comment>
   </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Име на героя</value>
@@ -1986,10 +1982,6 @@
   </data>
   <data name="NavFocusMode" xml:space="preserve">
     <value>Режим на фокус</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavGoToAccountPage" xml:space="preserve">
-    <value>Към страницата на вашия акаунт</value>
     <comment>MT</comment>
   </data>
   <data name="NavGuestTag" xml:space="preserve">
@@ -2780,6 +2772,18 @@
     <value>Играй</value>
     <comment>MT — assumed the button that opens the game client, not media playback</comment>
   </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Все още нямате герой. Създайте такъв, за да влезете в играта.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Вашите герои не можаха да бъдат заредени. Възможно е играта да е недостъпна в момента.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Опитайте отново</value>
+    <comment>MT</comment>
+  </data>
   <data name="Players" xml:space="preserve">
     <value>Играчи:</value>
     <comment>MT</comment>
@@ -2938,34 +2942,6 @@
   </data>
   <data name="ResWikiStatTranslations" xml:space="preserve">
     <value>Преводи</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsConnectFailed" xml:space="preserve">
-    <value>[Грешка] Неуспешно свързване: {0}</value>
-    <comment>MT — terminal log tags translated; they are player-facing prose, not identifiers</comment>
-  </data>
-  <data name="ResWsConnectedTo" xml:space="preserve">
-    <value>[Система] Свързано с {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnectFailed" xml:space="preserve">
-    <value>[Грешка] Неуспешно прекъсване на връзката: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsDisconnected" xml:space="preserve">
-    <value>[Система] Връзката е прекъсната</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsReceived" xml:space="preserve">
-    <value>[Получено] {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSendFailed" xml:space="preserve">
-    <value>[Грешка] Неуспешно изпращане: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResWsSent" xml:space="preserve">
-    <value>[Изпратено] {0}</value>
     <comment>MT</comment>
   </data>
   <data name="ResetChanges" xml:space="preserve">
@@ -3312,10 +3288,6 @@
     <value>Изпрати</value>
     <comment>MT — plain imperative, button</comment>
   </data>
-  <data name="SendMessage" xml:space="preserve">
-    <value>Изпрати съобщение</value>
-    <comment>MT</comment>
-  </data>
   <data name="Server" xml:space="preserve">
     <value>Сървър</value>
     <comment>MT</comment>
@@ -3331,10 +3303,6 @@
   <data name="ServerSettings" xml:space="preserve">
     <value>Настройки на сървъра</value>
     <comment>MT</comment>
-  </data>
-  <data name="ServerUri" xml:space="preserve">
-    <value>URI на сървъра</value>
-    <comment>MT — «URI» kept in Latin</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Задай като икона на профила</value>
@@ -3736,14 +3704,6 @@
     <value>Този компонент демонстрира извличане на данни от сървъра.</value>
     <comment>MT</comment>
   </data>
-  <data name="WebSocketConnectionTest" xml:space="preserve">
-    <value>Тест на връзката по WebSocket</value>
-    <comment>MT — «WebSocket» kept in English per glossary</comment>
-  </data>
-  <data name="WebSocketTest" xml:space="preserve">
-    <value>Тест на WebSocket</value>
-    <comment>MT</comment>
-  </data>
   <data name="WidAction" xml:space="preserve">
     <value>Действие</value>
     <comment>MT</comment>
@@ -3838,6 +3798,10 @@
   </data>
   <data name="WidNobodyConnected" xml:space="preserve">
     <value>В момента няма свързани играчи.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidUnavailable" xml:space="preserve">
+    <value>В момента не е налично.</value>
     <comment>MT</comment>
   </data>
   <data name="WidNothingToDisplay" xml:space="preserve">

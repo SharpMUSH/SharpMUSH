@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
+using MudBlazor;
+using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
@@ -25,8 +27,17 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// after first-run setup) — the fake echoes back the posted username so the success view's
 /// "signed in as" copy can be asserted against what the test typed into the form.
 /// </summary>
+/// <param name="statusGate">
+/// When set, api/setup/status does not answer until this task completes — the cold-load window in
+/// which the claim form must not be on screen.
+/// </param>
+/// <param name="statusUnavailable">
+/// When true, api/setup/status errors, which is what makes <c>NeedsSetupAsync</c> return null. That
+/// answer must NOT bounce the visitor away: /setup is the only place first-run setup can happen.
+/// </param>
 file sealed class SetupApiHandler(
-		bool needsSetup, HttpStatusCode completeStatus, string? completeBody, string completeSessionToken = "test-session-token")
+		bool needsSetup, HttpStatusCode completeStatus, string? completeBody, string completeSessionToken = "test-session-token",
+		Task? statusGate = null, bool statusUnavailable = false)
 		: HttpMessageHandler
 {
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -34,7 +45,14 @@ file sealed class SetupApiHandler(
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
 
 		if (request.Method == HttpMethod.Get && path == "api/setup/status")
-			return Json(new { needsSetup });
+		{
+			if (statusGate is not null)
+				await statusGate;
+
+			return statusUnavailable
+				? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+				: Json(new { needsSetup });
+		}
 
 		if (request.Method == HttpMethod.Post && path == "api/setup/complete")
 		{
@@ -87,9 +105,11 @@ file static class SetupTestServices
 	/// </summary>
 	public static HttpClient AddSetupTestServices(
 			this BunitContext ctx, bool needsSetup, HttpStatusCode completeStatus = HttpStatusCode.OK,
-			string? completeBody = null, string completeSessionToken = "test-session-token")
+			string? completeBody = null, string completeSessionToken = "test-session-token",
+			Task? statusGate = null, bool statusUnavailable = false)
 	{
-		var apiClient = new HttpClient(new SetupApiHandler(needsSetup, completeStatus, completeBody, completeSessionToken))
+		var apiClient = new HttpClient(
+				new SetupApiHandler(needsSetup, completeStatus, completeBody, completeSessionToken, statusGate, statusUnavailable))
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
 		};
@@ -98,6 +118,7 @@ file static class SetupTestServices
 		factory.CreateClient("api").Returns(apiClient);
 
 		ctx.Services
+				.AddMudServices()
 				.AddSingleton(factory)
 				.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 				.AddSingleton(sp => new AccountAuthService(
@@ -130,15 +151,82 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 		await Assert.That(layoutAttribute!.LayoutType).IsEqualTo(typeof(OnboardingLayout));
 	}
 
+	/// <summary>
+	/// The measured defect: on a cold load of /setup against an ALREADY-CLAIMED game, the claim form
+	/// ("This game hasn't been claimed yet") was on screen for ~12 seconds before the status check
+	/// came back and redirected. The POST it invited was safely rejected with a 409, so this was
+	/// never a security hole — it just told every visitor a lie about the game they were looking at.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_DoesNotShowTheClaimFormWhileTheStatusIsStillUnknown()
+	{
+		var gate = new TaskCompletionSource();
+		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true, statusGate: gate.Task));
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+
+		// Status still outstanding: no form, no "claim the administrator account" copy.
+		await Assert.That(cut.FindAll("#setup-username")).IsEmpty();
+		await Assert.That(cut.Markup).DoesNotContain("AuthClaimAdminTitle");
+		await Assert.That(cut.Markup).Contains("Loading");
+
+		gate.SetResult();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll("#setup-username").Count == 0)
+				throw new InvalidOperationException("claim form not rendered yet");
+		});
+		await Assert.That(cut.Markup).Contains("AuthClaimAdminTitle");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Setup_AlreadyComplete_NeverRendersTheClaimFormAndRedirectsHome()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: false));
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+
+		await Assert.That(cut.FindAll("#setup-username")).IsEmpty();
+		await Assert.That(cut.Markup).DoesNotContain("AuthClaimAdminTitle");
+
+		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+		await Assert.That(nav.History.Single().Uri).IsEqualTo("/");
+	}
+
+	/// <summary>
+	/// The deliberate behaviour this fix had to preserve: an unknown-yet status hides the form, but a
+	/// status check that came back and FAILED still shows it. /setup is the only place first-run setup
+	/// can be completed, so a transient/unreachable server must not lock the operator out of it.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_StatusUnavailable_StillShowsTheClaimFormAndDoesNotRedirect()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true, statusUnavailable: true));
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll("#setup-username").Count == 0)
+				throw new InvalidOperationException("claim form not rendered yet");
+		});
+
+		await Assert.That(cut.Markup).Contains("AuthClaimAdminTitle");
+
+		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+		await Assert.That(nav.History).IsEmpty();
+	}
+
 	[TUnit.Core.Test]
 	public async Task Setup_Success_ShowsAdministratorStateInsteadOfRedirect()
 	{
 		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Input("headwiz");
-		cut.Find("#setup-password").Input("password-one");
-		cut.Find("#setup-confirm").Input("password-one");
+		cut.Find("#setup-username").Change("headwiz");
+		cut.Find("#setup-password").Change("password-one");
+		cut.Find("#setup-confirm").Change("password-one");
 		cut.Find("button.setup-submit").Click();
 
 		cut.WaitForAssertion(() =>
@@ -176,9 +264,9 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true, completeSessionToken: ""));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Input("headwiz");
-		cut.Find("#setup-password").Input("password-one");
-		cut.Find("#setup-confirm").Input("password-one");
+		cut.Find("#setup-username").Change("headwiz");
+		cut.Find("#setup-password").Change("password-one");
+		cut.Find("#setup-confirm").Change("password-one");
 		cut.Find("button.setup-submit").Click();
 
 		cut.WaitForAssertion(() =>
@@ -199,15 +287,37 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 		await Assert.That(accountAuth.IsLoggedIn).IsFalse();
 	}
 
+	/// <summary>
+	/// /setup was the portal's only form page not using the shared field component: Login (5),
+	/// Account (3) and CharacterCreate (2) all use MudTextField, /setup hand-rolled three bare
+	/// &lt;input&gt; elements with uppercase micro-labels above them. It sits one click from /login
+	/// inside the same OnboardingLayout, so the difference read as an inconsistency.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_UsesTheSharedFieldComponentLikeEveryOtherFormPage()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true));
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+
+		await Assert.That(cut.FindComponents<MudTextField<string>>().Count).IsEqualTo(3);
+		await Assert.That(cut.FindAll(".setup-input")).IsEmpty();
+
+		// Both password fields stay password fields, and the leading adornment icons match /login's.
+		await Assert.That(cut.Find("#setup-password").GetAttribute("type")).IsEqualTo("password");
+		await Assert.That(cut.Find("#setup-confirm").GetAttribute("type")).IsEqualTo("password");
+		await Assert.That(cut.FindAll(".mud-input-adornment-start")).IsNotEmpty();
+	}
+
 	[TUnit.Core.Test]
 	public async Task Setup_ValidatesPasswordConfirmation()
 	{
 		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Input("headwiz");
-		cut.Find("#setup-password").Input("password-one");
-		cut.Find("#setup-confirm").Input("password-two");
+		cut.Find("#setup-username").Change("headwiz");
+		cut.Find("#setup-password").Change("password-one");
+		cut.Find("#setup-confirm").Change("password-two");
 		cut.Find("button.setup-submit").Click();
 
 		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AuthPasswordsDoNotMatch");
@@ -222,9 +332,9 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 				completeBody: "Setup has already been completed."));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Input("headwiz");
-		cut.Find("#setup-password").Input("password-one");
-		cut.Find("#setup-confirm").Input("password-one");
+		cut.Find("#setup-username").Change("headwiz");
+		cut.Find("#setup-password").Change("password-one");
+		cut.Find("#setup-confirm").Change("password-one");
 		cut.Find("button.setup-submit").Click();
 
 		cut.WaitForAssertion(() =>
@@ -245,9 +355,9 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
 				completeBody: "Username is already taken."));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Input("headwiz");
-		cut.Find("#setup-password").Input("password-one");
-		cut.Find("#setup-confirm").Input("password-one");
+		cut.Find("#setup-username").Change("headwiz");
+		cut.Find("#setup-password").Change("password-one");
+		cut.Find("#setup-confirm").Change("password-one");
 		cut.Find("button.setup-submit").Click();
 
 		cut.WaitForAssertion(() =>

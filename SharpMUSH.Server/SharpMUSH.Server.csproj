@@ -63,22 +63,42 @@
     <ProjectReference Include="..\SharpMUSH.CodeAnalysis\SharpMUSH.CodeAnalysis.csproj" />
   </ItemGroup>
 
-  <!-- Drop the built Scene plugin (DLL + deps.json + manifest) into plugins/scene/ beside the server binary
-       so the booting host's PluginBootstrapService discovers and loads it. -->
-  <Target Name="CopyScenePlugin" AfterTargets="Build">
+  <!-- The Scene plugin's shipped payload (DLL + deps.json + manifest). Resolved in a target rather than at
+       evaluation time because the files only exist once the referenced plugin project has been built; both
+       the build-output copy and the publish-output copy below consume this one list. -->
+  <Target Name="ResolveScenePluginFiles">
     <PropertyGroup>
       <ScenePluginOutDir>$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\bin\$(Configuration)\net10.0</ScenePluginOutDir>
-      <ScenePluginsTargetDir>$(OutDir)plugins\scene</ScenePluginsTargetDir>
     </PropertyGroup>
     <ItemGroup>
       <ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.dll" />
       <ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.deps.json" />
       <ScenePluginFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\plugin.json" />
     </ItemGroup>
-    <MakeDir Directories="$(ScenePluginsTargetDir)" />
-    <Copy SourceFiles="@(ScenePluginFiles)" DestinationFolder="$(ScenePluginsTargetDir)" SkipUnchangedFiles="false" />
   </Target>
-	
+
+  <!-- Drop the built Scene plugin into plugins/scene/ beside the server binary so the booting host's
+       PluginBootstrapService discovers and loads it. -->
+  <Target Name="CopyScenePlugin" AfterTargets="Build" DependsOnTargets="ResolveScenePluginFiles">
+    <MakeDir Directories="$(OutDir)plugins\scene" />
+    <Copy SourceFiles="@(ScenePluginFiles)" DestinationFolder="$(OutDir)plugins\scene" SkipUnchangedFiles="false" />
+  </Target>
+
+  <!-- ...and into the PUBLISH output. `dotnet publish` does not collect $(OutDir), so CopyScenePlugin alone
+       ships a server with no plugins/ directory at all: PluginLoaderService finds nothing under
+       AppContext.BaseDirectory/plugins, the Scene controller and /hubs/scene are never mapped, and every
+       /api/scenes request falls through to the SPA fallback and returns index.html. Publishing goes through
+       @(ResolvedFileToPublish) instead, with RelativePath fixing the plugins/scene/ layout. -->
+  <Target Name="PublishScenePlugin" AfterTargets="ComputeResolvedFilesToPublishList"
+          DependsOnTargets="ResolveScenePluginFiles">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="@(ScenePluginFiles)">
+        <RelativePath>plugins/scene/%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <Content Include="appsettings*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

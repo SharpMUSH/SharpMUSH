@@ -152,13 +152,33 @@ A plugin's `[SharpPlugin] IPlugin` may implement any subset of these (all live i
 | Interface | Where it is applied | Wiring |
 |-----------|---------------------|--------|
 | `IServiceRegistrar` | **Pre-build**, into the host `IServiceCollection` | `PluginCatalog.Build` calls `RegisterServices(services)` in `Startup.ConfigureServices`, before `AddMediator()`. |
-| `IFlagSource` (→ `PluginFlag` records) | **DB migration**, seeded alongside built-in flags | The catalog's `AllFlags` is passed into each DB constructor. Arango UPSERTs them after `UpgradeAsync`; Memgraph/Surreal MERGE/UPSERT them after the built-in flag batch. Idempotent (keyed on flag name). |
-| `IMigrationSource` (provider-tagged) | **DB migration**, after the built-in batch | The catalog's `MigrationSources` is passed into each DB constructor. Arango feeds `ArangoMigrationAssembly` to `migrator.AddMigrations`; Memgraph runs `CypherStatements`; Surreal runs `SurrealStatements`. Each statement is isolated. |
+| `IFlagSource` (→ `PluginFlag` records) | **DB migration**, seeded alongside built-in flags | The catalog's `AllFlags` is passed into each DB constructor. Arango UPSERTs them after the migration pass; Memgraph/Surreal MERGE/UPSERT them after the built-in flag batch. Idempotent (keyed on flag name). |
+| `IMigrationSource` (provider-tagged) | **DB migration**, alongside the built-in batch | The catalog's `MigrationSources` is passed into each DB constructor. Arango treats each `ArangoMigrationAssembly` as a migration stream of its own (see below); Memgraph runs `CypherStatements`; Surreal runs `SurrealStatements`. Each statement is isolated. |
 | `IBridgeSubscriptionSource` | **NATS→SignalR bridge** background loop | `NatsBridgeService` runs each `BridgeSources` entry's `RunAsync(nats, hubContext, ct)` alongside its built-in output/room/scene subscriptions, each wrapped in `try/catch` so one faulting subscription cannot tear down the loop. |
 
 `IMigrationSource` and `IBridgeSubscriptionSource` keep their parameter types loose (`Assembly?` / `object`)
 so the contracts live in `SharpMUSH.Library` without forcing a SignalR dependency there; the host passes the
 concrete `NatsConnection` and `IHubContext<GameHub, IGameHubClient>` for the plugin to cast.
+
+#### Arango migrations are per-source streams
+
+A migration's identity is **(source, Id)**, where the source is the assembly contributing it — the engine is
+one source, each plugin's `ArangoMigrationAssembly` another. This is Django's `(app, name)` rather than one
+global sequence, and the engine-plus-plugins shape requires it: a plugin author can coordinate Ids with
+nobody. `ArangoDatabase.ApplyMigrationsAsync` therefore replaces `ArangoMigrator.UpgradeAsync`, whose single
+whole-history high-water mark skipped any plugin migration older than the engine's newest (F-04).
+
+- **Within a source**, Ids run ascending, and one dated before an Id that source has already applied is
+  **refused** with an error naming both — Flyway's default for a back-dated version. Add migrations in
+  increasing Id order.
+- **Across sources**, nothing is ordered. A plugin's `20260619_001` is unaffected by the engine sitting at
+  `20260713_001`, and two plugins may both ship the same Id.
+- **History** is one row per applied migration in `MigrationHistory`, the shape `UpgradeAsync` already wrote.
+  Engine rows keep a bare Id as their `_key`; a plugin's are namespaced `{assembly}:{id}`. Rows a pre-Phase-5
+  build wrote for a plugin under a bare Id are re-keyed into that plugin's stream on the next boot.
+- Memgraph and SurrealDB have no history table: they replay every plugin statement on every boot, and those
+  statements are written idempotent (`MERGE` / `UPSERT` / `DEFINE`). They never had the F-04 defect and have
+  no ordering to model.
 
 ### How the DB factory receives the migration/flag sources
 

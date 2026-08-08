@@ -1,12 +1,16 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
+using System.Collections.Concurrent;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 
 namespace SharpMUSH.Tests.Integration.Profile;
@@ -145,14 +149,14 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// GET /http/online is the connection list, not the roster: it is built on lwho(), the same
-	/// registry WHO reads, so it tracks actual connections in both directions. The portal used to
-	/// derive "players online" from the full character roster, which made every seeded player —
-	/// including the Package Manager principal — look connected.
+	/// GET /http/online reports presence, not the roster: it is built on mwho(), which reads the
+	/// same connection registry WHO does, so it tracks who is actually here in both directions. The
+	/// portal used to derive "players online" from the full character roster, which made every
+	/// seeded player — including the Package Manager principal — look connected.
 	/// The shared factory logs God in, so God is the connected fixture here; a freshly created
 	/// player that never binds a connection is the unconnected one.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel("PortalPresence")]
 	public async Task Online_ListsConnectedPlayersOnly()
 	{
 		var (godName, _) = await GodIdentity();
@@ -179,6 +183,62 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		// Exist but never bound a connection → absent. This is what the roster-backed widget got wrong.
 		await Assert.That(names).DoesNotContain("OnlineNobody");
 		await Assert.That(names).DoesNotContain("Package Manager");
+	}
+
+	/// <summary>
+	/// One row per player, however many sockets they hold. mwho() lists players, so a second login
+	/// for the same character adds no row — measured against a live server, this route returned the
+	/// same objid eight times for one character, and the portal reported eight people online.
+	/// </summary>
+	/// <remarks>
+	/// This binds a real connection in a server shared for the whole test session, so it shares the
+	/// "PortalPresence" constraint group with <see cref="Online_ListsConnectedPlayersOnly"/>: the two
+	/// read a presence snapshot the other mutates, and only a group they both name serializes them.
+	/// A bare <c>[NotInParallel]</c> would not — measured on TUnit 1.19.16, an unkeyed not-in-parallel
+	/// test still ran alongside four unconstrained ones, so it constrains a test only against others
+	/// that are also unkeyed.
+	/// </remarks>
+	[Test, NotInParallel("PortalPresence")]
+	public async Task Online_ListsADoublyConnectedPlayerOnce()
+	{
+		var (godName, _) = await GodIdentity();
+		var connectionService = factory.Services.GetRequiredService<IConnectionService>();
+
+		// A second connection bound to the same character as the factory's own login.
+		const long handle = 810_001;
+		await connectionService.Register(handle, "127.0.0.1", "localhost", "websocket",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
+			new ConcurrentDictionary<string, string>(new Dictionary<string, string>
+			{
+				["ConnectionStartTime"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
+				["LastConnectionSignal"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
+				["InternetProtocolAddress"] = "127.0.0.1",
+				["HostName"] = "localhost",
+				["ConnectionType"] = "websocket",
+				["PresenceClass"] = PresenceClasses.Play
+			}));
+		await connectionService.Bind(handle, new DBRef(1, null));
+
+		try
+		{
+			var http = factory.CreateHttpClient();
+			var response = await http.GetAsync("http/online");
+			var body = await response.Content.ReadAsStringAsync();
+
+			await Assert.That((int)response.StatusCode).IsEqualTo(200);
+			using var doc = JsonDocument.Parse(body);
+			var rows = doc.RootElement.EnumerateArray()
+				.Select(row => (Name: row.GetProperty("name").GetString(), Objid: row.GetProperty("objid").GetString()))
+				.ToList();
+
+			await Assert.That(rows.Count(r => r.Name == godName)).IsEqualTo(1);
+			// The objid is the identity the portal deduplicates on, so it must be unique too.
+			await Assert.That(rows.Select(r => r.Objid).Distinct().Count()).IsEqualTo(rows.Count);
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
 	}
 
 	[Test]

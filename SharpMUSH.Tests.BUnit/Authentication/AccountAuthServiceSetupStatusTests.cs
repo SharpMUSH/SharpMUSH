@@ -26,15 +26,15 @@ file sealed class SequencedSetupStatusHandler(params HttpResponseMessage[] respo
 
 /// <summary>
 /// Pins the fix for the "transient setup-status failure permanently hides the first-run wizard"
-/// bug: <see cref="AccountAuthService.NeedsSetupAsync"/> must return <c>null</c> (never a false
-/// negative) whenever the server call fails or the body can't be parsed, so callers like
+/// bug: <see cref="AccountAuthService.NeedsSetupAsync"/> must answer with its failed arm (never a
+/// false negative) whenever the server call fails or the body can't be parsed, so callers like
 /// MainLayout's EnsureAccountRoutingAsync know to retry on the next navigation instead of
 /// latching a stale "setup already done."
 /// </summary>
 public class AccountAuthServiceSetupStatusTests : BunitContext
 {
 	[TUnit.Core.Test]
-	public async Task NeedsSetupAsync_ServerError_ReturnsNullNotFalse()
+	public async Task NeedsSetupAsync_ServerError_ReturnsFailureNotFalse()
 	{
 		using var http = new HttpClient(new SequencedSetupStatusHandler(
 			new HttpResponseMessage(HttpStatusCode.InternalServerError)))
@@ -48,11 +48,11 @@ public class AccountAuthServiceSetupStatusTests : BunitContext
 
 		var result = await service.NeedsSetupAsync();
 
-		await Assert.That(result).IsNull();
+		await Assert.That(result.IsT1).IsTrue();
 	}
 
 	[TUnit.Core.Test]
-	public async Task NeedsSetupAsync_NonJsonSpaFallbackBody_ReturnsNullNotFalse()
+	public async Task NeedsSetupAsync_NonJsonSpaFallbackBody_ReturnsFailureNotFalse()
 	{
 		// Simulates a stale dev server / proxy returning the SPA's index.html for the API route
 		// instead of JSON — the historical field observation behind this bug.
@@ -68,18 +68,18 @@ public class AccountAuthServiceSetupStatusTests : BunitContext
 
 		var result = await service.NeedsSetupAsync();
 
-		await Assert.That(result).IsNull();
+		await Assert.That(result.IsT1).IsTrue();
 	}
 
 	/// <summary>
-	/// The essential regression pin: a failing first attempt (null) followed by a succeeding
-	/// second attempt (true) — mirroring one transient hiccup during EnsureAccountRoutingAsync's
-	/// retry loop, which never caches anything but a definitive result. Before the fix, the first
-	/// failed call would have returned `false` and gotten cached forever, so the wizard would
-	/// never be reached on the second, successful attempt.
+	/// The essential regression pin: a failing first attempt followed by a succeeding second one —
+	/// mirroring one transient hiccup during EnsureAccountRoutingAsync's retry loop, which never
+	/// caches anything but a definitive result. Before the fix, the first failed call would have
+	/// returned `false` and gotten cached forever, so the wizard would never be reached on the
+	/// second, successful attempt.
 	/// </summary>
 	[TUnit.Core.Test]
-	public async Task NeedsSetupAsync_FailsThenSucceeds_NullThenTrue_RetryReachesWizard()
+	public async Task NeedsSetupAsync_FailsThenSucceeds_RetryReachesWizard()
 	{
 		using var http = new HttpClient(new SequencedSetupStatusHandler(
 			new HttpResponseMessage(HttpStatusCode.InternalServerError),
@@ -92,19 +92,19 @@ public class AccountAuthServiceSetupStatusTests : BunitContext
 
 		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 
-		// Simulates MainLayout's EnsureAccountRoutingAsync guard: only a non-null result is
-		// ever cached, so a null result on the first navigation leaves the next navigation free
-		// to retry.
+		// Simulates MainLayout's EnsureAccountRoutingAsync guard: only the success arm is ever
+		// cached, so a failure on the first navigation leaves the next navigation free to retry.
 		bool? cachedNeedsSetup = null;
 
 		var first = await service.NeedsSetupAsync();
-		if (first is not null) cachedNeedsSetup = first;
-		await Assert.That(first).IsNull();
+		if (first.TryPickT0(out var firstAnswer, out _)) cachedNeedsSetup = firstAnswer;
+		await Assert.That(first.IsT1).IsTrue();
 		await Assert.That(cachedNeedsSetup).IsNull();
 
 		var second = await service.NeedsSetupAsync();
-		if (second is not null) cachedNeedsSetup = second;
-		await Assert.That(second).IsTrue();
+		if (second.TryPickT0(out var secondAnswer, out _)) cachedNeedsSetup = secondAnswer;
+		await Assert.That(second.IsT0).IsTrue();
+		await Assert.That(second.AsT0).IsTrue();
 		await Assert.That(cachedNeedsSetup).IsTrue();
 	}
 

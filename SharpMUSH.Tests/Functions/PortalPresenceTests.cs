@@ -101,6 +101,42 @@ public class PortalPresenceTests
 		}
 	}
 
+	/// <summary>
+	/// mwho() is a list of players, not of sockets — help mwho defines it as "exactly the same as
+	/// lwho() used by a mortal", and lwho() walks the player table. Someone logged in twice used to
+	/// be listed twice, which the portal then rendered as two players online (and, at eight
+	/// connections, as fourteen players in a four-character game).
+	/// </summary>
+	[Test, NotInParallel(nameof(PortalPresenceTests))]
+	public async Task TwoConnectionsFromOnePlayer_AreOneEntryInTheMortalWho()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var doubledRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "DoubleDipper");
+		var first = await ConnectAsAsync(doubledRef, PresenceClasses.Play);
+		var second = await ConnectAsAsync(doubledRef, PresenceClasses.Play);
+
+		try
+		{
+			// Occurrences of this player, not the length of the list: the connection registry is
+			// shared across the test session, so other players come and go in it.
+			var mortalWho = await WhoAsync("mwho()");
+			await Assert.That(mortalWho.Count(x => x == $"#{doubledRef.Number}")).IsEqualTo(1);
+
+			// mwhoid() yields objids ("#12:1700000000000"), so match on the dbref part alone — a
+			// StartsWith would also count #120 when looking for #12.
+			var mortalWhoIds = await WhoAsync("mwhoid()");
+			await Assert.That(mortalWhoIds.Count(x => x.Split(':')[0] == $"#{doubledRef.Number}")).IsEqualTo(1);
+		}
+		finally
+		{
+			await connectionService.Disconnect(first);
+			await connectionService.Disconnect(second);
+		}
+	}
+
 	[Test, NotInParallel(nameof(PortalPresenceTests))]
 	public async Task PortalConnection_ReportedByConnAndIdle_ButOfflineForConnectedFlag()
 	{
