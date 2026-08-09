@@ -97,7 +97,8 @@ public class ChannelUniquenessTests
 		var refused = results.Count(r => r.IsNameTaken);
 		var failed = results.Where(r => r.IsError).Select(r => r.AsError).ToArray();
 
-		await Assert.That(failed).IsEmpty();
+		// Joined rather than asserted empty as a collection, so a failure prints what the storage layer said.
+		await Assert.That(string.Join(" | ", failed)).IsEqualTo(string.Empty);
 		await Assert.That(winners).IsEqualTo(1);
 		await Assert.That(refused).IsEqualTo(racers - 1);
 		await Assert.That(await CountNamed(name)).IsEqualTo(1);

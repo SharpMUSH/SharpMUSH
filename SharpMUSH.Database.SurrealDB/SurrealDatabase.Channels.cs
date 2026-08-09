@@ -77,28 +77,57 @@ public partial class SurrealDatabase
 		//
 		// One transaction so the channel node and its owner/membership edges commit together — otherwise
 		// the channel is visible before its owner edge and GetChannelOwnerAsync throws.
-		var response = await ExecuteAsync(
+		const string createQuery =
 			"BEGIN TRANSACTION;" +
 			"CREATE channel:⟨$name⟩ SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = '';" +
 			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->object:$ownerKey;" +
 			"RELATE object:$ownerKey->member_of_channel->(SELECT VALUE id FROM channel WHERE name = $name LIMIT 1) SET combine = false, gagged = false, hide = false, mute = false, title = '';" +
-			"COMMIT TRANSACTION",
-			parameters, cancellationToken);
+			"COMMIT TRANSACTION";
 
-		if (!response.HasErrors)
+		const int maxAttempts = 8;
+
+		for (var attempt = 0; ; attempt++)
 		{
-			return new Success();
+			var response = await ExecuteAsync(createQuery, parameters, cancellationToken);
+
+			if (!response.HasErrors)
+			{
+				return new Success();
+			}
+
+			var errors = string.Join("; ", response.Errors.Select(FormatError));
+
+			// "Database record `channel:Foo` already exists" — and the index guard, in case a name reaches
+			// the same record by a different id form.
+			if (errors.Contains("already exists", StringComparison.OrdinalIgnoreCase)
+					|| errors.Contains("already contains", StringComparison.OrdinalIgnoreCase))
+			{
+				return new ChannelNameTaken();
+			}
+
+			// SurrealDB is optimistic: concurrent writers to one record do not queue, they lose at commit
+			// with "Failed to commit transaction due to a read or write conflict. This transaction can be
+			// retried." Retrying is what turns that into the answer the caller needs, because the retry
+			// finds the winner's record and gets "already exists". Without it the loser of a race is told
+			// the create failed for an unexplained reason — true, but useless.
+			if (attempt < maxAttempts - 1 && IsRetryableConflict(errors))
+			{
+				var backoff = Math.Min(25 * (1 << attempt), 500);
+				await Task.Delay(backoff + Random.Shared.Next(0, (backoff / 2) + 1), cancellationToken);
+				continue;
+			}
+
+			return new Error<string>(errors);
 		}
-
-		var errors = string.Join("; ", response.Errors.Select(FormatError));
-
-		// "Database record `channel:Foo` already exists" — and the index guard, in case a name reaches the
-		// same record by a different id form.
-		return errors.Contains("already exists", StringComparison.OrdinalIgnoreCase)
-					 || errors.Contains("already contains", StringComparison.OrdinalIgnoreCase)
-			? new ChannelNameTaken()
-			: new Error<string>(errors);
 	}
+
+	/// <summary>
+	/// True when SurrealDB refused a commit because another transaction touched the same records. Its own
+	/// message says the transaction can be retried, and on retry the create resolves to "already exists".
+	/// </summary>
+	private static bool IsRetryableConflict(string message)
+		=> message.Contains("read or write conflict", StringComparison.OrdinalIgnoreCase)
+			|| message.Contains("can be retried", StringComparison.OrdinalIgnoreCase);
 
 	public async ValueTask UpdateChannelAsync(SharpChannel channel, MString? name, MString? description, string[]? privs,
 		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock,
