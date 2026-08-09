@@ -30,7 +30,7 @@ public static class ChannelAdd
 
 		// notify: false — a missing channel is the expected case when creating one; the player should
 		// not be told "Channel not found." on their way to "Channel has been created."
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator, NotifyService, channelName, false);
 		if (!maybeChannel.IsError)
 		{
 			await NotifyService.Notify(executor, "CHAT: Channel already exists.", executor);
@@ -55,11 +55,21 @@ public static class ChannelAdd
 			return new CallState(ErrorMessages.Returns.TooManyChannels);
 		}
 
-		var parsedPrivileges = ChannelHelper.StringToChannelPrivileges(privileges);
+		var parsedPrivileges = ChannelHelper.StringToChannelPrivileges(privileges, []);
 		if (parsedPrivileges.IsError)
 		{
 			await NotifyService.Notify(executor, $"Invalid privileges: {string.Join(", ", parsedPrivileges.AsError.Value)}.", executor);
 			return new CallState(ErrorMessages.Returns.InvalidPrivileges);
+		}
+
+		// extchat.c:1736 — `if (!Chan_Can(player, type))`. You cannot create a channel of a type you could
+		// not yourself use, which includes a DISABLED one: Chan_Can is false for that bit for everybody,
+		// wizards included. A wizard disables an existing channel through @channel/privs instead, where
+		// Chan_Can_Priv's `Wizard(p) ||` escape applies.
+		if (!await PermissionService.ChannelStandardCan(executor, parsedPrivileges.AsPrivileges))
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatCannotCreateThatType, executor);
+			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
 		await Mediator.Send(new CreateChannelCommand(channelName, parsedPrivileges.AsPrivileges, executorOwner));

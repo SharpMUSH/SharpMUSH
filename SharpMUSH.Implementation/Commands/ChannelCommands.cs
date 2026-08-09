@@ -31,7 +31,8 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -39,6 +40,12 @@ public partial class Commands
 		}
 
 		var channel = maybeChannel.AsChannel;
+
+		if (await ChannelHelper.CemitRefusal(PermissionService!, executor, channel) is { } refusal)
+		{
+			await NotifyService!.Notify(executor, refusal, executor);
+			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
+		}
 
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 
@@ -81,7 +88,8 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -89,6 +97,13 @@ public partial class Commands
 		}
 
 		var channel = maybeChannel.AsChannel;
+
+		// extchat.c:1533-1546 — the type gate, then Chan_Can_Speak, which LOUD bypasses.
+		if (await ChannelHelper.SpeechRefusal(PermissionService!, executor, channel) is { } refusal)
+		{
+			await NotifyService!.Notify(executor, refusal, executor);
+			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
+		}
 
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 
@@ -150,7 +165,8 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -158,6 +174,12 @@ public partial class Commands
 		}
 
 		var channel = maybeChannel.AsChannel;
+
+		if (await ChannelHelper.CemitRefusal(PermissionService!, executor, channel) is { } refusal)
+		{
+			await NotifyService!.Notify(executor, refusal, executor);
+			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
+		}
 
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 
@@ -211,7 +233,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
@@ -222,6 +245,25 @@ public partial class Commands
 		var isMember = await ChannelHelper.IsMemberOfChannel(executor, channel);
 		if (!isMember)
 		{
+			// addcom joins the channel, so it answers to the same join gate as @channel/on.
+			if (await executor.IsGuest())
+			{
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.ChatGuestsCantJoin, executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
+			var joinCheck = await ChannelHelper.JoinRefusal(PermissionService!, executor, executor, channel);
+			if (joinCheck.Refused)
+			{
+				await NotifyService!.Notify(executor, joinCheck.Refusal!, executor);
+				return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
+			}
+
+			if (joinCheck.Warning is not null)
+			{
+				await NotifyService!.Notify(executor, joinCheck.Warning, executor);
+			}
+
 			await Mediator!.Send(new AddUserToChannelCommand(channel, executor));
 		}
 
@@ -291,7 +333,7 @@ public partial class Commands
 
 			if (!hasOtherAlias)
 			{
-				var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, false);
+				var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator!, NotifyService!, channelName, false);
 				if (!maybeChannel.IsError)
 				{
 					await Mediator!.Send(new RemoveUserFromChannelCommand(maybeChannel.AsChannel, executor));
@@ -362,7 +404,8 @@ public partial class Commands
 
 		var channelName = maybeAttribute.AsAttribute.Last().Value;
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;

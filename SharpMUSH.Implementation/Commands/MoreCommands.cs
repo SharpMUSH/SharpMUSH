@@ -65,8 +65,7 @@ public partial class Commands
 		var lockType = switches.FirstOrDefault() ?? "JOIN";
 		lockType = lockType.ToUpper();
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator!, NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{

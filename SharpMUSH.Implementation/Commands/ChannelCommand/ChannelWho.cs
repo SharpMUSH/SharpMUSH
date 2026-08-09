@@ -10,7 +10,7 @@ public static class ChannelWho
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService locateService, IPermissionService permissionService, IMediator mediator, INotifyService notifyService, MString channelName)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, locateService, permissionService, mediator, notifyService, channelName, notify: true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, mediator, notifyService, channelName, notify: true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;

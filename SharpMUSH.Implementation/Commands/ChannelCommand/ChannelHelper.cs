@@ -2,6 +2,7 @@ using Mediator;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -81,30 +82,70 @@ public static class ChannelHelper
 		AnySharpObject member, SharpChannel channel) =>
 		await channel.Members.Value.FirstOrDefaultAsync(x => x.Member.Id() == member.Id());
 
-	public static PrivilegeOrError StringToChannelPrivileges(MString channelName)
+	/// <summary>
+	/// PennMUSH <c>string_to_privs(table, str, origprivs)</c> (<c>src/privtab.c:36</c>): applies a
+	/// space-separated privilege list to an existing set rather than replacing it, and honours a leading
+	/// <c>!</c> as removal. An empty list leaves <paramref name="originalPrivileges"/> untouched.
+	///
+	/// <para>Names are returned in the canonical casing of the <c>chan_privs</c> table, never in whatever
+	/// casing the player typed. <c>@channel/add Foo=wizard</c> used to persist the literal <c>"wizard"</c>,
+	/// which every ordinal <c>Privs.Contains("Wizard")</c> permission check then failed to see.</para>
+	///
+	/// <para>Unlike PennMUSH this matches full names exactly (case-insensitively) rather than by prefix;
+	/// single-character aliases are matched case-sensitively, as 'O' (Object) and 'o' (Open) differ.</para>
+	/// </summary>
+	public static PrivilegeOrError StringToChannelPrivileges(MString privileges, string[] originalPrivileges)
 	{
-		var plainText = channelName.ToPlainText();
-		var list = plainText
+		var tokens = privileges.ToPlainText()
 			.Split(' ')
 			.Where(x => !string.IsNullOrWhiteSpace(x))
 			.ToArray();
 
-		var badList = list.Where(x => x.Length == 1
-			? !ChannelPrivilegesReverse.ContainsKey(x[0])
-			: !ChannelPrivileges.ContainsKey(x)).ToArray();
+		var badList = tokens
+			.Select(TrimNegation)
+			.Where(x => x.Length != 0 && ResolvePrivilege(x) is null)
+			.ToArray();
 
 		if (badList.Length != 0)
 		{
 			return new PrivilegeOrError(new Error<string[]>(badList));
 		}
 
-		var validatedList = list.Select(x => x.Length == 1
-				? ChannelPrivilegesReverse.GetValueOrDefault(x[0], null)
-				: (ChannelPrivileges.ContainsKey(x) ? x : null))
-			.Where(x => x != null).ToArray();
+		var result = new List<string>(originalPrivileges
+			.Select(x => ResolvePrivilege(x) ?? x)
+			.Distinct(StringComparer.OrdinalIgnoreCase));
 
-		return new PrivilegeOrError(validatedList!);
+		foreach (var token in tokens)
+		{
+			var negated = token.StartsWith('!');
+			var name = ResolvePrivilege(TrimNegation(token));
+
+			if (name is null)
+			{
+				continue;
+			}
+
+			result.RemoveAll(x => x.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+			if (!negated)
+			{
+				result.Add(name);
+			}
+		}
+
+		return new PrivilegeOrError([.. result]);
 	}
+
+	private static string TrimNegation(string token)
+		=> token.StartsWith('!') ? token[1..] : token;
+
+	private static string? ResolvePrivilege(string token)
+		=> token.Length switch
+		{
+			0 => null,
+			1 => ChannelPrivilegesReverse.GetValueOrDefault(token[0]),
+			_ => ChannelPrivileges.Keys.FirstOrDefault(x => x.Equals(token, StringComparison.OrdinalIgnoreCase))
+		};
 
 	public static bool IsValidChannelName(IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName)
 		=> IsValidChannelName(Configuration, channelName.ToPlainText());
@@ -114,10 +155,17 @@ public static class ChannelHelper
 			 && channelName.Length > 3
 			 && !channelName.Contains(' ');
 
+	/// <summary>
+	/// Looks a channel up by name. This is PennMUSH's <c>find_channel()</c> and nothing more: it does not
+	/// decide who may see, join or speak on what it returns.
+	///
+	/// <para>It used to take an <see cref="IPermissionService"/> and never touch it, which made every one
+	/// of its twenty-odd call sites read as though a permission check had already happened. The parameter
+	/// is gone; callers that need a gate ask for one by name — <see cref="GetVisibleChannelOrError"/>,
+	/// <see cref="JoinRefusal"/>, <see cref="SpeechRefusal"/>, <see cref="CemitRefusal"/>.</para>
+	/// </summary>
 	public static async ValueTask<ChannelOrError> GetChannelOrError(
 		IMUSHCodeParser parser,
-		ILocateService LocateService,
-		IPermissionService PermissionService,
 		IMediator Mediator,
 		INotifyService NotifyService,
 		MString channelName,
@@ -143,5 +191,128 @@ public static class ChannelHelper
 					return new ChannelOrError(foundChannel);
 				}
 		}
+	}
+
+	/// <summary>
+	/// Lookup plus PennMUSH's <c>Chan_Can_See</c> gate. A channel the executor may not see is reported as
+	/// no channel at all, exactly as <c>src/extchat.c</c> does at every function and command that reads
+	/// channel state ("#-1 NO SUCH CHANNEL", "CHAT: I don't recognize that channel.").
+	/// </summary>
+	public static async ValueTask<ChannelOrError> GetVisibleChannelOrError(
+		IMUSHCodeParser parser,
+		IPermissionService permissionService,
+		IMediator mediator,
+		INotifyService notifyService,
+		AnySharpObject viewer,
+		MString channelName,
+		bool notify = false)
+	{
+		var maybeChannel = await GetChannelOrError(parser, mediator, notifyService, channelName, notify);
+
+		if (maybeChannel.IsError || await permissionService.ChannelCanSeeAsync(viewer, maybeChannel.AsChannel))
+		{
+			return maybeChannel;
+		}
+
+		if (notify)
+		{
+			await notifyService.Notify(viewer, ErrorMessages.Notifications.DontRecognizeThatChannel, viewer);
+		}
+
+		return new ChannelOrError(new Error<CallState>(new CallState(ErrorMessages.Returns.ChannelNotFound)));
+	}
+
+	/// <summary>
+	/// PennMUSH <c>Chan_Ok_Type</c> (hdrs/extchat.h:196) with the refusal <c>src/extchat.c:1533</c>
+	/// prints. Returns <see langword="null"/> when the object is of a type the channel accepts.
+	/// </summary>
+	public static string? WrongTypeRefusal(IPermissionService permissionService, AnySharpObject who,
+		SharpChannel channel)
+		=> permissionService.ChannelOkType(who, channel)
+			? null
+			: string.Format(ErrorMessages.Notifications.ChatWrongTypeForChannel, channel.Name.ToPlainText());
+
+	/// <summary>
+	/// The outcome of PennMUSH's join checks (<c>src/extchat.c:1241-1268</c> for a third party,
+	/// <c>:1347-1362</c> for oneself). A wizard who fails only the join lock is warned and joined anyway,
+	/// so a plain refusal string cannot express the result.
+	/// </summary>
+	public readonly record struct JoinCheck(string? Refusal, string? Warning)
+	{
+		public bool Refused => Refusal is not null;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>Chan_Ok_Type</c> then <c>Chan_Can_Join</c>, with the wizard override
+	/// (<c>src/extchat.c:1261-1268</c>): a wizard actor who fails the check is warned rather than
+	/// refused. The override is the ACTOR's privilege, not the victim's.
+	/// </summary>
+	public static async ValueTask<JoinCheck> JoinRefusal(IPermissionService permissionService,
+		AnySharpObject actor, AnySharpObject victim, SharpChannel channel)
+	{
+		if (WrongTypeRefusal(permissionService, victim, channel) is not null)
+		{
+			return new JoinCheck(
+				string.Format(ErrorMessages.Notifications.ChatWrongTypeOfThingForChannel, channel.Name.ToPlainText()),
+				null);
+		}
+
+		if (await permissionService.ChannelCanJoin(victim, channel))
+		{
+			return new JoinCheck(null, null);
+		}
+
+		return await actor.IsWizard()
+			? new JoinCheck(null, actor.Id() == victim.Id()
+				? ErrorMessages.Notifications.ChatJoinOverrideSelf
+				: ErrorMessages.Notifications.ChatJoinOverrideTarget)
+			: new JoinCheck(ErrorMessages.Notifications.ChatJoinDenied, null);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_chat</c> (<c>src/extchat.c:1533-1546</c>): the type gate, then the speak gate that
+	/// <c>LOUD</c> bypasses. A speaker who cannot even see the channel is told it does not exist rather
+	/// than that they may not speak on it.
+	/// </summary>
+	public static async ValueTask<string?> SpeechRefusal(IPermissionService permissionService, AnySharpObject who,
+		SharpChannel channel)
+	{
+		if (WrongTypeRefusal(permissionService, who, channel) is { } wrongType)
+		{
+			return wrongType;
+		}
+
+		if (await who.IsLoud() || await permissionService.ChannelCanSpeak(who, channel))
+		{
+			return null;
+		}
+
+		return await permissionService.ChannelCanSeeAsync(who, channel)
+			? string.Format(ErrorMessages.Notifications.ChatNotAllowedToSpeak, channel.Name.ToPlainText())
+			: ErrorMessages.Notifications.ChatNoSuchChannel;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_cemit</c> (<c>src/extchat.c:1622-1640</c>): See_All + Pemit_All skips the checks
+	/// entirely, since such a player could enumerate the channel's members and <c>@pemit</c> them anyway.
+	/// Otherwise the type gate and <c>Chan_Can_Cemit</c> apply. Note <c>LOUD</c> does NOT bypass this —
+	/// Penn only consults it in <c>do_chat</c>.
+	/// </summary>
+	public static async ValueTask<string?> CemitRefusal(IPermissionService permissionService, AnySharpObject who,
+		SharpChannel channel)
+	{
+		if (await who.IsSee_All() && await who.HasPower("Pemit_All"))
+		{
+			return null;
+		}
+
+		if (WrongTypeRefusal(permissionService, who, channel) is { } wrongType)
+		{
+			return wrongType;
+		}
+
+		return await permissionService.ChannelCanCemit(who, channel)
+			? null
+			: string.Format(ErrorMessages.Notifications.ChatNotAllowedToCemit, channel.Name.ToPlainText());
 	}
 }
