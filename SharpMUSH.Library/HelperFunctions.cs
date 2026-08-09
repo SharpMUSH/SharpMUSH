@@ -51,6 +51,19 @@ public static partial class HelperFunctions
 		=> await obj.HasPower("Guest");
 
 	/// <summary>
+	/// The one approval predicate: <b>royalty or above, or carrying the <c>APPROVED</c> flag</b> — and
+	/// never a guest, whatever else is true of it.
+	///
+	/// <para>The engine ships the rule, not the policy: what earns a character its <c>APPROVED</c> flag is
+	/// each game's decision, expressed by setting the flag. Softcode reaches this same method through the
+	/// <c>isapproved()</c> function, so a game's <c>+</c>-verbs and the C# side cannot drift into two
+	/// different answers.</para>
+	/// </summary>
+	public static async ValueTask<bool> IsApproved(this AnySharpObject obj)
+		=> !await obj.IsGuest()
+			&& (await obj.IsPriv() || await obj.HasFlag("APPROVED"));
+
+	/// <summary>
 	/// Evaluates an <c>@function/restrict</c> restriction string against <paramref name="executor"/>,
 	/// returning whether the executor is PERMITTED to call the function.
 	///
