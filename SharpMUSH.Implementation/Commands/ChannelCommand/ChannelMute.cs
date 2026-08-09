@@ -20,13 +20,24 @@ public static class ChannelMute
 			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator, NotifyService, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			NotifyService, executor, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
 		}
 
 		var channel = maybeChannel.AsChannel;
+
+		// @channel/mute writes the status of a player the executor NAMES, unlike /gag, /hide, /combine and
+		// /title, which only ever write the executor's own. A third-party write needs the channel's modify
+		// right; without this any non-guest who knows a channel and a member name could mute that member.
+		// Silencing someone else's channel voice is exactly what ChanModLock exists to control.
+		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
 		var players = Mediator.CreateStream(new GetPlayerQuery(playerName.ToPlainText()));
 		var player = await players.FirstOrDefaultAsync();

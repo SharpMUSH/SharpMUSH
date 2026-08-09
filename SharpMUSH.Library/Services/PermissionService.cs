@@ -329,11 +329,27 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> ChannelCanCemit(AnySharpObject target, SharpChannel channel)
 		=> !channel.HasPriv("NoCemit") && await ChannelCanSpeak(target, channel);
 
+	/// <summary>
+	/// PennMUSH <c>Chan_Can_Modify</c> — hdrs/extchat.h:210.
+	///
+	/// <para>The mod lock is only consulted when one is actually set. PennMUSH gets away with evaluating
+	/// it unconditionally because it never leaves it unset: <c>do_chan_admin</c> stamps
+	/// <c>=#&lt;creator&gt;</c> onto every channel as it is created (<c>src/extchat.c:1755-1763</c>).
+	/// SharpMUSH's <c>CreateChannelCommand</c> writes no lock, and an empty lock string evaluates TRUE for
+	/// everybody — so evaluating it here handed modify rights over every channel in the game to every
+	/// non-guest, which is <c>@channel/privs</c>, <c>/rename</c>, <c>/wipe</c>, <c>/decompile</c> and
+	/// <c>/mute</c>.</para>
+	///
+	/// <para>This is the same trap, and the same fix, as the control lock in <see cref="Controls"/> above:
+	/// an unset lock must be skipped, not evaluated. Owner and wizard still pass, so the effective result
+	/// matches PennMUSH for every channel PennMUSH would have created.</para>
+	/// </summary>
 	public async ValueTask<bool> ChannelCanModifyAsync(AnySharpObject target, SharpChannel channel) =>
 		await target.IsWizard()
 		|| (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id()
 		|| (
 			!await target.HasPower("guest")
+			&& !string.IsNullOrWhiteSpace(channel.ModLock)
 			&& await ChannelCanAccess(target, channel)
 			&& lockService.Evaluate(channel.ModLock, channel, target)
 		);

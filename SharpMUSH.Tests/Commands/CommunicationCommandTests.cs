@@ -301,6 +301,13 @@ public class CommunicationCommandTests
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor, executor)).IsTrue();
 	}
 
+	/// <summary>
+	/// A channel that does not exist gets the SAME refusal as one the caller may not see —
+	/// "CHAT: I don't recognize that channel." A distinguishable "Channel not found." would let a caller
+	/// tell the two apart and enumerate the channel list, which is why <c>GetVisibleChannelOrError</c>
+	/// gives both one answer. PennMUSH words both cases identically too (<c>hdrs/extchat.h:161</c> for
+	/// missing, every <c>Chan_Can_See</c> refusal in <c>src/extchat.c</c> for invisible).
+	/// </summary>
 	[Test]
 	public async ValueTask AddComChannelNotFound()
 	{
@@ -311,7 +318,8 @@ public class CommunicationCommandTests
 		await testParser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("addcom test_alias_ADDCOM3=NonExistentChannel"));
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), "Channel not found.", TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), ErrorMessages.Notifications.DontRecognizeThatChannel,
+				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

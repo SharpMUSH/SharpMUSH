@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -155,7 +156,8 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Channel not found.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), ErrorMessages.Notifications.DontRecognizeThatChannel,
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

@@ -34,12 +34,15 @@ public static class ChannelGag
 
 		if (channelName is null)
 		{
-			var channelList = Mediator.CreateStream(new GetChannelListQuery());
-			channels = [.. await channelList.ToArrayAsync()];
+			// Same enumeration oracle as @channel/hide's bulk path: this walked every channel and then named
+			// each one back to the executor.
+			channels = [.. await ChannelHelper.VisibleChannels(PermissionService, executor,
+				Mediator.CreateStream(new GetChannelListQuery()))];
 		}
 		else
 		{
-			var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator, NotifyService, channelName, true);
+			var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+				NotifyService, executor, channelName, true);
 			if (maybeChannel.IsError)
 			{
 				return maybeChannel.AsError.Value;

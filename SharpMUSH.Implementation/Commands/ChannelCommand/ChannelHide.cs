@@ -35,8 +35,11 @@ public static class ChannelHide
 		// passed a null name to a lookup that cannot take one.
 		if (channelName is null)
 		{
-			var channelList = Mediator.CreateStream(new GetChannelListQuery());
-			channels = [.. await channelList.ToArrayAsync()];
+			// The bulk path routed around GetVisibleChannelOrError entirely and then named each channel in
+			// its per-channel notifications, so `@channel/hide` with no argument listed exactly the channels
+			// that gate exists to hide.
+			channels = [.. await ChannelHelper.VisibleChannels(PermissionService, executor,
+				Mediator.CreateStream(new GetChannelListQuery()))];
 		}
 		else
 		{

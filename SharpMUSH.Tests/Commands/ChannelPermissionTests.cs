@@ -1,7 +1,12 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using OneOf;
+using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -30,10 +35,45 @@ public class ChannelPermissionTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IPermissionService PermissionService => WebAppFactoryArg.Services.GetRequiredService<IPermissionService>();
+	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
 
+	/// <summary>A function-evaluating parser whose executor is <paramref name="executor"/>.</summary>
+	private IMUSHCodeParser FunctionParserFor(DBRef executor)
+		=> WebAppFactoryArg.FunctionParserFor(executor);
+
+	/// <summary>
+	/// Every message the notify mock was asked to send to <paramref name="who"/> since the last
+	/// <c>ClearReceivedCalls</c>, as plain text. Used to prove two refusals are worded identically, and
+	/// that a bulk switch never names a channel.
+	/// </summary>
+	private List<string> NotifiedMessages(DBRef who)
+		=> NotifyService.ReceivedCalls()
+			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
+			.Select(call => call.GetArguments())
+			.Where(args => args.Length > 1 && args[0] switch
+			{
+				AnySharpObject o => o.Object().DBRef.Number == who.Number,
+				DBRef d => d.Number == who.Number,
+				_ => false
+			})
+			.Select(args => args[1] switch
+			{
+				OneOf<MString, string> m => m.Match(ms => ms.ToPlainText(), str => str),
+				MString ms => ms.ToPlainText(),
+				string str => str,
+				_ => string.Empty
+			})
+			.ToList();
+
+	/// <summary>
+	/// Channel names must be unique across the whole session — <see cref="ServerWebAppFactory"/> is
+	/// <see cref="SharedType.PerTestSession"/>, so every test in this class shares one database. A bare
+	/// six-digit random suffix collides often enough to matter; <c>GenerateUniqueName</c> adds a
+	/// millisecond timestamp. Underscores are stripped because a channel name may not contain one.
+	/// </summary>
 	private static string UniqueChannel(string prefix)
-		=> $"{prefix}{Random.Shared.Next(100000, 999999)}";
+		=> TestIsolationHelpers.GenerateUniqueName(prefix).Replace("_", string.Empty);
 
 	/// <summary>Creates a channel owned by God with exactly the given privileges.</summary>
 	private async Task<SharpChannel> CreateChannel(string name, params string[] privileges)
@@ -398,5 +438,214 @@ public class ChannelPermissionTests
 			await Run(mortimer, $"@chat {name}=Mortimer speaks.");
 			await Assert.That(await MessageCount(name)).IsEqualTo(before);
 		}
+	}
+
+	// --- Enumeration oracles: a refusal must not tell a caller what it is refusing ------------------
+
+	/// <summary>
+	/// A channel that does not exist and a channel that exists but is invisible to the caller must be
+	/// indistinguishable — in the notification AND in the return value softcode reads. A caller who can
+	/// tell them apart can enumerate every channel on the game by name.
+	///
+	/// <para>PennMUSH answers both with "CHAT: I don't recognize that channel." and
+	/// <c>#-1 NO SUCH CHANNEL</c>: the missing case in <c>test_channel_fun</c> (<c>hdrs/extchat.h:161</c>)
+	/// and the invisible case at every <c>Chan_Can_See</c> refusal in <c>src/extchat.c</c>. This
+	/// repository made the same call for scenes in PR #750 (<c>SceneHub.cs:52-57</c>).</para>
+	/// </summary>
+	[Test]
+	public async Task MissingAndInvisibleChannelsAreIndistinguishable()
+	{
+		var invisible = UniqueChannel("OracleHidden");
+		await CreateChannel(invisible, "Player", "Wizard");
+		var missing = UniqueChannel("OracleMissing");
+
+		var mortal = await CreateMortal("ChanPermOracle");
+		var parser = FunctionParserFor(mortal.DbRef);
+
+		// The function surface is where the return value is observable to a mortal's softcode.
+		var invisibleResult = await parser.FunctionParse(MModule.single($"cwho({invisible})"));
+		var missingResult = await parser.FunctionParse(MModule.single($"cwho({missing})"));
+
+		await Assert.That(invisibleResult?.Message?.ToPlainText())
+			.IsEqualTo(missingResult?.Message?.ToPlainText());
+		await Assert.That(invisibleResult?.Message?.ToPlainText())
+			.IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
+
+		// And the same for the notification the command surface emits.
+		NotifyService.ClearReceivedCalls();
+		await Run(mortal, $"@channel/on {invisible}");
+		var afterInvisible = NotifiedMessages(mortal.DbRef);
+
+		NotifyService.ClearReceivedCalls();
+		await Run(mortal, $"@channel/on {missing}");
+		var afterMissing = NotifiedMessages(mortal.DbRef);
+
+		await Assert.That(afterInvisible).IsEquivalentTo(afterMissing);
+		await Assert.That(afterInvisible).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
+		await Assert.That(afterInvisible).DoesNotContain("Channel not found.");
+	}
+
+	/// <summary>
+	/// <c>cwho()</c> is reachable from mortal softcode, so an ungated one is the <c>scenelist()</c> hole
+	/// from PR #763 again: it returned every member's dbref on any channel, named or not.
+	/// </summary>
+	[Test]
+	public async Task CwhoOnInvisibleChannelReturnsNothingUseful()
+	{
+		var name = UniqueChannel("CwhoHidden");
+		var channel = await CreateChannel(name, "Player", "Wizard");
+
+		var wizard = await CreateFlagged("ChanPermCwhoWiz", "WIZARD");
+		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Known;
+		await Mediator.Send(new AddUserToChannelCommand(channel, wizardObject));
+
+		var mortal = await CreateMortal("ChanPermCwho");
+
+		var mortalResult = await FunctionParserFor(mortal.DbRef).FunctionParse(MModule.single($"cwho({name})"));
+		await Assert.That(mortalResult?.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
+		await Assert.That(mortalResult?.Message?.ToPlainText()).DoesNotContain($"#{wizard.DbRef.Number}");
+
+		// The wizard, who may see it, still gets the member list.
+		var wizardResult = await FunctionParserFor(wizard.DbRef).FunctionParse(MModule.single($"cwho({name})"));
+		await Assert.That(wizardResult?.Message?.ToPlainText()).Contains($"#{wizard.DbRef.Number}");
+	}
+
+	/// <summary>
+	/// <c>cowner()</c> and <c>cmogrifier()</c> looked a channel up without any visibility check. I had
+	/// claimed that matched PennMUSH; re-auditing showed it does not — Penn puts the gate inside
+	/// <c>find_channel</c> itself (<c>src/extchat.c:959</c>), so every channel function is gated there and
+	/// none of them is exempt.
+	/// </summary>
+	[Test]
+	public async Task ChannelReadingFunctionsAreGatedOnVisibility()
+	{
+		var name = UniqueChannel("FnHidden");
+		await CreateChannel(name, "Player", "Wizard");
+
+		var mortal = await CreateMortal("ChanPermFnRead");
+		var parser = FunctionParserFor(mortal.DbRef);
+
+		foreach (var call in new[] { $"cowner({name})", $"cmogrifier({name})", $"cwho({name})" })
+		{
+			var result = await parser.FunctionParse(MModule.single(call));
+			await Assert.That(result?.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
+		}
+	}
+
+	/// <summary>
+	/// <c>channels(&lt;object&gt;)</c> judged visibility against the OBJECT rather than the caller, so
+	/// naming a wizard read back that wizard's wizard-only channels; and its <c>on</c>/<c>off</c> arms
+	/// applied no visibility rule at all. PennMUSH <c>fun_channels</c> (<c>src/extchat.c:3313</c>) judges
+	/// against the executor and additionally hides members flagged hidden from non-Priv_Who callers.
+	/// </summary>
+	[Test]
+	public async Task ChannelsFunctionJudgesVisibilityAgainstTheCaller()
+	{
+		var name = UniqueChannel("ChansHidden");
+		var channel = await CreateChannel(name, "Player", "Wizard");
+
+		var wizard = await CreateFlagged("ChanPermChansWiz", "WIZARD");
+		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Known;
+		await Mediator.Send(new AddUserToChannelCommand(channel, wizardObject));
+
+		var mortal = await CreateMortal("ChanPermChans");
+		var parser = FunctionParserFor(mortal.DbRef);
+
+		var named = await parser.FunctionParse(MModule.single($"channels(#{wizard.DbRef.Number})"));
+		await Assert.That(named?.Message?.ToPlainText()).DoesNotContain(name);
+
+		var off = await parser.FunctionParse(MModule.single("channels(me,off)"));
+		await Assert.That(off?.Message?.ToPlainText()).DoesNotContain(name);
+
+		var all = await parser.FunctionParse(MModule.single("channels()"));
+		await Assert.That(all?.Message?.ToPlainText()).DoesNotContain(name);
+	}
+
+	/// <summary>
+	/// With no channel named, <c>@channel/hide</c>, <c>/gag</c> and <c>/combine</c> walk every channel from
+	/// <c>GetChannelListQuery</c> and notify per channel, routing around
+	/// <see cref="ChannelHelper.GetVisibleChannelOrError"/> — so the argument-less form named exactly the
+	/// channels that gate exists to hide.
+	///
+	/// <para>These call the handlers directly on purpose. <c>@CHANNEL</c>'s dispatcher matches
+	/// <c>["HIDE"] when arg0 is not null</c> (GeneralCommands.cs:5036-5043), so the bulk path is
+	/// unreachable from the command surface today and no player can currently trigger the leak. The
+	/// handlers implement it regardless, and whoever wires the argument-less form — PennMUSH has it —
+	/// must not reintroduce the oracle. Testing through the dispatcher would assert nothing.</para>
+	/// </summary>
+	[Test]
+	[Arguments("hide")]
+	[Arguments("gag")]
+	[Arguments("combine")]
+	public async Task BulkSwitchesDoNotNameChannelsTheExecutorCannotSee(string switchName)
+	{
+		var name = UniqueChannel($"Bulk{switchName}");
+		await CreateChannel(name, "Player", "Wizard");
+
+		var mortal = await CreateMortal($"ChanPermBulk{switchName}");
+		var parser = WebAppFactoryArg.CommandParserFor(mortal.DbRef, mortal.Handle);
+		var locate = WebAppFactoryArg.Services.GetRequiredService<ILocateService>();
+
+		NotifyService.ClearReceivedCalls();
+
+		_ = switchName switch
+		{
+			"hide" => await ChannelHide.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null),
+			"gag" => await ChannelGag.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null, []),
+			_ => await ChannelCombine.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null)
+		};
+
+		foreach (var message in NotifiedMessages(mortal.DbRef))
+		{
+			await Assert.That(message).DoesNotContain(name);
+		}
+	}
+
+	// --- Third-party status writes need the channel's modify right ---------------------------------
+
+	/// <summary>
+	/// <c>@channel/mute</c> writes the status of a player the executor NAMES. Before this stack it wrote
+	/// against the executor instead, which made it a harmless self-mute; correcting the target without
+	/// adding authorization would have turned a no-op bug into "any non-guest may silence any member of
+	/// any channel", which is worse than the bug.
+	///
+	/// <para><c>/gag</c>, <c>/hide</c>, <c>/combine</c> and <c>/title</c> only ever write the executor's
+	/// own status and correctly require no modify right; <c>/hide</c> has its own <c>Chan_Can_Hide</c>
+	/// gate.</para>
+	/// </summary>
+	[Test]
+	public async Task MuteRequiresModifyRightsOnTheChannel()
+	{
+		var name = UniqueChannel("MuteGate");
+		var channel = await CreateChannel(name, "Player");
+
+		var victim = await CreateMortal("ChanPermMuteVictim");
+		var meddler = await CreateMortal("ChanPermMuteMeddler");
+
+		foreach (var player in new[] { victim, meddler })
+		{
+			var obj = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+			await Mediator.Send(new AddUserToChannelCommand(channel, obj));
+		}
+
+		var victimObject = (await Mediator.Send(new GetObjectNodeQuery(victim.DbRef))).Known;
+		// @channel/mute resolves its target by name, not dbref.
+		var victimName = victimObject.Object().Name;
+
+		await Assert.That(await PermissionService.ChannelCanModifyAsync(
+			(await Mediator.Send(new GetObjectNodeQuery(meddler.DbRef))).Known, channel)).IsFalse();
+
+		await Run(meddler, $"@channel/mute {name}={victimName}");
+
+		var afterMeddler = await ChannelHelper.ChannelMemberStatus(victimObject,
+			(await Mediator.Send(new GetChannelQuery(name)))!);
+		await Assert.That(afterMeddler!.Status.Mute ?? false).IsFalse();
+
+		// God owns the channel, so the same command from God does mute.
+		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@channel/mute {name}={victimName}"));
+
+		var afterOwner = await ChannelHelper.ChannelMemberStatus(victimObject,
+			(await Mediator.Send(new GetChannelQuery(name)))!);
+		await Assert.That(afterOwner!.Status.Mute ?? false).IsTrue();
 	}
 }

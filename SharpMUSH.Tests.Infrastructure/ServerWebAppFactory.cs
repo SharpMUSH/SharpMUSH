@@ -171,6 +171,46 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	/// and connection <paramref name="handle"/>.  Use this in tests that need an isolated executor
 	/// (unique player) so that <see cref="INotifyService"/> mock assertions remain per-player.
 	/// </summary>
+	/// <summary>
+	/// <see cref="FunctionParser"/> with a chosen executor rather than God. Permission tests need to
+	/// evaluate a function AS a mortal: a channel function that is gated at the command surface but open
+	/// to mortal softcode is only testable this way.
+	/// </summary>
+	public IMUSHCodeParser FunctionParserFor(DBRef executor)
+	{
+		var integrationServer = _server!;
+		return new MUSHCodeParser(
+			integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
+			integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
+			integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
+			integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
+			integrationServer.Services,
+			state: new ParserState(
+				Registers: new([[]]),
+				IterationRegisters: [],
+				RegexRegisters: [],
+				SwitchStack: [],
+				ExecutionStack: [],
+				EnvironmentRegisters: [],
+				CurrentEvaluation: null,
+				ParserFunctionDepth: 0,
+				Function: null,
+				Command: "think",
+				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
+				Switches: [],
+				Arguments: [],
+				Executor: executor,
+				Enactor: executor,
+				Caller: executor,
+				Handle: 1,
+				CallDepth: new InvocationCounter(),
+				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+				TotalInvocations: new InvocationCounter(),
+				LimitExceeded: new LimitExceededFlag(),
+				Flags: ParserStateFlags.DirectInput
+			));
+	}
+
 	public IMUSHCodeParser CommandParserFor(DBRef executor, long handle)
 	{
 		var integrationServer = _server!;

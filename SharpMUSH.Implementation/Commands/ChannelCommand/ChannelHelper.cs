@@ -194,9 +194,34 @@ public static class ChannelHelper
 	}
 
 	/// <summary>
-	/// Lookup plus PennMUSH's <c>Chan_Can_See</c> gate. A channel the executor may not see is reported as
-	/// no channel at all, exactly as <c>src/extchat.c</c> does at every function and command that reads
-	/// channel state ("#-1 NO SUCH CHANNEL", "CHAT: I don't recognize that channel.").
+	/// Whether <paramref name="viewer"/> may be told this channel exists at all.
+	///
+	/// <para>PennMUSH's <c>find_channel</c> (<c>src/extchat.c:959</c>) resolves a name only when
+	/// <c>Chan_Can_See(chan, player) || onchannel(player, chan)</c>. The membership half matters on its own:
+	/// <c>Chan_Can_See</c> requires a member to also pass <c>Chan_Can_Speak</c>, so without it a gagged or
+	/// speak-locked member would be told their own channel does not exist.</para>
+	/// </summary>
+	public static async ValueTask<bool> CanSeeChannel(IPermissionService permissionService, AnySharpObject viewer,
+		SharpChannel channel)
+		=> await permissionService.ChannelCanSeeAsync(viewer, channel)
+			 || await IsMemberOfChannel(viewer, channel);
+
+	/// <summary>
+	/// Lookup plus PennMUSH's visibility gate, which is inside <c>find_channel</c> itself
+	/// (<c>src/extchat.c:943-972</c>) and therefore applies to every command and function that resolves a
+	/// channel by name.
+	///
+	/// <para><b>A channel that does not exist and a channel the viewer may not see produce the same
+	/// notification AND the same return value, deliberately.</b> Anything else is an enumeration oracle:
+	/// a caller who can tell "no such channel" from "not for you" can walk the channel list. PennMUSH
+	/// agrees — <c>test_channel_fun</c> (<c>extchat.h:161</c>) answers a missing channel with
+	/// "CHAT: I don't recognize that channel." and <c>#-1 NO SUCH CHANNEL</c>, and every
+	/// <c>Chan_Can_See</c> refusal in <c>extchat.c</c> answers with exactly the same pair.</para>
+	///
+	/// <para>This repository has already made this decision once, for the same reason: PR #750 gave a
+	/// missing scene and an invisible scene one identical answer, recorded at
+	/// <c>SharpMUSH.Plugins.Scene/Web/SceneHub.cs:52-57</c> and <c>SceneLive.razor:120-124</c>. Any future
+	/// edit that wants to explain a not-found here has to keep the two cases sharing an answer.</para>
 	/// </summary>
 	public static async ValueTask<ChannelOrError> GetVisibleChannelOrError(
 		IMUSHCodeParser parser,
@@ -207,9 +232,11 @@ public static class ChannelHelper
 		MString channelName,
 		bool notify = false)
 	{
-		var maybeChannel = await GetChannelOrError(parser, mediator, notifyService, channelName, notify);
+		// notify: false — the caller must not learn which of the two failures it hit, so the one refusal
+		// below is the only thing either path is allowed to emit.
+		var maybeChannel = await GetChannelOrError(parser, mediator, notifyService, channelName, notify: false);
 
-		if (maybeChannel.IsError || await permissionService.ChannelCanSeeAsync(viewer, maybeChannel.AsChannel))
+		if (!maybeChannel.IsError && await CanSeeChannel(permissionService, viewer, maybeChannel.AsChannel))
 		{
 			return maybeChannel;
 		}
@@ -219,7 +246,34 @@ public static class ChannelHelper
 			await notifyService.Notify(viewer, ErrorMessages.Notifications.DontRecognizeThatChannel, viewer);
 		}
 
-		return new ChannelOrError(new Error<CallState>(new CallState(ErrorMessages.Returns.ChannelNotFound)));
+		return new ChannelOrError(new Error<CallState>(new CallState(ErrorMessages.Returns.NoSuchChannel)));
+	}
+
+	/// <summary>
+	/// The channels <paramref name="viewer"/> may be told exist, for the switches that operate on every
+	/// channel at once. Resolving one channel by name goes through
+	/// <see cref="GetVisibleChannelOrError"/>; enumerating them has to apply the same rule or
+	/// <c>@channel/hide</c> with no argument becomes a way to list what that gate hides.
+	/// </summary>
+	public static async ValueTask<SharpChannel[]> VisibleChannels(IPermissionService permissionService,
+		AnySharpObject viewer, IAsyncEnumerable<SharpChannel> channels)
+	{
+		// Materialise the channel list BEFORE testing visibility. The test reads channel.Members, which
+		// opens its own database stream, and Core.Arango 3.12.x races when one ExecuteStreamAsync is
+		// enumerated inside another — it faults on a thread pool thread and takes the process with it.
+		// The same driver race is already worked around in HelperFunctions.HasPower.
+		var all = await channels.ToArrayAsync();
+		var visible = new List<SharpChannel>(all.Length);
+
+		foreach (var channel in all)
+		{
+			if (await CanSeeChannel(permissionService, viewer, channel))
+			{
+				visible.Add(channel);
+			}
+		}
+
+		return [.. visible];
 	}
 
 	/// <summary>
