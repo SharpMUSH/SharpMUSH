@@ -726,7 +726,17 @@ public interface ISharpDatabase
 
 	IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, CancellationToken cancellationToken = default);
 
-	ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default);
+	/// <summary>
+	/// Creates a channel, its owner edge and its owner's membership edge, atomically with respect to the
+	/// channel name — which is a global namespace, so a create that loses the race must be refused rather
+	/// than duplicating or overwriting the winner.
+	/// </summary>
+	/// <returns>
+	/// <see cref="OneOf.Types.Success"/>, <see cref="ChannelNameTaken"/> when the name is already in use, or
+	/// <see cref="OneOf.Types.Error{T}"/> carrying the storage layer's message. Never silence: the caller
+	/// tells a player which of the three happened.
+	/// </returns>
+	ValueTask<ChannelCreationResult> CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default);
 
 	ValueTask UpdateChannelAsync(SharpChannel channel,
 		MString? name,

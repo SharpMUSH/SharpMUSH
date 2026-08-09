@@ -32,10 +32,14 @@ public static class ChannelAdd
 		//
 		// Channel names are globally unique, so uniqueness has to be tested against every channel, not just
 		// the ones this player may see. A visible lookup here would report "no such channel" for a hidden
-		// one and then let the create succeed, producing two channels with the same name — a data bug worse
-		// than the probe it would close. PennMUSH resolves it the same way: ok_channel_name
-		// (src/extchat.c:1855-1870) walks the whole channel list and returns NAME_NOT_UNIQUE without
-		// consulting Chan_Can_See.
+		// one and then let the create proceed — on ArangoDB and Memgraph a duplicate, on SurrealDB a hidden
+		// channel created over by someone who cannot see it. PennMUSH resolves it the same way:
+		// ok_channel_name (src/extchat.c:1855-1870) walks the whole channel list and returns
+		// NAME_NOT_UNIQUE without consulting Chan_Can_See.
+		//
+		// This check is a fast path for the message, NOT the guarantee: it cannot be atomic with a create
+		// that happens several awaits later. CreateChannelAsync decides uniqueness inside its own storage
+		// transaction and answers ChannelNameTaken, which is handled below.
 		//
 		// The residual leak is that "CHAT: Channel already exists." tells a player a name is taken even
 		// when they cannot see the channel holding it. That is inherent to a global namespace and PennMUSH
@@ -43,7 +47,7 @@ public static class ChannelAdd
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator, NotifyService, channelName, false);
 		if (!maybeChannel.IsError)
 		{
-			await NotifyService.Notify(executor, "CHAT: Channel already exists.", executor);
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatAlreadyExists, executor);
 			return new CallState(ErrorMessages.Returns.ChannelAlreadyExists);
 		}
 
@@ -82,9 +86,24 @@ public static class ChannelAdd
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
-		await Mediator.Send(new CreateChannelCommand(channelName, parsedPrivileges.AsPrivileges, executorOwner));
+		// The check above raced; this one cannot. CreateChannelAsync tests the name inside the same storage
+		// transaction that writes the channel, so the loser is refused rather than duplicating the winner
+		// (ArangoDB, Memgraph) or overwriting its privileges and locks (SurrealDB).
+		var creation = await Mediator.Send(new CreateChannelCommand(channelName, parsedPrivileges.AsPrivileges, executorOwner));
 
-		await NotifyService.Notify(executor, "Channel has been created.", executor);
-		return new CallState("Channel has been created.");
+		if (creation.IsNameTaken)
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatAlreadyExists, executor);
+			return new CallState(ErrorMessages.Returns.ChannelAlreadyExists);
+		}
+
+		if (creation.IsError)
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatChannelCreationFailed, executor);
+			return new CallState(ErrorMessages.Returns.ChannelCreationFailed);
+		}
+
+		await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatChannelCreated, executor);
+		return new CallState(ErrorMessages.Notifications.ChatChannelCreated);
 	}
 }

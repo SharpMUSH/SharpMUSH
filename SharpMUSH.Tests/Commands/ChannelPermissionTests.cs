@@ -465,6 +465,19 @@ public class ChannelPermissionTests
 			await Run(mortimer, $"@chat {name}=Mortimer speaks.");
 			await Assert.That(await MessageCount(name)).IsEqualTo(before);
 		}
+
+		// Every assertion above is an ABSENCE, and six of them would read the same way against a
+		// @channel/on and a @chat that had simply stopped working for everyone. An ungated channel,
+		// created by the same command in the same test, must admit the same player and carry his speech.
+		var open = UniqueChannel("ReproOpen");
+		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@channel/add {open}=player"));
+
+		await Run(mortimer, $"@channel/on {open}");
+		await Assert.That(await IsMember(open, mortimer.DbRef)).IsTrue();
+
+		var openBefore = await MessageCount(open);
+		await Run(mortimer, $"@chat {open}=Mortimer speaks.");
+		await Assert.That(await MessageCount(open)).IsEqualTo(openBefore + 1);
 	}
 
 	// --- Enumeration oracles: a refusal must not tell a caller what it is refusing ------------------

@@ -8,7 +8,7 @@ namespace SharpMUSH.Library.Commands.Database;
 public record CreateChannelCommand(
 	MString Channel,
 	string[] Privs,
-	SharpPlayer Owner) : ICommand, ICacheInvalidating
+	SharpPlayer Owner) : ICommand<ChannelCreationResult>, ICacheInvalidating
 {
 	public string[] CacheKeys => [$"channel:{Channel.ToPlainText()}"];
 	public string[] CacheTags => [Definitions.CacheTags.ChannelList];

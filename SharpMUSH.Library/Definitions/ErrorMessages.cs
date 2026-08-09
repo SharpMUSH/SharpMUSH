@@ -301,6 +301,7 @@ public static class ErrorMessages
 		public const string YouAreNotAMemberOfThatChannel = "#-1 YOU ARE NOT A MEMBER OF THAT CHANNEL";
 		public const string YouCannotModifyThisChannel = "#-1 YOU CANNOT MODIFY THIS CHANNEL";
 		public const string ChannelAlreadyExists = "#-1 CHANNEL ALREADY EXISTS";
+		public const string ChannelCreationFailed = "#-1 CHANNEL COULD NOT BE CREATED";
 		public const string ChannelNotFound = "#-1 CHANNEL NOT FOUND";
 		public const string InvalidChannelName = "#-1 INVALID CHANNEL NAME";
 		public const string InvalidPrivileges = "#-1 INVALID PRIVILEGES";
@@ -733,6 +734,7 @@ public static class ErrorMessages
 		public const string ErrorDetailFormat = "Error: {0}";
 
 		public const string ChatAlreadyExists = "CHAT: Channel already exists.";
+		public const string ChatChannelCreationFailed = "CHAT: The channel could not be created.";
 		public const string ChatInvalidChannelNameShort = "CHAT: Invalid channel name.";
 		public const string ChatChannelCreated = "Channel has been created.";
 		public const string ChatYesOrNoOnly = "CHAT: Yes or No are the only valid options.";

@@ -46,13 +46,27 @@ RETURN c
 			yield return MapNodeToChannel(record["c"].As<INode>());
 	}
 
-	public async ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
+	/// <summary>
+	/// True when Memgraph rejected a write because it would break the <c>:Channel(name)</c> uniqueness
+	/// constraint. That is the whole atomicity mechanism on this backend, so it has to be told apart from a
+	/// genuine failure rather than surfaced as one.
+	/// </summary>
+	private static bool IsUniqueConstraintViolation(string message)
+		=> message.Contains("unique constraint", StringComparison.OrdinalIgnoreCase);
+
+	public async ValueTask<ChannelCreationResult> CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
 	{
 		var channelName = name.ToPlainText();
 		var serializedName = MModule.serialize(name);
 		var ownerObjKey = owner.Object.Key;
 
-		await ExecuteWithRetryAsync("""
+		// Uniqueness comes from the constraint, not from a check in this method. Memgraph runs at snapshot
+		// isolation, so a MATCH-then-CREATE in one query still lets two concurrent writers both observe
+		// "absent" and both create; only the constraint rejects the loser at commit. ArangoDB gets the same
+		// guarantee from an exclusive collection lock instead, and SurrealDB from the record id.
+		try
+		{
+			await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $ownerKey})
 CREATE (c:Channel {name: $name, markedUpName: $markedUpName, description: '', privs: $privs,
 joinLock: '', speakLock: '', seeLock: '', hideLock: '', modLock: '',
@@ -60,6 +74,18 @@ buffer: 0, mogrifier: ''})
 CREATE (c)-[:HAS_CHANNEL_OWNER]->(o)
 CREATE (o)-[:ON_CHANNEL {combine: false, gagged: false, hide: false, mute: false, title: ''}]->(c)
 """, new { name = channelName, markedUpName = serializedName, privs, ownerKey = ownerObjKey }, cancellationToken);
+
+			return new Success();
+		}
+		catch (Neo4jException ex) when (IsUniqueConstraintViolation(ex.Message))
+		{
+			return new ChannelNameTaken();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Failed to create channel {ChannelName}", channelName);
+			return new Error<string>(ex.Message);
+		}
 	}
 
 	public async ValueTask UpdateChannelAsync(SharpChannel channel, MString? name, MString? description, string[]? privs,

@@ -54,7 +54,7 @@ public partial class SurrealDatabase
 			yield return MapRecordToChannel(channelRecord);
 	}
 
-	public async ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
+	public async ValueTask<ChannelCreationResult> CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
 	{
 		var channelName = name.ToPlainText();
 		var serializedName = MModule.serialize(name);
@@ -68,16 +68,36 @@ public partial class SurrealDatabase
 			["ownerKey"] = ownerObjKey
 		};
 
-		// Deterministic record ID so repeated creates are idempotent under the unique name index.
-		// One transaction so the channel node and its owner/membership edges commit together —
-		// otherwise the channel is visible before its owner edge and GetChannelOwnerAsync throws.
-		await ExecuteAsync(
+		// CREATE, not UPSERT. The record ID is the channel name, so UPSERT did not duplicate on a collision
+		// — it OVERWROTE, and it set every field unconditionally: privs became whatever the second caller
+		// asked for and all five locks reset to ''. A wizard-only, join-locked channel silently became an
+		// unrestricted one, and both callers were told the create succeeded. CREATE fails on an existing
+		// record ID, which is what makes this atomic here; the unique index on channel.name cannot help,
+		// because an overwrite of one record never violates it.
+		//
+		// One transaction so the channel node and its owner/membership edges commit together — otherwise
+		// the channel is visible before its owner edge and GetChannelOwnerAsync throws.
+		var response = await ExecuteAsync(
 			"BEGIN TRANSACTION;" +
-			"UPSERT channel:⟨$name⟩ SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = '';" +
+			"CREATE channel:⟨$name⟩ SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = '';" +
 			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->object:$ownerKey;" +
 			"RELATE object:$ownerKey->member_of_channel->(SELECT VALUE id FROM channel WHERE name = $name LIMIT 1) SET combine = false, gagged = false, hide = false, mute = false, title = '';" +
 			"COMMIT TRANSACTION",
 			parameters, cancellationToken);
+
+		if (!response.HasErrors)
+		{
+			return new Success();
+		}
+
+		var errors = string.Join("; ", response.Errors.Select(FormatError));
+
+		// "Database record `channel:Foo` already exists" — and the index guard, in case a name reaches the
+		// same record by a different id form.
+		return errors.Contains("already exists", StringComparison.OrdinalIgnoreCase)
+					 || errors.Contains("already contains", StringComparison.OrdinalIgnoreCase)
+			? new ChannelNameTaken()
+			: new Error<string>(errors);
 	}
 
 	public async ValueTask UpdateChannelAsync(SharpChannel channel, MString? name, MString? description, string[]? privs,

@@ -66,8 +66,10 @@ public partial class MemgraphDatabase
 			if (_migrated) return;
 			logger.LogInformation("Migrating Memgraph Database");
 
-			// Storage mode IN_MEMORY_ANALYTICAL is set via container startup flags
-			// (--storage-mode=IN_MEMORY_ANALYTICAL) to avoid MVCC transaction conflicts.
+			// Storage mode IN_MEMORY_TRANSACTIONAL is set via container startup flags
+			// (MemgraphTestServer.cs, MemgraphBaseBenchmark.cs). MVCC conflicts are absorbed by
+			// ExecuteWithRetryAsync instead of being avoided by dropping to the analytical mode, which
+			// enforces no constraints — and the :Channel(name) constraint below is load-bearing.
 
 			var indexQueries = new[]
 			{
@@ -109,6 +111,25 @@ public partial class MemgraphDatabase
 				{ /* Index already exists — safe to ignore */ }
 				catch (DatabaseException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
 				{ /* Index already exists — safe to ignore */ }
+			}
+
+			// Channel names are a global namespace, and this constraint is the only thing that makes
+			// CreateChannelAsync atomic on this backend: under snapshot isolation a MATCH-then-CREATE lets
+			// two concurrent creators both observe "absent" and both create, and only the constraint
+			// rejects the loser at commit. MemgraphDatabase.CreateChannelAsync turns that rejection into
+			// ChannelNameTaken.
+			//
+			// A database that already holds duplicate channel names — the state the missing check produced —
+			// cannot take the constraint. That is logged at warning and left alone: the alternatives are
+			// deleting somebody's channel or renaming it behind their back, and neither belongs in a
+			// start-up migration.
+			try { await indexSession.RunAsync("CREATE CONSTRAINT ON (c:Channel) ASSERT c.name IS UNIQUE"); }
+			catch (Neo4jException ex) when (IsBenignSchemaStatementFailure(ex.Message))
+			{ /* Constraint already present — safe to ignore */ }
+			catch (Neo4jException ex)
+			{
+				logger.LogWarning(ex,
+					"Could not create the :Channel(name) uniqueness constraint. Duplicate channel names must be resolved by hand before channel creation is atomic on this backend.");
 			}
 
 			// Wiki indexes — same auto-commit requirement.
