@@ -5057,7 +5057,10 @@ public partial class Commands
 					Configuration!, arg0, arg1),
 			["CHOWN"] when arg0 is not null => await ChannelChown.Handle(parser, LocateService!, PermissionService!,
 				Mediator!, NotifyService!, arg0, emptyIfMissing1),
-			["RENAME"] when arg0 is not null && arg1 is not null
+			// NAME and RENAME are the same operation, as in PennMUSH (src/extchat.c:3605-3608, where both
+			// switches call do_chan_admin with CH_ADMIN_RENAME). NAME was declared in the switch list above
+			// but had no arm, so `@channel/name` fell through to the "What do you want to do" usage line.
+			(["RENAME"] or ["NAME"]) when arg0 is not null && arg1 is not null
 				=> await ChannelRename.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
 					Configuration!, arg0, arg1),
 			["WIPE"] when arg0 is not null => await ChannelWipe.Handle(parser, LocateService!, PermissionService!, Mediator!,

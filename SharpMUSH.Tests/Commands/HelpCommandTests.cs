@@ -113,4 +113,60 @@ public class HelpCommandTests
 				(msg.IsT0 && msg.AsT0.ToString().Contains("If you are new to MUSHing")) ||
 				(msg.IsT1 && msg.AsT1.Contains("If you are new to MUSHing"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
+
+	/// <summary>
+	/// The privileges a channel actually has, delivered by the in-game <c>help</c> command.
+	///
+	/// <para>The topic used to list join, speak, hide, open, quiet, hide_ok, loud and disabled. Only
+	/// three of those are privileges. <c>src/extchat.c:118</c> is the authoritative list and it holds
+	/// twelve; join, speak and hide are <em>locks</em> (<c>hdrs/extchat.h:228</c>,
+	/// <c>enum clock_type</c>); and loud is a player flag (<c>src/flags.c:783</c>), consulted at
+	/// <c>src/extchat.c:1539</c> to bypass the speak check, not a channel priv at all.</para>
+	/// </summary>
+	[Test]
+	[MethodDataSource(nameof(RealChannelPrivileges))]
+	public async ValueTask HelpChannelPrivsNamesARealPrivilege(string privilege)
+	{
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"HelpPriv{privilege}");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help @channel privs"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessagePlainTextContains(msg, privilege)),
+				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>PennMUSH's channel privileges, <c>src/extchat.c:118</c> minus the undocumented Thing alias.</summary>
+	public static IEnumerable<string> RealChannelPrivileges() =>
+	[
+		"player", "object", "admin", "wizard", "quiet", "open",
+		"hide_ok", "notitles", "nonames", "nocemit", "interact", "disabled"
+	];
+
+	/// <summary>
+	/// The five channel locks, delivered by <c>help @clock</c>. The topic used to describe eight
+	/// switches of which none exist, on a <c>@channel/clock</c> that is not a switch of <c>@channel</c>
+	/// at all — <c>@CLOCK</c> is its own command with switches JOIN, SPEAK, MOD, SEE and HIDE, matching
+	/// <c>enum clock_type</c> at <c>hdrs/extchat.h:228</c>.
+	/// </summary>
+	[Test]
+	[Arguments("join")]
+	[Arguments("speak")]
+	[Arguments("see")]
+	[Arguments("hide")]
+	[Arguments("mod")]
+	public async ValueTask HelpClockCoversEveryChannelLock(string lockName)
+	{
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"HelpClock{lockName}");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help @clock"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessagePlainTextContains(msg, $"@clock/{lockName}")),
+				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+	}
 }

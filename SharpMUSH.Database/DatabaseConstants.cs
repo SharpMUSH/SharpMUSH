@@ -191,6 +191,10 @@ public static class DatabaseConstants
 
 	public static readonly string[] typesContainer = [TypeRoom, TypePlayer, TypeThing];
 	public static readonly string[] typesContent = [TypePlayer, TypeExit, TypeThing];
+
+	/// <summary>Everything but a player — PennMUSH's <c>TYPE_THING | TYPE_EXIT | TYPE_ROOM</c>.</summary>
+	public static readonly string[] typesNonPlayer = [TypeThing, TypeExit, TypeRoom];
+
 	public static readonly string[] typesAll = [TypeRoom, TypePlayer, TypeExit, TypeThing];
 
 	public static readonly string[] permissionsWizard = ["wizard"];
