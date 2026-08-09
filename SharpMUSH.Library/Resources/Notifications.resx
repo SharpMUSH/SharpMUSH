@@ -527,6 +527,9 @@
   <data name="WelcomeBackFormat" xml:space="preserve">
     <value>Welcome back, {0}!</value>
   </data>
+  <data name="WelcomeFirstLoginFormat" xml:space="preserve">
+    <value>Welcome, {0}! This is your first time connecting.</value>
+  </data>
 
   <!-- Name / Password -->
   <data name="CannotNameObjectFormat" xml:space="preserve">

@@ -55,7 +55,7 @@ public class ConnectionService(
 	public void ListenState(Action<(long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
 		_handlers.Add(handler);
 
-	public async ValueTask Bind(long handle, DBRef player)
+	public async ValueTask Bind(long handle, DBRef player, bool firstLogin = false)
 	{
 		var get = Get(handle);
 		if (get is null) return;
@@ -78,7 +78,7 @@ public class ConnectionService(
 		UpdateConnectionMetrics();
 
 		await publisher.Publish(new ConnectionStateChangeNotification(handle, player, get.State,
-			IConnectionService.ConnectionState.LoggedIn));
+			IConnectionService.ConnectionState.LoggedIn, firstLogin));
 	}
 
 	public async ValueTask BindAccount(long handle, string accountId)

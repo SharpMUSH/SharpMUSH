@@ -93,7 +93,9 @@ public class ConnectionStateChangeHandler(
 	/// <summary>
 	/// The first line of every session. It is addressed to the player by NAME — passing the
 	/// <see cref="DBRef"/> straight in as the format argument rendered its <c>ToString()</c>, so
-	/// players were greeted with "Welcome back, #12:1786227218582!".
+	/// players were greeted with "Welcome back, #12:1786227218582!". A character that has just been
+	/// created and walked straight into play has never been here, so it is welcomed rather than
+	/// welcomed back.
 	/// </summary>
 	private async ValueTask GreetAsync(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
 	{
@@ -106,8 +108,11 @@ public class ConnectionStateChangeHandler(
 			return;
 		}
 
-		await notifyService.NotifyLocalized(notification.Handle,
-			nameof(ErrorMessages.Notifications.WelcomeBackFormat), name);
+		var key = notification.FirstLogin
+			? nameof(ErrorMessages.Notifications.WelcomeFirstLoginFormat)
+			: nameof(ErrorMessages.Notifications.WelcomeBackFormat);
+
+		await notifyService.NotifyLocalized(notification.Handle, key, name);
 	}
 
 	private async ValueTask<string?> ResolveNameAsync(DBRef? playerRef, CancellationToken cancellationToken)

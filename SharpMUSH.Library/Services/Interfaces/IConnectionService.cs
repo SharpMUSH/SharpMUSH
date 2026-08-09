@@ -54,7 +54,14 @@ public interface IConnectionService
 	ValueTask Register(long handle, string ipaddr, string host, string connectionType, Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding,
 		ConcurrentDictionary<string, string>? metaData = null);
 
-	ValueTask Bind(long handle, DBRef player);
+	/// <summary>
+	/// Binds a handle to a character and moves it to <see cref="ConnectionState.LoggedIn"/>.
+	/// </summary>
+	/// <param name="firstLogin">
+	/// True when the character was just created and is entering play for the very first time, so
+	/// the greeting can welcome it rather than welcome it "back".
+	/// </param>
+	ValueTask Bind(long handle, DBRef player, bool firstLogin = false);
 
 	/// <summary>
 	/// Transitions a connection to <see cref="ConnectionState.AccountMode"/>, storing the account ID in metadata.
