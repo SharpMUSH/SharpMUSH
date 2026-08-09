@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using OneOf.Types;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -94,6 +96,20 @@ public class AccountSessionAuthHandlerTests
 			cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
 	}
 
+	/// <summary>A guard with no rules, so the sitelock re-check never fires for tests about other things.</summary>
+	private static SitelockGuard PermissiveSitelockGuard() => SitelockGuardFor([]);
+
+	private static SitelockGuard SitelockGuardFor(Dictionary<string, string[]> rules)
+	{
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(
+			ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst") with
+			{
+				SitelockRules = new SitelockRulesOptions(rules)
+			});
+		return new SitelockGuard(options);
+	}
+
 	private static async Task<AccountSessionAuthenticationHandler> CreateHandlerWithHeaderAsync(
 		IAccountSessionStore sessionStore,
 		IAccountService accountService,
@@ -101,7 +117,9 @@ public class AccountSessionAuthHandlerTests
 		string? authorizationHeader = null,
 		string? accessTokenQuery = null,
 		string? actingCharacterHeader = null,
-		string? actingCharacterQuery = null)
+		string? actingCharacterQuery = null,
+		SitelockGuard? sitelockGuard = null,
+		string? remoteIp = null)
 	{
 		var optionsMonitor = Substitute.For<IOptionsMonitor<AuthenticationSchemeOptions>>();
 		optionsMonitor.Get(Arg.Any<string>()).Returns(new AuthenticationSchemeOptions());
@@ -113,12 +131,15 @@ public class AccountSessionAuthHandlerTests
 			UrlEncoder.Default,
 			sessionStore,
 			accountService,
-			accountClaims);
+			accountClaims,
+			sitelockGuard ?? PermissiveSitelockGuard());
 
 		var httpContext = new DefaultHttpContext
 		{
 			RequestServices = new ServiceCollection().BuildServiceProvider(),
 		};
+		if (remoteIp is not null)
+			httpContext.Connection.RemoteIpAddress = System.Net.IPAddress.Parse(remoteIp);
 		if (authorizationHeader is not null)
 			httpContext.Request.Headers.Authorization = authorizationHeader;
 		if (actingCharacterHeader is not null)
@@ -441,5 +462,89 @@ public class AccountSessionAuthHandlerTests
 
 		await Assert.That(result.Succeeded).IsTrue();
 		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)).IsNull();
+	}
+
+	/// <summary>
+	/// A session records the one address it was created at; sitelock rules are patterns judged against
+	/// the address a request is actually coming from. Revoking at ban time can only ever reach the
+	/// former. This is the case it cannot reach: a live, valid session presented from an address inside
+	/// a banned range that it was never created at.
+	/// </summary>
+	[Test]
+	public async Task ValidToken_PresentedFromASitelockedAddress_DoesNotAuthenticate()
+	{
+		var sessionStore = Substitute.For<IAccountSessionStore>();
+		var accountService = Substitute.For<IAccountService>();
+
+		sessionStore.ValidateAsync("good").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(
+			new IAccountSessionStore.SessionIdentity("node_accounts/1", null, null)));
+		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
+		accountService.GetCharactersAsync("node_accounts/1")
+			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[]));
+
+		var accountClaims = MakeAccountClaims(Substitute.For<IAccountService>(), PortalRole.Player);
+		var guard = SitelockGuardFor(new Dictionary<string, string[]> { ["10.0.0.0/8"] = [SitelockGuard.Connect] });
+
+		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
+			authorizationHeader: "Bearer good", sitelockGuard: guard, remoteIp: "10.11.12.13");
+
+		var result = await handler.AuthenticateAsync();
+
+		await Assert.That(result.Succeeded)
+			.IsFalse()
+			.Because("sitelock is a rule about the address a request comes from, not about where a session was minted");
+		// The session store is never consulted, so a banned address costs less than an allowed one.
+		await sessionStore.DidNotReceive().ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>The control: the same session from an address the rule does not cover still works.</summary>
+	[Test]
+	public async Task ValidToken_PresentedFromAnAddressOutsideTheRule_StillAuthenticates()
+	{
+		var sessionStore = Substitute.For<IAccountSessionStore>();
+		var accountService = Substitute.For<IAccountService>();
+
+		sessionStore.ValidateAsync("good").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(
+			new IAccountSessionStore.SessionIdentity("node_accounts/1", null, null)));
+		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
+		accountService.GetCharactersAsync("node_accounts/1")
+			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[]));
+
+		var accountClaims = MakeAccountClaims(Substitute.For<IAccountService>(), PortalRole.Player);
+		var guard = SitelockGuardFor(new Dictionary<string, string[]> { ["10.0.0.0/8"] = [SitelockGuard.Connect] });
+
+		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
+			authorizationHeader: "Bearer good", sitelockGuard: guard, remoteIp: "198.51.100.7");
+
+		var result = await handler.AuthenticateAsync();
+
+		await Assert.That(result.Succeeded).IsTrue();
+	}
+
+	/// <summary>
+	/// A rule carrying only <c>!create</c> gates registration, not an existing session. Re-checking on
+	/// every authenticated request must not quietly widen what a rule means.
+	/// </summary>
+	[Test]
+	public async Task ValidToken_FromAnAddressBannedOnlyForCreate_StillAuthenticates()
+	{
+		var sessionStore = Substitute.For<IAccountSessionStore>();
+		var accountService = Substitute.For<IAccountService>();
+
+		sessionStore.ValidateAsync("good").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(
+			new IAccountSessionStore.SessionIdentity("node_accounts/1", null, null)));
+		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
+		accountService.GetCharactersAsync("node_accounts/1")
+			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[]));
+
+		var accountClaims = MakeAccountClaims(Substitute.For<IAccountService>(), PortalRole.Player);
+		var guard = SitelockGuardFor(new Dictionary<string, string[]> { ["10.0.0.0/8"] = [SitelockGuard.Create] });
+
+		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
+			authorizationHeader: "Bearer good", sitelockGuard: guard, remoteIp: "10.11.12.13");
+
+		var result = await handler.AuthenticateAsync();
+
+		await Assert.That(result.Succeeded).IsTrue();
 	}
 }

@@ -58,4 +58,12 @@ public sealed class InMemoryAccountSessionStore : IAccountSessionStore
 			_tokens.TryRemove(pair.Key, out _);
 		return Task.CompletedTask;
 	}
+
+	public Task<string[]> GetKnownOriginIpsAsync(CancellationToken ct = default)
+		=> Task.FromResult<string[]>([
+			.. _tokens.Values
+				.Select(session => session.OriginIp)
+				.Where(ip => !string.IsNullOrEmpty(ip))
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+		]);
 }

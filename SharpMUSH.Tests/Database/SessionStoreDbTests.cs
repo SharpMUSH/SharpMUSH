@@ -74,4 +74,36 @@ public class SessionStoreDbTests
 		await Db.DeleteSessionsForIpAsync("10.0.0.1");
 		await Assert.That(await Db.GetSessionAsync("tok-b1")).IsNull();
 	}
+
+	/// <summary>
+	/// Ban enforcement asks the store which origin IPs it holds so it can decide which of them a glob or
+	/// CIDR sitelock rule matches — <c>DeleteSessionsForIpAsync</c> only knows one literal address at a
+	/// time. All three providers must answer the same question the same way, so this runs on each leg of
+	/// the matrix.
+	/// </summary>
+	[Test, NotInParallel(nameof(SessionStoreDbTests))]
+	public async Task GetSessionOriginIps_ReturnsTheDistinctOriginsOfLivingSessions()
+	{
+		await Db.UpsertSessionAsync(Make("tok-o1", "acctO", "203.0.113.10"));
+		await Db.UpsertSessionAsync(Make("tok-o2", "acctO", "203.0.113.10"));
+		await Db.UpsertSessionAsync(Make("tok-o3", "acctO", "203.0.113.11"));
+
+		try
+		{
+			var origins = await Db.GetSessionOriginIpsAsync();
+
+			await Assert.That(origins).Contains("203.0.113.10");
+			await Assert.That(origins).Contains("203.0.113.11");
+			await Assert.That(origins.Count(ip => ip == "203.0.113.10"))
+				.IsEqualTo(1)
+				.Because("two sessions from one address are one address to revoke");
+
+			await Db.DeleteSessionsForIpAsync("203.0.113.10");
+			await Assert.That(await Db.GetSessionOriginIpsAsync()).DoesNotContain("203.0.113.10");
+		}
+		finally
+		{
+			await Db.DeleteSessionsForAccountAsync("acctO");
+		}
+	}
 }

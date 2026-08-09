@@ -93,4 +93,7 @@ public sealed class DatabaseAccountSessionStore(ISharpDatabase database) : IAcco
 
 	public Task RevokeAllForIpAsync(string originIp, CancellationToken ct = default)
 		=> database.DeleteSessionsForIpAsync(originIp, ct).AsTask();
+
+	public Task<string[]> GetKnownOriginIpsAsync(CancellationToken ct = default)
+		=> database.GetSessionOriginIpsAsync(ct).AsTask();
 }

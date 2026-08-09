@@ -113,13 +113,18 @@ public sealed class BanEnforcementService(
 	/// <summary>
 	/// For every live game connection or SignalR connection whose IP or hostname matches
 	/// <paramref name="hostPattern"/>, revokes sessions from that connection's origin IP,
-	/// disconnects the game handle, and aborts the SignalR connection.
+	/// disconnects the game handle, and aborts the SignalR connection — plus every session the store
+	/// holds whose own origin IP the rule matches, connected or not.
 	/// </summary>
 	/// <remarks>
-	/// The connection walk (per-handle publish), the session-revoke fan-out, and the SignalR-abort
-	/// fan-out are each independently guarded (see <see cref="RunGuardedAsync"/> and the per-item
-	/// try/catch inside each loop): a ban must land as completely as possible, so one failing step
-	/// must never prevent the others from running.
+	/// <para>The connection walk (per-handle publish), the stored-origin sweep, the session-revoke
+	/// fan-out, and the SignalR-abort fan-out are each independently guarded (see
+	/// <see cref="RunGuardedAsync"/> and the per-item try/catch inside each loop): a ban must land as
+	/// completely as possible, so one failing step must never prevent the others from running.</para>
+	///
+	/// <para>This still cannot reach a session used from an address it was not created at — that
+	/// address does not exist anywhere when the ban lands. <c>AccountSessionAuthenticationHandler</c>
+	/// re-checks sitelock per request for exactly that case.</para>
 	/// </remarks>
 	public async ValueTask EnforceHostRuleAsync(string hostPattern, CancellationToken ct = default)
 	{
@@ -162,19 +167,36 @@ public sealed class BanEnforcementService(
 
 		// The pattern itself counts as an extra revoke/abort target when it is already a literal
 		// IP. The session store's own lookup (RevokeAllForIpAsync) is keyed by exact IP only — it
-		// has no CIDR/glob awareness — so CIDR/glob host rules only revoke sessions/abort
-		// connections for the concrete IPs observed live above (matchedIps), never for the pattern
-		// itself. Never target the literal "unknown" sentinel — a session legitimately carries
-		// that origin IP when the client's remote address could not be resolved (see
-		// AuthController.ClientIp()), and it is not what an admin means when banning a host.
+		// has no CIDR/glob awareness. Never target the literal "unknown" sentinel — a session
+		// legitimately carries that origin IP when the client's remote address could not be
+		// resolved (see AuthController.ClientIp()), and it is not what an admin means when banning
+		// a host.
 		var literalTarget = !IsGlobPattern(hostPattern)
 				&& !string.Equals(hostPattern, UnknownOrigin, StringComparison.OrdinalIgnoreCase)
 			? hostPattern
 			: null;
 
-		// Revoke sessions from every concrete IP we found live traffic from, plus the literal
-		// pattern target. Each IP is independently guarded so one un-revokable IP doesn't block
-		// the rest.
+		// Sessions that exist with no live connection behind them. Reading the live connection list
+		// above only finds the addresses of people currently connected, so a CIDR or glob rule used
+		// to leave every idle session from the banned range valid until its own TTL ran out — the
+		// credential outlived the ban. Ask the store which origin IPs it actually holds and put every
+		// one the rule matches through the same exact-IP revoke, so the pattern semantics stay in
+		// SitelockMatcher and the providers keep their one simple query.
+		await RunGuardedAsync("collect stored session origins for host rule", hostPattern, async () =>
+		{
+			foreach (var ip in await sessionStore.GetKnownOriginIpsAsync(ct))
+			{
+				if (!string.Equals(ip, UnknownOrigin, StringComparison.OrdinalIgnoreCase)
+					&& MatchesConnection(ip, string.Empty, hostPattern))
+				{
+					matchedIps.Add(ip);
+				}
+			}
+		});
+
+		// Revoke sessions from every concrete IP the rule matched — whether it was found on a live
+		// connection or only in the session store — plus the literal pattern target. Each IP is
+		// independently guarded so one un-revokable IP doesn't block the rest.
 		await RunGuardedAsync("revoke sessions for host rule", hostPattern, async () =>
 		{
 			foreach (var ip in matchedIps)

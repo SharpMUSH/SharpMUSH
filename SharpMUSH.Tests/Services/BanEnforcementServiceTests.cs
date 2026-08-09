@@ -59,6 +59,12 @@ public class BanEnforcementServiceTests
 			IAccountSessionStore? sessionStore = null)
 	{
 		var sessions = sessionStore ?? Substitute.For<IAccountSessionStore>();
+		if (sessionStore is null)
+		{
+			// A store with no sessions in it, so tests that say nothing about stored origins keep
+			// exercising only the live-connection path.
+			sessions.GetKnownOriginIpsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<string[]>([]));
+		}
 		var claimsInvalidator = Substitute.For<IAccountClaimsInvalidator>();
 		var connections = Substitute.For<IConnectionService>();
 		connections.GetAll().Returns((liveConnections ?? []).ToAsyncEnumerable());
@@ -236,6 +242,57 @@ public class BanEnforcementServiceTests
 			Arg.Is<DisconnectConnectionMessage>(m => m.Handle == 302), Arg.Any<CancellationToken>());
 		await sessions.Received().RevokeAllForIpAsync("10.0.0.42", Arg.Any<CancellationToken>());
 		await sessions.DidNotReceive().RevokeAllForIpAsync("10.0.1.42", Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// The case ban enforcement could not reach: a session that exists with nobody connected on it.
+	/// Reading the live connection list finds nothing, so before stored origins were consulted a CIDR
+	/// rule revoked nothing at all and the credential outlived the ban.
+	/// </summary>
+	[Test]
+	public async Task EnforceHostRuleAsync_CidrPattern_RevokesStoredSessionsWithNoLiveConnection()
+	{
+		var sessionStore = Substitute.For<IAccountSessionStore>();
+		sessionStore.GetKnownOriginIpsAsync(Arg.Any<CancellationToken>())
+			.Returns(Task.FromResult<string[]>(["10.0.0.5", "10.255.255.254", "198.51.100.7"]));
+		var (svc, sessions, _, _, _, _, _) = Build(sessionStore: sessionStore);
+
+		await svc.EnforceHostRuleAsync("10.0.0.0/8");
+
+		await sessions.Received().RevokeAllForIpAsync("10.0.0.5", Arg.Any<CancellationToken>());
+		await sessions.Received().RevokeAllForIpAsync("10.255.255.254", Arg.Any<CancellationToken>());
+		await sessions.DidNotReceive().RevokeAllForIpAsync("198.51.100.7", Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task EnforceHostRuleAsync_GlobPattern_RevokesStoredSessionsWithNoLiveConnection()
+	{
+		var sessionStore = Substitute.For<IAccountSessionStore>();
+		sessionStore.GetKnownOriginIpsAsync(Arg.Any<CancellationToken>())
+			.Returns(Task.FromResult<string[]>(["10.0.0.42", "10.0.1.42"]));
+		var (svc, sessions, _, _, _, _, _) = Build(sessionStore: sessionStore);
+
+		await svc.EnforceHostRuleAsync("10.0.0.*");
+
+		await sessions.Received().RevokeAllForIpAsync("10.0.0.42", Arg.Any<CancellationToken>());
+		await sessions.DidNotReceive().RevokeAllForIpAsync("10.0.1.42", Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// The stored-origin sweep must respect the same "unknown" sentinel rule the live-connection sweep
+	/// does: a session whose origin could not be resolved is not what an admin means by <c>*</c>.
+	/// </summary>
+	[Test]
+	public async Task EnforceHostRuleAsync_StoredOrigins_NeverIncludeTheUnknownBucket()
+	{
+		var sessionStore = Substitute.For<IAccountSessionStore>();
+		sessionStore.GetKnownOriginIpsAsync(Arg.Any<CancellationToken>())
+			.Returns(Task.FromResult<string[]>(["unknown"]));
+		var (svc, sessions, _, _, _, _, _) = Build(sessionStore: sessionStore);
+
+		await svc.EnforceHostRuleAsync("*");
+
+		await sessions.DidNotReceive().RevokeAllForIpAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
