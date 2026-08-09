@@ -54,7 +54,37 @@ public partial class SurrealDatabase
 			yield return MapRecordToChannel(channelRecord);
 	}
 
+	/// <summary>
+	/// Serializes channel creation for this database.
+	/// </summary>
+	/// <remarks>
+	/// SurrealDB is EMBEDDED here — <c>SurrealDb.Embedded.InMemory</c> or the RocksDB engine, in the
+	/// server's own process (<c>Startup.cs:167-190</c>) — so one process owns the whole store and an
+	/// in-process gate is a complete guarantee, not an approximation of one. It is needed: SurrealDB is
+	/// optimistic, and under eight-way contention two <c>CREATE</c>s on the same record ID were both
+	/// observed committing, which is the overwrite this method exists to prevent. The same reasoning
+	/// already produced the in-memory object-key counter at <c>SurrealDatabase.cs:214-220</c>.
+	///
+	/// <para>ArangoDB and Memgraph get no equivalent, and must not: they are real servers with other
+	/// possible clients, so a lock inside one process would guarantee nothing. Their guarantee is an
+	/// exclusive collection lock and a uniqueness constraint respectively.</para>
+	/// </remarks>
+	private readonly SemaphoreSlim _channelCreateLock = new(1, 1);
+
 	public async ValueTask<ChannelCreationResult> CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
+	{
+		await _channelCreateLock.WaitAsync(cancellationToken);
+		try
+		{
+			return await CreateChannelCoreAsync(name, privs, owner, cancellationToken);
+		}
+		finally
+		{
+			_channelCreateLock.Release();
+		}
+	}
+
+	private async ValueTask<ChannelCreationResult> CreateChannelCoreAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken)
 	{
 		var channelName = name.ToPlainText();
 		var serializedName = MModule.serialize(name);

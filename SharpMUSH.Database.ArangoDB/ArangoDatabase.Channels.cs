@@ -127,8 +127,6 @@ public partial class ArangoDatabase
 				}
 			}, ct);
 
-		var settled = false;
-
 		try
 		{
 			// Uniqueness is decided INSIDE this transaction, on purpose. The Exclusive scope already holds a
@@ -152,7 +150,6 @@ public partial class ArangoDatabase
 
 			if (existing.Count > 0)
 			{
-				settled = true;
 				await arangoDb.Transaction.AbortAsync(transaction, ct);
 				return new ChannelNameTaken();
 			}
@@ -173,7 +170,6 @@ public partial class ArangoDatabase
 			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
 				new SharpEdgeCreateRequest(owner.Object.Id!, createdChannel.New.Id), cancellationToken: ct);
 
-			settled = true;
 			await arangoDb.Transaction.CommitAsync(transaction, ct);
 			return new Success();
 		}
@@ -184,16 +180,16 @@ public partial class ArangoDatabase
 			// created channel.
 			logger.LogError(ex, "Failed to create channel {ChannelName}", channelName);
 
-			if (!settled)
+			// Unconditional, including when the commit itself threw: an uncommitted transaction left open
+			// holds the exclusive lock until it expires, which blocks every other channel create. Aborting
+			// one that did commit answers "not found", which is logged and harmless.
+			try
 			{
-				try
-				{
-					await arangoDb.Transaction.AbortAsync(transaction, ct);
-				}
-				catch (Exception abortEx)
-				{
-					logger.LogError(abortEx, "Failed to abort the transaction for channel {ChannelName}", channelName);
-				}
+				await arangoDb.Transaction.AbortAsync(transaction, ct);
+			}
+			catch (Exception abortEx)
+			{
+				logger.LogError(abortEx, "Failed to abort the transaction for channel {ChannelName}", channelName);
 			}
 
 			return new Error<string>(ex.Message);
