@@ -37,7 +37,7 @@ public class AccountClaimsCacheTests
 		var cache = new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
 
 		var svc = new AccountClaimsService(accountSvc, roleDerivation, roleRegistry, permissionResolver, cache,
-			NullLogger<AccountClaimsService>.Instance);
+			new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
 
 		return (svc, accountSvc, roleRegistry);
 	}

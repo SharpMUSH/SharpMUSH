@@ -88,9 +88,10 @@ public class AccountSessionAuthHandlerTests
 		roleRegistry.GetRolesForAccountAsync(Arg.Any<string>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
 		permissionResolver.Resolve(Arg.Any<IEnumerable<SharpRole>>()).Returns(new HashSet<string>(scopes));
 
+		var cache = new FusionCache(
+			new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
 		return new AccountClaimsService(accountServiceForClaims, roleDerivation, roleRegistry, permissionResolver,
-			new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions())),
-			NullLogger<AccountClaimsService>.Instance);
+			cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
 	}
 
 	private static async Task<AccountSessionAuthenticationHandler> CreateHandlerWithHeaderAsync(

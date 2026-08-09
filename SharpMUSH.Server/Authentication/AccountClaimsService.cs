@@ -25,13 +25,13 @@ public class AccountClaimsService(
 	IRoleRegistryService roleRegistry,
 	IPermissionResolver permissionResolver,
 	IFusionCache cache,
+	IAccountClaimsInvalidator invalidator,
 	ILogger<AccountClaimsService> logger)
 {
 	/// <summary>
 	/// The single source of truth for the cache tag shared by every cached role/scope entry for
-	/// <paramref name="accountId"/>. Also used directly by <see cref="SharpMUSH.Server.Services.BanEnforcementService"/>
-	/// (via <see cref="ZiggyCreatures.Caching.Fusion.IFusionCache.RemoveByTagAsync"/>) so cache
-	/// invalidation doesn't require depending on this whole service.
+	/// <paramref name="accountId"/>. Read by <see cref="AccountClaimsInvalidator"/>, which is the
+	/// only thing that clears it.
 	/// </summary>
 	public static string AccountCacheTag(string accountId) => $"acct:{accountId}";
 
@@ -117,11 +117,13 @@ public class AccountClaimsService(
 
 	/// <summary>
 	/// Clears both the cached role and granted-scope entries for <paramref name="accountId"/>
-	/// (both are tagged <c>acct:{accountId}</c>). Called by ban/disable enforcement paths so a
-	/// freshly-revoked account doesn't keep its stale claims for the remainder of the 30s TTL.
+	/// (both are tagged <c>acct:{accountId}</c>), so the very next request recomputes them.
 	/// </summary>
-	public async ValueTask InvalidateAsync(string accountId)
-	{
-		await cache.RemoveByTagAsync(AccountCacheTag(accountId));
-	}
+	/// <remarks>
+	/// Server-layer convenience wrapper over <see cref="IAccountClaimsInvalidator"/>. The mutations
+	/// that actually make these entries stale — linking and unlinking characters — invalidate through
+	/// the interface from <c>AccountService</c>, because they happen in the Library layer.
+	/// </remarks>
+	public ValueTask InvalidateAsync(string accountId, CancellationToken ct = default)
+		=> invalidator.InvalidateAsync(accountId, ct);
 }
