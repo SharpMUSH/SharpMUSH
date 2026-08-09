@@ -88,17 +88,18 @@ public static class WikiCommandHelper
 	}
 
 	/// <summary>
-	/// The display form of a page reference: "slug" for a Main/general page, "ns:category:slug"
-	/// otherwise. This round-trips through <see cref="ResolveTarget"/>.
+	/// The display form of a page reference, always fully qualified as "ns:category:slug". Round-trips
+	/// through <see cref="ResolveTarget"/>, so every identifier a listing prints can be pasted straight
+	/// back into <c>@wiki</c>.
 	/// </summary>
-	public static string DisplayReference(WikiPage page)
-	{
-		var cat = page.Category ?? WikiHelpers.DefaultCategory;
-		return page.Namespace.Equals("main", StringComparison.OrdinalIgnoreCase)
-			&& cat.Equals(WikiHelpers.DefaultCategory, StringComparison.OrdinalIgnoreCase)
-				? page.Slug
-				: $"{page.Namespace}:{cat}:{page.Slug}";
-	}
+	/// <remarks>
+	/// Main-namespace pages used to print bare ("home") while everything else printed qualified
+	/// ("help:general:markdown_guide"), which put two identifier grammars in one column of one listing
+	/// and left the reader to work out which spelling a given row was in. One grammar for every row is
+	/// the cost of one prefix on the common case.
+	/// </remarks>
+	public static string DisplayReference(WikiPage page) =>
+		$"{page.Namespace}:{page.Category ?? WikiHelpers.DefaultCategory}:{page.Slug}";
 
 	/// <summary>
 	/// Edit permission mirrors the web rule: protected pages are Wizard-only;

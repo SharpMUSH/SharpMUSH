@@ -161,8 +161,10 @@ public class WikiFunctionUnitTests
 
 		var result = await Eval("wikisearch(vertugadin)");
 
+		// A reference is fully qualified in every listing surface, main namespace included, so the
+		// expected answer here is "main:general:<slug>" rather than the bare slug.
 		await Assert.That(result)
-			.IsEqualTo(page.Slug)
+			.IsEqualTo($"main:general:{page.Slug}")
 			.Because("wikisearch() returns references, never titles — a locale-aware search must widen what "
 				+ "is found without changing the shape of the answer");
 	}
