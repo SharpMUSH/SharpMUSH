@@ -1740,6 +1740,9 @@
   <data name="MailTooManySwitches" xml:space="preserve">
     <value>Error: Too many switches passed to @mail.</value>
   </data>
+  <data name="MailBadArguments" xml:space="preserve">
+    <value>MAIL: Bad arguments to @mail. See 'help @mail' for usage.</value>
+  </data>
 
   <!-- @password command -->
   <data name="PasswordOnlyPlayersHavePasswords" xml:space="preserve">

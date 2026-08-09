@@ -17,7 +17,6 @@ public static class StatusMail
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var filteredList = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor);
 		var statusString = arg1?.ToPlainText().ToUpper();
-		var id = arg0!.ToPlainText();
 
 		if (filteredList.IsError)
 		{
@@ -29,14 +28,24 @@ public static class StatusMail
 
 		switch (sw)
 		{
-			case "UPDATE" when string.IsNullOrEmpty(statusString):
+			// @mail/status [<msg-list>|all]=<status> — the target status arrives as arg1, so the
+			// STATUS switch has to resolve to one of the concrete status verbs before dispatch.
+			case "STATUS" when string.IsNullOrEmpty(statusString):
 				await notifyService.Notify(executor, "Update to what?", executor);
 				return MModule.single(ErrorMessages.Returns.UpdateToWhat);
-			case "UPDATE"
-				when statusString is "CLEAR" or "UNCLEAR" or "TAG" or "UNTAG" or "UNREAD" or "READ" or "URGENT" or "UNURGENT":
-				sw = statusString;
+			case "STATUS"
+				when statusString is "CLEARED" or "UNCLEARED" or "TAGGED" or "UNTAGGED" or "UNREAD" or "READ" or "URGENT"
+					or "UNURGENT":
+				sw = statusString switch
+				{
+					"CLEARED" => "CLEAR",
+					"UNCLEARED" => "UNCLEAR",
+					"TAGGED" => "TAG",
+					"UNTAGGED" => "UNTAG",
+					_ => statusString
+				};
 				break;
-			case "UPDATE":
+			case "STATUS":
 				await notifyService.Notify(executor, $"{statusString} is not a valid status.", executor);
 				return MModule.single($"{statusString} is not a valid status.");
 		}

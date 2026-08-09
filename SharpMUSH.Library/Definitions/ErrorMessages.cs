@@ -1195,6 +1195,7 @@ public static class ErrorMessages
 		public const string IncludeErrorExecutingFormat = "Error executing included attribute: {0}";
 
 		public const string MailTooManySwitches = "Error: Too many switches passed to @mail.";
+		public const string MailBadArguments = "MAIL: Bad arguments to @mail. See 'help @mail' for usage.";
 
 		public const string PasswordOnlyPlayersHavePasswords = "Only players have passwords.";
 		public const string PasswordInvalid = "Invalid password.";

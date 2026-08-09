@@ -102,7 +102,7 @@ public static class MessageListHelper
 						 && !int.TryParse(rangeSplit[0], out _) && int.TryParse(rangeSplit[1], out var right)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Take(right)),
 			_ when int.TryParse(msgList, out var specificMessage)
-				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(specificMessage).Take(1)),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(Math.Max(0, specificMessage - 1)).Take(1)),
 			[] when msgList.Length == 0
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
 			_ => new Error<string>("MAIL: Invalid message specification")
@@ -164,7 +164,7 @@ public static class MessageListHelper
 						 && !int.TryParse(rangeSplit[0], out _) && int.TryParse(rangeSplit[1], out var right)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Take(right)),
 			_ when int.TryParse(msgList, out var specificMessage)
-				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(specificMessage).Take(1)),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(Math.Max(0, specificMessage - 1)).Take(1)),
 			[] when msgList.Length == 0
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
 			_ => new Error<string>("MAIL: Invalid message specification")

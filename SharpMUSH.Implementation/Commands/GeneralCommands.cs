@@ -6334,7 +6334,7 @@ public partial class Commands
 	[SharpCommand(Name = "@MAIL",
 		Switches =
 		[
-			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDERS", "UNFOLDER", "LIST", "READ",
+			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDER", "UNFOLDER", "LIST", "READ",
 			"UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD", "SEND", "SILENT",
 			"URGENT", "REVIEW", "RETRACT"
 		], Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["player", "subject"])]
@@ -6406,7 +6406,7 @@ public partial class Commands
 				=> await ForwardMail.Handle(parser, ObjectDataService!, LocateService!, PermissionService!, Mediator!, number,
 					arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
-				when arg0?.Length != 0 && arg1?.Length != 0
+				when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await SendMail.Handle(parser, PermissionService!, ObjectDataService!, Mediator!, NotifyService!, AttributeService!, Configuration!, arg0!,
 					arg1!, switches),
 			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
@@ -6415,10 +6415,16 @@ public partial class Commands
 					switches),
 			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
 				=> await ListMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
-			_ => MModule.single(ErrorMessages.Returns.BadArgumentsToMailCommand)
+			_ => await NotifyAndReturnBadMailArguments(executor)
 		};
 
 		return new CallState(response);
+	}
+
+	private static async ValueTask<MString> NotifyAndReturnBadMailArguments(AnySharpObject executor)
+	{
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MailBadArguments), executor);
+		return MModule.single(ErrorMessages.Returns.BadArgumentsToMailCommand);
 	}
 
 	[SharpCommand(Name = "@NSPEMIT", Switches = ["LIST", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit,
