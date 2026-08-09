@@ -15,11 +15,24 @@ namespace SharpMUSH.Tests.Database;
 /// <summary>
 /// Pins the seed → read round trip for flag unset permissions.
 ///
-/// <para>The ArangoDB seed spelled the property <c>UnSetPermissions</c> on thirteen flags while
-/// <c>SharpObjectFlagQueryResult</c> reads <c>UnsetPermissions</c>. Nothing failed — the flags simply
-/// read back with no unset restriction, and the permission gate in
-/// <c>ManipulateSharpObjectService.SetOrUnsetFlag</c> treats an empty list as "unrestricted". So the
-/// only thing that catches this is asserting on the value that reached the database.</para>
+/// <para><b>These flags were never actually unprotected.</b> The ArangoDB seed spelled the property
+/// <c>UnSetPermissions</c> on thirteen flags while <c>SharpObjectFlagQueryResult</c> reads
+/// <c>UnsetPermissions</c>, which looks like it should have left them with no unset restriction at all.
+/// It did not: <c>Core.Arango</c>'s <c>ArangoJsonSerializer</c> is constructed from
+/// <c>JsonSerializerDefaults.Web</c>, which sets <c>PropertyNameCaseInsensitive</c>, so the misspelled
+/// key landed on the right member anyway. ROYALTY, SUSPECT and the rest were enforced the whole time —
+/// measured, by running the behavioural tests below against a database migrated by the unfixed seed
+/// and watching all of them pass.</para>
+///
+/// <para>So what was fixed is a coincidence, not a hole. The coincidence is not worth keeping, for
+/// three reasons: AQL attribute access is case-sensitive, so the first query that filters on this
+/// field loses the restriction silently; changing the serializer's naming policy would do the same;
+/// and a document carrying both spellings resolves last-key-wins rather than to the correct one.</para>
+///
+/// <para>That is also why the assertions split in two. Everything behavioural here passes with or
+/// without the fix and exists to pin the enforcement contract going forward. Only
+/// <see cref="NoSeededFlag_CarriesAMisspelledPermissionProperty"/>, which reads the stored attribute
+/// names, can tell the two seeds apart.</para>
 /// </summary>
 public class FlagUnsetPermissionTests
 {

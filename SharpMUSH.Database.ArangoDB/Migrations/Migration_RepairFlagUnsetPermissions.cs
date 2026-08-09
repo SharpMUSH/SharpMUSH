@@ -6,20 +6,25 @@ namespace SharpMUSH.Database.ArangoDB.Migrations;
 /// <summary>
 /// Repairs the thirteen object-flag seeds that <see cref="Migration_CreateDatabase"/> wrote with the
 /// property spelled <c>UnSetPermissions</c> (capital S) instead of <c>UnsetPermissions</c>. The seed
-/// used anonymous objects, the serializer preserves PascalCase verbatim, and
-/// <c>SharpObjectFlagQueryResult</c> reads <c>UnsetPermissions</c> — so the two never met and those
-/// flags read back with no unset restriction at all.
+/// used anonymous objects, which the serializer writes verbatim, while
+/// <c>SharpObjectFlagQueryResult</c> reads <c>UnsetPermissions</c>.
 ///
-/// <para>That is not a cosmetic mismatch. <c>ManipulateSharpObjectService.SetOrUnsetFlag</c> treats an
-/// absent or empty permission list as "unrestricted" (matching PennMUSH's <c>can_set_flag_generic()</c>,
-/// where a flag with no F_* permission bits is settable by anyone who controls the object), so the
-/// missing property let anyone who controls an object clear ROYALTY, SUSPECT, NO_LOG, GAGGED, MISTRUST
-/// and PARANOID off it.
+/// <para><b>Those flags were still enforced.</b> <c>Core.Arango</c>'s <c>ArangoJsonSerializer</c> is
+/// constructed from <c>JsonSerializerDefaults.Web</c>, which sets <c>PropertyNameCaseInsensitive</c>,
+/// so the misspelled key landed on the right member and nothing was ever settable that should not have
+/// been. This migration removes a coincidence, not a permission bypass — say so plainly, because the
+/// mismatch reads like a bypass and the next person to find it will assume it was one.</para>
+///
+/// <para>The coincidence is still worth removing. AQL attribute access is case-sensitive, so the first
+/// query that filters or projects on this field drops the restriction on twelve flags with no error;
+/// changing the serializer's naming policy would do the same; and a document carrying both spellings
+/// resolves last-key-wins rather than to the correct one (reachable only if the <c>System</c> guard on
+/// <c>UpdateObjectFlagAsync</c>'s merge UPDATE ever moves, since all thirteen are system flags).</para>
 ///
 /// <para>The standing decision is that a pre-existing SharpMUSH database is dropped and re-migrated,
-/// which would also fix this. This migration exists anyway because it is three lines of AQL and it
-/// removes the need to trust that every operator did the drop — silently keeping an unenforced
-/// ROYALTY unset permission is not a failure mode worth leaving to convention.</para>
+/// which would also fix this. This migration exists anyway because it is three lines of AQL, and
+/// leaving correctness resting on a third-party serializer default is not worth the alternative of
+/// trusting that every operator did the drop.</para>
 ///
 /// <para>Idempotent and safe to run on a fresh database: the corrected seed already writes the right
 /// property, so the UPDATE writes the same value it finds. <c>keepNull: false</c> is what removes the
