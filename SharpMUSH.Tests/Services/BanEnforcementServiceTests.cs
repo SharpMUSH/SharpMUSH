@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
@@ -56,9 +57,10 @@ public class BanEnforcementServiceTests
 		HubConnectionRegistry Registry,
 		ISharpDatabase Database)
 		Build(IEnumerable<IConnectionService.ConnectionData>? liveConnections = null,
-			IReadOnlyList<SharpPlayer>? linkedCharacters = null)
+			IReadOnlyList<SharpPlayer>? linkedCharacters = null,
+			IAccountSessionStore? sessionStore = null)
 	{
-		var sessions = Substitute.For<IAccountSessionStore>();
+		var sessions = sessionStore ?? Substitute.For<IAccountSessionStore>();
 		var cache = Substitute.For<IFusionCache>();
 		var connections = Substitute.For<IConnectionService>();
 		connections.GetAll().Returns((liveConnections ?? []).ToAsyncEnumerable());
@@ -294,5 +296,36 @@ public class BanEnforcementServiceTests
 			Arg.Is<string>(ip => string.Equals(ip, "unknown", StringComparison.OrdinalIgnoreCase)),
 			Arg.Any<CancellationToken>());
 		await Assert.That(abortedUnknown).IsFalse();
+	}
+
+	/// <summary>
+	/// The ban-evasion window this whole conditional-renewal change exists to close. A ban revokes an
+	/// account's sessions, but session renewal is read-then-write and the two halves are not atomic: a ban
+	/// landing between them used to be undone by the insert branch of the upsert that wrote the slid expiry
+	/// back, and the banned account kept a working token for up to another full TTL.
+	/// </summary>
+	/// <remarks>
+	/// Run against a real <see cref="DatabaseAccountSessionStore"/> rather than the substituted session
+	/// store the rest of this class uses, because the defect lives in how the store sequences its two
+	/// database calls — a substitute would assert nothing about it.
+	/// </remarks>
+	[Test]
+	public async Task EnforceAccountBanAsync_CommittingBetweenARenewalsReadAndItsWrite_LeavesTheSessionRevoked()
+	{
+		var spy = new SessionSpy();
+		var store = new DatabaseAccountSessionStore(spy.Database);
+		var (svc, _, _, _, _, _, _) = Build(sessionStore: store);
+
+		var token = await store.CreateTokenAsync("accounts/1", TimeSpan.FromMinutes(15), "203.0.113.66");
+		spy.AgeBy(TimeSpan.FromMinutes(1)); // past the coalescing threshold, so this validation really writes
+
+		spy.AfterNextRead = async () => await svc.EnforceAccountBanAsync("accounts/1");
+
+		var identity = await store.ValidateAsync(token);
+
+		await Assert.That(spy.Stored).IsNull()
+			.Because("a ban that commits mid-validation must not be undone by the renewal write");
+		await Assert.That(identity).IsNull()
+			.Because("a banned account's token must not authenticate the request that was already holding it");
 	}
 }

@@ -1,58 +1,15 @@
-using NSubstitute;
-using SharpMUSH.Library;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// Unit cover for the write-coalescing half of the session-concurrency fix. The exclusive transaction in
-/// the ArangoDB provider stops concurrent slides from failing; this is what stops them from happening at
-/// all, so it is asserted by counting writes rather than by observing latency.
+/// Unit cover for the two halves of the session-renewal contract: the write-coalescing that keeps a burst
+/// of validations from writing at all (asserted by counting writes rather than by observing latency), and
+/// the rule that a renewal may never insert — so a revocation landing between the read and the write is
+/// not undone by it.
 /// </summary>
 public class DatabaseAccountSessionStoreTests
 {
-	/// <summary>
-	/// A substituted <see cref="ISharpDatabase"/> holding exactly one session, counting the writes the
-	/// store issues against it.
-	/// </summary>
-	private sealed class SessionSpy
-	{
-		public ISharpDatabase Database { get; } = Substitute.For<ISharpDatabase>();
-		public SharpSession? Stored { get; private set; }
-		public int Upserts { get; private set; }
-		public int Deletes { get; private set; }
-
-		public SessionSpy()
-		{
-			Database.GetSessionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-				.Returns(_ => ValueTask.FromResult(Stored));
-			Database.When(x => x.UpsertSessionAsync(Arg.Any<SharpSession>(), Arg.Any<CancellationToken>()))
-				.Do(call =>
-				{
-					Upserts++;
-					var s = call.Arg<SharpSession>();
-					// Copy: the store mutates the instance it read back, so keeping the reference would
-					// make the "stored" expiry follow un-persisted slides.
-					Stored = new SharpSession
-					{
-						Token = s.Token, AccountId = s.AccountId, OriginIp = s.OriginIp,
-						ExpiryUnixMs = s.ExpiryUnixMs, TtlMs = s.TtlMs,
-						CharacterKey = s.CharacterKey, CharacterCreationTime = s.CharacterCreationTime
-					};
-				});
-			Database.When(x => x.DeleteSessionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()))
-				.Do(_ =>
-				{
-					Deletes++;
-					Stored = null;
-				});
-		}
-
-		/// <summary>Backdates the persisted expiry, standing in for time passing since the last write.</summary>
-		public void AgeBy(TimeSpan elapsed) => Stored!.ExpiryUnixMs -= (long)elapsed.TotalMilliseconds;
-	}
-
 	[Test]
 	public async Task Validate_RepeatedlyWithinTheThreshold_WritesNothing()
 	{
@@ -66,6 +23,7 @@ public class DatabaseAccountSessionStoreTests
 
 		await Assert.That(spy.Upserts).IsEqualTo(1)
 			.Because("a burst of validations inside the threshold must not re-persist the same expiry");
+		await Assert.That(spy.Touches).IsEqualTo(0);
 	}
 
 	[Test]
@@ -80,7 +38,9 @@ public class DatabaseAccountSessionStoreTests
 		spy.AgeBy(TimeSpan.FromMinutes(1));
 
 		await Assert.That((await store.ValidateAsync(token))?.AccountId).IsEqualTo("acct-1");
-		await Assert.That(spy.Upserts).IsEqualTo(2);
+		await Assert.That(spy.Touches).IsEqualTo(1);
+		await Assert.That(spy.Upserts).IsEqualTo(1)
+			.Because("only minting a token may insert one; renewal is a conditional update");
 		await Assert.That(spy.Stored!.ExpiryUnixMs).IsGreaterThanOrEqualTo(expiryAtMint);
 	}
 
@@ -97,5 +57,29 @@ public class DatabaseAccountSessionStoreTests
 		await Assert.That(spy.Deletes).IsEqualTo(1);
 		await Assert.That(spy.Upserts).IsEqualTo(1)
 			.Because("an expired session is removed, never slid");
+		await Assert.That(spy.Touches).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// The resurrection race. Renewal is read-then-write and the two are not atomic, so a logout committing
+	/// in between used to be undone by the insert branch of the upsert that wrote the slid expiry back —
+	/// leaving a token the user had explicitly given up alive for up to another full TTL.
+	/// </summary>
+	[Test]
+	public async Task Validate_WhenALogoutCommitsBetweenTheReadAndTheRenewal_DoesNotResurrectTheSession()
+	{
+		var spy = new SessionSpy();
+		var store = new DatabaseAccountSessionStore(spy.Database);
+		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15), "203.0.113.1");
+		spy.AgeBy(TimeSpan.FromMinutes(1)); // past the coalescing threshold, so this validation really writes
+
+		spy.AfterNextRead = async () => await store.RevokeAsync(token);
+
+		var identity = await store.ValidateAsync(token);
+
+		await Assert.That(spy.Stored).IsNull()
+			.Because("a revocation that commits mid-validation must not be undone by the renewal write");
+		await Assert.That(identity).IsNull()
+			.Because("a request holding a token that has already been revoked must not authenticate");
 	}
 }

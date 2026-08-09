@@ -70,8 +70,18 @@ public sealed class DatabaseAccountSessionStore(ISharpDatabase database) : IAcco
 		if (slid - s.ExpiryUnixMs < s.TtlMs * SlidePersistThresholdFractionOfTtl)
 			return identity;
 
-		s.ExpiryUnixMs = slid;
-		await database.UpsertSessionAsync(s, ct);
+		// TouchSessionExpiryAsync, not UpsertSessionAsync: the read above and this write are not atomic, and
+		// the upsert's insert branch would reinstate a session that a revocation deleted in between — a
+		// logout, an account ban, or a sitelock rule — keeping a revoked token alive for up to another full
+		// TTL. The conditional update does nothing when the document is gone, so the revocation stands.
+		//
+		// Losing that race also fails this validation. The false is not "no write was needed", it is the
+		// database stating that the session was already gone at the instant of the write; the caller learns
+		// that for free, and authenticating on a token that a ban has already revoked is exactly the
+		// outcome the ban exists to prevent. Only CreateTokenAsync may insert a session.
+		if (!await database.TouchSessionExpiryAsync(token, slid, ct))
+			return null;
+
 		return identity;
 	}
 

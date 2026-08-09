@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 using SharpMUSH.Tests.Infrastructure;
@@ -61,5 +62,35 @@ public class BanEnforcementTests(ServerWebAppFactory factory)
 
 		// The session token no longer authenticates.
 		await Assert.That(await sessions.ValidateAsync(account.AccountSessionToken)).IsNull();
+	}
+
+	/// <summary>
+	/// The ban-evasion window, proved closed against whichever real provider the suite is running.
+	/// <see cref="IAccountSessionStore.ValidateAsync"/> renews a session by reading it and then writing a
+	/// slid expiry back, and the two halves are not atomic. Spelled out here in the same order the store
+	/// performs them, with the ban landing between: the renewal must find nothing and write nothing, or
+	/// the banned account keeps a working token for up to another full TTL.
+	/// </summary>
+	[Test]
+	public async Task AccountBan_CommittingBetweenASessionsReadAndItsRenewal_IsNotUndoneByTheRenewal()
+	{
+		var (_, account) = await RegisterAccountAsync();
+		var database = factory.Services.GetRequiredService<ISharpDatabase>();
+		var enforcement = factory.Services.GetRequiredService<BanEnforcementService>();
+		var sessions = factory.Services.GetRequiredService<IAccountSessionStore>();
+		var token = account.AccountSessionToken;
+
+		var read = await database.GetSessionAsync(token);
+		await Assert.That(read).IsNotNull();
+
+		await enforcement.EnforceAccountBanAsync(account.AccountId);
+
+		var renewed = await database.TouchSessionExpiryAsync(token, read!.ExpiryUnixMs + 60_000);
+
+		await Assert.That(renewed).IsFalse()
+			.Because("the renewal must report that the session was already gone, not put it back");
+		await Assert.That(await database.GetSessionAsync(token)).IsNull()
+			.Because("a ban that commits mid-validation must survive the renewal write that follows it");
+		await Assert.That(await sessions.ValidateAsync(token)).IsNull();
 	}
 }
