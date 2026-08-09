@@ -14,6 +14,13 @@ Page targets may carry a namespace prefix: `Help:Markdown Guide` refers to the
 page "Markdown Guide" in the help namespace. Without a prefix, pages live in
 the main namespace. Valid namespaces: main, help, character, system.
 
+Listings (`@wiki/list`, `@wiki/search`, `@wiki/recent`) print every page's
+identifier fully qualified as `<namespace>:<category>:<slug>` — `home` in the
+main namespace lists as `main:general:home`. One column, one grammar, and the
+identifier printed is always one you can paste straight back into `@wiki`.
+Typing a target is unchanged: the short forms still work, so `@wiki home`,
+`@wiki main:home` and `@wiki main:general:home` all reach the same page.
+
 Viewing and discovery:
 * `@wiki <page>` or `@wiki/view <page>` - display a page
 * `@wiki/list [<namespace>]` - list pages

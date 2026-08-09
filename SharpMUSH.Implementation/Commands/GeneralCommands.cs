@@ -6826,24 +6826,34 @@ public partial class Commands
 		}
 	}
 
+	/// <summary>
+	/// Line-for-line the shape of PennMUSH's <c>do_version</c> (src/version.c): the game's name, the
+	/// address <em>only when one is configured</em>, the restart time, then the version banner — which is
+	/// the very string <c>version()</c> returns, exactly as PennMUSH's <c>fun_version</c> and
+	/// <c>do_version</c> both format from VERSION/PATCHLEVEL/PATCHDATE.
+	/// </summary>
 	[SharpCommand(Name = "@VERSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Version(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var uptimeData = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
+		var net = Configuration!.CurrentValue.Net;
 
-		var lines = new List<MString>
+		var lines = new List<MString> { MModule.single($"You are connected to {net.MudName}") };
+
+		// PennMUSH: `if (MUDURL && *MUDURL)`. An unset mud_url means the game has no published address,
+		// which is not the same fact as "the address is Unknown" — so the line is omitted, not filled in.
+		if (!string.IsNullOrWhiteSpace(net.MudUrl))
 		{
-			MModule.concat(MModule.single("You are connected to "),
-				MModule.single(Configuration!.CurrentValue.Net.MudName ?? "Unknown")),
-			MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl ?? "Unknown")),
-			MModule.single("SharpMUSH version 0")
-		};
+			lines.Add(MModule.single($"Address: {net.MudUrl}"));
+		}
 
 		if (uptimeData != null)
 		{
 			lines.Add(MModule.single($"Last restarted: {uptimeData.LastRebootTime:ddd MMM dd HH:mm:ss yyyy}"));
 		}
+
+		lines.Add(MModule.single(Implementation.Generated.VersionInfo.Version));
 
 		var result = MModule.multipleWithDelimiter(MModule.single("\n"), lines.ToArray());
 

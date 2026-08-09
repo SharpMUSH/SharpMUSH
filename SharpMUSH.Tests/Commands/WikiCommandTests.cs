@@ -83,6 +83,60 @@ public class WikiCommandTests
 		await ExpectNotify(player.DbRef, "help:general:markdown_guide");
 	}
 
+	/// <summary>
+	/// One column, one grammar. Main-namespace pages listed bare ("home") while every other namespace
+	/// listed qualified ("help:general:markdown_guide"), so a reader could not tell from the column which
+	/// spelling any given row was in. Every row is now fully qualified.
+	/// </summary>
+	[Test]
+	public async ValueTask WikiList_QualifiesMainNamespaceRowsToo()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMainLister");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/create Qualified Row Page=Body of the qualified row page."));
+		var listing = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@wiki/list"));
+
+		var rows = listing.Message!.ToPlainText()
+			.Split('\n')
+			.Skip(1) // the "WIKI: N page(s):" header
+			.Select(r => r.Trim())
+			.Where(r => r.Length > 0 && !r.StartsWith('…'))
+			.ToArray();
+
+		await Assert.That(rows).IsNotEmpty();
+		foreach (var row in rows)
+		{
+			var identifier = row.Split(' ')[0];
+			await Assert.That(identifier.Split(':').Length).IsEqualTo(3);
+		}
+
+		await Assert.That(rows.Any(r => r.StartsWith("main:general:qualified_row_page"))).IsTrue();
+	}
+
+	/// <summary>
+	/// The claim the qualification is worth anything: an identifier a listing prints has to be one
+	/// <c>@wiki</c> accepts back. A listing printing unusable identifiers is the same bug in a new place.
+	/// </summary>
+	[Test]
+	public async ValueTask WikiList_PrintedIdentifierIsAcceptedBackByView()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRoundTrip");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/create Round Trip Page=Body of the round trip page."));
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/view main:general:round_trip_page"));
+		await ExpectNotify(player.DbRef, "Body of the round trip page");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/view help:general:markdown_guide"));
+		await ExpectNoNotify(player.DbRef, "WIKI: No such page: help:general:markdown_guide");
+	}
+
 	[Test]
 	public async ValueTask WikiSearch_FindsPageByContent()
 	{

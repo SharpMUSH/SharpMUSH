@@ -2263,6 +2263,13 @@
     <value>Changed ownership of {0} object(s) from {1} to {2}.</value>
   </data>
 
+  <data name="CommandUnknownSwitchFormat" xml:space="preserve">
+    <value>{0} doesn't know switch {1}.</value>
+  </data>
+  <data name="ListNotUnderstood" xml:space="preserve">
+    <value>I don't understand what you want to @list.</value>
+  </data>
+
   <!-- @dump -->
   <data name="DumpDoesNothing" xml:space="preserve">
     <value>Dump command does nothing for SharpMUSH. Consider using @backup.</value>
@@ -2277,6 +2284,9 @@
   </data>
   <data name="PlayerCreateInvalidPassword" xml:space="preserve">
     <value>That is not a valid password.</value>
+  </data>
+  <data name="PlayerCreatedFormat" xml:space="preserve">
+    <value>New player '{0}' (#{1}) created with password '{2}'</value>
   </data>
 
   <!-- @quota -->

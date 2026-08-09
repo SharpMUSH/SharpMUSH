@@ -1892,7 +1892,23 @@ public class SharpMUSHParserVisitor(
 						}
 					}
 
-					// No extend hook or it didn't match - return error for invalid switches
+					// No extend hook or it didn't match - return error for invalid switches.
+					// PennMUSH (src/command.c) *notifies* here — `notify(executor, switch_err)` with
+					// "%s doesn't know switch %s." — instead of running the command. Returning the error
+					// only as a CallState made a mistyped switch silently do nothing at a prompt, which is
+					// how `@shutdown/what` and `@wiki/get home` both came to complete with no output at all.
+					// PennMUSH names only the first unknown switch, and names it upper-cased — the switch
+					// text it formats has already been through the command line's canonicalisation
+					// (oracle: `@shutdown/what` → "@SHUTDOWN doesn't know switch WHAT."). The return value
+					// still lists every offender as typed, because that string is a machine-readable
+					// result callers already match on.
+					if (!executor.IsNone)
+					{
+						await NotifyService.NotifyLocalized(executor.Known(),
+							nameof(ErrorMessages.Notifications.CommandUnknownSwitchFormat),
+							libraryCommandDefinition.Attribute.Name, invalidSwitches[0].ToUpperInvariant());
+					}
+
 					var invalidSwitchList = string.Join(", ", invalidSwitches);
 					return new CallState($"#-1 INVALID SWITCH: {invalidSwitchList}");
 				}

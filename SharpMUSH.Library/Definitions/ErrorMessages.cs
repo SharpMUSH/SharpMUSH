@@ -1464,11 +1464,24 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ChownAllCompleteFormat = "Changed ownership of {0} object(s) from {1} to {2}.";
 
+		/// <summary>
+		/// PennMUSH src/command.c: <c>"%s doesn't know switch %s."</c>, notified in place of running the
+		/// command. Only the first unknown switch is named, as PennMUSH names only the first.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CommandUnknownSwitchFormat = "{0} doesn't know switch {1}.";
+
+		/// <summary>PennMUSH src/cmds.c do_list, for a missing or unrecognised <c>@list</c> type.</summary>
+		public const string ListNotUnderstood = "I don't understand what you want to @list.";
+
 		public const string DumpDoesNothing = "Dump command does nothing for SharpMUSH. Consider using @backup.";
 
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
 		public const string PlayerNameAlreadyExists = "That player name already exists.";
 		public const string PlayerCreateInvalidPassword = "That is not a valid password.";
+		/// <summary>PennMUSH src/wiz.c do_pcreate: "New player '%s' (#%d) created with password '%s'".</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PlayerCreatedFormat = "New player '{0}' (#{1}) created with password '{2}'";
 
 		public const string QuotaSetUsage = "Usage: @quota/set <player>=<amount>";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

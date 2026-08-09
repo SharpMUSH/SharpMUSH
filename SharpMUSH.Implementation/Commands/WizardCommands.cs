@@ -1971,6 +1971,11 @@ public partial class Commands
 
 		var player = await Mediator!.Send(new CreatePlayerCommand(name, password, defaultHomeDbref, defaultHomeDbref, startingQuota));
 
+		// PennMUSH src/wiz.c do_pcreate ends with exactly this notify — including the password, which the
+		// wizard has to be able to pass on to the new player and just typed anyway.
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreatedFormat), executor,
+			name, player.Number, password);
+
 		// PennMUSH spec: player`create (objid, name, how, descriptor, email)
 		await EventService!.TriggerEventAsync(
 			parser,

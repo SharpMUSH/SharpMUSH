@@ -88,6 +88,37 @@ public class SystemCommandTests
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: list");
 	}
 
+	// PennMUSH src/command.c: an unknown switch is formatted as "%s doesn't know switch %s." into
+	// switch_err and then `notify(executor, switch_err)`ed *instead of* running the command. SharpMUSH
+	// only ever produced the CallState, so an unknown switch typed at a prompt did nothing visible at
+	// all — which is what made `@shutdown/what` and `@wiki/get home` look like commands that succeed
+	// silently. Oracle (PennMUSH 1.8.8, minimal db): `@shutdown/what` -> "@SHUTDOWN doesn't know
+	// switch WHAT." — canonical command name, upper-cased switch.
+	[Test]
+	public async ValueTask UnknownSwitchIsAnnounced()
+	{
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown/what"));
+
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: what");
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
+			NotifyService, nameof(ErrorMessages.Notifications.CommandUnknownSwitchFormat),
+			"@SHUTDOWN doesn't know switch WHAT.")).IsTrue();
+	}
+
+	// The same root cause seen from @wiki, which has no /get switch: its documented reader is
+	// `@wiki/view <page>` (SharpMUSH.Documentation/Helpfiles/SharpMUSH/sharpwiki.md). No PennMUSH
+	// equivalent exists; the helpfile is the contract, and "not a switch" must say so.
+	[Test]
+	public async ValueTask UnknownWikiSwitchIsAnnounced()
+	{
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@wiki/get home"));
+
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: get");
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
+			NotifyService, nameof(ErrorMessages.Notifications.CommandUnknownSwitchFormat),
+			"@WIKI doesn't know switch GET.")).IsTrue();
+	}
+
 	// PennMUSH reference: cmd_hide calls hide_player(executor, status, arg_left).
 	// @HIDE acts on the executor. Use an isolated player to avoid modifying shared God (#1).
 	// Expected: "You are now hidden from the WHO list."
