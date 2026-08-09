@@ -1,8 +1,8 @@
 format: 1
 package: scene
-version: 1.5.0
+version: 1.6.0
 authors: [SharpMUSH]
-description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits."
+description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [scene, rp, logging, capture, hooks]
@@ -47,12 +47,38 @@ objects:
       FUN`OWNS: |-
         or(orflags(%0,Wz),strmatch(scene(%1,owner),%0))
 
+      # ---- approval guard -------------------------------------------------------
+      # The ONE place +scene asks "may this thing be ASSOCIATED with a scene?". Two halves:
+      #   • it must be a CHARACTER — a scene associates players, not things or rooms; and
+      #   • it must be APPROVED — isapproved() is the engine predicate, "royalty or above,
+      #     or carrying the APPROVED flag", and it is false for a guest whatever else is set.
+      # The engine ships that rule and no policy for what earns the flag; a game decides that
+      # and sets APPROVED itself. A game that wants a DIFFERENT bar edits this one attribute —
+      # nothing else in the package tests the flag, and the engine and the verbs cannot drift
+      # because both sides run the same isapproved() code.
+      #
+      # Association is the line, not visibility: viewing a schedule or a scene's information is
+      # open to any character (see CMD`BROWSE / OLD / UPCOMING / SHOW / WHO / RECALL / POT, none
+      # of which include this guard), and leaving is always allowed (CMD`LEAVE / UNTAG /
+      # DEACTIVATE). Joining, owning, administering and posing into a scene all require approval.
+      #
+      # The guard is written INLINE at the head of each gated verb, as a bare @assert — NOT factored into
+      # an INC` attribute and @included. A single-target @include runs its body as its own command list and
+      # the list boundary CONTAINS the break, so an @assert inside an @include emits its message and then
+      # lets the caller carry straight on to the write it was supposed to prevent. (Proven: routed through
+      # an @include, +scene/join printed the refusal AND still created the membership edge.) The one-line
+      # @assert keeps the refusal text in one place via DATA`DENY_APPROVAL — get() reads it without
+      # evaluating it — while keeping the break where it has to be, in the verb's own list.
+      FUN`IS`APPROVED: |-
+        and(hastype(%0,PLAYER),isapproved(%0))
+      DATA`DENY_APPROVAL: |-
+        You are not approved to take part in scenes. You can still browse the schedule with +scene and +scene/upcoming, and read any scene with +scene <id>.
+
       # ---- capture hooks --------------------------------------------------------
       # Each hook RE-BROADCASTS its type-specific speech via @message/spoof, then records
-      # the rendered line. The capture tail is INLINED into each hook (not factored into
-      # an @include attribute): @include cannot resolve an attribute name that contains a
-      # backtick (e.g. INCLUDE`CAPTURE) — only get()/u() do — so an @include of the shared
-      # tail silently no-ops and nothing is captured.
+      # the rendered line. The @scene/addpose call itself stays inline in each hook because
+      # each speech type renders a different line; only the shared header/footer rules are
+      # factored out into INC`CAP_HEADER / INC`CAP_FOOTER and @included.
       #
       # Why @message/spoof instead of hand-rolled @remit/@pemit/@oemit (the old form):
       #   • /spoof makes the notification SENDER the real speaker (%# / enactor), NOT the
@@ -81,10 +107,14 @@ objects:
       #   The recorded @scene/addpose line below is NOT RSArgs in the same way, so it still uses \,.
       #
       # Flow per hook (one physical line, `;`-separated):
-      #   1. setr(WillCaptureAsPose, <room has an active scene I am focused on>) — computing %q<SceneID>
-      #      and %q<RoomID> along the way. The check is `strmatch(scenefocus(%#),scenewhere(loc(%#)))
-      #      AND not(strmatch(scenewhere,#-1*))` — a real, focused, in-room active scene (NOT just
-      #      words(), which is truthy on "#-1 NOT FOUND").
+      #   1. setr(WillCaptureAsPose, <room has an active scene I am focused on, and I am approved>)
+      #      — computing %q<SceneID> and %q<RoomID> along the way. The check is
+      #      `strmatch(scenefocus(%#),scenewhere(loc(%#))) AND not(strmatch(scenewhere,#-1*)) AND
+      #      FUN`IS`APPROVED(%#)` — a real, focused, in-room active scene (NOT just words(), which is
+      #      truthy on "#-1 NOT FOUND"), posed by a character still approved RIGHT NOW. The approval
+      #      term is what makes revocation take effect immediately: without it, a character approved
+      #      when they joined would keep writing poses into the scene after losing the flag, since
+      #      their focus and membership survive the revocation.
       #   2. @if %q<WillCaptureAsPose> ⇒ record with @scene/addpose, then emit the CAP_HEADER rule.
       #   3. ALWAYS @message/spoof the pose to the room (so a pose outside any scene behaves exactly
       #      like the un-hooked built-in — the emit is never gated).
@@ -108,26 +138,26 @@ objects:
       # Built-in POSE (MoreCommands.Pose) emits: "<name> <message>" to the room.
       CMD`CAPTURE`POSE:
         value: |-
-          $(?i)^(pose |\:)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,pose,,[name(%#)] %2; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] %2,%#/FORMAT`POSE,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
+          $(?i)^(pose |\:)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,pose,,[name(%#)] %2; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] %2,%#/FORMAT`POSE,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # Built-in SAY (MoreCommands.Say) emits "You say, \"<msg>\"" to the speaker
       # and "<name> says, \"<msg>\"" to everyone else in the room.
       CMD`CAPTURE`SAY:
         value: |-
-          $(?i)^(say |")(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,say,,[name(%#)] says\, "%2"; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] says[chr(44)] "%2",%#/FORMAT`SAY,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
+          $(?i)^(say |")(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,say,,[name(%#)] says\, "%2"; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] says[chr(44)] "%2",%#/FORMAT`SAY,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # Built-in SEMIPOSE (MoreCommands.SemiPose) emits "<name><message>" (no space).
       CMD`CAPTURE`SEMI:
         value: |-
-          $(?i)^(semipose |;)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,semipose,,[name(%#)]%2; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)]%2,%#/FORMAT`SEMIPOSE,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
+          $(?i)^(semipose |;)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,semipose,,[name(%#)]%2; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)]%2,%#/FORMAT`SEMIPOSE,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # Built-in @EMIT emits "<message>" verbatim (no name) to the room.
       CMD`CAPTURE`EMIT:
         value: |-
-          $(?i)^@emit (.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,emit,,%1; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=%1,%#/FORMAT`EMIT,%1,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
+          $(?i)^@emit (.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,emit,,%1; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=%1,%#/FORMAT`EMIT,%1,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # ---- create / lifecycle ---------------------------------------------------
@@ -139,24 +169,24 @@ objects:
       # `&MY.SID %#=[setr(SceneID,…)]` also failed (setr inside an &attr=<value> RHS doesn't
       # propagate its register); @assert in command position does.
       CMD`CREATE: |-
-        $+scene/create *: @assert setr(SceneID,scenecreate(%L,%#,%0)); @scene/member %q<SceneID>/owner=%#; @scene/focus %#=%q<SceneID>; @scene/set %q<SceneID>/status=[get(%!/DATA`DEFAULT_STATUS)]; @pemit %#=Scene %q<SceneID> created and focused (status: [get(%!/DATA`DEFAULT_STATUS)]).; &MY.SID %#=%q<SceneID>
+        $+scene/create *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(SceneID,scenecreate(%L,%#,%0)); @scene/member %q<SceneID>/owner=%#; @scene/focus %#=%q<SceneID>; @scene/set %q<SceneID>/status=[get(%!/DATA`DEFAULT_STATUS)]; @pemit %#=Scene %q<SceneID> created and focused (status: [get(%!/DATA`DEFAULT_STATUS)]).; &MY.SID %#=%q<SceneID>
 
       # NOTE: verb bodies are written as ONE physical line with `;` separators. In a
       # multi-line ($-command) attribute the FIRST command after the `$pattern:` header does
       # not parse cleanly (the following line's leading `@scene…` leaks into it) and
       # q-registers do not cross newlines — the `;` form is robust on both counts.
       CMD`START: |-
-        $+scene/start: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=active; @pemit %#=Scene is now active.
+        $+scene/start: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=active; @pemit %#=Scene is now active.
 
       CMD`PAUSE: |-
-        $+scene/pause: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=paused; @pemit %#=Scene paused.
+        $+scene/pause: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=paused; @pemit %#=Scene paused.
 
       CMD`FINISH: |-
-        $+scene/finish: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
+        $+scene/finish: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
 
       # ---- membership / RSVP / focus --------------------------------------------
       CMD`JOIN: |-
-        $+scene/join *: @scene/member %0/participant=%#; @scene/focus %#=%0; @pemit %#=Joined and focused on scene %0.
+        $+scene/join *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/member %0/participant=%#; @scene/focus %#=%0; @pemit %#=Joined and focused on scene %0.
 
       # NOTE: one physical line (q-registers cross `;` but not newlines in a $-command body).
       # Capture the focused scene id into %q<SceneID> BEFORE @scene/focus clears it (@assert sets the
@@ -165,39 +195,39 @@ objects:
         $+scene/leave: @assert setr(SceneID,scenefocus(%#)); @scene/focus %#=; @if not(words(sceneposes(%q<SceneID>,%#)))={@scene/unmember %q<SceneID>=%#}; @pemit %#=Left the scene.; &MY.SID %#=%q<SceneID>
 
       CMD`TAG: |-
-        $+scene/tag *: @scene/member %0/attending=%#; @pemit %#=RSVP'd to scene %0.
+        $+scene/tag *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/member %0/attending=%#; @pemit %#=RSVP'd to scene %0.
 
       CMD`UNTAG: |-
         $+scene/untag *: @scene/unmember %0=%#; @pemit %#=Removed RSVP from scene %0.
 
       CMD`AS: |-
-        $+scene/as *: @scene/showas [scenefocus(%#)]/%#=%0; @pemit %#=Future poses show as: %0
+        $+scene/as *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/showas [scenefocus(%#)]/%#=%0; @pemit %#=Future poses show as: %0
 
       # ---- edit your own poses --------------------------------------------------
       # %1 is find^^^replace; author-only is enforced by @scene/editpose. Stash the poseId in %q<pid>
       # and compute the new content into %q<new> in a separate command first (a nested function
       # reference to the verb's %0/%1 inside an @scene arg does not resolve reliably), then edit off them.
       CMD`EDIT: |-
-        $+scene/edit *=*: @assert setr(pid,%0); @assert setr(new,edit(scenepose(scenefocus(%#),%q<pid>,content),before(%1,^^^),after(%1,^^^))); @scene/editpose %q<pid>=%#,%q<new>
+        $+scene/edit *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert setr(new,edit(scenepose(scenefocus(%#),%q<pid>,content),before(%1,^^^),after(%1,^^^))); @scene/editpose %q<pid>=%#,%q<new>
 
       CMD`UNDO: |-
-        $+scene/undo *: @scene/undo %0
+        $+scene/undo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/undo %0
 
       CMD`REDO: |-
-        $+scene/redo *: @scene/redo %0
+        $+scene/redo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/redo %0
 
       CMD`DELETE: |-
-        $+scene/delete *: @scene/delete %0
+        $+scene/delete *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/delete %0
 
       CMD`MOVE: |-
-        $+scene/move *=*: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/move %0=%1
+        $+scene/move *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/move %0=%1
 
       # ---- visibility -----------------------------------------------------------
       CMD`PUBLIC: |-
-        $+scene/public: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=1; @pemit %#=Scene is now public.
+        $+scene/public: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=1; @pemit %#=Scene is now public.
 
       CMD`PRIVATE: |-
-        $+scene/private: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=0; @pemit %#=Scene is now private.
+        $+scene/private: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=0; @pemit %#=Scene is now private.
 
       # ---- viewing --------------------------------------------------------------
       CMD`WHO: |-
@@ -222,14 +252,14 @@ objects:
         [rjust(u(%!/FUN`POT_MS,%0,%1),15,0)]~%1
       FUN`POT_ROW: |-
         align(>3 <[sub(%3,30)] >14 <9,%2,[name(%1)][switch(scenemember(%0,%1,showas),,,%b\([scenemember(%0,%1,showas)]\))],u(%!/FUN`POT_IDLE,%0,%1),switch(%2,1,<- up,))
-      # Control flow is guard-then-display: INC`REQUIRE`FOCUS early-exits via @assert (no switch() for
-      # output) and leaves %q<SceneID> set for the shared display tail, which is @included with that id.
-      INC`REQUIRE`FOCUS: |-
-        @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=You are not focused on a scene. Use +scene/join <id> or +scene/create <title>.
+      # Control flow is guard-then-display: the @assert early-exits (no switch() for output) and leaves
+      # %q<SceneID> set for the shared display tail, which is @included with that id. The guard is inline
+      # for the same reason the approval guard is — an @assert behind an @include does not stop the caller,
+      # so the guard used to print "you are not focused" and then render a tracker for scene "#-1 NOT FOUND".
       INC`DISPLAY`POT: |-
         @pemit %#=[header(Pose Tracker - Scene %0,width(%#))]%r[iter(sort(iter(scenemembers(%0),u(%!/FUN`POT_KEY,%0,##))),u(%!/FUN`POT_ROW,%0,after(##,~),inum(0),width(%#)),,%r)]%r[footer([words(scenemembers(%0))] in scene - oldest pose is up next,width(%#))]
       CMD`POT: |-
-        $+pot: @include %!/INC`REQUIRE`FOCUS; @include %!/INC`DISPLAY`POT=%q<SceneID>
+        $+pot: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=You are not focused on a scene. Use +scene/join <id> or +scene/create <title>.; @include %!/INC`DISPLAY`POT=%q<SceneID>
 
       # ---- scene browser: align()'d tables of scenes -----------------------------
       # Volund-style listing: bare `+scene` = active scenes, `+scene/old` = finished, `+scene/mine` =
@@ -253,11 +283,11 @@ objects:
       FUN`SCHED_WHEN: |-
         mul(firstof(convtime(%0),%0),1000)
       CMD`SCHEDULE: |-
-        $+scene/schedule *=*: @assert setr(SceneID,scenecreate(,%#,%0)); @scene/member %q<SceneID>/owner=%#; @scene/set %q<SceneID>/status=scheduled; @scene/set %q<SceneID>/scheduledfor=[u(%!/FUN`SCHED_WHEN,%1)]; @pemit %#=Scheduled scene %q<SceneID> "%0" for [convsecs(div(u(%!/FUN`SCHED_WHEN,%1),1000))].
+        $+scene/schedule *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(SceneID,scenecreate(,%#,%0)); @scene/member %q<SceneID>/owner=%#; @scene/set %q<SceneID>/status=scheduled; @scene/set %q<SceneID>/scheduledfor=[u(%!/FUN`SCHED_WHEN,%1)]; @pemit %#=Scheduled scene %q<SceneID> "%0" for [convsecs(div(u(%!/FUN`SCHED_WHEN,%1),1000))].
       CMD`RESCHEDULE: |-
-        $+scene/reschedule *=*: @assert u(%!/FUN`OWNS,%#,%0); @scene/set %0/scheduledfor=[u(%!/FUN`SCHED_WHEN,%1)]; @pemit %#=Rescheduled scene %0 for [convsecs(div(u(%!/FUN`SCHED_WHEN,%1),1000))].
+        $+scene/reschedule *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,%0); @scene/set %0/scheduledfor=[u(%!/FUN`SCHED_WHEN,%1)]; @pemit %#=Rescheduled scene %0 for [convsecs(div(u(%!/FUN`SCHED_WHEN,%1),1000))].
       CMD`UNSCHEDULE: |-
-        $+scene/unschedule *: @assert u(%!/FUN`OWNS,%#,%0); @scene/delete %0; @pemit %#=Deleted scheduled scene %0.
+        $+scene/unschedule *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,%0); @scene/delete %0; @pemit %#=Deleted scheduled scene %0.
       FUN`SCHED_ROW: |-
         align(<10 <[sub(%1,42)] <24 >6,left(%0,10),left(u(%!/FUN`LIST_TITLE,%0),sub(%1,43)),convsecs(div(scene(%0,scheduledfor),1000)),words(scenemembers(%0)))
       CMD`UPCOMING: |-
@@ -270,7 +300,7 @@ objects:
       CMD`DEACTIVATE: |-
         $+scene/deactivate: @assert setr(SceneID,scenefocus(%#)); @scene/focus %#=; @pemit %#=Deactivated scene %q<SceneID> - still a member, poses paused. +scene/activate %q<SceneID> to resume.
       CMD`ACTIVATE: |-
-        $+scene/activate *: @scene/member %0/participant=%#; @scene/focus %#=%0; @pemit %#=Activated scene %0 - your poses are recorded again.
+        $+scene/activate *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/member %0/participant=%#; @scene/focus %#=%0; @pemit %#=Activated scene %0 - your poses are recorded again.
 
       # ---- summary + info card --------------------------------------------------
       # SCENE_FIELD(scene,field,default) reads a field, substituting <default> for an unset/#-1 result.
@@ -280,15 +310,13 @@ objects:
         switch(setr(val,scene(%0,%1)),#-1*,%2,%q<val>)
       FUN`INFO_LINE: |-
         align(>9 <[sub(%2,11)],ansi(h,%0),%1)
-      INC`REQUIRE`SCENE: |-
-        @assert not(strmatch(scene(setr(SceneID,%0),status),#-1*))=@pemit %#=No such scene: %0
       INC`DISPLAY`INFO: |-
         @pemit %#=[header(Scene %0,width(%#))]%r[u(%!/FUN`INFO_LINE,Title,u(%!/FUN`LIST_TITLE,%0),width(%#))]%r[u(%!/FUN`INFO_LINE,Pitch,u(%!/FUN`SCENE_FIELD,%0,summary,-),width(%#))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername),width(%#))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)),width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status),width(%#))]%r[u(%!/FUN`INFO_LINE,Poses,scene(%0,posecount),width(%#))]%r[u(%!/FUN`INFO_LINE,Cast,scenecast(%0),width(%#))]%r[footer(,width(%#))]
       CMD`PITCH: |-
-        $+scene/pitch *: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/summary=%0; @pemit %#=Pitch set for scene [scenefocus(%#)].
+        $+scene/pitch *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/summary=%0; @pemit %#=Pitch set for scene [scenefocus(%#)].
       # Scene DETAILS card: `+scene <id>` (Volund-style; bare `+scene` is the active list).
       CMD`SHOW: |-
-        $+scene *: @include %!/INC`REQUIRE`SCENE=%0; @include %!/INC`DISPLAY`INFO=%q<SceneID>
+        $+scene *: @assert not(strmatch(scene(setr(SceneID,%0),status),#-1*))=@pemit %#=No such scene: %0; @include %!/INC`DISPLAY`INFO=%q<SceneID>
 
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).

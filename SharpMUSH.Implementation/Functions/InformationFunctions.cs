@@ -393,6 +393,23 @@ public partial class Functions
 		return new CallState(hasPower);
 	}
 
+	/// <summary>
+	/// <c>isapproved(&lt;object&gt;)</c> — 1 when the object is royalty or above, or carries the
+	/// <c>APPROVED</c> flag; 0 otherwise (and always 0 for a guest). The softcode face of
+	/// <see cref="HelperFunctions.IsApproved"/>, so a game's <c>+</c>-verbs and the engine answer the
+	/// approval question with the same code rather than two copies of the same rule.
+	/// </summary>
+	[SharpFunction(Name = "isapproved", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	public static async ValueTask<CallState> IsApproved(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var toLocate = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, toLocate, LocateFlags.All | LocateFlags.NoVisibilityCheck,
+			async found => new CallState(await found.IsApproved()));
+	}
+
 	[SharpFunction(Name = "hastype", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "type"])]
 	public static async ValueTask<CallState> HasType(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
