@@ -168,7 +168,21 @@ public static class SceneFunctions
 		var viewer = await ViewerDbrefAsync(parser);
 		var scenes = await service.ListScenesAsync(filter, viewer, from, to);
 
-		return new CallState(string.Join(" ", scenes.Select(s => s.Id)));
+		// Every other read function gates on SceneVisibleToAsync, so a private scene answers
+		// #-1 PERMISSION — but the storage's `active`/`finished`/`recent`/`scheduled` filters carry no
+		// visibility clause at all, so an ungated listing handed any player the id of every private
+		// scene in the game and let them count them. Ids are cheap to try; filter the listing through
+		// the same predicate the field reads use, so what a player can list is exactly what they can read.
+		var visible = new List<string>(scenes.Count);
+		foreach (var scene in scenes)
+		{
+			if (await SceneVisibleToAsync(service, scene, parser))
+			{
+				visible.Add(scene.Id);
+			}
+		}
+
+		return new CallState(string.Join(" ", visible));
 	}
 
 	/// <summary>
