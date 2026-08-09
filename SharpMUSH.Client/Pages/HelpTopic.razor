@@ -1,24 +1,30 @@
-@page "/help/{Slug}"
+@page "/help/{Topic}"
+@using SharpMUSH.Client.Components.Help
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Slug — @Loc["Help"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Topic — @Loc["Help"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="help-page">
     <header class="help-header">
         <div class="help-kicker">
             <a class="help-kicker-link" href="/help">@Loc["Help"]</a>
             <span class="help-kicker-sep">/</span>
-            <span class="help-kicker-current">@Slug</span>
+            <span class="help-kicker-current">@Topic</span>
         </div>
-        <h1 class="help-title">@Slug</h1>
+        <h1 class="help-title">@Topic</h1>
     </header>
 
     <section class="help-body">
-        <WikiView Slug="@Slug" Mode="WikiView.WikiMode.View" />
+        <HelpEntryPanel Topic="@Topic" />
     </section>
 </div>
 
 @code {
+    /// <summary>
+    /// The help topic, decoded from the route. Topics are the markdown headers inside the
+    /// helpfiles — <c>@@mail</c>, <c>getting started</c>, <c>mail-sending</c> — not filenames, so
+    /// this arrives percent-decoded and is passed through verbatim.
+    /// </summary>
     [Parameter]
-    public string Slug { get; set; } = string.Empty;
+    public string Topic { get; set; } = string.Empty;
 }

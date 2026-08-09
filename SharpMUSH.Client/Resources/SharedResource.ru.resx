@@ -4484,4 +4484,36 @@
     <value>Ваша учётная запись готова. Создание персонажа — последний шаг перед началом игры.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить файлы справки.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Все темы ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Фильтр тем</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Ни одна тема не соответствует этому фильтру.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Нет записи для «{0}».</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Несколько тем соответствуют «{0}». Выберите одну:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Справка администратора</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>Темы ahelp. Только для волшебников и Бога — как в портале, так и в игре.</value>
+    <comment>MT</comment>
+  </data>
 </root>

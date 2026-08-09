@@ -4484,4 +4484,36 @@
     <value>Ditt konto är klart. Att skapa en karaktär är det sista steget innan du kan spela.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>Hjälpfilerna kunde inte läsas in.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Alla ämnen ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Filtrera ämnen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Inget ämne matchar det filtret.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Ingen post för ”{0}”.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Flera ämnen matchar ”{0}”. Välj ett:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Administratörshjälp</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>Ahelp-ämnena. Endast för Trollkarlar och Gud, i portalen liksom i spelet.</value>
+    <comment>MT</comment>
+  </data>
 </root>

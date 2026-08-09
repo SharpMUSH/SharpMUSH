@@ -1,5 +1,10 @@
 @page "/help"
+@inject GameHelpService HelpFiles
 @inject IStringLocalizer<SharedResource> Loc
+
+@* The index of the help files the server ships — the same corpus `help` answers from at a telnet
+   prompt. It is not a wiki page: nothing here is editable from the portal, and a fresh game shows
+   the full index rather than an invitation to write one. *@
 
 <PageTitle>@Loc["Help"] — @Loc["AppTitle"]</PageTitle>
 
@@ -10,7 +15,95 @@
         <p class="help-subtitle">@Loc["AdmHelpSubtitle"]</p>
     </header>
 
-    <section class="help-body">
-        <WikiView Slug="help-index" Mode="WikiView.WikiMode.View" />
-    </section>
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_index is null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true">@Loc["HelpLoadFailed"]</MudAlert>
+    }
+    else
+    {
+        <section class="help-body">
+            <article class="help-entry">@((MarkupString)(_index.Html ?? string.Empty))</article>
+        </section>
+
+        <section class="help-body help-topics">
+            <h2 class="help-section-title">@string.Format(Loc["HelpAllTopics"], _index.Topics.Count)</h2>
+            <MudTextField T="string" @bind-Value="_filter" Immediate="true"
+                          Placeholder="@Loc["HelpFilterTopics"]"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Class="help-filter" />
+
+            @if (Filtered.Count == 0)
+            {
+                <p class="help-empty">@Loc["HelpNoTopicsMatch"]</p>
+            }
+            else
+            {
+                <ul class="help-topic-list">
+                    @foreach (var topic in Filtered)
+                    {
+                        <li><a href="/help/@Uri.EscapeDataString(topic)">@topic</a></li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <AuthorizeView Roles="Wizard,God">
+            <Authorized>
+                @if (_adminIndex is not null)
+                {
+                    <section class="help-body help-topics help-admin">
+                        <h2 class="help-section-title">@Loc["HelpAdminTitle"]</h2>
+                        <p class="help-subtitle">@Loc["HelpAdminSubtitle"]</p>
+                        <ul class="help-topic-list">
+                            @foreach (var topic in _adminIndex.Topics)
+                            {
+                                <li><a href="/help/admin/@Uri.EscapeDataString(topic)">@topic</a></li>
+                            }
+                        </ul>
+                    </section>
+                }
+            </Authorized>
+        </AuthorizeView>
+    }
 </div>
+
+@code {
+    private GameHelpIndex? _index;
+    private GameHelpIndex? _adminIndex;
+    private bool _loading = true;
+    private string _filter = string.Empty;
+
+    // 1500+ topics is far too many to scroll, and far too few to need paging: filter in the browser.
+    private IReadOnlyList<string> Filtered =>
+        _index is null
+            ? []
+            : string.IsNullOrWhiteSpace(_filter)
+                ? _index.Topics
+                : _index.Topics.Where(t => t.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _index = await HelpFiles.GetIndexAsync();
+
+        // Only staff ask for the admin corpus. The gate that matters is the server's 403 on
+        // /api/help/admin — this check just keeps every anonymous page view from spending a
+        // rejected request to learn what it already knows.
+        if (AuthState is not null)
+        {
+            var user = (await AuthState).User;
+            if (user.IsInRole("Wizard") || user.IsInRole("God"))
+            {
+                _adminIndex = await HelpFiles.GetAdminIndexAsync();
+            }
+        }
+
+        _loading = false;
+    }
+}

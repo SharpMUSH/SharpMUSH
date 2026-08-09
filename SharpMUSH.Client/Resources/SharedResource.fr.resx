@@ -3677,4 +3677,36 @@
     <value>Votre compte est prêt. Créer un personnage est la dernière étape avant de pouvoir jouer.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>Impossible de charger les fichiers d’aide.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Tous les sujets ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Filtrer les sujets</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Aucun sujet ne correspond à ce filtre.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Aucune entrée pour « {0} ».</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Plusieurs sujets correspondent à « {0} ». Choisissez-en un :</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Aide administrateur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>Les sujets ahelp. Réservés aux Sorciers et à Dieu, dans le portail comme dans le jeu.</value>
+    <comment>MT</comment>
+  </data>
 </root>

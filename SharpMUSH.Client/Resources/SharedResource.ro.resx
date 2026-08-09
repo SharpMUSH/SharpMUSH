@@ -4484,4 +4484,36 @@
     <value>Contul tău este gata. Crearea unui personaj este ultimul pas înainte de a putea juca.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>Fișierele de ajutor nu au putut fi încărcate.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Toate subiectele ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Filtrează subiectele</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Niciun subiect nu corespunde acelui filtru.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Nicio intrare pentru „{0}”.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Mai multe subiecte corespund lui „{0}”. Alegeți unul:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Ajutor pentru administratori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>Subiectele ahelp. Doar pentru Vrăjitori și Dumnezeu, atât în portal, cât și în joc.</value>
+    <comment>MT</comment>
+  </data>
 </root>

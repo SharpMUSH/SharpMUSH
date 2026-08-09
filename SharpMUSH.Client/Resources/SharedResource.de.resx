@@ -4484,4 +4484,36 @@
     <value>Ihr Konto ist bereit. Das Erstellen eines Charakters ist der letzte Schritt, bevor Sie spielen können.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>Die Hilfedateien konnten nicht geladen werden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Alle Themen ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Themen filtern</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Kein Thema entspricht diesem Filter.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Kein Eintrag für „{0}“.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Mehrere Themen passen zu „{0}“. Wählen Sie eines aus:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Administratorhilfe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>Die ahelp-Themen. Nur für Zauberer und Gott, im Portal wie im Spiel.</value>
+    <comment>MT</comment>
+  </data>
 </root>

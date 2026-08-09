@@ -4484,4 +4484,36 @@
     <value>Sua conta está pronta. Criar um personagem é o último passo antes de você poder jogar.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>Não foi possível carregar os arquivos de ajuda.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Todos os tópicos ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Filtrar tópicos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Nenhum tópico corresponde a esse filtro.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Nenhuma entrada para “{0}”.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Vários tópicos correspondem a “{0}”. Escolha um:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Ajuda do administrador</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>Os tópicos do ahelp. Apenas para Magos e Deus, no portal como no jogo.</value>
+    <comment>MT</comment>
+  </data>
 </root>

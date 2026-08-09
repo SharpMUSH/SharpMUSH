@@ -33,15 +33,23 @@ public static class RecursiveMarkdownHelper
 	/// </list>
 	/// </summary>
 	private static MarkdownPipeline BuildPipeline() =>
-		new MarkdownPipelineBuilder()
-			.UsePipeTables()
+		ConfigureHelpSyntax(new MarkdownPipelineBuilder())
 			.EnableTrackTrivia() // Track HTML
+			.Build();
+
+	/// <summary>
+	/// Applies the syntax extensions that define what SharpMUSH help-file markdown <em>means</em>.
+	/// Shared with <see cref="HelpHtmlRenderer"/> so the portal and the terminal cannot disagree
+	/// about which brackets are a topic link — add an extension here, not in one renderer.
+	/// </summary>
+	public static MarkdownPipelineBuilder ConfigureHelpSyntax(MarkdownPipelineBuilder builder) =>
+		builder
+			.UsePipeTables()
 			.UseHelpTopicLinks() // [topic] → help <topic> hyperlinks
 			.UseGenericAttributes()
 			.UseCustomContainers()
 			.UseTaskLists()
-			.Use<WikiLinkExtension>() // parser only; its HTML renderer hook is a no-op here
-			.Build();
+			.Use<WikiLinkExtension>(); // parser only; its HTML renderer hook is a no-op for ASCII
 
 	/// <summary>
 	/// Renders markdown text to MString using the recursive renderer

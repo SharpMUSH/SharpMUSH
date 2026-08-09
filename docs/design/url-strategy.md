@@ -21,8 +21,9 @@ non-API routes (standard WASM hosting pattern).
 /scenes                     Scene archive (completed, public)
 /scenes/42                  Scene archive detail (numeric ID permalink)
 /scenes/active              Active scenes list
-/help                       Help file index
-/help/Topic_Name            Help file page
+/help                       Help file index (the server's shipped helpfile corpus)
+/help/{topic}               Help file entry, by topic (e.g. /help/@mail)
+/help/admin/{topic}         Administrator (ahelp) entry — Wizard/God only
 /login                      Login page
 /register                   Registration page
 ```
@@ -73,8 +74,35 @@ non-API routes (standard WASM hosting pattern).
 - Underscores replace spaces in the slug; lookup is case-insensitive
 - Display always shows the page's canonical title (original case)
 - Special characters in slugs are percent-encoded
-- `/help/{topic}` and `/character/{name}` are aliases resolving to the `help`
-  and `character` namespaces at the default `general` category
+- `/character/{name}` is an alias resolving to the `character` namespace at the
+  default `general` category
+- `/help/...` is **not** a wiki route. See "Help files" below.
+
+### Help files
+
+The help pages serve the helpfile corpus the server ships (`TextFiles/help`,
+`TextFiles/ahelp`) — the same files, resolved by the same `IHelpTopicResolver`,
+that the in-game `help` and `ahelp` commands answer from. They are not wiki
+pages and are never imported into the wiki: the wiki holds the game's editable
+world content, and engine documentation shipped with the release does not belong
+to a game's editable content.
+
+- A path segment under `/help` is a **topic**, not a slug. Topics are the
+  markdown headers inside the helpfiles (`@mail`, `getting started`,
+  `mail-sending`), never filenames.
+- Because topics carry spaces, case and punctuation that matter, `CanonicalUrlMiddleware`
+  leaves everything below `/help/` verbatim: no slugification, no case folding.
+  Link to a topic with `Uri.EscapeDataString`.
+- `/help/admin/{topic}` reads the `ahelp` corpus and is refused to anyone below
+  Wizard, matching the in-game command.
+- The backing API is `GET /api/help`, `GET /api/help/entry?topic=…`, and their
+  `/api/help/admin` counterparts. The topic travels as a query value because
+  topic names include `%#`, `#-1 exception` and `?`, which a path segment cannot
+  carry intact.
+
+Two wiki pages do live in the `Help` namespace — the Markdown Guide and the
+Application Schema Guide, both seeded at startup. They document the *portal's*
+wiki, not the engine, and stay at `/wiki/help/general/{slug}`.
 
 ### Locale
 

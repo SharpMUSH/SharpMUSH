@@ -1,0 +1,70 @@
+@inject GameHelpService Help
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Renders one help topic out of the server's shipped helpfile corpus. Not a wiki page: there is
+   nothing to create here, so a topic nobody wrote about is a plain "no such topic", never an
+   invitation to write one. *@
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_failed)
+{
+    <MudAlert Severity="Severity.Error" Dense="true">@Loc["HelpLoadFailed"]</MudAlert>
+}
+else if (_entry is not null && _entry.Topic is not null)
+{
+    <article class="help-entry">@((MarkupString)(_entry.Html ?? string.Empty))</article>
+}
+else if (_entry is not null && _entry.Candidates.Count > 0)
+{
+    <p class="help-ambiguous">@string.Format(Loc["HelpSeveralTopicsMatch"], Topic)</p>
+    <ul class="help-candidates">
+        @foreach (var candidate in _entry.Candidates)
+        {
+            <li><a href="@HrefFor(candidate)">@candidate</a></li>
+        }
+    </ul>
+}
+else
+{
+    <MudAlert Severity="Severity.Info" Dense="true">@string.Format(Loc["HelpNoSuchTopic"], Topic)</MudAlert>
+}
+
+@code {
+    /// <summary>The topic to resolve, exactly as it came out of the URL.</summary>
+    [Parameter]
+    public string Topic { get; set; } = string.Empty;
+
+    /// <summary>Read the administrator corpus (<c>ahelp</c>) instead of the general one.</summary>
+    [Parameter]
+    public bool Admin { get; set; }
+
+    private GameHelpEntry? _entry;
+    private bool _loading = true;
+    private bool _failed;
+    private string? _loadedTopic;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Navigating between topics reuses this component instance, so reload on topic change only.
+        var key = $"{Admin}|{Topic}";
+        if (_loadedTopic == key)
+        {
+            return;
+        }
+        _loadedTopic = key;
+
+        _loading = true;
+        _failed = false;
+        _entry = Admin ? await Help.GetAdminEntryAsync(Topic) : await Help.GetEntryAsync(Topic);
+        _failed = _entry is null;
+        _loading = false;
+    }
+
+    private string HrefFor(string topic) =>
+        Admin
+            ? $"/help/admin/{Uri.EscapeDataString(topic)}"
+            : $"/help/{Uri.EscapeDataString(topic)}";
+}

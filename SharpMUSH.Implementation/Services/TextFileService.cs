@@ -68,7 +68,7 @@ public class TextFileService : ITextFileService
 	{
 		await _initializationTask.WithCancellation(CancellationToken.None);
 
-		var (category, _) = ParseFileReference(fileReference);
+		var category = ResolveEntryCategory(fileReference);
 
 		lock (_indexLock)
 		{
@@ -90,7 +90,7 @@ public class TextFileService : ITextFileService
 	{
 		await _initializationTask.WithCancellation(CancellationToken.None);
 
-		var (category, _) = ParseFileReference(fileReference);
+		var category = ResolveEntryCategory(fileReference);
 
 		IndexEntry? indexEntry = null;
 		lock (_indexLock)
@@ -166,7 +166,7 @@ public class TextFileService : ITextFileService
 	{
 		await _initializationTask.WithCancellation(CancellationToken.None);
 
-		var (category, _) = ParseFileReference(fileReference);
+		var category = ResolveEntryCategory(fileReference);
 		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
 		var regex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -193,7 +193,7 @@ public class TextFileService : ITextFileService
 	{
 		await _initializationTask.WithCancellation(CancellationToken.None);
 
-		var (category, _) = ParseFileReference(fileReference);
+		var category = ResolveEntryCategory(fileReference);
 
 		IEnumerable<KeyValuePair<string, IndexEntry>> entries;
 		lock (_indexLock)
@@ -387,6 +387,40 @@ public class TextFileService : ITextFileService
 		}
 
 		return content;
+	}
+
+	/// <summary>
+	/// Resolves the category an <em>entry</em> lookup is scoped to. A bare reference naming an
+	/// existing category is that category.
+	/// </summary>
+	/// <remarks>
+	/// Entry lookups never use the filename half of a reference — entries are keyed by the topic
+	/// headers inside the markdown, and one category's entries are indexed together regardless of
+	/// which file they came from. So <c>GetEntryAsync("help", …)</c> used to parse as
+	/// <c>(category: null, file: "help")</c> and fall through to "search every category", which let
+	/// <c>help Security</c> answer out of the wizard-only <c>ahelp</c> corpus. Resolving a bare
+	/// reference to the category of that name is what every caller — the HELP/NEWS/AHELP commands
+	/// and PennMUSH's <c>textfile()</c>/<c>textentries()</c> — already means by it. An unrecognised
+	/// reference still searches every category, which is the only way <c>textfile()</c> can be
+	/// asked for something outside the shipped set.
+	/// </remarks>
+	private string? ResolveEntryCategory(string fileReference)
+	{
+		var (category, fileName) = ParseFileReference(fileReference);
+		if (category is not null)
+		{
+			return category;
+		}
+
+		if (fileName is null)
+		{
+			return null;
+		}
+
+		lock (_indexLock)
+		{
+			return _categoryIndexes.ContainsKey(fileName) ? fileName : null;
+		}
 	}
 
 	private (string? Category, string? FileName) ParseFileReference(string fileReference)

@@ -1,0 +1,32 @@
+@page "/help/admin/{Topic}"
+@using SharpMUSH.Client.Components.Help
+@attribute [Authorize(Roles = "Wizard,God")]
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The administrator corpus. The [Authorize] here only hides the route; the refusal that matters is
+   the one on /api/help/admin/*, which answers 403 to a mortal exactly as `ahelp` does in game. *@
+
+<PageTitle>@Topic — @Loc["HelpAdminTitle"] — @Loc["AppTitle"]</PageTitle>
+
+<div class="help-page">
+    <header class="help-header">
+        <div class="help-kicker">
+            <a class="help-kicker-link" href="/help">@Loc["Help"]</a>
+            <span class="help-kicker-sep">/</span>
+            <span class="help-kicker-current">@Loc["HelpAdminTitle"]</span>
+            <span class="help-kicker-sep">/</span>
+            <span class="help-kicker-current">@Topic</span>
+        </div>
+        <h1 class="help-title">@Topic</h1>
+    </header>
+
+    <section class="help-body">
+        <HelpEntryPanel Topic="@Topic" Admin="true" />
+    </section>
+</div>
+
+@code {
+    /// <summary>The administrator help topic, decoded from the route.</summary>
+    [Parameter]
+    public string Topic { get; set; } = string.Empty;
+}

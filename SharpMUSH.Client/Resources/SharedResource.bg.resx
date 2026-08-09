@@ -4484,4 +4484,36 @@
     <value>Вашият акаунт е готов. Създаването на герой е последната стъпка, преди да можете да играете.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>Файловете с помощ не можаха да бъдат заредени.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Всички теми ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Филтриране на темите</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Няма тема, отговаряща на този филтър.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Няма запис за „{0}“.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Няколко теми съвпадат с „{0}“. Изберете една:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Администраторска помощ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>Темите от ahelp. Само за магьосници и Бог, в портала както и в играта.</value>
+    <comment>MT</comment>
+  </data>
 </root>

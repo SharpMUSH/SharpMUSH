@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -111,18 +112,21 @@ public sealed class BotPrerenderMiddleware(
 		}
 		else if (path.StartsWith("/help/", StringComparison.OrdinalIgnoreCase))
 		{
+			// Help is the shipped helpfile corpus, not a wiki namespace: this used to look the topic
+			// up as a wiki slug, which never matched anything on a fresh game. The admin corpus
+			// (/help/admin/…) is deliberately absent — a crawler is anonymous, and `ahelp` is
+			// wizard-only in game.
+			// HttpRequest.Path is already percent-decoded, so "%20" has become a space by now.
 			var topic = path["/help/".Length..].Trim('/');
-			if (!string.IsNullOrEmpty(topic))
+			if (!string.IsNullOrEmpty(topic) && !topic.Contains('/'))
 			{
-				var result = await wikiService.GetBySlugAsync(topic, WikiHelpers.DefaultCategory, WikiNamespace.Help);
-				if (result.IsT0 && result.AsT0.Published)
+				var resolver = scope.ServiceProvider.GetRequiredService<IHelpTopicResolver>();
+				var resolution = await resolver.ResolveAsync(HelpCorpora.Help, topic);
+				if (resolution.TryPickT0(out var entry, out _))
 				{
-					var page = result.AsT0;
-					html = WikiController.GeneratePrerenderHtml(
-						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
-						$"{canonicalBase}/help/{topic}",
-						await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
-						localization.DefaultLocale);
+					html = HelpController.GeneratePrerenderHtml(
+						entry,
+						$"{canonicalBase}{HelpController.PublicTopicHref(entry.Topic)}");
 				}
 			}
 		}

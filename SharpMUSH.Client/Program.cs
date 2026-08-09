@@ -57,6 +57,9 @@ builder.Services.AddSingleton<HelpService>(sp =>
 	var factory = sp.GetRequiredService<IHttpClientFactory>();
 	return new HelpService(factory.CreateClient("help"));
 });
+// The server's shipped helpfile corpus (/api/help). Distinct from HelpService above, which indexes
+// mush-defs.json for the softcode editor's function drawer.
+builder.Services.AddSingleton<GameHelpService>();
 builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());
 builder.Services.AddSingleton<DatabaseConversionService>();

@@ -383,31 +383,5 @@ public class CharacterRouteTests : BunitContext
 	}
 }
 
-public class HelpRouteTests : BunitContext
-{
-	public HelpRouteTests()
-	{
-		this.AddWikiTestServices();
-	}
-
-	[TUnit.Core.Test]
-	public async Task HelpIndex_RendersWikiViewWithHelpIndexSlug()
-	{
-		var cut = Render<SharpMUSH.Client.Pages.Help>();
-
-		var wikiView = cut.FindComponent<WikiView>();
-		await Assert.That(wikiView).IsNotNull();
-		await Assert.That(wikiView.Instance.Slug).IsEqualTo("help-index");
-	}
-
-	[TUnit.Core.Test]
-	public async Task HelpTopic_RendersWikiViewWithParameterSlug()
-	{
-		var cut = Render<SharpMUSH.Client.Pages.HelpTopic>(p => p
-				.Add(c => c.Slug, "commands"));
-
-		var wikiView = cut.FindComponent<WikiView>();
-		await Assert.That(wikiView).IsNotNull();
-		await Assert.That(wikiView.Instance.Slug).IsEqualTo("commands");
-	}
-}
+// The /help routes no longer render WikiView: help is the shipped helpfile corpus, not a wiki
+// namespace. Their coverage lives in HelpPageTests.
