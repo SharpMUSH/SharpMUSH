@@ -189,8 +189,8 @@ public partial class Commands
 
 		if (connectionData?.State != IConnectionService.ConnectionState.AccountMode)
 		{
-			await NotifyService!.Notify(handle,
-				"You must be logged in to an account first. Use: login <display-name-or-email> <password>");
+			await NotifyNotInAccountModeAsync(handle, connectionData?.State,
+				"Character creation happens from the account menu, before you enter the game.");
 			return new None();
 		}
 
@@ -273,8 +273,8 @@ public partial class Commands
 
 		if (connectionData?.State != IConnectionService.ConnectionState.AccountMode)
 		{
-			await NotifyService!.Notify(handle,
-				"You must be logged in to an account first. Use: login <display-name-or-email> <password>");
+			await NotifyNotInAccountModeAsync(handle, connectionData?.State,
+				"A telnet session plays one character for its whole life.");
 			return new None();
 		}
 
@@ -337,6 +337,27 @@ public partial class Commands
 		await NotifyService!.Notify(handle, "Access from your location is restricted.");
 		return true;
 	}
+
+	/// <summary>
+	/// Refuses an account-menu command (MAKE / PLAY) that arrived outside AccountMode, saying which of the
+	/// two very different reasons applies.
+	///
+	/// <para>Both surfaces used to answer "You must be logged in to an account first", which is only true
+	/// for a connection that has not authenticated. The other way in is a connection that is already
+	/// PLAYING: it authenticated, then bound a character, and left AccountMode by succeeding. Telling that
+	/// player to log in reads as a bug in their own session and invites them to try a login that will be
+	/// refused as well. Telnet is one session per character by design — no in-session character switching —
+	/// so the honest answer is that switching means reconnecting.</para>
+	/// </summary>
+	/// <param name="handle">The connection to notify.</param>
+	/// <param name="state">The connection's current state; <c>LoggedIn</c> selects the in-game wording.</param>
+	/// <param name="inGameReason">One sentence saying why this command has no meaning once in play.</param>
+	private static async ValueTask NotifyNotInAccountModeAsync(
+		long handle, IConnectionService.ConnectionState? state, string inGameReason) =>
+		await NotifyService!.Notify(handle, state is IConnectionService.ConnectionState.LoggedIn
+			? $"You are already playing a character. {inGameReason} " +
+				"To play a different one, disconnect and connect again."
+			: "You must be logged in to an account first. Use: login <display-name-or-email> <password>");
 
 	/// <summary>
 	/// PennMUSH-style refusal for a disabled <c>Net.PlayerCreation</c>: prefer the configured
