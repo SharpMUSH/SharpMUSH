@@ -405,6 +405,7 @@ public partial class SurrealDatabase
 		{
 			("WIZARD", "W", null, ["trusted","wizard","log"], ["trusted","wizard"], ["ROOM","PLAYER","EXIT","THING"]),
 			("ABODE", "A", null, [], [], ["ROOM"]),
+			("APPROVED", "+", null, ["royalty"], ["royalty"], ["PLAYER"]),
 			("ANSI", "A", null, [], [], ["PLAYER"]),
 			("CHOWN_OK", "C", null, [], [], ["ROOM","PLAYER","THING"]),
 			("COLOR", "C", ["COLOUR"], [], [], ["PLAYER"]),
