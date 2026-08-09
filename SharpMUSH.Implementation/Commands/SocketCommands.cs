@@ -25,8 +25,12 @@ public partial class Commands
 	[SharpCommand(Name = "WHO", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Who(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var isWizard = await executor.IsWizard();
+		// WHO is CommandBehavior.SOCKET precisely so it answers at the connect screen, where nothing
+		// is bound to the handle yet. KnownExecutorObject() throws on that None, so resolve the
+		// executor optionally: an anonymous viewer is never a wizard and gets the mortal listing.
+		var executorOption = await parser.CurrentState.ExecutorObject(Mediator!);
+		var executor = executorOption.IsNone ? null : executorOption.Known();
+		var isWizard = executor is not null && await executor.IsWizard();
 
 		var everyone = ConnectionService!.GetAll();
 
@@ -63,13 +67,20 @@ public partial class Commands
 				}
 				else
 				{
-					var doingText = await Commands.GetDoingText(executor, known);
+					// No executor at the connect screen: read DOING as the listed player reads it on
+					// itself. @doing is public in PennMUSH, and it is the one column the connect-screen
+					// listing exists to show.
+					var doingText = await Commands.GetDoingText(executor ?? known, known);
 					line = $"{namePadded} {onFor,10}   {idle,4}{(isDark ? 'D' : ' ')} {doingText}";
 				}
 
 				return (Line: line, Known: known);
 			})
-			.Where(async (player, _) => await PermissionService!.CanSee(executor, player.Known))
+			// CanSee needs a viewer; an anonymous connect-screen viewer has none and is neither
+			// privileged nor SEE_ALL, so it reduces to the DARK check CanSee would have made.
+			.Where(async (player, _) => executor is null
+				? !await player.Known.IsDark()
+				: await PermissionService!.CanSee(executor, player.Known))
 			.ToListAsync();
 
 		var count = filteredPlayers.Count;
@@ -425,13 +436,19 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Quit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var handle = parser.CurrentState.Handle!.Value;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		await NotifyService!.Notify(executor, MModule.single("GOODBYE."), executor);
+
+		// QUIT is a SOCKET command: it must also work at the connect screen, where the handle has
+		// no executor bound and KnownExecutorObject() would throw. Fall back to notifying the
+		// socket directly in that case.
+		var executorOption = await parser.CurrentState.ExecutorObject(Mediator!);
+		var executor = executorOption.IsNone ? null : executorOption.Known();
+
+		await NotifyQuitAsync(MModule.single("GOODBYE."));
 
 		var quitText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.QuitFile);
 		if (!string.IsNullOrWhiteSpace(quitText))
 		{
-			await NotifyService!.Notify(executor, quitText, executor);
+			await NotifyQuitAsync(MModule.single(quitText));
 		}
 
 		await ConnectionService!.Disconnect(handle);
@@ -443,6 +460,18 @@ public partial class Commands
 		}
 
 		return new None();
+
+		async ValueTask NotifyQuitAsync(MString what)
+		{
+			if (executor is null)
+			{
+				await NotifyService!.Notify(handle, what);
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, what, executor);
+			}
+		}
 	}
 
 	/// <summary>

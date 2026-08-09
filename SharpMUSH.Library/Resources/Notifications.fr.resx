@@ -21,6 +21,9 @@
   <data name="WelcomeBackFormat" xml:space="preserve">
     <value>Bienvenue, {0} !</value>
   </data>
+  <data name="WelcomeFirstLoginFormat" xml:space="preserve">
+    <value>Bienvenue, {0} ! C'est votre première connexion.</value>
+  </data>
 
   <!-- ── @locale command ─────────────────────────────────────────────── -->
   <data name="LocaleSetFormat" xml:space="preserve">

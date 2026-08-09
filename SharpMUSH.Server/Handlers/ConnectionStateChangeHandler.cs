@@ -2,6 +2,8 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -64,7 +66,7 @@ public class ConnectionStateChangeHandler(
 						}
 					}
 
-					await notifyService.NotifyLocalized(notification.Handle, nameof(ErrorMessages.Notifications.WelcomeBackFormat), notification.PlayerRef!);
+					await GreetAsync(notification, cancellationToken);
 
 					logger.LogInformation("[{ConnectionId}] Successfully sent login message to handle {Handle}",
 						connectionId, notification.Handle);
@@ -86,5 +88,38 @@ public class ConnectionStateChangeHandler(
 			logger.LogError(ex, "[{ConnectionId}] Error handling connection state change for handle {Handle}",
 				connectionId, notification.Handle);
 		}
+	}
+
+	/// <summary>
+	/// The first line of every session. It is addressed to the player by NAME — passing the
+	/// <see cref="DBRef"/> straight in as the format argument rendered its <c>ToString()</c>, so
+	/// players were greeted with "Welcome back, #12:1786227218582!". A character that has just been
+	/// created and walked straight into play has never been here, so it is welcomed rather than
+	/// welcomed back.
+	/// </summary>
+	private async ValueTask GreetAsync(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
+	{
+		var name = await ResolveNameAsync(notification.PlayerRef, cancellationToken);
+		if (name is null)
+		{
+			// Better to say nothing than to greet somebody by database key.
+			logger.LogWarning("Could not resolve a name for {Ref} on handle {Handle}; skipping the greeting",
+				notification.PlayerRef, notification.Handle);
+			return;
+		}
+
+		var key = notification.FirstLogin
+			? nameof(ErrorMessages.Notifications.WelcomeFirstLoginFormat)
+			: nameof(ErrorMessages.Notifications.WelcomeBackFormat);
+
+		await notifyService.NotifyLocalized(notification.Handle, key, name);
+	}
+
+	private async ValueTask<string?> ResolveNameAsync(DBRef? playerRef, CancellationToken cancellationToken)
+	{
+		if (!playerRef.HasValue) return null;
+
+		var node = await database.GetObjectNodeAsync(playerRef.Value, cancellationToken);
+		return node.IsNone() ? null : node.Known().Object().Name;
 	}
 }

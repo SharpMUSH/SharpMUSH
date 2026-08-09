@@ -579,6 +579,8 @@ public static class ErrorMessages
 		public const string Connected = "Connected!";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WelcomeBackFormat = "Welcome back, {0}!";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string WelcomeFirstLoginFormat = "Welcome, {0}! This is your first time connecting.";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotNameObjectFormat = "You cannot name that object {0}.";

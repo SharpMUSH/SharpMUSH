@@ -235,7 +235,9 @@ public partial class Commands
 
 		await AccountService!.LinkCharacterAsync(accountId, playerDbRef);
 
-		await ConnectionService.Bind(handle, playerDbRef);
+		// The character was created a line ago, so this is its first ever entry into play: it gets
+		// the first-login greeting, not "Welcome back".
+		await ConnectionService.Bind(handle, playerDbRef, firstLogin: true);
 
 		var playerNode = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(playerDbRef));
 		if (!playerNode.IsPlayer)
