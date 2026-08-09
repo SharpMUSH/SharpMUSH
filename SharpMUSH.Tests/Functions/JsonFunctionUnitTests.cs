@@ -120,8 +120,12 @@ public class JsonFunctionUnitTests
 		var pages = doc.RootElement.GetProperty("pages");
 		await Assert.That(pages.GetArrayLength()).IsEqualTo(1);
 		var sections = pages[0].GetProperty("sections");
-		// Public read-only schema: Demographics + Status + Description.
-		await Assert.That(sections.GetArrayLength()).IsEqualTo(3);
+		// Public read-only schema: one Identity section, holding only fields every character has.
+		await Assert.That(sections.GetArrayLength()).IsEqualTo(1);
+		await Assert.That(sections[0].GetProperty("name").GetString()).IsEqualTo("Identity");
+		var keys = sections[0].GetProperty("elements").EnumerateArray()
+			.Select(e => e.GetProperty("key").GetString()!).ToArray();
+		await Assert.That(keys).IsEquivalentTo(new[] { "created", "objid" });
 	}
 
 	[Test]

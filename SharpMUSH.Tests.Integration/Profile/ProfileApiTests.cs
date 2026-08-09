@@ -255,8 +255,53 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		await Assert.That(doc.RootElement.TryGetProperty("pages", out var pages)).IsTrue();
 		await Assert.That(pages.GetArrayLength()).IsEqualTo(1);
 		await Assert.That(pages[0].TryGetProperty("sections", out var sections)).IsTrue();
-		// Public read-only schema: Demographics + Status + Description.
-		await Assert.That(sections.GetArrayLength()).IsEqualTo(3);
+		// Public read-only schema: one Identity section. Every element it declares must be one the
+		// data route always fills — a declared-but-unfilled field renders as a blank row, which is
+		// how a fresh character's profile came to be a table of empty labels.
+		await Assert.That(sections.GetArrayLength()).IsEqualTo(1);
+		await Assert.That(sections[0].GetProperty("name").GetString()).IsEqualTo("Identity");
+		var keys = sections[0].GetProperty("elements").EnumerateArray()
+			.Select(e => e.GetProperty("key").GetString()!).ToArray();
+		await Assert.That(keys).IsEquivalentTo(new[] { "created", "objid" });
+	}
+
+	/// <summary>
+	/// The schema and the data route have to agree: every key the schema declares must arrive with a
+	/// non-empty value for a character that has done nothing but exist. This is the regression — the
+	/// profile page rendered Full Name / Alias / Age / Concept / Status / Faction all blank because
+	/// none of those attributes is set on a newly created character.
+	/// </summary>
+	[Test]
+	public async Task ProfileSchemaAndData_Agree_EveryDeclaredFieldHasAValue()
+	{
+		var mediator = factory.Services.GetRequiredService<IMediator>();
+		var home = new DBRef(0, null);
+		await mediator.Send(new CreatePlayerCommand("SchemaFresh", "testpass", home, home, 1));
+		var fresh = await mediator.CreateStream(new GetPlayerQuery("SchemaFresh")).FirstAsync();
+		var objid = $"#{fresh.Object.Key}:{fresh.Object.CreationTime}";
+
+		var http = factory.CreateHttpClient();
+		using var schemaDoc = JsonDocument.Parse(
+			await (await http.GetAsync("http/profile/schema")).Content.ReadAsStringAsync());
+		using var dataDoc = JsonDocument.Parse(
+			await (await http.GetAsync($"http/profile?objid={Uri.EscapeDataString(objid)}")).Content.ReadAsStringAsync());
+
+		var declared = schemaDoc.RootElement.GetProperty("pages").EnumerateArray()
+			.SelectMany(p => p.GetProperty("sections").EnumerateArray())
+			.SelectMany(s => s.GetProperty("elements").EnumerateArray())
+			.Where(e => e.GetProperty("kind").GetString() == "field")
+			.Select(e => e.GetProperty("key").GetString()!)
+			.ToList();
+
+		await Assert.That(declared).IsNotEmpty();
+
+		var fields = dataDoc.RootElement.GetProperty("fields");
+		foreach (var key in declared)
+		{
+			await Assert.That(fields.TryGetProperty(key, out var field)).IsTrue();
+			await Assert.That(field.GetProperty("visible").GetBoolean()).IsTrue();
+			await Assert.That(field.GetProperty("value").GetString()).IsNotNullOrEmpty();
+		}
 	}
 
 	[Test]
@@ -272,10 +317,12 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		using var doc = JsonDocument.Parse(body);
 		await Assert.That(doc.RootElement.GetProperty("character").GetString()).IsEqualTo(name);
 		await Assert.That(doc.RootElement.GetProperty("objid").GetString()).IsEqualTo(objid);
-		// All public fields are present as {value, visible} even when unset.
+		// Public fields arrive as {value, visible}. objid is repeated inside `fields` deliberately:
+		// the schema renderer resolves element keys only against `fields`, not the envelope.
 		var fields = doc.RootElement.GetProperty("fields");
-		await Assert.That(fields.TryGetProperty("fullname", out var fullname)).IsTrue();
-		await Assert.That(fullname.GetProperty("visible").GetBoolean()).IsTrue();
+		await Assert.That(fields.GetProperty("objid").GetProperty("value").GetString()).IsEqualTo(objid);
+		await Assert.That(fields.GetProperty("objid").GetProperty("visible").GetBoolean()).IsTrue();
+		await Assert.That(fields.GetProperty("created").GetProperty("value").GetString()).IsNotNullOrEmpty();
 	}
 
 	[Test]
