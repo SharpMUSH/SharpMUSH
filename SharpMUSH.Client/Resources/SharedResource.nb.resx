@@ -4472,4 +4472,8 @@
     <value>{count, plural, one {# ord} other {# ord}}</value>
     <comment>MT — 'ord' is invariant in the plural</comment>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>Kontoen din er klar. Å opprette en karakter er det siste trinnet før du kan spille.</value>
+    <comment>MT</comment>
+  </data>
 </root>

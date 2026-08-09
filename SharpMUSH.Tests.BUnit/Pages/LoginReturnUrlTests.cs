@@ -28,7 +28,10 @@ file sealed class LoginApiHandler : HttpMessageHandler
 				{
 					accountId = "test-account-id",
 					username = "headwiz",
-					characters = Array.Empty<object>(),
+					// One character, deliberately: an account with an EMPTY roster is routed into
+					// onboarding instead of the return URL (see OnboardingRoutingTests), which is a
+					// different question from the URL sanitizing these tests are about.
+					characters = new[] { new { dbrefNumber = 5, creationTime = 5L, name = "Gwendolyn", flags = "", isActing = true } },
 					accountSessionToken = "test-session-token",
 					mustChangePassword = false,
 					role = "God",

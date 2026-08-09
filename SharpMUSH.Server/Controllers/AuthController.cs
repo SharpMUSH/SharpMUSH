@@ -250,9 +250,9 @@ public class AuthController(
 
 		// Bind the session to the primary character up front, so there is never a "has characters but
 		// the token names none" state for a request handler to paper over. Switching mints a new token.
-		// Ordered by dbref: GetCharactersAsync passes the backend query through unsorted, so an
-		// unordered pick could bind a different character on each login for a multi-character account.
-		var primary = characters.OrderBy(c => c.Object.Key).FirstOrDefault();
+		// The pick goes through ActingCharacterResolver so that this binding and the implicit
+		// resolution a characterless session falls back to can never name different characters.
+		var primary = ActingCharacterResolver.Primary(characters);
 
 		// The roster carries the binding too — the token is opaque to the client, so this response is
 		// where the tab learns who it starts as.

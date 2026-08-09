@@ -4472,4 +4472,8 @@
     <value>{count, plural, one {# riječ} few {# riječi} other {# riječi}}</value>
     <comment>MT — «riječ» is syncretic here: the paucal (2–4) and the genitive plural are both «riječi», so few and other coincide.</comment>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>Vaš je račun spreman. Stvaranje lika posljednji je korak prije nego što možete igrati.</value>
+    <comment>MT</comment>
+  </data>
 </root>

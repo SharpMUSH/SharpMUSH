@@ -4,11 +4,9 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
-using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Helpers;
 using SharpMUSH.Server.Hubs;
 using System.Diagnostics.CodeAnalysis;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Server.Services;
 
@@ -28,7 +26,7 @@ namespace SharpMUSH.Server.Services;
 /// </remarks>
 public sealed class BanEnforcementService(
 	IAccountSessionStore sessionStore,
-	IFusionCache cache,
+	IAccountClaimsInvalidator claimsInvalidator,
 	IConnectionService connectionService,
 	IMessageBus messageBus,
 	HubConnectionRegistry registry,
@@ -59,7 +57,7 @@ public sealed class BanEnforcementService(
 	{
 		await RunGuardedAsync("revoke sessions", accountId, () => sessionStore.RevokeAllForAccountAsync(accountId, ct));
 		await RunGuardedAsync("invalidate claims cache", accountId,
-			() => cache.RemoveByTagAsync(AccountClaimsService.AccountCacheTag(accountId)).AsTask());
+			() => claimsInvalidator.InvalidateAsync(accountId, ct).AsTask());
 		await RunGuardedAsync("abort SignalR connections", accountId, () =>
 		{
 			registry.AbortConnectionsForAccount(accountId);

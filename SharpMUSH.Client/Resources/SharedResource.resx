@@ -3495,4 +3495,7 @@
   <data name="AdmAccountStatusChanged" xml:space="preserve">
     <value>Account '{0}' status updated.</value>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>Your account is ready. Creating a character is the last step before you can play.</value>
+  </data>
 </root>

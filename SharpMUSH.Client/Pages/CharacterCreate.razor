@@ -11,6 +11,15 @@
 <div style="padding:var(--cpad);">
     <MudPaper Elevation="0" Class="pa-6"
               Style="max-width:560px;margin:0 auto;background:var(--surface);border:1px solid var(--border-soft);">
+        @* An account with no character yet is mid-onboarding, not short of a permission. Login
+           routes it straight here, and this line says why it landed here rather than the portal. *@
+        @if (_onboarding)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" id="onboarding-notice">
+                @Loc["OnboardingCreateFirstCharacter"]
+            </MudAlert>
+        }
+
         <MudText Typo="Typo.h5" GutterBottom="true">@Loc["NavCreateACharacter"]</MudText>
         <MudText Typo="Typo.body2" Style="color:var(--text-faint);">
             @Loc["NavCreateCharacterBlurb"]
@@ -39,6 +48,20 @@
     private string _password = string.Empty;
     private string? _error;
     private bool _busy;
+    private bool _onboarding;
+
+    /// <summary>
+    /// Loads the roster so the page knows whether this is the account's first character. A reloaded
+    /// tab hydrates its session from sessionStorage but not its roster, so without this the local
+    /// count is 0 for everyone — which would both show the onboarding line to an established player
+    /// and make CreateAsync below mistake their second character for their first.
+    /// A failed fetch is left alone: "we could not ask" must not render as "you have none".
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        var roster = await AccountAuth.GetCharactersAsync();
+        _onboarding = roster.Match(characters => characters.Count == 0, _ => false);
+    }
 
     private async Task CreateAsync()
     {

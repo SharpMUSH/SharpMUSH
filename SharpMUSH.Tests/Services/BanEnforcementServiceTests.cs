@@ -8,10 +8,8 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
-using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Services;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -19,8 +17,8 @@ namespace SharpMUSH.Tests.Services;
 /// Unit tests for <see cref="BanEnforcementService"/>. Every dependency is an NSubstitute double
 /// except <see cref="HubConnectionRegistry"/>, a real instance wired to substituted
 /// collaborators — it isn't interface-shaped, so its real behavior is exercised directly rather
-/// than mocked. Cache invalidation is verified against a real <see cref="FusionCache"/> instance
-/// (tag-based removal isn't meaningfully observable through a bare substitute).
+/// than mocked. Cache invalidation is verified through the <see cref="IAccountClaimsInvalidator"/>
+/// seam the service now calls, rather than against the FusionCache tag API directly.
 /// </summary>
 public class BanEnforcementServiceTests
 {
@@ -51,7 +49,7 @@ public class BanEnforcementServiceTests
 	private static (
 		BanEnforcementService Service,
 		IAccountSessionStore Sessions,
-		IFusionCache Cache,
+		IAccountClaimsInvalidator ClaimsInvalidator,
 		IConnectionService Connections,
 		IMessageBus Bus,
 		HubConnectionRegistry Registry,
@@ -61,7 +59,7 @@ public class BanEnforcementServiceTests
 			IAccountSessionStore? sessionStore = null)
 	{
 		var sessions = sessionStore ?? Substitute.For<IAccountSessionStore>();
-		var cache = Substitute.For<IFusionCache>();
+		var claimsInvalidator = Substitute.For<IAccountClaimsInvalidator>();
 		var connections = Substitute.For<IConnectionService>();
 		connections.GetAll().Returns((liveConnections ?? []).ToAsyncEnumerable());
 		var bus = Substitute.For<IMessageBus>();
@@ -70,10 +68,10 @@ public class BanEnforcementServiceTests
 		database.GetCharactersForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(ValueTask.FromResult(linkedCharacters ?? (IReadOnlyList<SharpPlayer>)[]));
 
-		var svc = new BanEnforcementService(sessions, cache, connections, bus, registry, database,
+		var svc = new BanEnforcementService(sessions, claimsInvalidator, connections, bus, registry, database,
 			NullLogger<BanEnforcementService>.Instance);
 
-		return (svc, sessions, cache, connections, bus, registry, database);
+		return (svc, sessions, claimsInvalidator, connections, bus, registry, database);
 	}
 
 	[Test]
@@ -89,15 +87,13 @@ public class BanEnforcementServiceTests
 	[Test]
 	public async Task EnforceAccountBanAsync_InvalidatesCachedClaims()
 	{
-		var (svc, _, cache, _, _, _, _) = Build();
+		var (svc, _, claimsInvalidator, _, _, _, _) = Build();
 
 		await svc.EnforceAccountBanAsync("accounts/1");
 
-		// BanEnforcementService no longer depends on AccountClaimsService directly; it invalidates
-		// the same cache tag AccountClaimsService's cached role/scope entries are tagged with, via
-		// IFusionCache.RemoveByTagAsync — the shared AccountCacheTag() is the single source of truth
-		// for that tag, so both classes always agree on it.
-		await cache.Received(1).RemoveByTagAsync(AccountClaimsService.AccountCacheTag("accounts/1"));
+		// Ban enforcement and character link/unlink drop the same cached claims, so they share one
+		// invalidator rather than each reaching for the cache tag themselves.
+		await claimsInvalidator.Received(1).InvalidateAsync("accounts/1", Arg.Any<CancellationToken>());
 	}
 
 	[Test]

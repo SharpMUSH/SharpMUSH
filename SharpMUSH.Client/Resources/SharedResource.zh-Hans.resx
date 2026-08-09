@@ -4472,4 +4472,8 @@
     <value>{count, plural, other {# 个词条}}</value>
     <comment>MT — Chinese has a single CLDR plural category, so one `other` branch is correct. 词条/词 are used inconsistently in this file; a reviewer should confirm the term.</comment>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>您的账户已就绪。创建一个角色是开始游戏前的最后一步。</value>
+    <comment>MT</comment>
+  </data>
 </root>

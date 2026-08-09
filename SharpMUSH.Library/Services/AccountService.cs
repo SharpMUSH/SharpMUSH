@@ -10,7 +10,8 @@ public class AccountService(
 	ISharpDatabase database,
 	IPasswordService passwordService,
 	IAccountSessionStore accountSessionStore,
-	IBanEnforcer? banEnforcer = null) : IAccountService
+	IBanEnforcer? banEnforcer = null,
+	IAccountClaimsInvalidator? claimsInvalidator = null) : IAccountService
 {
 	// Account IDs are used as the "user" salt key for hashing
 	private static string AccountKey(SharpAccount account) => $"account:{account.Id}:{account.CreatedAt}";
@@ -149,11 +150,30 @@ public class AccountService(
 	public ValueTask<IReadOnlyList<SharpPlayer>> GetCharactersAsync(string accountId, CancellationToken ct = default)
 		=> database.GetCharactersForAccountAsync(accountId, ct);
 
-	public ValueTask LinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default)
-		=> database.LinkCharacterToAccountAsync(accountId, characterRef, ct);
+	/// <remarks>
+	/// The account's cached role and permission scopes are derived from its characters, so linking
+	/// one makes them stale. Invalidating here rather than at each caller is what makes a brand-new
+	/// player's first character take effect immediately instead of on the cache's next expiry:
+	/// every route to a link — the REST endpoints, the in-game MAKE command, bootstrap/setup — goes
+	/// through this method, so none of them can forget.
+	/// </remarks>
+	public async ValueTask LinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default)
+	{
+		await database.LinkCharacterToAccountAsync(accountId, characterRef, ct);
+		if (claimsInvalidator is not null)
+			await claimsInvalidator.InvalidateAsync(accountId, ct);
+	}
 
-	public ValueTask UnlinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default)
-		=> database.UnlinkCharacterFromAccountAsync(accountId, characterRef, ct);
+	/// <remarks>
+	/// The security-relevant direction: unlinking the last character drops the account back to Guest,
+	/// and leaving Player scopes cached would keep granting them after the entitlement is gone.
+	/// </remarks>
+	public async ValueTask UnlinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default)
+	{
+		await database.UnlinkCharacterFromAccountAsync(accountId, characterRef, ct);
+		if (claimsInvalidator is not null)
+			await claimsInvalidator.InvalidateAsync(accountId, ct);
+	}
 
 	public ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken ct = default)
 		=> database.GetAccountForCharacterAsync(characterRef, ct);
