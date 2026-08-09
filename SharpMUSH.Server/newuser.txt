@@ -1,3 +1,8 @@
 
-Welcome, new player! A wizard will create a character for you shortly.
+Welcome, new player!
 
+Your account is ready. Create your first character with:
+    make <character-name> <password>
+
+Then enter play with:
+    play <character-name>
