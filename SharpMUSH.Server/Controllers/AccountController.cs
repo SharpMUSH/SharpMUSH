@@ -8,6 +8,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Helpers;
 
 namespace SharpMUSH.Server.Controllers;
@@ -36,7 +37,7 @@ public class AccountController(
 	/// roster entry the caller is acting as — the session token is opaque to the client, so the roster
 	/// response is where a reloaded tab finds out.
 	/// </summary>
-	private async Task<IAccountSessionStore.SessionIdentity?> ActingCharacterAsync()
+	private async Task<IAccountSessionStore.SessionIdentity?> SessionAsync()
 	{
 		var header = Request.Headers.Authorization.FirstOrDefault();
 		if (header is null || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -75,9 +76,11 @@ public class AccountController(
 		if (failure is not null) return failure;
 
 		var characters = await accountService.GetCharactersAsync(accountId!);
-		var acting = await ActingCharacterAsync();
+		// Resolved through the same rule the authentication handler applies, so the roster's
+		// isActing flag can never disagree with the identity a write actually runs as.
+		var acting = ActingCharacterResolver.Resolve(await SessionAsync(), characters);
 		var summaries = await CharacterSummaryMapper.BuildSummariesAsync(characters,
-			actingKey: acting?.CharacterKey, actingCreationTime: acting?.CharacterCreationTime);
+			actingKey: acting?.Object.Key, actingCreationTime: acting?.Object.CreationTime);
 		return Ok(summaries);
 	}
 

@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Library.Authorization;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Hubs;
 
@@ -15,6 +14,11 @@ namespace SharpMUSH.Server.Authentication;
 /// role/permission claims server-side (so bans/role changes take effect on the next request)
 /// and emitting the <see cref="GameHub.CharacterDbrefClaim"/> the hub authorizes on.
 /// </summary>
+/// <remarks>
+/// Nothing the client sends participates in choosing the acting character — there is no header or
+/// query hint to spoof. The choice is <see cref="ActingCharacterResolver"/>'s alone, made from the
+/// session the token names plus the account's live character roster.
+/// </remarks>
 public class AccountSessionAuthenticationHandler(
 	IOptionsMonitor<AuthenticationSchemeOptions> options,
 	ILoggerFactory logger,
@@ -54,7 +58,7 @@ public class AccountSessionAuthenticationHandler(
 		claims.AddRange(scopes.Select(s => new Claim(PortalPermission.ClaimType, s)));
 
 		var characters = await accountService.GetCharactersAsync(accountId);
-		var acting = ResolveActingCharacter(session.Value, characters);
+		var acting = ActingCharacterResolver.Resolve(session.Value, characters);
 		if (acting is not null)
 		{
 			claims.Add(new Claim(GameHub.CharacterDbrefClaim, acting.Object.DBRef.ToString()));
@@ -65,26 +69,6 @@ public class AccountSessionAuthenticationHandler(
 
 		var identity = new ClaimsIdentity(claims, SchemeName);
 		return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));
-	}
-
-	/// <summary>
-	/// The character this request acts as, taken from the session the token names. The binding is
-	/// established when the token is minted (login binds the primary; switch-character mints a new
-	/// token bound to the target), so nothing the client sends participates in the decision — there is
-	/// no header or query hint to spoof, and no silent fallback to the primary when one doesn't match.
-	/// </summary>
-	/// <remarks>
-	/// Membership is still re-checked against the live roster on every request: a character unlinked
-	/// from the account after the token was minted must stop being actable immediately, without
-	/// waiting for the session to expire.
-	/// </remarks>
-	private static SharpPlayer? ResolveActingCharacter(
-		IAccountSessionStore.SessionIdentity session, IReadOnlyList<SharpPlayer> characters)
-	{
-		if (session.CharacterKey is not { } key || session.CharacterCreationTime is not { } created)
-			return null;
-
-		return characters.FirstOrDefault(c => c.Object.Key == key && c.Object.CreationTime == created);
 	}
 
 	private string? ExtractToken()

@@ -286,6 +286,87 @@ public class AccountSessionAuthHandlerTests
 		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)).IsNull();
 	}
 
+	/// <summary>
+	/// N-02 regression: the session minted at REGISTRATION names no character, because the account
+	/// owned none yet. Creating one afterwards never rebound it, so that session acted as nobody
+	/// forever — the roster reported the account's only character as not acting, and every write
+	/// needing a character identity answered "Missing character identity." until the player logged
+	/// out and back in.
+	/// </summary>
+	[Test]
+	public async Task SessionWithNoBoundCharacter_ActsAsTheAccountsOnlyCharacter()
+	{
+		var sessionStore = Substitute.For<IAccountSessionStore>();
+		var accountService = Substitute.For<IAccountService>();
+		var accountServiceForClaims = Substitute.For<IAccountService>();
+
+		// Minted before the account had any character; the character arrived afterwards.
+		sessionStore.ValidateAsync("registration-token").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(
+			new IAccountSessionStore.SessionIdentity("node_accounts/1", null, null)));
+		IReadOnlyList<SharpPlayer> roster = [MakePlayer(12, "Gwendolyn", 555L)];
+		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
+		accountService.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+		accountServiceForClaims.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+
+		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService,
+			MakeAccountClaims(accountServiceForClaims, PortalRole.Player), authorizationHeader: "Bearer registration-token");
+
+		var result = await handler.AuthenticateAsync();
+
+		await Assert.That(result.Succeeded).IsTrue();
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#12:555");
+		await Assert.That(result.Principal!.FindFirst("character_name")!.Value).IsEqualTo("Gwendolyn");
+	}
+
+	/// <summary>
+	/// The multi-character rule for an unbound session: lowest dbref, the same character login binds.
+	/// The roster is deliberately supplied out of order — <c>GetCharactersAsync</c> passes the backend
+	/// query through unsorted, so an unordered pick would name a different character per request.
+	/// </summary>
+	[Test]
+	public async Task SessionWithNoBoundCharacter_MultipleCharacters_ActsAsTheLowestDbref()
+	{
+		var sessionStore = Substitute.For<IAccountSessionStore>();
+		var accountService = Substitute.For<IAccountService>();
+		var accountServiceForClaims = Substitute.For<IAccountService>();
+
+		sessionStore.ValidateAsync("unbound").Returns(Task.FromResult<IAccountSessionStore.SessionIdentity?>(
+			new IAccountSessionStore.SessionIdentity("node_accounts/1", null, null)));
+		IReadOnlyList<SharpPlayer> roster = [MakePlayer(9, "Zed", 999L), MakePlayer(3, "Alice", 333L)];
+		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
+		accountService.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+		accountServiceForClaims.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+
+		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService,
+			MakeAccountClaims(accountServiceForClaims, PortalRole.Player), authorizationHeader: "Bearer unbound");
+
+		var result = await handler.AuthenticateAsync();
+
+		await Assert.That(result.Succeeded).IsTrue();
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#3:333");
+	}
+
+	/// <summary>
+	/// The implicit fallback must never override an explicit choice: a session bound by
+	/// <c>AuthController.SwitchCharacter</c> keeps acting as the character it names even though a
+	/// lower-dbref one exists. Sibling of <see cref="SessionBoundToANonPrimaryCharacter_ActsAsIt"/>,
+	/// pinned separately because the fallback added in N-02 is what could regress it.
+	/// </summary>
+	[Test]
+	public async Task AnExplicitlyChosenCharacter_BeatsTheImplicitFallback()
+	{
+		var (sessionStore, accountService, accountClaims) = TwoCharacterAccount();
+
+		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService, accountClaims,
+			authorizationHeader: "Bearer good");
+
+		var result = await handler.AuthenticateAsync();
+
+		// Roster is [#1 Alice, #7 Bob]; the session names Bob. Falling back to the lowest dbref here
+		// would silently undo a character switch.
+		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#7:777");
+	}
+
 	[Test]
 	public async Task UnknownToken_Fails()
 	{
