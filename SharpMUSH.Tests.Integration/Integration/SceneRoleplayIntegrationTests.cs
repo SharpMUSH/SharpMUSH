@@ -164,13 +164,22 @@ public class SceneRoleplayIntegrationTests
 		return NotificationsSince(before);
 	}
 
-	/// <summary>Creates a non-God player, registers + binds a connection handle, returns its full objid.</summary>
+	/// <summary>
+	/// Creates a non-God player, registers + binds a connection handle, returns its full objid.
+	///
+	/// <para>The player is set APPROVED. Every character in this narrative is a full participant — they own,
+	/// join, administer and pose into scenes — and association with a scene requires approval since the
+	/// package's 1.6.0 guard. The refusal path is the subject of
+	/// <see cref="Scenes.SceneApprovalIntegrationTests"/>; here approval is fixture, not subject.</para>
+	/// </summary>
 	private async Task<string> CreatePlayerAsync(string name, string password, long handle)
 	{
 		await God1($"@pcreate {name}={password}");
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
 		if (string.IsNullOrEmpty(dbref) || dbref.StartsWith("#-") || !DBRef.TryParse(dbref, out var parsed))
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
+
+		await God1($"@set {dbref}=APPROVED");
 
 		await ConnectionService.Register(handle, "localhost", "localhost", "test",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
