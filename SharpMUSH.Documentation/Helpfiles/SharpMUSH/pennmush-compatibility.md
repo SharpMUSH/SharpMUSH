@@ -45,6 +45,12 @@ function's name from evaluated output, so `[setq(0,add)]%q0(1,2)` calls `add`.
 SharpMUSH recognizes function names lexically, so a name that only appears after
 substitution is treated as ordinary text, not a call.
 
+**A command that crashes says so.** PennMUSH has no equivalent: when an internal
+error escapes a SharpMUSH command, the command returns
+`#-1 EXCEPTION: <json>` and the player is notified with the same text, instead of
+producing no output at all. See `help exception` for the payload and what a
+mortal versus a wizard is shown.
+
 **Unescaped commas are never absorbed by a final argument.** PennMUSH lets the
 last argument of functions such as `pemit()`, `emit()`, and `capstr()` swallow
 extra unescaped commas — `capstr(a,b,c)` capitalizes the string `a,b,c` — though

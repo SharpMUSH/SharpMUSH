@@ -317,6 +317,15 @@ public static class ErrorMessages
 		public const string NotGoing = "#-1 OBJECT NOT MARKED FOR DESTRUCTION";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string InternalErrorFormat = "#-1 INTERNAL SHARPMUSH ERROR:\n{0}";
+
+		/// <summary>
+		/// A command threw. <c>{0}</c> is a single-line JSON object built by
+		/// <see cref="ExceptionReport"/>; see that type for the disclosure rule that decides which
+		/// fields a given recipient gets. Never build this string by hand — the whole point of the
+		/// builder is that the mortal payload is an allowlist rather than a scrubbed dump.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ExceptionFormat = "#-1 EXCEPTION: {0}";
 	}
 
 	/// <summary>
