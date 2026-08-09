@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -117,9 +118,10 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 /// <summary>Helper to register the full wiki service stack needed for client component tests.</summary>
 file static class WikiServiceSetup
 {
-	public static void AddWikiTestServices(this BunitContext ctx)
+	/// <summary>Returns the authorization context so a test can grant itself policies.</summary>
+	public static BunitAuthorizationContext AddWikiTestServices(this BunitContext ctx)
 	{
-		ctx.AddAuthorization();
+		var auth = ctx.AddAuthorization();
 
 		// One InMemoryWikiService instance shared between the handler and the test
 		// so tests can seed pages directly via IWikiService and have WikiService
@@ -178,6 +180,7 @@ file static class WikiServiceSetup
 						NullLogger<LayoutService>.Instance));
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		return auth;
 	}
 }
 
@@ -282,9 +285,81 @@ public class WikiRedlinkRenderingTests : BunitContext
 
 public class CharacterRouteTests : BunitContext
 {
+	private readonly BunitAuthorizationContext _auth;
+
 	public CharacterRouteTests()
 	{
-		this.AddWikiTestServices();
+		_auth = this.AddWikiTestServices();
+	}
+
+	/// <summary>
+	/// Renders the real page and waits until the profile layout has resolved and the wiki body has
+	/// settled into its empty state (the widget renders before its fetch completes).
+	/// </summary>
+	private IRenderedComponent<SharpMUSH.Client.Pages.CharacterProfile> RenderProfile(string name)
+	{
+		var cut = Render<SharpMUSH.Client.Pages.CharacterProfile>(p => p.Add(c => c.Name, name));
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("WikiCharacterNoBio", StringComparison.Ordinal))
+				throw new InvalidOperationException("character wiki body not settled yet");
+		}, TimeSpan.FromSeconds(5));
+		return cut;
+	}
+
+	/// <summary>
+	/// A character with no wiki page is the normal case. The profile used to borrow the wiki's
+	/// "This page does not exist yet" alert, which read as breakage on a character's own profile.
+	/// [Authorize] does nothing in bUnit (pages render below AuthorizeRouteView), so this asserts
+	/// the rendered wording directly rather than any redirect.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task CharacterProfile_WithoutBiography_StatesTheFactAndOffersToWriteOne()
+	{
+		_auth.SetAuthorized("Scribe");
+		_auth.SetPolicies("wiki.create");
+
+		var markup = RenderProfile("Aurelia").Markup;
+
+		// EchoLocalizer renders the indexed form as "Key(arg)", so this also pins the name argument.
+		await Assert.That(markup).Contains("WikiCharacterNoBio(Aurelia)");
+		await Assert.That(markup).Contains("WikiCharacterWriteBio");
+		await Assert.That(markup).DoesNotContain("WikiPageNotExist");
+		await Assert.That(markup).DoesNotContain("CreateThisPage");
+	}
+
+	/// <summary>
+	/// A reader who cannot create pages gets the same plain statement — not "Nothing to see here",
+	/// which reads as a dead end on a character that plainly exists.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task CharacterProfile_WithoutBiography_UnprivilegedReaderSeesNoCreateOffer()
+	{
+		var markup = RenderProfile("Aurelia").Markup;
+
+		await Assert.That(markup).Contains("WikiCharacterNoBio(Aurelia)");
+		await Assert.That(markup).DoesNotContain("WikiCharacterWriteBio");
+		await Assert.That(markup).DoesNotContain("NothingToSeeHere");
+	}
+
+	/// <summary>The ordinary wiki empty state is untouched — it is honest wording for a wiki page.</summary>
+	[TUnit.Core.Test]
+	public async Task WikiPage_WithoutArticle_KeepsTheWikiEmptyState()
+	{
+		_auth.SetAuthorized("Scribe");
+		_auth.SetPolicies("wiki.create");
+
+		var cut = Render<WikiView>(p => p
+				.Add(v => v.Slug, "ghost_page")
+				.Add(v => v.Mode, WikiView.WikiMode.View));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("WikiPageNotExist", StringComparison.Ordinal))
+				throw new InvalidOperationException("wiki body not settled yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Markup).DoesNotContain("WikiCharacterNoBio");
 	}
 
 	[TUnit.Core.Test]

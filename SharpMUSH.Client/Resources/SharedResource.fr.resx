@@ -1600,6 +1600,14 @@
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Parcourez les rubriques, recherchez des références et lisez le manuel.</value>
   </data>
+  <data name="WikiCharacterNoBio" xml:space="preserve">
+    <value>{0} n'a pas encore de biographie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiCharacterWriteBio" xml:space="preserve">
+    <value>Rédiger une biographie</value>
+    <comment>MT</comment>
+  </data>
   <data name="WkEditLivePreview" xml:space="preserve">
     <value>modification · aperçu en direct</value>
   </data>

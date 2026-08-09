@@ -8,7 +8,7 @@ namespace SharpMUSH.Client.Services;
 /// <summary>
 /// DB-backed, scope-aware layout service. Reads layouts from <c>/api/layouts/{scope}</c> (anonymous-
 /// friendly) and writes them back with <c>layout.admin</c>. A scope that has never been customized
-/// (HTTP 404) or that fails to load resolves to <see cref="GetDefaultLayout"/>.
+/// (HTTP 204) or that fails to load resolves to <see cref="GetDefaultLayout"/>.
 /// </summary>
 public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<LayoutService> logger) : ILayoutService
 {
@@ -99,7 +99,11 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var response = await http.GetAsync($"api/layouts/{Uri.EscapeDataString(scope)}");
-			if (response.StatusCode == HttpStatusCode.NotFound)
+
+			// 204 is the server saying "nothing stored for this scope" — the ordinary state of an
+			// uncustomized game, and not a failure. 404 is still accepted so a client served from a
+			// cached build keeps working against an older server (and vice versa) during a rollout.
+			if (response.StatusCode is HttpStatusCode.NoContent or HttpStatusCode.NotFound)
 			{
 				return null;
 			}

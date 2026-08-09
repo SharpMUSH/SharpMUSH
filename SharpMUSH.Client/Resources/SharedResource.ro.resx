@@ -3952,6 +3952,14 @@
     <value>Categorie</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiCharacterNoBio" xml:space="preserve">
+    <value>{0} nu are încă o biografie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiCharacterWriteBio" xml:space="preserve">
+    <value>Scrie o biografie</value>
+    <comment>MT</comment>
+  </data>
   <data name="WikiDelete" xml:space="preserve">
     <value>Ștergere</value>
     <comment>MT</comment>

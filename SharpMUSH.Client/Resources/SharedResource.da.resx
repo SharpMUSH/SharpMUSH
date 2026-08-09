@@ -3952,6 +3952,14 @@
     <value>Kategori</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiCharacterNoBio" xml:space="preserve">
+    <value>{0} har endnu ingen biografi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiCharacterWriteBio" xml:space="preserve">
+    <value>Skriv en biografi</value>
+    <comment>MT</comment>
+  </data>
   <data name="WikiDelete" xml:space="preserve">
     <value>Slet</value>
     <comment>MT</comment>

@@ -3952,6 +3952,14 @@
     <value>Kategoria</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiCharacterNoBio" xml:space="preserve">
+    <value>{0} nie ma jeszcze biografii.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiCharacterWriteBio" xml:space="preserve">
+    <value>Napisz biografię</value>
+    <comment>MT</comment>
+  </data>
   <data name="WikiDelete" xml:space="preserve">
     <value>Usuń</value>
     <comment>MT</comment>

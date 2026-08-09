@@ -1,6 +1,6 @@
 format: 1
 package: profile-handler
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Read-only character directory, online list, and profile API, served through the HTTP verb routers."
 license: MIT
@@ -23,7 +23,14 @@ objects:
     target: "{{$http_handler}}"
     attributes:
       # ── Helpers (me-relative; redefinable per game) ──────────────────────
-      # One profile field as the {value, visible} shape. %0 = objid, %1 = key.
+      # One already-computed value as the {value, visible} shape the portal reads. %0 = the value.
+      # Args are split before evaluation, so a result containing commas survives intact.
+      FN`VALUE: |-
+        json(object,value,json(string,%0),visible,json(boolean,true))
+      # One player-authored profile field as the {value, visible} shape. %0 = objid, %1 = key.
+      # get() and never u(): PROFILE`* holds text a player typed, and evaluating it would run
+      # whatever they hid in it with this wizard handler's permissions.
+      # Unused by the shipped schema — see the opt-in block under GET`PROFILE`SCHEMA.
       FN`FIELD: |-
         json(object,value,json(string,get(%0/PROFILE`%1)),visible,json(boolean,true))
       # Directory category for one player (%0). Wizard > Royalty > Guest; blank otherwise.
@@ -63,11 +70,39 @@ objects:
       GET`ONLINE: |-
         @respond/type application/json; think json_array(iter(filter(me/FN`ONLINEVIS,mwho()),u(me/FN`CHARROW,%i0),,%r),%r)
       # GET /http/profile?objid=#1:123 — one character's public profile.
+      # `fields` carries only facts the engine itself knows, so a brand-new character's profile
+      # renders real state instead of a table of blanks. Anything a game wants beyond that is a
+      # PROFILE`* attribute it also adds to the schema — see the opt-in block below.
+      # objid is repeated inside `fields` on purpose: the envelope's copy addresses the character,
+      # but the schema renderer only resolves element keys against `fields`, so a field the schema
+      # declares has to live there to render at all.
       GET`PROFILE: |-
-        @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json(object,character,json(string,name(%q<form.objid>)),objid,json(string,objid(%q<form.objid>)),dbref,json(string,num(%q<form.objid>)),fields,json(object,fullname,u(FN`FIELD,%q<form.objid>,fullname),alias,u(FN`FIELD,%q<form.objid>,alias),age,u(FN`FIELD,%q<form.objid>,age),concept,u(FN`FIELD,%q<form.objid>,concept),faction,u(FN`FIELD,%q<form.objid>,faction),description,u(FN`FIELD,%q<form.objid>,description)))
+        @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json(object,character,json(string,name(%q<form.objid>)),objid,json(string,objid(%q<form.objid>)),dbref,json(string,num(%q<form.objid>)),fields,json(object,created,u(FN`VALUE,ctime(%q<form.objid>)),objid,u(FN`VALUE,objid(%q<form.objid>))))
       # GET /http/profile/schema — the Portal Schema Document the portal renders from
       # (Area 21, kind:"view"). The character profile is the canonical view instance:
       # sections → keyvalue-style field elements; the GET`PROFILE data endpoint supplies
       # {value, visible} per key.
+      #
+      # The shipped schema declares only what a character has from the moment it is created:
+      # its creation date and its objid. A schema field with no data behind it still renders —
+      # as an empty row — so declaring fullname/age/concept/faction out of the box gave every
+      # character, including its own owner, a profile of blank labels. Those fields are a game's
+      # choice, not the engine's: opt back into them below.
       GET`PROFILE`SCHEMA: |-
-        @respond/type application/json; think json(object,kind,json(string,view),schema_version,json(number,1),pages,json(array,json(object,key,json(string,profile),order,json(number,1),sections,json(array,json(object,name,json(string,Demographics),order,json(number,1),elements,json(array,json(object,kind,json(string,field),key,json(string,fullname),label,json(string,Full Name),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,alias),label,json(string,Alias),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,age),label,json(string,Age),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,concept),label,json(string,Concept),type,json(string,text),visible_to,json(string,public)))),json(object,name,json(string,Status),order,json(number,2),elements,json(array,json(object,kind,json(string,field),key,json(string,faction),label,json(string,Faction),type,json(string,text),visible_to,json(string,public)))),json(object,name,json(string,Description),order,json(number,3),elements,json(array,json(object,kind,json(string,field),key,json(string,description),label,json(string,Description),type,json(string,mstring),visible_to,json(string,public))))))))
+        @respond/type application/json; think json(object,kind,json(string,view),schema_version,json(number,1),pages,json(array,json(object,key,json(string,profile),order,json(number,1),sections,json(array,json(object,name,json(string,Identity),order,json(number,1),elements,json(array,json(object,kind,json(string,field),key,json(string,created),label,json(string,Created),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,objid),label,json(string,Object ID),type,json(string,text),visible_to,json(string,public))))))))
+
+      # ── Opt-in: the richer demographic schema ────────────────────────────
+      # Demonstrating the schema system is the point of this package, so the fuller example is kept
+      # here rather than deleted. To adopt it on your game, add the fields to the data route and the
+      # matching elements to the schema — both, or the portal renders labels with nothing behind
+      # them, which is the defect the shipped schema above exists to avoid.
+      #
+      # Players fill these in with `&PROFILE`FULLNAME me=Gandalf the Grey` (etc.); FN`FIELD reads
+      # PROFILE`<key> with get(), never u(). Set `show_when_empty: false` on an element if you would
+      # rather an unfilled field vanish than render blank.
+      #
+      #   GET`PROFILE: |-
+      #     @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json(object,character,json(string,name(%q<form.objid>)),objid,json(string,objid(%q<form.objid>)),dbref,json(string,num(%q<form.objid>)),fields,json(object,created,u(FN`VALUE,ctime(%q<form.objid>)),objid,u(FN`VALUE,objid(%q<form.objid>)),fullname,u(FN`FIELD,%q<form.objid>,fullname),alias,u(FN`FIELD,%q<form.objid>,alias),age,u(FN`FIELD,%q<form.objid>,age),concept,u(FN`FIELD,%q<form.objid>,concept),faction,u(FN`FIELD,%q<form.objid>,faction),description,u(FN`FIELD,%q<form.objid>,description)))
+      #
+      #   GET`PROFILE`SCHEMA: |-
+      #     @respond/type application/json; think json(object,kind,json(string,view),schema_version,json(number,1),pages,json(array,json(object,key,json(string,profile),order,json(number,1),sections,json(array,json(object,name,json(string,Demographics),order,json(number,1),elements,json(array,json(object,kind,json(string,field),key,json(string,fullname),label,json(string,Full Name),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,alias),label,json(string,Alias),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,age),label,json(string,Age),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,concept),label,json(string,Concept),type,json(string,text),visible_to,json(string,public)))),json(object,name,json(string,Status),order,json(number,2),elements,json(array,json(object,kind,json(string,field),key,json(string,faction),label,json(string,Faction),type,json(string,text),visible_to,json(string,public)))),json(object,name,json(string,Description),order,json(number,3),elements,json(array,json(object,kind,json(string,field),key,json(string,description),label,json(string,Description),type,json(string,mstring),visible_to,json(string,public))))))))

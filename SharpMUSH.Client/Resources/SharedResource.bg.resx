@@ -3952,6 +3952,14 @@
     <value>Категория</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiCharacterNoBio" xml:space="preserve">
+    <value>{0} все още няма биография.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WikiCharacterWriteBio" xml:space="preserve">
+    <value>Напишете биография</value>
+    <comment>MT</comment>
+  </data>
   <data name="WikiDelete" xml:space="preserve">
     <value>Изтрий</value>
     <comment>MT — plain imperative, button</comment>
