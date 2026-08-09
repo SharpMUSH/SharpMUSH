@@ -1,7 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using OneOf;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -43,41 +41,33 @@ public class ChannelPermissionTests
 		=> WebAppFactoryArg.FunctionParserFor(executor);
 
 	/// <summary>
-	/// Runs <paramref name="action"/> and returns every message the notify mock was asked to send to
-	/// <paramref name="who"/> while it ran, as plain text. Used to prove two refusals are worded
-	/// identically, and that a bulk switch never names a channel.
+	/// Runs <paramref name="action"/> and returns every message <paramref name="who"/> was notified of
+	/// while it ran, as plain text. Used to prove two refusals are worded identically, and that a bulk
+	/// switch never names a channel.
 	///
-	/// <para>It snapshots a call index rather than calling <c>ClearReceivedCalls</c>. The notify mock is
-	/// shared for the whole session and TUnit runs tests in parallel, so clearing it deletes calls other
-	/// tests are about to assert on — it made <c>MailCommand</c>, <c>Flag_Delete_RemovesNonSystemFlag</c>
-	/// and <c>Test_Respond_StatusLine_TooLong</c> fail at random. Filtering by recipient is what actually
-	/// isolates these tests: every one of them creates a uniquely named player.</para>
+	/// <para><b>It does not touch <c>ReceivedCalls()</c>.</b> The notify substitute is a singleton shared
+	/// by every test in the session and TUnit runs tests in parallel, so it is being written to the entire
+	/// time these assertions run — and NSubstitute's threading contract
+	/// (nsubstitute.github.io/help/threading) says verification and production activity must not overlap.
+	/// Two earlier shapes were both wrong for that reason: <c>ClearReceivedCalls()</c> deleted calls other
+	/// tests were about to assert on (it made <c>MailCommand</c>,
+	/// <c>Flag_Delete_RemovesNonSystemFlag</c> and <c>Test_Respond_StatusLine_TooLong</c> fail at random),
+	/// and snapshotting a call index still enumerated the shared substitute — it moved the race rather
+	/// than removing it.</para>
+	///
+	/// <para>The messages now come from <see cref="TestHelpers.NotificationRecorder"/>, which the
+	/// substitute writes into from its delivery callback, on the calling thread, keyed by recipient. No
+	/// NSubstitute state is read; the per-recipient <c>ConcurrentQueue</c> snapshot is safe under
+	/// concurrent enqueue by construction; and since every test here creates a uniquely named player, no
+	/// other test writes into the bucket being read.</para>
 	/// </summary>
 	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
 	{
-		var before = NotifyService.ReceivedCalls().Count();
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(who);
 		await action();
-		return NotifiedMessagesFrom(who, before);
+		return [.. recorder.For(who).Skip(before)];
 	}
-
-	private List<string> NotifiedMessagesFrom(DBRef who, int skip)
-		=> NotifyService.ReceivedCalls().Skip(skip).ToList()
-			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Select(call => call.GetArguments())
-			.Where(args => args.Length > 1 && args[0] switch
-			{
-				AnySharpObject o => o.Object().DBRef.Number == who.Number,
-				DBRef d => d.Number == who.Number,
-				_ => false
-			})
-			.Select(args => args[1] switch
-			{
-				OneOf<MString, string> m => m.Match(ms => ms.ToPlainText(), str => str),
-				MString ms => ms.ToPlainText(),
-				string str => str,
-				_ => string.Empty
-			})
-			.ToList();
 
 	/// <summary>
 	/// Channel names must be unique across the whole session — <see cref="ServerWebAppFactory"/> is

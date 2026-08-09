@@ -60,6 +60,14 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	/// </summary>
 	public DBRef ExecutorDBRef => _one;
 
+	/// <summary>
+	/// What the notify substitute was asked to deliver, bucketed by recipient. Read this instead of
+	/// enumerating <c>ReceivedCalls()</c> when a test needs the text of what was said: the substitute is
+	/// one singleton shared by every test in the session, and NSubstitute does not support enumerating it
+	/// while other threads are still recording calls into it.
+	/// </summary>
+	public TestHelpers.NotificationRecorder Notifications { get; } = new();
+
 	// Metrics collected via MeterListener — static so they persist across all factory instances
 	// and can be written from the ProcessExit handler regardless of disposal order.
 	private MeterListener? _meterListener;
@@ -222,7 +230,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
-			TestHelpers.CreateNotifyServiceSubstitute(),
+			TestHelpers.CreateNotifyServiceSubstitute(Notifications),
 			_customDatabaseName,
 			_sqlPlatform);
 
