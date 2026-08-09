@@ -4484,4 +4484,36 @@
     <value>Kontoen din er klar. Å opprette en karakter er det siste trinnet før du kan spille.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>Hjelpefilene kunne ikke lastes inn.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Alle emner ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Filtrer emner</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Ingen emner samsvarer med det filteret.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Ingen oppføring for «{0}».</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Flere emner samsvarer med «{0}». Velg ett:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Administratorhjelp</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>Ahelp-emnene. Kun for Trollmenn og Gud, i portalen som i spillet.</value>
+    <comment>MT</comment>
+  </data>
 </root>

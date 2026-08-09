@@ -1,4 +1,3 @@
-using System.Text;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -17,7 +16,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		if (TextFileService == null)
+		if (HelpTopicResolver == null)
 		{
 			await NotifyService!.Notify(executor, "Help system not initialized.", executor);
 			return new CallState(ErrorMessages.Returns.HelpSystemNotInitialized);
@@ -26,10 +25,10 @@ public partial class Commands
 		// No arguments - show main help (PennMUSH shows the command's own entry)
 		if (args.Count == 0)
 		{
-			var mainHelp = await TextFileService.GetEntryAsync("help", "help");
+			var mainHelp = await HelpTopicResolver.GetExactAsync(HelpCorpora.Help, "help");
 			if (mainHelp != null)
 			{
-				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainHelp, mushParser: parser);
+				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainHelp.Markdown, mushParser: parser);
 				await NotifyService!.Notify(executor, rendered, executor);
 			}
 			else
@@ -44,9 +43,7 @@ public partial class Commands
 		// /search switch - search entry bodies for content containing the term (PennMUSH behavior)
 		if (switches.Contains("SEARCH"))
 		{
-			var matches = (await TextFileService.SearchContentAsync("help", topic))
-				.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-				.ToList();
+			var matches = await HelpTopicResolver.SearchContentAsync(HelpCorpora.Help, topic);
 			if (matches.Count == 0)
 			{
 				await NotifyService!.Notify(executor, $"No matches.", executor);
@@ -58,124 +55,27 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (topic.Contains('*') || topic.Contains('?'))
+		var isWildcard = topic.Contains('*') || topic.Contains('?');
+		var resolution = await HelpTopicResolver.ResolveAsync(HelpCorpora.Help, topic);
+
+		if (resolution.TryPickT0(out var entry, out var notAnEntry))
 		{
-			var matches = (await TextFileService.SearchEntriesAsync("help", topic))
-				.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-				.ToList();
-			if (matches.Count == 0)
-			{
-				await NotifyService!.Notify(executor, $"No entries matching '{topic}' were found.", executor);
-			}
-			else if (matches.Count == 1)
-			{
-				var wildcardContent = await TextFileService.GetEntryAsync("help", matches[0]);
-				if (wildcardContent != null)
-				{
-					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent, mushParser: parser);
-					await NotifyService!.Notify(executor, rendered, executor);
-				}
-			}
-			else
-			{
-				await NotifyService!.Notify(executor, $"Here are the entries which match '{topic}':", executor);
-				await NotifyService!.Notify(executor, string.Join(", ", matches), executor);
-			}
-			return CallState.Empty;
+			var rendered = RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown, mushParser: parser);
+			await NotifyService!.Notify(executor, rendered, executor);
 		}
-
-		// Non-wildcard: PennMUSH does prefix match first (name LIKE 'topic%', takes first alphabetically).
-		// If nothing found, build a fuzzy pattern with * between words and at alpha-digit boundaries.
-		var prefixMatches = (await TextFileService.SearchEntriesAsync("help", topic + "*"))
-			.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-			.ToList();
-
-		if (prefixMatches.Count > 0)
+		else if (notAnEntry.TryPickT0(out var candidates, out _))
 		{
-			// Show the first alphabetically matching entry (matches PennMUSH's LIMIT 1 ORDER BY name)
-			var firstMatch = prefixMatches[0];
-			var prefixContent = await TextFileService.GetEntryAsync("help", firstMatch);
-			if (prefixContent != null)
-			{
-				var rendered = RecursiveMarkdownHelper.RenderMarkdown(prefixContent, mushParser: parser);
-				await NotifyService!.Notify(executor, rendered, executor);
-			}
-			return CallState.Empty;
-		}
-
-		var fuzzyPattern = BuildFuzzyPattern(topic);
-		var fuzzyMatches = (await TextFileService.SearchEntriesAsync("help", fuzzyPattern))
-			.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-			.ToList();
-
-		if (fuzzyMatches.Count == 0)
-		{
-			await NotifyService!.Notify(executor, $"No entry for '{topic}'.", executor);
-		}
-		else if (fuzzyMatches.Count == 1)
-		{
-			var fuzzyContent = await TextFileService.GetEntryAsync("help", fuzzyMatches[0]);
-			if (fuzzyContent != null)
-			{
-				var rendered = RecursiveMarkdownHelper.RenderMarkdown(fuzzyContent, mushParser: parser);
-				await NotifyService!.Notify(executor, rendered, executor);
-			}
+			await NotifyService!.Notify(executor, $"Here are the entries which match '{topic}':", executor);
+			await NotifyService!.Notify(executor, string.Join(", ", candidates.Topics), executor);
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"Here are the entries which match '{topic}':", executor);
-			await NotifyService!.Notify(executor, string.Join(", ", fuzzyMatches), executor);
+			// PennMUSH words the miss differently depending on whether the reader wildcarded.
+			await NotifyService!.Notify(executor, isWildcard
+				? $"No entries matching '{topic}' were found."
+				: $"No entry for '{topic}'.", executor);
 		}
 
 		return CallState.Empty;
-	}
-
-	/// <summary>
-	/// Builds a fuzzy wildcard pattern from a plain topic string, matching PennMUSH's behavior:
-	/// - Inserts '*' between words (at space boundaries)
-	/// - Inserts '*' at transitions from alphabetic to digit characters
-	/// Note: digit→alpha transitions do NOT get a wildcard (matches PennMUSH source).
-	/// </summary>
-	private static string BuildFuzzyPattern(string topic)
-	{
-		if (string.IsNullOrEmpty(topic))
-			return topic;
-
-		var sb = new StringBuilder();
-		const int StateNone = 0;
-		const int StateAlpha = 1;
-		const int StateDigit = 2;
-		var state = StateNone;
-
-		foreach (var c in topic)
-		{
-			if (char.IsWhiteSpace(c))
-			{
-				if (state != StateNone)
-				{
-					state = StateNone;
-					sb.Append('*');
-				}
-				sb.Append(c);
-			}
-			else if (char.IsAsciiDigit(c))
-			{
-				if (state == StateAlpha)
-				{
-					// alpha → digit transition: insert * (PennMUSH behavior)
-					state = StateDigit;
-					sb.Append('*');
-				}
-				sb.Append(c);
-			}
-			else
-			{
-				if (state != StateAlpha)
-					state = StateAlpha;
-				sb.Append(c);
-			}
-		}
-
-		return sb.ToString();
 	}
 }

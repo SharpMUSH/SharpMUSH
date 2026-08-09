@@ -4484,4 +4484,36 @@
     <value>Je account is klaar. Een personage aanmaken is de laatste stap voordat je kunt spelen.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>De helpbestanden konden niet worden geladen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Alle onderwerpen ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Onderwerpen filteren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Geen onderwerp komt overeen met dat filter.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Geen vermelding voor ‘{0}’.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Meerdere onderwerpen komen overeen met ‘{0}’. Kies er een:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Beheerdershulp</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>De ahelp-onderwerpen. Alleen voor Tovenaars en God, in het portaal net als in het spel.</value>
+    <comment>MT</comment>
+  </data>
 </root>

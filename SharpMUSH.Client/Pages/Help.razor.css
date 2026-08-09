@@ -45,3 +45,70 @@
         padding: 1rem;
     }
 }
+
+.help-topics {
+    margin-top: 1.25rem;
+}
+
+.help-section-title {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.help-filter {
+    margin-bottom: 1rem;
+}
+
+.help-topic-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    gap: 0.125rem 1rem;
+    max-height: 32rem;
+    overflow-y: auto;
+}
+
+.help-topic-list a {
+    display: block;
+    padding: 0.1875rem 0;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--accent);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.help-topic-list a:hover {
+    text-decoration: underline;
+}
+
+.help-empty {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-dim);
+}
+
+.help-admin {
+    border-color: var(--accent);
+}
+
+/* The index entry is server-rendered markdown, so its tags are not in this component's markup and
+   scoped CSS would not reach them without ::deep. */
+.help-entry ::deep a {
+    color: var(--accent);
+}
+
+.help-entry ::deep pre {
+    overflow-x: auto;
+}
+
+.help-entry ::deep table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+}

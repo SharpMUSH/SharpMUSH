@@ -4484,4 +4484,36 @@
     <value>Twoje konto jest gotowe. Utworzenie postaci to ostatni krok przed rozpoczęciem gry.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>Nie udało się wczytać plików pomocy.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Wszystkie tematy ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Filtruj tematy</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Żaden temat nie pasuje do tego filtra.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Brak wpisu dla „{0}”.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Kilka tematów pasuje do „{0}”. Wybierz jeden:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Pomoc administratora</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>Tematy ahelp. Tylko dla Czarodziejów i Boga, w portalu tak samo jak w grze.</value>
+    <comment>MT</comment>
+  </data>
 </root>

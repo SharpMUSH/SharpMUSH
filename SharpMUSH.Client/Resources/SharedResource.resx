@@ -3504,4 +3504,28 @@
   <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
     <value>Your account is ready. Creating a character is the last step before you can play.</value>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>The help files could not be loaded.</value>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>All topics ({0})</value>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Filter topics</value>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>No topic matches that filter.</value>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>No entry for ‘{0}’.</value>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Several topics match ‘{0}’. Pick one:</value>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Administrator help</value>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>The ahelp topics. Wizards and God only, in the portal as in the game.</value>
+  </data>
 </root>

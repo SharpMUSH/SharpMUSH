@@ -54,6 +54,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private static ITextFileService? TextFileService { get; set; }
 
+	private static IHelpTopicResolver? HelpTopicResolver { get; set; }
+
 	private static IMessageBus? MessageBus { get; set; }
 
 	private static IGameBroadcastService? GameBroadcastService { get; set; }
@@ -98,6 +100,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ITelemetryService telemetryService,
 		IWarningService warningService,
 		ITextFileService textFileService,
+		IHelpTopicResolver helpTopicResolver,
 		IMessageBus messageBus,
 		ILocalizationService localizationService,
 		IGameBroadcastService gameBroadcastService,
@@ -132,6 +135,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		TelemetryService = telemetryService;
 		WarningService = warningService;
 		TextFileService = textFileService;
+		HelpTopicResolver = helpTopicResolver;
 		MessageBus = messageBus;
 		LocalizationService = localizationService;
 		GameBroadcastService = gameBroadcastService;

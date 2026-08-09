@@ -18,7 +18,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		if (TextFileService == null)
+		if (HelpTopicResolver == null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsSystemNotInitialized), executor);
 			return new CallState(ErrorMessages.Returns.NewsSystemNotInitialized);
@@ -26,11 +26,10 @@ public partial class Commands
 
 		if (args.Count == 0)
 		{
-			var mainNews = await TextFileService.GetEntryAsync("news", "news");
+			var mainNews = await HelpTopicResolver.GetExactAsync(HelpCorpora.News, "news");
 			if (mainNews != null)
 			{
-				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainNews);
-				await NotifyService!.Notify(executor, rendered, executor);
+				await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(mainNews.Markdown), executor);
 			}
 			else
 			{
@@ -43,62 +42,46 @@ public partial class Commands
 
 		if (switches.Contains("SEARCH"))
 		{
-			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
+			var matches = await HelpTopicResolver.SearchTopicsAsync(HelpCorpora.News, topic);
 			if (matches.Count == 0)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoEntriesFoundContaining), executor, topic);
 			}
 			else if (matches.Count == 1)
 			{
-				var searchContent = await TextFileService.GetEntryAsync("news", matches[0]);
+				var searchContent = await HelpTopicResolver.GetExactAsync(HelpCorpora.News, matches[0]);
 				if (searchContent != null)
 				{
-					var rendered = RecursiveMarkdownHelper.RenderMarkdown(searchContent);
-					await NotifyService!.Notify(executor, rendered, executor);
+					await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(searchContent.Markdown), executor);
 				}
 			}
 			else
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsEntriesContaining), executor, topic);
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
+				await NotifyService!.Notify(executor, string.Join(", ", matches), executor);
 			}
 			return CallState.Empty;
 		}
 
-		if (topic.Contains('*') || topic.Contains('?'))
-		{
-			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
-			if (matches.Count == 0)
-			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), executor, topic);
-			}
-			else if (matches.Count == 1)
-			{
-				var wildcardContent = await TextFileService.GetEntryAsync("news", matches[0]);
-				if (wildcardContent != null)
-				{
-					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
-					await NotifyService!.Notify(executor, rendered, executor);
-				}
-			}
-			else
-			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTopicsMatchingFormat), executor, topic);
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
-			}
-			return CallState.Empty;
-		}
+		var isWildcard = topic.Contains('*') || topic.Contains('?');
+		var resolution = await HelpTopicResolver.ResolveAsync(HelpCorpora.News, topic);
 
-		var exactContent = await TextFileService.GetEntryAsync("news", topic);
-		if (exactContent != null)
+		if (resolution.TryPickT0(out var entry, out var notAnEntry))
 		{
-			var rendered = RecursiveMarkdownHelper.RenderMarkdown(exactContent);
-			await NotifyService!.Notify(executor, rendered, executor);
+			await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown), executor);
+		}
+		else if (notAnEntry.TryPickT0(out var candidates, out _))
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTopicsMatchingFormat), executor, topic);
+			await NotifyService!.Notify(executor, string.Join(", ", candidates.Topics), executor);
 		}
 		else
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), executor, topic);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTryPattern), executor);
+			if (!isWildcard)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTryPattern), executor);
+			}
 		}
 
 		return CallState.Empty;
@@ -117,7 +100,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (TextFileService == null)
+		if (HelpTopicResolver == null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpSystemNotInitialized), executor);
 			return new CallState(ErrorMessages.Returns.AhelpSystemNotInitialized);
@@ -125,11 +108,10 @@ public partial class Commands
 
 		if (args.Count == 0)
 		{
-			var mainAhelp = await TextFileService.GetEntryAsync("ahelp", "ahelp");
+			var mainAhelp = await HelpTopicResolver.GetExactAsync(HelpCorpora.Admin, "ahelp");
 			if (mainAhelp != null)
 			{
-				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainAhelp);
-				await NotifyService!.Notify(executor, rendered, executor);
+				await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(mainAhelp.Markdown), executor);
 			}
 			else
 			{
@@ -142,62 +124,46 @@ public partial class Commands
 
 		if (switches.Contains("SEARCH"))
 		{
-			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
+			var matches = await HelpTopicResolver.SearchTopicsAsync(HelpCorpora.Admin, topic);
 			if (matches.Count == 0)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoEntriesFoundContaining), executor, topic);
 			}
 			else if (matches.Count == 1)
 			{
-				var searchContent = await TextFileService.GetEntryAsync("ahelp", matches[0]);
+				var searchContent = await HelpTopicResolver.GetExactAsync(HelpCorpora.Admin, matches[0]);
 				if (searchContent != null)
 				{
-					var rendered = RecursiveMarkdownHelper.RenderMarkdown(searchContent);
-					await NotifyService!.Notify(executor, rendered, executor);
+					await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(searchContent.Markdown), executor);
 				}
 			}
 			else
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpEntriesContaining), executor, topic);
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
+				await NotifyService!.Notify(executor, string.Join(", ", matches), executor);
 			}
 			return CallState.Empty;
 		}
 
-		if (topic.Contains('*') || topic.Contains('?'))
-		{
-			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
-			if (matches.Count == 0)
-			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoHelpForTopic), executor, topic);
-			}
-			else if (matches.Count == 1)
-			{
-				var wildcardContent = await TextFileService.GetEntryAsync("ahelp", matches[0]);
-				if (wildcardContent != null)
-				{
-					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
-					await NotifyService!.Notify(executor, rendered, executor);
-				}
-			}
-			else
-			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTopicsMatchingFormat), executor, topic);
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
-			}
-			return CallState.Empty;
-		}
+		var isWildcard = topic.Contains('*') || topic.Contains('?');
+		var resolution = await HelpTopicResolver.ResolveAsync(HelpCorpora.Admin, topic);
 
-		var exactContent = await TextFileService.GetEntryAsync("ahelp", topic);
-		if (exactContent != null)
+		if (resolution.TryPickT0(out var entry, out var notAnEntry))
 		{
-			var rendered = RecursiveMarkdownHelper.RenderMarkdown(exactContent);
-			await NotifyService!.Notify(executor, rendered, executor);
+			await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown), executor);
+		}
+		else if (notAnEntry.TryPickT0(out var candidates, out _))
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTopicsMatchingFormat), executor, topic);
+			await NotifyService!.Notify(executor, string.Join(", ", candidates.Topics), executor);
 		}
 		else
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoHelpForTopic), executor, topic);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTryPattern), executor);
+			if (!isWildcard)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTryPattern), executor);
+			}
 		}
 
 		return CallState.Empty;

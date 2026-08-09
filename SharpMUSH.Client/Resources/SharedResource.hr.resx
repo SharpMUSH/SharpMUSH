@@ -4484,4 +4484,36 @@
     <value>Vaš je račun spreman. Stvaranje lika posljednji je korak prije nego što možete igrati.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>Datoteke pomoći nije bilo moguće učitati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Sve teme ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Filtriraj teme</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Nijedna tema ne odgovara tom filtru.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Nema unosa za „{0}“.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Više tema odgovara „{0}“. Odaberite jednu:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Pomoć za administratore</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>Teme iz ahelpa. Samo za Čarobnjake i Boga, na portalu kao i u igri.</value>
+    <comment>MT</comment>
+  </data>
 </root>

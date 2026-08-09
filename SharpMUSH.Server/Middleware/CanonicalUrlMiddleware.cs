@@ -68,7 +68,8 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 	/// <summary>
 	/// Produces the canonical form of a path:
 	/// 1. Lowercase the first path segment prefix (e.g. /Wiki → /wiki).
-	/// 2. Percent-decode then replace spaces with underscores in each segment.
+	/// 2. Percent-decode then replace spaces with underscores in each segment — except below
+	///    <c>/help</c>, whose tail is a help topic rather than a slug and is left verbatim.
 	/// 3. Strip trailing slash (except root "/").
 	/// 4. Rewrite a character biography's wiki route to its /character/{slug} alias.
 	/// </summary>
@@ -81,10 +82,21 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 			path = path[..^1];
 
 		var segments = path.Split('/');
+
+		// Help topics are not slugs. They are the markdown headers inside the shipped helpfiles, and
+		// they genuinely contain spaces ("getting started"), case ("MAIL") and punctuation ("@mail",
+		// "#-1 exception"). Slugifying them would 301 every one of those to a topic that does not
+		// exist, so below /help only the prefix itself is canonicalised.
+		var verbatimTail = segments.Length > 2
+			&& string.Equals(segments[1], "help", StringComparison.OrdinalIgnoreCase);
+
 		for (var i = 0; i < segments.Length; i++)
 		{
 			var seg = segments[i];
 			if (string.IsNullOrEmpty(seg))
+				continue;
+
+			if (i > 1 && verbatimTail)
 				continue;
 
 			var decoded = Uri.UnescapeDataString(seg);

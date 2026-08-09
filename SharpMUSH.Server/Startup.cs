@@ -354,6 +354,9 @@ public class Startup(
 
 		services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
 		services.AddSingleton<ILocalizedTextFileService, Implementation.Services.LocalizedTextFileService>();
+		// Shared by the in-game HELP/NEWS/AHELP commands and the portal's /api/help endpoints, so a
+		// topic resolves identically at a telnet prompt and in a browser.
+		services.AddSingleton<IHelpTopicResolver, Implementation.Services.HelpTopicResolver>();
 
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();

@@ -4484,4 +4484,36 @@
     <value>A fiókja készen áll. Egy karakter létrehozása az utolsó lépés, mielőtt játszhatna.</value>
     <comment>MT</comment>
   </data>
+  <data name="HelpLoadFailed" xml:space="preserve">
+    <value>A súgófájlokat nem sikerült betölteni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAllTopics" xml:space="preserve">
+    <value>Összes témakör ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpFilterTopics" xml:space="preserve">
+    <value>Témakörök szűrése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoTopicsMatch" xml:space="preserve">
+    <value>Egyetlen témakör sem felel meg ennek a szűrőnek.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpNoSuchTopic" xml:space="preserve">
+    <value>Nincs bejegyzés a(z) „{0}” elemhez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpSeveralTopicsMatch" xml:space="preserve">
+    <value>Több témakör is illeszkedik a(z) „{0}” elemre. Válasszon egyet:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminTitle" xml:space="preserve">
+    <value>Rendszergazdai súgó</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HelpAdminSubtitle" xml:space="preserve">
+    <value>Az ahelp témakörök. Csak Varázslóknak és Istennek, a portálon is, mint a játékban.</value>
+    <comment>MT</comment>
+  </data>
 </root>

@@ -116,11 +116,15 @@
       <Link>TextFiles\help\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\TextFiles\news\*.md">
+    <!-- ahelp/ and news/ live under the same Helpfiles tree as help/. These used to point at a
+         top-level ..\TextFiles\ that does not exist in this repository, so the globs matched nothing
+         and a published server shipped an empty TextFiles/news and TextFiles/ahelp — the in-game
+         `news` and `ahelp` commands had no entries to find. -->
+    <None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\news\*.md">
       <Link>TextFiles\news\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\TextFiles\ahelp\*.md">
+    <None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\ahelp\*.md">
       <Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
