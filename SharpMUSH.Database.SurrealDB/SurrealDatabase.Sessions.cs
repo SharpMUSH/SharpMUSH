@@ -37,6 +37,21 @@ public partial class SurrealDatabase
 			parameters, cancellationToken);
 	}
 
+	/// <summary>
+	/// UPDATE, never UPSERT: since SurrealDB 2.0 the two are distinct statements, and UPDATE on a record
+	/// that does not exist affects nothing and creates nothing. The embedded engine serialises the
+	/// statement itself, so no extra guard is needed against a concurrent revoke.
+	/// </summary>
+	public async ValueTask<bool> TouchSessionExpiryAsync(string token, long expiryUnixMs,
+		CancellationToken cancellationToken = default)
+	{
+		var response = await ExecuteAsync(
+			"UPDATE type::thing('session', $token) SET expiryUnixMs = $expiryUnixMs RETURN AFTER",
+			new Dictionary<string, object?> { ["token"] = token, ["expiryUnixMs"] = expiryUnixMs },
+			cancellationToken);
+		return response.GetValue<List<SessionDbRecord>>(0) is { Count: > 0 };
+	}
+
 	public async ValueTask<SharpSession?> GetSessionAsync(string token, CancellationToken cancellationToken = default)
 	{
 		var response = await ExecuteAsync(

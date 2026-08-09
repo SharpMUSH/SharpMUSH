@@ -24,6 +24,20 @@ public partial class MemgraphDatabase
 			}, cancellationToken);
 	}
 
+	/// <summary>
+	/// MATCH, never MERGE: the pattern binds nothing when the node is gone, so the SET never runs and no
+	/// node is created. <see cref="ExecuteWithRetryAsync"/> already retries the MVCC conflict a concurrent
+	/// revoke can raise, so a lost race here retries and then correctly finds nothing.
+	/// </summary>
+	public async ValueTask<bool> TouchSessionExpiryAsync(string token, long expiryUnixMs,
+		CancellationToken cancellationToken = default)
+	{
+		var result = await ExecuteWithRetryAsync(
+			"MATCH (s:Session {token: $token}) SET s.expiryUnixMs = $expiryUnixMs RETURN s.token AS token",
+			new { token, expiryUnixMs }, cancellationToken);
+		return result.Result.Count > 0;
+	}
+
 	public async ValueTask<SharpSession?> GetSessionAsync(string token, CancellationToken cancellationToken = default)
 	{
 		var result = await ExecuteWithRetryAsync(

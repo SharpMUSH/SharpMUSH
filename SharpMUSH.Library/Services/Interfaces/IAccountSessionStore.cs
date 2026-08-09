@@ -27,7 +27,9 @@ public interface IAccountSessionStore
 
 	/// <summary>
 	/// Validates a token. If valid and unexpired, returns the bound account and acting character and
-	/// slides the expiry window by the original TTL. Returns <c>null</c> if unknown or expired.
+	/// slides the expiry window by the original TTL. Returns <c>null</c> if unknown, expired, or revoked
+	/// while this very call was in flight — a token a ban has already taken away must not authenticate
+	/// the request that was holding it.
 	/// </summary>
 	Task<SessionIdentity?> ValidateAsync(string token, CancellationToken ct = default);
 

@@ -89,6 +89,35 @@ public class SurrealSessionStoreTests
 		await Assert.That(await db.GetSessionAsync("tok-conc")).IsNotNull();
 	}
 
+	/// <summary>
+	/// Same contract as <see cref="SessionStoreDbTests.TouchSessionExpiry_SlidesALiveSession_AndNeverInsertsARevokedOne"/>,
+	/// pinned here because the ArangoDB/Memgraph test host has no SurrealDB leg. It also pins the
+	/// SurrealDB-specific premise: since 2.0, UPDATE and UPSERT are distinct statements and UPDATE on a
+	/// record that does not exist creates nothing.
+	/// </summary>
+	[Test]
+	public async Task TouchSessionExpiry_SlidesALiveSession_AndNeverInsertsARevokedOne()
+	{
+		var db = await CreateFreshMigratedSurrealDatabaseAsync("touch");
+		var s = Make("tok-touch-1", "acctTouch", "203.0.113.40");
+		await db.UpsertSessionAsync(s);
+
+		var slid = s.ExpiryUnixMs + 60_000;
+		await Assert.That(await db.TouchSessionExpiryAsync("tok-touch-1", slid)).IsTrue();
+
+		var touched = await db.GetSessionAsync("tok-touch-1");
+		await Assert.That(touched!.ExpiryUnixMs).IsEqualTo(slid);
+		await Assert.That(touched.AccountId).IsEqualTo("acctTouch")
+			.Because("a touch slides the expiry and leaves the rest of the document alone");
+		await Assert.That(touched.OriginIp).IsEqualTo("203.0.113.40");
+
+		await db.DeleteSessionAsync("tok-touch-1");
+
+		await Assert.That(await db.TouchSessionExpiryAsync("tok-touch-1", slid + 60_000)).IsFalse();
+		await Assert.That(await db.GetSessionAsync("tok-touch-1")).IsNull()
+			.Because("renewal must never insert — that is exactly what resurrects a revoked session");
+	}
+
 	[Test]
 	public async Task DeleteForAccount_And_ForIp()
 	{
