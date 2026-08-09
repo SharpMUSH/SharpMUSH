@@ -48,7 +48,9 @@ public static class ChannelMute
 			return new CallState("Player is already muted.");
 		}
 
-		await Mediator.Send(new UpdateChannelUserStatusCommand(channel, executor,
+		// The status was written against the executor, so @channel/mute muted whoever issued it rather
+		// than the player they named.
+		await Mediator.Send(new UpdateChannelUserStatusCommand(channel, player,
 			new SharpChannelStatus(
 				null,
 				null,

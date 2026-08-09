@@ -62,7 +62,9 @@ public static class ChannelGag
 
 			var status = maybeMemberStatus.Status;
 
-			if ((status.Hide ?? false) == gagOn)
+			// @channel/gag read and wrote the Hide flag, so gagging hid you from the who-list and left you
+			// hearing every word. SharpChannelStatus is (Combine, Gagged, Hide, Mute, Title).
+			if ((status.Gagged ?? false) == gagOn)
 			{
 				await NotifyService.Notify(executor, $"CHAT: You are already in that gag state on {channel.Name.ToPlainText()}.", executor);
 				continue;
@@ -71,8 +73,8 @@ public static class ChannelGag
 			await Mediator.Send(new UpdateChannelUserStatusCommand(
 				channel, executor, new SharpChannelStatus(
 					null,
-					null,
 					gagOn,
+					null,
 					null,
 					null
 				)));
