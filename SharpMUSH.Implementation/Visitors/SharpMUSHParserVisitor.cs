@@ -897,11 +897,15 @@ public class SharpMUSHParserVisitor(
 			logger.LogError(ex, nameof(CallFunction));
 			success = false;
 
-			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+			// KnownExecutorObject throws when there is no executor — which is exactly the state at the
+			// connect screen. Using it here meant the error handler replaced the real exception with an
+			// ArgumentNullException of its own, hiding the actual failure. Resolve optionally instead.
+			var executor = await parser.CurrentState.ExecutorObject(Mediator);
 
-			if (executor.IsGod())
+			if (!executor.IsNone && executor.Known().IsGod())
 			{
-				await NotifyService.Notify(executor, string.Format(ErrorMessages.Returns.InternalErrorFormat, ex));
+				await NotifyService.Notify(executor.Known(),
+					string.Format(ErrorMessages.Returns.InternalErrorFormat, ex));
 			}
 
 			return CallState.Empty;
@@ -1021,6 +1025,9 @@ public class SharpMUSHParserVisitor(
 		bool isCommandList,
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{
+		// Hoisted out of the try so the catch can name the command that failed.
+		string? command = null;
+
 		try
 		{
 			var firstCommandMatch = context.evaluationString();
@@ -1028,7 +1035,7 @@ public class SharpMUSHParserVisitor(
 			if (firstCommandMatch?.SourceInterval.Length is null or 0)
 				return new None();
 
-			var command = firstCommandMatch.GetText().TrimStart();
+			command = firstCommandMatch.GetText().TrimStart();
 
 			var spaceIndex = command.AsSpan().IndexOf(' ');
 			if (spaceIndex != -1)
@@ -1380,8 +1387,57 @@ public class SharpMUSHParserVisitor(
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, nameof(EvaluateCommands));
-			return CallState.Empty;
+			// A command that throws used to be logged server-side and then swallowed to
+			// CallState.Empty, which is indistinguishable to the player from a command that simply
+			// had nothing to say. Surface it instead, following CallFunction's precedent above.
+			var correlationId = ExceptionReport.NewCorrelationId();
+			logger.LogError(ex, "{Method} threw for command {Command} (correlation {CorrelationId})",
+				nameof(EvaluateCommands), command ?? "(unknown)", correlationId);
+
+			return await ReportCommandException(ex, command, correlationId);
+		}
+	}
+
+	/// <summary>
+	/// Turns an escaped command exception into the player-visible <c>#-1 EXCEPTION: {json}</c>,
+	/// notifies whoever ran the command, and returns it so nested evaluations see it too.
+	/// </summary>
+	/// <remarks>
+	/// Notification targets, in order: the executor when there is one; otherwise the raw connection
+	/// handle, which is the only recipient available at the connect screen (where a pre-login command
+	/// such as <c>WHO</c> has no executor at all — precisely one of the cases this exists for).
+	/// The whole body is defensive: this runs because something already failed, so a second failure
+	/// here (a downed database behind <c>ExecutorObject</c>, say) must not escape and replace the
+	/// original exception.
+	/// </remarks>
+	private async ValueTask<Option<CallState>> ReportCommandException(Exception ex, string? command,
+		string correlationId)
+	{
+		try
+		{
+			var executor = await parser.CurrentState.ExecutorObject(Mediator);
+			var privileged = !executor.IsNone && await executor.Known().IsPriv();
+			var message = ExceptionReport.Format(ex, command, correlationId, privileged);
+
+			if (!executor.IsNone)
+			{
+				await NotifyService.Notify(executor.Known(), message);
+			}
+			else if (parser.CurrentState.Handle is not null)
+			{
+				await NotifyService.Notify(parser.CurrentState.Handle.Value, message);
+			}
+
+			return new CallState(message);
+		}
+		catch (Exception reportingFailure)
+		{
+			logger.LogError(reportingFailure,
+				"Failed to report command exception (correlation {CorrelationId})", correlationId);
+
+			// Still hand back an unprivileged payload: the player learns the command failed and gets
+			// the id that reaches the log, even though the notification could not be delivered.
+			return new CallState(ExceptionReport.Format(ex, command, correlationId, privileged: false));
 		}
 	}
 
