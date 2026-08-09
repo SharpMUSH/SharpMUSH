@@ -120,16 +120,27 @@ public class CommandExceptionSurfacingTests
 		await Assert.That(message.GetString()).IsNotNull().And.IsNotEmpty();
 	}
 
+	/// <summary>
+	/// A connection whose executor cannot be resolved — bound to a dbref that is not in the
+	/// database — has nobody to notify by object, so the report goes to the raw socket instead.
+	/// This used to be demonstrated with pre-login <c>WHO</c>, which threw
+	/// <see cref="ArgumentNullException"/> out of <c>KnownExecutorObject()</c>; that was a bug in
+	/// <c>WHO</c> and is fixed, so the handle-targeted path is exercised here instead.
+	/// <para>The throw comes from the visitor's own <c>WithoutNone()</c> on the unresolvable
+	/// executor, before the command body runs — a separate robustness gap that is only visible at
+	/// all because of the surfacing this class covers. What is asserted here is the delivery
+	/// target, not which line threw.</para>
+	/// </summary>
 	[Test]
-	public async Task APreLoginCommandWithNoExecutorNotifiesTheConnectionHandle()
+	public async Task ACommandWithNoResolvableExecutorNotifiesTheConnectionHandle()
 	{
-		// The connect screen: a registered handle with nothing bound to it, so CurrentState.Executor
-		// is null. WHO calls KnownExecutorObject unconditionally and throws ArgumentNullException.
 		var handle = Random.Shared.NextInt64(900_000, 999_999);
 		await ConnectionService.Register(handle, "localhost", "localhost", "test",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		await ConnectionService.Bind(handle, new DBRef(999_999_999));
 
-		await WebAppFactoryArg.CommandParser.CommandParse(handle, ConnectionService, MModule.single("WHO"));
+		await WebAppFactoryArg.CommandParser.CommandParse(handle, ConnectionService,
+			MModule.single(CrashingCommand));
 
 		var message = NotificationToHandle(handle);
 
@@ -138,9 +149,10 @@ public class CommandExceptionSurfacingTests
 
 		using var document = JsonDocument.Parse(PayloadOf(message));
 		await Assert.That(document.RootElement.GetProperty("type").GetString())
-			.IsEqualTo(nameof(ArgumentNullException));
+			.IsEqualTo(nameof(ArgumentException));
+		await Assert.That(document.RootElement.GetProperty("command").GetString()).IsEqualTo(CrashingCommand);
 
-		// No executor means no privilege, so the unprivileged allowlist applies.
+		// No resolvable executor means no privilege, so the unprivileged allowlist applies.
 		var keys = document.RootElement.EnumerateObject().Select(p => p.Name).ToArray();
 		await Assert.That(keys).IsEquivalentTo(new[] { "id", "command", "type" });
 	}
