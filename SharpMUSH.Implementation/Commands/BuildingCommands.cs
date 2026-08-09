@@ -33,6 +33,7 @@ public partial class Commands
 	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
 	public static async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.Arguments;
 		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -127,6 +128,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "name"])]
 	public static async ValueTask<Option<CallState>> Rename(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var name = parser.CurrentState.Arguments["1"].Message!;
@@ -159,6 +161,7 @@ public partial class Commands
 	[SharpCommand(Name = "@SET", Behavior = CB.RSArgs | CB.EqSplit, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "attribute", "value"])]
 	public static async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(args["0"].Message!));
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
@@ -240,6 +243,7 @@ public partial class Commands
 		MaxArgs = 2, ParameterNames = ["object", "player"])]
 	public static async ValueTask<Option<CallState>> ChangeOwner(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
@@ -297,6 +301,7 @@ public partial class Commands
 	[SharpCommand(Name = "@DESTROY", Switches = ["OVERRIDE"], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> Destroy(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
@@ -619,6 +624,7 @@ public partial class Commands
 		MaxArgs = 2, ParameterNames = ["object", "destination"])]
 	public static async ValueTask<Option<CallState>> Link(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var exitName = args["0"].Message!.ToPlainText();
@@ -785,6 +791,7 @@ public partial class Commands
 	[SharpCommand(Name = "@NUKE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> Nuke(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// @nuke is @destroy/override: it bypasses the SAFE flag and the "use @nuke" player guard.
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
@@ -799,6 +806,7 @@ public partial class Commands
 	[SharpCommand(Name = "@UNDESTROY", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> UnDestroy(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
@@ -855,6 +863,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "zone"])]
 	public static async ValueTask<Option<CallState>> ChangeZone(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
@@ -949,6 +958,7 @@ public partial class Commands
 		MinArgs = 1, MaxArgs = 6, ParameterNames = ["name", "exits"])]
 	public static async ValueTask<Option<CallState>> Dig(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// NOTE: We discard arguments 4-6.
 		var executorBase = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executor = executorBase.Object();
@@ -1035,6 +1045,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "locktype", "key"])]
 	public static async ValueTask<Option<CallState>> Lock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var target = args["0"].Message!.ToPlainText();
@@ -1074,6 +1085,7 @@ public partial class Commands
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object", "locktype"])]
 	public static async ValueTask<Option<CallState>> Unlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var target = args["0"].Message!.ToPlainText();
@@ -1111,6 +1123,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
 	public static async ValueTask<Option<CallState>> ELock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// @ELOCK is an alias for @lock/enter
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
@@ -1141,6 +1154,7 @@ public partial class Commands
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> EUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// @EUNLOCK is an alias for @unlock/enter
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
@@ -1170,6 +1184,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
 	public static async ValueTask<Option<CallState>> ULock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// @ULOCK is an alias for @lock/use
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
@@ -1200,6 +1215,7 @@ public partial class Commands
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> UUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// @UUNLOCK is an alias for @unlock/use
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
@@ -1246,6 +1262,7 @@ public partial class Commands
 		MinArgs = 1, MaxArgs = 5, ParameterNames = ["exit", "destination"])]
 	public static async ValueTask<Option<CallState>> Open(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var exitName = args["0"].Message!.ToPlainText();
@@ -1335,6 +1352,7 @@ public partial class Commands
 		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "name", "cost"])]
 	public static async ValueTask<Option<CallState>> Clone(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
@@ -1448,6 +1466,7 @@ public partial class Commands
 	[SharpCommand(Name = "@MONIKER", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "moniker"])]
 	public static async ValueTask<Option<CallState>> Moniker(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
@@ -1480,9 +1499,10 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@PARENT", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "parent"])]
+	[SharpCommand(Name = "@PARENT", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "parent"])]
 	public static async ValueTask<Option<CallState>> Parent(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 
@@ -1522,6 +1542,7 @@ public partial class Commands
 	[SharpCommand(Name = "@UNLINK", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> Unlink(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();

@@ -2119,7 +2119,11 @@ public class SharpMUSHParserVisitor(
 
 		// TODO: Investigate if single-token commands should support argument splitting.
 		// Currently causing errors, may require special handling for single-character commands.
-		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition.LibraryInformation);
+		// The root command must be passed so the no-space branch strips the token: without it, a bare
+		// "]" split to a single argument equal to "]" itself, and the re-dispatch in NoParse/StrictParse
+		// re-entered this same path forever — a stack overflow that takes the whole process down.
+		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition.LibraryInformation,
+			singleRootCommand);
 		if (splitResult.TryPickT1(out var splitError, out var arguments))
 		{
 			if (prs.CurrentState.Handle.HasValue)

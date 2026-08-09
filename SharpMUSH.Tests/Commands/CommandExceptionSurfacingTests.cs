@@ -4,10 +4,13 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.Core;
 using OneOf;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
 using System.Text;
@@ -23,11 +26,12 @@ namespace SharpMUSH.Tests.Commands;
 /// payload is valid JSON, a mortal's copy leaks no internals, and the server log still gets
 /// everything.
 ///
-/// <para>The crashing command used here is bare <c>@switch</c>, which indexes <c>args["0"]</c>
-/// despite declaring <c>MinArgs = 3</c> and throws <c>KeyNotFoundException</c>. That underlying bug
-/// belongs to a later PR in this stack; when it is fixed, these tests must be re-pointed at another
-/// throwing command (or a deliberate one), NOT deleted — what they assert is the surfacing
-/// behaviour, not the bug.</para>
+/// <para>These originally rode on bare <c>@switch</c>, which indexed <c>args["0"]</c> despite
+/// declaring <c>MinArgs = 3</c>. Command <c>MinArgs</c> is now enforced, so that command no longer
+/// throws; per the standing note, the tests are re-pointed rather than deleted — what they assert
+/// is the surfacing behaviour, not the bug. The crash is now produced deliberately by a
+/// test-registered command that throws <see cref="KeyNotFoundException"/>, so no future fix can
+/// silently disarm this class again.</para>
 /// </summary>
 [NotInParallel]
 public class CommandExceptionSurfacingTests
@@ -41,8 +45,32 @@ public class CommandExceptionSurfacingTests
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	/// <summary>Bare, so no <c>"0"</c> argument is ever put in the argument dictionary.</summary>
-	private const string CrashingCommand = "@switch";
+	/// <summary>Registered by <see cref="RegisterCrashingCommand"/>; throws unconditionally.</summary>
+	private const string CrashingCommand = "@zzcrash";
+
+	[Before(Test)]
+	public void RegisterCrashingCommand()
+	{
+		var library = WebAppFactoryArg.Services.GetRequiredService<LibraryService<string, CommandDefinition>>();
+		if (library.ContainsKey(CrashingCommand))
+		{
+			return;
+		}
+
+		var attribute = new SharpCommandAttribute
+		{
+			Name = CrashingCommand.ToUpperInvariant(),
+			Switches = [],
+			Behavior = CommandBehavior.Default,
+			MinArgs = 0,
+			MaxArgs = 0,
+			ParameterNames = []
+		};
+
+		library.Add(CrashingCommand,
+			(new CommandDefinition(attribute,
+				_ => throw new KeyNotFoundException("Deliberate crash for exception-surfacing tests.")), true));
+	}
 
 	[Test]
 	public async Task ACommandThatThrowsIsSurfacedInsteadOfSwallowed()

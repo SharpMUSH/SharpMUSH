@@ -104,6 +104,8 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string TooManyArguments = "#-1 FUNCTION ({0}) EXPECTS AT MOST {1} ARGUMENTS BUT GOT {2}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string TooFewCommandArguments = "#-1 COMMAND ({0}) EXPECTS AT LEAST {1} ARGUMENTS BUT GOT {2}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GotEvenArgs = "#-1 FUNCTION ({0}) EXPECTS AN ODD NUMBER OF ARGUMENTS";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GotUnEvenArgs = "#-1 FUNCTION ({0}) EXPECTS AN EVEN NUMBER OF ARGUMENTS";

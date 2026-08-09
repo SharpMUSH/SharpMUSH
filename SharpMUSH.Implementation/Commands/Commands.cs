@@ -6,6 +6,10 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -147,5 +151,33 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 		// Store reference to this command library for @command introspection
 		CommandLibrary = _commandLibrary;
+	}
+
+	/// <summary>
+	/// Rejects an invocation carrying fewer arguments than the command declares in
+	/// <see cref="SharpCommandAttribute.MinArgs"/>, reporting the arity the way functions already do.
+	/// <para>Commands declare MinArgs but the engine never enforced it, so a handler that indexed
+	/// <c>Arguments["0"]</c> without checking threw <see cref="KeyNotFoundException"/> on a bare
+	/// invocation. Enforcing it centrally in the dispatcher was measured and rejected: it pre-empts
+	/// the specific usage messages that ~40 commands (@enable, @disable, @verb, @command, @respond,
+	/// @atrchown, @include and others) already render for themselves, which is strictly worse for the
+	/// player. This is the per-command opt-in instead — call it from handlers that would otherwise
+	/// index an argument they never checked for.</para>
+	/// </summary>
+	/// <returns>The rejection to return, or <c>null</c> when the arity is satisfied.</returns>
+	private static async ValueTask<CallState?> RejectIfTooFewArguments(IMUSHCodeParser parser,
+		SharpCommandAttribute attribute)
+	{
+		var count = parser.CurrentState.Arguments.Count;
+		if (count >= attribute.MinArgs)
+		{
+			return null;
+		}
+
+		var message = string.Format(ErrorMessages.Returns.TooFewCommandArguments,
+			attribute.Name, attribute.MinArgs, count);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await NotifyService!.Notify(executor, message, executor);
+		return new CallState(message);
 	}
 }

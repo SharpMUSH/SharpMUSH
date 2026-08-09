@@ -1531,6 +1531,7 @@ public partial class Commands
 		Switches = ["LIST", "INSIDE", "QUIET"], ParameterNames = ["object", "destination"])]
 	public static async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
@@ -2089,6 +2090,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["target", "message"])]
 	public static async ValueTask<Option<CallState>> NoSpoofPrompt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -2122,9 +2124,10 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SCAN", Switches = ["ROOM", "SELF", "ZONE", "GLOBALS"], Behavior = CB.Default | CB.NoGagged,
-		MinArgs = 0, MaxArgs = 0, ParameterNames = ["object", "code"])]
+		MinArgs = 1, MaxArgs = 0, ParameterNames = ["object", "code"])]
 	public static async ValueTask<Option<CallState>> Scan(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches.Any()
@@ -2254,6 +2257,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 3, MaxArgs = int.MaxValue, ParameterNames = ["expression", "cases..."])]
 	public static async ValueTask<Option<CallState>> Switch(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches.ToArray();
@@ -2846,6 +2850,7 @@ public partial class Commands
 		MaxArgs = 2, ParameterNames = ["object", "attribute"])]
 	public static async ValueTask<Option<CallState>> Drain(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText();
 		var switches = parser.CurrentState.Switches.ToArray();
@@ -3071,6 +3076,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["condition", "true-command", "false-command"])]
 	public static async ValueTask<Option<CallState>> IfElse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var truthy = Predicates.Truthy(parsedIfElse!);
 
@@ -4562,6 +4568,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["expression", "cases..."])]
 	public static async ValueTask<Option<CallState>> Select(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
@@ -4750,6 +4757,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["object/attribute", "arguments..."])]
 	public static async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var args = parser.CurrentState.Arguments;
@@ -5674,7 +5682,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@VERB", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0,
+	[SharpCommand(Name = "@VERB", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 2,
 		MaxArgs = 0, ParameterNames = ["object", "verb", "target"])]
 	public static async ValueTask<Option<CallState>> Verb(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -5689,13 +5697,17 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.CantSeeThat);
 		}
 
-		var victimName = args.ElementAtOrDefault(0).Value.Message!.ToPlainText();
-		var actorName = args.ElementAtOrDefault(1).Value.Message!.ToPlainText();
-		var what = args.ElementAtOrDefault(2).Value.Message!.ToPlainText();
-		var whatd = args.ElementAtOrDefault(3).Value.Message!.ToPlainText();
-		var owhat = args.ElementAtOrDefault(4).Value.Message!.ToPlainText();
-		var owhatd = args.ElementAtOrDefault(5).Value.Message!.ToPlainText();
-		var awhat = args.ElementAtOrDefault(6).Value.Message!.ToPlainText();
+		// ElementAtOrDefault past the end yields a default KeyValuePair whose Value is a null CallState,
+		// so every optional slot has to be read through a null-safe accessor.
+		string ArgAt(int index) => args.ElementAtOrDefault(index).Value?.Message?.ToPlainText() ?? string.Empty;
+
+		var victimName = ArgAt(0);
+		var actorName = ArgAt(1);
+		var what = ArgAt(2);
+		var whatd = ArgAt(3);
+		var owhat = ArgAt(4);
+		var owhatd = ArgAt(5);
+		var awhat = ArgAt(6);
 
 		const int RequiredArgsBeforeStack = 7;
 		var stackArgs = args.Skip(RequiredArgsBeforeStack)
@@ -6507,12 +6519,13 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@PASSWORD", Switches = [],
-		Behavior = CB.Player | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGuest, MinArgs = 0, MaxArgs = 0, ParameterNames = ["old", "new"])]
+		Behavior = CB.Player | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGuest, MinArgs = 2, MaxArgs = 0, ParameterNames = ["old", "new"])]
 	public static async ValueTask<Option<CallState>> Password(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var oldPassword = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var newPassword = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var newPassword = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
 		if (!executor.IsPlayer)
 		{
@@ -7236,9 +7249,10 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SKIP", Switches = ["IFELSE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
-		MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+		MinArgs = 1, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Skip(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var falsey = Predicates.Falsy(parsedIfElse!);
 
@@ -7254,6 +7268,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 3, MaxArgs = 0, ParameterNames = ["object", "type", "message"])]
 	public static async ValueTask<Option<CallState>> Message(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
