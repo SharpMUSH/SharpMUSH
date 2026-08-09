@@ -2266,6 +2266,9 @@
   <data name="CommandUnknownSwitchFormat" xml:space="preserve">
     <value>{0} doesn't know switch {1}.</value>
   </data>
+  <data name="ListNotUnderstood" xml:space="preserve">
+    <value>I don't understand what you want to @list.</value>
+  </data>
 
   <!-- @dump -->
   <data name="DumpDoesNothing" xml:space="preserve">

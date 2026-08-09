@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
@@ -115,19 +116,87 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// The eight things <c>@list</c> can list. PennMUSH spells each of them both ways — as a switch
+	/// (<c>cmd_list</c>) and as an argument (<c>do_list</c>), both in src/cmds.c — so SharpMUSH does too.
+	/// </summary>
+	private enum ListKind
+	{
+		Motd,
+		Functions,
+		Commands,
+		Attribs,
+		Locks,
+		Flags,
+		Powers,
+		Allocations
+	}
+
+	/// <summary>
+	/// Resolves <c>@list &lt;type&gt;</c>'s argument the way PennMUSH's <c>do_list</c> (src/cmds.c) does:
+	/// in that order, and with that mix of prefix and exact matching. "commands", "functions", "powers",
+	/// "locks" and "allocations" accept any non-empty prefix (<c>string_prefixe</c>); "motd", "attribs"
+	/// and "flags" must be spelled in full (<c>strcasecmp</c>).
+	/// </summary>
+	/// <remarks>
+	/// The order is load-bearing, not incidental: "f" reaches <c>functions</c> by prefix before it can
+	/// reach the exact-match-only <c>flags</c>, exactly as it does in PennMUSH.
+	/// </remarks>
+	private static ListKind? ResolveListKind(string argument)
+	{
+		var arg = argument.Trim();
+		if (arg.Length == 0) return null;
+
+		bool Prefix(string full) => full.StartsWith(arg, StringComparison.OrdinalIgnoreCase);
+		bool Exact(string full) => full.Equals(arg, StringComparison.OrdinalIgnoreCase);
+
+		if (Prefix("commands")) return ListKind.Commands;
+		if (Prefix("functions")) return ListKind.Functions;
+		if (Exact("motd")) return ListKind.Motd;
+		if (Exact("attribs")) return ListKind.Attribs;
+		if (Exact("flags")) return ListKind.Flags;
+		if (Prefix("powers")) return ListKind.Powers;
+		if (Prefix("locks")) return ListKind.Locks;
+		if (Prefix("allocations")) return ListKind.Allocations;
+
+		return null;
+	}
+
 	[SharpCommand(Name = "@LIST",
 		Switches =
 		[
 			"LOWERCASE", "MOTD", "LOCKS", "FLAGS", "FUNCTIONS", "POWERS", "COMMANDS", "ATTRIBS", "ALLOCATIONS", "ALL",
 			"BUILTIN", "LOCAL"
-		], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = ["type"])]
+		], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["type"])]
 	public static async ValueTask<Option<CallState>> List(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
 		var useLowercase = switches.Contains("LOWERCASE");
 
-		if (switches.Contains("MOTD"))
+		// PennMUSH's cmd_list consults the switches first and only falls through to do_list — which reads
+		// the same eight names off the argument — when none of them is set. A switch therefore still wins
+		// over a contradicting argument, and `@list/lowercase commands` keeps working.
+		var kind =
+			switches.Contains("MOTD") ? ListKind.Motd
+			: switches.Contains("FUNCTIONS") ? ListKind.Functions
+			: switches.Contains("COMMANDS") ? ListKind.Commands
+			: switches.Contains("ATTRIBS") ? ListKind.Attribs
+			: switches.Contains("LOCKS") ? ListKind.Locks
+			: switches.Contains("FLAGS") ? ListKind.Flags
+			: switches.Contains("POWERS") ? ListKind.Powers
+			: switches.Contains("ALLOCATIONS") ? ListKind.Allocations
+			: ResolveListKind(parser.CurrentState.Arguments.TryGetValue("0", out var typeArg)
+				? typeArg.Message?.ToPlainText() ?? string.Empty
+				: string.Empty);
+
+		if (kind is null)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListNotUnderstood), executor);
+			return CallState.Empty;
+		}
+
+		if (kind == ListKind.Motd)
 		{
 			var isWizard = await executor.IsWizard();
 
@@ -150,7 +219,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("FLAGS"))
+		if (kind == ListKind.Flags)
 		{
 			var output = new System.Text.StringBuilder();
 			var header = useLowercase ? "Object Flags:" : "OBJECT FLAGS:";
@@ -175,7 +244,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("POWERS"))
+		if (kind == ListKind.Powers)
 		{
 			var output = new System.Text.StringBuilder();
 			var header = useLowercase ? "Object Powers:" : "OBJECT POWERS:";
@@ -200,7 +269,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("LOCKS"))
+		if (kind == ListKind.Locks)
 		{
 			var output = new System.Text.StringBuilder();
 			var header = useLowercase ? "Lock Types:" : "LOCK TYPES:";
@@ -217,7 +286,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("ATTRIBS"))
+		if (kind == ListKind.Attribs)
 		{
 			var output = new System.Text.StringBuilder();
 			var header = useLowercase ? "Standard Attributes:" : "STANDARD ATTRIBUTES:";
@@ -234,7 +303,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("COMMANDS"))
+		if (kind == ListKind.Commands)
 		{
 			var output = new System.Text.StringBuilder();
 			var header = useLowercase ? "Commands:" : "COMMANDS:";
@@ -268,7 +337,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("FUNCTIONS"))
+		if (kind == ListKind.Functions)
 		{
 			var output = new System.Text.StringBuilder();
 			var header = useLowercase ? "Functions:" : "FUNCTIONS:";
@@ -302,7 +371,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("ALLOCATIONS"))
+		if (kind == ListKind.Allocations)
 		{
 			var isWizard = await executor.IsWizard();
 			if (!isWizard)
@@ -322,8 +391,8 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		await NotifyService!.Notify(executor, "You must specify what to list. Use one of: /MOTD /FUNCTIONS /COMMANDS /ATTRIBS /LOCKS /FLAGS /POWERS /ALLOCATIONS", executor);
-		return CallState.Empty;
+		// Unreachable: every ListKind has a branch above, and a null kind returned early.
+		throw new UnreachableException($"@list has no branch for {kind}.");
 	}
 
 	[SharpCommand(Name = "@LOGWIPE", Switches = ["CHECK", "CMD", "CONN", "ERR", "TRACE", "WIZ", "ROTATE", "TRIM", "WIPE"],

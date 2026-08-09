@@ -1471,6 +1471,9 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandUnknownSwitchFormat = "{0} doesn't know switch {1}.";
 
+		/// <summary>PennMUSH src/cmds.c do_list, for a missing or unrecognised <c>@list</c> type.</summary>
+		public const string ListNotUnderstood = "I don't understand what you want to @list.";
+
 		public const string DumpDoesNothing = "Dump command does nothing for SharpMUSH. Consider using @backup.";
 
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";

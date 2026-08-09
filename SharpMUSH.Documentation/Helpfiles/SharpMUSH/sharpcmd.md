@@ -2498,6 +2498,8 @@ Switches include:
 - powers : Alias for @powers/list, shows all powers.
 - allocations : Information about memory allocations. Admin-only.
 
+Each of those may be given as a switch (`@list/commands`) or as an argument (`@list commands`); the two are equivalent, and a switch wins if you give both. As an argument, "commands", "functions", "powers", "locks" and "allocations" may be abbreviated to any prefix, while "motd", "attribs" and "flags" must be spelled in full. Anything else, or nothing at all, answers "I don't understand what you want to @list."
+
 By default, information is shown in upper-case. Add the `/lowercase` switch to show output in lowercase instead.
 
 "commands" and "functions" show built-in and local commands/functions by default. The `/builtin` or `/local` switches can be given to limit this.
