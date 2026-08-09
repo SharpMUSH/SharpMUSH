@@ -1469,6 +1469,9 @@ public static class ErrorMessages
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
 		public const string PlayerNameAlreadyExists = "That player name already exists.";
 		public const string PlayerCreateInvalidPassword = "That is not a valid password.";
+		/// <summary>PennMUSH src/wiz.c do_pcreate: "New player '%s' (#%d) created with password '%s'".</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PlayerCreatedFormat = "New player '{0}' (#{1}) created with password '{2}'";
 
 		public const string QuotaSetUsage = "Usage: @quota/set <player>=<amount>";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
