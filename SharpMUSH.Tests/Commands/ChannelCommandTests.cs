@@ -109,6 +109,35 @@ public class ChannelCommandTests
 				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> NscemitCommand: Test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
 
+	/// <summary>
+	/// NAME and RENAME are the same operation, as in PennMUSH — <c>src/extchat.c:3605-3608</c> sends
+	/// both switches to <c>do_chan_admin</c> with <c>CH_ADMIN_RENAME</c>. SharpMUSH declared NAME in
+	/// <c>@CHANNEL</c>'s switch list but had no arm for it, so <c>@channel/name</c> fell through to the
+	/// "What do you want to do with the channel?" usage line while sharpchat.md documented it as working.
+	/// </summary>
+	[Test]
+	[Arguments("name")]
+	[Arguments("rename")]
+	public async ValueTask ChannelRenameAcceptsBothSwitchSpellings(string switchName)
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var suffix = Random.Shared.Next(100000, 999999);
+		var before = $"Ren{switchName}{suffix}";
+		var after = $"Post{switchName}{suffix}";
+
+		await Mediator.Send(new CreateChannelCommand(MModule.single(before), [TestChannelPrivilege], _testPlayer!));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@channel/{switchName} {before}={after}"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessagePlainTextEquals(msg, "CHAT: Renamed channel.")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+
+		await Assert.That(await Mediator.Send(new GetChannelQuery(after))).IsNotNull();
+	}
+
 	[Test]
 	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]

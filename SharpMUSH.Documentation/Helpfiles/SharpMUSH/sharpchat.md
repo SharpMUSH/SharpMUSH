@@ -247,22 +247,23 @@ For all four of these commands, you can specify a single channel to affect, or o
 # @channel/mogrifier
 # @channel/chown
 # @channel/name
-# @channel/desc
+# @channel/rename
+# @channel/describe
 # @channel/privs
 # @channel/wipe
-# @channel/clock
 
-- `@channel/add <channel>[=<description>]`
+- `@channel/add <channel>=<privlist>`
 - `@channel/delete <channel>`
 - `@channel/mogrifier <channel>=<object>`
 - `@channel/chown <channel>=<player>`
 - `@channel/name <channel>=<newname>`
-- `@channel/desc <channel>=<description>`
+- `@channel/rename <channel>=<newname>`
+- `@channel/describe <channel>=<description>`
 - `@channel/privs <channel>=<privlist>`
 - `@channel/wipe <channel>`
-- `@channel/clock[/on|/off|/clear|/add|/remove|/hide|/unhide|/list] <channel>[=<lock>]`
+- `@clock/join|/speak|/see|/hide|/mod <channel>[=<lock>]`
 
-`@channel/add` creates a new channel. You must be able to pay the cost of the channel. The channel's description is optional.
+`@channel/add` creates a new channel with the privileges in *<privlist>* — the same list `@channel/privs` takes, and it is required. You may not own more channels than the `max_channels` limit allows unless you are staff.
 
 `@channel/delete` removes a channel. Only channel admins can do this.
 
@@ -270,15 +271,15 @@ For all four of these commands, you can specify a single channel to affect, or o
 
 `@channel/chown` changes the owner of a channel. Only channel admins can do this.
 
-`@channel/name` renames a channel. Only channel admins can do this.
+`@channel/name` and `@channel/rename` both rename a channel. Only channel admins can do this.
 
-`@channel/desc` changes a channel's description. Only channel admins can do this.
+`@channel/describe` changes a channel's description. Only channel admins can do this.
 
 `@channel/privs` changes a channel's privileges. Only channel admins can do this. See [@channel privs] for details.
 
 `@channel/wipe` removes all players from a channel. Only channel admins can do this.
 
-`@channel/clock` manages channel locks. Only channel admins can do this. See [@channel clock] for details.
+Channel locks are managed by the separate `@clock` command, not by a `@channel` switch. See [@clock] for details.
 
 **See Also:**
 - [@channel/who]
@@ -313,60 +314,80 @@ The Lock column shows:
 - [@clock]
 
 # @CHANNEL PRIVS
+# CHANNEL-PRIVS
 
-Channel privileges control what players can do with a channel. They are set with `@channel/privs <channel>=<privlist>`, where *<privlist>* is a space-separated list of privilege names, optionally prefixed with `no_` to remove the privilege.
+`@channel/privs <channel>=<privlist>`
+
+Channel privileges say who a channel admits and how its messages are rendered. They are set with `@channel/privs`, and on a brand new channel with `@channel/add <channel>=<privlist>`.
+
+*<privlist>* is a space-separated list of privilege names, or of the single-letter abbreviations below. The list **replaces** the channel's current privileges rather than adding to them, so name every privilege the channel is to keep. Names match without regard to case; the letters do not, because `O` is Object and `o` is Open.
 
 Available privileges:
-- **join**: Players must pass the join lock to join the channel
-- **speak**: Players must pass the speak lock to speak on the channel
-- **hide**: Players must pass the hide lock to hide on the channel
-- **open**: Players can speak on the channel without joining it
-- **quiet**: Don't show connect/disconnect messages
-- **hide_ok**: Players can hide on the channel
-- **loud**: Show channel prefix even on @cemit/silent
-- **disabled**: Channel cannot be used
+- **player** (`P`): Players may use the channel
+- **object** (`O`): Non-players may use the channel
+- **admin** (`A`): Only royalty, wizards, and holders of the `chat_privs` power may use the channel
+- **wizard** (`W`): Only wizards may use the channel
+- **quiet** (`Q`): The channel does not show connection messages
+- **open** (`o`): You may speak on the channel even when you are not listening to it
+- **hide_ok** (`H`): You may hide yourself from the channel's who list
+- **notitles** (`T`): Channel titles are not shown in channel messages
+- **nonames** (`N`): Speakers' names are not shown in channel messages
+- **nocemit** (`C`): [@cemit] is prohibited on the channel
+- **interact** (`I`): Channel output is filtered through the game's interaction rules
+- **disabled** (`D`): No one can join or speak on the channel
+
+These are privileges, not locks. A privilege says which *kind* of thing the channel is open to; a lock says which particular objects get through. Joining, speaking, seeing, hiding and modifying are each governed by a lock of their own — see [@clock].
+
+`loud` is not a channel privilege and cannot be given to a channel. It is a flag set on an object — see [flag list].
 
 **Examples**
 ```sharp
-@channel/privs Public=no_join no_speak
-@channel/privs Admin=join speak no_hide_ok
+@channel/privs Public=player quiet open nocemit
+@channel/privs Admin=player admin
+@channel/privs Public=P Q o C
 ```
 
 **See Also:**
 - [@channel/who]
 - [@channel clock]
 - [@clock]
+- [CFLAGS()]
 
 # @CHANNEL CLOCK
+# @channel/clock
 # @clock
 
-`@channel/clock[/switch] <channel>[=<lock>]`
+`@clock/join <channel>[=<lock>]`<br>
+`@clock/speak <channel>[=<lock>]`<br>
+`@clock/see <channel>[=<lock>]`<br>
+`@clock/hide <channel>[=<lock>]`<br>
+`@clock/mod <channel>[=<lock>]`
 
-Channel locks control who can join, speak on, or hide on a channel. The basic switches are:
-- **/on** *<lock>*: Set the speak lock
-- **/off**: Remove the speak lock
-- **/clear**: Remove all locks
-- **/add** *<lock>*: Set the join lock
-- **/remove**: Remove the join lock
-- **/hide** *<lock>*: Set the hide lock
-- **/unhide**: Remove the hide lock
-- **/list**: Show all locks
+Channel locks are set with `@clock`, which is its own command — there is no `@channel/clock` switch. Each switch names the one lock it sets, and omitting *<lock>* removes that lock. With no switch at all, `@clock` sets the join lock. See [lock keys] for what may go in a *<lock>*.
 
-Only channel admins can set locks. Players must pass:
-- The join lock to join the channel (if the channel has the 'join' priv)
-- The speak lock to speak on the channel (if the channel has the 'speak' priv)
-- The hide lock to hide on the channel (if the channel has the 'hide_ok' priv)
+There are five locks:
+- **join**: Restricts who can join the channel
+- **speak**: Restricts who can speak on the channel
+- **see**: Restricts who can see the channel on `@channel/list`
+- **hide**: Restricts `@channel/hide` on a channel that is `hide_ok`
+- **mod**: Restricts who can modify the channel. Passing the mod lock lets you do anything to a channel short of deleting it
+
+A lock is evaluated against the object trying to pass it, exactly as if it had been set on that object.
+
+You may set a channel's locks if you own it, if you pass its mod lock, or if you are a wizard. A new channel starts with none of the five set, and an unset lock is one everybody passes.
 
 **Examples**
 ```sharp
-@channel/clock/on Public=WIZARD
-@channel/clock/add Admin=WIZARD
-@channel/clock/hide Secret=WIZARD
+@clock/join Public=flag^wizard
+@clock/speak Public=!flag^gagged
+@clock/mod Secret=#123
+@clock/speak Public=
 ```
 
 **See Also:**
 - [@lock]
 - [locks]
+- [lock keys]
 - [@channel privs]
 
 # CHANNEL FUNCTIONS
@@ -394,8 +415,8 @@ These functions provide information about channels:
 
 - **cowner()**: Returns the dbref of *\<channel\>*'s owner
 
-- **cflags()**: Returns channel flags for *\<channel\>*, or status flags for *\<player\>* on *\<channel\>*:
-  - Channel flags: DISABLED LOUD OPEN QUIET
+- **cflags()**: Returns *\<channel\>*'s privileges, or status flags for *\<player\>* on *\<channel\>*:
+  - Channel privileges, uppercased, any of: PLAYER OBJECT ADMIN WIZARD QUIET OPEN HIDE_OK NOTITLES NONAMES NOCEMIT INTERACT DISABLED. See [@channel privs].
   - Status flags: COMBINE GAG HIDE MUTE
 
 - **cstatus()**: Returns information about *\<player\>*'s channel status:
