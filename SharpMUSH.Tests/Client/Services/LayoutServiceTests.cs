@@ -10,8 +10,8 @@ namespace SharpMUSH.Tests.Client.Services;
 
 /// <summary>
 /// Unit tests for the DB-backed, scope-aware <see cref="LayoutService"/>. A scriptable handler stands
-/// in for <c>/api/layouts/{scope}</c> so we can assert default fallback (HTTP 404), caching, stored-
-/// layout reads, and the save/reset round-trip.
+/// in for <c>/api/layouts/{scope}</c> so we can assert default fallback (HTTP 204, and 404 from an
+/// older server), caching, stored-layout reads, and the save/reset round-trip.
 /// </summary>
 public class LayoutServiceTests
 {
@@ -38,6 +38,9 @@ public class LayoutServiceTests
 	}
 
 	private static HttpResponseMessage NotFound() => new(HttpStatusCode.NotFound);
+
+	/// <summary>What the server actually answers for an uncustomized scope.</summary>
+	private static HttpResponseMessage NoContent() => new(HttpStatusCode.NoContent);
 
 	private static HttpResponseMessage Ok(LayoutConfiguration layout)
 		=> new(HttpStatusCode.OK) { Content = JsonContent.Create(layout, options: LayoutSerialization.Options) };
@@ -76,6 +79,20 @@ public class LayoutServiceTests
 		await Assert.That(layout.Zones[WidgetZone.RightSidebar][0].WidgetName).IsEqualTo("CharacterGallery");
 	}
 
+	/// <summary>
+	/// The live shape: an uncustomized scope answers 204 No Content, which resolves to the code
+	/// default without the request ever counting as a failure.
+	/// </summary>
+	[Test]
+	public async Task GetLayoutAsync_WhenNoContent_ReturnsScopeDefault()
+	{
+		var svc = Build(new ScriptedHandler(_ => NoContent()));
+		var layout = await svc.GetLayoutAsync(LayoutScopes.WikiIndex);
+
+		await Assert.That(layout.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("WikiIndex");
+	}
+
+	/// <summary>Back-compat: a cached client hitting an older server that still 404s must still work.</summary>
 	[Test]
 	public async Task GetLayoutAsync_WhenNotFound_ReturnsScopeDefault()
 	{

@@ -14,13 +14,19 @@ namespace SharpMUSH.Server.Controllers;
 ///
 /// Routes:
 ///   GET    /api/layouts            — list scopes that have a stored (customized) layout
-///   GET    /api/layouts/{scope}    — fetch one scope's layout (404 when never customized → client uses its default)
+///   GET    /api/layouts/{scope}    — fetch one scope's layout (204 when never customized → client uses its default)
 ///   PUT    /api/layouts/{scope}    — create or replace one scope's layout (layout.admin)
 ///   DELETE /api/layouts/{scope}    — reset one scope to its code default (layout.admin)
 ///
 /// Reads are anonymous: a layout is presentation metadata, rendered for guests on public pages
 /// (the front page, the wiki). The widgets placed in it authorize their own data. Writes are gated on
 /// <see cref="PortalPermission.LayoutAdmin"/>, matching application/theme editing.
+///
+/// "No stored layout" is 204, not 404. A game nobody has customized is the ordinary state of every
+/// scope, and it stays the ordinary state after DELETE resets one — so answering 404 made the read
+/// path emit a failed request on literally every page view, and buried real failures in a console
+/// that was permanently red. 204 says what is true: the request succeeded and there is no override
+/// to send, so use the code default.
 /// </summary>
 [ApiController]
 [Route("api/layouts")]
@@ -40,7 +46,7 @@ public class LayoutsController(
 		var result = await layouts.GetLayoutAsync(scope);
 		return result.Match<ActionResult<LayoutConfiguration>>(
 			layout => Ok(layout),
-			_ => NotFound());
+			_ => NoContent());
 	}
 
 	[HttpPut("{scope}")]
