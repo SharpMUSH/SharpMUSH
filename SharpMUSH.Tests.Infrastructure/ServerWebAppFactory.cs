@@ -90,93 +90,18 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		_sqlPlatform = sqlPlatform;
 	}
 
-	public IMUSHCodeParser FunctionParser
-	{
-		get
-		{
-			var integrationServer = _server!;
-			return new MUSHCodeParser(
-				integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
-				integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
-				integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
-				integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
-				integrationServer.Services,
-				state: new ParserState(
-					Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
-					IterationRegisters: [],
-					RegexRegisters: [],
-					SwitchStack: [],
-					ExecutionStack: [],
-					EnvironmentRegisters: [],
-					CurrentEvaluation: null,
-					ParserFunctionDepth: 0,
-					Function: null,
-					Command: "think",
-					CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-					Switches: [],
-					Arguments: [],
-					Executor: _one,
-					Enactor: _one,
-					Caller: _one,
-					Handle: 1,
-					CallDepth: new InvocationCounter(),
-					FunctionRecursionDepths: new Dictionary<string, int>(),
-					TotalInvocations: new InvocationCounter(),
-					LimitExceeded: new LimitExceededFlag(),
-					Flags: ParserStateFlags.DirectInput
-				));
-		}
-	}
-
-	public IMUSHCodeParser CommandParser
-	{
-		get
-		{
-			var integrationServer = _server!;
-			return new MUSHCodeParser(
-				integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
-				integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
-				integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
-				integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
-				integrationServer.Services,
-				state: new ParserState(
-					Registers: new([[]]),
-					IterationRegisters: [],
-					RegexRegisters: [],
-					SwitchStack: [],
-					ExecutionStack: [],
-					EnvironmentRegisters: [],
-					CurrentEvaluation: null,
-					ParserFunctionDepth: 0,
-					Function: null,
-					Command: null,
-					CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-					Switches: [],
-					Arguments: [],
-					Executor: _one,
-					Enactor: _one,
-					Caller: _one,
-					Handle: 1,
-					CallDepth: new InvocationCounter(),
-					FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-					TotalInvocations: new InvocationCounter(),
-					LimitExceeded: new LimitExceededFlag(),
-					Flags: ParserStateFlags.DirectInput
-				));
-		}
-	}
-
 	/// <summary>
-	/// Creates a command parser whose initial state is bound to the given <paramref name="executor"/>
-	/// and connection <paramref name="handle"/>.  Use this in tests that need an isolated executor
-	/// (unique player) so that <see cref="INotifyService"/> mock assertions remain per-player.
+	/// The one <see cref="MUSHCodeParser"/> the four accessors below hand out. They differed only in the
+	/// executor, the connection handle, and whether <c>Command</c> was set — three parameters against
+	/// thirty-five lines of identical <see cref="ParserState"/>, copied four times.
 	/// </summary>
-	/// <summary>
-	/// <see cref="FunctionParser"/> with a chosen executor rather than God. Permission tests need to
-	/// evaluate a function AS a mortal: a channel function that is gated at the command surface but open
-	/// to mortal softcode is only testable this way.
-	/// </summary>
-	public IMUSHCodeParser FunctionParserFor(DBRef executor)
+	/// <param name="executor">Executor, enactor and caller. Tests that need a mortal pass one here.</param>
+	/// <param name="handle">Connection handle; only the command parsers bind a real one.</param>
+	/// <param name="command">
+	/// <c>"think"</c> for the function parsers and <see langword="null"/> for the command parsers, which
+	/// set their own as they dispatch.
+	/// </param>
+	private IMUSHCodeParser BuildParser(DBRef executor, long handle, string? command)
 	{
 		var integrationServer = _server!;
 		return new MUSHCodeParser(
@@ -195,42 +120,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 				CurrentEvaluation: null,
 				ParserFunctionDepth: 0,
 				Function: null,
-				Command: "think",
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-				Switches: [],
-				Arguments: [],
-				Executor: executor,
-				Enactor: executor,
-				Caller: executor,
-				Handle: 1,
-				CallDepth: new InvocationCounter(),
-				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag(),
-				Flags: ParserStateFlags.DirectInput
-			));
-	}
-
-	public IMUSHCodeParser CommandParserFor(DBRef executor, long handle)
-	{
-		var integrationServer = _server!;
-		return new MUSHCodeParser(
-			integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
-			integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
-			integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
-			integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
-			integrationServer.Services,
-			state: new ParserState(
-				Registers: new([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: [],
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: null,
+				Command: command,
 				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 				Switches: [],
 				Arguments: [],
@@ -245,6 +135,22 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 				Flags: ParserStateFlags.DirectInput
 			));
 	}
+
+	/// <summary>Evaluates functions as God.</summary>
+	public IMUSHCodeParser FunctionParser => BuildParser(_one, handle: 1, command: "think");
+
+	/// <summary>Runs commands as God.</summary>
+	public IMUSHCodeParser CommandParser => BuildParser(_one, handle: 1, command: null);
+
+	/// <summary>
+	/// <see cref="FunctionParser"/> with a chosen executor. Permission tests need to evaluate a function
+	/// AS a mortal: a channel function gated at the command surface but open to mortal softcode is only
+	/// testable this way.
+	/// </summary>
+	public IMUSHCodeParser FunctionParserFor(DBRef executor) => BuildParser(executor, handle: 1, command: "think");
+
+	/// <summary><see cref="CommandParser"/> with a chosen executor and its bound connection handle.</summary>
+	public IMUSHCodeParser CommandParserFor(DBRef executor, long handle) => BuildParser(executor, handle, command: null);
 
 	public virtual async Task InitializeAsync()
 	{

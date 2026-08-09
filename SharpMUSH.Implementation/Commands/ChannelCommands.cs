@@ -333,6 +333,13 @@ public partial class Commands
 
 			if (!hasOtherAlias)
 			{
+				// RAW lookup on purpose — do not "fix" this to GetVisibleChannelOrError.
+				//
+				// This resolves the channel only to take the executor off it, and nothing about the outcome
+				// reaches the player: the lookup is silent, the result is used solely to decide whether to
+				// send RemoveUserFromChannelCommand, and delcom answers "Alias deleted." either way. There is
+				// no observable difference to leak. A visible lookup would instead strand a membership the
+				// player can no longer reach — leaving them on a channel they just removed their alias for.
 				var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator!, NotifyService!, channelName, false);
 				if (!maybeChannel.IsError)
 				{

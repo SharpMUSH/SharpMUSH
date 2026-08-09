@@ -33,7 +33,8 @@ public static class ChannelOff
 			target = maybeTarget.AsAnyObject;
 		}
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator, NotifyService, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			NotifyService, executor, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;

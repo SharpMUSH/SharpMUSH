@@ -339,7 +339,11 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator!, NotifyService!, channelName, false);
+		// Chan_Can_Decomp below refuses with #-1 PERMISSION DENIED, which a raw lookup's
+		// #-1 NO SUCH CHANNEL is distinguishable from — so softcode could tell an invisible channel from a
+		// nonexistent one even though the lock itself stayed secret.
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{

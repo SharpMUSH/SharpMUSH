@@ -28,8 +28,18 @@ public static class ChannelAdd
 			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
-		// notify: false — a missing channel is the expected case when creating one; the player should
-		// not be told "Channel not found." on their way to "Channel has been created."
+		// RAW lookup on purpose — do not "fix" this to GetVisibleChannelOrError.
+		//
+		// Channel names are globally unique, so uniqueness has to be tested against every channel, not just
+		// the ones this player may see. A visible lookup here would report "no such channel" for a hidden
+		// one and then let the create succeed, producing two channels with the same name — a data bug worse
+		// than the probe it would close. PennMUSH resolves it the same way: ok_channel_name
+		// (src/extchat.c:1855-1870) walks the whole channel list and returns NAME_NOT_UNIQUE without
+		// consulting Chan_Can_See.
+		//
+		// The residual leak is that "CHAT: Channel already exists." tells a player a name is taken even
+		// when they cannot see the channel holding it. That is inherent to a global namespace and PennMUSH
+		// leaks it identically. notify: false keeps the lookup itself silent.
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator, NotifyService, channelName, false);
 		if (!maybeChannel.IsError)
 		{

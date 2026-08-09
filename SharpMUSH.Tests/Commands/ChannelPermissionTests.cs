@@ -43,12 +43,25 @@ public class ChannelPermissionTests
 		=> WebAppFactoryArg.FunctionParserFor(executor);
 
 	/// <summary>
-	/// Every message the notify mock was asked to send to <paramref name="who"/> since the last
-	/// <c>ClearReceivedCalls</c>, as plain text. Used to prove two refusals are worded identically, and
-	/// that a bulk switch never names a channel.
+	/// Runs <paramref name="action"/> and returns every message the notify mock was asked to send to
+	/// <paramref name="who"/> while it ran, as plain text. Used to prove two refusals are worded
+	/// identically, and that a bulk switch never names a channel.
+	///
+	/// <para>It snapshots a call index rather than calling <c>ClearReceivedCalls</c>. The notify mock is
+	/// shared for the whole session and TUnit runs tests in parallel, so clearing it deletes calls other
+	/// tests are about to assert on — it made <c>MailCommand</c>, <c>Flag_Delete_RemovesNonSystemFlag</c>
+	/// and <c>Test_Respond_StatusLine_TooLong</c> fail at random. Filtering by recipient is what actually
+	/// isolates these tests: every one of them creates a uniquely named player.</para>
 	/// </summary>
-	private List<string> NotifiedMessages(DBRef who)
-		=> NotifyService.ReceivedCalls()
+	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
+	{
+		var before = NotifyService.ReceivedCalls().Count();
+		await action();
+		return NotifiedMessagesFrom(who, before);
+	}
+
+	private List<string> NotifiedMessagesFrom(DBRef who, int skip)
+		=> NotifyService.ReceivedCalls().Skip(skip).ToList()
 			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
 			.Select(call => call.GetArguments())
 			.Where(args => args.Length > 1 && args[0] switch
@@ -473,13 +486,8 @@ public class ChannelPermissionTests
 			.IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
 
 		// And the same for the notification the command surface emits.
-		NotifyService.ClearReceivedCalls();
-		await Run(mortal, $"@channel/on {invisible}");
-		var afterInvisible = NotifiedMessages(mortal.DbRef);
-
-		NotifyService.ClearReceivedCalls();
-		await Run(mortal, $"@channel/on {missing}");
-		var afterMissing = NotifiedMessages(mortal.DbRef);
+		var afterInvisible = await MessagesWhile(mortal.DbRef, () => Run(mortal, $"@channel/on {invisible}"));
+		var afterMissing = await MessagesWhile(mortal.DbRef, () => Run(mortal, $"@channel/on {missing}"));
 
 		await Assert.That(afterInvisible).IsEquivalentTo(afterMissing);
 		await Assert.That(afterInvisible).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
@@ -587,16 +595,17 @@ public class ChannelPermissionTests
 		var parser = WebAppFactoryArg.CommandParserFor(mortal.DbRef, mortal.Handle);
 		var locate = WebAppFactoryArg.Services.GetRequiredService<ILocateService>();
 
-		NotifyService.ClearReceivedCalls();
-
-		_ = switchName switch
+		var messages = await MessagesWhile(mortal.DbRef, async () =>
 		{
-			"hide" => await ChannelHide.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null),
-			"gag" => await ChannelGag.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null, []),
-			_ => await ChannelCombine.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null)
-		};
+			_ = switchName switch
+			{
+				"hide" => await ChannelHide.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null),
+				"gag" => await ChannelGag.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null, []),
+				_ => await ChannelCombine.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null)
+			};
+		});
 
-		foreach (var message in NotifiedMessages(mortal.DbRef))
+		foreach (var message in messages)
 		{
 			await Assert.That(message).DoesNotContain(name);
 		}
@@ -648,5 +657,125 @@ public class ChannelPermissionTests
 		var afterOwner = await ChannelHelper.ChannelMemberStatus(victimObject,
 			(await Mediator.Send(new GetChannelQuery(name)))!);
 		await Assert.That(afterOwner!.Status.Mute ?? false).IsTrue();
+	}
+
+	// --- The oracle on the lock and admin surfaces -------------------------------------------------
+
+	/// <summary>
+	/// The lock surface is where Copilot could see the problem, and it is the worst place for it because
+	/// <c>clock()</c> hands a return value to mortal softcode. Resolving through the raw lookup answered
+	/// <c>#-1 NO SUCH CHANNEL</c> for a missing channel and let an invisible one through to
+	/// <c>Chan_Can_Decomp</c>, which answers <c>#-1 PERMISSION DENIED</c> — so the lock stayed secret
+	/// while the channel's existence did not.
+	/// </summary>
+	[Test]
+	public async Task ClockFunctionDoesNotDistinguishHiddenFromMissing()
+	{
+		var hidden = UniqueChannel("ClockHidden");
+		await CreateChannel(hidden, "Player", "Wizard");
+		var missing = UniqueChannel("ClockMissing");
+
+		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@clock/join {hidden}=#1"));
+
+		var mortal = await CreateMortal("ChanPermClockFn");
+		var parser = FunctionParserFor(mortal.DbRef);
+
+		var hiddenResult = await parser.FunctionParse(MModule.single($"clock({hidden})"));
+		var missingResult = await parser.FunctionParse(MModule.single($"clock({missing})"));
+
+		await Assert.That(hiddenResult?.Message?.ToPlainText())
+			.IsEqualTo(missingResult?.Message?.ToPlainText());
+		await Assert.That(hiddenResult?.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
+		// And the lock key itself never appears.
+		await Assert.That(hiddenResult?.Message?.ToPlainText()).DoesNotContain("#1");
+	}
+
+	/// <summary>
+	/// The same oracle on <c>@clock</c>, the command half Copilot flagged.
+	/// </summary>
+	[Test]
+	public async Task ClockCommandDoesNotDistinguishHiddenFromMissing()
+	{
+		var hidden = UniqueChannel("ClockCmdHidden");
+		await CreateChannel(hidden, "Player", "Wizard");
+		var missing = UniqueChannel("ClockCmdMissing");
+
+		var mortal = await CreateMortal("ChanPermClockCmd");
+
+		var afterHidden = await MessagesWhile(mortal.DbRef,
+			() => Run(mortal, $"@clock/join {hidden}=#{mortal.DbRef.Number}"));
+		var afterMissing = await MessagesWhile(mortal.DbRef,
+			() => Run(mortal, $"@clock/join {missing}=#{mortal.DbRef.Number}"));
+
+		await Assert.That(afterHidden).IsEquivalentTo(afterMissing);
+
+		// The lock must not have been set either.
+		// A channel that was never given a lock reads back null, not "".
+		var channel = await Mediator.Send(new GetChannelQuery(hidden));
+		await Assert.That(string.IsNullOrEmpty(channel!.JoinLock)).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>@clock</c> rewrote <c>Chan_Can_Modify</c> by hand, and carried the same defect the service did:
+	/// <c>string.IsNullOrEmpty(channel.ModLock) || Evaluate(...)</c> is TRUE for every channel, because
+	/// <c>CreateChannelCommand</c> never writes a ModLock. Any non-guest could set the join, speak, see,
+	/// hide or mod lock on any channel they could see.
+	/// </summary>
+	[Test]
+	public async Task ClockRequiresModifyRightsOnTheChannel()
+	{
+		var name = UniqueChannel("ClockGate");
+		var channel = await CreateChannel(name, "Player");
+
+		var meddler = await CreateMortal("ChanPermClockMeddler");
+		var meddlerObject = (await Mediator.Send(new GetObjectNodeQuery(meddler.DbRef))).Known;
+		await Mediator.Send(new AddUserToChannelCommand(channel, meddlerObject));
+
+		await Assert.That(await PermissionService.ChannelCanModifyAsync(meddlerObject, channel)).IsFalse();
+
+		await Run(meddler, $"@clock/join {name}=#{meddler.DbRef.Number}");
+		await Assert.That(string.IsNullOrEmpty(
+			(await Mediator.Send(new GetChannelQuery(name)))!.JoinLock)).IsTrue();
+
+		// God owns the channel, so the same command from God does set the lock.
+		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@clock/join {name}=#1"));
+		await Assert.That(string.IsNullOrEmpty(
+			(await Mediator.Send(new GetChannelQuery(name)))!.JoinLock)).IsFalse();
+	}
+
+	/// <summary>
+	/// The whole sweep in one assertion. Every channel-admin switch resolved through the raw lookup, so
+	/// "Channel not found." came from the lookup and "You cannot modify this channel." came from the
+	/// authorization gate — the authorization was correct and the oracle was wide open anyway. This is the
+	/// subtle half of the sweep and the reason it could not be done by inspecting the gates alone.
+	/// </summary>
+	[Test]
+	[Arguments("decompile", "")]
+	[Arguments("wipe", "")]
+	[Arguments("delete", "")]
+	[Arguments("recall", "")]
+	[Arguments("describe", "=a description")]
+	[Arguments("buffer", "=50")]
+	[Arguments("privs", "=quiet")]
+	[Arguments("title", "=a title")]
+	[Arguments("off", "")]
+	public async Task AdminSwitchesDoNotDistinguishHiddenFromMissing(string switchName, string rhs)
+	{
+		var hidden = UniqueChannel($"Adm{switchName}H");
+		await CreateChannel(hidden, "Player", "Wizard");
+		var missing = UniqueChannel($"Adm{switchName}M");
+
+		var mortal = await CreateMortal($"ChanPermAdm{switchName}");
+
+		var afterHidden = await MessagesWhile(mortal.DbRef,
+			() => Run(mortal, $"@channel/{switchName} {hidden}{rhs}"));
+		var afterMissing = await MessagesWhile(mortal.DbRef,
+			() => Run(mortal, $"@channel/{switchName} {missing}{rhs}"));
+
+		await Assert.That(afterHidden).IsEquivalentTo(afterMissing);
+		await Assert.That(afterHidden).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
+
+		// The hidden channel must still be there — /delete and /wipe are in this list.
+		await Assert.That(await Mediator.Send(new GetChannelQuery(hidden))).IsNotNull();
 	}
 }
