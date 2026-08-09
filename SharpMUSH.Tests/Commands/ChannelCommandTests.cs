@@ -57,22 +57,22 @@ public class ChannelCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ChatCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chat {TestChannelName}=ChatCommand: Test message"));
 
+		// sharpchat.md:39 — `@chat pub=Hello` renders as `<Public> Mike says, "Hello"`. This test used to
+		// assert the un-attributed emit form, which is what @chat produced when it published every
+		// message as NotificationType.Emit regardless of the message's leading character.
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "<TestCommandChannel> ChatCommand: Test message")), Arg.Any<AnySharpObject>());
+					TestHelpers.MessageEquals(msg, "<TestCommandChannel> God says, \"ChatCommand: Test message\"")),
+				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ChannelCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;

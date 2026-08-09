@@ -28,8 +28,11 @@ public static class ChannelMogrifier
 
 		var channel = maybeChannel.AsChannel;
 
-		if (await PermissionService.ChannelCanModifyAsync(executor, channel))
+		// The sense of this check was inverted: whoever COULD modify the channel was refused,
+		// and whoever could not fell through and made the change.
+		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
+			await NotifyService.Notify(executor, "You cannot modify this channel.", executor);
 			return new CallState("You cannot modify this channel.");
 		}
 

@@ -40,6 +40,13 @@ public static class ChannelOn
 
 		var channel = maybeChannel.AsChannel;
 
+		if (await ChannelHelper.IsMemberOfChannel(target, channel))
+		{
+			var alreadyOn = $"CHAT: {target.Object().Name} is already on {channel.Name.ToPlainText()}.";
+			await NotifyService.Notify(executor, alreadyOn, executor);
+			return new CallState(alreadyOn);
+		}
+
 		// Channel join/leave announcements are handled by the channel system
 		await Mediator.Send(new AddUserToChannelCommand(channel, target));
 

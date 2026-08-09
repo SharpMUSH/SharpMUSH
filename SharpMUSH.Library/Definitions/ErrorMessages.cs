@@ -104,6 +104,8 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string TooManyArguments = "#-1 FUNCTION ({0}) EXPECTS AT MOST {1} ARGUMENTS BUT GOT {2}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string TooFewCommandArguments = "#-1 COMMAND ({0}) EXPECTS AT LEAST {1} ARGUMENTS BUT GOT {2}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GotEvenArgs = "#-1 FUNCTION ({0}) EXPECTS AN ODD NUMBER OF ARGUMENTS";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GotUnEvenArgs = "#-1 FUNCTION ({0}) EXPECTS AN EVEN NUMBER OF ARGUMENTS";
@@ -1195,6 +1197,7 @@ public static class ErrorMessages
 		public const string IncludeErrorExecutingFormat = "Error executing included attribute: {0}";
 
 		public const string MailTooManySwitches = "Error: Too many switches passed to @mail.";
+		public const string MailBadArguments = "MAIL: Bad arguments to @mail. See 'help @mail' for usage.";
 
 		public const string PasswordOnlyPlayersHavePasswords = "Only players have passwords.";
 		public const string PasswordInvalid = "Invalid password.";

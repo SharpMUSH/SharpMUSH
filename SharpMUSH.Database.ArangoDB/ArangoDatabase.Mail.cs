@@ -153,11 +153,11 @@ public partial class ArangoDatabase
 				return;
 			case { IsClearEdit: true }:
 				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
-					key, new { Read = commandMail.AsClearEdit }, cancellationToken: ct);
+					key, new { Cleared = commandMail.AsClearEdit }, cancellationToken: ct);
 				return;
 			case { IsTaggedEdit: true }:
 				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
-					key, new { Urgent = commandMail.AsTaggedEdit }, cancellationToken: ct);
+					key, new { Tagged = commandMail.AsTaggedEdit }, cancellationToken: ct);
 				return;
 			case { IsUrgentEdit: true }:
 				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,

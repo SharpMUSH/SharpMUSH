@@ -1,5 +1,7 @@
 using Mediator;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
@@ -8,6 +10,12 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelTitle
 {
+	/// <summary>
+	/// <c>@channel/title &lt;channel&gt;=&lt;title&gt;</c> — sharpchat.md:236: "sets your title on
+	/// &lt;channel&gt;. Your title appears in front of your name when you speak on the channel...
+	/// If &lt;title&gt; is not given, your title is cleared." It is the speaker's own title, so it
+	/// requires channel membership rather than channel ownership.
+	/// </summary>
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString title)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -26,11 +34,24 @@ public static class ChannelTitle
 
 		var channel = maybeChannel.AsChannel;
 
-		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
+		var memberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
+		if (memberStatus is null)
 		{
-			return new CallState("You are not the owner of the channel.");
+			var notOn = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channel.Name.ToPlainText());
+			await NotifyService.Notify(executor, notOn, executor);
+			return new CallState(notOn);
 		}
 
-		return new CallState("Channel title has been updated.");
+		var (_, status) = memberStatus;
+		var cleared = MModule.getLength(title) == 0;
+
+		await Mediator.Send(new UpdateChannelUserStatusCommand(channel, executor,
+			status with { Title = cleared ? MModule.empty() : title }));
+
+		var response = cleared
+			? $"CHAT: Title cleared on {channel.Name.ToPlainText()}."
+			: $"CHAT: Title set on {channel.Name.ToPlainText()}.";
+		await NotifyService.Notify(executor, response, executor);
+		return new CallState(response);
 	}
 }

@@ -30,8 +30,13 @@ public static class ChannelList
 				shouldNotify: true);
 		}
 
+		// sharpchat.md:181 — "If a <prefix> is given, only channels whose names begin with <prefix> are shown."
+		var prefix = arg0.ToPlainText().Trim();
+
 		var channelList = await channels
 			.Where(async (x, _) => await PermissionService.ChannelCanSeeAsync(executor, x))
+			.Where((x, _) => ValueTask.FromResult(prefix.Length == 0
+				|| x.Name.ToPlainText().StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 			.Where(async (x, ct) => !offSwitch || await x.Members.Value
 				.AllAsync(m => m.Member.Object().Id != executor.Object().Id, ct))
 			.Where(async (x, ct) => !onSwitch || await x.Members.Value
@@ -40,6 +45,12 @@ public static class ChannelList
 				? channel.Name
 				: MModule.concat(MModule.single("Name: "), channel.Name))
 			.ToArrayAsync();
+
+		if (channelList.Length == 0)
+		{
+			await NotifyService.Notify(executor, "CHAT: No channels match that.", executor);
+			return new CallState(MModule.empty());
+		}
 
 		var result = MModule.multipleWithDelimiter(MModule.single("\n"), channelList);
 		await NotifyService.Notify(executor, result, executor);

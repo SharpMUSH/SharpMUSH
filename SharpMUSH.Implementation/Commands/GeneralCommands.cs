@@ -1531,6 +1531,7 @@ public partial class Commands
 		Switches = ["LIST", "INSIDE", "QUIET"], ParameterNames = ["object", "destination"])]
 	public static async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
@@ -2089,6 +2090,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["target", "message"])]
 	public static async ValueTask<Option<CallState>> NoSpoofPrompt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -2122,9 +2124,10 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SCAN", Switches = ["ROOM", "SELF", "ZONE", "GLOBALS"], Behavior = CB.Default | CB.NoGagged,
-		MinArgs = 0, MaxArgs = 0, ParameterNames = ["object", "code"])]
+		MinArgs = 1, MaxArgs = 0, ParameterNames = ["object", "code"])]
 	public static async ValueTask<Option<CallState>> Scan(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches.Any()
@@ -2254,6 +2257,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 3, MaxArgs = int.MaxValue, ParameterNames = ["expression", "cases..."])]
 	public static async ValueTask<Option<CallState>> Switch(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches.ToArray();
@@ -2846,6 +2850,7 @@ public partial class Commands
 		MaxArgs = 2, ParameterNames = ["object", "attribute"])]
 	public static async ValueTask<Option<CallState>> Drain(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText();
 		var switches = parser.CurrentState.Switches.ToArray();
@@ -3071,6 +3076,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["condition", "true-command", "false-command"])]
 	public static async ValueTask<Option<CallState>> IfElse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var truthy = Predicates.Truthy(parsedIfElse!);
 
@@ -4562,6 +4568,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["expression", "cases..."])]
 	public static async ValueTask<Option<CallState>> Select(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
@@ -4750,6 +4757,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["object/attribute", "arguments..."])]
 	public static async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var args = parser.CurrentState.Arguments;
@@ -4988,63 +4996,84 @@ public partial class Commands
 	{
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		if (switches.Contains("QUIET") && (!switches.Contains("LIST") || !switches.Contains("RECALL")))
+		// /quiet only pairs with /list or /recall — it is invalid alongside anything else.
+		if (switches.Contains("QUIET") && !switches.Contains("LIST") && !switches.Contains("RECALL"))
 		{
+			await NotifyService!.Notify(executor, "CHAT: Incorrect combination of switches.", executor);
 			return new CallState("CHAT: INCORRECT COMBINATION OF SWITCHES");
 		}
+
+		// sharpchat.md:179-181 documents `@channel/list[/on|/off][/quiet] [<prefix>]` and
+		// `@channel/what [<prefix>]` — the argument is OPTIONAL there and required everywhere else.
+		// Reading Arguments["0"] unconditionally turned every argument-less switched form into a
+		// KeyNotFoundException, so read through the dictionary and let the arms state their own arity.
+		var arg0 = args.GetValueOrDefault("0")?.Message;
+		var arg1 = args.GetValueOrDefault("1")?.Message;
+		var emptyIfMissing0 = arg0 ?? MModule.empty();
+		var emptyIfMissing1 = arg1 ?? MModule.empty();
 
 		// Note: Channel visibility checking is handled by PermissionService.ChannelCanSeeAsync in each handler
 		return switches switch
 		{
-			[.., "LIST"] => await ChannelCommand.ChannelList.Handle(parser, LocateService!, PermissionService!, Mediator!,
-				NotifyService!, args["0"].Message!, args["1"].Message!, switches),
+			// /list, /recall and /decompile combine with other switches (`@channel/list/on/quiet`), so they
+			// match on membership rather than on a positional list pattern that only fires when they are last.
+			_ when switches.Contains("LIST") => await ChannelCommand.ChannelList.Handle(parser, LocateService!,
+				PermissionService!, Mediator!, NotifyService!, emptyIfMissing0, emptyIfMissing1, switches),
+			_ when switches.Contains("RECALL") && arg0 is not null => await ChannelRecall.Handle(parser, LocateService!,
+				PermissionService!, Mediator!, NotifyService!, arg0, emptyIfMissing1, switches),
+			_ when switches.Contains("DECOMPILE") && arg0 is not null => await ChannelDecompile.Handle(parser,
+				LocateService!, PermissionService!, Mediator!, NotifyService!, arg0, emptyIfMissing1, switches),
 			["WHAT"] => await ChannelWhat.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-				args["0"].Message!),
-			["WHO"] => await ChannelWho.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-				args["0"].Message!),
-			["ON"] or ["JOIN"] => await ChannelOn.Handle(parser, LocateService!, PermissionService!, Mediator!,
-				NotifyService!, args["0"].Message!, args["1"].Message),
-			["OFF"] or ["LEAVE"] => await ChannelOff.Handle(parser, LocateService!, PermissionService!, Mediator!,
-				NotifyService!, args["0"].Message!, args["1"].Message),
-			["GAG"] => await ChannelGag.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-				args["0"].Message!, args["1"].Message!, switches),
-			["MUTE"] => await ChannelMute.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-				args["0"].Message!, args["1"].Message!),
-			["HIDE"] => await ChannelHide.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-				args["0"].Message!, args["1"].Message!),
-			["COMBINE"] => await ChannelCombine.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-				args["0"].Message!, args["1"].Message!),
-			["TITLE"] => await ChannelTitle.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-				args["0"].Message!, args["1"].Message!),
-			[.., "RECALL"] => await ChannelRecall.Handle(parser, LocateService!, PermissionService!, Mediator!,
-				NotifyService!, args["0"].Message!, args["1"].Message!, switches),
-			["ADD"] when args.ContainsKey("0") && args.ContainsKey("1")
+				emptyIfMissing0),
+			["WHO"] when arg0 is not null => await ChannelWho.Handle(parser, LocateService!, PermissionService!, Mediator!,
+				NotifyService!, arg0),
+			(["ON"] or ["JOIN"]) when arg0 is not null => await ChannelOn.Handle(parser, LocateService!, PermissionService!,
+				Mediator!, NotifyService!, arg0, arg1),
+			(["OFF"] or ["LEAVE"]) when arg0 is not null => await ChannelOff.Handle(parser, LocateService!,
+				PermissionService!, Mediator!, NotifyService!, arg0, arg1),
+			["GAG"] when arg0 is not null => await ChannelGag.Handle(parser, LocateService!, PermissionService!, Mediator!,
+				NotifyService!, arg0, arg1, switches),
+			["MUTE"] when arg0 is not null => await ChannelMute.Handle(parser, LocateService!, PermissionService!, Mediator!,
+				NotifyService!, arg0, emptyIfMissing1),
+			["HIDE"] when arg0 is not null => await ChannelHide.Handle(parser, LocateService!, PermissionService!, Mediator!,
+				NotifyService!, arg0, arg1),
+			["COMBINE"] when arg0 is not null => await ChannelCombine.Handle(parser, LocateService!, PermissionService!,
+				Mediator!, NotifyService!, arg0, arg1),
+			["TITLE"] when arg0 is not null => await ChannelTitle.Handle(parser, LocateService!, PermissionService!,
+				Mediator!, NotifyService!, arg0, emptyIfMissing1),
+			["ADD"] when arg0 is not null && arg1 is not null
 				=> await ChannelAdd.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-					Configuration!, args["0"].Message!, args["1"].Message!),
-			["PRIVS"] when args.ContainsKey("0") && args.ContainsKey("1")
+					Configuration!, arg0, arg1),
+			["PRIVS"] when arg0 is not null && arg1 is not null
 				=> await ChannelPrivs.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-					args["0"].Message!, args["1"].Message!),
-			["DESCRIBE"] when args.ContainsKey("0") && args.ContainsKey("1")
+					arg0, arg1),
+			["DESCRIBE"] when arg0 is not null && arg1 is not null
 				=> await ChannelDescribe.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-					args["0"].Message!, args["1"].Message!),
-			["BUFFER"] when args.ContainsKey("0") && args.ContainsKey("1")
+					arg0, arg1),
+			["BUFFER"] when arg0 is not null && arg1 is not null
 				=> await ChannelBuffer.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-					Configuration!, args["0"].Message!, args["1"].Message!),
-			[.., "DECOMPILE"] => await ChannelDecompile.Handle(parser, LocateService!, PermissionService!, Mediator!,
-				NotifyService!, args["0"].Message!, args["1"].Message!, switches),
-			["CHOWN"] => await ChannelChown.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-				args["0"].Message!, args["1"].Message!),
-			["RENAME"] => await ChannelRename.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-				Configuration!, args["0"].Message!, args["1"].Message!),
-			["WIPE"] => await ChannelWipe.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-				args["0"].Message!, args["1"].Message!),
-			["DELETE"] => await ChannelDelete.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
-				args["0"].Message!, args["1"].Message!),
-			["MOGRIFIER"] => await ChannelMogrifier.Handle(parser, LocateService!, PermissionService!, Mediator!,
-				NotifyService!, args["0"].Message!, args.GetValueOrDefault("1")?.Message),
-			_ => new CallState("What do you want to do with the channel?")
+					Configuration!, arg0, arg1),
+			["CHOWN"] when arg0 is not null => await ChannelChown.Handle(parser, LocateService!, PermissionService!,
+				Mediator!, NotifyService!, arg0, emptyIfMissing1),
+			["RENAME"] when arg0 is not null && arg1 is not null
+				=> await ChannelRename.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+					Configuration!, arg0, arg1),
+			["WIPE"] when arg0 is not null => await ChannelWipe.Handle(parser, LocateService!, PermissionService!, Mediator!,
+				NotifyService!, arg0, emptyIfMissing1),
+			["DELETE"] when arg0 is not null => await ChannelDelete.Handle(parser, LocateService!, PermissionService!,
+				Mediator!, NotifyService!, arg0, emptyIfMissing1),
+			["MOGRIFIER"] when arg0 is not null => await ChannelMogrifier.Handle(parser, LocateService!, PermissionService!,
+				Mediator!, NotifyService!, arg0, arg1),
+			_ => await NotifyAndReturnChannelUsage(executor)
 		};
+	}
+
+	private static async ValueTask<CallState> NotifyAndReturnChannelUsage(AnySharpObject executor)
+	{
+		await NotifyService!.Notify(executor, "What do you want to do with the channel?", executor);
+		return new CallState("What do you want to do with the channel?");
 	}
 
 	[SharpCommand(Name = "@DECOMPILE", Switches = ["DB", "NAME", "PREFIX", "TF", "FLAGS", "ATTRIBS", "SKIPDEFAULTS"],
@@ -5674,7 +5703,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@VERB", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0,
+	[SharpCommand(Name = "@VERB", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 2,
 		MaxArgs = 0, ParameterNames = ["object", "verb", "target"])]
 	public static async ValueTask<Option<CallState>> Verb(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -5689,13 +5718,17 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.CantSeeThat);
 		}
 
-		var victimName = args.ElementAtOrDefault(0).Value.Message!.ToPlainText();
-		var actorName = args.ElementAtOrDefault(1).Value.Message!.ToPlainText();
-		var what = args.ElementAtOrDefault(2).Value.Message!.ToPlainText();
-		var whatd = args.ElementAtOrDefault(3).Value.Message!.ToPlainText();
-		var owhat = args.ElementAtOrDefault(4).Value.Message!.ToPlainText();
-		var owhatd = args.ElementAtOrDefault(5).Value.Message!.ToPlainText();
-		var awhat = args.ElementAtOrDefault(6).Value.Message!.ToPlainText();
+		// ElementAtOrDefault past the end yields a default KeyValuePair whose Value is a null CallState,
+		// so every optional slot has to be read through a null-safe accessor.
+		string ArgAt(int index) => args.ElementAtOrDefault(index).Value?.Message?.ToPlainText() ?? string.Empty;
+
+		var victimName = ArgAt(0);
+		var actorName = ArgAt(1);
+		var what = ArgAt(2);
+		var whatd = ArgAt(3);
+		var owhat = ArgAt(4);
+		var owhatd = ArgAt(5);
+		var awhat = ArgAt(6);
 
 		const int RequiredArgsBeforeStack = 7;
 		var stackArgs = args.Skip(RequiredArgsBeforeStack)
@@ -6334,7 +6367,7 @@ public partial class Commands
 	[SharpCommand(Name = "@MAIL",
 		Switches =
 		[
-			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDERS", "UNFOLDER", "LIST", "READ",
+			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDER", "UNFOLDER", "LIST", "READ",
 			"UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD", "SEND", "SILENT",
 			"URGENT", "REVIEW", "RETRACT"
 		], Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["player", "subject"])]
@@ -6406,7 +6439,7 @@ public partial class Commands
 				=> await ForwardMail.Handle(parser, ObjectDataService!, LocateService!, PermissionService!, Mediator!, number,
 					arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
-				when arg0?.Length != 0 && arg1?.Length != 0
+				when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await SendMail.Handle(parser, PermissionService!, ObjectDataService!, Mediator!, NotifyService!, AttributeService!, Configuration!, arg0!,
 					arg1!, switches),
 			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
@@ -6415,10 +6448,16 @@ public partial class Commands
 					switches),
 			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
 				=> await ListMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
-			_ => MModule.single(ErrorMessages.Returns.BadArgumentsToMailCommand)
+			_ => await NotifyAndReturnBadMailArguments(executor)
 		};
 
 		return new CallState(response);
+	}
+
+	private static async ValueTask<MString> NotifyAndReturnBadMailArguments(AnySharpObject executor)
+	{
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MailBadArguments), executor);
+		return MModule.single(ErrorMessages.Returns.BadArgumentsToMailCommand);
 	}
 
 	[SharpCommand(Name = "@NSPEMIT", Switches = ["LIST", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit,
@@ -6501,12 +6540,13 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@PASSWORD", Switches = [],
-		Behavior = CB.Player | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGuest, MinArgs = 0, MaxArgs = 0, ParameterNames = ["old", "new"])]
+		Behavior = CB.Player | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGuest, MinArgs = 2, MaxArgs = 0, ParameterNames = ["old", "new"])]
 	public static async ValueTask<Option<CallState>> Password(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var oldPassword = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var newPassword = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var newPassword = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
 		if (!executor.IsPlayer)
 		{
@@ -7230,9 +7270,10 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SKIP", Switches = ["IFELSE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
-		MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+		MinArgs = 1, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Skip(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var falsey = Predicates.Falsy(parsedIfElse!);
 
@@ -7248,6 +7289,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 3, MaxArgs = 0, ParameterNames = ["object", "type", "message"])]
 	public static async ValueTask<Option<CallState>> Message(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;

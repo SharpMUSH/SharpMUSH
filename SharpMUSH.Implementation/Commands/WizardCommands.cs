@@ -652,9 +652,10 @@ public partial class Commands
 
 
 	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 0, ParameterNames = ["message"])]
+		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 1, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
@@ -676,6 +677,7 @@ public partial class Commands
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
@@ -1631,9 +1633,10 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@NEWPASSWORD", Switches = ["GENERATE"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["player", "password"])]
+		CommandLock = "FLAG^WIZARD", MinArgs = 1, ParameterNames = ["player", "password"])]
 	public static async ValueTask<Option<CallState>> NewPassword(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var arg0 = args["0"].Message!.ToPlainText();
@@ -1667,7 +1670,13 @@ public partial class Commands
 			return new CallState(generatedPassword);
 		}
 
-		var arg1 = args["1"].Message!.ToPlainText();
+		if (!args.TryGetValue("1", out var arg1CallState))
+		{
+			await NotifyService!.Notify(executor, "Usage: @newpassword <player>=<password>", executor);
+			return new CallState(string.Format(ErrorMessages.Returns.TooFewCommandArguments, "@NEWPASSWORD", 2, 1));
+		}
+
+		var arg1 = arg1CallState.Message!.ToPlainText();
 		var newHashedPassword = PasswordService!.HashPassword(asPlayer.Object.DBRef.ToString(), arg1);
 
 		await Mediator!.Send(new SetPlayerPasswordCommand(asPlayer, newHashedPassword));
@@ -1930,6 +1939,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password"])]
 	public static async ValueTask<Option<CallState>> PlayerCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var startingQuota = (int)Configuration!.CurrentValue.Limit.StartingQuota;
@@ -2308,9 +2318,10 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY|POWER^ANNOUNCE", MinArgs = 0, ParameterNames = ["message"])]
+		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY|POWER^ANNOUNCE", MinArgs = 1, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
@@ -2332,6 +2343,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["old-zone", "new-zone"])]
 	public static async ValueTask<Option<CallState>> ChangeZoneAll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var playerName = args["0"].Message!.ToPlainText();

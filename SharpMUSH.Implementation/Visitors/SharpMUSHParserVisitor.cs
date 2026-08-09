@@ -1444,10 +1444,17 @@ public class SharpMUSHParserVisitor(
 	private async Task<Option<CallState>> HandleChannelCommand(IMUSHCodeParser prs, SharpChannel channel,
 		CommandContext context, MString src)
 	{
-		var rest = MModule.substring(
+		var full = MModule.substring(
 			context.evaluationString().Start.StartIndex,
 			context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
 			src);
+
+		// The evaluation string still carries the `+<channel>` token itself; only what follows the first
+		// space is the message. Without this, `+Public Hi` was chatted as the literal "+Public Hi".
+		var firstSpace = MModule.indexOf(full, " ");
+		var rest = firstSpace == -1
+			? MModule.empty()
+			: MModule.substring(firstSpace + 1, MModule.getLength(full) - firstSpace - 1, full);
 
 		var chatParser = prs.Push(prs.CurrentState with
 		{
@@ -2119,7 +2126,11 @@ public class SharpMUSHParserVisitor(
 
 		// TODO: Investigate if single-token commands should support argument splitting.
 		// Currently causing errors, may require special handling for single-character commands.
-		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition.LibraryInformation);
+		// The root command must be passed so the no-space branch strips the token: without it, a bare
+		// "]" split to a single argument equal to "]" itself, and the re-dispatch in NoParse/StrictParse
+		// re-entered this same path forever — a stack overflow that takes the whole process down.
+		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition.LibraryInformation,
+			singleRootCommand);
 		if (splitResult.TryPickT1(out var splitError, out var arguments))
 		{
 			if (prs.CurrentState.Handle.HasValue)

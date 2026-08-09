@@ -27,8 +27,11 @@ public static class ChannelChown
 
 		var channel = maybeChannel.AsChannel;
 
-		if (await PermissionService.ChannelCanModifyAsync(executor, channel))
+		// The sense of this check was inverted: whoever COULD modify the channel was refused,
+		// and whoever could not fell through and made the change.
+		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
+			await NotifyService.Notify(executor, ErrorMessages.Returns.YouCannotModifyThisChannel, executor);
 			return new CallState(ErrorMessages.Returns.YouCannotModifyThisChannel);
 		}
 

@@ -15,11 +15,11 @@ public partial class Commands
 		// Re-parse the command with NoEval mode. This is necessary because the command
 		// was already tokenized in Default mode by the time we reach this handler.
 		// The "]" prefix changes evaluation semantics for the entire command.
-		var oldCommand = MModule.multipleWithDelimiter(MModule.single(" "),
-		[
-			parser.CurrentState.Arguments["0"].Message!,
-			parser.CurrentState.Arguments["1"].Message!
-		]);
+		var oldCommand = RebuildTokenlessCommand(parser);
+		if (MModule.getLength(oldCommand) == 0)
+		{
+			return CallState.Empty;
+		}
 
 		await parser.With(s => s with { ParseMode = ParseMode.NoEval },
 			async np => await np.CommandParse(oldCommand));
@@ -38,17 +38,34 @@ public partial class Commands
 	[SharpCommand(Name = "~", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> StrictParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var oldCommand = MModule.multipleWithDelimiter(MModule.single(" "),
-		[
-			parser.CurrentState.Arguments["0"].Message!,
-			parser.CurrentState.Arguments["1"].Message!
-		]);
+		var oldCommand = RebuildTokenlessCommand(parser);
+		if (MModule.getLength(oldCommand) == 0)
+		{
+			return CallState.Empty;
+		}
 
 		await parser.With(
 			s => s with { Flags = s.Flags | ParserStateFlags.StrictParse },
 			async sp => await sp.CommandParse(oldCommand));
 
 		return new CallState(string.Empty);
+	}
+
+	/// <summary>
+	/// Reassembles the command line that a prefix token such as <c>]</c> or <c>~</c> modifies, with the
+	/// token itself removed, so it can be re-dispatched. An empty result means the player typed the bare
+	/// token and there is nothing to re-dispatch — re-parsing then would re-enter this same command.
+	/// </summary>
+	private static MString RebuildTokenlessCommand(IMUSHCodeParser parser)
+	{
+		var parts = parser.CurrentState.ArgumentsOrdered.Values
+			.Select(x => x.Message ?? MModule.empty())
+			.Where(x => MModule.getLength(x) > 0)
+			.ToArray();
+
+		return parts.Length == 0
+			? MModule.empty()
+			: MModule.multipleWithDelimiter(MModule.single(" "), parts);
 	}
 
 	// RSNoParse: only the RHS value is kept unevaluated (deferred/literal).
