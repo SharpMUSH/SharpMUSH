@@ -317,10 +317,14 @@ public class ManipulateSharpObjectService(
 
 		var allPowers = mediator.CreateStream(new GetPowersQuery());
 
+		// Alias is declared non-nullable but the seeded powers store null for "no alias", so an unguarded
+		// x.Alias.Equals throws on the first aliasless power the stream yields — which, since the predicate
+		// runs over every power until one matches, made setting or clearing ANY power a NullReferenceException.
+		// GetPowerQueryHandler already guards the same comparison this way.
 		var found = await allPowers
 			.FirstOrDefaultAsync(x =>
 				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)
-				|| x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase));
+				|| (x.Alias is not null && x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)));
 
 		if (found is null)
 		{
@@ -385,10 +389,14 @@ public class ManipulateSharpObjectService(
 
 		var allPowers = mediator.CreateStream(new GetPowersQuery());
 
+		// Alias is declared non-nullable but the seeded powers store null for "no alias", so an unguarded
+		// x.Alias.Equals throws on the first aliasless power the stream yields — which, since the predicate
+		// runs over every power until one matches, made setting or clearing ANY power a NullReferenceException.
+		// GetPowerQueryHandler already guards the same comparison this way.
 		var found = await allPowers
 			.FirstOrDefaultAsync(x =>
 				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)
-				|| x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase));
+				|| (x.Alias is not null && x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)));
 
 		if (found is null)
 		{
