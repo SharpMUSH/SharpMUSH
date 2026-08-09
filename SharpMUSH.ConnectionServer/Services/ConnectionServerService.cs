@@ -44,7 +44,8 @@ public class ConnectionServerService(
 				gmcpFunction,
 				capabilities ?? new ProtocolCapabilities(),
 				null,
-				connectionType);
+				connectionType,
+				presenceClass);
 
 			_sessionState.AddOrUpdate(handle, data, (_, _) =>
 				throw new InvalidOperationException("Handle already registered"));
@@ -69,7 +70,12 @@ public class ConnectionServerService(
 							{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
 							{ "InternetProtocolAddress", ipAddress },
 							{ "HostName", hostname },
-							{ "ConnectionType", connectionType }
+							{ "ConnectionType", connectionType },
+							// Without this the engine rebuilds a reconciled connection with the
+							// IConnectionService default of "play", so a portal-class socket comes
+							// back visible to mortal WHO. It is the one field of the established
+							// message that the store did not carry.
+							{ "PresenceClass", presenceClass }
 						}
 					});
 				}
@@ -195,7 +201,8 @@ public class ConnectionServerService(
 		Func<string, string, ValueTask>? GMCPFunction,
 		ProtocolCapabilities Capabilities,
 		PlayerOutputPreferences? Preferences,
-		string ConnectionType = "telnet");
+		string ConnectionType = "telnet",
+		string PresenceClass = "play");
 
 	public enum ConnectionState
 	{
