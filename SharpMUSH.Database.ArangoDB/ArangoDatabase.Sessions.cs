@@ -123,4 +123,17 @@ public partial class ArangoDatabase
 				"FOR d IN @@c FILTER d.OriginIp == @ip REMOVE d IN @@c",
 				bindVars: new Dictionary<string, object> { { "@c", DatabaseConstants.Sessions }, { "ip", originIp } },
 				cancellationToken: cancellationToken), cancellationToken);
+
+	// Read, so no transaction — same reasoning as GetSessionAsync. Ban enforcement runs off the
+	// admin path, not the request path, and the answer only has to be as current as the moment the
+	// ban landed: a session created after this returns is one the validation-time sitelock check
+	// refuses anyway.
+	public async ValueTask<string[]> GetSessionOriginIpsAsync(CancellationToken cancellationToken = default)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
+			"FOR d IN @@c RETURN DISTINCT d.OriginIp",
+			bindVars: new Dictionary<string, object> { { "@c", DatabaseConstants.Sessions } },
+			cancellationToken: cancellationToken);
+		return [.. result.Where(ip => !string.IsNullOrEmpty(ip))];
+	}
 }

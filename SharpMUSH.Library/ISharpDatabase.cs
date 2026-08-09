@@ -851,5 +851,17 @@ public interface ISharpDatabase
 	ValueTask DeleteSessionsForAccountAsync(string accountId, CancellationToken cancellationToken = default);
 	ValueTask DeleteSessionsForIpAsync(string originIp, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// The distinct origin IPs of the sessions that currently exist.
+	/// </summary>
+	/// <remarks>
+	/// Ban enforcement needs this because sitelock rules are patterns — globs and CIDR blocks — while
+	/// <see cref="DeleteSessionsForIpAsync"/> is exact equality on one address. Matching a pattern
+	/// inside the query would mean writing the same glob/CIDR semantics three times, once per query
+	/// language, and AQL/Cypher/SurrealQL do not agree on how. Returning the candidate addresses lets
+	/// <c>SitelockMatcher</c> stay the single implementation of what a rule matches.
+	/// </remarks>
+	ValueTask<string[]> GetSessionOriginIpsAsync(CancellationToken cancellationToken = default);
+
 	#endregion
 }

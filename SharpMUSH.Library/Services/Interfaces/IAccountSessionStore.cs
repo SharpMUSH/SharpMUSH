@@ -41,4 +41,17 @@ public interface IAccountSessionStore
 
 	/// <summary>Invalidates every session token created from the given origin IP (ban enforcement).</summary>
 	Task RevokeAllForIpAsync(string originIp, CancellationToken ct = default);
+
+	/// <summary>
+	/// The distinct origin IPs of the sessions that currently exist, so ban enforcement can decide which
+	/// of them a glob or CIDR sitelock rule matches.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="RevokeAllForIpAsync"/> takes one literal address, and sitelock rules are patterns. A
+	/// rule like <c>10.0.0.0/8</c> or <c>*.example.net</c> therefore had nothing to revoke unless the
+	/// banned party happened to be connected at that instant, because the only addresses ban enforcement
+	/// knew about were the ones it read off live connections. This is how it learns about the sessions
+	/// that exist without one.
+	/// </remarks>
+	Task<string[]> GetKnownOriginIpsAsync(CancellationToken ct = default);
 }

@@ -78,5 +78,19 @@ public partial class MemgraphDatabase
 			"MATCH (s:Session {originIp: $originIp}) DELETE s", new { originIp }, cancellationToken);
 	}
 
+	/// <inheritdoc />
+	public async ValueTask<string[]> GetSessionOriginIpsAsync(CancellationToken cancellationToken = default)
+	{
+		var result = await ExecuteWithRetryAsync(
+			"MATCH (s:Session) RETURN DISTINCT s.originIp AS originIp", ct: cancellationToken);
+		return
+		[
+			.. result.Result
+				.Select(record => record["originIp"].As<string?>())
+				.Where(ip => !string.IsNullOrEmpty(ip))
+				.Select(ip => ip!)
+		];
+	}
+
 	#endregion
 }

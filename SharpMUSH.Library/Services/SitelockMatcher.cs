@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text.RegularExpressions;
 
@@ -84,16 +85,22 @@ public static class SitelockMatcher
 	}
 
 	/// <summary>
+	/// Compiled glob patterns, keyed by the rule text they came from. Matching now runs on the
+	/// authentication path of every authenticated request, not only at login, so rebuilding the pattern
+	/// string and re-parsing it once per rule per call is worth avoiding. The rule set is admin-authored
+	/// and small, and every caller passes a rule as the pattern, so its keys are bounded by the rule set
+	/// and this never grows unbounded.
+	/// </summary>
+	private static readonly ConcurrentDictionary<string, Regex> GlobCache = new();
+
+	/// <summary>
 	/// Simple wildcard matching for sitelock patterns (<c>*</c> and <c>?</c> wildcards), lifted
 	/// from the former private <c>WizardCommands.WildcardMatch</c> so it is shared across the
 	/// connect-time check and ban-enforcement matchers.
 	/// </summary>
 	private static bool WildcardMatch(string text, string pattern)
-	{
-		var regexPattern = "^" + Regex.Escape(pattern)
-			.Replace("\\*", ".*")
-			.Replace("\\?", ".") + "$";
-
-		return Regex.IsMatch(text, regexPattern, RegexOptions.IgnoreCase);
-	}
+		=> GlobCache.GetOrAdd(pattern, static p => new Regex(
+				"^" + Regex.Escape(p).Replace("\\*", ".*").Replace("\\?", ".") + "$",
+				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+			.IsMatch(text);
 }

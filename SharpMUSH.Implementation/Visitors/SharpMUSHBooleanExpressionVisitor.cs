@@ -604,11 +604,15 @@ public class SharpMUSHBooleanExpressionVisitor(
 				.AsTask()
 				.ConfigureAwait(false).GetAwaiter().GetResult();
 
-			if (evalResult == null)
-				return false;
-
-			// Compare with expected value (case-insensitive, per PennMUSH strcasecmp)
-			return evalResult.Equals(expected, StringComparison.OrdinalIgnoreCase);
+			return evalResult.Match(
+				// Compare with expected value (case-insensitive, per PennMUSH strcasecmp)
+				value => value.Equals(expected, StringComparison.OrdinalIgnoreCase),
+				// An evaluation that could not run denies, deliberately and in one place. PennMUSH's
+				// check_attrib_lock() (src/boolexp.c) returns 0 for every way the evaluation can fail —
+				// no attribute name, no comparison string, no such attribute — and pennlock.hlp says of a
+				// permission failure inside the eval that "the person will automatically fail to pass the
+				// lock". A lock that cannot be evaluated is a lock that has not been passed.
+				_ => false);
 		};
 
 		return Expression.Invoke(Expression.Constant(func), gated, unlocker, Expression.Constant(attribute), Expression.Constant(expectedValue));

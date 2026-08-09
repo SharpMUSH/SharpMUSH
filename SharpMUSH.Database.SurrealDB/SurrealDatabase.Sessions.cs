@@ -92,5 +92,20 @@ public partial class SurrealDatabase
 			new Dictionary<string, object?> { ["originIp"] = originIp }, cancellationToken);
 	}
 
+	/// <inheritdoc />
+	public async ValueTask<string[]> GetSessionOriginIpsAsync(CancellationToken cancellationToken = default)
+	{
+		var response = await ExecuteAsync("SELECT VALUE originIp FROM session",
+			new Dictionary<string, object?>(), cancellationToken);
+		var results = response.GetValue<List<string?>>(0) ?? [];
+		return
+		[
+			.. results
+				.Where(ip => !string.IsNullOrEmpty(ip))
+				.Select(ip => ip!)
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+		];
+	}
+
 	#endregion
 }

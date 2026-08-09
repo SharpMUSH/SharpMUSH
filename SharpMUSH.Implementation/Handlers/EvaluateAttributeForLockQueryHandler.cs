@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mediator;
+using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -16,12 +17,20 @@ namespace SharpMUSH.Implementation.Handlers;
 /// PennMUSH eval locks (ATTR/pattern) evaluate the attribute on the gated object
 /// with the unlocker as enactor, then compare the result to the pattern.
 /// </summary>
+/// <remarks>
+/// An evaluation that throws returns <see cref="LockEvaluationFailure"/>, not a value. It used to
+/// return <c>null</c>, which the caller then compared against the lock's pattern — a failure and a
+/// non-matching result were the same answer. They deny alike, but only one of them says the game is
+/// broken, and a caller that wanted to treat them differently had no way to.
+/// </remarks>
 public class EvaluateAttributeForLockQueryHandler(
 	IAttributeService attributeService,
 	IMUSHCodeParser parser,
-	ILogger<EvaluateAttributeForLockQueryHandler> logger) : IQueryHandler<EvaluateAttributeForLockQuery, string?>
+	ILogger<EvaluateAttributeForLockQueryHandler> logger)
+	: IQueryHandler<EvaluateAttributeForLockQuery, OneOf<string, LockEvaluationFailure>>
 {
-	public async ValueTask<string?> Handle(EvaluateAttributeForLockQuery query, CancellationToken cancellationToken)
+	public async ValueTask<OneOf<string, LockEvaluationFailure>> Handle(EvaluateAttributeForLockQuery query,
+		CancellationToken cancellationToken)
 	{
 		// PennMUSH: call_ufun(&ufun, buff, player, player, pe_info, NULL)
 		// where player = unlocker, and the attribute is on target (gated object)
@@ -62,13 +71,13 @@ public class EvaluateAttributeForLockQueryHandler(
 				evalParent: false,
 				ignorePermissions: true);
 
-			return result?.ToPlainText();
+			return result.ToPlainText();
 		}
 		catch (Exception ex)
 		{
 			logger.LogWarning(ex, "Failed to evaluate attribute {Attribute} on {Object} for lock evaluation",
 				query.AttributeName, query.GatedObject);
-			return null;
+			return new LockEvaluationFailure(query.AttributeName, ex.Message);
 		}
 	}
 }
