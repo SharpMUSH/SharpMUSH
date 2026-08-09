@@ -832,6 +832,21 @@ public interface ISharpDatabase
 	/// <summary>Returns the session for a token, or null if absent.</summary>
 	ValueTask<SharpSession?> GetSessionAsync(string token, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// Slides an existing session's expiry to <paramref name="expiryUnixMs"/>. Returns <c>true</c> if the
+	/// session was still there and was updated, <c>false</c> if it was gone.
+	/// </summary>
+	/// <remarks>
+	/// This exists because <see cref="UpsertSessionAsync"/> must not be used to renew a session. Renewal
+	/// is read-then-write, and the upsert's insert branch reinstates a document that a revocation deleted
+	/// in between — logout, <see cref="DeleteSessionsForAccountAsync"/>, or a ban — leaving a revoked
+	/// session alive for up to a full TTL. Renewal therefore has to be a conditional update that does
+	/// nothing at all when the document is absent, which is what this is. Only session creation may
+	/// insert.
+	/// </remarks>
+	ValueTask<bool> TouchSessionExpiryAsync(string token, long expiryUnixMs,
+		CancellationToken cancellationToken = default);
+
 	ValueTask DeleteSessionAsync(string token, CancellationToken cancellationToken = default);
 	ValueTask DeleteSessionsForAccountAsync(string accountId, CancellationToken cancellationToken = default);
 	ValueTask DeleteSessionsForIpAsync(string originIp, CancellationToken cancellationToken = default);

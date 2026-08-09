@@ -54,6 +54,29 @@ public partial class ArangoDatabase
 						} }
 				}, cancellationToken: cancellationToken), cancellationToken);
 
+	/// <summary>
+	/// UPDATE, never UPSERT: the FOR/FILTER finds nothing when the document is gone, so the whole statement
+	/// is a no-op rather than an insert. Same exclusive transaction as the other session writes, so this
+	/// cannot interleave with a concurrent revoke either — it either runs before the delete and is undone
+	/// by it, or after and finds nothing.
+	/// </summary>
+	public async ValueTask<bool> TouchSessionExpiryAsync(string token, long expiryUnixMs,
+		CancellationToken cancellationToken = default)
+	{
+		var touched = false;
+		await InTransactionAsync(async tx =>
+		{
+			var updated = await arangoDb.Query.ExecuteAsync<string>(tx,
+				"FOR d IN @@c FILTER d._key == @key UPDATE d WITH { ExpiryUnixMs: @expiry } IN @@c RETURN NEW._key",
+				bindVars: new Dictionary<string, object>
+				{
+					{ "@c", DatabaseConstants.Sessions }, { "key", token }, { "expiry", expiryUnixMs }
+				}, cancellationToken: cancellationToken);
+			touched = updated.Count > 0;
+		}, cancellationToken);
+		return touched;
+	}
+
 	public async ValueTask<SharpSession?> GetSessionAsync(string token, CancellationToken cancellationToken = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
