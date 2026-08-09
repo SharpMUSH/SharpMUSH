@@ -285,6 +285,8 @@ MERGE (o)-[:HAS_OWNER]->(pm)
 
 			await CreateInitialFlags(cancellationToken);
 
+			await RepairMistrustMyopicFlag(cancellationToken);
+
 			await CreateInitialAttributeFlags(cancellationToken);
 
 			await CreateInitialPowers(cancellationToken);
@@ -405,7 +407,10 @@ MERGE (o)-[:HAS_FLAG]->(f)
 ("JURY_OK", "j", ["JURYOK"], ["royalty"], ["royalty"], ["PLAYER"]),
 ("KEEPALIVE", "k", null, [], [], ["PLAYER"]),
 ("LIGHT", "l", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-("MISTRUST", "m", ["MYOPIC"], ["trusted"], ["trusted"], ["PLAYER","EXIT","THING"]),
+("MISTRUST", "m", null, ["trusted"], ["trusted"], ["THING","EXIT","ROOM"]),
+// MYOPIC shares MISTRUST's letter and is told apart from it by object type, as in PennMUSH
+// (hdrs/flag_tab.h:51, src/flags.c:778). Symbols are not unique here — see ABODE/ANSI on 'A'.
+("MYOPIC", "m", null, [], [], ["PLAYER"]),
 ("NO_COMMAND", "n", ["NOCOMMAND"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
 ("ON_VACATION", "o", ["ONVACATION","ON-VACATION"], [], [], ["PLAYER"]),
 ("PUPPET", "P", null, [], [], ["THING"]),
@@ -447,6 +452,28 @@ f.typeRestrictions = $typeRestrictions
 			}, ct);
 		}
 	}
+
+	/// <summary>
+	/// Splits MYOPIC back out of MISTRUST on a database seeded before the two were told apart.
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH has two flags on the letter <c>m</c>, separated by object type: MISTRUST
+	/// (<c>src/flags.c:778</c> — THING, EXIT, ROOM) and MYOPIC (<c>hdrs/flag_tab.h:51</c> — PLAYER).
+	/// The seed above collapsed them, giving MISTRUST a MYOPIC alias and the wrong type list.
+	/// <para>
+	/// MYOPIC itself needs no repair — it is a new name, so the seed's <c>MERGE</c> creates it. Only the
+	/// MISTRUST row needs correcting, and the <c>ON CREATE SET</c> the seed uses will not touch a row
+	/// that already exists. The <c>WHERE</c> clause is what keeps this from being a standing overwrite:
+	/// it matches only a row still carrying the collapsed alias, so the statement fires at most once per
+	/// database and never reverts an operator's later customisation of the flag.
+	/// </para>
+	/// </remarks>
+	private async Task RepairMistrustMyopicFlag(CancellationToken ct) =>
+		await ExecuteWithRetryAsync("""
+MATCH (f:ObjectFlag {name: 'MISTRUST'})
+WHERE 'MYOPIC' IN f.aliases
+SET f.aliases = [], f.symbol = 'm', f.typeRestrictions = ['THING', 'EXIT', 'ROOM']
+""", ct: ct);
 
 	/// <summary>
 	/// Seed plugin-contributed flags (Phase 2a <see cref="IFlagSource"/>) via the same idempotent MERGE

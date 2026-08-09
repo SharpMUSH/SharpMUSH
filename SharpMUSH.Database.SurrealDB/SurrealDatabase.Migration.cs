@@ -441,7 +441,13 @@ public partial class SurrealDatabase
 			("JURY_OK", "j", ["JURYOK"], ["royalty"], ["royalty"], ["PLAYER"]),
 			("KEEPALIVE", "k", null, [], [], ["PLAYER"]),
 			("LIGHT", "l", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("MISTRUST", "m", ["MYOPIC"], ["trusted"], ["trusted"], ["PLAYER","EXIT","THING"]),
+			("MISTRUST", "m", null, ["trusted"], ["trusted"], ["THING","EXIT","ROOM"]),
+			// MYOPIC shares MISTRUST's letter and is told apart from it by object type, as in PennMUSH
+			// (hdrs/flag_tab.h:51, src/flags.c:778). Symbols are not unique here — see ABODE/ANSI on 'A'.
+			// No separate repair migration is needed on this provider: the UPSERT below sets every field
+			// unconditionally on each Migrate(), so an existing MISTRUST row loses the MYOPIC alias and
+			// gains the right types, and MYOPIC is created, the next time the game boots.
+			("MYOPIC", "m", null, [], [], ["PLAYER"]),
 			("NO_COMMAND", "n", ["NOCOMMAND"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
 			("ON_VACATION", "o", ["ONVACATION","ON-VACATION"], [], [], ["PLAYER"]),
 			("PUPPET", "P", null, [], [], ["THING"]),

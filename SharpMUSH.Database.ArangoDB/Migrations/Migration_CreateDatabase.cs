@@ -3217,19 +3217,20 @@ public class Migration_CreateDatabase : IArangoMigration
 			Name = "MISTRUST",
 			Symbol = "m",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesContent,
+			TypeRestrictions = DatabaseConstants.typesNonPlayer,
 			SetPermissions = DatabaseConstants.permissionsTrusted,
 			UnsetPermissions = DatabaseConstants.permissionsTrusted
 		}),
+		// MYOPIC shares MISTRUST's letter and is told apart from it by object type, exactly as in
+		// PennMUSH (hdrs/flag_tab.h:51 and src/flags.c:778; game/txt/hlp/pennflag.hlp:37 prints the
+		// shared letter as "m - Mistrust/Myopic"). SharpObjectFlag.Symbol is documented as not unique
+		// and the seed already ships ABODE/ANSI on 'A' and CHOWN_OK/COLOR on 'C' the same way.
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
-			Name = "MISTRUST",
-			Aliases = (string[])["MYOPIC"],
+			Name = "MYOPIC",
 			Symbol = "m",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesContent,
-			SetPermissions = DatabaseConstants.permissionsTrusted,
-			UnsetPermissions = DatabaseConstants.permissionsTrusted
+			TypeRestrictions = DatabaseConstants.typesPlayer
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
