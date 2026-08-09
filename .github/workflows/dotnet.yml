@@ -12,10 +12,13 @@ on:
   pull_request:
     # Stacked pull requests target their predecessor rather than main, so a
     # main-only filter leaves every PR above the bottom of a stack with no build
-    # or test run until its parent merges and GitHub retargets it. Matching the
-    # stack's branch prefix too means each link is verified while it is still
-    # reviewable, instead of after it has already been approved on trust.
-    branches: [ "main", "fix/portal-audit-**" ]
+    # or test run until its parent merges and GitHub retargets it. The filter is
+    # therefore broad on purpose — it lists the repo's ordinary branch prefixes
+    # rather than whichever stack happens to be open, so a new stack is covered
+    # the day it is cut instead of after someone remembers to edit this file.
+    # Every link is verified while it is still reviewable, not after it has
+    # already been approved on trust.
+    branches: [ "main", "fix/**", "feat/**", "feature/**", "chore/**", "refactor/**", "docs/**", "test/**" ]
 
 jobs:
   build-and-test:
