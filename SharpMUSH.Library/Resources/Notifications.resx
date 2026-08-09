@@ -2263,6 +2263,9 @@
     <value>Changed ownership of {0} object(s) from {1} to {2}.</value>
   </data>
 
+  <data name="CommandUnknownSwitchFormat" xml:space="preserve">
+    <value>{0} doesn't know switch {1}.</value>
+  </data>
 
   <!-- @dump -->
   <data name="DumpDoesNothing" xml:space="preserve">

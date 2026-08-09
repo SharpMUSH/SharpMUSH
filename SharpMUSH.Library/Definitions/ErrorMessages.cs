@@ -1464,6 +1464,13 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ChownAllCompleteFormat = "Changed ownership of {0} object(s) from {1} to {2}.";
 
+		/// <summary>
+		/// PennMUSH src/command.c: <c>"%s doesn't know switch %s."</c>, notified in place of running the
+		/// command. Only the first unknown switch is named, as PennMUSH names only the first.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CommandUnknownSwitchFormat = "{0} doesn't know switch {1}.";
+
 		public const string DumpDoesNothing = "Dump command does nothing for SharpMUSH. Consider using @backup.";
 
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
