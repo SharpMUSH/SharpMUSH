@@ -396,6 +396,11 @@ public class UtilityCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), "Database Statistics:", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
+	// PennMUSH src/version.c do_version prints, in order: "You are connected to <MUDNAME>", "Address:
+	// <MUDURL>" *only when MUDURL is set*, "Last restarted: ...", then the version banner formatted from
+	// VERSION/PATCHLEVEL/PATCHDATE — byte-identical to what src/funmisc.c fun_version returns. So
+	// @version's version line and version() are one string from one source, and mud_url being unset
+	// omits the Address line rather than printing a placeholder.
 	[Test]
 	public async ValueTask VersionCommand()
 	{
@@ -406,7 +411,25 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SharpMUSH version")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, SharpMUSH.Implementation.Generated.VersionInfo.Version)), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask VersionCommandAgreesWithVersionFunction()
+	{
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "VersionAgree");
+		var command = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@version"));
+		var function = await Parser.FunctionParse(MModule.single("version()"));
+
+		var banner = function!.Message!.ToPlainText();
+		var lines = command.Message!.ToPlainText().Split('\n');
+
+		await Assert.That(banner).IsNotEmpty();
+		await Assert.That(lines).Contains(banner);
+		// The placeholders the two answers used to disagree over are gone for good.
+		await Assert.That(command.Message!.ToPlainText()).DoesNotContain("SharpMUSH version 0");
+		await Assert.That(command.Message!.ToPlainText()).DoesNotContain("Address: Unknown");
 	}
 
 	[Test]
