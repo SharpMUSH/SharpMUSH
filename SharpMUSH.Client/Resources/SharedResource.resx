@@ -204,6 +204,12 @@
   <data name="CreateThisPage" xml:space="preserve">
     <value>Create this Page!</value>
   </data>
+  <data name="WikiCharacterNoBio" xml:space="preserve">
+    <value>{0} has no biography yet.</value>
+  </data>
+  <data name="WikiCharacterWriteBio" xml:space="preserve">
+    <value>Write a biography</value>
+  </data>
   <data name="NothingToSeeHere" xml:space="preserve">
     <value>Nothing to see here.</value>
   </data>

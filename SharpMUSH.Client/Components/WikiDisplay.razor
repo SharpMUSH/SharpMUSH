@@ -10,7 +10,23 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
 
-@if (Article is null)
+@if (Article is null && IsCharacterBiography)
+{
+    @* A character with no biography is the normal state of a new character, not a missing page.
+       No alert, no "does not exist" wording, no back-link to a wiki the reader never navigated
+       from — just the fact and, for anyone who may write one, the offer. *@
+    <div class="wiki-article wiki-article--no-bio">
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WikiCharacterNoBio", Slug]</MudText>
+        <AuthorizeView Policy="wiki.create">
+            <Authorized>
+                <MudButton EndIcon="@Icons.Material.Filled.Create" Color="Color.Primary" Ripple="true"
+                           Class="mt-2" Style="text-transform:none;"
+                           OnClick="@ActivateEditMode">@Loc["WikiCharacterWriteBio"]</MudButton>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+}
+else if (Article is null)
 {
     <div class="wiki-article">
         <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["Wiki"]</a>
@@ -149,6 +165,12 @@ else
 
     private List<BodySegment> _segments = [];
     private List<TocEntry> _toc = [];
+
+    /// <summary>
+    /// True when this page is a character biography — served from /character/{slug}, where the wiki
+    /// framing (and the "this page does not exist" wording) would misread as something broken.
+    /// </summary>
+    private bool IsCharacterBiography => WikiRoutes.IsCharacterProfile(Namespace, Category);
 
     private string CategoryLabel =>
         string.IsNullOrWhiteSpace(Category) ? Loc["ResCategoryGeneral"] : char.ToUpper(Category[0]) + Category[1..];
