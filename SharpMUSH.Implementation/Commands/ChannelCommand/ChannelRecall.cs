@@ -40,7 +40,7 @@ public static class ChannelRecall
 			.Select(x => x.Message)
 			.ToListAsync();
 
-		var message = MModule.multiple(messages);
+		var message = MModule.multipleWithDelimiter(MModule.single("\n"), messages);
 
 		if (switches.Contains("QUIET"))
 		{

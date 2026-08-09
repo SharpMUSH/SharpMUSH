@@ -101,12 +101,16 @@ public partial class Commands
 
 		var (_, status) = maybeMemberStatus;
 
-		// Notification type is determined from message prefix in ChannelMessageRequestHandler
+		// sharpchat.md:33 — "If <message> begins with a ':' or ';' it will be posed (or semiposed)
+		// instead of spoken." Anything else is speech, which is what produces the documented
+		// `<Public> Mike says, "Hello"` rendering.
+		var (chatType, chatMessage) = ClassifyChannelSpeech(message);
+
 		await Mediator!.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
-			INotifyService.NotificationType.Emit,
-			message,
+			chatType,
+			chatMessage,
 			status.Title ?? MModule.empty(),
 			MModule.single(executor.Object().Name),
 			MModule.single("says"),
@@ -114,6 +118,19 @@ public partial class Commands
 		));
 
 		return new CallState(string.Empty);
+	}
+
+	private static (INotifyService.NotificationType Type, MString Message) ClassifyChannelSpeech(MString message)
+	{
+		var plain = message.ToPlainText();
+		var rest = MModule.substring(1, MModule.getLength(message) - 1, message);
+
+		return plain switch
+		{
+			[':', ..] => (INotifyService.NotificationType.Pose, rest),
+			[';', ..] => (INotifyService.NotificationType.SemiPose, rest),
+			_ => (INotifyService.NotificationType.Say, message)
+		};
 	}
 
 	[SharpCommand(Name = "@NSCEMIT", Switches = ["NOEVAL", "NOISY", "SILENT"],

@@ -40,6 +40,13 @@ public static class ChannelOff
 
 		var channel = maybeChannel.AsChannel;
 
+		if (!await ChannelHelper.IsMemberOfChannel(target, channel))
+		{
+			var notOn = $"CHAT: {target.Object().Name} is not on {channel.Name.ToPlainText()}.";
+			await NotifyService.Notify(executor, notOn, executor);
+			return new CallState(notOn);
+		}
+
 		// Channel join/leave announcements are handled by the channel system
 		await Mediator.Send(new RemoveUserFromChannelCommand(channel, target));
 

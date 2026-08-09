@@ -45,6 +45,11 @@ public class PrivilegeOrError : OneOfBase<string[], Error<string[]>>
 
 public static class ChannelHelper
 {
+	/// <summary>
+	/// Channel privilege names and their single-character abbreviations, matching PennMUSH's
+	/// <c>chan_privs</c> table (<c>extchat.c</c>). The characters are case-sensitive: 'O' is Object
+	/// and 'o' is Open.
+	/// </summary>
 	private static readonly ReadOnlyDictionary<string, char> ChannelPrivileges = new(
 		new Dictionary<string, char>(StringComparer.OrdinalIgnoreCase)
 		{
@@ -52,7 +57,6 @@ public static class ChannelHelper
 			{ "Player", 'P' },
 			{ "Admin", 'A' },
 			{ "Wizard", 'W' },
-			{ "Thing", 'T' },
 			{ "Object", 'O' },
 			{ "Quiet", 'Q' },
 			{ "Open", 'o' },
@@ -86,7 +90,7 @@ public static class ChannelHelper
 			.ToArray();
 
 		var badList = list.Where(x => x.Length == 1
-			? !ChannelPrivilegesReverse.ContainsKey(x.ToUpper()[0])
+			? !ChannelPrivilegesReverse.ContainsKey(x[0])
 			: !ChannelPrivileges.ContainsKey(x)).ToArray();
 
 		if (badList.Length != 0)
@@ -95,7 +99,7 @@ public static class ChannelHelper
 		}
 
 		var validatedList = list.Select(x => x.Length == 1
-				? ChannelPrivilegesReverse.GetValueOrDefault(x.ToUpper()[0], null)
+				? ChannelPrivilegesReverse.GetValueOrDefault(x[0], null)
 				: (ChannelPrivileges.ContainsKey(x) ? x : null))
 			.Where(x => x != null).ToArray();
 

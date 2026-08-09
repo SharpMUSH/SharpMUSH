@@ -27,8 +27,11 @@ public static class ChannelPrivs
 
 		var channel = maybeChannel.AsChannel;
 
-		if (await PermissionService.ChannelCanModifyAsync(executor, channel))
+		// The sense of this check was inverted: whoever COULD modify the channel was refused,
+		// and whoever could not fell through and made the change.
+		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
+			await NotifyService.Notify(executor, "You are not the owner of the channel.", executor);
 			return new CallState("You are not the owner of the channel.");
 		}
 
@@ -51,6 +54,7 @@ public static class ChannelPrivs
 			null,
 			null));
 
+		await NotifyService.Notify(executor, "CHAT: Channel privileges have been updated.", executor);
 		return new CallState("CHAT: Channel privileges have been updated.");
 	}
 }

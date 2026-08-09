@@ -28,7 +28,9 @@ public static class ChannelAdd
 			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
+		// notify: false — a missing channel is the expected case when creating one; the player should
+		// not be told "Channel not found." on their way to "Channel has been created."
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, false);
 		if (!maybeChannel.IsError)
 		{
 			await NotifyService.Notify(executor, "CHAT: Channel already exists.", executor);

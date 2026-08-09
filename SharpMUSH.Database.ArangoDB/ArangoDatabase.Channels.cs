@@ -155,16 +155,22 @@ public partial class ArangoDatabase
 		MString? description, string[]? privs,
 		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock, string? mogrifier,
 		int? buffer, CancellationToken ct = default)
+		// Vertex.UpdateAsync takes the document KEY, not the full "collection/key" _id that
+		// SharpChannel.Id carries — passing the _id produced a 404 on every channel update.
 		=> await arangoDb.Graph.Vertex.UpdateAsync(handle,
-			DatabaseConstants.GraphChannels, DatabaseConstants.Channels, channel.Id,
+			DatabaseConstants.GraphChannels, DatabaseConstants.Channels, ExtractKey(channel.Id!),
 			new
 			{
+				// Name is the plain-text lookup key (GetChannelAsync filters on it) and MarkedUpName holds
+				// the serialized MString — the same way CreateChannelAsync writes them. These two were
+				// swapped, so any channel update wrote serialized markup into Name and left the channel
+				// unfindable, with @channel/what then failing to deserialize the plain text in MarkedUpName.
 				Name = name is not null
-					? MModule.serialize(name)
-					: MModule.serialize(channel.Name),
-				MarkedUpName = name is not null
 					? name.ToPlainText()
 					: channel.Name.ToPlainText(),
+				MarkedUpName = name is not null
+					? MModule.serialize(name)
+					: MModule.serialize(channel.Name),
 				Description = description is not null
 					? MModule.serialize(description)
 					: MModule.serialize(channel.Description),
@@ -191,7 +197,7 @@ public partial class ArangoDatabase
 
 	public async ValueTask DeleteChannelAsync(SharpChannel channel, CancellationToken ct = default) =>
 		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.Channels,
-			channel.Id, cancellationToken: ct);
+			ExtractKey(channel.Id!), cancellationToken: ct);
 
 	public async ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken ct = default)
 		=> await arangoDb.Graph.Edge.CreateAsync(
@@ -236,30 +242,32 @@ public partial class ArangoDatabase
 		var edge = result?.FirstOrDefault(x => x.To == channel.Id);
 		if (edge is null) return;
 
-		var updates = new List<KeyValuePair<string, object>>();
+		// A List<KeyValuePair<..>> serializes as a JSON array, which Arango rejects with
+		// "VPack error: Expecting Object". The patch body has to be an object.
+		var updates = new Dictionary<string, object>();
 		if (status.Combine is { } combine)
 		{
-			updates.Add(new KeyValuePair<string, object>(nameof(status.Combine), combine));
+			updates[nameof(status.Combine)] = combine;
 		}
 
 		if (status.Gagged is { } gagged)
 		{
-			updates.Add(new KeyValuePair<string, object>(nameof(status.Gagged), gagged));
+			updates[nameof(status.Gagged)] = gagged;
 		}
 
 		if (status.Hide is { } hide)
 		{
-			updates.Add(new KeyValuePair<string, object>(nameof(status.Hide), hide));
+			updates[nameof(status.Hide)] = hide;
 		}
 
 		if (status.Mute is { } mute)
 		{
-			updates.Add(new KeyValuePair<string, object>(nameof(status.Mute), mute));
+			updates[nameof(status.Mute)] = mute;
 		}
 
 		if (status.Title is { } title)
 		{
-			updates.Add(new KeyValuePair<string, object>(nameof(status.Title), MModule.serialize(title)));
+			updates[nameof(status.Title)] = MModule.serialize(title);
 		}
 
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,

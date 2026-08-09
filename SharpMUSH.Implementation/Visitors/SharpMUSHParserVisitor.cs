@@ -1444,10 +1444,17 @@ public class SharpMUSHParserVisitor(
 	private async Task<Option<CallState>> HandleChannelCommand(IMUSHCodeParser prs, SharpChannel channel,
 		CommandContext context, MString src)
 	{
-		var rest = MModule.substring(
+		var full = MModule.substring(
 			context.evaluationString().Start.StartIndex,
 			context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
 			src);
+
+		// The evaluation string still carries the `+<channel>` token itself; only what follows the first
+		// space is the message. Without this, `+Public Hi` was chatted as the literal "+Public Hi".
+		var firstSpace = MModule.indexOf(full, " ");
+		var rest = firstSpace == -1
+			? MModule.empty()
+			: MModule.substring(firstSpace + 1, MModule.getLength(full) - firstSpace - 1, full);
 
 		var chatParser = prs.Push(prs.CurrentState with
 		{
