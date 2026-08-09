@@ -3133,7 +3133,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
 			SetPermissions = DatabaseConstants.permissionsODark,
-			UnSetPermissions = DatabaseConstants.permissionsODark
+			UnsetPermissions = DatabaseConstants.permissionsODark
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
@@ -3172,7 +3172,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
 			SetPermissions = DatabaseConstants.permissionsWizard,
-			UnSetPermissions = DatabaseConstants.permissionsWizard
+			UnsetPermissions = DatabaseConstants.permissionsWizard
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
@@ -3196,7 +3196,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
 			SetPermissions = DatabaseConstants.permissionsRoyalty,
-			UnSetPermissions = DatabaseConstants.permissionsRoyalty
+			UnsetPermissions = DatabaseConstants.permissionsRoyalty
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
@@ -3219,7 +3219,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesContent,
 			SetPermissions = DatabaseConstants.permissionsTrusted,
-			UnSetPermissions = DatabaseConstants.permissionsTrusted
+			UnsetPermissions = DatabaseConstants.permissionsTrusted
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
@@ -3229,7 +3229,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesContent,
 			SetPermissions = DatabaseConstants.permissionsTrusted,
-			UnSetPermissions = DatabaseConstants.permissionsTrusted
+			UnsetPermissions = DatabaseConstants.permissionsTrusted
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
@@ -3263,7 +3263,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsTrusted
 				.Union(DatabaseConstants.permissionsRoyalty)
 				.Union(DatabaseConstants.permissionsLog),
-			UnSetPermissions = DatabaseConstants.permissionsTrusted
+			UnsetPermissions = DatabaseConstants.permissionsTrusted
 				.Union(DatabaseConstants.permissionsRoyalty)
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
@@ -3275,7 +3275,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsWizard
 				.Union(DatabaseConstants.permissionsMDark)
 				.Union(DatabaseConstants.permissionsLog),
-			UnSetPermissions = DatabaseConstants.permissionsWizard
+			UnsetPermissions = DatabaseConstants.permissionsWizard
 				.Union(DatabaseConstants.permissionsMDark)
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
@@ -3315,7 +3315,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
 			SetPermissions = DatabaseConstants.permissionsTrusted,
-			UnSetPermissions = DatabaseConstants.permissionsTrusted
+			UnsetPermissions = DatabaseConstants.permissionsTrusted
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
@@ -3346,7 +3346,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsWizard
 				.Union(DatabaseConstants.permissionsMDark)
 				.Union(DatabaseConstants.permissionsLog),
-			UnSetPermissions = DatabaseConstants.permissionsWizard
+			UnsetPermissions = DatabaseConstants.permissionsWizard
 				.Union(DatabaseConstants.permissionsMDark)
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
@@ -3355,7 +3355,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
 			SetPermissions = DatabaseConstants.permissionsODark,
-			UnSetPermissions = DatabaseConstants.permissionsODark
+			UnsetPermissions = DatabaseConstants.permissionsODark
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
@@ -3376,7 +3376,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
 			SetPermissions = DatabaseConstants.permissionsRoyalty,
-			UnSetPermissions = DatabaseConstants.permissionsRoyalty
+			UnsetPermissions = DatabaseConstants.permissionsRoyalty
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
@@ -3391,7 +3391,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
 			SetPermissions = DatabaseConstants.permissionsWizard,
-			UnSetPermissions = DatabaseConstants.permissionsWizard
+			UnsetPermissions = DatabaseConstants.permissionsWizard
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
@@ -3399,7 +3399,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
 			SetPermissions = DatabaseConstants.permissionsWizard,
-			UnSetPermissions = DatabaseConstants.permissionsWizard
+			UnsetPermissions = DatabaseConstants.permissionsWizard
 		}),
 	];
 
