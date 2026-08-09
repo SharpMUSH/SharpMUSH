@@ -155,10 +155,18 @@ public class ChannelPermissionTests
 		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
 		await Mediator.Send(new AddUserToChannelCommand(channel, mortalObject));
 
+		var wizard = await CreateFlagged("ChanPermSpeakerWiz", "WIZARD");
+		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Known;
+		await Mediator.Send(new AddUserToChannelCommand(channel, wizardObject));
+
 		var before = await MessageCount(name);
 		await Run(mortal, $"@chat {name}=I should not be able to say this.");
 
 		await Assert.That(await MessageCount(name)).IsEqualTo(before);
+
+		// The positive half, so "the count did not move" cannot pass by @chat being broken outright.
+		await Run(wizard, $"@chat {name}=A wizard may.");
+		await Assert.That(await MessageCount(name)).IsEqualTo(before + 1);
 	}
 
 	// --- Chan_Can: the ADMIN privilege (extchat.h:198) ----------------------------------------------
@@ -203,11 +211,18 @@ public class ChannelPermissionTests
 	{
 		var name = UniqueChannel("Deaded");
 		await CreateChannel(name, "Player", "Disabled");
+		var live = UniqueChannel("NotDeaded");
+		await CreateChannel(live, "Player");
 
 		var mortal = await CreateMortal("ChanPermDisabled");
 
 		await Run(mortal, $"@channel/on {name}");
 		await Assert.That(await IsMember(name, mortal.DbRef)).IsFalse();
+
+		// The same player, the same command, a channel differing only in the DISABLED bit: without this
+		// the refusal could equally well be "@channel/on never joins anybody".
+		await Run(mortal, $"@channel/on {live}");
+		await Assert.That(await IsMember(live, mortal.DbRef)).IsTrue();
 	}
 
 	/// <summary>
@@ -220,15 +235,23 @@ public class ChannelPermissionTests
 	{
 		var name = UniqueChannel("DeadSpeak");
 		var channel = await CreateChannel(name, "Player", "Disabled");
+		var liveName = UniqueChannel("LiveSpeak");
+		var live = await CreateChannel(liveName, "Player");
 
 		var wizard = await CreateFlagged("ChanPermDeadWiz", "WIZARD");
 		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Known;
 		await Mediator.Send(new AddUserToChannelCommand(channel, wizardObject));
+		await Mediator.Send(new AddUserToChannelCommand(live, wizardObject));
 
 		var before = await MessageCount(name);
 		await Run(wizard, $"@chat {name}=Wizards do not get to talk on a dead channel.");
 
 		await Assert.That(await MessageCount(name)).IsEqualTo(before);
+
+		// Same wizard, same command, a channel differing only in the DISABLED bit.
+		var liveBefore = await MessageCount(liveName);
+		await Run(wizard, $"@chat {liveName}=But they may talk on a live one.");
+		await Assert.That(await MessageCount(liveName)).IsEqualTo(liveBefore + 1);
 	}
 
 	// --- eval_chan_lock: CLOCK_JOIN (extchat.h:204) -------------------------------------------------
@@ -533,11 +556,18 @@ public class ChannelPermissionTests
 
 		var mortal = await CreateMortal("ChanPermFnRead");
 		var parser = FunctionParserFor(mortal.DbRef);
+		var wizard = await CreateFlagged("ChanPermFnReadWiz", "WIZARD");
+		var wizardParser = FunctionParserFor(wizard.DbRef);
 
 		foreach (var call in new[] { $"cowner({name})", $"cmogrifier({name})", $"cwho({name})" })
 		{
 			var result = await parser.FunctionParse(MModule.single(call));
 			await Assert.That(result?.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
+
+			// The gate is what refuses the mortal, not the function being broken: a viewer who passes
+			// Chan_Can_See gets an answer from the same call.
+			var allowed = await wizardParser.FunctionParse(MModule.single(call));
+			await Assert.That(allowed?.Message?.ToPlainText()).IsNotEqualTo(ErrorMessages.Returns.NoSuchChannel);
 		}
 	}
 
@@ -546,28 +576,47 @@ public class ChannelPermissionTests
 	/// naming a wizard read back that wizard's wizard-only channels; and its <c>on</c>/<c>off</c> arms
 	/// applied no visibility rule at all. PennMUSH <c>fun_channels</c> (<c>src/extchat.c:3313</c>) judges
 	/// against the executor and additionally hides members flagged hidden from non-Priv_Who callers.
+	///
+	/// <para>Every assertion about the hidden channel is an ABSENCE, so each is paired with a shared
+	/// channel that must be PRESENT in the same answer. Without that pair the test would pass just as well
+	/// against a <c>channels()</c> that returned the empty string for everything.</para>
 	/// </summary>
 	[Test]
 	public async Task ChannelsFunctionJudgesVisibilityAgainstTheCaller()
 	{
 		var name = UniqueChannel("ChansHidden");
 		var channel = await CreateChannel(name, "Player", "Wizard");
+		var sharedName = UniqueChannel("ChansShared");
+		var shared = await CreateChannel(sharedName, "Player");
 
 		var wizard = await CreateFlagged("ChanPermChansWiz", "WIZARD");
 		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Known;
 		await Mediator.Send(new AddUserToChannelCommand(channel, wizardObject));
+		await Mediator.Send(new AddUserToChannelCommand(shared, wizardObject));
 
 		var mortal = await CreateMortal("ChanPermChans");
+		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
+		await Mediator.Send(new AddUserToChannelCommand(shared, mortalObject));
+
 		var parser = FunctionParserFor(mortal.DbRef);
 
+		// Naming the wizard reads back the channel they share and not the wizard-only one.
 		var named = await parser.FunctionParse(MModule.single($"channels(#{wizard.DbRef.Number})"));
 		await Assert.That(named?.Message?.ToPlainText()).DoesNotContain(name);
+		await Assert.That(named?.Message?.ToPlainText()).Contains(sharedName);
 
+		// `off` listed every channel in the game; it must still list the ones the mortal really is off.
 		var off = await parser.FunctionParse(MModule.single("channels(me,off)"));
 		await Assert.That(off?.Message?.ToPlainText()).DoesNotContain(name);
+		await Assert.That(off?.Message?.ToPlainText()).DoesNotContain(sharedName);
+
+		var on = await parser.FunctionParse(MModule.single("channels(me,on)"));
+		await Assert.That(on?.Message?.ToPlainText()).DoesNotContain(name);
+		await Assert.That(on?.Message?.ToPlainText()).Contains(sharedName);
 
 		var all = await parser.FunctionParse(MModule.single("channels()"));
 		await Assert.That(all?.Message?.ToPlainText()).DoesNotContain(name);
+		await Assert.That(all?.Message?.ToPlainText()).Contains(sharedName);
 	}
 
 	/// <summary>
@@ -581,6 +630,15 @@ public class ChannelPermissionTests
 	/// unreachable from the command surface today and no player can currently trigger the leak. The
 	/// handlers implement it regardless, and whoever wires the argument-less form — PennMUSH has it —
 	/// must not reintroduce the oracle. Testing through the dispatcher would assert nothing.</para>
+	///
+	/// <para>The loop below asserts an ABSENCE over a collection, which asserts nothing at all if the
+	/// collection is empty, so the bulk path is first required to have said SOMETHING. For <c>hide</c> —
+	/// the deterministic case, and the only one reachable from Penn's dispatcher — the requirement is
+	/// sharper: a channel the mortal CAN see must be named, proving the handler walked the list and the
+	/// hidden channel's absence is the gate working rather than the walk never happening. <c>gag</c> and
+	/// <c>combine</c> cannot be pinned that way because they <c>return</c> on the first channel the
+	/// executor is not a member of, and in a session-shared database that is whichever visible channel
+	/// another test happened to create first.</para>
 	/// </summary>
 	[Test]
 	[Arguments("hide")]
@@ -590,8 +648,13 @@ public class ChannelPermissionTests
 	{
 		var name = UniqueChannel($"Bulk{switchName}");
 		await CreateChannel(name, "Player", "Wizard");
+		var visibleName = UniqueChannel($"Seen{switchName}");
+		var visible = await CreateChannel(visibleName, "Player");
 
 		var mortal = await CreateMortal($"ChanPermBulk{switchName}");
+		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
+		await Mediator.Send(new AddUserToChannelCommand(visible, mortalObject));
+
 		var parser = WebAppFactoryArg.CommandParserFor(mortal.DbRef, mortal.Handle);
 		var locate = WebAppFactoryArg.Services.GetRequiredService<ILocateService>();
 
@@ -604,6 +667,13 @@ public class ChannelPermissionTests
 				_ => await ChannelCombine.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null)
 			};
 		});
+
+		await Assert.That(messages).IsNotEmpty();
+
+		if (switchName == "hide")
+		{
+			await Assert.That(messages.Any(message => message.Contains(visibleName))).IsTrue();
+		}
 
 		foreach (var message in messages)
 		{
@@ -688,10 +758,22 @@ public class ChannelPermissionTests
 		await Assert.That(hiddenResult?.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
 		// And the lock key itself never appears.
 		await Assert.That(hiddenResult?.Message?.ToPlainText()).DoesNotContain("#1");
+
+		// God set that lock and can see the channel, so the key IS readable by someone — the mortal's
+		// refusal is the Chan_Can_Decomp gate rather than clock() failing to read a lock at all.
+		var ownerResult = await WebAppFactoryArg.FunctionParser.FunctionParse(MModule.single($"clock({hidden})"));
+		await Assert.That(ownerResult?.Message?.ToPlainText()).Contains("#1");
 	}
 
 	/// <summary>
 	/// The same oracle on <c>@clock</c>, the command half Copilot flagged.
+	///
+	/// <para>This test used to compare two notification lists that were BOTH EMPTY, because the lookup was
+	/// resolving with <c>notify: false</c> and no later branch said anything — a mistyped channel name
+	/// failed in total silence. Two empty lists are equal for any implementation, including one that stops
+	/// working entirely, so the test read as coverage and asserted nothing about the refusal. It now pins
+	/// the shared refusal TEXT, the same way
+	/// <see cref="AdminSwitchesDoNotDistinguishHiddenFromMissing"/> always did.</para>
 	/// </summary>
 	[Test]
 	public async Task ClockCommandDoesNotDistinguishHiddenFromMissing()
@@ -708,6 +790,8 @@ public class ChannelPermissionTests
 			() => Run(mortal, $"@clock/join {missing}=#{mortal.DbRef.Number}"));
 
 		await Assert.That(afterHidden).IsEquivalentTo(afterMissing);
+		await Assert.That(afterHidden).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
+		await Assert.That(afterMissing).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
 
 		// The lock must not have been set either.
 		// A channel that was never given a lock reads back null, not "".

@@ -66,9 +66,11 @@ public partial class Commands
 		lockType = lockType.ToUpper();
 
 		// Setting a lock on a channel you cannot see must be refused the same way as setting one on a
-		// channel that does not exist, or @clock reports which names are taken.
+		// channel that does not exist, or @clock reports which names are taken. notify: true because the
+		// gate emits ONE refusal for both cases: suppressing it does not make the two cases more alike, it
+		// only makes a mistyped channel name fail in silence.
 		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
-			NotifyService!, executor, channelName, notify: false);
+			NotifyService!, executor, channelName, notify: true);
 
 		if (maybeChannel.IsError)
 		{
