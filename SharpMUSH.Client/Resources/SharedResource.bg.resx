@@ -4472,4 +4472,8 @@
     <value>{count, plural, one {# дума} other {# думи}}</value>
     <comment>MT — «дума» is feminine, ordinary plural after the numeral</comment>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>Вашият акаунт е готов. Създаването на герой е последната стъпка, преди да можете да играете.</value>
+    <comment>MT</comment>
+  </data>
 </root>

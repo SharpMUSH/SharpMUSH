@@ -3665,4 +3665,8 @@
     <value>{count, plural, one {# mot} other {# mots}}</value>
     <comment>MT — ICU categories one+other; French 'one' also covers 0, so 0 correctly renders the singular</comment>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>Votre compte est prêt. Créer un personnage est la dernière étape avant de pouvoir jouer.</value>
+    <comment>MT</comment>
+  </data>
 </root>

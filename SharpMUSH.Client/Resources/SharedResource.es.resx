@@ -4472,4 +4472,8 @@
     <value>{count, plural, one {# palabra} other {# palabras}}</value>
     <comment>MT — ICU categories one+other</comment>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>Tu cuenta está lista. Crear un personaje es el último paso antes de poder jugar.</value>
+    <comment>MT</comment>
+  </data>
 </root>

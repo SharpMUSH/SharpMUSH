@@ -4472,4 +4472,8 @@
     <value>{count, plural, one {# cuvânt} few {# cuvinte} other {# de cuvinte}}</value>
     <comment>MT — ICU categories one+few+other; the "de" form now covers 20+</comment>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>Contul tău este gata. Crearea unui personaj este ultimul pas înainte de a putea juca.</value>
+    <comment>MT</comment>
+  </data>
 </root>

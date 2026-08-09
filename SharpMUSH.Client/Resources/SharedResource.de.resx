@@ -4472,4 +4472,8 @@
     <value>{count, plural, one {# Wort} other {# Wörter}}</value>
     <comment>MT</comment>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>Ihr Konto ist bereit. Das Erstellen eines Charakters ist der letzte Schritt, bevor Sie spielen können.</value>
+    <comment>MT</comment>
+  </data>
 </root>

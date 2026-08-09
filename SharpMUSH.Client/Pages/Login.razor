@@ -90,6 +90,15 @@
     private const int SignInTabIndex = 0;
     private const int RegisterTabIndex = 1;
 
+    /// <summary>
+    /// Where an account with no character yet lands. "Registered, no character" is a step in
+    /// onboarding, not a degraded permission tier: dropping such an account into the full portal
+    /// shows it a shell where every gated surface refuses without saying why, while telnet's
+    /// `login` names the exact next command. This routes it to the one page that resolves the
+    /// state, which explains itself on arrival.
+    /// </summary>
+    private const string OnboardingUrl = "/characters/new";
+
     private int _tabIndex = SignInTabIndex;
     private bool _busy;
     private string? _error;
@@ -155,10 +164,10 @@
         }
         _busy = true;
         StateHasChanged();
-        var (success, error, _) = await AccountAuth.LoginAsync(_loginIdentifier, _loginPassword);
+        var (success, error, characters) = await AccountAuth.LoginAsync(_loginIdentifier, _loginPassword);
         _busy = false;
         if (success)
-            Nav.NavigateTo(SuccessUrl());
+            Nav.NavigateTo(characters.Count == 0 ? OnboardingUrl : SuccessUrl());
         else
             _error = error ?? Loc["AuthLoginFailed"];
         StateHasChanged();
@@ -174,10 +183,11 @@
         }
         _busy = true;
         StateHasChanged();
-        var (success, error, _) = await AccountAuth.RegisterAsync(_regUsername, _regEmail, _regPassword);
+        // A fresh account never has a character, so registration always continues into onboarding.
+        var (success, error, characters) = await AccountAuth.RegisterAsync(_regUsername, _regEmail, _regPassword);
         _busy = false;
         if (success)
-            Nav.NavigateTo(SuccessUrl());
+            Nav.NavigateTo(characters.Count == 0 ? OnboardingUrl : SuccessUrl());
         else
             _error = error ?? Loc["AuthRegistrationFailed"];
         StateHasChanged();

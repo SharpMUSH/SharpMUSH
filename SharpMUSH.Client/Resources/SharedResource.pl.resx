@@ -4472,4 +4472,8 @@
     <value>{count, plural, one {# słowo} few {# słowa} many {# słów} other {# słowa}}</value>
     <comment>MT</comment>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>Twoje konto jest gotowe. Utworzenie postaci to ostatni krok przed rozpoczęciem gry.</value>
+    <comment>MT</comment>
+  </data>
 </root>

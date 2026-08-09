@@ -4472,4 +4472,8 @@
     <value>{count, plural, one {# woord} other {# woorden}}</value>
     <comment>MT</comment>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>Je account is klaar. Een personage aanmaken is de laatste stap voordat je kunt spelen.</value>
+    <comment>MT</comment>
+  </data>
 </root>

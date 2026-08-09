@@ -4472,4 +4472,8 @@
     <value>{count, plural, one {# szó} other {# szó}}</value>
     <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
   </data>
+  <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
+    <value>A fiókja készen áll. Egy karakter létrehozása az utolsó lépés, mielőtt játszhatna.</value>
+    <comment>MT</comment>
+  </data>
 </root>
