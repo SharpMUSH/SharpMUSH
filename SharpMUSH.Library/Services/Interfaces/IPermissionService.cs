@@ -63,7 +63,7 @@ public interface IPermissionService
 
 	ValueTask<bool> ChannelStandardCan(AnySharpObject target, string[] channelType);
 
-	ValueTask<bool> ChannelCanPrivate(AnySharpObject target, SharpChannel channel);
+	ValueTask<bool> ChannelCanPriv(AnySharpObject target, string[] channelType);
 
 	ValueTask<bool> ChannelCanAccess(AnySharpObject target, SharpChannel channel);
 

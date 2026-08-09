@@ -305,6 +305,8 @@ public static class ErrorMessages
 		public const string InvalidChannelName = "#-1 INVALID CHANNEL NAME";
 		public const string InvalidPrivileges = "#-1 INVALID PRIVILEGES";
 		public const string TooManyChannels = "#-1 TOO MANY CHANNELS";
+		public const string NoSuchChannel = "#-1 NO SUCH CHANNEL";
+		public const string ChannelPermissionDenied = "#-1 CHANNEL PERMISSION DENIED";
 		public const string GetRequestsCannotHaveBody = "#-1 GET REQUESTS CANNOT HAVE A BODY";
 		public const string CannotRenameInbox = "#-1 CANNOT RENAME THE INBOX FOLDER";
 		public const string InvalidMailArguments = "#-1 INVALID ARGUMENTS FOR MAIL COMMAND";
@@ -537,6 +539,40 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ChatResizingBuffer = "CHAT: Resizing buffer of channel <{0}>";
 		public const string ChatGuestsCantModify = "CHAT: Guests may not modify channels.";
+		public const string ChatGuestsCantJoin = "Guests are not allowed to join channels.";
+		/// <summary>PennMUSH src/extchat.c:1237 / :1252 / :1290.</summary>
+		public const string ChatInvalidTarget = "Invalid target.";
+		/// <summary>PennMUSH src/extchat.c:1533 — <c>do_chat</c> / <c>do_cemit</c> type refusal.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatWrongTypeForChannel = "Sorry, you're not the right type to be on channel <{0}>.";
+		/// <summary>PennMUSH src/extchat.c:1241 — <c>@channel/on</c> type refusal.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatWrongTypeOfThingForChannel = "Sorry, wrong type of thing for channel <{0}>.";
+		/// <summary>PennMUSH src/extchat.c:1267.</summary>
+		public const string ChatJoinDenied = "Permission to join denied.";
+		/// <summary>PennMUSH src/extchat.c:1355.</summary>
+		public const string ChatJoinOverrideSelf =
+			"CHAT: Warning: You don't meet channel join permissions! (joining anyway)";
+		/// <summary>PennMUSH src/extchat.c:1263.</summary>
+		public const string ChatJoinOverrideTarget =
+			"CHAT: Warning: Target does not meet channel join permissions! (joining anyway)";
+		/// <summary>PennMUSH src/extchat.c:1541.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatNotAllowedToSpeak = "Sorry, you're not allowed to speak on channel <{0}>.";
+		/// <summary>PennMUSH src/extchat.c:1636.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatNotAllowedToCemit = "Sorry, you're not allowed to @cemit on channel <{0}>.";
+		/// <summary>PennMUSH src/extchat.c:1545.</summary>
+		public const string ChatNoSuchChannel = "CHAT: No such channel.";
+		/// <summary>PennMUSH src/extchat.c:2002.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatCannotHideOnChannel = "You are not permitted to hide on channel <{0}>.";
+		/// <summary>PennMUSH src/extchat.c:1737.</summary>
+		public const string ChatCannotCreateThatType = "You can't create channels of that type.";
+		/// <summary>PennMUSH src/extchat.c:1833.</summary>
+		public const string ChatCannotMakeThatType = "You can't make channels that type.";
+		/// <summary>PennMUSH src/extchat.c:1836.</summary>
+		public const string ChatChannelWillBeDisabled = "Warning: channel will be disabled.";
 
 		// --- Lock/Unlock messages aligned with PennMUSH src/lock.c ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

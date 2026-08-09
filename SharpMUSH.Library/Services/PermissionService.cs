@@ -293,21 +293,29 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		return ValueTask.FromResult(true);
 	}
 
+	/// <summary>PennMUSH <c>Chan_Ok_Type</c> — hdrs/extchat.h:196.</summary>
 	public bool ChannelOkType(AnySharpObject target, SharpChannel channel)
-		=> channel.Privs.Contains("Player") && target.IsPlayer
-			 || channel.Privs.Contains("Object") && target.IsThing;
+		=> (target.IsPlayer && channel.HasPriv("Player"))
+			 || (target.IsThing && channel.HasPriv("Object"));
 
+	/// <summary>PennMUSH <c>Chan_Can</c> — hdrs/extchat.h:198. The DISABLED bit lives here, so it gates
+	/// join, speak, see, hide and modify from one place.</summary>
 	public async ValueTask<bool> ChannelStandardCan(AnySharpObject target, string[] channelType)
-		=> !channelType.Contains("Disabled")
-			 && (!channelType.Contains("Wizard")
+		=> !channelType.HasPriv("Disabled")
+			 && (!channelType.HasPriv("Wizard")
 					 || await target.IsWizard())
-			 && (!channelType.Contains("Admin")
+			 && (!channelType.HasPriv("Admin")
 					 || await target.HasPower("CHAT_PRIVS")
 					 || await target.IsPriv());
 
-	public async ValueTask<bool> ChannelCanPrivate(AnySharpObject target, SharpChannel channel)
-		=> !await target.IsWizard()
-			 || await ChannelStandardCan(target, channel.Privs);
+	/// <summary>
+	/// PennMUSH <c>Chan_Can_Priv(p, t) = Wizard(p) || Chan_Can(p, t)</c> — hdrs/extchat.h:203, "who can
+	/// change channel privileges to type t". Note the argument is the type being SET, not the channel's
+	/// current type.
+	/// </summary>
+	public async ValueTask<bool> ChannelCanPriv(AnySharpObject target, string[] channelType)
+		=> await target.IsWizard()
+			 || await ChannelStandardCan(target, channelType);
 
 	public async ValueTask<bool> ChannelCanAccess(AnySharpObject target, SharpChannel channel)
 		=> await ChannelStandardCan(target, channel.Privs);
@@ -319,7 +327,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		=> await ChannelCanAccess(target, channel) && lockService.Evaluate(channel.SpeakLock, channel, target);
 
 	public async ValueTask<bool> ChannelCanCemit(AnySharpObject target, SharpChannel channel)
-		=> !channel.Privs.Contains("NoCemit") && await ChannelCanSpeak(target, channel);
+		=> !channel.HasPriv("NoCemit") && await ChannelCanSpeak(target, channel);
 
 	public async ValueTask<bool> ChannelCanModifyAsync(AnySharpObject target, SharpChannel channel) =>
 		await target.IsWizard()
@@ -342,10 +350,15 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 				 && await ChannelCanSpeak(target, channel)
 			 );
 
+	/// <summary>
+	/// PennMUSH <c>Chan_Can_Hide</c> — hdrs/extchat.h:216. The channel privilege is <c>Hide_Ok</c>
+	/// (<c>CHANNEL_CANHIDE</c>, spelled <c>hide_ok</c> in <c>chan_privs</c>); this read
+	/// <c>"CanHide"</c>, a name no channel has ever carried.
+	/// </summary>
 	public async ValueTask<bool> ChannelCanHide(AnySharpObject target, SharpChannel channel)
 		=> await target.CanHide()
 			 || (
-				 channel.Privs.Contains("CanHide")
+				 channel.HasPriv("Hide_Ok")
 				 && await ChannelCanAccess(target, channel)
 				 && lockService.Evaluate(channel.HideLock, channel, target)
 			 );
