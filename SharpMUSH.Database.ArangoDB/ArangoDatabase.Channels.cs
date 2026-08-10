@@ -113,9 +113,11 @@ public partial class ArangoDatabase
 				}, cancellationToken: ct)
 			.Select(SharpChannelQueryToSharpChannel);
 
-	public async ValueTask CreateChannelAsync(MString channel, string[] privs,
+	public async ValueTask<ChannelCreationResult> CreateChannelAsync(MString channel, string[] privs,
 		SharpPlayer owner, CancellationToken ct = default)
 	{
+		var channelName = channel.ToPlainText();
+
 		var transaction = await arangoDb.Transaction.BeginAsync(handle,
 			new ArangoTransaction
 			{
@@ -127,8 +129,33 @@ public partial class ArangoDatabase
 
 		try
 		{
+			// Uniqueness is decided INSIDE this transaction, on purpose. The Exclusive scope already holds a
+			// write lock on Channels for its whole lifetime, so a second creator either waits here or reads
+			// the committed winner — an existence check taken now is atomic with the create that follows it.
+			// ChannelAdd's own read-before-create is outside any transaction and cannot be: it is a fast path
+			// for the friendly "Channel already exists." message, not the guarantee.
+			//
+			// No unique index on Name is added for this. It would be redundant with the exclusive lock on the
+			// only path that writes channels, and it cannot be created at all on a database that already
+			// holds duplicates — which is exactly the state the bug this closes produces. Memgraph does need
+			// a constraint, because snapshot isolation there lets both writers observe "absent"; see
+			// MemgraphDatabase.Migration.cs.
+			var existing = await arangoDb.Query.ExecuteAsync<string>(transaction,
+				"FOR c IN @@C FILTER c.Name == @name LIMIT 1 RETURN c._id",
+				new Dictionary<string, object>
+				{
+					{ "@C", DatabaseConstants.Channels },
+					{ "name", channelName }
+				}, cancellationToken: ct);
+
+			if (existing.Count > 0)
+			{
+				await arangoDb.Transaction.AbortAsync(transaction, ct);
+				return new ChannelNameTaken();
+			}
+
 			var newChannel = new SharpChannelCreateRequest(
-				Name: channel.ToPlainText(),
+				Name: channelName,
 				MarkedUpName: MModule.serialize(channel),
 				Privs: privs
 			);
@@ -144,10 +171,28 @@ public partial class ArangoDatabase
 				new SharpEdgeCreateRequest(owner.Object.Id!, createdChannel.New.Id), cancellationToken: ct);
 
 			await arangoDb.Transaction.CommitAsync(transaction, ct);
+			return new Success();
 		}
-		catch
+		catch (Exception ex)
 		{
-			await arangoDb.Transaction.AbortAsync(transaction, ct);
+			// This used to be `catch { await AbortAsync(...); }` with no rethrow and no result, so every
+			// failure — schema violation, lost owner, dropped connection — was reported to the caller as a
+			// created channel.
+			logger.LogError(ex, "Failed to create channel {ChannelName}", channelName);
+
+			// Unconditional, including when the commit itself threw: an uncommitted transaction left open
+			// holds the exclusive lock until it expires, which blocks every other channel create. Aborting
+			// one that did commit answers "not found", which is logged and harmless.
+			try
+			{
+				await arangoDb.Transaction.AbortAsync(transaction, ct);
+			}
+			catch (Exception abortEx)
+			{
+				logger.LogError(abortEx, "Failed to abort the transaction for channel {ChannelName}", channelName);
+			}
+
+			return new Error<string>(ex.Message);
 		}
 	}
 

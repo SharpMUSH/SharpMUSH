@@ -31,14 +31,20 @@ public static class ChannelHide
 			return new CallState(ErrorMessages.Returns.InvalidOption);
 		}
 
-		if (channelName != null)
+		// The sense of this was inverted: naming a channel hid you on EVERY channel, and naming none
+		// passed a null name to a lookup that cannot take one.
+		if (channelName is null)
 		{
-			var channelList = Mediator.CreateStream(new GetChannelListQuery());
-			channels = [.. await channelList.ToArrayAsync()];
+			// The bulk path routed around GetVisibleChannelOrError entirely and then named each channel in
+			// its per-channel notifications, so `@channel/hide` with no argument listed exactly the channels
+			// that gate exists to hide.
+			channels = [.. await ChannelHelper.VisibleChannels(PermissionService, executor,
+				Mediator.CreateStream(new GetChannelListQuery()))];
 		}
 		else
 		{
-			var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName!, true);
+			var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+				NotifyService, executor, channelName, true);
 			if (maybeChannel.IsError)
 			{
 				return maybeChannel.AsError.Value;
@@ -56,11 +62,23 @@ public static class ChannelHide
 			if (maybeMemberStatus is null)
 			{
 				await NotifyService.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.", executor);
+				continue;
 			}
 
-			var status = maybeMemberStatus?.Status;
+			// extchat.c:2001 — `if (!Chan_Can_Hide(c, player) && !Wizard(player))`. The Hide_Ok privilege and
+			// the hide lock decide who may vanish from a channel's who-list; nothing consulted them before.
+			if (!await PermissionService.ChannelCanHide(executor, channel) && !await executor.IsWizard())
+			{
+				await NotifyService.Notify(executor,
+					string.Format(ErrorMessages.Notifications.ChatCannotHideOnChannel, channel.Name.ToPlainText()),
+					executor);
+				continue;
+			}
 
-			if (status?.Hide ?? false == hideOn)
+			// `status?.Hide ?? false == hideOn` binds as `status?.Hide ?? (false == hideOn)`, which reports
+			// "already in that hide state" whenever the player was NOT hidden and asked to unhide — and
+			// never reported it when they were.
+			if ((maybeMemberStatus.Status.Hide ?? false) == hideOn)
 			{
 				await NotifyService.Notify(executor, $"CHAT: You are already in that hide state on {channel.Name.ToPlainText()}.", executor);
 				continue;

@@ -34,12 +34,15 @@ public static class ChannelGag
 
 		if (channelName is null)
 		{
-			var channelList = Mediator.CreateStream(new GetChannelListQuery());
-			channels = [.. await channelList.ToArrayAsync()];
+			// Same enumeration oracle as @channel/hide's bulk path: this walked every channel and then named
+			// each one back to the executor.
+			channels = [.. await ChannelHelper.VisibleChannels(PermissionService, executor,
+				Mediator.CreateStream(new GetChannelListQuery()))];
 		}
 		else
 		{
-			var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
+			var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+				NotifyService, executor, channelName, true);
 			if (maybeChannel.IsError)
 			{
 				return maybeChannel.AsError.Value;
@@ -62,7 +65,9 @@ public static class ChannelGag
 
 			var status = maybeMemberStatus.Status;
 
-			if ((status.Hide ?? false) == gagOn)
+			// @channel/gag read and wrote the Hide flag, so gagging hid you from the who-list and left you
+			// hearing every word. SharpChannelStatus is (Combine, Gagged, Hide, Mute, Title).
+			if ((status.Gagged ?? false) == gagOn)
 			{
 				await NotifyService.Notify(executor, $"CHAT: You are already in that gag state on {channel.Name.ToPlainText()}.", executor);
 				continue;
@@ -71,8 +76,8 @@ public static class ChannelGag
 			await Mediator.Send(new UpdateChannelUserStatusCommand(
 				channel, executor, new SharpChannelStatus(
 					null,
-					null,
 					gagOn,
+					null,
 					null,
 					null
 				)));

@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -32,13 +33,24 @@ public static class ChannelOff
 			target = maybeTarget.AsAnyObject;
 		}
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			NotifyService, executor, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
 		}
 
 		var channel = maybeChannel.AsChannel;
+
+		// extchat.c:1289 — "You must control either the victim or the channel". Without this, any mortal
+		// could remove any other player from any channel.
+		if (target.Id() != executor.Id()
+				&& !await PermissionService.Controls(executor, target)
+				&& !await PermissionService.ChannelCanModifyAsync(executor, channel))
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatInvalidTarget, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
 		if (!await ChannelHelper.IsMemberOfChannel(target, channel))
 		{

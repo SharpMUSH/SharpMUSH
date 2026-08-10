@@ -278,6 +278,14 @@ public static partial class HelperFunctions
 		=> await obj.Object().Flags.Value
 			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase));
 
+	/// <summary>
+	/// PennMUSH <c>LOUD</c> (hlp/pennflag.hlp:256): "LOUD objects bypass all speech, channel speech, and
+	/// interaction @locks. This flag can only be set by royalty or wizards." Penn consults it at the call
+	/// site rather than inside <c>Chan_Can_Speak</c> — see <c>src/extchat.c:1539</c>.
+	/// </summary>
+	public static async ValueTask<bool> IsLoud(this AnySharpObject obj)
+		=> await obj.HasFlag("LOUD");
+
 	public static async ValueTask<bool> CanDark(this AnySharpObject obj)
 		=> await obj.HasPower("Can_Dark") || await obj.IsWizard();
 

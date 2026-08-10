@@ -11,7 +11,8 @@ public static class ChannelRecall
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString lines, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			NotifyService, executor, channelName, true);
 
 		if (maybeChannel.IsError)
 		{

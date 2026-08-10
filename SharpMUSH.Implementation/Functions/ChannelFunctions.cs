@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using SharpMUSH.Library;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -28,8 +29,9 @@ public partial class Functions
 
 		if (maybePlayer.IsError) return (null, null, maybePlayer.AsError);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, MModule.single(channelName!), false);
+		// extchat.c:2434 (fun_ctitle) / :2491 (fun_cstatus) — "You must pass the channel's see-lock".
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, MModule.single(channelName!), false);
 
 		if (maybeChannel.IsError) return (maybePlayer.AsSharpObject, null, maybeChannel.AsError.Value);
 
@@ -48,8 +50,8 @@ public partial class Functions
 		var message = parser.CurrentState.Arguments["1"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -87,8 +89,8 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -96,6 +98,13 @@ public partial class Functions
 		}
 
 		var channel = maybeChannel.AsChannel;
+
+		// cemit() is @cemit with a different spelling, so it answers to the same gate — otherwise softcode
+		// is a way around it.
+		if (await ChannelHelper.CemitRefusal(PermissionService!, executor, channel) is not null)
+		{
+			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
+		}
 
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 
@@ -135,8 +144,8 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -212,23 +221,56 @@ public partial class Functions
 			type = arg1.Message!.ToPlainText().ToLower();
 		}
 
-		var allChannels = Mediator!.CreateStream(new GetChannelListQuery());
-		var channelArray = await allChannels.ToArrayAsync();
+		// PennMUSH fun_channels (src/extchat.c:3313-3375): "You can see an object's channels if you can
+		// examine it. Otherwise you can see only channels that you share with it where it's not hidden."
+		//
+		// Visibility is judged against the EXECUTOR, never against the object being asked about. Judging it
+		// against the object let any mortal read back a wizard's wizard-only channels by naming the wizard;
+		// and the "on"/"off" arms applied no visibility rule at all, so `channels(me,off)` listed every
+		// channel in the game by name.
+		var askingAboutSomeoneElse = player.Id() != executor.Id();
+		var canExamineTarget = !askingAboutSomeoneElse || await PermissionService!.CanExamine(executor, player);
+		var privWho = await executor.IsPriv() || await executor.HasPower("Who");
+
+		// Materialised before the loop: the per-channel checks below open their own streams, and
+		// Core.Arango faults when one stream is enumerated inside another.
+		var channelArray = await Mediator!.CreateStream(new GetChannelListQuery()).ToArrayAsync();
 
 		var filteredChannels = new List<string>();
 		foreach (var channel in channelArray)
 		{
-			var shouldInclude = type switch
+			var isMember = await ChannelHelper.IsMemberOfChannel(player, channel);
+
+			var matchesType = type switch
 			{
-				"on" => await ChannelHelper.IsMemberOfChannel(player, channel),
-				"off" => !await ChannelHelper.IsMemberOfChannel(player, channel),
-				"quiet" or _ => await PermissionService!.ChannelCanSeeAsync(player, channel)
+				"on" => isMember,
+				"off" => !isMember,
+				"quiet" or _ => true
 			};
 
-			if (shouldInclude)
+			if (!matchesType)
 			{
-				filteredChannels.Add(channel.Name.ToPlainText());
+				continue;
 			}
+
+			if (!canExamineTarget)
+			{
+				// Not examinable: the executor may only learn about channels they can see themselves, that
+				// the object is actually on, and on which the object is not hidden from them.
+				var status = await ChannelHelper.ChannelMemberStatus(player, channel);
+				if (status is null
+						|| (!privWho && (status.Status.Hide ?? false))
+						|| !await ChannelHelper.CanSeeChannel(PermissionService!, executor, channel))
+				{
+					continue;
+				}
+			}
+			else if (!await ChannelHelper.CanSeeChannel(PermissionService!, executor, channel))
+			{
+				continue;
+			}
+
+			filteredChannels.Add(channel.Name.ToPlainText());
 		}
 
 		return new CallState(string.Join(" ", filteredChannels));
@@ -240,8 +282,8 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -295,10 +337,13 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		// Chan_Can_Decomp below refuses with #-1 PERMISSION DENIED, which a raw lookup's
+		// #-1 NO SUCH CHANNEL is distinguishable from — so softcode could tell an invisible channel from a
+		// nonexistent one even though the lock itself stayed secret.
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -306,6 +351,13 @@ public partial class Functions
 		}
 
 		var channel = maybeChannel.AsChannel;
+
+		// extchat.c:3437 — reading a channel's lock needs Chan_Can_Decomp. This handed every channel's
+		// join/speak/see/hide/mod lock key to any mortal who asked for it.
+		if (!await PermissionService!.ChannelCanDecomposeAsync(executor, channel))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
 		var lockType = "join";
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
@@ -331,10 +383,10 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelMogrifier(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -350,10 +402,10 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -372,8 +424,8 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -462,10 +514,10 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -501,8 +553,8 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -510,6 +562,11 @@ public partial class Functions
 		}
 
 		var channel = maybeChannel.AsChannel;
+
+		if (await ChannelHelper.CemitRefusal(PermissionService!, executor, channel) is not null)
+		{
+			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
+		}
 
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 
@@ -542,9 +599,10 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelBuffer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -560,10 +618,10 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelDescription(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -579,10 +637,10 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelMessages(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -601,10 +659,10 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelUsers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -628,8 +686,8 @@ public partial class Functions
 			: "name";
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, false);
 
 		if (maybeChannel.IsError)
 		{

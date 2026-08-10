@@ -5,6 +5,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Tests;
@@ -72,6 +73,37 @@ public static class TestHelpers
 		Arg.Is<AnySharpObject>(o => o.Object().DBRef == dbRef);
 
 	/// <summary>
+	/// Every notification the substitute was asked to deliver, bucketed by recipient dbref number.
+	///
+	/// <para>This exists because <c>ReceivedCalls()</c> must not be enumerated while the substitute is
+	/// still recording: NSubstitute's threading contract requires verification and production activity to
+	/// be disjoint (nsubstitute.github.io/help/threading), and the substitute the test factories install is
+	/// a singleton shared by every test in a session that TUnit runs in parallel. Clearing it is worse
+	/// still — it deletes calls other tests are about to assert on.</para>
+	///
+	/// <para>Recording happens inside the delivery callback, on the thread that made the call, into a
+	/// <see cref="ConcurrentQueue{T}"/> keyed by recipient. Enumeration never touches NSubstitute state,
+	/// and <see cref="ConcurrentQueue{T}.ToArray"/> is a point-in-time snapshot that cannot throw while
+	/// another thread enqueues. Recipient bucketing gives isolation on top of that: a test that reads its
+	/// own uniquely-created player's bucket cannot see another test's notifications at all.</para>
+	/// </summary>
+	public sealed class NotificationRecorder
+	{
+		private readonly ConcurrentDictionary<int, ConcurrentQueue<string>> _byRecipient = new();
+
+		internal void Record(int recipient, string message)
+			=> _byRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<string>()).Enqueue(message);
+
+		/// <summary>Everything <paramref name="who"/> has been notified of so far, in order.</summary>
+		public List<string> For(DBRef who)
+			=> _byRecipient.TryGetValue(who.Number, out var queue) ? [.. queue] : [];
+
+		/// <summary>How many notifications <paramref name="who"/> has had, for windowing.</summary>
+		public int CountFor(DBRef who)
+			=> _byRecipient.TryGetValue(who.Number, out var queue) ? queue.Count : 0;
+	}
+
+	/// <summary>
 	/// Creates the <see cref="INotifyService"/> substitute used by the test factories. The real
 	/// <see cref="SharpMUSH.Library.Services.NotifyService"/> consults
 	/// <see cref="SharpMUSH.Library.Services.Interfaces.IHttpOutputCapture"/> before delivering to
@@ -80,16 +112,26 @@ public static class TestHelpers
 	/// empty bodies. Received()-style assertions are unaffected — When/Do does not change call
 	/// recording, and capture state lives in an AsyncLocal so non-HTTP test flows are no-ops.
 	/// </summary>
-	public static INotifyService CreateNotifyServiceSubstitute()
+	/// <param name="recorder">
+	/// Optional sink that also receives every delivered message, so a test can read what was said without
+	/// enumerating <c>ReceivedCalls()</c>. See <see cref="NotificationRecorder"/>.
+	/// </param>
+	public static INotifyService CreateNotifyServiceSubstitute(NotificationRecorder? recorder = null)
 	{
 		var capture = new SharpMUSH.Library.Services.HttpOutputCapture();
 		var localization = new SharpMUSH.Library.Services.LocalizationService();
 		var notifier = Substitute.For<INotifyService>();
 
+		void Deliver(int recipient, string message)
+		{
+			capture.TryCapture(recipient, message);
+			recorder?.Record(recipient, message);
+		}
+
 		notifier
 			.When(x => x.Notify(Arg.Any<DBRef>(), Arg.Any<OneOf<MString, string>>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
-			.Do(call => capture.TryCapture(
+			.Do(call => Deliver(
 				call.ArgAt<DBRef>(0).Number,
 				PlainText(call.ArgAt<OneOf<MString, string>>(1))));
 
@@ -98,7 +140,7 @@ public static class TestHelpers
 		notifier
 			.When(x => x.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
-			.Do(call => capture.TryCapture(
+			.Do(call => Deliver(
 				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
 				PlainText(call.ArgAt<OneOf<MString, string>>(1))));
 
@@ -106,25 +148,25 @@ public static class TestHelpers
 		// HTTP capture, mirroring the real NotifyService — formatted with the neutral locale.
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<object[]>()))
-			.Do(call => capture.TryCapture(
+			.Do(call => Deliver(
 				call.ArgAt<DBRef>(0).Number,
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
 
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<object[]>()))
-			.Do(call => capture.TryCapture(
+			.Do(call => Deliver(
 				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
 
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
-			.Do(call => capture.TryCapture(
+			.Do(call => Deliver(
 				call.ArgAt<DBRef>(0).Number,
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
 
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
-			.Do(call => capture.TryCapture(
+			.Do(call => Deliver(
 				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
 

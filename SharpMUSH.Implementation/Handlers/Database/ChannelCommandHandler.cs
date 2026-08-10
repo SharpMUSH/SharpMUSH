@@ -1,16 +1,14 @@
 ﻿using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class CreateChannelCommandHandler(ISharpDatabase database) : ICommandHandler<CreateChannelCommand>
+public class CreateChannelCommandHandler(ISharpDatabase database) : ICommandHandler<CreateChannelCommand, ChannelCreationResult>
 {
-	public async ValueTask<Unit> Handle(CreateChannelCommand request, CancellationToken cancellationToken)
-	{
-		await database.CreateChannelAsync(request.Channel, request.Privs, request.Owner, cancellationToken);
-		return Unit.Value;
-	}
+	public async ValueTask<ChannelCreationResult> Handle(CreateChannelCommand request, CancellationToken cancellationToken)
+		=> await database.CreateChannelAsync(request.Channel, request.Privs, request.Owner, cancellationToken);
 }
 
 public class UpdateChannelCommandHandler(ISharpDatabase database) : ICommandHandler<UpdateChannelCommand>

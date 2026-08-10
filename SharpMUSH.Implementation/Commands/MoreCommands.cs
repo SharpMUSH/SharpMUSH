@@ -65,8 +65,12 @@ public partial class Commands
 		var lockType = switches.FirstOrDefault() ?? "JOIN";
 		lockType = lockType.ToUpper();
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
-			NotifyService!, channelName, false);
+		// Setting a lock on a channel you cannot see must be refused the same way as setting one on a
+		// channel that does not exist, or @clock reports which names are taken. notify: true because the
+		// gate emits ONE refusal for both cases: suppressing it does not make the two cases more alike, it
+		// only makes a mistyped channel name fail in silence.
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
+			NotifyService!, executor, channelName, notify: true);
 
 		if (maybeChannel.IsError)
 		{
@@ -75,12 +79,12 @@ public partial class Commands
 
 		var channel = maybeChannel.AsChannel;
 
-		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
-		var isOwner = owner.Object.DBRef.Equals(executor.Object().DBRef);
-		var passesModLock = string.IsNullOrEmpty(channel.ModLock) ||
-												LockService!.Evaluate(channel.ModLock, channel, executor);
-
-		if (!isOwner && !passesModLock && !await executor.IsWizard())
+		// This was Chan_Can_Modify rewritten by hand, and it carried the same defect: an unset ModLock made
+		// `passesModLock` true for everybody, so any non-guest could set the join/speak/see/hide/mod lock on
+		// any channel — and no channel has a ModLock, because CreateChannelCommand never writes one.
+		// ChannelCanModifyAsync now skips an unset lock rather than evaluating it; going through it means
+		// this command cannot drift away from that rule again.
+		if (!await PermissionService!.ChannelCanModifyAsync(executor, channel))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);

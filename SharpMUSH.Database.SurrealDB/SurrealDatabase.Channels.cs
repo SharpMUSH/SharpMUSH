@@ -54,7 +54,37 @@ public partial class SurrealDatabase
 			yield return MapRecordToChannel(channelRecord);
 	}
 
-	public async ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
+	/// <summary>
+	/// Serializes channel creation for this database.
+	/// </summary>
+	/// <remarks>
+	/// SurrealDB is EMBEDDED here — <c>SurrealDb.Embedded.InMemory</c> or the RocksDB engine, in the
+	/// server's own process (<c>Startup.cs:167-190</c>) — so one process owns the whole store and an
+	/// in-process gate is a complete guarantee, not an approximation of one. It is needed: SurrealDB is
+	/// optimistic, and under eight-way contention two <c>CREATE</c>s on the same record ID were both
+	/// observed committing, which is the overwrite this method exists to prevent. The same reasoning
+	/// already produced the in-memory object-key counter at <c>SurrealDatabase.cs:214-220</c>.
+	///
+	/// <para>ArangoDB and Memgraph get no equivalent, and must not: they are real servers with other
+	/// possible clients, so a lock inside one process would guarantee nothing. Their guarantee is an
+	/// exclusive collection lock and a uniqueness constraint respectively.</para>
+	/// </remarks>
+	private readonly SemaphoreSlim _channelCreateLock = new(1, 1);
+
+	public async ValueTask<ChannelCreationResult> CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
+	{
+		await _channelCreateLock.WaitAsync(cancellationToken);
+		try
+		{
+			return await CreateChannelCoreAsync(name, privs, owner, cancellationToken);
+		}
+		finally
+		{
+			_channelCreateLock.Release();
+		}
+	}
+
+	private async ValueTask<ChannelCreationResult> CreateChannelCoreAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken)
 	{
 		var channelName = name.ToPlainText();
 		var serializedName = MModule.serialize(name);
@@ -68,17 +98,66 @@ public partial class SurrealDatabase
 			["ownerKey"] = ownerObjKey
 		};
 
-		// Deterministic record ID so repeated creates are idempotent under the unique name index.
-		// One transaction so the channel node and its owner/membership edges commit together —
-		// otherwise the channel is visible before its owner edge and GetChannelOwnerAsync throws.
-		await ExecuteAsync(
+		// CREATE, not UPSERT. The record ID is the channel name, so UPSERT did not duplicate on a collision
+		// — it OVERWROTE, and it set every field unconditionally: privs became whatever the second caller
+		// asked for and all five locks reset to ''. A wizard-only, join-locked channel silently became an
+		// unrestricted one, and both callers were told the create succeeded. CREATE fails on an existing
+		// record ID, which is what makes this atomic here; the unique index on channel.name cannot help,
+		// because an overwrite of one record never violates it.
+		//
+		// One transaction so the channel node and its owner/membership edges commit together — otherwise
+		// the channel is visible before its owner edge and GetChannelOwnerAsync throws.
+		const string createQuery =
 			"BEGIN TRANSACTION;" +
-			"UPSERT channel:⟨$name⟩ SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = '';" +
+			"CREATE channel:⟨$name⟩ SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = '';" +
 			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->object:$ownerKey;" +
 			"RELATE object:$ownerKey->member_of_channel->(SELECT VALUE id FROM channel WHERE name = $name LIMIT 1) SET combine = false, gagged = false, hide = false, mute = false, title = '';" +
-			"COMMIT TRANSACTION",
-			parameters, cancellationToken);
+			"COMMIT TRANSACTION";
+
+		const int maxAttempts = 8;
+
+		for (var attempt = 0; ; attempt++)
+		{
+			var response = await ExecuteAsync(createQuery, parameters, cancellationToken);
+
+			if (!response.HasErrors)
+			{
+				return new Success();
+			}
+
+			var errors = string.Join("; ", response.Errors.Select(FormatError));
+
+			// "Database record `channel:Foo` already exists" — and the index guard, in case a name reaches
+			// the same record by a different id form.
+			if (errors.Contains("already exists", StringComparison.OrdinalIgnoreCase)
+					|| errors.Contains("already contains", StringComparison.OrdinalIgnoreCase))
+			{
+				return new ChannelNameTaken();
+			}
+
+			// SurrealDB is optimistic: concurrent writers to one record do not queue, they lose at commit
+			// with "Failed to commit transaction due to a read or write conflict. This transaction can be
+			// retried." Retrying is what turns that into the answer the caller needs, because the retry
+			// finds the winner's record and gets "already exists". Without it the loser of a race is told
+			// the create failed for an unexplained reason — true, but useless.
+			if (attempt < maxAttempts - 1 && IsRetryableConflict(errors))
+			{
+				var backoff = Math.Min(25 * (1 << attempt), 500);
+				await Task.Delay(backoff + Random.Shared.Next(0, (backoff / 2) + 1), cancellationToken);
+				continue;
+			}
+
+			return new Error<string>(errors);
+		}
 	}
+
+	/// <summary>
+	/// True when SurrealDB refused a commit because another transaction touched the same records. Its own
+	/// message says the transaction can be retried, and on retry the create resolves to "already exists".
+	/// </summary>
+	private static bool IsRetryableConflict(string message)
+		=> message.Contains("read or write conflict", StringComparison.OrdinalIgnoreCase)
+			|| message.Contains("can be retried", StringComparison.OrdinalIgnoreCase);
 
 	public async ValueTask UpdateChannelAsync(SharpChannel channel, MString? name, MString? description, string[]? privs,
 		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock,

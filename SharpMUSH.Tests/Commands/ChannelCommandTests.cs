@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -15,7 +16,14 @@ namespace SharpMUSH.Tests.Commands;
 public class ChannelCommandTests
 {
 	private const string TestChannelName = "TestCommandChannel";
-	private const string TestChannelPrivilege = "Open";
+
+	/// <summary>
+	/// A channel players can use needs the <c>Player</c> privilege: PennMUSH's <c>Chan_Ok_Type</c>
+	/// (hdrs/extchat.h:196) admits a player only to a channel carrying it, which is why Penn's default
+	/// <c>channel_flags</c> is <c>player</c>. This fixture asked for <c>Open</c> alone, which was harmless
+	/// only while the type gate went unenforced.
+	/// </summary>
+	private static readonly string[] TestChannelPrivileges = ["Player", "Open"];
 	private const int TestPlayerDbRef = 1;
 
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -43,7 +51,7 @@ public class ChannelCommandTests
 
 		await Mediator.Send(new CreateChannelCommand(
 			MModule.single(TestChannelName),
-			[TestChannelPrivilege],
+			TestChannelPrivileges,
 			_testPlayer
 		));
 
@@ -125,7 +133,7 @@ public class ChannelCommandTests
 		var before = $"Ren{switchName}{suffix}";
 		var after = $"Post{switchName}{suffix}";
 
-		await Mediator.Send(new CreateChannelCommand(MModule.single(before), [TestChannelPrivilege], _testPlayer!));
+		await Mediator.Send(new CreateChannelCommand(MModule.single(before), TestChannelPrivileges, _testPlayer!));
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@channel/{switchName} {before}={after}"));
 
@@ -148,7 +156,8 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Channel not found.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), ErrorMessages.Notifications.DontRecognizeThatChannel,
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

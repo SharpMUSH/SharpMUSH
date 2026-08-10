@@ -17,7 +17,8 @@ public static class ChannelWipe
 			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			NotifyService, executor, channelName, true);
 
 		if (maybeChannel.IsError)
 		{

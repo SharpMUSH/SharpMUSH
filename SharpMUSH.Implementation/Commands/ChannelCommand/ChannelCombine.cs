@@ -31,14 +31,16 @@ public static class ChannelCombine
 			return new CallState(ErrorMessages.Returns.InvalidOption);
 		}
 
-		var channelList = Mediator.CreateStream(new GetChannelListQuery());
 		if (channelName is null)
 		{
-			channels = [.. await channelList.ToArrayAsync()];
+			// Same enumeration oracle as @channel/hide's bulk path.
+			channels = [.. await ChannelHelper.VisibleChannels(PermissionService, executor,
+				Mediator.CreateStream(new GetChannelListQuery()))];
 		}
 		else
 		{
-			var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
+			var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+				NotifyService, executor, channelName, true);
 			if (maybeChannel.IsError)
 			{
 				return maybeChannel.AsError.Value;
