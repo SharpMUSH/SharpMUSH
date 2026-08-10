@@ -3484,6 +3484,10 @@
     <value>Opret rum</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCreateExit" xml:space="preserve">
+    <value>Opret udgang</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermCreateThing" xml:space="preserve">
     <value>Opret ting</value>
     <comment>MT</comment>

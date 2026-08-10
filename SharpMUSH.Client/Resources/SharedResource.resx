@@ -1837,6 +1837,9 @@
   <data name="TermCreateRoom" xml:space="preserve">
     <value>Create Room</value>
   </data>
+  <data name="TermCreateExit" xml:space="preserve">
+    <value>Create Exit</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Expand objects</value>
   </data>

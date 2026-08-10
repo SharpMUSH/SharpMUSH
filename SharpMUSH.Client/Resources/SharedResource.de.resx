@@ -3484,6 +3484,10 @@
     <value>Raum erstellen</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCreateExit" xml:space="preserve">
+    <value>Ausgang erstellen</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermCreateThing" xml:space="preserve">
     <value>Objekt erstellen</value>
     <comment>MT</comment>

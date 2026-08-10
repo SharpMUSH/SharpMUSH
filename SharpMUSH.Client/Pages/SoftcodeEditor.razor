@@ -45,6 +45,9 @@
                 <MudTooltip Text="@Loc["TermCreateRoom"]">
                     <MudIconButton Icon="@Icons.Material.Filled.MeetingRoom" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Room))" />
                 </MudTooltip>
+                <MudTooltip Text="@Loc["TermCreateExit"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.CallMade" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Exit))" />
+                </MudTooltip>
             }
             <MudIconButton Icon="@(_objCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ChevronLeft)"
                            Size="Size.Small" OnClick="@(() => _objCollapsed = !_objCollapsed)"
@@ -441,8 +444,28 @@
     private async Task OnEditorInitAsync()
         => await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.initEditor", "mush-editor");
 
+    // Monaco raises OnDidChangeModelContent for SetValue too, so loading an attribute, switching
+    // tabs or refreshing would each mark the tab unsaved without the user touching anything —
+    // which also made RefreshAttributesAsync skip those tabs forever, since it only refreshes
+    // clean ones. Every programmatic write goes through SetEditorValueAsync, which consumes the
+    // one change event it causes.
+    private bool _programmaticEditorWrite;
+
+    private async Task SetEditorValueAsync(string value)
+    {
+        if (_monacoEditor is null) return;
+        _programmaticEditorWrite = true;
+        await _monacoEditor.SetValue(value);
+    }
+
     private void OnEditorChanged(ModelContentChangedEvent e)
     {
+        if (_programmaticEditorWrite)
+        {
+            _programmaticEditorWrite = false;
+            return;
+        }
+
         if (ActiveTab is not null)
             ActiveTab.IsDirty = true;
     }
@@ -467,8 +490,7 @@
             _activeTabIndex = _openTabs.Count - 1;
         }
 
-        if (_monacoEditor is not null)
-            await _monacoEditor.SetValue(ActiveTab!.WorkingContent);
+        await SetEditorValueAsync(ActiveTab!.WorkingContent);
 
         // Mobile drill-down: picking an attribute advances to the editor.
         _mobilePane = MobilePane.Editor;
@@ -482,8 +504,8 @@
         if (_monacoEditor is not null && ActiveTab is not null)
             ActiveTab.WorkingContent = await _monacoEditor.GetValue();
         _activeTabIndex = idx;
-        if (_monacoEditor is not null && ActiveTab is not null)
-            await _monacoEditor.SetValue(ActiveTab.WorkingContent);
+        if (ActiveTab is not null)
+            await SetEditorValueAsync(ActiveTab.WorkingContent);
         StateHasChanged();
     }
 
@@ -496,13 +518,13 @@
         {
             _activeTabIndex = -1;
             if (_monacoEditor is not null)
-                await _monacoEditor.SetValue(string.Empty);
+                await SetEditorValueAsync(string.Empty);
         }
         else
         {
             _activeTabIndex = Math.Clamp(_activeTabIndex, 0, _openTabs.Count - 1);
             if (_monacoEditor is not null)
-                await _monacoEditor.SetValue(ActiveTab!.WorkingContent);
+                await SetEditorValueAsync(ActiveTab!.WorkingContent);
         }
         StateHasChanged();
     }
@@ -556,8 +578,8 @@
                     tab.WorkingContent = refreshed.Value;
             }
         }
-        if (_monacoEditor is not null && ActiveTab is not null)
-            await _monacoEditor.SetValue(ActiveTab.WorkingContent);
+        if (ActiveTab is not null)
+            await SetEditorValueAsync(ActiveTab.WorkingContent);
     }
 
     private async Task SaveAsync()

@@ -3484,6 +3484,10 @@
     <value>Stvori sobu</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCreateExit" xml:space="preserve">
+    <value>Stvori izlaz</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermCreateThing" xml:space="preserve">
     <value>Stvori predmet</value>
     <comment>MT</comment>

@@ -3484,6 +3484,10 @@
     <value>Creare cameră</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCreateExit" xml:space="preserve">
+    <value>Creare ieșire</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermCreateThing" xml:space="preserve">
     <value>Creare obiect</value>
     <comment>MT</comment>
