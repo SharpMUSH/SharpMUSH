@@ -50,6 +50,16 @@ public class ObjectApiServiceTests
 		return (new ObjectApiService(new SingleClientFactory(handler)), handler);
 	}
 
+	/// <summary>A handler that fails the way an unreachable server does.</summary>
+	private sealed class ThrowingHandler(Exception failure) : HttpMessageHandler
+	{
+		protected override Task<HttpResponseMessage> SendAsync(
+			HttpRequestMessage request, CancellationToken cancellationToken) => throw failure;
+	}
+
+	private static ObjectApiService Failing(Exception failure) =>
+		new(new SingleClientFactory(new ThrowingHandler(failure)));
+
 	[Test]
 	public async Task SetAttribute_SendsTheValueVerbatim_NewlinesIntact()
 	{
@@ -100,15 +110,71 @@ public class ObjectApiServiceTests
 			.IsEqualTo("/api/objects/42/attributes/BRANCH%60LEAF");
 	}
 
+	/// <summary>
+	/// A server that cannot be reached must come back as a value, not an exception. These calls are
+	/// made straight from Blazor event handlers, so a thrown HttpRequestException escapes the
+	/// handler instead of reaching the editor's error banner.
+	/// </summary>
+	[Test]
+	public async Task SetAttribute_WhenTheServerIsUnreachable_ReturnsATransportFailure()
+	{
+		var service = Failing(new HttpRequestException("connection refused"));
+
+		var result = await service.SetAttributeAsync(7, "DESC", "x");
+
+		await Assert.That(result.IsT1).IsTrue().Because("a transport failure must be in the return type");
+		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Transport);
+	}
+
+	[Test]
+	public async Task GetObject_WhenTheServerIsUnreachable_ReturnsATransportFailure()
+	{
+		var service = Failing(new HttpRequestException("connection refused"));
+
+		var result = await service.GetObjectAsync(7);
+
+		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Transport);
+	}
+
+	[Test]
+	public async Task CreateObject_WhenTheServerIsUnreachable_ReturnsATransportFailure()
+	{
+		var service = Failing(new HttpRequestException("connection refused"));
+
+		var result = await service.CreateObjectAsync("Widget", MushObjectType.Thing);
+
+		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Transport);
+	}
+
+	/// <summary>
+	/// Not-found and forbidden are different facts and must not collapse into one "it failed".
+	/// </summary>
+	[Test]
+	public async Task GetAttribute_DistinguishesNotFoundFromForbidden()
+	{
+		var (missing, _) = Build(HttpStatusCode.NotFound);
+		var notFound = await missing.GetAttributeAsync(7, "NOPE");
+
+		var (refused, _) = Build(HttpStatusCode.Forbidden, """{"error":"#-1 PERMISSION DENIED"}""");
+		var forbidden = await refused.GetAttributeAsync(7, "SECRET");
+
+		await Assert.That(notFound.AsT1.Kind).IsEqualTo(ApiFailureKind.NotFound);
+		await Assert.That(forbidden.AsT1.Kind).IsEqualTo(ApiFailureKind.Forbidden);
+		await Assert.That(forbidden.AsT1.Message).IsEqualTo("#-1 PERMISSION DENIED");
+	}
+
 	[Test]
 	public async Task SetAttribute_OnRefusal_ReturnsTheServersMessage()
 	{
 		var (service, _) = Build(
 			HttpStatusCode.Forbidden, """{"error":"You do not have permission to do that."}""");
 
-		var error = await service.SetAttributeAsync(7, "PWNED", "nope");
+		var result = await service.SetAttributeAsync(7, "PWNED", "nope");
 
-		await Assert.That(error).IsEqualTo("You do not have permission to do that.");
+		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.AsT1.Message).IsEqualTo("You do not have permission to do that.");
 	}
 
 	[Test]
@@ -116,7 +182,9 @@ public class ObjectApiServiceTests
 	{
 		var (service, _) = Build();
 
-		await Assert.That(await service.SetAttributeAsync(7, "DESC", "fine")).IsNull();
+		var result = await service.SetAttributeAsync(7, "DESC", "fine");
+
+		await Assert.That(result.IsT0).IsTrue();
 	}
 
 	[Test]
@@ -127,7 +195,7 @@ public class ObjectApiServiceTests
 
 		var attributes = await service.GetAttributesAsync(7);
 
-		await Assert.That(attributes[0].Value).IsEqualTo("line one\nline two")
+		await Assert.That(attributes.AsT0[0].Value).IsEqualTo("line one\nline two")
 			.Because("the load path must not translate either way round");
 	}
 
@@ -136,10 +204,10 @@ public class ObjectApiServiceTests
 	{
 		var (service, _) = Build(HttpStatusCode.OK, """{"dbref":"#123:1700000000"}""");
 
-		var (dbref, error) = await service.CreateObjectAsync("Widget", MushObjectType.Thing);
+		var result = await service.CreateObjectAsync("Widget", MushObjectType.Thing);
 
-		await Assert.That(dbref).IsEqualTo(123);
-		await Assert.That(error).IsNull();
+		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.AsT0).IsEqualTo(123);
 	}
 
 	[Test]
@@ -147,9 +215,10 @@ public class ObjectApiServiceTests
 	{
 		var (service, _) = Build(HttpStatusCode.Forbidden, """{"error":"#-1 THAT IS A BAD NAME."}""");
 
-		var (dbref, error) = await service.CreateObjectAsync("!!", MushObjectType.Thing);
+		var result = await service.CreateObjectAsync("!!", MushObjectType.Thing);
 
-		await Assert.That(dbref).IsNull();
-		await Assert.That(error).IsEqualTo("#-1 THAT IS A BAD NAME.");
+		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Forbidden);
+		await Assert.That(result.AsT1.Message).IsEqualTo("#-1 THAT IS A BAD NAME.");
 	}
 }

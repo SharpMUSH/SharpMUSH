@@ -544,43 +544,56 @@
     // advanceMobilePane: only true for a direct object pick. Internal refreshes
     // (Save, Refresh attributes) reuse this method and must NOT yank the mobile user
     // out of the editor back to the attributes pane.
+    /// <summary>
+    /// Monotonic ticket for object loads. Clicking a second object before the first responds must
+    /// not let the older, slower answer land on top of the newer selection.
+    /// </summary>
+    private int _objectLoadGeneration;
+
     private async Task OnObjectSelected(int dbref, bool advanceMobilePane = true)
     {
+        var generation = ++_objectLoadGeneration;
+
         _loadingAttrs = true;
         _saveMessage = null;
         _showCreateAttr = false;
         StateHasChanged();
-        try
-        {
-            _selectedObject = await ObjectApi.GetObjectAsync(dbref);
-            _selectedObject ??= new MushObject
+
+        var result = await ObjectApi.GetObjectAsync(dbref);
+
+        // Someone selected something else while this was in flight; that request owns the state now.
+        if (generation != _objectLoadGeneration) return;
+
+        result.Switch(
+            obj =>
             {
-                Dbref = dbref,
-                Name = $"#{dbref}",
-                Attributes = await ObjectApi.GetAttributesAsync(dbref),
-            };
-            // Mobile drill-down: picking an object advances to its attributes.
-            if (advanceMobilePane)
-                _mobilePane = MobilePane.Attrs;
-        }
-        catch (Exception ex)
-        {
-            _saveMessage = Loc["TermErrorLoadingObject", ex.Message];
-            _saveSeverity = Severity.Error;
-        }
-        finally
-        {
-            _loadingAttrs = false;
-            StateHasChanged();
-        }
+                _selectedObject = obj;
+                // Mobile drill-down: picking an object advances to its attributes.
+                if (advanceMobilePane)
+                    _mobilePane = MobilePane.Attrs;
+            },
+            failure =>
+            {
+                _selectedObject = null;
+                _saveMessage = Loc["TermErrorLoadingObject", failure.Message];
+                _saveSeverity = Severity.Error;
+            });
+
+        _loadingAttrs = false;
+        StateHasChanged();
     }
 
     private async Task RefreshAttributesAsync()
     {
         if (_selectedObject is null) return;
+
+        // Captured before the await: the user may select a different object while the reload runs,
+        // and this refresh must only ever touch tabs belonging to the object it started on.
         var dbref = _selectedObject.Dbref;
+
         await OnObjectSelected(dbref, advanceMobilePane: false);
-        if (_selectedObject is not null)
+
+        if (_selectedObject is not null && _selectedObject.Dbref == dbref)
         {
             foreach (var tab in _openTabs.Where(t => t.Obj.Dbref == dbref))
             {
@@ -607,27 +620,32 @@
     private async Task SaveAsync()
     {
         if (ActiveTab is null || _monacoEditor is null) return;
+
+        // The tab itself is captured, not just its name and dbref: the user can switch tabs while
+        // the PUT is in flight, and the result belongs to the tab that initiated it. Writing back
+        // through ActiveTab marked whichever tab happened to be active as clean, handing it another
+        // tab's saved baseline — so it read as saved when it was not, and the next refresh
+        // overwrote it.
+        var tab = ActiveTab;
         var value = await _monacoEditor.GetValue();
-        ActiveTab.WorkingContent = value;
-        var savedAttrName = ActiveTab.Attr.Name;
-        var savedDbref = ActiveTab.Obj.Dbref;
+        tab.WorkingContent = value;
 
         // Sent verbatim — newlines included. The API carries the value in a JSON body, so there is
         // nothing to escape and nothing for the server to decode.
-        var error = await ObjectApi.SetAttributeAsync(savedDbref, savedAttrName, value);
-        if (error is not null)
+        var result = await ObjectApi.SetAttributeAsync(tab.Obj.Dbref, tab.Attr.Name, value);
+        if (result.TryPickT1(out var failure, out _))
         {
-            _saveMessage = error;
+            _saveMessage = failure.Message;
             _saveSeverity = Severity.Error;
             StateHasChanged();
             return;
         }
 
-        // The buffer is now what the database holds, so the tab is clean by definition.
-        ActiveTab.SavedContent = value;
-        ActiveTab.IsDirty = false;
+        // The buffer is now what the database holds, so that tab is clean by definition.
+        tab.SavedContent = value;
+        tab.IsDirty = false;
         await RefreshAttributesAsync();
-        _saveMessage = Loc["TermSavedAttribute", savedAttrName, savedDbref];
+        _saveMessage = Loc["TermSavedAttribute", tab.Attr.Name, tab.Obj.Dbref];
         _saveSeverity = Severity.Success;
         StateHasChanged();
     }
@@ -635,21 +653,23 @@
     private async Task DeleteAsync()
     {
         if (ActiveTab is null) return;
-        var deletedName = ActiveTab.Attr.Name;
-        var deletedDbref = ActiveTab.Obj.Dbref;
 
-        var error = await ObjectApi.DeleteAttributeAsync(deletedDbref, deletedName);
-        if (error is not null)
+        // Captured for the same reason as SaveAsync: on return we must close the tab we deleted
+        // from, not whichever one the user switched to meanwhile.
+        var tab = ActiveTab;
+
+        var result = await ObjectApi.DeleteAttributeAsync(tab.Obj.Dbref, tab.Attr.Name);
+        if (result.TryPickT1(out var failure, out _))
         {
-            _saveMessage = error;
+            _saveMessage = failure.Message;
             _saveSeverity = Severity.Error;
             StateHasChanged();
             return;
         }
 
-        _saveMessage = Loc["TermDeletedAttribute", deletedName];
+        _saveMessage = Loc["TermDeletedAttribute", tab.Attr.Name];
         _saveSeverity = Severity.Info;
-        var tabIdx = _openTabs.IndexOf(ActiveTab);
+        var tabIdx = _openTabs.IndexOf(tab);
         if (tabIdx >= 0) await CloseTabAsync(tabIdx);
         await RefreshAttributesAsync();
         StateHasChanged();
@@ -694,10 +714,10 @@
         var name = _createObjectName.Trim();
         _createObjectType = null;
         _createObjectName = string.Empty;
-        var (newDbref, error) = await ObjectApi.CreateObjectAsync(name, type);
-        if (error is not null)
+        var result = await ObjectApi.CreateObjectAsync(name, type);
+        if (result.TryPickT1(out var failure, out var newDbref))
         {
-            _saveMessage = error;
+            _saveMessage = failure.Message;
             _saveSeverity = Severity.Error;
             StateHasChanged();
             return;
@@ -706,8 +726,7 @@
         if (_objectBrowser is not null)
         {
             await _objectBrowser.RefreshAsync();
-            if (newDbref.HasValue)
-                await _objectBrowser.SelectDbrefAsync(newDbref.Value);
+            await _objectBrowser.SelectDbrefAsync(newDbref);
         }
     }
 
@@ -728,14 +747,20 @@
         _newAttrName = string.Empty;
         // 'null()' rather than an empty value: with empty_attrs off the engine treats an empty set
         // as a clear, so a genuinely empty attribute could not be created to open a tab on.
-        var error = await ObjectApi.SetAttributeAsync(_selectedObject.Dbref, attrName, "null()");
-        if (error is not null)
+        // Captured before the await: a refresh must target the object the attribute was created
+        // on, not whichever one is selected by the time the request comes back.
+        var targetDbref = _selectedObject.Dbref;
+
+        var result = await ObjectApi.SetAttributeAsync(targetDbref, attrName, "null()");
+        if (result.TryPickT1(out var failure, out _))
         {
-            _saveMessage = error;
+            _saveMessage = failure.Message;
             _saveSeverity = Severity.Error;
             StateHasChanged();
             return;
         }
+
+        if (_selectedObject?.Dbref != targetDbref) return;
 
         await RefreshAttributesAsync();
         var created = _selectedObject?.Attributes.FirstOrDefault(a =>
