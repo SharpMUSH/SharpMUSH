@@ -1,7 +1,9 @@
+using OneOf;
+using OneOf.Types;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Library.API;
-using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace SharpMUSH.Client.Services;
 
@@ -9,15 +11,24 @@ namespace SharpMUSH.Client.Services;
 /// Typed client for <c>api/objects</c> — object info, attribute CRUD and object creation.
 /// </summary>
 /// <remarks>
+/// <para>
 /// This replaces the softcode round-trip <see cref="MushQueryService"/> used to run for the same
 /// operations. That route went down the terminal WebSocket, which is line-delimited, so an
 /// attribute value had to have its newlines rewritten as <c>%r</c> to survive as one message —
 /// and since <c>&amp;</c> does not evaluate direct input, the literal <c>%r</c> was what got
 /// stored. Over HTTP a value is just a JSON string, so nothing has to be encoded and nothing has
 /// to be decoded on the way back.
-///
+/// </para>
+/// <para>
+/// Every method returns <see cref="OneOf{T0,T1}"/> with <see cref="ApiFailure"/> on the failed arm,
+/// matching <see cref="CharacterDirectoryService"/>. Nothing here throws for an unreachable server
+/// or a refused request: these are called straight from Blazor event handlers, where an escaping
+/// exception bypasses the page's error banner entirely.
+/// </para>
+/// <para>
 /// <see cref="MushQueryService"/> keeps the operations that genuinely are softcode evaluation:
 /// free-form <c>lsearch</c> expressions and <c>u()</c>.
+/// </para>
 /// </remarks>
 public class ObjectApiService(IHttpClientFactory httpClientFactory)
 {
@@ -33,63 +44,57 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 	private static string AttrPath(int dbref, string attribute)
 		=> $"api/objects/{dbref}/attributes/{Uri.EscapeDataString(attribute)}";
 
-	public async Task<MushObject?> GetObjectAsync(int dbref)
+	public async Task<OneOf<MushObject, ApiFailure>> GetObjectAsync(int dbref)
 	{
-		var response = await Client.GetAsync($"api/objects/{dbref}");
-		if (!response.IsSuccessStatusCode) return null;
+		var summary = await SendAsync<ObjectSummaryDto>(HttpMethod.Get, $"api/objects/{dbref}");
+		if (summary.TryPickT1(out var failure, out var dto)) return failure;
 
-		var summary = await response.Content.ReadFromJsonAsync<ObjectSummaryDto>();
-		if (summary is null) return null;
+		var attributes = await GetAttributesAsync(dbref);
 
 		return new MushObject
 		{
 			Dbref = dbref,
-			Name = summary.Name,
-			Type = ParseType(summary.Type),
-			Owner = summary.Owner,
-			Flags = string.Join(' ', summary.Flags),
-			Attributes = await GetAttributesAsync(dbref),
+			Name = dto.Name,
+			Type = ParseType(dto.Type),
+			Owner = dto.Owner,
+			Flags = string.Join(' ', dto.Flags),
+			// A readable object with unreadable attributes is still worth showing; the attribute
+			// pane renders empty rather than the whole selection failing.
+			Attributes = attributes.Match(list => list, _ => []),
 		};
 	}
 
-	public async Task<List<MushAttribute>> GetAttributesAsync(int dbref)
+	public async Task<OneOf<List<MushAttribute>, ApiFailure>> GetAttributesAsync(int dbref)
 	{
-		var attributes = await Client.GetFromJsonAsync<List<AttributeDto>>(
-			$"api/objects/{dbref}/attributes?depth={ListDepth}");
+		var result = await SendAsync<List<AttributeDto>>(
+			HttpMethod.Get, $"api/objects/{dbref}/attributes?depth={ListDepth}");
 
-		return attributes?.Select(a => new MushAttribute
-		{
-			Name = a.Name,
-			Value = a.Value,
-			AttributeFlags = [.. a.Flags],
-		}).ToList() ?? [];
+		return result.Match<OneOf<List<MushAttribute>, ApiFailure>>(
+			attributes => attributes.Select(a => new MushAttribute
+			{
+				Name = a.Name,
+				Value = a.Value,
+				AttributeFlags = [.. a.Flags],
+			}).ToList(),
+			failure => failure);
 	}
 
-	public async Task<string?> GetAttributeAsync(int dbref, string attribute)
+	public async Task<OneOf<string, ApiFailure>> GetAttributeAsync(int dbref, string attribute)
 	{
-		var response = await Client.GetAsync(AttrPath(dbref, attribute));
-		if (!response.IsSuccessStatusCode) return null;
+		var result = await SendAsync<AttributeDto>(HttpMethod.Get, AttrPath(dbref, attribute));
 
-		return (await response.Content.ReadFromJsonAsync<AttributeDto>())?.Value;
+		return result.Match<OneOf<string, ApiFailure>>(dto => dto.Value, failure => failure);
 	}
 
-	/// <summary>
-	/// Stores <paramref name="value"/> verbatim — newlines included. Returns the server's refusal
-	/// message when the acting character may not write there, or <see langword="null"/> on success.
-	/// </summary>
-	public async Task<string?> SetAttributeAsync(int dbref, string attribute, string value)
-	{
-		var response = await Client.PutAsJsonAsync(
-			AttrPath(dbref, attribute), new SetAttributeRequest(value));
+	/// <summary>Stores <paramref name="value"/> verbatim — newlines included.</summary>
+	public async Task<OneOf<Success, ApiFailure>> SetAttributeAsync(int dbref, string attribute, string value)
+		=> await SendAsync(HttpMethod.Put, AttrPath(dbref, attribute), new SetAttributeRequest(value));
 
-		return await ErrorOrNullAsync(response);
-	}
+	public async Task<OneOf<Success, ApiFailure>> DeleteAttributeAsync(int dbref, string attribute)
+		=> await SendAsync(HttpMethod.Delete, AttrPath(dbref, attribute));
 
-	public async Task<string?> DeleteAttributeAsync(int dbref, string attribute)
-		=> await ErrorOrNullAsync(await Client.DeleteAsync(AttrPath(dbref, attribute)));
-
-	/// <summary>Creates an object, returning its dbref number, or null with the refusal message.</summary>
-	public async Task<(int? Dbref, string? Error)> CreateObjectAsync(string name, MushObjectType type)
+	/// <summary>Creates an object, returning its dbref number.</summary>
+	public async Task<OneOf<int, ApiFailure>> CreateObjectAsync(string name, MushObjectType type)
 	{
 		var typeName = type switch
 		{
@@ -98,30 +103,124 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 			_ => "THING",
 		};
 
-		var response = await Client.PostAsJsonAsync("api/objects", new CreateObjectRequest(name, typeName));
-		if (!response.IsSuccessStatusCode)
+		var result = await SendAsync<CreatedObjectDto>(
+			HttpMethod.Post, "api/objects", new CreateObjectRequest(name, typeName));
+
+		if (result.TryPickT1(out var failure, out var created)) return failure;
+
+		// '#N' or '#N:creationTime' — the browser addresses objects by number.
+		var number = created.Dbref.TrimStart('#').Split(':')[0];
+
+		return int.TryParse(number, out var parsed)
+			? parsed
+			: new ApiFailure(ApiFailureKind.Unexpected, $"Malformed dbref in response: '{created.Dbref}'.");
+	}
+
+	/// <summary>Sends a request whose success carries no body.</summary>
+	private async Task<OneOf<Success, ApiFailure>> SendAsync(HttpMethod method, string url, object? body = null)
+	{
+		HttpResponseMessage response;
+		try
 		{
-			return (null, await ErrorOrNullAsync(response));
+			response = await SendCoreAsync(method, url, body);
+		}
+		catch (Exception ex) when (IsTransportFailure(ex))
+		{
+			return ApiFailure.Transport(ex);
 		}
 
-		var created = await response.Content.ReadFromJsonAsync<CreatedObjectDto>();
-		// '#N' or '#N:creationTime' — the browser addresses objects by number.
-		var number = created?.Dbref.TrimStart('#').Split(':')[0];
-
-		return int.TryParse(number, out var parsed) ? (parsed, null) : (null, "Malformed dbref in response.");
+		using (response)
+		{
+			return response.IsSuccessStatusCode
+				? new Success()
+				: ApiFailure.FromStatus(response.StatusCode, await ServerMessageAsync(response));
+		}
 	}
 
-	/// <summary>The server's message for a failed call, or <see langword="null"/> when it succeeded.</summary>
-	private static async Task<string?> ErrorOrNullAsync(HttpResponseMessage response)
+	/// <summary>Sends a request and deserializes its body.</summary>
+	private async Task<OneOf<T, ApiFailure>> SendAsync<T>(HttpMethod method, string url, object? body = null)
 	{
-		if (response.IsSuccessStatusCode) return null;
+		HttpResponseMessage response;
+		try
+		{
+			response = await SendCoreAsync(method, url, body);
+		}
+		catch (Exception ex) when (IsTransportFailure(ex))
+		{
+			return ApiFailure.Transport(ex);
+		}
 
-		var error = response.StatusCode == HttpStatusCode.NotFound
-			? null
-			: (await response.Content.ReadFromJsonAsync<ApiErrorDto>().ConfigureAwait(false))?.Error;
+		using (response)
+		{
+			if (!response.IsSuccessStatusCode)
+			{
+				return ApiFailure.FromStatus(response.StatusCode, await ServerMessageAsync(response));
+			}
 
-		return error ?? $"Request failed ({(int)response.StatusCode}).";
+			// Reading the body is a separate failure mode from reaching the server: a malformed
+			// response reported as "could not reach the server" sends the reader to the wrong place.
+			try
+			{
+				var value = await response.Content.ReadFromJsonAsync<T>();
+
+				return value is null
+					? new ApiFailure(ApiFailureKind.Unexpected, "The server returned an empty body.", response.StatusCode)
+					: OneOf<T, ApiFailure>.FromT0(value);
+			}
+			catch (Exception ex) when (IsBodyFailure(ex))
+			{
+				return ApiFailure.Malformed(ex, response.StatusCode);
+			}
+		}
 	}
+
+	private async Task<HttpResponseMessage> SendCoreAsync(HttpMethod method, string url, object? body)
+	{
+		using var request = new HttpRequestMessage(method, url);
+		if (body is not null)
+		{
+			request.Content = JsonContent.Create(body, body.GetType());
+		}
+
+		return await Client.SendAsync(request);
+	}
+
+	/// <summary>The engine's own refusal text, when the response carried one.</summary>
+	private static async Task<string?> ServerMessageAsync(HttpResponseMessage response)
+	{
+		try
+		{
+			return (await response.Content.ReadFromJsonAsync<ApiErrorDto>())?.Error;
+		}
+		catch (Exception ex) when (IsBodyFailure(ex) || IsTransportFailure(ex))
+		{
+			// A refusal without a readable body is still a refusal; the status carries the meaning.
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// The request never produced a response: unreachable server, dropped connection, timeout.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="TaskCanceledException"/> needs no separate arm — it derives from
+	/// <see cref="OperationCanceledException"/>, which is how HttpClient surfaces a timeout.
+	/// </remarks>
+	private static bool IsTransportFailure(Exception ex) =>
+		ex is HttpRequestException or OperationCanceledException;
+
+	/// <summary>
+	/// A response arrived but its body could not be turned into the expected shape.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="InvalidOperationException"/> belongs here but NOT around request dispatch:
+	/// <c>ReadFromJsonAsync</c> resolves the response charset and throws it for one it cannot
+	/// parse, which is an unreadable body — whereas the same exception escaping
+	/// <see cref="SendCoreAsync"/> means this service misused HttpClient and should keep throwing.
+	/// That is why the two try blocks are separate rather than one predicate over the whole call.
+	/// </remarks>
+	private static bool IsBodyFailure(Exception ex) =>
+		ex is JsonException or NotSupportedException or InvalidOperationException;
 
 	private static MushObjectType ParseType(string type) => type.ToUpperInvariant() switch
 	{
