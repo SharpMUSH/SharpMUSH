@@ -280,7 +280,18 @@ public partial class ValidateService(
 			.AnyAsync(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase));
 	}
 
-	[GeneratedRegex(@"[^ \[\]%\\=&\|][\[\]%\\=&\|]*?[^ \[\]%\\=&\|]?$")]
+	/// <summary>
+	/// A legal object name: at least one character, no leading or trailing space, and none of
+	/// <c>[ ] % \ = &amp; |</c> anywhere. Interior spaces are fine ("a red ball"), and so is
+	/// <c>;</c> — <c>@open</c> splits exit aliases on it.
+	/// </summary>
+	/// <remarks>
+	/// Anchored at both ends deliberately. The previous pattern had <c>$</c> but no <c>^</c>, and
+	/// its middle term matched the forbidden set instead of its complement, so
+	/// <see cref="Regex.IsMatch"/> could satisfy the whole expression against the last character or
+	/// two of any input — every forbidden character passed as long as it was not at the very end.
+	/// </remarks>
+	[GeneratedRegex(@"^[^ \[\]%\\=&\|](?:[^\[\]%\\=&\|]*[^ \[\]%\\=&\|])?$")]
 	private partial Regex NameRegex();
 
 	private bool ValidateName(MString value)
