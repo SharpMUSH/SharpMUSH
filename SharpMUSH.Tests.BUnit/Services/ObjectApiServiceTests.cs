@@ -163,6 +163,35 @@ public class ObjectApiServiceTests
 		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Unexpected);
 	}
 
+	/// <summary>A response whose Content-Type names a charset .NET cannot resolve.</summary>
+	private sealed class BadCharsetHandler : HttpMessageHandler
+	{
+		protected override Task<HttpResponseMessage> SendAsync(
+			HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			var content = new StringContent("{}", Encoding.UTF8);
+			content.Headers.ContentType!.CharSet = "not-a-real-charset";
+
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+		}
+	}
+
+	/// <summary>
+	/// ReadFromJsonAsync resolves the response charset and throws InvalidOperationException when it
+	/// cannot. That is a body we could not read, not a bug in this service, so it must come back as
+	/// a value rather than escape into the Blazor event handler.
+	/// </summary>
+	[Test]
+	public async Task GetObject_WhenTheResponseCharsetIsInvalid_IsUnexpectedRatherThanThrowing()
+	{
+		var service = new ObjectApiService(new SingleClientFactory(new BadCharsetHandler()));
+
+		var result = await service.GetObjectAsync(7);
+
+		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Unexpected);
+	}
+
 	/// <summary>
 	/// 401 is "you are not signed in" and 403 is "you are, but you may not do that". Collapsing them
 	/// leaves an expired session reading as a permission problem, with no way to re-authenticate.

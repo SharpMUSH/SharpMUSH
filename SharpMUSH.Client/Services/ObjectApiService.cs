@@ -210,12 +210,17 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 		ex is HttpRequestException or OperationCanceledException;
 
 	/// <summary>
-	/// A response arrived but its body could not be turned into the expected shape. Deliberately
-	/// narrower than <see cref="IsTransportFailure"/>: anything outside these is a bug here and
-	/// should keep throwing rather than be reported to the user as a server problem.
+	/// A response arrived but its body could not be turned into the expected shape.
 	/// </summary>
+	/// <remarks>
+	/// <see cref="InvalidOperationException"/> belongs here but NOT around request dispatch:
+	/// <c>ReadFromJsonAsync</c> resolves the response charset and throws it for one it cannot
+	/// parse, which is an unreadable body — whereas the same exception escaping
+	/// <see cref="SendCoreAsync"/> means this service misused HttpClient and should keep throwing.
+	/// That is why the two try blocks are separate rather than one predicate over the whole call.
+	/// </remarks>
 	private static bool IsBodyFailure(Exception ex) =>
-		ex is JsonException or NotSupportedException;
+		ex is JsonException or NotSupportedException or InvalidOperationException;
 
 	private static MushObjectType ParseType(string type) => type.ToUpperInvariant() switch
 	{
