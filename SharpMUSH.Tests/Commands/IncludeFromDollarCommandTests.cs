@@ -127,9 +127,14 @@ public class IncludeFromDollarCommandTests
 		// time; %r does NOT escape, so it becomes the raw newline this test is about.
 		await Cmd($"@set {obj}=DO_NL_{tag}:${token}:@pemit \\%#=FIRST_{tag};%r@pemit \\%#=SECOND_{tag}");
 
+		// Assert the whole value, not just that a newline exists somewhere: this is the
+		// byte-for-byte storage contract, so position and surrounding text matter.
+		//
+		// '%#' appears as '#1' because @set evaluates its RHS — the same evaluation that turns the
+		// %r into the real newline this test is about. The enactor is #1 (God) via Cmd's handle.
 		var stored = (await Parser.FunctionParse(MModule.single($"[get({obj}/DO_NL_{tag})]")))?.Message?.ToPlainText();
-		await Assert.That(stored).Contains("\n")
-			.Because($"the test is vacuous unless a real newline reached the attribute; stored: [{stored}]");
+		await Assert.That(stored).IsEqualTo($"${token}:@pemit #1=FIRST_{tag};\n@pemit #1=SECOND_{tag}")
+			.Because($"a real newline must follow the ';' and nothing else may have been rewritten; stored: [{stored}]");
 
 		var msgs = await TriggerAndCollect(token);
 
@@ -137,6 +142,28 @@ public class IncludeFromDollarCommandTests
 			.Because($"the command before the newline must run; got: [{string.Join(" | ", msgs)}]");
 		await Assert.That(msgs.Any(m => m.Trim() == $"SECOND_{tag}")).IsTrue()
 			.Because($"the command after the newline must run as its own command; got: [{string.Join(" | ", msgs)}]");
+	}
+
+	/// <summary>
+	/// The contrast case, and the reason the ';' matters: a newline on its own does NOT separate
+	/// commands. The lexer only swallows whitespace as part of a ';' token, so an unseparated body
+	/// is one command whose argument runs to the end of the value — the first verb takes the rest as
+	/// its own text. Authoring bugs of this shape used to get blamed on @include and %! instead.
+	/// </summary>
+	[Test]
+	public async ValueTask MultiLineBody_WithoutSemicolon_DoesNotRunTheSecondCommand()
+	{
+		var tag = Guid.NewGuid().ToString("N")[..8];
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "IncNoSemi");
+		var token = $"nosemi{tag}";
+
+		// Same shape as the passing case, minus the ';' before the newline.
+		await Cmd($"@set {obj}=DO_NS_{tag}:${token}:@pemit \\%#=ALPHA_{tag}%r@pemit \\%#=BETA_{tag}");
+
+		var msgs = await TriggerAndCollect(token);
+
+		await Assert.That(msgs.Any(m => m.Trim() == $"BETA_{tag}")).IsFalse()
+			.Because($"without a ';' the second verb is swallowed into the first's argument; got: [{string.Join(" | ", msgs)}]");
 	}
 
 	[Test]

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Hubs;
@@ -44,7 +45,8 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 			Mediator,
 			AttributeService,
 			factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
-			factory.Services.GetRequiredService<IEngineCommandInvoker>())
+			factory.Services.GetRequiredService<IEngineCommandInvoker>(),
+			factory.Services.GetRequiredService<IPermissionService>())
 		{
 			ControllerContext = new ControllerContext
 			{
@@ -113,6 +115,51 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 
 		var stillThere = await ControllerAs(owner).GetAttribute(owner.Number, "KEEP_ME", CancellationToken.None);
 		await Assert.That(stillThere).IsTypeOf<OkObjectResult>();
+	}
+
+	/// <summary>
+	/// Reads are gated too, not just writes. An attribute the actor may not see must not come back
+	/// through the API just because it can be addressed by dbref.
+	/// </summary>
+	[Test]
+	public async Task GetAttribute_OnAnObjectTheActorCannotSee_DoesNotReturnTheValue()
+	{
+		var owner = await NewPlayerAsync("ObjApiReadOwner");
+		var snooper = await NewPlayerAsync("ObjApiSnooper");
+
+		await ControllerAs(owner).SetAttribute(
+			owner.Number, "PRIVATE_NOTE", new SetAttributeRequest("for my eyes only"), CancellationToken.None);
+
+		var result = await ControllerAs(snooper).GetAttribute(owner.Number, "PRIVATE_NOTE", CancellationToken.None);
+
+		var leaked = result is OkObjectResult { Value: AttributeDto dto } && dto.Value.Contains("eyes only");
+		await Assert.That(leaked).IsFalse()
+			.Because("a read the engine refuses must not surface the stored value");
+	}
+
+	/// <summary>
+	/// The object summary carries name, owner and flags, so it needs the same visibility check the
+	/// attribute endpoints get for free from <see cref="IAttributeService"/>.
+	/// </summary>
+	[Test]
+	public async Task GetObject_OnAnObjectTheActorCannotExamine_IsRefused()
+	{
+		var owner = await NewPlayerAsync("ObjApiExamineOwner");
+		var snooper = await NewPlayerAsync("ObjApiExamineSnooper");
+
+		var permissions = factory.Services.GetRequiredService<IPermissionService>();
+		var ownerObject = (await Mediator.Send(new GetObjectNodeQuery(owner))).Known;
+		var snooperObject = (await Mediator.Send(new GetObjectNodeQuery(snooper))).Known;
+
+		// Only meaningful while the engine actually refuses this pairing.
+		var mayExamine = await permissions.CanExamine(snooperObject, ownerObject);
+		await Assert.That(mayExamine).IsFalse()
+			.Because("two unrelated mortals must not be able to examine each other, or this test proves nothing");
+
+		var result = await ControllerAs(snooper).GetObject(owner.Number, CancellationToken.None);
+
+		await Assert.That(result).IsTypeOf<ObjectResult>();
+		await Assert.That(((ObjectResult)result).StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);
 	}
 
 	[Test]

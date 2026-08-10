@@ -14,7 +14,11 @@ public class CreateExitCommandHandler(ISharpDatabase database, IFusionCache cach
 	public async ValueTask<DBRef> Handle(CreateExitCommand request, CancellationToken cancellationToken)
 	{
 		var created = await database.CreateExitAsync(request.Name, request.Aliases, request.Location, request.Creator, cancellationToken);
-		await cache.RemoveAsync(CacheKeys.Object(created), token: cancellationToken);
+
+		// CancellationToken.None deliberately: this runs AFTER the insert has committed. A token
+		// cancelled in between would abort the invalidation and leave the cached "no such object"
+		// entry pointing at a dbref that now exists — the exact defect this line exists to prevent.
+		await cache.RemoveAsync(CacheKeys.Object(created), token: CancellationToken.None);
 		return created;
 	}
 }

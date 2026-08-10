@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -46,7 +47,8 @@ public class ObjectsController(
 	IMediator mediator,
 	IAttributeService attributeService,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
-	IEngineCommandInvoker commandInvoker) : ControllerBase
+	IEngineCommandInvoker commandInvoker,
+	IPermissionService permissionService) : ControllerBase
 {
 	/// <summary>
 	/// Attribute-tree levels returned by the listing endpoint when the caller does not ask.
@@ -114,7 +116,16 @@ public class ObjectsController(
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
 		if (await ResolveTargetAsync(dbref, ct) is not { } target) return NotFound();
 
-		return Ok(await SummariseAsync(target));
+		// The attribute endpoints inherit their visibility check from IAttributeService; this one
+		// returns name, owner and flags directly, so it has to ask. Without it any authenticated
+		// character could enumerate the database by dbref.
+		if (!await permissionService.CanExamine(executor, target))
+		{
+			return StatusCode(StatusCodes.Status403Forbidden,
+				new ApiErrorDto(ErrorMessages.Returns.PermissionDenied));
+		}
+
+		return Ok(await SummariseAsync(target, ct));
 	}
 
 	[HttpGet("{dbref:int}/attributes")]
@@ -246,11 +257,11 @@ public class ObjectsController(
 		attribute.Value.ToPlainText(),
 		attribute.Flags.Select(f => f.Name).ToList());
 
-	private static async Task<ObjectSummaryDto> SummariseAsync(AnySharpObject target)
+	private static async Task<ObjectSummaryDto> SummariseAsync(AnySharpObject target, CancellationToken ct)
 	{
 		var obj = target.Object();
-		var owner = await obj.Owner.WithCancellation(CancellationToken.None);
-		var flags = await obj.Flags.Value.Select(f => f.Name).ToListAsync();
+		var owner = await obj.Owner.WithCancellation(ct);
+		var flags = await obj.Flags.Value.Select(f => f.Name).ToListAsync(ct);
 
 		return new ObjectSummaryDto(
 			$"#{obj.Key}",

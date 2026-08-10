@@ -37,22 +37,36 @@ public class CreateInvalidatesNegativeCacheTests
 	[Test]
 	public async ValueTask ObjectIsVisible_WhenItsDbrefWasLookedUpBeforeItExisted()
 	{
-		// Establish where the next dbref will land, then poison exactly that key.
-		var first = await CreateThingAsync("NegCacheAnchor");
-		var next = new DBRef(first.Number + 1);
+		// The test has to poison the key for a dbref that does not exist yet, which means predicting
+		// the next one. The factory is shared per test session, so another class can take that dbref
+		// in between; retry rather than fail, since a lost race says nothing about the behaviour.
+		const int attempts = 5;
+		for (var attempt = 1; ; attempt++)
+		{
+			var anchor = await CreateThingAsync("NegCacheAnchor");
+			var next = new DBRef(anchor.Number + 1);
 
-		var beforeCreation = await Mediator.Send(new GetObjectNodeQuery(next));
-		await Assert.That(beforeCreation.IsNone).IsTrue()
-			.Because($"#{next.Number} must not exist yet for this test to mean anything");
+			var beforeCreation = await Mediator.Send(new GetObjectNodeQuery(next));
+			if (!beforeCreation.IsNone)
+			{
+				if (attempt < attempts) continue;
+				Assert.Fail($"#{next.Number} already existed on every one of {attempts} attempts.");
+			}
 
-		var created = await CreateThingAsync("NegCacheTarget");
-		await Assert.That(created.Number).IsEqualTo(next.Number)
-			.Because("dbrefs are handed out sequentially; if not, the poisoned key is not the one under test");
+			var created = await CreateThingAsync("NegCacheTarget");
+			if (created.Number != next.Number)
+			{
+				// Someone else took the dbref we poisoned; this round proves nothing either way.
+				if (attempt < attempts) continue;
+				Assert.Fail($"lost the dbref race {attempts} times (wanted #{next.Number}, got #{created.Number}).");
+			}
 
-		var afterCreation = await Mediator.Send(new GetObjectNodeQuery(created));
+			var afterCreation = await Mediator.Send(new GetObjectNodeQuery(created));
 
-		await Assert.That(afterCreation.IsNone).IsFalse()
-			.Because("creating the object must clear the cached miss for its dbref");
+			await Assert.That(afterCreation.IsNone).IsFalse()
+				.Because("creating the object must clear the cached miss for its dbref");
+			return;
+		}
 	}
 
 	[Test]

@@ -281,17 +281,23 @@ public partial class ValidateService(
 	}
 
 	/// <summary>
-	/// A legal object name: at least one character, no leading or trailing space, and none of
-	/// <c>[ ] % \ = &amp; |</c> anywhere. Interior spaces are fine ("a red ball"), and so is
-	/// <c>;</c> — <c>@open</c> splits exit aliases on it.
+	/// A legal object name: at least one character, no leading or trailing space, no control
+	/// characters anywhere, and none of <c>[ ] % \ = &amp; |</c>. Interior spaces are fine
+	/// ("a red ball"), and so is <c>;</c> — <c>@open</c> splits exit aliases on it.
 	/// </summary>
 	/// <remarks>
-	/// Anchored at both ends deliberately. The previous pattern had <c>$</c> but no <c>^</c>, and
-	/// its middle term matched the forbidden set instead of its complement, so
-	/// <see cref="Regex.IsMatch"/> could satisfy the whole expression against the last character or
-	/// two of any input — every forbidden character passed as long as it was not at the very end.
+	/// <para>
+	/// Anchored with <c>\A</c>/<c>\z</c> rather than <c>^</c>/<c>$</c>: in .NET <c>$</c> also
+	/// matches immediately before a trailing newline, so <c>$</c> accepts <c>"name\n"</c>.
+	/// </para>
+	/// <para>
+	/// The previous pattern had <c>$</c> but no start anchor at all, and its middle term matched the
+	/// forbidden set instead of its complement, so <see cref="Regex.IsMatch"/> could satisfy the
+	/// whole expression against the last character or two of any input — every forbidden character
+	/// passed as long as it was not at the very end.
+	/// </para>
 	/// </remarks>
-	[GeneratedRegex(@"^[^ \[\]%\\=&\|](?:[^\[\]%\\=&\|]*[^ \[\]%\\=&\|])?$")]
+	[GeneratedRegex(@"\A[^ \p{C}\[\]%\\=&\|](?:[^\p{C}\[\]%\\=&\|]*[^ \p{C}\[\]%\\=&\|])?\z")]
 	private partial Regex NameRegex();
 
 	private bool ValidateName(MString value)

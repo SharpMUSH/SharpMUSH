@@ -76,6 +76,22 @@ public class ValidateNameTests
 	public async Task RejectsLeadingAndTrailingWhitespace(string name)
 		=> await Assert.That(await IsValid(name)).IsFalse().Because($"'{name}' is space-padded");
 
+	/// <summary>
+	/// Control characters are not names. A tab or an embedded newline would corrupt every
+	/// line-oriented surface the name appears on, and <c>$</c> in .NET matches immediately before a
+	/// trailing <c>\n</c> — so an anchor of <c>$</c> rather than <c>\z</c> accepts <c>"name\n"</c>.
+	/// </summary>
+	[Test]
+	[Arguments("na\tme")]
+	[Arguments("na\nme")]
+	[Arguments("name\n")]
+	[Arguments("name\r\n")]
+	[Arguments("\nname")]
+	[Arguments("\tname")]
+	public async Task RejectsControlCharacters(string name)
+		=> await Assert.That(await IsValid(name)).IsFalse()
+			.Because($"'{name.Replace("\n", "\\n").Replace("\t", "\\t").Replace("\r", "\\r")}' contains a control character");
+
 	[Test]
 	public async Task RejectsAnEmptyName()
 		=> await Assert.That(await IsValid(string.Empty)).IsFalse();

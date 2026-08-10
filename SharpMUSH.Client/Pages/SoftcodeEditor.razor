@@ -326,6 +326,10 @@
         // two indistinguishable — an intentional %r looked like formatting and a real newline
         // came back as %r on the next save.
         public string WorkingContent { get; set; } = attr.Value;
+
+        /// <summary>What the database holds. Dirty is derived from this, never tracked by hand.</summary>
+        public string SavedContent { get; set; } = attr.Value;
+
         public bool IsDirty { get; set; }
     }
 
@@ -444,30 +448,38 @@
     private async Task OnEditorInitAsync()
         => await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.initEditor", "mush-editor");
 
-    // Monaco raises OnDidChangeModelContent for SetValue too, so loading an attribute, switching
-    // tabs or refreshing would each mark the tab unsaved without the user touching anything —
-    // which also made RefreshAttributesAsync skip those tabs forever, since it only refreshes
-    // clean ones. Every programmatic write goes through SetEditorValueAsync, which consumes the
-    // one change event it causes.
-    private bool _programmaticEditorWrite;
-
     private async Task SetEditorValueAsync(string value)
     {
         if (_monacoEditor is null) return;
-        _programmaticEditorWrite = true;
         await _monacoEditor.SetValue(value);
     }
 
-    private void OnEditorChanged(ModelContentChangedEvent e)
+    /// <summary>
+    /// Dirty means "the buffer differs from what the database holds" — compared, not tracked.
+    /// </summary>
+    /// <remarks>
+    /// Monaco raises OnDidChangeModelContent for SetValue as well as for typing, so loading an
+    /// attribute, switching tabs or refreshing used to mark the tab unsaved with no user input,
+    /// which in turn made RefreshAttributesAsync skip those tabs forever (it only refreshes clean
+    /// ones). A "this write was mine" flag fixes that but is fragile in both directions: it stays
+    /// armed if SetValue throws, and again if Monaco raises no event because the text was already
+    /// identical — and an armed flag swallows the user's next real edit while the tab reads clean,
+    /// so the next refresh silently overwrites their work. Comparing sidesteps the whole question:
+    /// it needs no assumption about when the event fires, and it also clears the flag when an edit
+    /// is undone back to the stored text.
+    /// </remarks>
+    private async Task OnEditorChanged(ModelContentChangedEvent e)
     {
-        if (_programmaticEditorWrite)
-        {
-            _programmaticEditorWrite = false;
-            return;
-        }
+        if (_monacoEditor is null || ActiveTab is null) return;
 
-        if (ActiveTab is not null)
-            ActiveTab.IsDirty = true;
+        var current = await _monacoEditor.GetValue();
+        ActiveTab.WorkingContent = current;
+
+        var dirty = !string.Equals(current, ActiveTab.SavedContent, StringComparison.Ordinal);
+        if (dirty == ActiveTab.IsDirty) return;
+
+        ActiveTab.IsDirty = dirty;
+        StateHasChanged();
     }
 
     private async Task OnAttributeSelected(MushAttribute? attr)
@@ -574,7 +586,12 @@
             {
                 var refreshed = _selectedObject.Attributes.FirstOrDefault(a =>
                     string.Equals(a.Name, tab.Attr.Name, StringComparison.OrdinalIgnoreCase));
-                if (refreshed is not null && !tab.IsDirty)
+                if (refreshed is null) continue;
+
+                // The freshly-read value is authoritative for what the database holds, whether or
+                // not the tab has unsaved edits sitting on top of it.
+                tab.SavedContent = refreshed.Value;
+                if (!tab.IsDirty)
                     tab.WorkingContent = refreshed.Value;
             }
         }
@@ -601,6 +618,8 @@
             return;
         }
 
+        // The buffer is now what the database holds, so the tab is clean by definition.
+        ActiveTab.SavedContent = value;
         ActiveTab.IsDirty = false;
         await RefreshAttributesAsync();
         _saveMessage = Loc["TermSavedAttribute", savedAttrName, savedDbref];

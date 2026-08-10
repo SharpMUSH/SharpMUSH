@@ -423,7 +423,7 @@ body has no line limit, so the conversion has no reason to exist.
 consumes a newline and its continuation indent as part of the `;` token, so
 idiomatic multi-line softcode already parses correctly:
 
-```
+```mushcode
 $greet *:@pemit %#=Hi;
   @pemit %#=Bye
 ```

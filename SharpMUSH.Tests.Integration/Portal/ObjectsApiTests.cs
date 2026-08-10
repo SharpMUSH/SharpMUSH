@@ -98,7 +98,10 @@ public class ObjectsApiTests(ServerWebAppFactory factory)
 		var (http, dbref) = await CharacterAsync("literalpr");
 		const string value = "line one%rline two";
 
-		await http.PutAsJsonAsync(AttrUrl(dbref, "DESC_LITERAL"), new SetAttributeRequest(value));
+		var put = await http.PutAsJsonAsync(AttrUrl(dbref, "DESC_LITERAL"), new SetAttributeRequest(value));
+		await Assert.That(put.StatusCode).IsEqualTo(HttpStatusCode.NoContent)
+			.Because("a refused write would make the read below fail for the wrong reason");
+
 		var read = await http.GetFromJsonAsync<AttributeDto>(AttrUrl(dbref, "DESC_LITERAL"));
 
 		await Assert.That(read!.Value).IsEqualTo(value);
@@ -124,7 +127,8 @@ public class ObjectsApiTests(ServerWebAppFactory factory)
 	{
 		var (http, dbref) = await CharacterAsync("delattr");
 
-		await http.PutAsJsonAsync(AttrUrl(dbref, "TRANSIENT"), new SetAttributeRequest("here"));
+		var seeded = await http.PutAsJsonAsync(AttrUrl(dbref, "TRANSIENT"), new SetAttributeRequest("here"));
+		await Assert.That(seeded.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
 		var deleted = await http.DeleteAsync(AttrUrl(dbref, "TRANSIENT"));
 		await Assert.That(deleted.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
 
@@ -137,7 +141,8 @@ public class ObjectsApiTests(ServerWebAppFactory factory)
 	{
 		var (http, dbref) = await CharacterAsync("listattr");
 
-		await http.PutAsJsonAsync(AttrUrl(dbref, "LISTED_ONE"), new SetAttributeRequest("first"));
+		var seeded = await http.PutAsJsonAsync(AttrUrl(dbref, "LISTED_ONE"), new SetAttributeRequest("first"));
+		await Assert.That(seeded.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
 
 		var all = await http.GetFromJsonAsync<List<AttributeDto>>($"api/objects/{dbref}/attributes");
 
