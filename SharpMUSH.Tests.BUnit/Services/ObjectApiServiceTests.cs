@@ -149,6 +149,38 @@ public class ObjectApiServiceTests
 	}
 
 	/// <summary>
+	/// A body we cannot read is not an unreachable server. Reporting "could not reach the server"
+	/// for a malformed response sends the user looking at their network instead of the response.
+	/// </summary>
+	[Test]
+	public async Task GetObject_WhenTheBodyIsMalformed_IsUnexpectedRatherThanTransport()
+	{
+		var (service, _) = Build(HttpStatusCode.OK, "{ this is not json");
+
+		var result = await service.GetObjectAsync(7);
+
+		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Unexpected);
+	}
+
+	/// <summary>
+	/// 401 is "you are not signed in" and 403 is "you are, but you may not do that". Collapsing them
+	/// leaves an expired session reading as a permission problem, with no way to re-authenticate.
+	/// </summary>
+	[Test]
+	public async Task Unauthorized_IsDistinctFromForbidden()
+	{
+		var (unauthenticated, _) = Build(HttpStatusCode.Unauthorized);
+		var expired = await unauthenticated.GetObjectAsync(7);
+
+		var (refused, _) = Build(HttpStatusCode.Forbidden, """{"error":"#-1 PERMISSION DENIED"}""");
+		var denied = await refused.GetObjectAsync(7);
+
+		await Assert.That(expired.AsT1.Kind).IsEqualTo(ApiFailureKind.Unauthenticated);
+		await Assert.That(denied.AsT1.Kind).IsEqualTo(ApiFailureKind.Forbidden);
+	}
+
+	/// <summary>
 	/// Not-found and forbidden are different facts and must not collapse into one "it failed".
 	/// </summary>
 	[Test]

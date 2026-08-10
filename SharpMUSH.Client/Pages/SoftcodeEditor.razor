@@ -559,33 +559,54 @@
         _showCreateAttr = false;
         StateHasChanged();
 
-        var result = await ObjectApi.GetObjectAsync(dbref);
+        try
+        {
+            var result = await ObjectApi.GetObjectAsync(dbref);
 
-        // Someone selected something else while this was in flight; that request owns the state now.
-        if (generation != _objectLoadGeneration) return;
+            // Someone selected something else while this was in flight; that request owns the
+            // state now, including the loading flag it set on its own way in.
+            if (generation != _objectLoadGeneration) return;
 
-        result.Switch(
-            obj =>
+            result.Switch(
+                obj =>
+                {
+                    _selectedObject = obj;
+                    // Mobile drill-down: picking an object advances to its attributes.
+                    if (advanceMobilePane)
+                        _mobilePane = MobilePane.Attrs;
+                },
+                failure =>
+                {
+                    // The selection is deliberately left alone. This runs on the reload after a
+                    // successful save too, and blanking the panes because a re-read failed would
+                    // throw away work the user can still see and re-save.
+                    _saveMessage = Loc["TermErrorLoadingObject", failure.Message];
+                    _saveSeverity = Severity.Error;
+                });
+        }
+        finally
+        {
+            // Only the newest request owns the flag; an older one clearing it would unstick the
+            // spinner while the current load is still running.
+            if (generation == _objectLoadGeneration)
             {
-                _selectedObject = obj;
-                // Mobile drill-down: picking an object advances to its attributes.
-                if (advanceMobilePane)
-                    _mobilePane = MobilePane.Attrs;
-            },
-            failure =>
-            {
-                _selectedObject = null;
-                _saveMessage = Loc["TermErrorLoadingObject", failure.Message];
-                _saveSeverity = Severity.Error;
-            });
-
-        _loadingAttrs = false;
-        StateHasChanged();
+                _loadingAttrs = false;
+                StateHasChanged();
+            }
+        }
     }
 
-    private async Task RefreshAttributesAsync()
+    /// <summary>
+    /// Re-reads the selected object and re-syncs its open tabs.
+    /// </summary>
+    /// <returns>
+    /// Whether the reload actually landed. A caller that is about to report its own success needs
+    /// to know: overwriting a "could not re-read the object" message with "saved" hides the fact
+    /// that what is on screen is now stale.
+    /// </returns>
+    private async Task<bool> RefreshAttributesAsync()
     {
-        if (_selectedObject is null) return;
+        if (_selectedObject is null) return false;
 
         // Captured before the await: the user may select a different object while the reload runs,
         // and this refresh must only ever touch tabs belonging to the object it started on.
@@ -615,6 +636,8 @@
         }
         if (ActiveTab is not null)
             await SetEditorValueAsync(ActiveTab.WorkingContent);
+
+        return _selectedObject is not null && _selectedObject.Dbref == dbref;
     }
 
     private async Task SaveAsync()
@@ -628,6 +651,12 @@
         // overwrote it.
         var tab = ActiveTab;
         var value = await _monacoEditor.GetValue();
+
+        // GetValue is interop and yields. A tab switch during it loads the other tab's text into
+        // Monaco, so `value` may be that tab's content — writing it to `tab` would PUT one
+        // attribute's text over another's.
+        if (!ReferenceEquals(ActiveTab, tab)) return;
+
         tab.WorkingContent = value;
 
         // Sent verbatim — newlines included. The API carries the value in a JSON body, so there is
@@ -644,9 +673,16 @@
         // The buffer is now what the database holds, so that tab is clean by definition.
         tab.SavedContent = value;
         tab.IsDirty = false;
-        await RefreshAttributesAsync();
-        _saveMessage = Loc["TermSavedAttribute", tab.Attr.Name, tab.Obj.Dbref];
-        _saveSeverity = Severity.Success;
+
+        // Only claim success once the re-read confirms it. If the reload failed it has already put
+        // its own error on screen, and overwriting that with "saved" would leave the user looking
+        // at stale panes believing everything is current.
+        if (await RefreshAttributesAsync())
+        {
+            _saveMessage = Loc["TermSavedAttribute", tab.Attr.Name, tab.Obj.Dbref];
+            _saveSeverity = Severity.Success;
+        }
+
         StateHasChanged();
     }
 
@@ -667,11 +703,17 @@
             return;
         }
 
-        _saveMessage = Loc["TermDeletedAttribute", tab.Attr.Name];
-        _saveSeverity = Severity.Info;
         var tabIdx = _openTabs.IndexOf(tab);
         if (tabIdx >= 0) await CloseTabAsync(tabIdx);
-        await RefreshAttributesAsync();
+
+        // After the refresh, not before: RefreshAttributesAsync goes through OnObjectSelected,
+        // which clears _saveMessage on its way in, so a confirmation set earlier never renders.
+        if (await RefreshAttributesAsync())
+        {
+            _saveMessage = Loc["TermDeletedAttribute", tab.Attr.Name];
+            _saveSeverity = Severity.Info;
+        }
+
         StateHasChanged();
     }
 
@@ -760,7 +802,11 @@
             return;
         }
 
-        if (_selectedObject?.Dbref != targetDbref) return;
+        // Only the dbref is compared, not the instance: a refresh legitimately replaces
+        // _selectedObject with a fresh read of the same object. The null arm is spelled out rather
+        // than folded into `?.` so a future path that clears the selection cannot turn this into a
+        // NullReferenceException in an event handler.
+        if (_selectedObject is null || _selectedObject.Dbref != targetDbref) return;
 
         await RefreshAttributesAsync();
         var created = _selectedObject?.Attributes.FirstOrDefault(a =>

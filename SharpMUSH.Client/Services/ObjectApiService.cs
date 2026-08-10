@@ -119,41 +119,58 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 	/// <summary>Sends a request whose success carries no body.</summary>
 	private async Task<OneOf<Success, ApiFailure>> SendAsync(HttpMethod method, string url, object? body = null)
 	{
+		HttpResponseMessage response;
 		try
 		{
-			using var response = await SendCoreAsync(method, url, body);
+			response = await SendCoreAsync(method, url, body);
+		}
+		catch (Exception ex) when (IsTransportFailure(ex))
+		{
+			return ApiFailure.Transport(ex);
+		}
 
+		using (response)
+		{
 			return response.IsSuccessStatusCode
 				? new Success()
 				: ApiFailure.FromStatus(response.StatusCode, await ServerMessageAsync(response));
-		}
-		catch (Exception ex) when (IsRequestFailure(ex))
-		{
-			return ApiFailure.Transport(ex);
 		}
 	}
 
 	/// <summary>Sends a request and deserializes its body.</summary>
 	private async Task<OneOf<T, ApiFailure>> SendAsync<T>(HttpMethod method, string url, object? body = null)
 	{
+		HttpResponseMessage response;
 		try
 		{
-			using var response = await SendCoreAsync(method, url, body);
+			response = await SendCoreAsync(method, url, body);
+		}
+		catch (Exception ex) when (IsTransportFailure(ex))
+		{
+			return ApiFailure.Transport(ex);
+		}
 
+		using (response)
+		{
 			if (!response.IsSuccessStatusCode)
 			{
 				return ApiFailure.FromStatus(response.StatusCode, await ServerMessageAsync(response));
 			}
 
-			var value = await response.Content.ReadFromJsonAsync<T>();
+			// Reading the body is a separate failure mode from reaching the server: a malformed
+			// response reported as "could not reach the server" sends the reader to the wrong place.
+			try
+			{
+				var value = await response.Content.ReadFromJsonAsync<T>();
 
-			return value is null
-				? new ApiFailure(ApiFailureKind.Unexpected, "The server returned an empty body.", response.StatusCode)
-				: OneOf<T, ApiFailure>.FromT0(value);
-		}
-		catch (Exception ex) when (IsRequestFailure(ex))
-		{
-			return ApiFailure.Transport(ex);
+				return value is null
+					? new ApiFailure(ApiFailureKind.Unexpected, "The server returned an empty body.", response.StatusCode)
+					: OneOf<T, ApiFailure>.FromT0(value);
+			}
+			catch (Exception ex) when (IsBodyFailure(ex))
+			{
+				return ApiFailure.Malformed(ex, response.StatusCode);
+			}
 		}
 	}
 
@@ -175,7 +192,7 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 		{
 			return (await response.Content.ReadFromJsonAsync<ApiErrorDto>())?.Error;
 		}
-		catch (Exception ex) when (IsRequestFailure(ex))
+		catch (Exception ex) when (IsBodyFailure(ex) || IsTransportFailure(ex))
 		{
 			// A refusal without a readable body is still a refusal; the status carries the meaning.
 			return null;
@@ -183,15 +200,22 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 	}
 
 	/// <summary>
-	/// Failures worth turning into a value rather than letting escape. Anything else is a bug here
-	/// and should keep throwing.
+	/// The request never produced a response: unreachable server, dropped connection, timeout.
 	/// </summary>
-	private static bool IsRequestFailure(Exception ex) => ex switch
-	{
-		HttpRequestException or JsonException or NotSupportedException or TaskCanceledException
-			or OperationCanceledException or InvalidOperationException => true,
-		_ => false
-	};
+	/// <remarks>
+	/// <see cref="TaskCanceledException"/> needs no separate arm — it derives from
+	/// <see cref="OperationCanceledException"/>, which is how HttpClient surfaces a timeout.
+	/// </remarks>
+	private static bool IsTransportFailure(Exception ex) =>
+		ex is HttpRequestException or OperationCanceledException;
+
+	/// <summary>
+	/// A response arrived but its body could not be turned into the expected shape. Deliberately
+	/// narrower than <see cref="IsTransportFailure"/>: anything outside these is a bug here and
+	/// should keep throwing rather than be reported to the user as a server problem.
+	/// </summary>
+	private static bool IsBodyFailure(Exception ex) =>
+		ex is JsonException or NotSupportedException;
 
 	private static MushObjectType ParseType(string type) => type.ToUpperInvariant() switch
 	{
