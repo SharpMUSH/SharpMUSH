@@ -105,6 +105,40 @@ public class IncludeFromDollarCommandTests
 			.Because($"a q-register set before a ';'-separated @include must be readable in the included body; got: [{string.Join(" | ", msgs)}]");
 	}
 
+	/// <summary>
+	/// A body whose ';' separators are followed by a REAL newline runs every command, because
+	/// the lexer's <c>SEMICOLON: ';' WS</c> (WS = <c>[ \r\n\f\t]*</c>) swallows the newline and the
+	/// continuation indent as part of the ';' token.
+	///
+	/// This is the premise the portal's typed attribute API rests on: it stores what the author
+	/// typed byte-for-byte instead of rewriting newlines to '%r', so idiomatic multi-line softcode
+	/// has to already execute correctly. '@set' is used to author it because its RHS is evaluated
+	/// (no RSNoParse, unlike '&' from a player's keyboard), which is what turns %r into a real
+	/// newline on the way in — the same route @force and package installs take.
+	/// </summary>
+	[Test]
+	public async ValueTask MultiLineBody_SemicolonAtLineEnd_RunsEveryCommand()
+	{
+		var tag = Guid.NewGuid().ToString("N")[..8];
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "IncNewline");
+		var token = $"nlcmd{tag}";
+
+		// \%# escapes the substitution so %# survives @set's evaluation and resolves at trigger
+		// time; %r does NOT escape, so it becomes the raw newline this test is about.
+		await Cmd($"@set {obj}=DO_NL_{tag}:${token}:@pemit \\%#=FIRST_{tag};%r@pemit \\%#=SECOND_{tag}");
+
+		var stored = (await Parser.FunctionParse(MModule.single($"[get({obj}/DO_NL_{tag})]")))?.Message?.ToPlainText();
+		await Assert.That(stored).Contains("\n")
+			.Because($"the test is vacuous unless a real newline reached the attribute; stored: [{stored}]");
+
+		var msgs = await TriggerAndCollect(token);
+
+		await Assert.That(msgs.Any(m => m.Trim() == $"FIRST_{tag}")).IsTrue()
+			.Because($"the command before the newline must run; got: [{string.Join(" | ", msgs)}]");
+		await Assert.That(msgs.Any(m => m.Trim() == $"SECOND_{tag}")).IsTrue()
+			.Because($"the command after the newline must run as its own command; got: [{string.Join(" | ", msgs)}]");
+	}
+
 	[Test]
 	public async ValueTask SemicolonSeparatedBody_RunsEveryCommand()
 	{

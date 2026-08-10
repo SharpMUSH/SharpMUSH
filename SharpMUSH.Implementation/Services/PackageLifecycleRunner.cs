@@ -98,30 +98,7 @@ public class PackageLifecycleRunner(
 			// AINSTALL/AUPDATE contain commands (@function/@hook/@set/&attr) — they must be
 			// command-parsed, not function-evaluated — and run as the object so `%!`/`me` resolve
 			// to it (e.g. `@function header=%!,HEADER` targets the package object's own attribute).
-			var basedParser = parser.Push(new ParserState(
-				Registers: new([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: new Dictionary<string, CallState>(),
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: null,
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-				Switches: [],
-				Arguments: [],
-				Executor: god.Object().DBRef,
-				Enactor: god.Object().DBRef,
-				Caller: god.Object().DBRef,
-				Handle: null,
-				ParseMode: ParseMode.Default,
-				HttpResponse: null,
-				CallDepth: new InvocationCounter(),
-				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag()));
+			var basedParser = parser.Push(ParserState.RootFor(god.Object().DBRef));
 
 			var ran = await StartupAttributeRunner.RunObjectAttributeAsync(
 				basedParser, attributeService, target, attribute, god);

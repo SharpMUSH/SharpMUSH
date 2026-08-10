@@ -7,6 +7,7 @@
 @using SharpMUSH.Client.Services
 @inject ITerminalService Terminal
 @inject MushQueryService QueryService
+@inject ObjectApiService ObjectApi
 @inject IJSRuntime JsRuntime
 @inject IStringLocalizer<SharedResource> Loc
 @implements IAsyncDisposable
@@ -317,7 +318,11 @@
     {
         public MushObject Obj { get; } = obj;
         public MushAttribute Attr { get; } = attr;
-        public string WorkingContent { get; set; } = attr.Value.Replace("%r", "\n").Replace("%R", "\n");
+        // Verbatim: the stored value IS what the author typed. This used to translate every
+        // stored %r into a newline, which was the mirror of the save-side rewrite and made the
+        // two indistinguishable — an intentional %r looked like formatting and a real newline
+        // came back as %r on the next save.
+        public string WorkingContent { get; set; } = attr.Value;
         public bool IsDirty { get; set; }
     }
 
@@ -513,12 +518,12 @@
         StateHasChanged();
         try
         {
-            _selectedObject = await QueryService.GetObjectAsync($"#{dbref}");
+            _selectedObject = await ObjectApi.GetObjectAsync(dbref);
             _selectedObject ??= new MushObject
             {
                 Dbref = dbref,
                 Name = $"#{dbref}",
-                Attributes = await QueryService.GetAttributesAsync($"#{dbref}"),
+                Attributes = await ObjectApi.GetAttributesAsync(dbref),
             };
             // Mobile drill-down: picking an object advances to its attributes.
             if (advanceMobilePane)
@@ -548,7 +553,7 @@
                 var refreshed = _selectedObject.Attributes.FirstOrDefault(a =>
                     string.Equals(a.Name, tab.Attr.Name, StringComparison.OrdinalIgnoreCase));
                 if (refreshed is not null && !tab.IsDirty)
-                    tab.WorkingContent = refreshed.Value.Replace("%r", "\n").Replace("%R", "\n");
+                    tab.WorkingContent = refreshed.Value;
             }
         }
         if (_monacoEditor is not null && ActiveTab is not null)
@@ -562,7 +567,18 @@
         ActiveTab.WorkingContent = value;
         var savedAttrName = ActiveTab.Attr.Name;
         var savedDbref = ActiveTab.Obj.Dbref;
-        await QueryService.SetAttributeAsync($"#{savedDbref}", savedAttrName, value);
+
+        // Sent verbatim — newlines included. The API carries the value in a JSON body, so there is
+        // nothing to escape and nothing for the server to decode.
+        var error = await ObjectApi.SetAttributeAsync(savedDbref, savedAttrName, value);
+        if (error is not null)
+        {
+            _saveMessage = error;
+            _saveSeverity = Severity.Error;
+            StateHasChanged();
+            return;
+        }
+
         ActiveTab.IsDirty = false;
         await RefreshAttributesAsync();
         _saveMessage = Loc["TermSavedAttribute", savedAttrName, savedDbref];
@@ -575,7 +591,16 @@
         if (ActiveTab is null) return;
         var deletedName = ActiveTab.Attr.Name;
         var deletedDbref = ActiveTab.Obj.Dbref;
-        await QueryService.DeleteAttributeAsync($"#{deletedDbref}", deletedName);
+
+        var error = await ObjectApi.DeleteAttributeAsync(deletedDbref, deletedName);
+        if (error is not null)
+        {
+            _saveMessage = error;
+            _saveSeverity = Severity.Error;
+            StateHasChanged();
+            return;
+        }
+
         _saveMessage = Loc["TermDeletedAttribute", deletedName];
         _saveSeverity = Severity.Info;
         var tabIdx = _openTabs.IndexOf(ActiveTab);
@@ -623,7 +648,15 @@
         var name = _createObjectName.Trim();
         _createObjectType = null;
         _createObjectName = string.Empty;
-        var newDbref = await QueryService.CreateObjectAsync(name, type);
+        var (newDbref, error) = await ObjectApi.CreateObjectAsync(name, type);
+        if (error is not null)
+        {
+            _saveMessage = error;
+            _saveSeverity = Severity.Error;
+            StateHasChanged();
+            return;
+        }
+
         if (_objectBrowser is not null)
         {
             await _objectBrowser.RefreshAsync();
@@ -647,7 +680,17 @@
         var attrName = _newAttrName.Trim().ToUpperInvariant();
         _showCreateAttr = false;
         _newAttrName = string.Empty;
-        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", attrName, "null()");
+        // 'null()' rather than an empty value: with empty_attrs off the engine treats an empty set
+        // as a clear, so a genuinely empty attribute could not be created to open a tab on.
+        var error = await ObjectApi.SetAttributeAsync(_selectedObject.Dbref, attrName, "null()");
+        if (error is not null)
+        {
+            _saveMessage = error;
+            _saveSeverity = Severity.Error;
+            StateHasChanged();
+            return;
+        }
+
         await RefreshAttributesAsync();
         var created = _selectedObject?.Attributes.FirstOrDefault(a =>
             string.Equals(a.Name, attrName, StringComparison.OrdinalIgnoreCase));

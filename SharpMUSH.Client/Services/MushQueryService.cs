@@ -9,88 +9,15 @@ namespace SharpMUSH.Client.Services;
 /// so output is unambiguous and permission-safe (the server enforces all MUSH permissions).
 /// <see cref="ITerminalService.SendCommandAsync"/> returns the result over the out-of-band channel,
 /// so structured output never appears in the visible terminal (or on other sessions).
+///
+/// What remains here is what genuinely IS softcode evaluation: free-form <c>lsearch</c>
+/// expressions and <c>u()</c>. Object info, attribute CRUD and object creation moved to
+/// <see cref="ObjectApiService"/>, because this channel is line-delimited and so could not carry
+/// an attribute value containing a newline without encoding it.
 /// </summary>
 public partial class MushQueryService(ITerminalService terminal, ILogger<MushQueryService> logger)
 {
 	private readonly ILogger<MushQueryService> _logger = logger;
-
-	/// <summary>Retrieve basic details (name, type, owner) and the full attribute list for a single object.</summary>
-	public async Task<MushObject?> GetObjectAsync(string dbref)
-	{
-		_logger.LogDebug("GetObjectAsync {Dbref}", dbref);
-		var infoExpr = $"SHARP_INFO:{dbref}:[name({dbref})]:[type({dbref})]:[owner({dbref})]";
-		// edit() collapses actual newlines in values to @@NL@@ so SHARP_ATTR stays single-line.
-		var attrExpr = $"iter(lattr({dbref}/**),SHARP_ATTR:%i0::[edit(get({dbref}/%i0),%r,@@NL@@)],%b,%r)";
-
-		var infoLines = await terminal.SendCommandAsync(infoExpr);
-		var attrLines = await terminal.SendCommandAsync(attrExpr);
-
-		var obj = ParseInfo(infoLines);
-		if (obj is null) return null;
-
-		obj.Attributes = ParseAttributes(attrLines);
-		return obj;
-	}
-
-	/// <summary>Get only the attribute list for an object (faster than full GetObjectAsync).</summary>
-	public async Task<List<MushAttribute>> GetAttributesAsync(string dbref)
-	{
-		// edit() replaces any actual newlines in the attribute value with @@NL@@ so the
-		// SHARP_ATTR marker stays on a single line — safe even when attrs contain %r output.
-		var expr = $"iter(lattr({dbref}/**),SHARP_ATTR:%i0::[edit(get({dbref}/%i0),%r,@@NL@@)],%b,%r)";
-		var lines = await terminal.SendCommandAsync(expr);
-		return ParseAttributes(lines);
-	}
-
-	/// <summary>Get a single attribute value.</summary>
-	public async Task<string?> GetAttributeAsync(string dbref, string attrName)
-	{
-		var lines = await terminal.SendCommandAsync($"get({dbref}/{attrName})");
-		return lines.Length > 0 ? string.Join("\n", lines) : null;
-	}
-
-	/// <summary>Set (or clear) an attribute via the standard &amp;ATTR command.
-	/// Newlines in <paramref name="value"/> are converted to the MUSH <c>%r</c> substitution
-	/// so the command is always a single-line WebSocket message.</summary>
-	public Task SetAttributeAsync(string dbref, string attrName, string value)
-	{
-		// Replace actual newlines with %r (MUSH convention) so the &ATTR command
-		// is a single WebSocket message — a multi-line message would be split by
-		// the server into separate commands, truncating the attribute value.
-		var safeValue = value.Replace("\r\n", "%r").Replace("\r", "%r").Replace("\n", "%r");
-		return terminal.SendAsync($"&{attrName} {dbref}={safeValue}");
-	}
-
-	/// <summary>Delete an attribute by setting it to empty.</summary>
-	public Task DeleteAttributeAsync(string dbref, string attrName)
-		=> terminal.SendAsync($"&{attrName} {dbref}=");
-
-	/// <summary>
-	/// Create a new in-game object using the appropriate building command.
-	/// Returns the new object's dbref if the server confirms creation, otherwise null.
-	/// </summary>
-	/// <summary>
-	/// Create a new in-game object using the appropriate softcode function
-	/// (<c>create()</c>, <c>dig()</c>, or <c>open()</c>) so the new dbref is
-	/// returned directly in one round-trip — no text parsing needed.
-	/// </summary>
-	public async Task<int?> CreateObjectAsync(string name, MushObjectType type)
-	{
-		// Each function returns the new dbref (#N or #N:timestamp).
-		// We wrap with before(…,:) to strip any creation-time suffix from dig()/open().
-		var expr = type switch
-		{
-			MushObjectType.Room => $"before(dig({name}),:)",
-			MushObjectType.Exit => $"before(open({name}),:)",
-			_ => $"create({name})",   // create() already returns #N cleanly
-		};
-
-		var lines = await terminal.SendCommandAsync(expr);
-		if (lines.Length == 0) return null;
-
-		var dbrefStr = lines.FirstOrDefault(l => l.TrimStart().StartsWith('#'))?.Trim();
-		return dbrefStr is not null && int.TryParse(dbrefStr.TrimStart('#'), out var n) ? n : null;
-	}
 
 	/// <summary>
 	/// Returns true if the currently connected player has the WIZARD flag.
@@ -147,58 +74,6 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	/// </summary>
 	public Task<string[]> EvalAsync(string dbref, string attrName)
 		=> terminal.SendCommandAsync($"u({dbref}/{attrName})");
-
-	private static MushObject? ParseInfo(string[] lines)
-	{
-		foreach (var line in lines)
-		{
-			if (!line.StartsWith("SHARP_INFO:")) continue;
-
-			// SHARP_INFO:<dbref>:<name>:<type>:<owner>
-			var parts = line.Split(':', 5);
-			if (parts.Length < 5) continue;
-
-			if (!int.TryParse(parts[1].TrimStart('#'), out var dbref)) continue;
-
-			return new MushObject
-			{
-				Dbref = dbref,
-				Name = parts[2],
-				Type = ParseType(parts[3]),
-				Owner = parts[4],
-			};
-		}
-
-		return null;
-	}
-
-	private static List<MushAttribute> ParseAttributes(string[] lines)
-	{
-		var attrs = new List<MushAttribute>();
-
-		foreach (var line in lines)
-		{
-			if (!line.StartsWith("SHARP_ATTR:")) continue;
-
-			// SHARP_ATTR:<name>:<flags>:<value…>
-			var parts = line.Split(':', 4);
-			if (parts.Length < 4) continue;
-
-			// Decode @@NL@@ placeholders back to actual newlines (see edit() in iter expr).
-			var value = parts[3].Replace("@@NL@@", "\n");
-
-			attrs.Add(new MushAttribute
-			{
-				Name = parts[1],
-				AttributeFlags = string.IsNullOrEmpty(parts[2])
-					? []
-					: [.. parts[2].Split(' ', StringSplitOptions.RemoveEmptyEntries)],
-				Value = value,
-			});
-		}
-
-		return attrs;
-	}
 
 	private static List<MushSearchResult> ParseSearchResults(string[] lines)
 	{
