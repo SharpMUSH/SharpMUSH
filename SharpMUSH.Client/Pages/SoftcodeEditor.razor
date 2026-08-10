@@ -593,6 +593,11 @@
                 tab.SavedContent = refreshed.Value;
                 if (!tab.IsDirty)
                     tab.WorkingContent = refreshed.Value;
+
+                // Derived, never carried over: a tab whose buffer now matches what was just read is
+                // clean by definition, even if it was dirty a moment ago (someone else saving the
+                // same text, or our own save round-tripping).
+                tab.IsDirty = !string.Equals(tab.WorkingContent, tab.SavedContent, StringComparison.Ordinal);
             }
         }
         if (ActiveTab is not null)

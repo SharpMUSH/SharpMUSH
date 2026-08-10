@@ -162,6 +162,11 @@ public class IncludeFromDollarCommandTests
 
 		var msgs = await TriggerAndCollect(token);
 
+		// Guard first: without this the test would also pass if the $-command never matched at all,
+		// which would prove nothing about separation.
+		await Assert.That(msgs.Any(m => m.Contains($"ALPHA_{tag}"))).IsTrue()
+			.Because($"the body must have run for its shape to be under test; got: [{string.Join(" | ", msgs)}]");
+
 		await Assert.That(msgs.Any(m => m.Trim() == $"BETA_{tag}")).IsFalse()
 			.Because($"without a ';' the second verb is swallowed into the first's argument; got: [{string.Join(" | ", msgs)}]");
 	}
