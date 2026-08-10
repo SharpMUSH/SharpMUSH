@@ -65,34 +65,16 @@ public class HttpHandlerCommandService(
 
 		// Build a fresh parser state — there is no ambient parser on the HTTP request path.
 		// 'Invisible login': the handler is executor, enactor, and caller, as in Penn.
-		var evalParser = parser.Push(new ParserState(
-			Registers: new([BuildHeaderRegisters(headers)]),
-			IterationRegisters: [],
-			RegexRegisters: [],
-			SwitchStack: [],
-			ExecutionStack: [],
-			EnvironmentRegisters: new Dictionary<string, CallState>
+		var evalParser = parser.Push(ParserState.RootFor(handlerRef) with
+		{
+			Registers = new([BuildHeaderRegisters(headers)]),
+			EnvironmentRegisters = new Dictionary<string, CallState>
 			{
 				["0"] = new CallState(path),
 				["1"] = new CallState(body)
 			},
-			CurrentEvaluation: null,
-			ParserFunctionDepth: 0,
-			Function: null,
-			Command: null,
-			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-			Switches: [],
-			Arguments: [],
-			Executor: handlerRef,
-			Enactor: handlerRef,
-			Caller: handlerRef,
-			Handle: null,
-			ParseMode: ParseMode.Default,
-			HttpResponse: context,
-			CallDepth: new InvocationCounter(),
-			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag()));
+			HttpResponse = context
+		});
 
 		var attributeValue = attributeResult.AsAttribute.Last().Value;
 

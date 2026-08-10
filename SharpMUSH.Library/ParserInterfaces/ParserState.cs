@@ -314,6 +314,43 @@ public partial record ParserState(
 		new LimitExceededFlag());
 
 	/// <summary>
+	/// A fresh root state for code that runs as <paramref name="actor"/> with no ambient parser:
+	/// the boot @STARTUP pass, package lifecycle attributes, HTTP handler dispatch, and the
+	/// portal's typed object API. The actor is executor, enactor and caller at once, because there
+	/// is no outer frame for those to differ in.
+	/// </summary>
+	/// <remarks>
+	/// Unlike <see cref="Empty"/>, the register stack is seeded with one frame — code invoked from
+	/// a root state must be able to <c>setq()</c> without pushing a frame of its own. Callers
+	/// needing extras (seeded q-registers, %0-%9, an HTTP response context) apply them with a
+	/// <c>with</c> expression rather than growing this signature.
+	/// </remarks>
+	public static ParserState RootFor(DBRef actor) => new(
+		Registers: new([[]]),
+		IterationRegisters: [],
+		RegexRegisters: [],
+		SwitchStack: [],
+		ExecutionStack: [],
+		EnvironmentRegisters: new Dictionary<string, CallState>(),
+		CurrentEvaluation: null,
+		ParserFunctionDepth: 0,
+		Function: null,
+		Command: null,
+		CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
+		Switches: [],
+		Arguments: new Dictionary<string, CallState>(),
+		Executor: actor,
+		Enactor: actor,
+		Caller: actor,
+		Handle: null,
+		ParseMode: ParseMode.Default,
+		HttpResponse: null,
+		CallDepth: new InvocationCounter(),
+		FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+		TotalInvocations: new InvocationCounter(),
+		LimitExceeded: new LimitExceededFlag());
+
+	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!
 	/// </summary>
 	/// <param name="mediator">Mediator to get the object node with.</param>

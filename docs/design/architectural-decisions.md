@@ -402,6 +402,45 @@ serves via ASP.NET static files or a file controller.
 **Migration path:** Swap `LocalFileStorage` for `MinioFileStorage` when scaling
 requires it. Client code unchanged (URLs work either way).
 
+### 4.5 Attribute Editing: Typed API, Values Stored Verbatim
+
+**Decision:** The Softcode Editor reads and writes attributes through
+`api/objects` (`ObjectsController`), not through the terminal. Values are stored
+exactly as typed — no encoding on the way out, no decoding on the way back.
+
+**Rationale:** The terminal channel is line-delimited, so the editor had to
+rewrite every newline as the two characters `%r` to keep `&ATTR #dbref=value` a
+single message. `&` is `RSNoParse` for direct input, so that literal `%r` is what
+reached the database, and the editor translated `%r` back to a newline on load.
+The two were indistinguishable in both directions.
+
+Every other write path already stores real newlines — `@set` and `&` from a queue
+both evaluate their RHS (and `%r` expands to `"\n"`), and package installs write
+their YAML block scalars byte-for-byte. The editor was the sole exception. A JSON
+body has no line limit, so the conversion has no reason to exist.
+
+**No grammar change was needed.** `SEMICOLON: ';' WS` with `WS: [ \r\n\f\t]*`
+consumes a newline and its continuation indent as part of the `;` token, so
+idiomatic multi-line softcode already parses correctly:
+
+```mushcode
+$greet *:@pemit %#=Hi;
+  @pemit %#=Bye
+```
+
+**Permissions** are the engine's. Every operation goes through `IAttributeService`
+— the same service `&` calls — which enforces `Controls` and `CanSet` itself.
+There is no portal-role gate beyond holding a session with a character.
+
+**Object creation** invokes the registered `@CREATE` / `@DIG` / `@OPEN` through
+`IEngineCommandInvoker` with pre-split arguments, so quota, zone inheritance, the
+`OBJECT`CREATE` event and plugin hooks all still fire. Names are never spliced
+into a command line: `ValidateService.NameRegex` does not forbid `;`.
+
+**No migration.** Attributes written by the old editor hold a literal `%r`, and
+nothing can distinguish one the author meant from one that was a mangled newline.
+They now display as `%r`, which is what is stored.
+
 ---
 
 ## 5. Content Formatting & Rendering Pipeline

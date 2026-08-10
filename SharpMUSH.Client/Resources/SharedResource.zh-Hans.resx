@@ -3484,6 +3484,10 @@
     <value>创建房间</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCreateExit" xml:space="preserve">
+    <value>创建出口</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermCreateThing" xml:space="preserve">
     <value>创建物品</value>
     <comment>MT</comment>

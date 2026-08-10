@@ -48,6 +48,7 @@ builder.Services.AddSingleton<AdminAccountsService>();
 // Registers the terminal facades — see AddTerminalServices for the rationale.
 builder.Services.AddTerminalServices();
 builder.Services.AddSingleton<MushQueryService>();
+builder.Services.AddSingleton<ObjectApiService>();
 builder.Services.AddHttpClient("help", c =>
 {
 	c.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);

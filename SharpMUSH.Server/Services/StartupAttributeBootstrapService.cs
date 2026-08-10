@@ -46,31 +46,8 @@ public class StartupAttributeBootstrapService(
 			var god = godNode.Known;
 
 			// Fresh parser state: God is executor, enactor, and caller — there is no ambient
-			// parser at boot (mirrors the package lifecycle / HTTP handler invocation pattern).
-			var bootParser = parser.Push(new ParserState(
-				Registers: new([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: new Dictionary<string, CallState>(),
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: null,
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-				Switches: [],
-				Arguments: [],
-				Executor: god.Object().DBRef,
-				Enactor: god.Object().DBRef,
-				Caller: god.Object().DBRef,
-				Handle: null,
-				ParseMode: ParseMode.Default,
-				HttpResponse: null,
-				CallDepth: new InvocationCounter(),
-				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag()));
+			// parser at boot.
+			var bootParser = parser.Push(ParserState.RootFor(god.Object().DBRef));
 
 			logger.LogInformation("Running boot @STARTUP pass on all objects as God (#1).");
 			await StartupAttributeRunner.RunAllAsync(bootParser, mediator, attributeService, god);

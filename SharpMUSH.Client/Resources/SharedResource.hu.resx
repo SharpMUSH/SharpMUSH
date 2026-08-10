@@ -3484,6 +3484,10 @@
     <value>Szoba létrehozása</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCreateExit" xml:space="preserve">
+    <value>Kijárat létrehozása</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermCreateThing" xml:space="preserve">
     <value>Tárgy létrehozása</value>
     <comment>MT</comment>

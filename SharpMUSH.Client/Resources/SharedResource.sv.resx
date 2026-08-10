@@ -3484,6 +3484,10 @@
     <value>Skapa rum</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCreateExit" xml:space="preserve">
+    <value>Skapa utgång</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermCreateThing" xml:space="preserve">
     <value>Skapa sak</value>
     <comment>MT — corpus renders thing as 'sak'.</comment>

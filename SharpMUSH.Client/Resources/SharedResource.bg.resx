@@ -3484,6 +3484,10 @@
     <value>Създай стая</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCreateExit" xml:space="preserve">
+    <value>Създай изход</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermCreateThing" xml:space="preserve">
     <value>Създай нещо</value>
     <comment>MT</comment>

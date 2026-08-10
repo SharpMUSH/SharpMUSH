@@ -7,6 +7,7 @@
 @using SharpMUSH.Client.Services
 @inject ITerminalService Terminal
 @inject MushQueryService QueryService
+@inject ObjectApiService ObjectApi
 @inject IJSRuntime JsRuntime
 @inject IStringLocalizer<SharedResource> Loc
 @implements IAsyncDisposable
@@ -43,6 +44,9 @@
                 </MudTooltip>
                 <MudTooltip Text="@Loc["TermCreateRoom"]">
                     <MudIconButton Icon="@Icons.Material.Filled.MeetingRoom" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Room))" />
+                </MudTooltip>
+                <MudTooltip Text="@Loc["TermCreateExit"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.CallMade" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Exit))" />
                 </MudTooltip>
             }
             <MudIconButton Icon="@(_objCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ChevronLeft)"
@@ -317,7 +321,15 @@
     {
         public MushObject Obj { get; } = obj;
         public MushAttribute Attr { get; } = attr;
-        public string WorkingContent { get; set; } = attr.Value.Replace("%r", "\n").Replace("%R", "\n");
+        // Verbatim: the stored value IS what the author typed. This used to translate every
+        // stored %r into a newline, which was the mirror of the save-side rewrite and made the
+        // two indistinguishable — an intentional %r looked like formatting and a real newline
+        // came back as %r on the next save.
+        public string WorkingContent { get; set; } = attr.Value;
+
+        /// <summary>What the database holds. Dirty is derived from this, never tracked by hand.</summary>
+        public string SavedContent { get; set; } = attr.Value;
+
         public bool IsDirty { get; set; }
     }
 
@@ -436,10 +448,38 @@
     private async Task OnEditorInitAsync()
         => await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.initEditor", "mush-editor");
 
-    private void OnEditorChanged(ModelContentChangedEvent e)
+    private async Task SetEditorValueAsync(string value)
     {
-        if (ActiveTab is not null)
-            ActiveTab.IsDirty = true;
+        if (_monacoEditor is null) return;
+        await _monacoEditor.SetValue(value);
+    }
+
+    /// <summary>
+    /// Dirty means "the buffer differs from what the database holds" — compared, not tracked.
+    /// </summary>
+    /// <remarks>
+    /// Monaco raises OnDidChangeModelContent for SetValue as well as for typing, so loading an
+    /// attribute, switching tabs or refreshing used to mark the tab unsaved with no user input,
+    /// which in turn made RefreshAttributesAsync skip those tabs forever (it only refreshes clean
+    /// ones). A "this write was mine" flag fixes that but is fragile in both directions: it stays
+    /// armed if SetValue throws, and again if Monaco raises no event because the text was already
+    /// identical — and an armed flag swallows the user's next real edit while the tab reads clean,
+    /// so the next refresh silently overwrites their work. Comparing sidesteps the whole question:
+    /// it needs no assumption about when the event fires, and it also clears the flag when an edit
+    /// is undone back to the stored text.
+    /// </remarks>
+    private async Task OnEditorChanged(ModelContentChangedEvent e)
+    {
+        if (_monacoEditor is null || ActiveTab is null) return;
+
+        var current = await _monacoEditor.GetValue();
+        ActiveTab.WorkingContent = current;
+
+        var dirty = !string.Equals(current, ActiveTab.SavedContent, StringComparison.Ordinal);
+        if (dirty == ActiveTab.IsDirty) return;
+
+        ActiveTab.IsDirty = dirty;
+        StateHasChanged();
     }
 
     private async Task OnAttributeSelected(MushAttribute? attr)
@@ -462,8 +502,7 @@
             _activeTabIndex = _openTabs.Count - 1;
         }
 
-        if (_monacoEditor is not null)
-            await _monacoEditor.SetValue(ActiveTab!.WorkingContent);
+        await SetEditorValueAsync(ActiveTab!.WorkingContent);
 
         // Mobile drill-down: picking an attribute advances to the editor.
         _mobilePane = MobilePane.Editor;
@@ -477,8 +516,8 @@
         if (_monacoEditor is not null && ActiveTab is not null)
             ActiveTab.WorkingContent = await _monacoEditor.GetValue();
         _activeTabIndex = idx;
-        if (_monacoEditor is not null && ActiveTab is not null)
-            await _monacoEditor.SetValue(ActiveTab.WorkingContent);
+        if (ActiveTab is not null)
+            await SetEditorValueAsync(ActiveTab.WorkingContent);
         StateHasChanged();
     }
 
@@ -491,13 +530,13 @@
         {
             _activeTabIndex = -1;
             if (_monacoEditor is not null)
-                await _monacoEditor.SetValue(string.Empty);
+                await SetEditorValueAsync(string.Empty);
         }
         else
         {
             _activeTabIndex = Math.Clamp(_activeTabIndex, 0, _openTabs.Count - 1);
             if (_monacoEditor is not null)
-                await _monacoEditor.SetValue(ActiveTab!.WorkingContent);
+                await SetEditorValueAsync(ActiveTab!.WorkingContent);
         }
         StateHasChanged();
     }
@@ -513,12 +552,12 @@
         StateHasChanged();
         try
         {
-            _selectedObject = await QueryService.GetObjectAsync($"#{dbref}");
+            _selectedObject = await ObjectApi.GetObjectAsync(dbref);
             _selectedObject ??= new MushObject
             {
                 Dbref = dbref,
                 Name = $"#{dbref}",
-                Attributes = await QueryService.GetAttributesAsync($"#{dbref}"),
+                Attributes = await ObjectApi.GetAttributesAsync(dbref),
             };
             // Mobile drill-down: picking an object advances to its attributes.
             if (advanceMobilePane)
@@ -547,12 +586,22 @@
             {
                 var refreshed = _selectedObject.Attributes.FirstOrDefault(a =>
                     string.Equals(a.Name, tab.Attr.Name, StringComparison.OrdinalIgnoreCase));
-                if (refreshed is not null && !tab.IsDirty)
-                    tab.WorkingContent = refreshed.Value.Replace("%r", "\n").Replace("%R", "\n");
+                if (refreshed is null) continue;
+
+                // The freshly-read value is authoritative for what the database holds, whether or
+                // not the tab has unsaved edits sitting on top of it.
+                tab.SavedContent = refreshed.Value;
+                if (!tab.IsDirty)
+                    tab.WorkingContent = refreshed.Value;
+
+                // Derived, never carried over: a tab whose buffer now matches what was just read is
+                // clean by definition, even if it was dirty a moment ago (someone else saving the
+                // same text, or our own save round-tripping).
+                tab.IsDirty = !string.Equals(tab.WorkingContent, tab.SavedContent, StringComparison.Ordinal);
             }
         }
-        if (_monacoEditor is not null && ActiveTab is not null)
-            await _monacoEditor.SetValue(ActiveTab.WorkingContent);
+        if (ActiveTab is not null)
+            await SetEditorValueAsync(ActiveTab.WorkingContent);
     }
 
     private async Task SaveAsync()
@@ -562,7 +611,20 @@
         ActiveTab.WorkingContent = value;
         var savedAttrName = ActiveTab.Attr.Name;
         var savedDbref = ActiveTab.Obj.Dbref;
-        await QueryService.SetAttributeAsync($"#{savedDbref}", savedAttrName, value);
+
+        // Sent verbatim — newlines included. The API carries the value in a JSON body, so there is
+        // nothing to escape and nothing for the server to decode.
+        var error = await ObjectApi.SetAttributeAsync(savedDbref, savedAttrName, value);
+        if (error is not null)
+        {
+            _saveMessage = error;
+            _saveSeverity = Severity.Error;
+            StateHasChanged();
+            return;
+        }
+
+        // The buffer is now what the database holds, so the tab is clean by definition.
+        ActiveTab.SavedContent = value;
         ActiveTab.IsDirty = false;
         await RefreshAttributesAsync();
         _saveMessage = Loc["TermSavedAttribute", savedAttrName, savedDbref];
@@ -575,7 +637,16 @@
         if (ActiveTab is null) return;
         var deletedName = ActiveTab.Attr.Name;
         var deletedDbref = ActiveTab.Obj.Dbref;
-        await QueryService.DeleteAttributeAsync($"#{deletedDbref}", deletedName);
+
+        var error = await ObjectApi.DeleteAttributeAsync(deletedDbref, deletedName);
+        if (error is not null)
+        {
+            _saveMessage = error;
+            _saveSeverity = Severity.Error;
+            StateHasChanged();
+            return;
+        }
+
         _saveMessage = Loc["TermDeletedAttribute", deletedName];
         _saveSeverity = Severity.Info;
         var tabIdx = _openTabs.IndexOf(ActiveTab);
@@ -623,7 +694,15 @@
         var name = _createObjectName.Trim();
         _createObjectType = null;
         _createObjectName = string.Empty;
-        var newDbref = await QueryService.CreateObjectAsync(name, type);
+        var (newDbref, error) = await ObjectApi.CreateObjectAsync(name, type);
+        if (error is not null)
+        {
+            _saveMessage = error;
+            _saveSeverity = Severity.Error;
+            StateHasChanged();
+            return;
+        }
+
         if (_objectBrowser is not null)
         {
             await _objectBrowser.RefreshAsync();
@@ -647,7 +726,17 @@
         var attrName = _newAttrName.Trim().ToUpperInvariant();
         _showCreateAttr = false;
         _newAttrName = string.Empty;
-        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", attrName, "null()");
+        // 'null()' rather than an empty value: with empty_attrs off the engine treats an empty set
+        // as a clear, so a genuinely empty attribute could not be created to open a tab on.
+        var error = await ObjectApi.SetAttributeAsync(_selectedObject.Dbref, attrName, "null()");
+        if (error is not null)
+        {
+            _saveMessage = error;
+            _saveSeverity = Severity.Error;
+            StateHasChanged();
+            return;
+        }
+
         await RefreshAttributesAsync();
         var created = _selectedObject?.Attributes.FirstOrDefault(a =>
             string.Equals(a.Name, attrName, StringComparison.OrdinalIgnoreCase));

@@ -3484,6 +3484,10 @@
     <value>Создать комнату</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCreateExit" xml:space="preserve">
+    <value>Создать выход</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermCreateThing" xml:space="preserve">
     <value>Создать предмет</value>
     <comment>MT</comment>
