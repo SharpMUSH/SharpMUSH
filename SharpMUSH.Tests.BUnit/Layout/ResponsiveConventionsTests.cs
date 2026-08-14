@@ -133,8 +133,6 @@ public class ResponsiveConventionsTests
 		// No @media to convert, but !important to remove, so they are exempt until their batch
 		// reaches them — MigratedStylesheetsCarryNoImportantDeclarations reads this same list.
 		"Components/Widgets/CharacterDirectoryWidget.razor.css",
-		"Pages/Admin/AdminMedia.razor.css",
-		"Pages/Admin/AdminServer.razor.css",
 		"Pages/Admin/ImportDatabase.razor.css",
 	};
 

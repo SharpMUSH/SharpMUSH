@@ -107,3 +107,25 @@
     margin: 0.625rem 0 0;
     line-height: 1.6;
 }
+
+/* .ph-status-row and .ph-attrs-row are space-between flex rows with a code element
+   whose content length is not ours to bound (attribute paths, handler names). Stack
+   them and let the code wrap instead of pushing the chip past the container edge. */
+@container page (max-width: 48rem) {
+    .ph-status-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .ph-attrs-head,
+    .ph-attrs-row {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .ph-attrs-row code {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+}
