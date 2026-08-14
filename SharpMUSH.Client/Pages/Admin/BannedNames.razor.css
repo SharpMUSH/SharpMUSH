@@ -149,3 +149,21 @@
     color: var(--mud-palette-error, #e57373);
     border-color: rgba(229, 115, 115, 0.5);
 }
+
+/* The add-name row sits below the config nav aside, which eats into the page container's
+   width on top of the viewport itself; wrap it so the button never has to squeeze the input
+   past its intrinsic size. */
+@container page (max-width: 48rem) {
+    .config-add-grid {
+        flex-wrap: wrap;
+    }
+
+    .config-add-grid .config-input {
+        flex-basis: 100%;
+    }
+
+    .config-primary-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

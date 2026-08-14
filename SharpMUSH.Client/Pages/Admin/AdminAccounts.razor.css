@@ -1,0 +1,33 @@
+/* Every sibling admin page wraps its body in a padded root; this one had none, so its heading
+   and table sat flush against the topbar and the viewport edges. */
+.accounts-page {
+    padding: var(--cpad);
+}
+
+/* MudTable renders a real <table>, which cannot reflow. Below the narrow tier the rows become
+   stacked blocks, each cell labelled from its column header via the data-label attribute the
+   markup sets. */
+@container page (max-width: 48rem) {
+    .accounts-table ::deep thead {
+        display: none;
+    }
+
+    .accounts-table ::deep tr {
+        display: block;
+        border-bottom: 1px solid var(--border);
+        padding-block: 0.5rem;
+    }
+
+    .accounts-table ::deep td {
+        display: grid;
+        grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+        gap: 0.5rem;
+        border: none;
+    }
+
+    .accounts-table ::deep td::before {
+        content: attr(data-label);
+        color: var(--text-dim);
+        font-size: 0.8125rem;
+    }
+}

@@ -133,7 +133,6 @@ public class ResponsiveConventionsTests
 		// No @media to convert, but !important to remove, so they are exempt until their batch
 		// reaches them — MigratedStylesheetsCarryNoImportantDeclarations reads this same list.
 		"Components/Widgets/CharacterDirectoryWidget.razor.css",
-		"Pages/Admin/ImportDatabase.razor.css",
 	};
 
 	/// <summary>
@@ -151,7 +150,6 @@ public class ResponsiveConventionsTests
 
 		// Not by design — these gain stylesheets during the sweep and their entries are
 		// deleted with the task that writes them.
-		"Pages/Admin/AdminAccounts.razor",   // Task 7
 		"Pages/WikiPage.razor",              // Task 12
 		"Pages/CharacterCreate.razor",       // Task 13
 		"Pages/Register.razor",              // Task 13
