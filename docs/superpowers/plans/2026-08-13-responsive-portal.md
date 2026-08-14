@@ -977,8 +977,9 @@ conversions: they need container tiers written from scratch.
 
 **Files:**
 - Modify: `Pages/Admin/Dashboard.razor.css` — `repeat(auto-fill, minmax(280px, 1fr))` stat grid is already fluid; add a narrow tier for the 44px avatar row and the flex header
-- Modify: `Pages/Admin/Players.razor.css` — unwrapped flex toolbar; apply `.toolbar-row`
-- Modify: `Pages/Admin/PlayerDetail.razor.css` — unwrapped flex header
+- Modify: `Pages/Admin/Players.razor.css` — a "coming soon" stub: `.ph-header` plus a centred
+  `.ph-empty` card, no toolbar. Tier its title and empty-card sizing
+- Modify: `Pages/Admin/PlayerDetail.razor.css` — also a stub, same shape as Players
 - Modify: `Pages/Admin/Moderation.razor.css`
 - Modify: `Pages/Admin/AdminCharacters.razor.css`
 - Modify: `Pages/Admin/AdminProfiles.razor.css`
