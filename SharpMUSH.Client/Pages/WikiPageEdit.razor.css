@@ -1,0 +1,5 @@
+/* Passes height:100% through to WikiEdit's own height:100% root — see the comment in
+   WikiPageEdit.razor for why this wrapper exists instead of classing WikiView directly. */
+.wiki-edit-host {
+    height: 100%;
+}

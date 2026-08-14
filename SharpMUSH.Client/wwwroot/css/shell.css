@@ -147,12 +147,21 @@
 	min-height: 100%;
 }
 
-/* Working surfaces (terminal, editors, diff views) opt out of the reading cap by putting
-   `full-bleed` on their own root element — a page cannot set a class on its ancestor, and
-   :has() removes the need for a cascading parameter to do it. They are also the pages that
-   size themselves to the viewport, so the wrapper passes a definite height through. */
+/* Two independent opt-outs, not one: wanting full window width and needing a definite
+   height are unrelated concerns, and a page can want either without the other (a mail
+   three-pane view needs its height passed through but must stay capped; a wide diff view
+   wants the width but has no height-bound panes). A page carries both classes on its root
+   only when it genuinely wants both. :has() removes the need for a cascading parameter to
+   let a page reach up to this wrapper it cannot otherwise touch. */
 .phosphor-page:has(> .full-bleed) {
 	max-width: none;
+}
+
+/* Pages whose root uses height:100% (or a percentage height/min-height anywhere in their
+   own layout) need this wrapper to have a definite height — a plain block only carrying
+   `min-height` never does, so without this override every percentage height nested inside
+   collapses to auto. */
+.phosphor-page:has(> .full-height) {
 	height: 100%;
 }
 

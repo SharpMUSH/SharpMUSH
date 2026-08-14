@@ -20,13 +20,13 @@
    an answer must not make it. *@
 @if (!_rosterResolved)
 {
-    <div class="play-gate full-bleed">
+    <div class="play-gate full-height">
         <MudProgressCircular Size="Size.Small" Indeterminate="true" />
     </div>
 }
 else if (_rosterFailed)
 {
-    <div class="play-gate full-bleed">
+    <div class="play-gate full-height">
         <EmptyState Class="play-gate-card">
             <MudText>@Loc["NavPlayRosterUnavailable"]</MudText>
             <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RetryRosterAsync" Class="mt-2">
@@ -37,7 +37,7 @@ else if (_rosterFailed)
 }
 else if (_needsCharacter)
 {
-    <div class="play-gate full-bleed">
+    <div class="play-gate full-height">
         <EmptyState Class="play-gate-card">
             <MudText>@Loc["NavPlayNeedsCharacter"]</MudText>
             <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/characters/new" Class="mt-2">
@@ -48,7 +48,7 @@ else if (_needsCharacter)
 }
 else
 {
-    <div class="play-shell full-bleed @(_focusMode ? "play-shell--focus" : "")">
+    <div class="play-shell full-bleed full-height @(_focusMode ? "play-shell--focus" : "")">
 
         <div class="play-term">
             <div class="play-term-header">

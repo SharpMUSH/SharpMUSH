@@ -32,9 +32,18 @@ public class ContentContainerTests
 	public async Task FullHeightPagesKeepADefiniteHeightThroughTheWrapper()
 	{
 		// Inserting a wrapper between .phosphor-main and the page would otherwise break the pages
-		// that set height:100% on their own root (/play, the wiki editor).
-		await Assert.That(Shell()).Contains(":has(> .full-bleed)")
-			.Because("full-bleed pages opt out of the cap and need the wrapper to pass height through");
+		// that set height:100% on their own root (/play, the wiki editor). Wanting the full window
+		// width and needing a definite height are separate concerns — Mail's three-pane layout
+		// needs only the latter — so the two opt-outs are two selectors, checked independently.
+		var bleed = Regex.Match(Shell(), @"\.phosphor-page:has\(> \.full-bleed\)\s*\{(?<body>[^}]*)\}", RegexOptions.Singleline);
+		await Assert.That(bleed.Success).IsTrue().Because("full-bleed pages need a selector that lifts the reading-width cap");
+		await Assert.That(bleed.Groups["body"].Value).Contains("max-width: none")
+			.Because("full-bleed removes the max-width cap and nothing else");
+
+		var height = Regex.Match(Shell(), @"\.phosphor-page:has\(> \.full-height\)\s*\{(?<body>[^}]*)\}", RegexOptions.Singleline);
+		await Assert.That(height.Success).IsTrue().Because("full-height pages need a selector that passes a definite height through the wrapper");
+		await Assert.That(height.Groups["body"].Value).Contains("height: 100%")
+			.Because("full-height opts in to a definite height without forcing the width cap open too");
 	}
 
 	[Test]

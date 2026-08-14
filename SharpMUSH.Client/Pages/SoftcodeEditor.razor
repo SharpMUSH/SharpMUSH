@@ -16,7 +16,7 @@
 
 @* Three-pane layout. IMPORTANT: no CSS transition on widths — Chrome freezes when
    transitioning between px and 1fr. Collapse is an instant class swap. *@
-<div class="sc-shell full-bleed sc-shell--@(_mobilePane.ToString().ToLowerInvariant())">
+<div class="sc-shell full-bleed full-height sc-shell--@(_mobilePane.ToString().ToLowerInvariant())">
 
     @* Mobile-only pane switcher: the three IDE panes can't coexist on a phone, so show one at
        a time. Selecting an object/attribute drills forward automatically (see handlers). *@
