@@ -47,8 +47,12 @@ public class ZoneRendererGridTests : BunitContext
 
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("zone-grid");
-		await Assert.That(markup).Contains("grid-column:span 12");
-		await Assert.That(markup).Contains("grid-column:span 6");
+		// Span comes in as the --zone-span custom property, not a plain inline grid-column: the
+		// stylesheet's grid-column: span var(--zone-span, 12) rule needs to win against the
+		// narrow-tier override without !important, which an inline grid-column would prevent
+		// regardless of specificity (see ZoneRenderer.razor.css).
+		await Assert.That(markup).Contains("--zone-span:12;");
+		await Assert.That(markup).Contains("--zone-span:6;");
 		await Assert.That(markup).Contains("AAA");
 		await Assert.That(markup).Contains("BBB");
 	}

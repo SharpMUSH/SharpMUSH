@@ -84,15 +84,9 @@ public class ResponsiveConventionsTests
 	/// </summary>
 	private static readonly HashSet<string> NotYetMigrated = new(StringComparer.Ordinal)
 	{
-		"Components/Layout/ZoneRenderer.razor.css",
-		"Components/ScenePoseLine.razor.css",
 		"Components/Widgets/RecentWikiActivityWidget.razor.css",
 		"Components/Widgets/WikiBodyWidget.razor.css",
 		"Components/Widgets/WikiIndexWidget.razor.css",
-		"Components/WikiDisplay.razor.css",
-		"Components/WikiEdit.razor.css",
-		"Layout/AccountPanel.razor.css",
-		"Layout/ConfigLayout.razor.css",
 		"Pages/Account.razor.css",
 		"Pages/CharacterProfile.razor.css",
 		"Pages/Characters.razor.css",

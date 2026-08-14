@@ -13,3 +13,19 @@
 		box-sizing: border-box;
 	}
 }
+
+/* AccountPanel's open/submenu-slide animations. Global (not scoped AccountPanel.razor.css)
+   because AccountPanel renders inside a MudPopover, which teleports its content into a
+   body-level portal outside .phosphor-page — and separately, prefers-reduced-motion is a user
+   preference, not a viewport size, so it belongs in neither the shell's device breakpoints nor
+   a page's @container tiers. This is the only @media a migrated scoped stylesheet is allowed
+   to lean on instead of writing itself. */
+@media (prefers-reduced-motion: reduce) {
+	.account-panel {
+		animation: none;
+	}
+
+	.account-panel-track {
+		transition: none;
+	}
+}

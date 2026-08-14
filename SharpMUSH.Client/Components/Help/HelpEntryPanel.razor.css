@@ -1,5 +1,12 @@
 /* The entry body is HTML the server rendered from the helpfile markdown, so every rule that has to
-   reach inside it needs ::deep. */
+   reach inside it needs ::deep. Helpfile prose carries PennMUSH-style syntax examples and long
+   flag/attribute names as plain inline text (not <code>), so the reflow guard has to cover the
+   whole body, not just the code/table elements below — a long unbroken token there would push the
+   narrow tier's already-tight column wide otherwise. */
+.help-entry {
+    overflow-wrap: anywhere;
+}
+
 .help-entry ::deep h1 {
     margin: 0 0 0.75rem;
     font-family: var(--font-display);

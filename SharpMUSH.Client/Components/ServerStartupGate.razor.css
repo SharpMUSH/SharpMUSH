@@ -1,4 +1,8 @@
+/* Wraps ChildContent (the whole app, via App.razor) before ThemeProvider/MainLayout ever
+   mounts, so while the gate itself is showing there is no .phosphor-page ancestor and no
+   container named 'page' — this is that container, queried unnamed, same as the dialogs. */
 .startup-gate-shell {
+    container-type: inline-size;
     position: relative;
     min-height: 100vh;
     min-height: 100svh;

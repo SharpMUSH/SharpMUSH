@@ -11,7 +11,7 @@
                 var descriptor = Registry?.GetWidget(placement.WidgetName);
                 @if (descriptor is not null)
                 {
-                    <div class="zone-grid-cell" style="@($"grid-column:span {ClampSpan(placement.Span)};")">
+                    <div class="zone-grid-cell" style="@($"--zone-span:{ClampSpan(placement.Span)};")">
                         <WidgetErrorBoundary WidgetName="@placement.WidgetName">
                             <DynamicComponent Type="@descriptor.ComponentType"
                                               Parameters="@BuildParams(placement, descriptor)" />

@@ -191,12 +191,7 @@
     color: var(--accent);
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .account-panel {
-        animation: none;
-    }
-
-    .account-panel-track {
-        transition: none;
-    }
-}
+/* prefers-reduced-motion override for .account-panel / .account-panel-track lives in
+   globals.css: AccountPanel renders inside a MudPopover portal outside .phosphor-page, and a
+   user-preference media feature belongs to neither the shell's device breakpoints nor a
+   page's @container tiers — see the comment there. */

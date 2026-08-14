@@ -6,9 +6,39 @@
     align-items: start;
 }
 
-@media (max-width: 900px) {
+/* Grid items default to min-width: auto (shrink-to-fit), so a track's own content can force it
+   wider than the container has room for instead of actually shrinking into it. The measured
+   390px overflow (+47px, widest: aside.config-section-nav / div.config-nav-title / nav — see
+   task-9-report.md's sweep output) traced to the nav column; .config-section-body gets the same
+   treatment defensively, since it is exactly as exposed once its own content grows. */
+.config-section-nav,
+.config-section-body {
+    min-width: 0;
+}
+
+/* Fixed 230px sidecar stacks at the medium tier per the spec's tier table (spec's Medium row:
+   "fixed sidecars (230-340px) stack"). */
+@container page (max-width: 64rem) {
     .config-shell {
         grid-template-columns: 1fr;
         gap: 0.875rem;
+    }
+
+    /* Stacked, the nav renders above the body — and ConfigNavDrawer is a full section list
+       (~24 links across 7 groups), not a short rail, so left unconstrained it measured
+       1273.75px tall and pushed .config-section-body's first pixel past y=1378: roughly 1.5
+       screens of scroll before any page content — including the narrow-tier work Tasks 7/8 put
+       into BannedNames/ImportConfig/ConfigIndex — was reachable.
+       Capping the nav's own height and scrolling inside it (rather than collapsing it behind a
+       disclosure toggle) keeps every link permanently visible and reachable with no extra tap,
+       keeps the current section's active-state highlight always in the rendered DOM, and needs
+       no JS to track container width or sync an open/closed state — @container already reacts
+       to the same width change that triggers the stack. */
+    .config-section-nav {
+        max-height: 17.5rem;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
     }
 }

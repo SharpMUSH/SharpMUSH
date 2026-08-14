@@ -111,6 +111,10 @@
     line-height: 1.7;
     caret-color: var(--accent);
     border-right: 1px solid var(--border-soft);
+    /* Grow with content instead of relying on the textarea's own internal scrollbar — most
+       useful once the narrow tier below drops the preview pane and the editor is the only
+       thing on screen. Unsupported browsers just keep the old fixed-box-with-scroll behavior. */
+    field-sizing: content;
 }
 .wiki-edit-preview {
     overflow-y: auto;
@@ -216,7 +220,7 @@
 .wiki-edit-foot a { color: var(--accent); text-decoration: none; }
 .wiki-edit-foot a:hover { text-decoration: underline; }
 
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .wiki-edit-split { grid-template-columns: 1fr; }
     .wiki-edit-preview { display: none; }
 }
