@@ -16,6 +16,12 @@
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <!-- Transitive pin. Testcontainers requires SSH.NET >= 2025.1.0 and NuGet resolves the
+         floor, which carries GHSA-q939-rpr3-3284 (high: ScpClient recursive download allows
+         arbitrary file write from server-controlled filenames). 2026.0.0 is the first patched
+         release and satisfies the same range, so this is a floor bump rather than an override.
+         Drop it once Testcontainers raises its own floor. -->
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
     <PackageReference Include="Testcontainers.Nats" Version="4.11.0" />
   </ItemGroup>
 
