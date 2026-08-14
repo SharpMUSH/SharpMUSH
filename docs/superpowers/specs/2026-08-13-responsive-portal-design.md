@@ -133,6 +133,18 @@ roomy → medium → narrow so the cascade is uniform and reviewable.
 A widget then renders correctly both full-width on `/` and in a 300px aside, which is
 impossible under viewport queries.
 
+The three sanctioned literals and their directions (previous section) govern `@container page
+(...)` only — they were calibrated against `.phosphor-page`'s bounded width space, which the
+sidebar, the two widget asides, and the 1400px content cap shape. A component's own container
+has no relationship to those numbers: `.widget-root` above might be 200px wide in an aside or
+1400px full-width on `/`, so forcing it onto page-tier values would defeat the reason a
+component queries its own box instead of the page's. A component chooses breakpoints, if any,
+from what its own content needs, unnamed and outside the sanctioned-literal/direction rules.
+
+Prefer continuous CSS — `clamp()`, `minmax(min(Npx, 100%), 1fr)`, `flex-wrap` — over a
+breakpoint wherever it solves the problem outright: a breakpoint is a discontinuity the layout
+must survive at exactly one width, where continuous CSS has none to survive.
+
 **Containment safety.** `container-type: inline-size` makes the element a containing block
 for `position: fixed` descendants. Audited: no `position: fixed` exists in any scoped
 stylesheet or Razor inline style; the only two `position: sticky` uses
@@ -299,8 +311,10 @@ A convention test over the source tree, so regressions cannot land silently:
 4. Every routable page has a scoped stylesheet, or appears on an explicit exemption list
    with a stated reason.
 5. Every page stylesheet declares at least one container tier, or is exempt.
-6. Container tier conditions use only the three sanctioned literals (`48rem`, `64rem`,
-   `90rem`) — prevents tier drift.
+6. `@container page (...)` conditions use only the three sanctioned literals (`48rem`,
+   `64rem`, `90rem`), in the required direction — prevents page-tier drift. Unnamed
+   component queries (`@container (...)`) are outside this rule; a component's own
+   container has no relationship to `.phosphor-page`'s bounded width.
 7. Viewport breakpoint literals in `shell.css` match `sharpmushLayout` in `layout.js`.
 8. No `!important` in scoped CSS. *(guards the layer work — the reason they existed is gone)*
 

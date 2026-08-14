@@ -231,6 +231,22 @@ public class ResponsiveConventionsTests
 				+ "renders outside the container and so cannot query it");
 	}
 
+	/// <summary>
+	/// Matches only the header of a *named* <c>@container page (...)</c> rule — from the name up
+	/// to (not including) the block's opening brace — so a query against an unnamed component
+	/// container (<c>@container (max-width: 30rem) { … }</c>) never enters the header group at
+	/// all. The three sanctioned literals and their directions describe <c>.phosphor-page</c>'s
+	/// bounded width, shaped by the sidebar and asides and capped at 1400px; a component's own
+	/// box has no relationship to those numbers; it may be 200px in an aside or full-width, so it
+	/// picks values from its own content instead. The header is captured whole, rather than
+	/// matching each <c>(min|max)-width: …)</c> directly off <c>@container</c>, so a compound
+	/// condition — <c>@container page (min-width: 90rem) and (max-width: 120rem)</c> — still
+	/// yields every width test inside it, not just the first.
+	/// </summary>
+	private static IEnumerable<Match> NamedPageContainerConditions(string css) =>
+		Regex.Matches(css, @"@container\s+page\s*(?<header>\([^{]*)\{")
+			.SelectMany(block => Regex.Matches(block.Groups["header"].Value, @"(?<dir>min|max)-width:\s*(?<value>[^)]+)\)"));
+
 	[Test]
 	public async Task ContainerTiersUseOnlyTheSanctionedLiterals()
 	{
@@ -238,7 +254,7 @@ public class ResponsiveConventionsTests
 
 		foreach (var file in ScopedStylesheets())
 		{
-			foreach (Match m in Regex.Matches(StripComments(File.ReadAllText(file)), @"@container[^{]*?\(\s*(?:min|max)-width:\s*(?<value>[^)]+)\)"))
+			foreach (var m in NamedPageContainerConditions(StripComments(File.ReadAllText(file))))
 			{
 				var value = m.Groups["value"].Value.Trim();
 				if (!SanctionedTiers.Contains(value))
@@ -247,7 +263,8 @@ public class ResponsiveConventionsTests
 		}
 
 		await Assert.That(offenders).IsEmpty()
-			.Because($"tiers drift into a private set of breakpoints unless they are fixed at {string.Join(" / ", SanctionedTiers)}");
+			.Because($"page tiers drift into a private set of breakpoints unless they are fixed at {string.Join(" / ", SanctionedTiers)}; "
+				+ "a component querying its own unnamed container is unconstrained by this rule");
 	}
 
 	[Test]
@@ -257,7 +274,7 @@ public class ResponsiveConventionsTests
 
 		foreach (var file in ScopedStylesheets())
 		{
-			foreach (Match m in Regex.Matches(StripComments(File.ReadAllText(file)), @"@container[^{]*?\(\s*(?<dir>min|max)-width:\s*(?<value>[^)]+)\)"))
+			foreach (var m in NamedPageContainerConditions(StripComments(File.ReadAllText(file))))
 			{
 				var value = m.Groups["value"].Value.Trim();
 				var dir = m.Groups["dir"].Value;
@@ -270,7 +287,32 @@ public class ResponsiveConventionsTests
 			.Because("narrow/medium gate on max-width (a downgrade as the container shrinks) and "
 				+ "roomy gates on min-width (an upgrade as the container grows); a max-width tier at "
 				+ "90rem or wider sits above the shell's 1400px content cap, so it is unreachable or "
-				+ "flicker-prone rather than merely off-spec");
+				+ "flicker-prone rather than merely off-spec. This is a page-tier rule; a component's "
+				+ "own container has no relationship to the shell's content cap");
+	}
+
+	[Test]
+	public async Task UnnamedComponentContainerQueriesAreUnconstrained()
+	{
+		// A component declares its own container and queries it unnamed, choosing values from its
+		// own content — it may be 200px in an aside or full-width on the home page, so it has no
+		// relationship to the page-tier literals or their directions. Neither guard should so much
+		// as look at this rule.
+		const string css = """
+			.widget-root { container-type: inline-size; }
+			@container (max-width: 30rem) {
+				.widget-root { flex-direction: column; }
+			}
+			@container (min-width: 55rem) {
+				.widget-root { flex-direction: row; }
+			}
+			""";
+
+		var stripped = StripComments(css);
+
+		await Assert.That(NamedPageContainerConditions(stripped)).IsEmpty()
+			.Because("an unnamed @container query is a component sizing itself, not a page tier, "
+				+ "and must not be matched by the page-tier literal/direction extraction at all");
 	}
 
 	[Test]
