@@ -111,7 +111,7 @@
                             <MudText Style="font-size:0.875rem;font-weight:600;">@p.Package.Id</MudText>
                             <MudChip T="string" Size="Size.Small"
                                      Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;border:1px solid var(--border);">
-                                v@p.Package.Version
+                                v@(p.Package.Version)
                             </MudChip>
                             @if (!string.IsNullOrEmpty(p.Package.SourceRepo))
                             {
