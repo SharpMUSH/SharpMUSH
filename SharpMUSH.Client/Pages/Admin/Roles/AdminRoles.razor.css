@@ -92,7 +92,12 @@
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 1rem;
 }
-@media (max-width: 820px) {
+/* At a 1280px viewport with the sidebar expanded (232px), the container is exactly
+   1280 - 232 = 1048px — past the medium tier's 64rem/1024px cutoff, so a 340px rail still
+   leaves under 710px for a detail pane designed against 940px. The roomy tier (90rem) is the
+   sanctioned literal that actually covers 1048px; verified against the running app rather
+   than inferred, since 64rem alone leaves the documented case unfixed. */
+@container page (max-width: 90rem) {
     .roleadmin-grid { grid-template-columns: 1fr; }
 }
 
@@ -305,10 +310,10 @@
 }
 .ra-add-chip:hover { border-color: rgba(var(--glow), 0.4); color: var(--accent); }
 
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     /* Permission rows: stack the label above a full-width tri-state for big touch targets. */
-    .ra-perm-row { flex-direction: column !important; align-items: stretch !important; gap: 0.625rem !important; }
+    .ra-perm-row { flex-direction: column; align-items: stretch; gap: 0.625rem; }
     .ra-tristate { width: 100%; justify-content: space-between; }
     .ra-tri { flex: 1; text-align: center; padding: 0.625rem 0.5rem; }
-    .ra-field--narrow { flex: 1 1 140px !important; }
+    .ra-field--narrow { flex: 1 1 140px; }
 }

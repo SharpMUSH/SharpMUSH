@@ -1,8 +1,30 @@
-@media (max-width: 760px) {
-    /* Header action stack wraps; configure/merge inputs go full width.
-       The Objects table keeps its own horizontal scroll (mud-table-container).
-       .flex-row and .mud-input-control are MudBlazor-rendered (MudStack / MudTextField),
-       so they need ::deep behind the page-authored .pkg-review ancestor. */
-    .pkg-review ::deep .flex-row { flex-wrap: wrap; }
-    .pkg-review ::deep .mud-input-control { max-width: 100% !important; }
+@container page (max-width: 48rem) {
+    /* MudTable renders a real <table>, which cannot reflow. Below the narrow tier the rows
+       become stacked blocks, each cell labelled from its column header via data-label.
+       ::deep .pkg-objects-table (leading ::deep, anchored on this component's own wrapper)
+       rather than .pkg-objects-table ::deep — MudTable never stamps the caller's scope
+       attribute onto the <table> it renders, so the latter form would require an attribute
+       that is never present and match nothing. */
+    ::deep .pkg-objects-table thead { display: none; }
+
+    ::deep .pkg-objects-table tr {
+        display: block;
+        border-bottom: 1px solid var(--border-soft);
+        padding-block: 0.5rem;
+    }
+
+    ::deep .pkg-objects-table td {
+        display: grid;
+        grid-template-columns: minmax(0, 6rem) minmax(0, 1fr);
+        gap: 0.5rem;
+        border: none;
+    }
+
+    ::deep .pkg-objects-table td::before {
+        content: attr(data-label);
+        color: var(--text-dim);
+        font-size: 0.8125rem;
+    }
+
+    ::deep .mud-input-control { max-width: 100%; }
 }

@@ -26,9 +26,6 @@
     gap: 1rem;
     align-items: start;
 }
-@media (max-width: 960px) {
-    .pkg-cols { grid-template-columns: 1fr; }
-}
 .pkg-card {
     background: var(--surface);
     border: 1px solid var(--border-soft);
@@ -49,15 +46,46 @@
 }
 .pkg-card-body { padding: 1rem 1.125rem; }
 .pkg-card-body ::deep .pkg-btn-primary {
-    background: var(--accent) !important;
-    color: var(--accent-on) !important;
+    background: var(--accent);
+    color: var(--accent-on);
 }
 
-@media (max-width: 760px) {
-    /* "Add a remote" trust+branch row and community-listing rows stack; fields go full width.
-       The remotes table keeps its own horizontal scroll (mud-table-container).
-       .flex-row and .mud-input-control are MudBlazor-rendered (MudStack / MudTextField),
-       so they need ::deep behind the page-authored .pkg-page ancestor. */
-    .pkg-page ::deep .flex-row { flex-wrap: wrap; }
-    .pkg-page ::deep .mud-input-control { max-width: 100% !important; }
+/* At a 1280px viewport with the sidebar expanded (232px), the container is exactly
+   1280 - 232 = 1048px — past the medium tier's 64rem/1024px cutoff, so the 1.4fr/1fr split
+   still leaves the remotes table under 620px. The roomy tier (90rem) is the sanctioned
+   literal that actually covers 1048px; verified against the running app rather than
+   inferred, since 64rem alone leaves the documented case unfixed. */
+@container page (max-width: 90rem) {
+    .pkg-cols { grid-template-columns: 1fr; }
+}
+
+@container page (max-width: 48rem) {
+    /* MudTable renders a real <table>, which cannot reflow. Below the narrow tier the rows
+       become stacked blocks, each cell labelled from its column header via data-label.
+       ::deep .pkg-remotes-table (leading ::deep, anchored on this component's own wrapper)
+       rather than .pkg-remotes-table ::deep — MudTable never stamps the caller's scope
+       attribute onto the <table> it renders, so the latter form would require an attribute
+       that is never present and match nothing. */
+    ::deep .pkg-remotes-table thead { display: none; }
+
+    ::deep .pkg-remotes-table tr {
+        display: block;
+        border-bottom: 1px solid var(--border-soft);
+        padding-block: 0.5rem;
+    }
+
+    ::deep .pkg-remotes-table td {
+        display: grid;
+        grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+        gap: 0.5rem;
+        border: none;
+    }
+
+    ::deep .pkg-remotes-table td::before {
+        content: attr(data-label);
+        color: var(--text-dim);
+        font-size: 0.8125rem;
+    }
+
+    ::deep .mud-input-control { max-width: 100%; }
 }

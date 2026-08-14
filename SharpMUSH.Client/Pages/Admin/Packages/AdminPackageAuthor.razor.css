@@ -53,14 +53,22 @@
 }
 .pkg-card-body { padding: 1.125rem 1.25rem; }
 .pkg-card-body ::deep .pkg-btn-primary {
-    background: var(--accent) !important;
-    color: var(--accent-on) !important;
+    background: var(--accent);
+    color: var(--accent-on);
 }
 
-@media (max-width: 760px) {
-    /* Let the external-ref / metadata rows stack instead of clipping inside cards.
-       .flex-row and .mud-input-control are MudBlazor-rendered (MudStack / MudTextField),
-       so they need ::deep behind the page-authored .pkg-page ancestor. */
-    .pkg-page ::deep .flex-row { flex-wrap: wrap; }
-    .pkg-page ::deep .mud-input-control { max-width: 100% !important; }
+/* External-dbref classification row: MudSelect/MudTextField carry their max-width via Class=
+   rather than an inline Style=, so the narrow tier below can relax it without !important —
+   an inline max-width on the same element would always win over a stylesheet rule that lacks
+   !important, regardless of selector specificity. */
+::deep .pkg-resolution-select { max-width: 200px; }
+::deep .pkg-wellknown-select { max-width: 220px; }
+::deep .pkg-configure-key-field { max-width: 200px; }
+
+@container page (max-width: 48rem) {
+    ::deep .pkg-resolution-select,
+    ::deep .pkg-wellknown-select,
+    ::deep .pkg-configure-key-field {
+        max-width: 100%;
+    }
 }
