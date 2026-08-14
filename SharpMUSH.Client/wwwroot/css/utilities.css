@@ -1,0 +1,7 @@
+/* Cross-cutting utility helpers — currently just touch tap-target sizing. */
+
+/* ══ Touch ergonomics: 44px tap targets on any touch device, regardless of width. ══ */
+@media (pointer: coarse) {
+	.phosphor-nav-link { min-height: 44px; }
+	.phosphor-icon-btn { min-width: 44px; min-height: 44px; }
+}

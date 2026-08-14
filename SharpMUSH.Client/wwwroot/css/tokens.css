@@ -1,0 +1,191 @@
+/* Design tokens: :root custom properties, self-hosted @font-face rules, and locale font overrides. */
+
+/* ── Self-hosted Cascadia Mono (OFL 1.1, microsoft/cascadia-code v2407.24) ── */
+@font-face {
+    font-family: "Cascadia Mono";
+    src: url("/fonts/cascadia-mono.woff2") format("woff2");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ── Self-hosted Sarasa Term SC (OFL 1.1, be5invis/Sarasa-Gothic v1.0.40) ──
+   Subset to the GB2312 repertoire plus Latin, box drawing and fullwidth forms. Rarer
+   hanzi fall through to the system CJK font rather than rendering tofu. Only the CJK
+   rule below names this family, so other locales never fetch the 1 MB of glyphs.
+   "Term" rather than "Mono": its East-Asian-ambiguous characters — the box-drawing
+   runs MUSH tables are framed with — are one cell wide, where Mono renders them two
+   and shears every framed row.
+   font-display: swap is safe despite the size: terminalMetrics.js re-measures the
+   character grid on document.fonts.ready, so the terminal refits when this lands. */
+@font-face {
+    font-family: "Sarasa Term SC";
+    src: url("/fonts/sarasa-term-sc-regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Sarasa Term SC";
+    src: url("/fonts/sarasa-term-sc-bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ── Self-hosted Hanken Grotesk (OFL 1.1, google/fonts) ──
+   The UI face, previously fetched from fonts.googleapis.com. Variable across the whole
+   100-900 range, so one file per subset covers every weight the portal asks for. These
+   are Google's own subsets and unicode-ranges unchanged, so coverage is identical to
+   what the CDN served — latin-ext is what carries ł, ș, č, ő, å and ß for the European
+   locales, and only loads when a page actually uses one.
+   Note the family has no basic Cyrillic (its "cyrillic-ext" subset is U+0460-052F, not
+   the U+0400-045F that Russian and Bulgarian are written in), so ru and bg chrome falls
+   through to system-ui. That was equally true of the CDN version. */
+@font-face {
+    font-family: "Hanken Grotesk";
+    src: url("/fonts/hanken-grotesk-latin.woff2") format("woff2");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: "Hanken Grotesk";
+    src: url("/fonts/hanken-grotesk-latin-ext.woff2") format("woff2");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+	/* ── Phosphor Refined design tokens ── */
+	--bg: #0e0f11;
+	--surface: #16181b;
+	--surface-2: #1c1f23;
+	--surface-3: #101113;
+	--text: #e9edf0;
+	--text-dim: #9aa3ab;
+	--text-faint: #5f6870;
+	--border: #262a2f;
+	--border-soft: #1d2024;
+	--accent: #00f5b7;
+	--accent-dim: rgb(0,191,143);
+	--accent-on: #03150f;
+	--glow: 0,245,183;
+	--radius: 9px;
+	--radius-lg: 14px;
+	--cpad: 1.875rem;
+	--nav-letterspacing: 0.01em;
+	/* Documentation only: the mobile breakpoint. CSS media queries can't read a
+	   custom property in their condition, so every @media uses the literal 760px —
+	   keep them in sync with this value (and with sharpmushLayout.isNarrow in layout.js). */
+	--mobile-bp: 760px;
+	/* Container padding to use inside mobile (<=760px) media queries — tighter than the
+	   desktop --cpad (1.875rem) without depending on the density-compact toggle. Pages
+	   should prefer var(--cpad-mobile) over a hardcoded 1rem in their @media blocks.
+	   Sizing is rem (16px root) so type + spacing honor the user's browser font size;
+	   borders, shadows, fixed dimensions, radii, and breakpoints stay px. */
+	--cpad-mobile: 1rem;
+	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
+	--font-mono: "Cascadia Mono", "DejaVu Sans Mono", monospace;
+	--font-display: 'Hanken Grotesk', system-ui, sans-serif;
+	--shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 4px 16px rgba(0,0,0,0.4);
+	--mud-palette-background-gradient: radial-gradient(120% 100% at 80% -10%, #16181c 0%, #0e0f11 55%);
+	--mud-palette-navbar-gradient: linear-gradient(90deg, #101113 0%, #0d0e10 100%);
+}
+
+/* CJK locales replace the whole mono stack instead of falling back per glyph. Cascadia's
+   Latin advance width is not half of any CJK glyph's, so a mixed line drifts out of the
+   character grid the terminal measures and reports to the server over NAWS. Sarasa Term
+   is drawn to that 1:2 ratio and supplies the Latin too, so the ratio holds across the
+   whole line. :lang() is prefix-matching, so zh-Hans and zh-CN both hit the zh rule;
+   Program.cs stamps the tag onto <html> at startup. */
+:root:lang(zh),
+:root:lang(ja),
+:root:lang(ko) {
+	--font-mono: "Sarasa Term SC", monospace;
+}
+
+/* ── Not Authorized — centered, designed panel ── */
+.not-authorized {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 60vh;
+	padding: var(--cpad);
+}
+.not-authorized-card {
+	max-width: 420px;
+	text-align: center;
+}
+.not-authorized-icon {
+	width: 64px;
+	height: 64px;
+	margin: 0 auto 1.125rem;
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	background: rgba(var(--glow), 0.08);
+	border: 1px solid rgba(var(--glow), 0.2);
+	color: var(--accent);
+}
+.not-authorized-card h1 {
+	margin: 0 0 0.5rem;
+	font-family: var(--font-display);
+	font-size: 1.5rem;
+	font-weight: 600;
+	color: var(--text);
+}
+.not-authorized-card p {
+	margin: 0 0 1.25rem;
+	font-family: var(--font-ui);
+	font-size: 0.875rem;
+	color: var(--text-dim);
+}
+.not-authorized-home {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.5625rem 1rem;
+	border-radius: var(--radius);
+	background: var(--accent);
+	color: var(--accent-on);
+	text-decoration: none;
+	font-family: var(--font-ui);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	transition: filter 0.12s;
+}
+.not-authorized-home:hover {
+	filter: brightness(1.08);
+}
+
+/* ── Section kicker (mono uppercase labels — stat tiles, panel headers, meta fields) ── */
+.section-kicker {
+	font-family: var(--font-mono);
+	font-size: 0.625rem;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--text-faint);
+}
+
+/* ── Density compact toggle ── */
+.density-compact {
+	--cpad: 1rem;
+}
+
+/* Prevent mobile browsers (notably Chrome on Android) from auto-inflating
+   text — "font boosting" overrides explicit small font-sizes on wide text
+   blocks, which breaks fixed-width terminal layout and any fit-to-width sizing. */
+html, body {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+body {
+	background-image: var(--mud-palette-background-gradient);
+	background-size: 200% 200%;
+}
+

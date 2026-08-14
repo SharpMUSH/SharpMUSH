@@ -1,0 +1,15 @@
+/* Global overrides that cannot live in a scoped .razor.css file — see each rule for why. */
+
+/* CharacterPicker popover width. Global (not scoped .razor.css) because the class sits
+   on the component's root <MudPaper>, which carries MudPaper's scope, not the picker's —
+   a scoped `::deep` rule has no HTML ancestor to anchor to. */
+.char-picker {
+	min-width: 320px;
+}
+@media (max-width: 760px) {
+	.char-picker {
+		min-width: 0;
+		width: 100%;
+		box-sizing: border-box;
+	}
+}

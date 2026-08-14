@@ -10,7 +10,13 @@ namespace SharpMUSH.Tests.BUnit.Resources;
 /// </summary>
 public class MonoFontStackTests
 {
-	private static string Css() => File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "custom.css"));
+	// The stylesheet is split by responsibility (tokens / shell / utilities / syntax / globals),
+	// so these assertions read the folder as one sheet rather than pinning a filename that the
+	// next split would silently invalidate.
+	private static string Css() =>
+		string.Join("\n", Directory.EnumerateFiles(Path.Join(AppContext.BaseDirectory, "client", "css"), "*.css")
+			.OrderBy(f => f, StringComparer.Ordinal)
+			.Select(File.ReadAllText));
 
 	private static IEnumerable<string> ComponentSources() =>
 		Directory.EnumerateFiles(Path.Join(AppContext.BaseDirectory, "client", "razor"), "*.*", SearchOption.AllDirectories)
