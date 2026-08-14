@@ -144,6 +144,26 @@ public class ResponsiveConventionsTests
 
 	private static readonly string[] SanctionedTiers = ["48rem", "64rem", "90rem"];
 
+	/// <summary>
+	/// Narrow and medium are downgrades applied as the container shrinks, so they gate on
+	/// <c>max-width</c>. Roomy is an upgrade applied as the container grows, so it gates on
+	/// <c>min-width</c> — the spec's tier table defines it that way explicitly. A <c>max-width:
+	/// 90rem</c> (or wider) tier is not just off-spec: the shell caps <c>.phosphor-page</c> at
+	/// <c>--content-max</c> (1400px) above a 1601px viewport, so a threshold above 1400px is
+	/// either unreachable at ordinary viewports or — when the sidebar is collapsed instead of
+	/// expanded — flickers as the container crosses the 1400px cap and the threshold in the same
+	/// narrow window (verified live: widening from 1600px to 1601px snaps a `max-width: 90rem`
+	/// tier from unstacked to stacked, because the container drops from 1538px straight to the
+	/// 1400px cap). This shipped once already, silently, because the literal-only regex above
+	/// accepts either direction for any sanctioned value.
+	/// </summary>
+	private static readonly Dictionary<string, string> RequiredTierDirection = new(StringComparer.Ordinal)
+	{
+		["48rem"] = "max",
+		["64rem"] = "max",
+		["90rem"] = "min",
+	};
+
 	[Test]
 	public async Task PagesQueryTheirContainerRatherThanTheViewport()
 	{
@@ -241,6 +261,29 @@ public class ResponsiveConventionsTests
 
 		await Assert.That(offenders).IsEmpty()
 			.Because($"tiers drift into a private set of breakpoints unless they are fixed at {string.Join(" / ", SanctionedTiers)}");
+	}
+
+	[Test]
+	public async Task SanctionedTiersUseTheCorrectDirection()
+	{
+		var offenders = new List<string>();
+
+		foreach (var file in ScopedStylesheets())
+		{
+			foreach (Match m in Regex.Matches(StripComments(File.ReadAllText(file)), @"@container[^{]*?\(\s*(?<dir>min|max)-width:\s*(?<value>[^)]+)\)"))
+			{
+				var value = m.Groups["value"].Value.Trim();
+				var dir = m.Groups["dir"].Value;
+				if (RequiredTierDirection.TryGetValue(value, out var required) && dir != required)
+					offenders.Add($"{Rel(file)}: {dir}-width: {value} (must be {required}-width)");
+			}
+		}
+
+		await Assert.That(offenders).IsEmpty()
+			.Because("narrow/medium gate on max-width (a downgrade as the container shrinks) and "
+				+ "roomy gates on min-width (an upgrade as the container grows); a max-width tier at "
+				+ "90rem or wider sits above the shell's 1400px content cap, so it is unreachable or "
+				+ "flicker-prone rather than merely off-spec");
 	}
 
 	[Test]

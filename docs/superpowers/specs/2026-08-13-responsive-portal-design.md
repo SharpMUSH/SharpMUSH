@@ -105,6 +105,16 @@ shadows, fixed dimensions and radii in `px`):
 | Medium | `@container page (max-width: 64rem)` | 3+ column grids → 2; fixed sidecars (230–340px) stack; portrait tablet and thin desktop windows land here |
 | Roomy | `@container page (min-width: 90rem)` | optional richer layouts; most pages need nothing |
 
+Roomy gates on `min-width`, not `max-width` — it is an upgrade applied as the container grows,
+the reverse of narrow/medium. A `max-width` tier at 90rem or wider is not just off-spec: the
+shell caps `.phosphor-page` at `--content-max` (1400px) once the viewport passes 1601px (see
+below), so a `max-width` threshold above 1400px is either unreachable at ordinary viewports
+(the container simply never gets that wide with a sidebar subtracted) or, worse, flickers —
+with the sidebar collapsed, widening the window from 1600px to 1601px snaps the container from
+just under the cap straight down to it, re-crossing a >1400px threshold in the same pixel. This
+cost a round of review on Task 9 before the guard test learned to check tier direction, not just
+the literal.
+
 Tiers nest by width, not by device. A page in a narrow content column on a 27" monitor
 gets the narrow layout, which is the correct answer and one the old model got wrong.
 

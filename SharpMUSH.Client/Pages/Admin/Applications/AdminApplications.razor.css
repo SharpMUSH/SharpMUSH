@@ -84,12 +84,13 @@
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 1rem;
 }
-/* At a 1280px viewport with the sidebar expanded (232px), the container is exactly
-   1280 - 232 = 1048px — past the medium tier's 64rem/1024px cutoff, so a 340px rail still
-   leaves under 710px for a detail pane designed against 940px. The roomy tier (90rem) is the
-   sanctioned literal that actually covers 1048px; verified against the running app rather
-   than inferred, since 64rem alone leaves the documented case unfixed. */
-@container page (max-width: 90rem) {
+/* Fixed sidecars (230-340px) stack at the medium tier per the spec's tier table. A 1048px
+   container (1280px viewport, sidebar expanded) leaves a 708px detail pane, which measured
+   clean at every width down to ~950px — the medium tier's 64rem/1024px cutoff is correct as
+   written; a wider threshold was tried and reverted (see task-9 review) because the shell caps
+   .phosphor-page at 1400px above a 1601px viewport, making any max-width tier above 1400px
+   unreachable or flicker-prone in practice. */
+@container page (max-width: 64rem) {
     .appadmin-grid { grid-template-columns: 1fr; }
 }
 
