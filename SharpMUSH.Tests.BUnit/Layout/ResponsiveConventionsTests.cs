@@ -84,9 +84,6 @@ public class ResponsiveConventionsTests
 	/// </summary>
 	private static readonly HashSet<string> NotYetMigrated = new(StringComparer.Ordinal)
 	{
-		"Components/Widgets/RecentWikiActivityWidget.razor.css",
-		"Components/Widgets/WikiBodyWidget.razor.css",
-		"Components/Widgets/WikiIndexWidget.razor.css",
 		"Pages/Account.razor.css",
 		"Pages/CharacterProfile.razor.css",
 		"Pages/Characters.razor.css",
@@ -110,10 +107,6 @@ public class ResponsiveConventionsTests
 		"Pages/SoftcodeEditor.razor.css",
 		"Pages/WikiPageDiff.razor.css",
 		"Pages/WikiPageHistory.razor.css",
-
-		// No @media to convert, but !important to remove, so they are exempt until their batch
-		// reaches them — MigratedStylesheetsCarryNoImportantDeclarations reads this same list.
-		"Components/Widgets/CharacterDirectoryWidget.razor.css",
 	};
 
 	/// <summary>

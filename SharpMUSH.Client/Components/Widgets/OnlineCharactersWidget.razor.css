@@ -1,0 +1,26 @@
+/* Wrapping div, not a class handed to the MudPaper below: a class handed to a MudBlazor
+   component lands on its outer wrapper, which never carries this file's scope attribute, so a
+   non-::deep rule targeting it would silently match nothing. This div is literal HTML, so it
+   reliably sizes the widget to whichever box it gets — home page, zone cell, or an
+   admin-configured aside. */
+.online-characters-widget {
+    container-type: inline-size;
+    height: 100%;
+}
+
+.online-characters-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.3125rem 0;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+/* A long character name has no natural break point; without min-width:0 a flex child keeps
+   its content's full width and pushes the row wider than a narrow aside instead of eliding. */
+.online-characters-row ::deep .mud-link {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

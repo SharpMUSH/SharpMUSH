@@ -1,0 +1,21 @@
+/* Wrapping div, not a class handed to the MudPaper branches below: this widget swaps between
+   three different roots (skeleton / live card / empty card) depending on load state, and a
+   class on a MudBlazor component's own tag lands on its outer wrapper, which never carries
+   this file's scope attribute — a non-::deep rule targeting it would silently match nothing.
+   This div is literal HTML that exists in every state, giving the widget one consistent box
+   to size itself against on the home page, in a zone cell, and in an admin-configured aside. */
+.active-scene-widget {
+    container-type: inline-size;
+    height: 100%;
+}
+
+/* The status chip and scene title sit in a row with no wrap; a long title in a narrow aside
+   would otherwise push the row wider than the card. Wrapping is a continuous fix — it reflows
+   at whatever width the container turns out to be, without a discrete breakpoint. */
+.active-scene-widget-head {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}

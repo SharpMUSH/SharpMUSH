@@ -1,10 +1,30 @@
+/* This widget renders full-width on the home page, in a 12-column zone cell, and in an
+   admin-configured widget aside from the same admin-authored markdown, so its own box is the
+   only width it can trust. */
 .welcome-text-widget {
+    container-type: inline-size;
     max-width: 100%;
     min-width: 0;
     overflow-wrap: break-word;
 }
 
-.welcome-text-widget img {
+/* The markdown renders as a raw MarkupString (see WelcomeTextWidget.razor), so img is never
+   part of this component's own render tree and never carries the scope attribute; ::deep is
+   required for the rule to match at all — without it this was dead CSS. */
+.welcome-text-widget ::deep img {
     max-width: 100%;
     height: auto;
+}
+
+/* Admin-authored markdown can contain a code block or table of any width; scroll it inside
+   the widget instead of forcing the widget (and its aside) wider, at any container size.
+   ::deep is required: the markdown renders as a raw MarkupString, so these elements never
+   carry the scope attribute themselves. */
+.welcome-text-widget ::deep pre {
+    overflow-x: auto;
+}
+.welcome-text-widget ::deep table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
 }

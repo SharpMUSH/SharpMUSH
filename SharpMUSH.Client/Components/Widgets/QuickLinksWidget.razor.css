@@ -1,0 +1,10 @@
+/* Renders in the sidebar zones (a vertical MudNavMenu), the topbar/footer zones (a wrapping
+   MudStack of chips), and inside an admin-configured aside — every rendering already reflows
+   on its own (Wrap="Wrap.Wrap" on the chip row, a naturally vertical nav list), so no explicit
+   tier is needed here. container-type is declared for consistency with the rest of the widget
+   set and so this widget's own box, not the viewport, is what any future rule here would
+   query. Only wraps the has-links branch in QuickLinksWidget.razor — the no-links,
+   non-admin state must still render nothing at all, not an empty box. */
+.quick-links-widget {
+    container-type: inline-size;
+}

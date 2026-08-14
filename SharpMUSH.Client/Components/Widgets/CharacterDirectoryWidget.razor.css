@@ -1,4 +1,28 @@
+/* This widget renders full-width on /characters, in a 12-column zone cell, and in an
+   admin-configured widget aside — container-type makes the grid below measure its own box
+   rather than guessing from the viewport. */
+.char-dir-widget {
+    container-type: inline-size;
+}
+
 ::deep .char-card:hover {
-    border-color: var(--accent) !important;
-    background: var(--surface-2) !important;
+    border-color: var(--accent);
+    background: var(--surface-2);
+}
+
+/* min(260px, 100%) rather than a plain 260px track: a container narrower than 260px (the
+   280px admin aside, minus its padding, is already close) would otherwise force the grid
+   wider than its own box. Clamping the track to 100% when the box is smaller than 260px
+   keeps this correct continuously, at any width, without a discrete breakpoint. */
+.char-dir-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.char-dir-grid--loading {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+    gap: 0.875rem;
 }
