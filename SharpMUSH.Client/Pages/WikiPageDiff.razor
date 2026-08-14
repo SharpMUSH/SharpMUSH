@@ -8,7 +8,7 @@
 
 <PageTitle>@Loc["WkDiffPageTitle", Slug] — @Loc["AppTitle"]</PageTitle>
 
-<div class="wikidiff">
+<div class="wikidiff full-bleed">
     <a class="wikidiff-back" href="@($"/wiki/{Ns}/{Category}/{Slug}/history{(string.IsNullOrWhiteSpace(Lang) ? "" : $"?lang={Uri.EscapeDataString(Lang)}")}")">
         <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["WkRevisionHistory"]
     </a>

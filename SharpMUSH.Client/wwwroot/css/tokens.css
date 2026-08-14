@@ -88,6 +88,13 @@
 	   Sizing is rem (16px root) so type + spacing honor the user's browser font size;
 	   borders, shadows, fixed dimensions, radii, and breakpoints stay px. */
 	--cpad-mobile: 1rem;
+	/* Reading-width cap for the wide tier. A fixed dimension, so px (see the unit rule). */
+	--content-max: 1400px;
+	/* Documentation only: container tiers are 48rem / 64rem / 90rem. A @container condition
+	   cannot read a custom property any more than a @media condition can. */
+	--tier-narrow: 48rem;
+	--tier-medium: 64rem;
+	--tier-roomy: 90rem;
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
 	--font-mono: "Cascadia Mono", "DejaVu Sans Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;

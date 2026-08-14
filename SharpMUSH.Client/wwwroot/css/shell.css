@@ -139,6 +139,30 @@
 	padding-bottom: 18.75rem;
 }
 
+/* The seam between shell and page CSS. The shell decides how much width the content column
+   gets; pages ask this container how much they got. Nothing else in the portal declares a
+   container named 'page'. */
+.phosphor-page {
+	container: page / inline-size;
+	min-height: 100%;
+}
+
+/* Working surfaces (terminal, editors, diff views) opt out of the reading cap by putting
+   `full-bleed` on their own root element — a page cannot set a class on its ancestor, and
+   :has() removes the need for a cascading parameter to do it. They are also the pages that
+   size themselves to the viewport, so the wrapper passes a definite height through. */
+.phosphor-page:has(> .full-bleed) {
+	max-width: none;
+	height: 100%;
+}
+
+@media (min-width: 1601px) {
+	.phosphor-page {
+		max-width: var(--content-max);
+		margin-inline: auto;
+	}
+}
+
 /* ── Widget aside columns (left / right sidebar zones) ── */
 .phosphor-widget-aside {
 	flex-shrink: 0;

@@ -5,8 +5,15 @@
 
 <PageTitle>@Loc["WikiEdit"]: @Slug</PageTitle>
 
-<WikiView @key="@($"{Ns}:{Category}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns" Category="@Category"
-          Locale="@Lang" Mode="WikiView.WikiMode.Edit" />
+@* WikiView is shared with the read-only /wiki route, which wants the reading-width cap, so the
+   full-bleed opt-out can't live on WikiView itself; this page wraps it instead. The wrapper needs
+   its own height:100% because .phosphor-page only passes height through to a DIRECT full-bleed
+   child (see shell.css) — WikiEdit's own root sizes to height:100%, and without this the wrapper
+   would only be as tall as its content. *@
+<div class="full-bleed" style="height:100%;">
+    <WikiView @key="@($"{Ns}:{Category}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns" Category="@Category"
+              Locale="@Lang" Mode="WikiView.WikiMode.Edit" />
+</div>
 
 @code {
     [Parameter]
