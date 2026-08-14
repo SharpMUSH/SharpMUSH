@@ -201,10 +201,16 @@ Deliberately **not** adopted: `light-dark()` (theming is DB-driven CSS variables
 transitions (SPA routing needs JS orchestration; out of scope), `@property`, `@container
 style()`.
 
-**Spike before use:** native CSS nesting. It is unverified whether .NET 10's scoped-CSS
-rewriter, which rewrites selectors to add the `[b-xxxxx]` attribute, handles nested rules
-correctly. Nesting is permitted in the global files only until a spike proves the
-rewriter handles it; the spike is the first task in the plan.
+**Spike before use:** native CSS nesting — verified: the rewriter scopes nested rules
+correctly; nesting is permitted in scoped stylesheets. A scoped `EmptyState.razor.css`
+with `.nesting-spike { & .child { } @container (max-width: 48rem) { } }` built and
+emitted `.nesting-spike[b-pi9wsximhx] { ... & .child { ... } @container (...) { ... } }`
+— the rewriter appends `[b-xxxxx]` only to the outer top-level selector and leaves the
+nested `& .child` rule and the nested `@container` block untouched. That is sufficient:
+the browser resolves `&` against the already-scoped parent selector, so `& .child`
+desugars to `.nesting-spike[b-xxxxx] .child`, and the `@container` block's declarations
+stay attached to the scoped `.nesting-spike[b-xxxxx]` rule. Nesting is permitted in
+scoped (`*.razor.css`) files, not just global ones.
 
 ## Work breakdown
 
