@@ -1,0 +1,19 @@
+/* Rendered into MudBlazor's body-level portal, so there is no .phosphor-page ancestor to
+   query. The dialog is its own container. */
+.role-edit-dialog {
+    container-type: inline-size;
+}
+
+/* MudGrid's sm breakpoint is a real @media (min-width:600px), driven by the viewport — not
+   by this dialog's own width. A wide desktop viewport keeps every MudItem sm="6" pair side
+   by side even while the dialog box itself is well under 48rem, cramping the two fields.
+   Overriding MudGrid's own class needs ::deep since MudItem stamps it on a div this
+   component's own markup never wrote — .role-edit-dialog carries this component's scope
+   attribute (it is our own literal element), so leading with it here is not the trap: unlike
+   a class passed to a MudBlazor component, this anchor really does carry [b-xxx]. */
+@container (max-width: 48rem) {
+    .role-edit-dialog ::deep .mud-grid-item-sm-6 {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+}

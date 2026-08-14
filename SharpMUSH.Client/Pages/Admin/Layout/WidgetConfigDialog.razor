@@ -4,27 +4,29 @@
 
 <MudDialog>
     <DialogContent>
-        @if (IsSpacer)
-        {
-            <MudText Typo="Typo.body2" Class="mb-3" Style="color:var(--text-dim);">
-                @Loc["LaySpacerHelp"]
-            </MudText>
-            <MudNumericField @bind-Value="_height" Label="@Loc["LaySpacerHeight"]" Variant="Variant.Outlined"
-                             Min="0" Max="600" Step="4" />
-        }
-        else
-        {
-            <MudText Typo="Typo.body2" Class="mb-2" Style="color:var(--text-dim);">
-                @((MarkupString)string.Format(Loc["LayConfigJsonHelp"].Value, $"<strong>{WebUtility.HtmlEncode(WidgetName)}</strong>"))
-            </MudText>
-            <MudTextField @bind-Value="_json" Variant="Variant.Outlined" Lines="10"
-                          Label="@Loc["LayConfigJsonLabel"]" Class="layout-config-json"
-                          Style="font-family:var(--font-mono);font-size:0.78125rem;" />
-            @if (_error is not null)
+        <div class="widget-config-dialog">
+            @if (IsSpacer)
             {
-                <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-1">@_error</MudText>
+                <MudText Typo="Typo.body2" Class="mb-3" Style="color:var(--text-dim);">
+                    @Loc["LaySpacerHelp"]
+                </MudText>
+                <MudNumericField @bind-Value="_height" Label="@Loc["LaySpacerHeight"]" Variant="Variant.Outlined"
+                                 Min="0" Max="600" Step="4" />
             }
-        }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mb-2" Style="color:var(--text-dim);">
+                    @((MarkupString)string.Format(Loc["LayConfigJsonHelp"].Value, $"<strong>{WebUtility.HtmlEncode(WidgetName)}</strong>"))
+                </MudText>
+                <MudTextField @bind-Value="_json" Variant="Variant.Outlined" Lines="10"
+                              Label="@Loc["LayConfigJsonLabel"]" Class="layout-config-json"
+                              Style="font-family:var(--font-mono);font-size:0.78125rem;" />
+                @if (_error is not null)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-1">@_error</MudText>
+                }
+            }
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">@Loc["Cancel"]</MudButton>

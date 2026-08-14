@@ -15,6 +15,15 @@ dotnet run --project SharpMUSH.Client               # https://localhost:7102
 A dev build of the Server does **not** serve the WASM client, so the sweep drives the
 Client's own dev host on 7102.
 
+**Restart the Client dev host after any `dotnet build`/`dotnet run` that touches
+`SharpMUSH.Client`, before sweeping.** Building or running the project while its dev host is
+already live regenerates the fingerprinted `_framework` bundle out from under the running
+server: `index.html` keeps referencing the old hash, that URL 404s, and the app fails to boot
+with "Failed to start platform". Any sweep launched in that window measures nothing —
+every route lands on a blank boot failure, not a real render. This has cost multiple sessions
+real time; before trusting a sweep, fetch `index.html`, extract the exact hashed
+`_framework/dotnet.*.js` it references, and confirm that URL itself returns 200.
+
 On a fresh database, complete first-run setup before sweeping:
 
 ```bash

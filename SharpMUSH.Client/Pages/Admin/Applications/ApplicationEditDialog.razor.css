@@ -1,0 +1,19 @@
+/* Rendered into MudBlazor's body-level portal, so there is no .phosphor-page ancestor to
+   query. The dialog is its own container. */
+.application-edit-dialog {
+    container-type: inline-size;
+}
+
+/* MudGrid's sm/md breakpoints are real @media queries keyed to the viewport, not to this
+   dialog's own width, so a wide desktop viewport keeps every two- or three-across row even
+   while the dialog itself is well under 48rem. ::deep is required because MudItem stamps
+   these classes on a div this component's markup never wrote; .application-edit-dialog is
+   our own literal element and does carry this component's scope attribute, so leading with
+   it here is not the ::deep trap. */
+@container (max-width: 48rem) {
+    .application-edit-dialog ::deep .mud-grid-item-sm-6,
+    .application-edit-dialog ::deep .mud-grid-item-sm-4 {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+}

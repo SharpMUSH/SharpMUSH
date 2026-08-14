@@ -6,23 +6,25 @@
 
 <MudDialog>
     <DialogContent>
-        <MudGrid>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_slug" Label="@Loc["RolSlugLabel"]" Required="true" Variant="Variant.Outlined"
-                              Disabled="@(!_isNew)" HelperText="@Loc["RolSlugHelper"]" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_name" Label="@Loc["RolNameLabel"]" Required="true" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_color" Label="@Loc["RolColorLabel"]" Variant="Variant.Outlined"
-                              HelperText="@Loc["RolColorHelper"]" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField @bind-Value="_priority" Label="@Loc["RolPriorityLabel"]" Variant="Variant.Outlined"
-                                 HelperText="@Loc["RolPriorityHelper"]" />
-            </MudItem>
-        </MudGrid>
+        <div class="role-edit-dialog">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_slug" Label="@Loc["RolSlugLabel"]" Required="true" Variant="Variant.Outlined"
+                                  Disabled="@(!_isNew)" HelperText="@Loc["RolSlugHelper"]" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_name" Label="@Loc["RolNameLabel"]" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_color" Label="@Loc["RolColorLabel"]" Variant="Variant.Outlined"
+                                  HelperText="@Loc["RolColorHelper"]" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="_priority" Label="@Loc["RolPriorityLabel"]" Variant="Variant.Outlined"
+                                     HelperText="@Loc["RolPriorityHelper"]" />
+                </MudItem>
+            </MudGrid>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="_saving">@Loc["Cancel"]</MudButton>

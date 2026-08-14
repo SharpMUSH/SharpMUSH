@@ -95,6 +95,13 @@
 	--tier-narrow: 48rem;
 	--tier-medium: 64rem;
 	--tier-roomy: 90rem;
+	/* Space reserved above the fixed touch-chrome bottom nav. Zero here; shell.css redefines
+	   it to the bar's real height only while `.phosphor-shell--bottomnav` is on screen, so a
+	   page's own sticky-bottom chrome (e.g. a save bar) can read this custom property instead
+	   of duplicating the media query — custom properties inherit through the DOM regardless of
+	   Blazor's CSS scope attribute, so a scoped stylesheet can consume it with no @media of its
+	   own. */
+	--bottomnav-clearance: 0px;
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
 	--font-mono: "Cascadia Mono", "DejaVu Sans Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;

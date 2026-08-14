@@ -1361,9 +1361,14 @@
 		-webkit-backdrop-filter: blur(10px);
 		border-top: 1px solid var(--border-soft);
 	}
-	/* Keep page content clear of the fixed bar. */
+	/* Keep page content clear of the fixed bar. Also exposed as --bottomnav-clearance (see
+	   tokens.css) so a page's own sticky-bottom chrome can read the same offset without a
+	   media query of its own. */
+	.phosphor-shell--bottomnav {
+		--bottomnav-clearance: calc(3.625rem + env(safe-area-inset-bottom));
+	}
 	.phosphor-shell--bottomnav .phosphor-main {
-		padding-bottom: calc(3.625rem + env(safe-area-inset-bottom));
+		padding-bottom: var(--bottomnav-clearance);
 	}
 	/* When the terminal drawer is open it grows to 70svh and covers the bottom bar,
 	   so the content offset must match the drawer (not the 300px desktop value).

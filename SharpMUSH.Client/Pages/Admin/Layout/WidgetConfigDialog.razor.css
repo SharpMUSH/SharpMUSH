@@ -1,0 +1,8 @@
+/* Rendered into MudBlazor's body-level portal, so there is no .phosphor-page ancestor to
+   query. The dialog declares its own container; there is currently nothing inside it wide
+   enough to need a narrow-tier override (the JSON textarea and numeric field are already
+   single-column), but the declaration keeps this dialog consistent with the others and
+   ready for the day its content grows a second column. */
+.widget-config-dialog {
+    container-type: inline-size;
+}
