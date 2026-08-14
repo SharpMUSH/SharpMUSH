@@ -15,12 +15,26 @@ dotnet run --project SharpMUSH.Client               # https://localhost:7102
 A dev build of the Server does **not** serve the WASM client, so the sweep drives the
 Client's own dev host on 7102.
 
-On a fresh database, complete first-run setup (`https://localhost:7102/setup`, or
-`POST /api/setup/complete`) before sweeping. While a game is unclaimed, MainLayout redirects
-every route to `/setup` — sometimes, since whether that fires races the debug-auth bootstrap
-call on each full page load. Left unclaimed, the sweep doesn't fail outright, but silently
-measures a mix of real pages and the same small claim form substituted in for them, which
-reads as full coverage while actually being much less.
+On a fresh database, complete first-run setup before sweeping:
+
+```bash
+curl -sk https://localhost:8081/api/setup/status          # {"needsSetup":true} means unclaimed
+curl -sk -X POST https://localhost:8081/api/setup/complete \
+  -H 'Content-Type: application/json' \
+  -d '{"Username":"SweepAdmin","Password":"a-password-8-or-more"}'
+```
+
+While a game is unclaimed, MainLayout redirects every route to `/setup` — *sometimes*, since
+whether it fires races the debug-auth bootstrap on each full page load, and the bounce can land
+several seconds after the page first renders. This used to be the harness's worst failure mode:
+`/setup` renders under OnboardingLayout, so it has a perfectly measurable `.onboarding-body`,
+and the sweep would measure the small claim form, find it clean, and file that result under
+whichever route had been requested. Full-looking coverage, an unknown share of it fictional.
+
+The sweep now detects this: any route that lands on `/setup` without having asked for it is
+recorded as `NOT MEASURED` and gates (exit `1`), with a message naming the cause. An unclaimed
+game can no longer produce a clean sweep. It is still worth claiming the game first, because
+otherwise most of the run is failures rather than measurements.
 
 ## Setup
 
@@ -85,6 +99,81 @@ appending output) pays that ceiling once and moves on rather than hanging. A fur
 sequence as defense in depth, from the Node side, so nothing inside the page can stall the
 sweep past it.
 
+## What is measured, and why not the document
+
+The obvious metric — `document.scrollingElement.scrollWidth` vs `window.innerWidth` — **cannot
+fire on this app**, and an early version of this harness shipped with it. `.phosphor-shell` is
+`position: absolute; inset: 0; overflow: hidden` (`shell.css`), so the document is pinned to the
+viewport regardless of what any page does. A baseline taken that way reported 0 overflow across
+192 route/width pairs on three byte-identical runs. It was measuring nothing. A 5000px canary
+injected into `.phosphor-page` moved that metric by exactly 0px.
+
+The real scroll containers are measured instead, `scrollWidth` vs `clientWidth`, with 1px of
+slack for sub-pixel rounding:
+
+| Container | Role |
+|---|---|
+| `.phosphor-page` | the box pages render into, and the one page CSS `@container`-queries |
+| `.phosphor-main` | the scroll pane wrapping it |
+| `.onboarding-body` | OnboardingLayout's equivalent (`/login`, `/setup`), which has neither of the above |
+
+`.phosphor-main` declares only `overflow-y: auto`, but its computed `overflow-x` is `auto`, not
+`visible` — CSS promotes `visible` to `auto` when the other axis is not visible. Over-wide
+content there becomes a horizontal scrollbar inside the content column rather than being clipped
+away. Either way the document never moves, so either way the old metric was blind to it.
+
+Every failure line names the container it came from, so a reader can tell a page-level overflow
+from a shell-level one:
+
+```
+390px /admin/players: .phosphor-page scrollWidth 812 > clientWidth 390 — widest: table.mud-table +422px
+```
+
+A route where **none** of the three containers is present is recorded as `NOT MEASURED` and
+gates (exit `1`). It is never silently dropped: a pair that was never checked is otherwise
+indistinguishable in the results from one that came back clean.
+
+### Element-level attribution is a hint, not a gate
+
+When a container overflows, the sweep walks its descendants and names the three that stick out
+furthest. "This page overflows" is a poor work item; "`table.mud-table` sticks out 422px" is
+actionable.
+
+This deliberately does **not** gate. Element-level checks have a real false-positive surface —
+off-canvas drawers, fixed overlays, and the sanctioned `.scroll-x` pattern in `utilities.css`
+all legitimately extend past their parent — and a gate that cries wolf gets ignored, which is
+the same failure as a gate that cannot fire. Because attribution only ever annotates a container
+failure that has already been established on its own, a false positive here costs a misleading
+hint and can never cause a false failure or a false pass. Elements sitting inside an ancestor
+that scrolls or clips horizontally are excluded outright: they are either the sanctioned escape
+hatch or already clipped, and in neither case are they what pushed the container wide.
+
+## Gate self-test
+
+Every sweep proves its own gate before measuring anything, and aborts with exit `3` if the proof
+fails. On `/` (MainLayout) and `/login` (OnboardingLayout), at all four widths, it:
+
+1. measures the containers,
+2. injects a canary `viewport + 1000` px wide into the live page,
+3. re-measures **through the same `measureContainers` + `isOverflowing` path the sweep uses** —
+   not a parallel reimplementation, which would prove nothing about the code that gates,
+4. removes the canary and measures once more.
+
+Three assertions, because a gate stuck ON is as useless as one stuck OFF:
+
+- the canary must raise a failure,
+- the largest overhang must be *greater than it was before injection* — so the gate is
+  responding to the canary rather than being pinned on by pre-existing damage,
+- the reading must return exactly to its pre-injection value, proving the gate clears and the
+  canary left no residue to poison later pairs.
+
+The comparison is against the page's own prior reading rather than against zero, so a route that
+already overflows is still a valid host for the test.
+
+This exists because three agreeing runs of a dead gate agree perfectly. Determinism is not
+correctness; the only thing separating "clean" from "blind" is watching the gate go off on
+demand.
+
 ## Progress output and teardown
 
 Progress goes to stderr, one line per route/width pair, with the pair announced *before* it is
@@ -110,18 +199,24 @@ prints `Warning: browser did not shut down cleanly` and the exit code is still d
 
 ## Exit codes
 
-- `0` — no horizontal overflow, and every route loaded, on every swept route/width pair.
-- `1` — one or more routes overflowed, or one or more routes failed to load (or never
-  rendered within the readiness wait above). Both categories are listed separately on
-  stderr — a route that fails to load is not the same finding as a route that overflows, and
-  a caller needs to tell them apart.
+- `0` — every pair was measured, and none overflowed.
+- `1` — one or more pairs overflowed, failed to load, or could not be measured. The three
+  categories are listed separately on stderr; they are different findings and a caller needs to
+  tell them apart.
 - `2` — the dev stack itself could not be reached at all (`BASE` didn't answer over HTTP).
   Checked once, up front, independent of whether any individual route renders correctly, so a
   down server and a broken route can never be confused for each other, and neither can be
   confused with `1`.
+- `3` — the gate self-test failed: the canary did not raise a failure, did not respond to the
+  canary specifically, or did not clear afterwards. **No sweep results are reported at all** in
+  this case, deliberately — a gate that cannot be shown to fire cannot certify anything, and
+  printing a clean-looking list from it is precisely the laundering this harness exists to
+  prevent.
 
 Screenshot capture outcome does not affect the exit code; it is reported on its own line
-instead. See "Screenshots" below for why.
+instead. See "Screenshots" below for why. Unmeasured pairs *do* gate, unlike capture: they are
+not an environment fault but a case of the gate being handed a page it does not understand and
+returning no verdict on it.
 
 A single bad route no longer aborts the run: `sweep.mjs` records the failure and continues to
 the next route/width pair, so one broken page can't hide overflow data on the other 47.
