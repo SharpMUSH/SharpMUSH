@@ -1017,26 +1017,32 @@ narrow tier:
 ```css
 /* MudTable renders a real <table>, which cannot reflow. Below the narrow tier the rows become
    stacked blocks, each cell labelled from its column header via the data-label attribute the
-   markup sets. */
+   markup sets.
+
+   ::deep leads the selector, and must. Blazor stamps the scope attribute only on elements the
+   page's own markup declares; the class handed to <MudTable> lands on a <table> MudTable
+   renders internally, which never carries it. Anchoring as `::deep .accounts-table thead`
+   compiles to `.accounts-table[b-xxx] thead` and matches nothing at any width. A leading
+   ::deep compiles to `[b-xxx] .accounts-table thead`, anchored on the page's own wrapper. */
 @container page (max-width: 48rem) {
-    .accounts-table ::deep thead {
+    ::deep .accounts-table thead {
         display: none;
     }
 
-    .accounts-table ::deep tr {
+    ::deep .accounts-table tr {
         display: block;
         border-bottom: 1px solid var(--border);
         padding-block: 0.5rem;
     }
 
-    .accounts-table ::deep td {
+    ::deep .accounts-table td {
         display: grid;
         grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
         gap: 0.5rem;
         border: none;
     }
 
-    .accounts-table ::deep td::before {
+    ::deep .accounts-table td::before {
         content: attr(data-label);
         color: var(--text-dim);
         font-size: 0.8125rem;
@@ -1048,6 +1054,13 @@ Add `Class="accounts-table"` to the `MudTable` in `Pages/Admin/AdminAccounts.raz
 `data-label="@Loc["…"]"` to each `MudTd`, reusing the localizer key already used for that
 column's header so no new resx key is needed. Then remove `Pages/Admin/AdminAccounts.razor`
 from `PagesWithoutStylesheetByDesign` in the guard test.
+
+The pattern is easy to get wrong in exactly one way, so verify it rather than eyeballing it:
+load the page and assert the table element actually matches the compiled selector (in the
+browser console, `document.querySelector('table').matches('[b-xxxxx] .accounts-table')`). A
+table can *look* stacked while this rule is dead, because MudBlazor's own `mud-xs-table`
+feature uses the same `data-label` attribute — but it is viewport-driven, so it misses the
+sidebar-expanded and wide-aside cases this whole plan exists to handle.
 
 Apply the same treatment to the `MudTable` in `Pages/Admin/Packages/AdminPackageRemotes.razor`
 and `AdminPackageReview.razor` in Task 9, and `Pages/Account.razor` in Task 13.
@@ -1126,7 +1139,11 @@ Commit message: `Stack the admin sidecar layouts before they run out of room`
 - Modify: `Components/WikiDisplay.razor.css` — `minmax(0, 1fr) 220px` TOC sidecar at line 8; keep the `position: sticky` TOC
 - Modify: `Components/WikiEdit.razor.css` — `1fr 1fr` split at line 97; add `field-sizing: content` to the editor textarea
 - Modify: `Layout/AccountPanel.razor.css`
-- Modify: `Layout/ConfigLayout.razor.css` — `230px 1fr` at line 4
+- Modify: `Layout/ConfigLayout.razor.css` — `230px 1fr` at line 4. **Measured defect:** at 390px
+  the nav stacks above the body and is 1273.75px tall, so `.config-section-body` starts at
+  y≈1378 — roughly 1.5 screens of scrolling before any `/admin/config/*` page content is
+  reachable. Collapse or otherwise shorten the nav at the narrow tier; the tiers Task 7 added
+  to BannedNames, ImportConfig and ConfigIndex are correct but unreachable until this is fixed
 - Modify: `Layout/OnboardingLayout.razor.css` — no breakpoints today
 - Create: `Components/Help/HelpEntryPanel.razor.css` additions (file exists, no breakpoints)
 - Modify: `Components/ObjectBrowser.razor.css` — no breakpoints today
