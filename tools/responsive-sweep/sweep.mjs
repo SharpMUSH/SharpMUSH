@@ -4,9 +4,12 @@
 import { chromium } from 'playwright-core';
 import { readFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const BASE = process.env.SWEEP_BASE ?? 'https://localhost:7102';
-const OUT = new URL('./out/', import.meta.url).pathname;
+// fileURLToPath, not `.pathname`: the latter leaves percent-encoding intact (a repo checked out
+// under a path with a space yields `%20`) and prefixes a drive letter on Windows (`/C:/...`).
+const OUT = fileURLToPath(new URL('./out/', import.meta.url));
 
 // Portrait phone, portrait tablet, thin desktop window, fullscreen desktop.
 const WIDTHS = [
@@ -35,6 +38,7 @@ const screenshotsEnabled = !process.argv.includes('--no-screenshots');
 const routes = JSON.parse(await readFile(new URL('./routes.json', import.meta.url), 'utf8'));
 const all = [...routes.public, ...routes.authenticated, ...routes.admin];
 const skipped = routes.parameterized ?? [];
+const expectedRedirects = routes.expectedRedirects ?? {};
 
 // Printed first and unconditionally: routes.json parsing is the only thing that can happen
 // before this. Every later step can fail or abort, and a reader who lands on a failure needs
@@ -85,30 +89,44 @@ try {
 // round-trip; if one lands mid-navigation it just throws and gets treated as "still changing"
 // rather than wedging the wait. The loop is bounded by MAX_MS regardless, so a page that never
 // stops mutating (a live terminal appending output) pays that ceiling once and moves on.
-// The stability key is DOM size *and* pathname, not DOM size alone. Several routes exist only
-// to bounce old bookmarks somewhere else (`/admin/restrictions` → `/admin/config/restrictions`,
-// and the bannednames/sitelock/settings-characters aliases beside it), and a client-side
-// redirect can leave the DOM briefly the same size while the location has already moved. Keying
-// on size alone let those routes settle against whichever page happened to be mounted at the
-// moment the window elapsed: two otherwise identical baseline runs disagreed by exactly one
-// pair, `390px /admin/restrictions`, present in one and absent in the other. Folding the
-// pathname into the key makes a redirect reset the stability window, so the measurement always
-// lands on the page the route actually ends up at.
+// The stability key is the container geometry, the pathname, and the markup length together —
+// see `probeSettleKey`. Two separate defects drove that. Keying on markup length alone let the
+// bookmark-alias routes (`/admin/restrictions` → `/admin/config/restrictions` and the
+// bannednames/sitelock/settings-characters aliases beside it) settle against whichever page
+// happened to be mounted when the window elapsed; two otherwise identical baseline runs
+// disagreed by exactly one pair. And markup length is only a proxy for layout: a same-length
+// mutation or a late font/image load reflows text without changing it. Polling the measured
+// geometry itself closes both.
 async function waitForSettled(page) {
 	const QUIET_MS = 400;
 	const POLL_MS = 100;
 	const MAX_MS = 8000;
+	// ~1.5s of uninterrupted failure. A context swap mid-navigation throws for a few polls and
+	// must be ridden out; a page that has genuinely stopped answering must not be.
+	const MAX_CONSECUTIVE_FAILURES = 15;
+
 	const deadline = Date.now() + MAX_MS;
 	let lastKey = null;
 	let stableSince = Date.now();
+	let consecutiveFailures = 0;
 
 	while (Date.now() < deadline) {
 		let key;
 		try {
-			key = await page.evaluate(() => `${location.pathname}|${document.body.innerHTML.length}`);
+			key = await page.evaluate(probeSettleKey, CONTAINER_SELECTORS);
+			consecutiveFailures = 0;
 		} catch {
 			key = null;
+			consecutiveFailures++;
+			// An unreadable page is an error, not a quiet one. Folding failures into the same
+			// sentinel the stability check reads would let a page that cannot be evaluated at all
+			// satisfy the quiet condition by repeating that sentinel — settled-looking, and
+			// entirely unmeasured.
+			if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+				throw new Error(`page stopped responding to evaluate for ${consecutiveFailures} consecutive polls`);
+			}
 		}
+
 		const now = Date.now();
 		if (key === null || key !== lastKey) {
 			lastKey = key;
@@ -178,6 +196,23 @@ const measureContainers = (selectors) =>
 
 // The single Node-side verdict, for the same reason.
 const isOverflowing = (c) => c.scroll > c.client + SLACK_PX;
+
+// The stability signal for `waitForSettled`, and it includes the very quantity the gate reads.
+// Markup length alone is a proxy, and a poor one: a same-length DOM mutation, or a late font or
+// image load that reflows text, moves `scrollWidth` without changing a single character of
+// markup, so the quiet window could close while layout was still moving under it. Polling the
+// container geometry directly removes the proxy — the wait ends when the thing being measured
+// has stopped changing, which is what "settled" has to mean here. Pathname stays in the key so a
+// client-side redirect still resets the window.
+const probeSettleKey = (selectors) => {
+	const geometry = selectors
+		.map((s) => {
+			const el = document.querySelector(s);
+			return el ? `${s}:${el.scrollWidth}x${el.clientWidth}` : `${s}:-`;
+		})
+		.join(',');
+	return `${location.pathname}|${document.body.innerHTML.length}|${geometry}`;
+};
 
 // Attribution, run only on a pair that has already failed. "This page overflows" is a poor work
 // item for eight page batches; "this element sticks out 412px" is actionable.
@@ -399,54 +434,89 @@ for (const size of WIDTHS) {
 			continue;
 		}
 
-		// Where the route actually ended up. The alias routes redirect, so a finding reported
-		// against `/admin/restrictions` is really a finding about `/admin/config/restrictions`,
-		// and saying so keeps one defect from reading as two independent ones.
-		const landed = await page.evaluate(() => location.pathname);
-		const via = landed === route ? '' : ` (redirected to ${landed})`;
-		if (via) redirects.push(`${size.name}px ${route} -> ${landed}`);
+		// Everything that reads from the page lives inside this boundary, not just navigation.
+		// These are all `page.evaluate` round-trips and every one of them can throw — a route
+		// that redirects as the call is in flight destroys the execution context, which is the
+		// exact race `waitForSettled` exists to handle and cannot eliminate. Outside the
+		// boundary a single such throw propagated out of the loop and killed the process, and
+		// because the report block only runs after the loop completes, it took all 192 pairs'
+		// findings with it. "One bad route must not take down the rest of the sweep" has to
+		// cover measurement, not only loading.
+		try {
+			// Where the route actually ended up.
+			const landed = await page.evaluate(() => location.pathname);
 
-		// The unclaimed-game trap, and the single most dangerous thing this harness can do.
-		// While `needsSetup` is true, MainLayout bounces every route to `/setup` — raced against
-		// the debug-auth bootstrap, so it fires on some loads and not others. `/setup` renders
-		// under OnboardingLayout, so it HAS a measurable container: the sweep would happily
-		// measure the small claim form, find it clean, and file that under the route that was
-		// asked for. That is a silent false pass on an unknown share of the sweep, and it is
-		// exactly what this gate exists to prevent, so it is a hard measurement failure with an
-		// actionable message rather than a clean result.
-		if (landed === '/setup' && route !== '/setup') {
-			process.stderr.write(` BOUNCED TO /setup\n`);
-			unmeasured.push(
-				`${size.name}px ${route}: bounced to /setup — the game is unclaimed, so this route was never measured. Complete first-run setup and re-run.`,
-			);
+			// The invariant: a measurement is only valid if it measured the route that was asked
+			// for. Anything else is a gating failure unless it is on the explicit allowlist in
+			// routes.json — the default is to fail.
+			//
+			// This is deliberately inverted from how it started. The first version special-cased
+			// the one convergent redirect that had bitten me (`/setup`, from an unclaimed game)
+			// and treated every other unexpected landing as a benign alias. But MainLayout has a
+			// second structurally identical forced redirect right below that one — a logged-in
+			// account with `MustChangePassword` bounces *every* route to `/account` — and
+			// `/account` renders under MainLayout with a perfectly measurable `.phosphor-page`.
+			// Under the old default, that would have silently measured `/account` for every
+			// authenticated and admin route and filed each result under the route that was asked
+			// for, reproducing the exact failure the `/setup` guard was written to stop, from a
+			// different trigger. A third instance exists too (the unauthenticated bounce to
+			// `/login` outside the debug-auth dev setup). Guarding instances one at a time loses
+			// that race by construction; only the allowlist closes the class.
+			const expected = expectedRedirects[route];
+			let via = '';
+			if (landed !== route) {
+				if (landed === expected) {
+					via = ` (redirected to ${landed})`;
+					redirects.push(`${size.name}px ${route} -> ${landed}`);
+				} else {
+					// Name the known convergent redirects, since each has a specific remedy and a
+					// bare pathname would leave the reader to rediscover it.
+					const diagnosis =
+						landed === '/setup'
+							? 'the game is unclaimed, so MainLayout is funnelling every route to the setup wizard — complete first-run setup and re-run'
+							: landed === '/account'
+								? 'the swept identity has MustChangePassword set, so MainLayout is funnelling every route to /account — clear that flag and re-run'
+								: landed === '/login'
+									? 'the swept identity is not authenticated, so this route redirected to sign-in — run against a Development build where DebugAuthStateProvider applies'
+									: 'unexpected destination';
+					process.stderr.write(` BOUNCED -> ${landed}\n`);
+					unmeasured.push(
+						`${size.name}px ${route}: landed on ${landed} instead — ${diagnosis}. This route was NOT measured. If this redirect is a legitimate alias, add "${route}": "${landed}" to expectedRedirects in routes.json.`,
+					);
+					continue;
+				}
+			}
+
+			const containers = await page.evaluate(measureContainers, CONTAINER_SELECTORS);
+
+			if (containers.length === 0) {
+				// The page rendered something — it passed the readiness selector — but nothing
+				// this gate knows how to measure, so this pair was NOT checked. Recorded and
+				// gated on rather than skipped, because an unmeasured pair silently omitted from
+				// the results is indistinguishable from a clean one.
+				process.stderr.write(` NO CONTAINER\n`);
+				unmeasured.push(`${size.name}px ${route}${via}: none of ${CONTAINER_SELECTORS.join(', ')} present`);
+				continue;
+			}
+
+			const overflowing = containers.filter(isOverflowing);
+			if (overflowing.length > 0) {
+				// Attribute against the first (innermost) container that overflowed:
+				// `.phosphor-page` sits inside `.phosphor-main`, so when both report it, the page
+				// container localises the culprit more tightly.
+				const culprits = await page.evaluate(attributeOverflow, overflowing[0].selector);
+				const where = overflowing
+					.map((c) => `${c.selector} scrollWidth ${c.scroll} > clientWidth ${c.client}`)
+					.join('; ');
+				const blame = culprits.length > 0
+					? ` — widest: ${culprits.map((c) => `${c.selector} +${c.over}px`).join(', ')}`
+					: ' — no unclipped element isolated (check a horizontally scrolling descendant)';
+				overflowFailures.push(`${size.name}px ${route}${via}: ${where}${blame}`);
+			}
+		} catch (err) {
+			process.stderr.write(` MEASURE FAILED ${Date.now() - startedAt}ms\n`);
+			unmeasured.push(`${size.name}px ${route}: measurement threw — ${err.message.split('\n')[0]}`);
 			continue;
-		}
-
-		const containers = await page.evaluate(measureContainers, CONTAINER_SELECTORS);
-
-		if (containers.length === 0) {
-			// Neither layout's container is present. The page rendered something — it passed the
-			// readiness selector — but nothing this gate knows how to measure, so this pair was
-			// NOT checked. Recorded and gated on rather than skipped, because an unmeasured pair
-			// silently omitted from the results is indistinguishable from a clean one.
-			process.stderr.write(` NO CONTAINER\n`);
-			unmeasured.push(`${size.name}px ${route}${via}: none of ${CONTAINER_SELECTORS.join(', ')} present`);
-			continue;
-		}
-
-		const overflowing = containers.filter(isOverflowing);
-		if (overflowing.length > 0) {
-			// Attribute against the first (innermost) container that overflowed: `.phosphor-page`
-			// sits inside `.phosphor-main`, so when both report it, the page container localises
-			// the culprit more tightly.
-			const culprits = await page.evaluate(attributeOverflow, overflowing[0].selector);
-			const where = overflowing
-				.map((c) => `${c.selector} scrollWidth ${c.scroll} > clientWidth ${c.client}`)
-				.join('; ');
-			const blame = culprits.length > 0
-				? ` — widest: ${culprits.map((c) => `${c.selector} +${c.over}px`).join(', ')}`
-				: ' — no unclipped element isolated (check a horizontally scrolling descendant)';
-			overflowFailures.push(`${size.name}px ${route}${via}: ${where}${blame}`);
 		}
 
 		if (!screenshotsEnabled) {

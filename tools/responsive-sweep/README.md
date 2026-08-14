@@ -283,7 +283,43 @@ Four groups:
 The three swept groups (`public` + `authenticated` + `admin`) are driven identically —
 `sweep.mjs` does not currently perform a login flow. In a Development build the portal's
 `DebugAuthStateProvider` bypasses auth with a hardcoded wizard user, so `authenticated` and
-`admin` routes render for real in the intended dev-sweep setup; against a production-mode
-build without that bypass, those routes would redirect to `/login` and get swept (and
-screenshotted) as the login page instead of their real content — a gap worth knowing about
-rather than a silent false pass, which is why it's called out here.
+`admin` routes render for real in the intended dev-sweep setup.
+
+## Redirects: allowlisted, or the pair does not count
+
+**A measurement is only valid if it measured the route that was asked for.** Any landing
+pathname other than the requested route is a gating `NOT MEASURED` failure, *unless* the route
+appears in `expectedRedirects` in `routes.json` with exactly that destination. The default is to
+fail.
+
+That default is inverted from where this started, and the inversion is the point. The first
+version special-cased the one convergent redirect that had already caused a bad baseline — the
+unclaimed-game bounce to `/setup` — and treated every other unexpected landing as a benign
+alias. But `MainLayout.EnsureAccountRoutingAsync` contains a second, structurally identical
+forced redirect immediately below it: a logged-in account with `MustChangePassword` bounces
+*every* route to `/account`. `/account` renders under MainLayout with a perfectly measurable
+`.phosphor-page`, so under the old default every authenticated and admin route would have
+quietly measured `/account`'s content and filed it under the route that was requested — the
+same "full-looking coverage, an unknown share of it fictional" failure, from a different
+trigger. A third instance is the unauthenticated bounce to `/login` when the sweep runs against
+a build without the debug-auth bypass.
+
+Guarding these one at a time loses the race by construction: the next forced redirect nobody
+predicted would fail silently again. The allowlist closes the class. When a pair does gate, the
+message names the likely cause (unclaimed game / `MustChangePassword` / unauthenticated) and
+prints the exact `routes.json` entry to add if the redirect turns out to be legitimate.
+
+The current allowlist, each entry verified against its component's own `NavigateTo` call:
+
+| Route | Destination | Source |
+|---|---|---|
+| `/admin/restrictions` | `/admin/config/restrictions` | `RestrictionsRedirect.razor` |
+| `/admin/sitelock` | `/admin/config/sitelock` | `SitelockRedirect.razor` |
+| `/admin/bannednames` | `/admin/config/bannednames` | `BannedNamesRedirect.razor` |
+| `/settings/characters` | `/account` | `SettingsCharactersRedirect.razor` |
+| `/register` | `/login` | `Register.razor` (`/login?tab=register`) |
+| `/setup` | `/` | `Setup.razor`, once the game is claimed |
+
+Allowlisted redirects are measured at their destination and reported under "Routes that
+redirected", and their failure lines say so inline — so an alias and its target do not read as
+two independent defects.

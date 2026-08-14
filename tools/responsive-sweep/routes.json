@@ -53,6 +53,24 @@
 		"/admin/bannednames",
 		"/admin/suggestions"
 	],
+	"_expectedRedirectsDoc": [
+		"Routes that legitimately bounce elsewhere, each verified against its own component's",
+		"NavigateTo call. A measurement is only valid if it measured the route that was asked",
+		"for, so ANY other landing pathname is a gating failure rather than a benign alias.",
+		"This list is the whole allowlist: the default is to fail, so a forced redirect nobody",
+		"predicted fails loudly instead of quietly filing fiction under the requested route.",
+		"Verified sources: RestrictionsRedirect/SitelockRedirect/BannedNamesRedirect.razor,",
+		"SettingsCharactersRedirect.razor, Register.razor (NavigateTo /login?tab=register),",
+		"Setup.razor (bounces to / once the game is claimed)."
+	],
+	"expectedRedirects": {
+		"/admin/restrictions": "/admin/config/restrictions",
+		"/admin/sitelock": "/admin/config/sitelock",
+		"/admin/bannednames": "/admin/config/bannednames",
+		"/settings/characters": "/account",
+		"/register": "/login",
+		"/setup": "/"
+	},
 	"parameterized": [
 		"/character/{name}",
 		"/wiki/{ns}/{category}/{slug}",
