@@ -1054,7 +1054,14 @@ Commit message: `Give the admin wiki, config and import pages responsive tiers`
 ### Task 8: Batch B1 — admin config, layout and dialogs
 
 **Files:**
-- Modify: `Pages/Admin/AdminConfig.razor.css`
+- Delete: `Pages/Admin/AdminConfig.razor`, `Pages/Admin/AdminConfig.razor.css`; remove the
+  `<AdditionalFiles Include="Pages\Admin\AdminConfig.razor" />` line from
+  `SharpMUSH.Client.csproj`. The component has no `@page` and no `@layout`, nothing
+  references it (the only `AdminConfig` hits in the tree are the unrelated
+  `AdminConfigService`), and it is not reachable through `DynamicComponent`, which only
+  renders widget descriptors registered in `Program.cs`. `Config/DynamicConfig.razor` is the
+  live replacement. Verify all of that again before deleting, then delete it rather than
+  giving container tiers to a page nothing renders.
 - Modify: `Pages/Admin/Config/DynamicConfig.razor.css` — keep the `position: sticky` rule; containment does not affect it
 - Modify: `Pages/Admin/Layout/AdminLayouts.razor.css` — `grid-template-columns: 1fr !important` at line 39 loses the flag
 - Modify: `Pages/Admin/Layout/LayoutEditor.razor.css` — the `820px` breakpoint at line 23 becomes the `64rem` medium tier; the 12-column zone grid at line 45 keeps 12 tracks above medium
