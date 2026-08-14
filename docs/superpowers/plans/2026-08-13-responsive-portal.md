@@ -16,7 +16,7 @@
 - **C# style:** tabs, indent size 2. Enforced at build time by `VerifyEditorConfigFormatting`; a failure reports `FORMAT001`. Fix with `dotnet format whitespace --folder <project-dir> --exclude "**/bin/**" --exclude "**/obj/**"`, run twice (the formatter needs two passes to converge).
 - **Razor/CSS style:** spaces, indent size 4. Not machine-enforced.
 - **Line endings:** LF.
-- **Ownership rule (the point of this plan):** `@media` appears only in `wwwroot/css/shell.css`. `@container` appears only in `*.razor.css`. Nothing else may contain either.
+- **Ownership rule (the point of this plan):** `@media` never appears in a `*.razor.css`; among the global stylesheets it lives in `wwwroot/css/shell.css`, and in `globals.css` only for elements MudBlazor renders into its body-level portal, which have no container ancestor to query. `@container` appears only in `*.razor.css`.
 - **Container tier literals:** exactly `48rem` (narrow), `64rem` (medium), `90rem` (roomy). No other value is permitted in a `@container` condition.
 - **Tier ordering within a stylesheet:** roomy → medium → narrow, so the narrow block wins on source order where both `max-width` tiers match.
 - **Units:** type and spacing in `rem`; borders, shadows, radii, fixed dimensions and viewport breakpoints in `px`.
@@ -32,10 +32,10 @@
 | Path | Responsibility |
 |---|---|
 | `SharpMUSH.Client/wwwroot/css/tokens.css` | design tokens, `@font-face`, per-`:lang` mono stack |
-| `SharpMUSH.Client/wwwroot/css/shell.css` | app shell, sidebar, topbar, terminal drawer, bottom nav, `.phosphor-page`; **the only file with `@media`** |
-| `SharpMUSH.Client/wwwroot/css/utilities.css` | `.scroll-x`, `.toolbar-row`, `.mobile-only`, `.desktop-only`, tap targets |
+| `SharpMUSH.Client/wwwroot/css/shell.css` | app shell, sidebar, topbar, terminal drawer, bottom nav, touch ergonomics, `.phosphor-page`; **owns viewport `@media`** |
+| `SharpMUSH.Client/wwwroot/css/utilities.css` | `.scroll-x`, `.toolbar-row` — width-agnostic helpers the page batches reuse. No `@media`: anything keyed to width belongs to the shell or to a page's container query |
 | `SharpMUSH.Client/wwwroot/css/mush-syntax.css` | `.mush-*` softcode token colours |
-| `SharpMUSH.Client/wwwroot/css/globals.css` | documented escape hatches — styles that must be global because scoped CSS cannot reach them |
+| `SharpMUSH.Client/wwwroot/css/globals.css` | documented escape hatches — styles that must be global because scoped CSS cannot reach them, chiefly MudBlazor body-level portal content. The one global file besides `shell.css` permitted a `@media`, because portal content has no container to query |
 | `SharpMUSH.Tests.BUnit/Layout/ResponsiveConventionsTests.cs` | the guard test and its burn-down exemption list |
 | `tools/responsive-sweep/sweep.mjs` | Playwright screenshot + horizontal-overflow sweep |
 | `tools/responsive-sweep/routes.json` | route map the sweep drives |
@@ -124,7 +124,7 @@ git commit -m "Record the CSS-nesting verdict for Blazor scoped stylesheets"
 - Modify: `SharpMUSH.Tests.BUnit/Resources/MonoFontStackTests.cs`
 
 **Interfaces:**
-- Produces: `wwwroot/css/shell.css` — the single file later tasks and the guard test treat as the owner of viewport `@media`. Layer names, in order: `vendor, tokens, shell, utilities`.
+- Produces: `wwwroot/css/shell.css` — the owner of viewport `@media` among the global stylesheets; `globals.css` is the only other file permitted one, and only for MudBlazor body-level portal content. Layer names, in order: `vendor, tokens, shell, utilities`.
 
 - [ ] **Step 1: Update the test project's CSS inputs first, and watch it fail**
 
@@ -619,6 +619,14 @@ public class ResponsiveConventionsTests
 		Path.GetRelativePath(RazorRoot, path).Replace('\\', '/');
 
 	/// <summary>
+	/// Every rule below matches on CSS syntax, and this codebase documents its stylesheets heavily —
+	/// including prose that names the very at-rules being banned. Scanning raw text would fail a file
+	/// for explaining the convention it follows.
+	/// </summary>
+	private static string StripComments(string css) =>
+		Regex.Replace(css, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
+
+	/// <summary>
 	/// Stylesheets still on the old viewport-query model. Each sweep batch deletes its own entries;
 	/// the list must reach empty, which <see cref="TheMigrationIsFinished"/> asserts.
 	/// </summary>
@@ -707,7 +715,7 @@ public class ResponsiveConventionsTests
 	{
 		var offenders = ScopedStylesheets()
 			.Where(f => !NotYetMigrated.Contains(Rel(f)))
-			.Where(f => Regex.IsMatch(File.ReadAllText(f), @"@media\b"))
+			.Where(f => Regex.IsMatch(StripComments(File.ReadAllText(f)), @"@media\b"))
 			.Select(Rel)
 			.Order(StringComparer.Ordinal)
 			.ToList();
@@ -722,22 +730,28 @@ public class ResponsiveConventionsTests
 	{
 		var shell = File.ReadAllText(Path.Join(CssRoot, "shell.css"));
 
-		await Assert.That(Regex.IsMatch(shell, @"@container\b")).IsFalse()
+		await Assert.That(Regex.IsMatch(StripComments(shell), @"@container\b")).IsFalse()
 			.Because("the shell decides how much width content gets; it never asks");
 	}
 
 	[Test]
-	public async Task ViewportQueriesLiveOnlyInTheShell()
+	public async Task ViewportQueriesLiveOnlyInTheShellOrTheEscapeHatches()
 	{
+		// globals.css is the second permitted home, and only because of what it holds: overrides for
+		// elements MudBlazor renders into its body-level portal, outside .phosphor-page. Those have no
+		// container ancestor to query, so the viewport is the only width available to them.
+		var permitted = new[] { "shell.css", "globals.css" };
+
 		var offenders = Directory.EnumerateFiles(CssRoot, "*.css")
-			.Where(f => Path.GetFileName(f) != "shell.css")
-			.Where(f => Regex.IsMatch(File.ReadAllText(f), @"@media\b"))
+			.Where(f => !permitted.Contains(Path.GetFileName(f)))
+			.Where(f => Regex.IsMatch(StripComments(File.ReadAllText(f)), @"@media\b"))
 			.Select(Path.GetFileName)
 			.Order(StringComparer.Ordinal)
 			.ToList();
 
 		await Assert.That(offenders).IsEmpty()
-			.Because("one file owns the device-facing rules, so there is one place to read them");
+			.Because("device-facing rules belong to the shell; the only exception is content that "
+				+ "renders outside the container and so cannot query it");
 	}
 
 	[Test]
@@ -747,7 +761,7 @@ public class ResponsiveConventionsTests
 
 		foreach (var file in ScopedStylesheets())
 		{
-			foreach (Match m in Regex.Matches(File.ReadAllText(file), @"@container[^{]*?\(\s*(?:min|max)-width:\s*(?<value>[^)]+)\)"))
+			foreach (Match m in Regex.Matches(StripComments(File.ReadAllText(file)), @"@container[^{]*?\(\s*(?:min|max)-width:\s*(?<value>[^)]+)\)"))
 			{
 				var value = m.Groups["value"].Value.Trim();
 				if (!SanctionedTiers.Contains(value))
@@ -766,7 +780,7 @@ public class ResponsiveConventionsTests
 		// so a fixed element inside page content would anchor to the content column rather than the
 		// viewport. Fixed chrome belongs to the shell.
 		var offenders = ScopedStylesheets()
-			.Where(f => Regex.IsMatch(File.ReadAllText(f), @"position:\s*fixed"))
+			.Where(f => Regex.IsMatch(StripComments(File.ReadAllText(f)), @"position:\s*fixed"))
 			.Select(Rel)
 			.Order(StringComparer.Ordinal)
 			.ToList();
@@ -783,7 +797,7 @@ public class ResponsiveConventionsTests
 		// was simulating that by hand.
 		var offenders = ScopedStylesheets()
 			.Where(f => !NotYetMigrated.Contains(Rel(f)))
-			.Where(f => File.ReadAllText(f).Contains("!important", StringComparison.Ordinal))
+			.Where(f => StripComments(File.ReadAllText(f)).Contains("!important", StringComparison.Ordinal))
 			.Select(Rel)
 			.Order(StringComparer.Ordinal)
 			.ToList();
