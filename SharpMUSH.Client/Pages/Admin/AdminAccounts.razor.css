@@ -8,24 +8,31 @@
    stacked blocks, each cell labelled from its column header via the data-label attribute the
    markup sets. */
 @container page (max-width: 48rem) {
-    .accounts-table ::deep thead {
+    /* Leading with ::deep rather than anchoring on .accounts-table: MudTable never stamps the
+       caller's scope attribute onto the <table> it renders, so `.accounts-table ::deep thead`
+       compiles to `.accounts-table[b-xxx] thead` — a selector requiring an attribute that is
+       never present on that element, matching nothing. `::deep .accounts-table thead` compiles
+       to `[b-xxx] .accounts-table thead`, anchored on this component's own wrapper (which does
+       carry the scope attribute), with .accounts-table and its descendants left correctly
+       unscoped. */
+    ::deep .accounts-table thead {
         display: none;
     }
 
-    .accounts-table ::deep tr {
+    ::deep .accounts-table tr {
         display: block;
         border-bottom: 1px solid var(--border);
         padding-block: 0.5rem;
     }
 
-    .accounts-table ::deep td {
+    ::deep .accounts-table td {
         display: grid;
         grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
         gap: 0.5rem;
         border: none;
     }
 
-    .accounts-table ::deep td::before {
+    ::deep .accounts-table td::before {
         content: attr(data-label);
         color: var(--text-dim);
         font-size: 0.8125rem;
