@@ -1,8 +1,10 @@
-/* App shell chrome: sidebar, topbar, terminal drawer, admin nav, and every viewport @media query. */
-/* Viewport @media lives here and nowhere else. Pages and components query the
-   .phosphor-page container instead — the content column's width depends on the collapsible
-   sidebar and two admin-configured widget asides, none of which a media query can see.
-   Enforced by ResponsiveConventionsTests. */
+/* App shell chrome: sidebar, topbar, terminal drawer, admin nav, and touch ergonomics. */
+/* Viewport @media lives here, with one exception: globals.css, for elements MudBlazor
+   renders into its body-level portal (outside .phosphor-page), which have no container
+   ancestor to query and so fall back to the viewport. Pages and components otherwise query
+   the .phosphor-page container instead — the content column's width depends on the
+   collapsible sidebar and two admin-configured widget asides, none of which a media query
+   can see. Enforced by ResponsiveConventionsTests. */
 
 /* ═══════════════════════════════════════════════════════════════════════
    Phosphor Refined app shell — full-height sidebar + content column.
@@ -1338,5 +1340,11 @@
 		padding-bottom: 70vh;
 		padding-bottom: 70svh;
 	}
+}
+
+/* ══ Touch ergonomics: 44px tap targets on any touch device, regardless of width. ══ */
+@media (pointer: coarse) {
+	.phosphor-nav-link { min-height: 44px; }
+	.phosphor-icon-btn { min-width: 44px; min-height: 44px; }
 }
 

@@ -98,7 +98,7 @@ public class MonoFontStackTests
 	{
 		// The failure this catches is silent: a hardcoded family renders perfectly in English and only
 		// misaligns once someone selects Chinese, on that one element. Components have no legitimate
-		// reason to name a face — @font-face lives in custom.css, which this sweep deliberately skips.
+		// reason to name a face — @font-face lives in tokens.css, which this sweep deliberately skips.
 		var offenders = new List<string>();
 
 		foreach (var file in ComponentSources())

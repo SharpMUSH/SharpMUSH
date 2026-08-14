@@ -1,7 +1,19 @@
-/* Cross-cutting utility helpers — currently just touch tap-target sizing. */
+/* Width-agnostic helpers reused across page batches. Deliberately no @media here — anything
+   keyed to width belongs to the shell (viewport) or to a page's own @container query. */
 
-/* ══ Touch ergonomics: 44px tap targets on any touch device, regardless of width. ══ */
-@media (pointer: coarse) {
-	.phosphor-nav-link { min-height: 44px; }
-	.phosphor-icon-btn { min-width: 44px; min-height: 44px; }
+/* Content that genuinely cannot reflow — code blocks, pre, diff panes — scrolls horizontally
+   instead of forcing the page wide. min-width: 0 so it actually shrinks as a flex/grid child
+   rather than the child's intrinsic width pushing the container past it. */
+.scroll-x {
+	overflow-x: auto;
+	min-width: 0;
+}
+
+/* Wrapping flex row for page toolbars. Several admin pages hand-rolled an unwrapped flex row
+   that overflowed once the container narrowed; this is that pattern, shared. */
+.toolbar-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: wrap;
 }
