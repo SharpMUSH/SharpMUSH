@@ -363,12 +363,16 @@ Append to the shell section, immediately after the `.phosphor-main` rules:
 	min-height: 100%;
 }
 
-/* Working surfaces (terminal, editors, diff views) opt out of the reading cap by putting
-   `full-bleed` on their own root element — a page cannot set a class on its ancestor, and
-   :has() removes the need for a cascading parameter to do it. They are also the pages that
-   size themselves to the viewport, so the wrapper passes a definite height through. */
+/* Two independent opt-outs, deliberately kept apart. `full-bleed` answers "this page wants
+   the whole window width"; `full-height` answers "this page needs a definite height to size
+   its own panes". Bundling them hid a defect: /mail needs the height for its three-pane
+   scrolling but should keep the cap. A page needing both carries both. A page cannot set a
+   class on its ancestor, which is what :has() is doing here. */
 .phosphor-page:has(> .full-bleed) {
 	max-width: none;
+}
+
+.phosphor-page:has(> .full-height) {
 	height: 100%;
 }
 

@@ -138,12 +138,22 @@ that way by failing on `position: fixed` inside scoped CSS.
 	.phosphor-page { max-width: var(--content-max); margin-inline: auto; }
 }
 .phosphor-page:has(> .full-bleed) { max-width: none; }
+.phosphor-page:has(> .full-height) { height: 100%; }
 ```
 
-`--content-max: 1400px`. A page opts out by putting `full-bleed` on its own root element —
-no cascading parameter, no layout service, no ancestor-class problem. Opting out:
-`/play`, `/softcode`, scene live, wiki edit split, the layout editor, and the wiki diff
-view, all of which are working surfaces rather than reading surfaces.
+`--content-max: 1400px`. A page opts out by putting a class on its own root element — no
+cascading parameter, no layout service, no ancestor-class problem.
+
+**The two opt-outs are independent classes, deliberately.** `full-bleed` answers "this page
+wants the whole window width"; `full-height` answers "this page needs a definite height to
+size its own panes". Bundling them into one class hid a defect: `/mail` needs the height for
+its three-pane scrolling but should keep the cap, since a mail client stretched across
+2560px is worse than a capped one. A page needing both carries both.
+
+Opting out of the cap: `/play`, `/softcode`, scene live, wiki edit split, the layout editor,
+and the wiki diff view — working surfaces rather than reading surfaces. Taking the height
+without the cap: `/mail`, and `/play`'s loading and gate branches, whose content is a
+centred card that gains nothing from the extra width.
 
 The cap is the one place a viewport query and a container declaration meet, and it lives
 in the shell where the boundary rule permits it.
