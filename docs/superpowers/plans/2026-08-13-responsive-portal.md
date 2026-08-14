@@ -669,6 +669,13 @@ public class ResponsiveConventionsTests
 		"Pages/SoftcodeEditor.razor.css",
 		"Pages/WikiPageDiff.razor.css",
 		"Pages/WikiPageHistory.razor.css",
+
+		// No @media to convert, but !important to remove, so they are exempt until their batch
+		// reaches them — MigratedStylesheetsCarryNoImportantDeclarations reads this same list.
+		"Components/Widgets/CharacterDirectoryWidget.razor.css",
+		"Pages/Admin/AdminMedia.razor.css",
+		"Pages/Admin/AdminServer.razor.css",
+		"Pages/Admin/ImportDatabase.razor.css",
 	};
 
 	/// <summary>
@@ -960,9 +967,13 @@ conversions: they need container tiers written from scratch.
 - Modify: `Pages/Admin/AdminMedia.razor.css`
 - Modify: `Pages/Admin/AdminServer.razor.css`
 
-None of these appear in `NotYetMigrated` (they have no `@media` to exempt), so Step 1 of the
-shared procedure is a no-op here and Step 2 will already pass. Their defect is absence, which
-the guard test cannot see — the sweep is what gates this batch. Run Step 5 before and after.
+Only `AdminMedia.razor.css` and `AdminServer.razor.css` appear in `NotYetMigrated`, listed
+there for their `!important` declarations rather than for any `@media`. Remove those two
+entries in Step 1; Step 2 will then fail naming exactly those two under
+`MigratedStylesheetsCarryNoImportantDeclarations`.
+
+The other six have no breakpoint of any kind, so their defect is absence — which the guard
+test cannot see. The sweep is what gates them: run Step 5 both before and after, and compare.
 
 Commit message: `Give the admin player and content pages responsive tiers`
 
