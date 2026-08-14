@@ -11,10 +11,10 @@ namespace SharpMUSH.Tests.BUnit.Layout;
 public class ContentContainerTests
 {
 	private static string Shell() =>
-		File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "css", "shell.css"));
+		File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
 
 	private static string MainLayout() =>
-		File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "razor", "Layout", "MainLayout.razor"));
+		File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Layout", "MainLayout.razor"));
 
 	[Test]
 	public async Task TheBodyIsWrappedInTheNamedQueryContainer()

@@ -14,12 +14,12 @@ public class MonoFontStackTests
 	// so these assertions read the folder as one sheet rather than pinning a filename that the
 	// next split would silently invalidate.
 	private static string Css() =>
-		string.Join("\n", Directory.EnumerateFiles(Path.Join(AppContext.BaseDirectory, "client", "css"), "*.css")
+		string.Join("\n", Directory.EnumerateFiles(ClientSource.CssRoot, "*.css")
 			.OrderBy(f => f, StringComparer.Ordinal)
 			.Select(File.ReadAllText));
 
 	private static IEnumerable<string> ComponentSources() =>
-		Directory.EnumerateFiles(Path.Join(AppContext.BaseDirectory, "client", "razor"), "*.*", SearchOption.AllDirectories)
+		Directory.EnumerateFiles(ClientSource.RazorRoot, "*.*", SearchOption.AllDirectories)
 			.Where(f => f.EndsWith(".razor", StringComparison.Ordinal) || f.EndsWith(".css", StringComparison.Ordinal));
 
 	[Test]
