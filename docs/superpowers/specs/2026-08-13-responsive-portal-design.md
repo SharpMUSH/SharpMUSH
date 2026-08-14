@@ -201,16 +201,39 @@ Deliberately **not** adopted: `light-dark()` (theming is DB-driven CSS variables
 transitions (SPA routing needs JS orchestration; out of scope), `@property`, `@container
 style()`.
 
-**Spike before use:** native CSS nesting — verified: the rewriter scopes nested rules
-correctly; nesting is permitted in scoped stylesheets. A scoped `EmptyState.razor.css`
-with `.nesting-spike { & .child { } @container (max-width: 48rem) { } }` built and
-emitted `.nesting-spike[b-pi9wsximhx] { ... & .child { ... } @container (...) { ... } }`
-— the rewriter appends `[b-xxxxx]` only to the outer top-level selector and leaves the
-nested `& .child` rule and the nested `@container` block untouched. That is sufficient:
-the browser resolves `&` against the already-scoped parent selector, so `& .child`
-desugars to `.nesting-spike[b-xxxxx] .child`, and the `@container` block's declarations
-stay attached to the scoped `.nesting-spike[b-xxxxx]` rule. Nesting is permitted in
-scoped (`*.razor.css`) files, not just global ones.
+**Spike before use:** native CSS nesting — verified unsafe for descendant rules, verified
+safe for nested at-rules and same-element compounding; permission is narrowed accordingly.
+
+For a flat rule the rewriter attributes the *innermost, matched* selector:
+`ObjectBrowser.razor.css:37`'s `.ob-item--on .ob-item-name { }` builds to
+`.ob-item--on .ob-item-name[b-3gnim3jhv4] { }`, so the rule can only ever match an element
+the component itself rendered. A scoped `EmptyState.razor.css` with `.nesting-spike {
+& .child { } @container (max-width: 48rem) { } }` built and emitted
+`.nesting-spike[b-pi9wsximhx] { & .child { } @container (...) { } }` — the rewriter
+attributes only the *outer* selector and leaves `& .child` untouched. The browser resolves
+that to `.nesting-spike[b-xxxxx] .child`: a plain descendant selector whose scope
+requirement sits on the ancestor only — the opposite of the flat form, and a weaker
+guarantee, not an equivalent one.
+
+Whether that gap is reachable was checked directly rather than assumed. `CharacterDirectoryWidget.razor`,
+given a temporary scoped stylesheet (scope `b-5qz6nm2reg`), renders `<EmptyState Class="child">`
+on its failed-roster path; `EmptyState` is a separate component with no scoped css of its
+own. Rendered through bUnit, the real DOM is
+`<div class="nesting-spike-parent" b-5qz6nm2reg>` … `<div class="mud-alert mud-alert-outlined-info
+mud-elevation-0 child" …>` — `EmptyState`'s element is a literal HTML descendant of the
+parent's scoped div and carries the `child` class, but never the parent's `b-5qz6nm2reg`
+attribute. A rule `.nesting-spike-parent[b-5qz6nm2reg] .child { }` (what `& .child { }`
+desugars to) matches that element purely by DOM structure — it leaks onto whatever a nested
+child component renders with a colliding class name, which is the norm here (widgets inside
+zones, layouts wrapping pages), not an edge case.
+
+Nesting is permitted in scoped (`*.razor.css`) stylesheets only for forms that stay on the
+*same element* as the outer selector: nested at-rules (`@container`, `@media`, `@supports`)
+and `&`-compounding (`&:hover`, `&.modifier`, `&[attr]`). A nested rule that introduces a
+descendant combinator (`& .child`, `& > .child`, `& x`) is **not** permitted in scoped files
+— write it flat (`.outer .child { }`) so the rewriter puts the scope attribute on the
+matched element itself, the same guarantee `ObjectBrowser.razor.css` already relies on.
+Global files remain unrestricted either way.
 
 ## Work breakdown
 
