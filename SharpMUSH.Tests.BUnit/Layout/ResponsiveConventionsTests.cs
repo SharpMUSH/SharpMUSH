@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Tests.BUnit.Layout;
@@ -20,9 +21,62 @@ public class ResponsiveConventionsTests
 	/// Every rule below matches on CSS syntax, and this codebase documents its stylesheets heavily —
 	/// including prose that names the very at-rules being banned. Scanning raw text would fail a file
 	/// for explaining the convention it follows.
+	///
+	/// A regex cannot do this correctly: a non-greedy <c>/\*.*?\*/</c> opens on a literal <c>/*</c>
+	/// inside a quoted string value (e.g. <c>content: "/* not a comment";</c>) and does not close
+	/// until the *next* genuine <c>*/</c> anywhere later in the file, silently deleting everything
+	/// between — including a live @media rule. This walks the text once, tracking whether it is
+	/// inside a <c>"</c>/<c>'</c> string, so a <c>/*</c> there is just two characters. An unterminated
+	/// comment strips to end of file rather than throwing.
 	/// </summary>
-	private static string StripComments(string css) =>
-		Regex.Replace(css, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
+	private static string StripComments(string css)
+	{
+		var result = new StringBuilder(css.Length);
+		var quote = '\0';
+		var i = 0;
+
+		while (i < css.Length)
+		{
+			var c = css[i];
+
+			if (quote != '\0')
+			{
+				result.Append(c);
+				// An escaped quote (or escaped anything) inside a string does not end the string,
+				// so consume the pair together rather than re-examining the escaped character.
+				if (c == '\\' && i + 1 < css.Length)
+				{
+					result.Append(css[i + 1]);
+					i += 2;
+					continue;
+				}
+				if (c == quote)
+					quote = '\0';
+				i++;
+				continue;
+			}
+
+			if (c is '"' or '\'')
+			{
+				quote = c;
+				result.Append(c);
+				i++;
+				continue;
+			}
+
+			if (c == '/' && i + 1 < css.Length && css[i + 1] == '*')
+			{
+				var end = css.IndexOf("*/", i + 2, StringComparison.Ordinal);
+				i = end < 0 ? css.Length : end + 2;
+				continue;
+			}
+
+			result.Append(c);
+			i++;
+		}
+
+		return result.ToString();
+	}
 
 	/// <summary>
 	/// Stylesheets still on the old viewport-query model. Each sweep batch deletes its own entries;
@@ -101,7 +155,6 @@ public class ResponsiveConventionsTests
 		// deleted with the task that writes them.
 		"Pages/Admin/AdminAccounts.razor",   // Task 7
 		"Pages/WikiPage.razor",              // Task 12
-		"Pages/WikiPageEdit.razor",          // Task 12
 		"Pages/CharacterCreate.razor",       // Task 13
 		"Pages/Register.razor",              // Task 13
 	};
@@ -121,6 +174,42 @@ public class ResponsiveConventionsTests
 		await Assert.That(offenders).IsEmpty()
 			.Because("a page cannot see the sidebar or the admin-configured widget asides, so a "
 				+ "viewport query inside one is wrong whenever either is present; use @container page");
+	}
+
+	[Test]
+	public async Task StripCommentsDoesNotOpenACommentOnASlashStarInsideAStringLiteral()
+	{
+		// Regression case for a reviewer-found defect: a `/*` inside a quoted CSS string value is not
+		// a comment opener, and a stripper that treats it as one deletes everything up to the *next*
+		// genuine `*/` in the file — including a live @media rule between the two.
+		const string css = """
+			.x {
+				content: "/* fake-opener, not a comment";
+			}
+			@media (max-width: 760px) {
+				.x { color: red; }
+			}
+			/* genuine-comment */
+			""";
+
+		var stripped = StripComments(css);
+
+		await Assert.That(stripped).Contains("@media (max-width: 760px)")
+			.Because("a `/*` opening inside a string literal must not swallow real CSS that follows it");
+		await Assert.That(stripped).DoesNotContain("genuine-comment")
+			.Because("a genuine comment outside any string must still be stripped");
+	}
+
+	[Test]
+	public async Task StripCommentsHandlesAnUnterminatedComment()
+	{
+		const string css = ".x { color: red; } /* never closed";
+
+		var stripped = StripComments(css);
+
+		await Assert.That(stripped).Contains(".x { color: red; }");
+		await Assert.That(stripped).DoesNotContain("never closed")
+			.Because("an unterminated comment strips to end of file rather than being left in place");
 	}
 
 	[Test]
@@ -208,7 +297,7 @@ public class ResponsiveConventionsTests
 	public async Task EveryRoutablePageHasAStylesheet()
 	{
 		var offenders = Directory.EnumerateFiles(Path.Join(ClientSource.RazorRoot, "Pages"), "*.razor", SearchOption.AllDirectories)
-			.Where(f => Regex.IsMatch(File.ReadAllText(f), @"^@page\b", RegexOptions.Multiline))
+			.Where(f => Regex.IsMatch(File.ReadAllText(f), @"^[ \t]*@page\b", RegexOptions.Multiline))
 			.Where(f => !File.Exists(f + ".css"))
 			.Select(Rel)
 			.Where(r => !PagesWithoutStylesheetByDesign.Contains(r))
@@ -248,6 +337,23 @@ public class ResponsiveConventionsTests
 
 		await Assert.That(missing).IsEmpty()
 			.Because("an entry naming a file that no longer exists silently exempts nothing and hides progress");
+	}
+
+	[Test]
+	public async Task TheStylesheetExemptionListHasNoStaleEntries()
+	{
+		// The moment a page named here gains a .razor.css, the exemption stops describing reality:
+		// EveryRoutablePageHasAStylesheet never sees the page again to check it, because it is
+		// filtered out before the "does a stylesheet exist" check even runs. An entry must be
+		// removed the same day the file it names stops being true, not left to rot.
+		var stale = PagesWithoutStylesheetByDesign
+			.Where(r => File.Exists(Path.Join(ClientSource.RazorRoot, r) + ".css"))
+			.Order(StringComparer.Ordinal)
+			.ToList();
+
+		await Assert.That(stale).IsEmpty()
+			.Because("a page that now has a stylesheet must be checked by EveryRoutablePageHasAStylesheet, "
+				+ "not silently exempted from it");
 	}
 
 	[Test, Skip("Enabled by the final sweep task, once NotYetMigrated is empty.")]

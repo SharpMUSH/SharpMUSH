@@ -167,7 +167,7 @@ public class NavGroupVisibilityTests : BunitContext, IAsyncDisposable
 		// this reads the whole folder as one sheet rather than pinning a filename the split moved the
 		// rule out of.
 		var css = string.Join("\n", await Task.WhenAll(
-			Directory.EnumerateFiles(Path.Join(AppContext.BaseDirectory, "client", "css"), "*.css")
+			Directory.EnumerateFiles(ClientSource.CssRoot, "*.css")
 				.OrderBy(f => f, StringComparer.Ordinal)
 				.Select(f => File.ReadAllTextAsync(f))));
 
