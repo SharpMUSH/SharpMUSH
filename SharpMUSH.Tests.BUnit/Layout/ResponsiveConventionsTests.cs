@@ -79,12 +79,6 @@ public class ResponsiveConventionsTests
 	}
 
 	/// <summary>
-	/// Stylesheets still on the old viewport-query model. Each sweep batch deletes its own entries;
-	/// the list must reach empty, which <see cref="TheMigrationIsFinished"/> asserts.
-	/// </summary>
-	private static readonly HashSet<string> NotYetMigrated = new(StringComparer.Ordinal);
-
-	/// <summary>
 	/// Routable pages that legitimately ship no stylesheet: they redirect, or render only
 	/// components that carry their own.
 	/// </summary>
@@ -124,7 +118,6 @@ public class ResponsiveConventionsTests
 	public async Task PagesQueryTheirContainerRatherThanTheViewport()
 	{
 		var offenders = ScopedStylesheets()
-			.Where(f => !NotYetMigrated.Contains(Rel(f)))
 			.Where(f => Regex.IsMatch(StripComments(File.ReadAllText(f)), @"@media\b"))
 			.Select(Rel)
 			.Order(StringComparer.Ordinal)
@@ -307,7 +300,6 @@ public class ResponsiveConventionsTests
 		// scoped rule already wins on layer order regardless of specificity. Every !important here
 		// was simulating that by hand.
 		var offenders = ScopedStylesheets()
-			.Where(f => !NotYetMigrated.Contains(Rel(f)))
 			.Where(f => StripComments(File.ReadAllText(f)).Contains("!important", StringComparison.Ordinal))
 			.Select(Rel)
 			.Order(StringComparer.Ordinal)
@@ -352,18 +344,6 @@ public class ResponsiveConventionsTests
 	}
 
 	[Test]
-	public async Task TheExemptionListHasNoStaleEntries()
-	{
-		var missing = NotYetMigrated
-			.Where(r => !File.Exists(Path.Join(ClientSource.RazorRoot, r)))
-			.Order(StringComparer.Ordinal)
-			.ToList();
-
-		await Assert.That(missing).IsEmpty()
-			.Because("an entry naming a file that no longer exists silently exempts nothing and hides progress");
-	}
-
-	[Test]
 	public async Task TheStylesheetExemptionListHasNoStaleEntries()
 	{
 		// The moment a page named here gains a .razor.css, the exemption stops describing reality:
@@ -378,12 +358,5 @@ public class ResponsiveConventionsTests
 		await Assert.That(stale).IsEmpty()
 			.Because("a page that now has a stylesheet must be checked by EveryRoutablePageHasAStylesheet, "
 				+ "not silently exempted from it");
-	}
-
-	[Test]
-	public async Task TheMigrationIsFinished()
-	{
-		await Assert.That(NotYetMigrated).IsEmpty()
-			.Because("the exemption list is a burn-down, not a permanent allowance");
 	}
 }
