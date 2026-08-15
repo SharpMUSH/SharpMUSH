@@ -426,3 +426,6 @@ pennmush
 
 # Local SurrealDB rocksdb data dir from running the server locally
 surrealdb-data/
+
+# Responsive sweep screenshots — regenerated per run, not build output worth tracking
+tools/responsive-sweep/out/

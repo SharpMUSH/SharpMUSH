@@ -10,10 +10,13 @@
 
 @if (!string.IsNullOrWhiteSpace(_slug))
 {
-    <MudPaper Class="wiki-body-widget" Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
-        <WikiView Slug="@_slug" Namespace="@_namespace" Category="@_category" Locale="@_locale"
-                  Mode="WikiView.WikiMode.View" />
-    </MudPaper>
+    @* The wrapper is the container-query context; its scoped CSS clamps the paper's padding. *@
+    <div class="wiki-body-widget">
+        <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+            <WikiView Slug="@_slug" Namespace="@_namespace" Category="@_category" Locale="@_locale"
+                      Mode="WikiView.WikiMode.View" />
+        </MudPaper>
+    </div>
 }
 
 @code {

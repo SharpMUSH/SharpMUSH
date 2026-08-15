@@ -1,0 +1,19 @@
+.online-characters-widget {
+    container-type: inline-size;
+    height: 100%;
+}
+
+.online-characters-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.3125rem 0;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.online-characters-row ::deep .mud-link {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

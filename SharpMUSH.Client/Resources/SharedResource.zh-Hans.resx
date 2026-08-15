@@ -3468,6 +3468,10 @@
     <value>清除</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCloseTab" xml:space="preserve">
+    <value>关闭 {0}</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>清除终端</value>
     <comment>MT</comment>

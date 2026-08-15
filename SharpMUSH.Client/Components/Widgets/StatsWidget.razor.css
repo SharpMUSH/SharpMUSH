@@ -1,0 +1,10 @@
+.stats-widget {
+    container-type: inline-size;
+}
+
+@container (max-width: 48rem) {
+    .stats-widget ::deep .mud-grid-item-sm-3 {
+        max-width: 50%;
+        flex-basis: 50%;
+    }
+}

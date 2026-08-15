@@ -84,7 +84,7 @@
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-1">
                             <MudSelect T="string" Value="@c.Mode" ValueChanged="@(m => SetMode(external.Dbref, m))"
                                        Label="@Loc["PkgResolutionLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined"
-                                       Style="max-width: 200px">
+                                       Class="pkg-resolution-select">
                                 <MudSelectItem Value="@("wellknown")">@Loc["PkgModeWellKnown"]</MudSelectItem>
                                 <MudSelectItem Value="@("configure")">@Loc["PkgModeConfigure"]</MudSelectItem>
                             </MudSelect>
@@ -92,7 +92,7 @@
                             {
                                 <MudSelect T="string" Value="@c.WellKnown" ValueChanged="@(v => SetWellKnown(external.Dbref, v))"
                                            Label="@Loc["PkgWellKnownRefLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined"
-                                           Style="max-width: 220px">
+                                           Class="pkg-wellknown-select">
                                     @foreach (var name in WellKnownRefs.All.Order())
                                     {
                                         <MudSelectItem Value="@name">$@name</MudSelectItem>
@@ -103,7 +103,7 @@
                             {
                                 <MudTextField T="string" Value="@c.ConfigureKey" ValueChanged="@(v => SetConfigureKey(external.Dbref, v))"
                                               Label="@Loc["PkgConfigureKeyLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined"
-                                              Style="max-width: 200px" />
+                                              Class="pkg-configure-key-field" />
                                 <MudTextField T="string" Value="@c.ConfigureLabel" ValueChanged="@(v => SetConfigureLabel(external.Dbref, v))"
                                               Label="@Loc["PkgConfigurePromptLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined" />
                             }

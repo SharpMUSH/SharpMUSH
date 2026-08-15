@@ -3468,6 +3468,10 @@
     <value>Golire</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCloseTab" xml:space="preserve">
+    <value>Închide {0}</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Golire terminal</value>
     <comment>MT</comment>

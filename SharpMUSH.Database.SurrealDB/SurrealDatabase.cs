@@ -652,6 +652,7 @@ public partial class SurrealDatabase(
 			Id = $"Power/{record.name}",
 			Name = record.name,
 			Alias = record.alias,
+			Symbol = record.symbol,
 			System = record.system,
 			Disabled = record.disabled,
 			SetPermissions = record.setPermissions,
@@ -945,6 +946,7 @@ public partial class SurrealDatabase(
 	{
 		public string name { get; set; } = "";
 		public string alias { get; set; } = "";
+		public string symbol { get; set; } = "";
 		public bool system { get; set; }
 		public bool disabled { get; set; }
 		public string[] setPermissions { get; set; } = [];

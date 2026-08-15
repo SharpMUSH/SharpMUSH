@@ -29,9 +29,9 @@ else if (_notFound)
 }
 else
 {
-    <div class="scene-live-page" style="display:flex;flex-direction:column;height:100%;">
+    <div class="scene-live-page full-bleed full-height" style="display:flex;flex-direction:column;height:100%;">
 
-        <div class="scene-live-header" style="padding:0.75rem var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
+        <div class="scene-live-header">
             <MudChip T="string" Color="Color.Success" Size="Size.Small"
                      Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">@Loc["RolLiveBadge"]</MudChip>
             <MudText Style="font-size:0.9375rem;font-weight:600;">@SceneTitle(_scene!)</MudText>
@@ -59,7 +59,7 @@ else
             </MudAlert>
         }
 
-        <div class="scene-log scene-log--live" style="flex:1;min-height:0;padding:1rem var(--cpad);">
+        <div class="scene-log scene-log--live">
             @if (_poses.Count == 0)
             {
                 <MudText Style="color:var(--text-faint);font-style:italic;">@Loc["RolWaitingForActivity"]</MudText>
@@ -70,7 +70,7 @@ else
             }
         </div>
 
-        <div class="scene-live-compose" style="padding:0.625rem var(--cpad);border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:flex-end;gap:0.5rem;flex-shrink:0;">
+        <div class="scene-live-compose">
             <MudSelect T="string" @bind-Value="_mode" Dense="true" Margin="Margin.Dense"
                        Variant="Variant.Outlined" Style="max-width:130px;">
                 <MudSelectItem Value="@("pose")">@Loc["RolModePose"]</MudSelectItem>

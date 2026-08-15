@@ -3468,6 +3468,10 @@
     <value>Изчисти</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCloseTab" xml:space="preserve">
+    <value>Затвори {0}</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Изчисти терминала</value>
     <comment>MT</comment>

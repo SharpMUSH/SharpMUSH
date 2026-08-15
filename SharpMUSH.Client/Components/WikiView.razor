@@ -77,7 +77,14 @@ else
 
     public async Task ActivateEditMode()
     {
-        _editDraft = _article is not null
+        _editDraft = BuildEditDraft();
+        _saveError = null;
+        Mode = WikiMode.Edit;
+        StateHasChanged();
+    }
+
+    private WikiArticle BuildEditDraft() =>
+        _article is not null
             ? new WikiArticle(_article.Title, _article.Content, _article.Image, _article.RenderedHtml)
             {
                 Id = _article.Id,
@@ -87,11 +94,6 @@ else
                 Published = _article.Published,
             }
             : new WikiArticle(Slug, string.Empty, null) { Category = Category };
-
-        _saveError = null;
-        Mode = WikiMode.Edit;
-        StateHasChanged();
-    }
 
     /// <summary>
     /// Switching locale in the editor is a navigation, not local state: <c>?lang=</c> stays the single
@@ -228,6 +230,13 @@ else
             _sourceLocale = _article.AvailableLocales.FirstOrDefault() ?? _article.Locale;
             _selectedLocale = _article.Locale;
             _loadedRevision = _article.RevisionNumber;
+        }
+
+        if (Mode == WikiMode.Edit)
+        {
+            // A cold load into Edit mode never calls ActivateEditMode, so it must build the draft
+            // itself or WikiEdit's `Article is not null` guard renders nothing.
+            _editDraft = BuildEditDraft();
         }
 
         _loading = false;

@@ -1,4 +1,21 @@
+.char-dir-widget {
+    container-type: inline-size;
+}
+
 ::deep .char-card:hover {
-    border-color: var(--accent) !important;
-    background: var(--surface-2) !important;
+    border-color: var(--accent);
+    background: var(--surface-2);
+}
+
+.char-dir-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.char-dir-grid--loading {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+    gap: 0.875rem;
 }

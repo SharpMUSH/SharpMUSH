@@ -11,6 +11,7 @@ public class UpdatePowerCommandHandler(ISharpDatabase database) : ICommandHandle
 		return await database.UpdatePowerAsync(
 			command.Name,
 			command.Alias,
+			command.Symbol,
 			command.SetPermissions,
 			command.UnsetPermissions,
 			command.TypeRestrictions,

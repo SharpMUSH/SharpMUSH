@@ -1012,6 +1012,10 @@
   <data name="TermClear" xml:space="preserve">
     <value>Effacer</value>
   </data>
+  <data name="TermCloseTab" xml:space="preserve">
+    <value>Fermer {0}</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermSelectAnObject" xml:space="preserve">
     <value>Sélectionnez un objet.</value>
   </data>

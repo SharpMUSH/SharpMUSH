@@ -190,7 +190,7 @@ public partial class SurrealDatabase
 			yield return MapRecordToPower(element);
 	}
 
-	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, bool system,
+	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, string symbol, bool system,
 		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken cancellationToken = default)
 	{
@@ -198,6 +198,7 @@ public partial class SurrealDatabase
 		{
 			["name"] = name,
 			["alias"] = alias,
+			["symbol"] = symbol,
 			["system"] = system,
 			["setPerms"] = setPermissions,
 			["unsetPerms"] = unsetPermissions,
@@ -205,7 +206,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"UPSERT power:⟨$name⟩ SET name = $name, alias = $alias, system = $system, disabled = false, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
+			"UPSERT power:⟨$name⟩ SET name = $name, alias = $alias, symbol = $symbol, system = $system, disabled = false, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
 			parameters, cancellationToken);
 
 		return new SharpPower
@@ -213,6 +214,7 @@ public partial class SurrealDatabase
 			Id = PowerId(name),
 			Name = name,
 			Alias = alias,
+			Symbol = symbol,
 			System = system,
 			SetPermissions = setPermissions,
 			UnsetPermissions = unsetPermissions,
@@ -279,7 +281,7 @@ public partial class SurrealDatabase
 		return existed;
 	}
 
-	public async ValueTask<bool> UpdatePowerAsync(string name, string alias,
+	public async ValueTask<bool> UpdatePowerAsync(string name, string alias, string symbol,
 		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken cancellationToken = default)
 	{
@@ -290,13 +292,14 @@ public partial class SurrealDatabase
 		{
 			["name"] = name,
 			["alias"] = alias,
+			["symbol"] = symbol,
 			["setPerms"] = setPermissions,
 			["unsetPerms"] = unsetPermissions,
 			["typeRestrictions"] = typeRestrictions
 		};
 
 		await ExecuteAsync(
-			"UPDATE power SET alias = $alias, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions WHERE name = $name",
+			"UPDATE power SET alias = $alias, symbol = $symbol, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions WHERE name = $name",
 			parameters, cancellationToken);
 		return true;
 	}

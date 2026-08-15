@@ -106,15 +106,19 @@
     color: var(--accent);
 }
 
-/* Card grid */
 .char-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    /* Two tracks per implicit row, so .char-card's subgrid below lines every footer in a row up. */
+    grid-auto-rows: auto auto;
     gap: 0.875rem;
 }
 
 .char-card {
-    display: block;
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    row-gap: 0.875rem;
     padding: 1rem;
     background: var(--surface);
     border: 1px solid var(--border-soft);
@@ -134,7 +138,6 @@
     display: flex;
     gap: 0.8125rem;
     align-items: center;
-    margin-bottom: 0.875rem;
 }
 
 .char-avatar {
@@ -222,7 +225,7 @@
     border-radius: var(--radius-lg);
 }
 
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .char-page .char-grid {
         grid-template-columns: minmax(0, 1fr);
     }

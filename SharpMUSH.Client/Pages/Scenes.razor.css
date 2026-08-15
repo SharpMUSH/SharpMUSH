@@ -1,28 +1,48 @@
 ::deep .scene-card:hover {
-    border-color: var(--accent) !important;
-    background: var(--surface-2) !important;
+    border-color: var(--accent);
+    background: var(--surface-2);
+}
+
+.scenes-page {
+    padding: var(--cpad);
+}
+
+::deep .scene-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.875rem 1.125rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+}
+
+::deep .scene-card .scene-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
 }
 
 /* Mobile: stack each scene card so the title block sits above its actions,
    trim the page padding, and let the meta row wrap instead of overflowing. */
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .scenes-page {
-        padding: 1rem !important;
+        padding: var(--cpad-mobile);
     }
-    .scenes-page ::deep .scene-card {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 0.625rem !important;
-        padding: 0.875rem !important;
+    ::deep .scene-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.625rem;
+        padding: 0.875rem;
     }
-    .scenes-page ::deep .scene-card .scene-meta-row {
+    ::deep .scene-card .scene-meta-row {
         flex-wrap: wrap;
         gap: 0.5rem 0.875rem;
     }
-    .scenes-page ::deep .scene-card .scene-actions {
+    ::deep .scene-card .scene-actions {
         width: 100%;
     }
-    .scenes-page ::deep .scene-card .scene-actions .mud-button-root {
+    ::deep .scene-card .scene-actions .mud-button-root {
         flex: 1;
         min-height: 44px;
     }

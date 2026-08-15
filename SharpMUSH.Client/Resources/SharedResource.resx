@@ -1864,6 +1864,9 @@
   <data name="TermClear" xml:space="preserve">
     <value>Clear</value>
   </data>
+  <data name="TermCloseTab" xml:space="preserve">
+    <value>Close {0}</value>
+  </data>
   <data name="TermSelectAnObject" xml:space="preserve">
     <value>Select an object.</value>
   </data>

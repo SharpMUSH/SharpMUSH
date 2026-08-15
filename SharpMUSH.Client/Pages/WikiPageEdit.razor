@@ -5,8 +5,10 @@
 
 <PageTitle>@Loc["WikiEdit"]: @Slug</PageTitle>
 
-<WikiView @key="@($"{Ns}:{Category}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns" Category="@Category"
-          Locale="@Lang" Mode="WikiView.WikiMode.Edit" />
+<div class="full-bleed full-height wiki-edit-host">
+    <WikiView @key="@($"{Ns}:{Category}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns" Category="@Category"
+              Locale="@Lang" Mode="WikiView.WikiMode.Edit" />
+</div>
 
 @code {
     [Parameter]

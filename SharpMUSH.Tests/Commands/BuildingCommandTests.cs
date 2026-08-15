@@ -676,6 +676,9 @@ public class BuildingCommandTests
 
 		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("look"));
 
+		// The @descformat evaluation is queued, so it can land after CommandParse returns.
+		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"THINGDESC_{token.ToUpper()}");
+
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
@@ -703,6 +706,9 @@ public class BuildingCommandTests
 		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@tel me={objDbRef}"));
 
 		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("look"));
+
+		// The @idescformat evaluation is queued, so it can land after CommandParse returns.
+		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"INSIDEDESC_{token.ToUpper()}");
 
 		await NotifyService
 			.Received()

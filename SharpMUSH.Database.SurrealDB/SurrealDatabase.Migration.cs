@@ -81,6 +81,9 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS attribute_key ON attribute FIELDS key",
 				"DEFINE INDEX IF NOT EXISTS object_flag_name ON object_flag FIELDS name UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS power_name ON power FIELDS name UNIQUE",
+				// "No letter" is the empty string, not an absent field: @power/letter's collision scan
+				// must read the same shape from every power row.
+				"UPDATE power SET symbol = '' WHERE symbol = NONE",
 				"DEFINE INDEX IF NOT EXISTS attribute_flag_name ON attribute_flag FIELDS name UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS attribute_entry_name ON attribute_entry FIELDS name UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS channel_name ON channel FIELDS name UNIQUE",
@@ -641,8 +644,9 @@ public partial class SurrealDatabase
 				["typeRestrictions"] = new[] { "ROOM", "PLAYER", "EXIT", "THING" }
 			};
 
+			// symbol = '': every entry in PennMUSH hdrs/flag_tab.h power_table has letter '\0'.
 			await ExecuteAsync(
-				$"UPSERT power:{SanitizeRecordId(p.Name)} SET name = $name, alias = $alias, system = true, disabled = false, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
+				$"UPSERT power:{SanitizeRecordId(p.Name)} SET name = $name, alias = $alias, symbol = '', system = true, disabled = false, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
 				parameters, ct);
 		}
 	}

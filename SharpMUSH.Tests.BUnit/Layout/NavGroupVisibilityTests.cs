@@ -160,7 +160,10 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 	[Test]
 	public async Task The_stylesheet_hides_a_nav_group_that_rendered_no_links()
 	{
-		var css = await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "client", "custom.css"));
+		var css = string.Join("\n", await Task.WhenAll(
+			Directory.EnumerateFiles(ClientSource.CssRoot, "*.css")
+				.OrderBy(f => f, StringComparer.Ordinal)
+				.Select(f => File.ReadAllTextAsync(f))));
 
 		var rule = Regex.Match(
 			css,

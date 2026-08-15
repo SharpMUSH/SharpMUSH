@@ -1,0 +1,49 @@
+using System.Text.RegularExpressions;
+
+namespace SharpMUSH.Tests.BUnit.Layout;
+
+public class ContentContainerTests
+{
+	private static string Shell() =>
+		File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
+
+	private static string MainLayout() =>
+		File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Layout", "MainLayout.razor"));
+
+	[Test]
+	public async Task TheBodyIsWrappedInTheNamedQueryContainer()
+	{
+		await Assert.That(MainLayout()).Contains("phosphor-page")
+			.Because("pages can only use @container if something declares the container around @Body");
+
+		var rule = Regex.Match(Shell(), @"\.phosphor-page\s*\{(?<body>[^}]*)\}", RegexOptions.Singleline);
+		await Assert.That(rule.Success).IsTrue();
+		await Assert.That(rule.Groups["body"].Value).Contains("container: page / inline-size")
+			.Because("the container must be named 'page' and query the inline axis only");
+	}
+
+	[Test]
+	public async Task FullHeightPagesKeepADefiniteHeightThroughTheWrapper()
+	{
+		var bleed = Regex.Match(Shell(), @"\.phosphor-page:has\(> \.full-bleed\)\s*\{(?<body>[^}]*)\}", RegexOptions.Singleline);
+		await Assert.That(bleed.Success).IsTrue().Because("full-bleed pages need a selector that lifts the reading-width cap");
+		await Assert.That(bleed.Groups["body"].Value).Contains("max-width: none")
+			.Because("full-bleed removes the max-width cap and nothing else");
+
+		var height = Regex.Match(Shell(), @"\.phosphor-page:has\(> \.full-height\)\s*\{(?<body>[^}]*)\}", RegexOptions.Singleline);
+		await Assert.That(height.Success).IsTrue().Because("full-height pages need a selector that passes a definite height through the wrapper");
+		await Assert.That(height.Groups["body"].Value).Contains("height: 100%")
+			.Because("full-height opts in to a definite height without forcing the width cap open too");
+	}
+
+	[Test]
+	public async Task WideViewportsCapTheReadingWidth()
+	{
+		var wide = Regex.Match(Shell(), @"@media\s*\(min-width:\s*1601px\)\s*\{(?<body>.*?)\n\}", RegexOptions.Singleline);
+		await Assert.That(wide.Success).IsTrue().Because("the ultrawide tier must exist");
+		await Assert.That(wide.Groups["body"].Value).Contains("--content-max")
+			.Because("the cap reads a token rather than hardcoding a width");
+		await Assert.That(wide.Groups["body"].Value).Contains("margin-inline: auto")
+			.Because("capped content is centred, not left-aligned against the sidebar");
+	}
+}

@@ -439,6 +439,7 @@ public static class ErrorMessages
 		public const string CantBuyThingsByTakingMoney = "You can't buy things by taking money.";
 
 		public const string DontLookLikeGod = "You don't look like God.";
+		public const string NotEnoughMagic = "You don't have enough magic for that.";
 		public const string NotAnAdmin = "You don't look like an admin to me.";
 		public const string CantAliasCommandToThat = "I can't alias a command to that!";
 		public const string CantMakeMultipleRequests = "You can't make multiple requests at the same time!";
@@ -603,10 +604,22 @@ public static class ErrorMessages
 		public const string DontRecognizeFlag = "{0} - I don't recognize that flag.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DontRecognizePower = "{0} - I don't recognize that power.";
+		// PennMUSH set_power reports powers as granted/removed, not set/reset.
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerSet = "{0} - {1} set.";
+		public const string PowerGranted = "{0} - {1} granted.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerAlreadySet = "{0} - {1} (already) set.";
+		public const string PowerAlreadyGranted = "{0} - {1} (already) granted.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerRemoved = "{0} - {1} removed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerAlreadyRemoved = "{0} - {1} (already) removed.";
+
+		// PennMUSH src/wiz.c do_power.
+		public const string OnlyWizardsMayGrantPowers = "Only wizards may grant powers.";
+		public const string GodIsAlreadyAllPowerful = "God is already all-powerful.";
+		public const string MustSpecifyPowerToSet = "You must specify a power to set.";
+		// PennMUSH src/flags.c do_flag_info, with the flagspace name lowercased.
+		public const string NoSuchPowerInfo = "No such power.";
 
 		// --- Attribute set messages aligned with PennMUSH src/set.c ---
 		// PennMUSH format: "ObjectName/ATTRNAME - Set."
@@ -1422,7 +1435,16 @@ public static class ErrorMessages
 		public const string FailedToDisablePowerFormat = "Failed to disable power '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToEnablePowerFormat = "Failed to enable power '{0}'.";
-		public const string PowerUsage = "Usage: @power/list, @power/add <name>=<alias>, @power/delete <name>, @power/alias <name>=<alias>, @power/type <name>=<types>, @power/restrict <name>=<permissions>, @power/decompile <name>";
+		// PennMUSH src/flags.c do_flag_letter.
+		public const string PowerLetterRequiresName = "@POWER/LETTER requires a power name.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerLetterSetFormat = "Letter for power {0} set to '{1}'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerLetterClearedFormat = "Letter for power {0} cleared.";
+		public const string PowerCharactersMustBeSingleCharacters = "Power characters must be single characters.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerLetterConflictFormat = "Letter conflicts with the {0} power.";
+		public const string PowerUsage = "Usage: @power <power>, @power <object>=[!]<power> [[!]<power>...], @power/list, @power/add <name>=<alias>, @power/delete <name>, @power/alias <name>=<alias>, @power/letter <name>[=<letter>], @power/type <name>=<types>, @power/restrict <name>=<permissions>, @power/decompile <name>";
 
 		public const string FullMotdCleared = "Full MOTD cleared.";
 		public const string RejectMotdUsage = "Usage: @rejectmotd <message>";
