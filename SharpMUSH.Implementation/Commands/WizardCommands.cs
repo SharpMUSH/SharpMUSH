@@ -46,6 +46,26 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	// PennMUSH src/flags.c:955 letter_to_flagptr: a letter is only taken by a definition whose object
+	// types overlap, so two definitions with no type in common may share one
+	// (game/txt/hlp/pennv177.hlp:20). The letter comparison is case-sensitive.
+	private static async ValueTask<string?> FindLetterConflict(
+		IAsyncEnumerable<(string Name, string Symbol, string[] TypeRestrictions)> definitions,
+		string ownName, string letter, string[] ownTypes)
+	{
+		await foreach (var (name, symbol, types) in definitions)
+		{
+			if (!name.Equals(ownName, StringComparison.OrdinalIgnoreCase)
+					&& string.Equals(symbol, letter, StringComparison.Ordinal)
+					&& types.Intersect(ownTypes, StringComparer.OrdinalIgnoreCase).Any())
+			{
+				return name;
+			}
+		}
+
+		return null;
+	}
+
 	[SharpCommand(Name = "@FLAG",
 		Switches =
 		[
@@ -71,6 +91,22 @@ public partial class Commands
 			}
 
 			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			return CallState.Empty;
+		}
+
+		// Editing flag definitions is God-only in flags.c; /decompile only reads, so it stays open like
+		// /list, and /debug wants Wizard rather than God.
+		if (!switches.Contains("DECOMPILE") && !switches.Contains("DEBUG") && switches.Any() && !executor.IsGod())
+		{
+			await NotifyService!.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.NotEnoughMagic), executor);
+			return CallState.Empty;
+		}
+
+		if (switches.Contains("DEBUG") && !await executor.IsWizard())
+		{
+			await NotifyService!.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
@@ -165,20 +201,25 @@ public partial class Commands
 
 		if (switches.Contains("LETTER"))
 		{
-			if (parser.CurrentState.Arguments.Count < 2)
+			// PennMUSH src/flags.c do_flag_letter, via src/cmds.c cmd_flag with ns "FLAG".
+			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterRequiresNameAndSymbol), executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterRequiresName), executor);
 				return CallState.Empty;
 			}
 
-			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-			var newSymbol = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
 
-			if (string.IsNullOrWhiteSpace(flagName) || string.IsNullOrWhiteSpace(newSymbol))
+			if (string.IsNullOrWhiteSpace(flagName))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameAndSymbolEmptyError), executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
+
+			// do_flag_letter treats an absent and an empty letter alike: both clear it.
+			var newSymbol = parser.CurrentState.Arguments.Count > 1
+				? parser.CurrentState.Arguments["1"].Message!.ToPlainText().Trim()
+				: string.Empty;
 
 			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
 			if (flag == null)
@@ -193,8 +234,28 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
+			if (newSymbol.Length > 1)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagCharactersMustBeSingleCharacters), executor);
+				return CallState.Empty;
+			}
+
+			if (newSymbol.Length == 1)
+			{
+				var conflict = await FindLetterConflict(
+					Mediator!.CreateStream(new GetAllObjectFlagsQuery())
+						.Select(x => (x.Name, x.Symbol, x.TypeRestrictions)),
+					flag.Name, newSymbol, flag.TypeRestrictions);
+
+				if (conflict is not null)
+				{
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterConflictFormat), executor, conflict);
+					return CallState.Empty;
+				}
+			}
+
 			var result = await Mediator!.Send(new UpdateObjectFlagCommand(
-				flagName.ToUpper(),
+				flag.Name,
 				flag.Aliases,
 				newSymbol,
 				flag.SetPermissions,
@@ -202,16 +263,22 @@ public partial class Commands
 				flag.TypeRestrictions
 			));
 
-			if (result)
-			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagSymbolChangedFormat), executor, flagName, newSymbol);
-				return new CallState(MModule.single(flagName));
-			}
-			else
+			if (!result)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
+
+			if (newSymbol.Length == 1)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterSetFormat), executor, flag.Name, newSymbol);
+			}
+			else
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterClearedFormat), executor, flag.Name);
+			}
+
+			return new CallState(MModule.single(flag.Name));
 		}
 
 		if (switches.Contains("TYPE"))
@@ -1130,34 +1197,16 @@ public partial class Commands
 
 			if (newLetter.Length == 1)
 			{
-				// PennMUSH src/flags.c:955 letter_to_flagptr scopes the search to definitions whose types
-				// overlap, and compares case-sensitively. Its `n->tab == &ptab_flag` guard (:961) makes it
-				// unreachable for powers; this implements the check as written, not as reached.
-				SharpPower? conflict = null;
-				await foreach (var other in Mediator!.CreateStream(new GetPowersQuery()))
-				{
-					if (other.Name.Equals(power.Name, StringComparison.OrdinalIgnoreCase))
-					{
-						continue;
-					}
-
-					if (!string.Equals(other.Symbol, newLetter, StringComparison.Ordinal))
-					{
-						continue;
-					}
-
-					if (!other.TypeRestrictions.Intersect(power.TypeRestrictions, StringComparer.OrdinalIgnoreCase).Any())
-					{
-						continue;
-					}
-
-					conflict = other;
-					break;
-				}
+				// letter_to_flagptr's `n->tab == &ptab_flag` guard makes this unreachable for the POWER
+				// flagspace; it is implemented as written, not as reached.
+				var conflict = await FindLetterConflict(
+					Mediator!.CreateStream(new GetPowersQuery())
+						.Select(x => (x.Name, x.Symbol, x.TypeRestrictions)),
+					power.Name, newLetter, power.TypeRestrictions);
 
 				if (conflict is not null)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterConflictFormat), executor, conflict.Name);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterConflictFormat), executor, conflict);
 					return CallState.Empty;
 				}
 			}

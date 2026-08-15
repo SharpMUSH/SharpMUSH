@@ -753,4 +753,161 @@ public class FlagAndPowerCommandTests
 					&& !TestHelpers.MessagePlainTextContains(s, "Announce")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
+
+	// The seed already spends most of the alphabet, so each /letter test claims a digit no other flag
+	// or test uses: the collision check is global and these run in parallel.
+	private async ValueTask<string> CreateLetterlessFlag(string[]? types = null)
+	{
+		var flagName = $"TEST_FLAG_LTR_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var created = await Mediator.Send(new CreateObjectFlagCommand(
+			flagName, null, string.Empty, false,
+			["FLAG^WIZARD"], ["FLAG^WIZARD"], types ?? ["PLAYER"]));
+		await Assert.That(created).IsNotNull();
+		await Assert.That(created!.Symbol).IsEqualTo(string.Empty);
+		return flagName;
+	}
+
+	// PennMUSH src/flags.c:2790 do_flag_letter: "Letter for flag <name> set to '<c>'."
+	[Test]
+	public async ValueTask Flag_Letter_SetsTheLetter()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var flagName = await CreateLetterlessFlag();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {flagName}=1"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Symbol).IsEqualTo("1");
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.FlagLetterSetFormat), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	// PennMUSH src/flags.c:2793 do_flag_letter: an empty or absent letter clears it.
+	[Test]
+	public async ValueTask Flag_Letter_ClearsTheLetterWhenNoneGiven()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var flagName = await CreateLetterlessFlag();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {flagName}=2"));
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Symbol).IsEqualTo("2");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {flagName}"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Symbol).IsEqualTo(string.Empty);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.FlagLetterClearedFormat), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	// PennMUSH src/flags.c:2778 do_flag_letter: "Flag characters must be single characters."
+	[Test]
+	public async ValueTask Flag_Letter_RejectsMultipleCharacters()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var flagName = await CreateLetterlessFlag();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {flagName}=ABC"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Symbol).IsEqualTo(string.Empty);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.FlagCharactersMustBeSingleCharacters), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	// PennMUSH src/flags.c:2784 do_flag_letter: "Letter conflicts with the <other> flag." Unlike the
+	// POWER flagspace, letter_to_flagptr's `n->tab == &ptab_flag` guard (:961) passes here, so the
+	// check is reached in Penn too.
+	[Test]
+	public async ValueTask Flag_Letter_RejectsLetterTakenByAnotherFlag()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var holder = await CreateLetterlessFlag();
+		var claimant = await CreateLetterlessFlag();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {holder}=3"));
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(holder)))!.Symbol).IsEqualTo("3");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {claimant}=3"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(claimant)))!.Symbol).IsEqualTo(string.Empty);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.FlagLetterConflictFormat), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeleteObjectFlagCommand(holder));
+		await Mediator.Send(new DeleteObjectFlagCommand(claimant));
+	}
+
+	// game/txt/hlp/pennv177.hlp:20 records the fix that lets two flags share a letter when they work
+	// on different object types; MISTRUST and MYOPIC are seeded on 'm' for exactly that reason.
+	[Test]
+	public async ValueTask Flag_Letter_AllowsSameLetterOnADisjointType()
+	{
+		var playerFlag = await CreateLetterlessFlag(["PLAYER"]);
+		var roomFlag = await CreateLetterlessFlag(["ROOM"]);
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {playerFlag}=4"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {roomFlag}=4"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(playerFlag)))!.Symbol).IsEqualTo("4");
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(roomFlag)))!.Symbol).IsEqualTo("4");
+
+		await Mediator.Send(new DeleteObjectFlagCommand(playerFlag));
+		await Mediator.Send(new DeleteObjectFlagCommand(roomFlag));
+	}
+
+	// PennMUSH src/flags.c:2764 do_flag_letter refuses anyone but God; a wizard is not enough.
+	[Test]
+	public async ValueTask Flag_Letter_RequiresGod()
+	{
+		var flagName = await CreateLetterlessFlag();
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagLetterNonGod");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@flag/letter {flagName}=5"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Symbol).IsEqualTo(string.Empty);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.NotEnoughMagic), testPlayer.DbRef, testPlayer.DbRef)).IsTrue();
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	// PennMUSH src/flags.c:2516 do_flag_add is God-only, like every other flag definition switch.
+	[Test]
+	public async ValueTask Flag_Add_RequiresGod()
+	{
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagAddNonGod");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+
+		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@flag/add {flagName}=6"));
+
+		await Assert.That(await Mediator.Send(new GetObjectFlagQuery(flagName))).IsNull();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.NotEnoughMagic), testPlayer.DbRef, testPlayer.DbRef)).IsTrue();
+	}
+
+	// PennMUSH src/cmds.c:545 cmd_flag routes /decompile to do_list_flags, which has no God check.
+	[Test]
+	public async ValueTask Flag_Decompile_StaysOpenToNonGod()
+	{
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagDecompileNonGod");
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/decompile WIZARD"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Flag: WIZARD")),
+				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+	}
 }

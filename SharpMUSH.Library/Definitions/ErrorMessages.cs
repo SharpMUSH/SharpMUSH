@@ -840,10 +840,15 @@ public static class ErrorMessages
 		public const string FlagDeletedFormat = "Flag '{0}' deleted.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToDeleteFlagFormat = "Failed to delete flag '{0}'.";
-		public const string FlagLetterRequiresNameAndSymbol = "@FLAG/LETTER requires flag name and new symbol.";
-		public const string FlagNameAndSymbolEmptyError = "Flag name and symbol cannot be empty.";
+		// PennMUSH src/flags.c do_flag_letter, with the FLAG flagspace name.
+		public const string FlagLetterRequiresName = "@FLAG/LETTER requires a flag name.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagSymbolChangedFormat = "Flag '{0}' symbol changed to '{1}'.";
+		public const string FlagLetterSetFormat = "Letter for flag {0} set to '{1}'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FlagLetterClearedFormat = "Letter for flag {0} cleared.";
+		public const string FlagCharactersMustBeSingleCharacters = "Flag characters must be single characters.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FlagLetterConflictFormat = "Letter conflicts with the {0} flag.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToUpdateFlagFormat = "Failed to update flag '{0}'.";
 		public const string FlagTypeRequiresNameAndTypes = "@FLAG/TYPE requires flag name and type restrictions.";
@@ -1410,7 +1415,7 @@ public static class ErrorMessages
 		public const string FlagDebugRequiresName = "@FLAG/DEBUG requires a flag name.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FlagDisableEnableRequiresNameFormat = "@FLAG/{0} requires a flag name.";
-		public const string FlagUsage = "Usage: @flag/list, @flag/add <name>=<symbol>, @flag/delete <name>, @flag/letter <name>=<symbol>, @flag/type <name>=<types>, @flag/alias <name>=<aliases>, @flag/restrict <name>=<permissions>, @flag/decompile <name>";
+		public const string FlagUsage = "Usage: @flag/list, @flag/add <name>=<symbol>, @flag/delete <name>, @flag/letter <name>[=<letter>], @flag/type <name>=<types>, @flag/alias <name>=<aliases>, @flag/restrict <name>=<permissions>, @flag/decompile <name>";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotModifySystemPowerFormat = "Cannot modify system power '{0}'.";
