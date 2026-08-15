@@ -1,7 +1,12 @@
+.pkg-page { padding: var(--cpad); }
+
 /* .pkg-row is applied via Class= on a child <MudPaper> (its rendered DOM), with no own-element
    ancestor carrying a class, so it needs a leading ::deep. */
-::deep .pkg-row { transition: border-color 0.12s; }
-::deep .pkg-row:hover { border-color: var(--accent) !important; }
+::deep .pkg-row {
+    border: 1px solid var(--border);
+    transition: border-color 0.12s;
+}
+::deep .pkg-row:hover { border-color: var(--accent); }
 
 .pkg-tabs {
     display: flex;
@@ -75,12 +80,18 @@
 
 .pkg-search input::placeholder { color: var(--text-faint); }
 
-@media (max-width: 760px) {
-    .pkg-page { padding: var(--cpad-mobile) !important; }
-    .pkg-stat-grid { grid-template-columns: 1fr 1fr !important; }
+.pkg-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+@container page (max-width: 48rem) {
+    .pkg-page { padding: var(--cpad-mobile); }
     .pkg-tabs { flex-wrap: wrap; }
     .pkg-search { flex: 1 1 100%; }
-    .pkg-search input { width: 100% !important; }
+    .pkg-search input { width: 100%; }
     /* .pkg-row is applied via Class= on a child <MudPaper>, so it needs a leading ::deep. */
-    ::deep .pkg-row { flex-wrap: wrap !important; }
+    ::deep .pkg-row { flex-wrap: wrap; }
 }

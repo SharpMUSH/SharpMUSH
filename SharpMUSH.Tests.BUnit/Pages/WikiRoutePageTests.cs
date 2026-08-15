@@ -234,15 +234,42 @@ public class WikiPageRouteTests : BunitContext
 		var wikiSvc = Services.GetRequiredService<IWikiService>();
 		await wikiSvc.CreateAsync("Magic System", "Content here.", authorDbref: "#1", WikiNamespace.Main);
 
-		var cut = Render<SharpMUSH.Client.Pages.WikiPageEdit>(p => p
-				.Add(c => c.Slug, "magic_system")
-				.Add(c => c.Ns, "main")
-				.Add(c => c.Category, "general"));
+		var host = Render<Components.MudHarness>(p => p
+				.AddChildContent<SharpMUSH.Client.Pages.WikiPageEdit>(cp => cp
+						.Add(c => c.Slug, "magic_system")
+						.Add(c => c.Ns, "main")
+						.Add(c => c.Category, "general")));
+		var cut = host.FindComponent<SharpMUSH.Client.Pages.WikiPageEdit>();
 
 		var wikiView = cut.FindComponent<WikiView>();
 		await Assert.That(wikiView).IsNotNull();
 		await Assert.That(wikiView.Instance.Slug).IsEqualTo("magic_system");
 		await Assert.That(wikiView.Instance.Mode).IsEqualTo(WikiView.WikiMode.Edit);
+	}
+
+	[TUnit.Core.Test]
+	public async Task WikiPageEdit_ColdLoad_RendersTheEditorInsteadOfABlankColumn()
+	{
+		var wikiSvc = Services.GetRequiredService<IWikiService>();
+		await wikiSvc.CreateAsync("Magic System", "Content here.", authorDbref: "#1", WikiNamespace.Main);
+
+		var host = Render<Components.MudHarness>(p => p
+				.AddChildContent<SharpMUSH.Client.Pages.WikiPageEdit>(cp => cp
+						.Add(c => c.Slug, "magic_system")
+						.Add(c => c.Ns, "main")
+						.Add(c => c.Category, "general")));
+		var cut = host.FindComponent<SharpMUSH.Client.Pages.WikiPageEdit>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindComponents<WikiEdit>().Count == 0)
+				throw new InvalidOperationException("editor not rendered yet");
+		}, TimeSpan.FromSeconds(5));
+
+		var editor = cut.FindComponent<WikiEdit>();
+		await Assert.That(editor.Instance.Article).IsNotNull();
+		await Assert.That(editor.Instance.Article!.Content).IsEqualTo("Content here.");
+		await Assert.That(cut.Markup).Contains("wiki-edit-title");
 	}
 }
 

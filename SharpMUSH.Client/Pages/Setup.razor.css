@@ -125,7 +125,8 @@
 	cursor: not-allowed;
 }
 
-@media (max-width: 760px) {
+/* Unnamed: under OnboardingLayout there is no .phosphor-page, so this queries .onboarding-shell. */
+@container (max-width: 48rem) {
     .setup-page {
         padding: 1rem;
         min-height: 100vh;

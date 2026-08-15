@@ -1071,94 +1071,177 @@ All patterns inherit colors from these tokens
 
 ---
 
-## 14. Responsive Design + Mobile Scene Experience
+## 14. Responsive Design: the Shell/Page CSS Boundary
 
-**Definition:** The portal adapts across 3 breakpoints (desktop, tablet, mobile)
-with layout transformations that preserve functionality. Scene reading/posing
-on mobile is a first-class experience, not a degraded desktop view.
+**Definition:** Two disjoint responsive systems, not one. The shell
+(`css/shell.css`) owns every viewport `@media` query and decides how much
+width the content column gets. Pages and components never query the
+viewport — they query `.phosphor-page`, the container the shell hands them,
+via `@container`. `@media` in a `*.razor.css` file and `@container` in
+`shell.css` are both convention violations, and `ResponsiveConventionsTests`
+fails the build on either.
 
-**Rationale:** Players check scenes on their phone during lunch, commute, or
-before bed. "I'll reply when I get to my desktop" kills RP momentum. A portal
-that works on mobile keeps scenes active 24/7. AresMUSH's web portal is
-desktop-only in practice — this is a clear competitive advantage.
+**Rationale:** The content column's width is not the viewport's. It is
+whatever remains after a collapsible sidebar (232px expanded, 62px collapsed)
+and up to two widget asides — left and right — whose widths are runtime
+admin settings, not constants a stylesheet can know. A page has no way to ask
+the viewport "how wide am I?" and get a truthful answer; the viewport might
+be 1600px while the page's actual box is 900px because two 300px asides are
+open. Only the container the shell constructs — `.phosphor-page` — knows the
+real number, which is why pages query it instead.
+
+The shell keeps a separate, legitimate use of viewport `@media`: device
+chrome that doesn't live inside `.phosphor-page` at all — the sidebar
+becoming an off-canvas drawer with a bottom tab bar under `(max-width: 760px),
+(pointer: coarse)`, and 44px minimum touch targets under `(pointer: coarse)`.
+That's the shell describing the device. It is a different question from a
+page describing its own content box, and the two must not be answered by the
+same mechanism.
 
 ### Specification
 
-**Breakpoints:**
+**Ownership rule:**
 
-| Breakpoint   | Width        | Layout                                    |
-|--------------|--------------|-------------------------------------------|
-| Desktop      | ≥1200px      | Left nav + content + optional right panel |
-| Tablet       | 768–1199px   | Collapsible left nav + full-width content |
-| Mobile       | <768px       | Bottom tab bar + full-width content       |
+| Query type | Lives in | Never in |
+|---|---|---|
+| `@media` (viewport / device) | `css/shell.css`; `css/globals.css` only for MudBlazor body-portal content | any `*.razor.css` |
+| `@container` (element's own box) | any `*.razor.css` | `css/shell.css` |
 
-**Desktop layout:**
-```
-┌──┬────────────────────────┬──────┐
-│  │                        │      │
-│N │      Main Content      │ Right│
-│A │                        │ Panel│
-│V │                        │      │
-│  ├────────────────────────┤      │
-│  │      Terminal          │      │
-└──┴────────────────────────┴──────┘
-```
+`css/globals.css` is the one sanctioned second home for `@media`, and only
+for the narrow case that has no alternative: elements MudBlazor teleports
+into a body-level portal (popovers, the `CharacterPicker` popup) render
+outside `.phosphor-page` entirely, so they have no container ancestor to
+query — the viewport is the only width available to them.
 
-**Mobile layout:**
-```
-┌──────────────────────────┐
-│      Main Content        │
-│                          │
-│                          │
-├──────────────────────────┤
-│  [Pose input - sticky]   │
-├──────────────────────────┤
-│ 🏠  🎭  📝  ✉️  ⋯      │
-│ Home Scene Wiki Mail More│
-└──────────────────────────┘
-```
+**The container vocabulary:**
 
-**Mobile-specific adaptations:**
+`.phosphor-page` (declared once, in `shell.css`) is `container: page /
+inline-size`. Pages query it by name — `@container page (max-width: 48rem)`
+— never unnamed, so a page-tier query can't accidentally match some other
+container a component happens to declare. There are exactly three sanctioned
+tier literals, each with an enforced direction:
 
-| Feature          | Desktop                        | Mobile                           |
-|------------------|--------------------------------|----------------------------------|
-| Navigation       | Left sidebar (always visible)  | Bottom tab bar (5 items max)     |
-| Right panel      | Visible alongside content      | Swipe/tab within page            |
-| Terminal         | Fixed bottom panel             | Bottom sheet (swipe up)          |
-| Scene posing     | Fixed input at bottom of scene | Sticky input (chat-app style)    |
-| Contextual menus | Right-click / ⋯ icon          | Long-press or ⋯ icon             |
-| Wiki TOC         | Floating right sidebar         | Collapsible top section          |
-| Omnisearch       | Modal overlay                  | Full-screen takeover             |
-| Notifications    | Dropdown panel                 | Full-screen slide                |
+| Tier | Literal | Direction | Why |
+|---|---|---|---|
+| Narrow | `48rem` | `max-width` | downgrade as the container shrinks |
+| Medium | `64rem` | `max-width` | downgrade as the container shrinks |
+| Roomy | `90rem` | `min-width` | upgrade as the container grows |
 
-**Scene on mobile (priority):**
-- Pose input is ALWAYS visible (sticky bottom, above tab bar)
-- Scene log scrolls above the input (newest at bottom, chat-style)
-- Virtual keyboard doesn't push content off screen (use `visualViewport` API)
-- Compose mode: input expands to 3 lines, toolbar appears above it
-- Submit: Enter key or Send button (configurable in settings)
+Blocks are ordered roomy → medium → narrow in the stylesheet, so a later,
+narrower rule wins the cascade over an earlier, wider one when both match.
+`ResponsiveConventionsTests` enforces the literal set and the direction; a
+`max-width: 90rem` tier (or wider) isn't just off-spec, it's broken, because
+the shell caps `.phosphor-page` at `--content-max` (1400px) above a 1601px
+viewport — a threshold that high is either unreachable, or (with the sidebar
+collapsed) flickers as the container crosses the 1400px cap and the tier
+threshold within the same few pixels.
 
-### Edge Cases
+**Components are not pages.** A component that declares its own unnamed
+container (`@container (max-width: 30rem) { … }`) is sizing itself against
+its own content, not the shell's layout math — it might be 200px in an aside
+or full-width on the home page, so it has no relationship to the three page
+literals and picks its own values freely. Before reaching for a breakpoint at
+all, prefer continuous CSS where it solves the problem outright: `clamp()`
+for fluid type/spacing, `minmax(min(320px, 100%), 1fr)` for a grid track that
+never triggers horizontal scroll, `flex-wrap` for a row that should become a
+stack without a named threshold. A container query is for a layout
+*transformation* (columns to stack, icon-only to labeled), not for scaling a
+number.
 
-- **Virtual keyboard:** On iOS/Android, the virtual keyboard pushes content up.
-  Use `window.visualViewport.height` to detect keyboard state and adjust layout.
-  The pose input must remain visible even with keyboard open.
-- **Orientation:** Landscape mobile is essentially a tablet — use tablet layout
-  rules (show more content width, keep sidebar collapsed).
-- **PWA install:** The portal should be installable as a PWA. Provide manifest.json
-  with appropriate icons. Home screen launch → standalone mode (no browser chrome).
-- **Offline mobile:** If disconnected on mobile, show cached content (last viewed
-  pages) and queue poses locally. Show clear "offline" indicator.
+**The two opt-outs.** `.phosphor-page` normally caps width at 1400px and
+sizes to content height. Two independent classes on a page's root override
+that, and a page carries either, both, or neither depending on what it
+actually needs:
 
-### Accessibility
+- `full-bleed` — removes the 1400px reading cap (the wiki diff view, the
+  layout editor's board, the softcode editor's three panes).
+- `full-height` — gives the wrapper a definite `height: 100%` instead of just
+  `min-height`, so a page whose own layout depends on percentage heights
+  (`height: 100%` nested content) doesn't collapse to `auto`.
 
-- Touch targets: minimum 44x44px for all interactive elements
-- Bottom tab bar: proper `<nav>` with `role="tablist"` semantics
-- Swipe gestures always have a non-gesture alternative (button)
-- Screen reader: mobile layout has same semantic structure as desktop
+They're separate because they answer separate questions — wanting the full
+window width and needing a definite height are unrelated, and a page can
+want one without the other.
 
-**Related patterns:** Connection State (especially important on mobile networks),
-Keyboard Shortcuts (disabled on mobile — touch replaces keyboard)
+**Enforcement:** `ResponsiveConventionsTests`
+(`SharpMUSH.Tests.BUnit/Layout/ResponsiveConventionsTests.cs`) is the gate.
+A page must never contain `@media`, full stop — there is no exemption list
+left. It also enforces: the shell contains no `@container`; every non-shell,
+non-globals `.css` file contains no `@media`; page-tier literals and
+directions; no scoped stylesheet positions anything `fixed` (a container is
+a containing block for `position: fixed`, so fixed chrome anchors to the
+content column instead of the viewport if it ends up in page CSS); no scoped
+stylesheet uses `!important` (unlayered scoped CSS already beats the vendor
+cascade layer, so `!important` there is only ever hiding a real conflict);
+**no global stylesheet uses `!important` either** — global sheets are
+imported into cascade layers, and a layered `!important` outranks every
+unlayered scoped rule in the app, which is the exact inversion this boundary
+exists to delete; multi-tier stylesheets state their tiers roomy → medium →
+narrow, because both `max-width` tiers match below 48rem and narrow only wins
+by being authored last; every page stylesheet declares at least one tier or
+appears in `PagesWithoutContainerTiersByDesign` with a stated reason; and
+every routable page ships a stylesheet (a page with nowhere to declare
+tiers ends up responsive by accident, not by design — `PagesWithoutStylesheetByDesign`
+is the sole, deliberately narrow exception, for redirect-only routes with no
+markup of their own).
+
+When a vendor ships CSS the app cannot import into a layer — Monaco injects
+its own stylesheet at runtime — the answer is an *unlayered* global sheet
+(`css/monaco-overrides.css`, imported without `layer(...)`), which wins on
+specificity from outside the layer stack. Not `!important`, which would also
+outrank every page.
+
+### Traps that cost real time
+
+These aren't hypothetical — each shipped, was invisible in the diff, and
+only showed up when the page was opened in a browser.
+
+- **`::deep` anchors on the wrong side.** A CSS class handed to a MudBlazor
+  component (`<MudButton Class="my-class">`) lands on that component's outer
+  wrapper element — an element Blazor did not stamp with the *page's* scope
+  attribute, because scope attributes are only applied to elements the
+  page's own markup declares. `.foo ::deep .bar` compiles to `.foo[b-xxx]
+  .bar`, which requires `.foo` itself to carry the page's scope attribute —
+  it doesn't, so the selector matches nothing. `::deep .foo .bar` compiles to
+  `[b-xxx] .foo .bar` instead, with the scope attribute anchored on an
+  ancestor already known to carry it, and works. Markdown- and
+  wiki-injected HTML is worse: it carries no scope attribute anywhere, so
+  even a correctly-anchored `::deep` selector needs to not depend on scoping
+  at all for that content. This shipped as dead, no-op CSS twice before the
+  pattern was named.
+- **Inline `Style="..."` wins regardless of layers.** A MudBlazor component's
+  `Style` parameter renders as an inline `style` attribute, which beats every
+  stylesheet rule — including an unlayered scoped rule that would otherwise
+  win — because inline style isn't part of the cascade layer system at all.
+  Several rules in this codebase were silently dead for exactly this reason:
+  correct selector, correct specificity, correct layer, and still
+  overridden, because the component was setting the same property inline.
+- **A page tier above 1400px is a trap, not just noise.** See the
+  `SanctionedTiersUseTheCorrectDirection` rationale above — a `max-width`
+  literal at `90rem` or wider sits above the shell's 1400px content cap and
+  is unreachable-or-flickery, never simply "a bit late."
+- **`container-type: size` needs a genuinely definite block size, and
+  `min-height` doesn't give you one.** `.onboarding-shell` needed a
+  block-axis (height) query for its short-viewport layout, so it declared
+  `container-type: size`. With only `min-height: 100vh` and no `height`, the
+  box's block size stayed `auto` — size containment removes the content's
+  contribution to that size but invents nothing to replace it, so the
+  container's block axis was indefinite and a `max-height` query against it
+  matched *unconditionally*, at every viewport height tested including
+  1600px. This is the mirror image of a rule that never fires: a rule that
+  always fires reads as "working" in every casual check. The fix was
+  `height: 100vh` (with an `svh` fallback line), which makes the block size
+  definite so the query only matches when the viewport is actually short.
+- **Read the compiled selector, then still open a browser.** The selector
+  tells you what a rule *would* match if reached; it says nothing about
+  whether the box it targets is definite, whether an inline style already
+  won, or whether `::deep` anchored where you think. Every trap above passed
+  a source-code read. None survived resizing the actual page.
+
+**Related patterns:** Connection State (offline handling applies equally on
+mobile), Keyboard Shortcuts (single-key shortcuts are disabled wherever
+touch input is likely, via the same `(pointer: coarse)` query the shell
+already owns).
 
 ---
 

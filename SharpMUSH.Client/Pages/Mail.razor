@@ -22,9 +22,9 @@
 }
 else
 {
-    <div class="mail-page" style="display:flex;height:100%;overflow:hidden;">
+    <div class="mail-page full-height">
 
-        <div class="mail-folders" style="width:180px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface-3);display:flex;flex-direction:column;overflow-y:auto;">
+        <div class="mail-folders">
             <div style="padding:0.875rem 0.75rem 0.5rem;border-bottom:1px solid var(--border-soft);">
                 <MudText Class="section-kicker">@Loc["NavMailFolders"]</MudText>
             </div>
@@ -47,7 +47,7 @@ else
             </div>
         </div>
 
-        <div class="mail-list" style="width:320px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface);">
+        <div class="mail-list">
             <div style="padding:0.625rem 0.875rem;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:0.5rem;">
                 <MudText Style="font-size:0.8125rem;font-weight:600;flex:1;">@_folder</MudText>
                 @if (_messages.Count > 0)
@@ -55,7 +55,7 @@ else
                     <MudText Style="font-size:0.6875rem;color:var(--text-faint);">@_messages.Count</MudText>
                 }
             </div>
-            <div style="flex:1;overflow-y:auto;">
+            <div class="mail-list-body">
                 @if (_loading)
                 {
                     <div style="padding:0.75rem;">
@@ -92,7 +92,7 @@ else
             </div>
         </div>
 
-        <div class="mail-reading" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;">
+        <div class="mail-reading">
             @if (_selected is null)
             {
                 <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-faint);font-size:0.875rem;">
@@ -113,7 +113,7 @@ else
                         </div>
                     </div>
                 </div>
-                <div style="flex:1;overflow-y:auto;padding:1.25rem var(--cpad);">
+                <div class="mail-reading-body">
                     <MudButton Variant="Variant.Text" Size="Size.Small"
                                Color="Color.Default" OnClick="OpenDetail">
                         @Loc["NavMailReadFullMessage"]

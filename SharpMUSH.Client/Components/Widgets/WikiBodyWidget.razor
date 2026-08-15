@@ -8,9 +8,11 @@
 
 @if (!string.IsNullOrWhiteSpace(_name))
 {
-    <MudPaper Class="wiki-body-widget" Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
-        <WikiView Slug="@_name" Namespace="@WikiRoutes.CharacterNamespace" Mode="WikiView.WikiMode.View" />
-    </MudPaper>
+    <div class="wiki-body-widget">
+        <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+            <WikiView Slug="@_name" Namespace="@WikiRoutes.CharacterNamespace" Mode="WikiView.WikiMode.View" />
+        </MudPaper>
+    </div>
 }
 
 @code {

@@ -40,7 +40,8 @@
     border: 1px solid var(--border);
 }
 
-@media (max-width: 760px) {
+/* Unnamed: under OnboardingLayout there is no .phosphor-page, so these query .onboarding-shell. */
+@container (max-width: 48rem) {
     .login-page {
         padding: 1rem;
         min-height: 100vh;
@@ -51,7 +52,7 @@
     }
 }
 
-@media (max-height: 700px) {
+@container (max-height: 700px) {
     .login-brand {
         margin-bottom: 0.75rem;
     }

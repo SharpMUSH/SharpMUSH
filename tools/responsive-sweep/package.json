@@ -1,0 +1,12 @@
+{
+	"name": "responsive-sweep",
+	"private": true,
+	"type": "module",
+	"description": "Drives the SharpMUSH portal at four widths and fails on horizontal overflow.",
+	"scripts": {
+		"sweep": "node sweep.mjs"
+	},
+	"dependencies": {
+		"playwright-core": "1.61.1"
+	}
+}
