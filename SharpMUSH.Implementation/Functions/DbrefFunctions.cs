@@ -637,7 +637,7 @@ public partial class Functions
 
 	private static LocateFlags ParseLocateParameters(string parameters)
 	{
-		var flags = LocateFlags.NoTypePreference;
+		var flags = default(LocateFlags);
 		var paramUpper = parameters.ToUpperInvariant().Replace(" ", "");
 
 		if (paramUpper.Contains('*'))
@@ -665,7 +665,15 @@ public partial class Functions
 		if (paramUpper.Contains('R')) flags |= LocateFlags.RoomsPreference;
 		if (paramUpper.Contains('T')) flags |= LocateFlags.ThingsPreference;
 		if (paramUpper.Contains('L')) flags |= LocateFlags.PreferLockPass;
-		if (paramUpper.Contains('F')) flags |= LocateFlags.FailIfNotPreferred;
+		// F is "fail if not of the preferred type" — MAT_TYPE, the flag that turns the preference
+		// into a filter during matching rather than only into a post-hoc check on the winner.
+		if (paramUpper.Contains('F')) flags |= LocateFlags.FailIfNotPreferred | LocateFlags.OnlyMatchTypePreference;
+
+		// NOTYPE only when no type letter was given. Setting it unconditionally alongside a preference
+		// said both "prefer things" and "have no preference", and left right_type at zero — which made
+		// every single-match locate() report #-2 WHICH ONE.
+		if (Library.Services.LocateService.PreferredTypes(flags) == SharpObjectTypes.None)
+			flags |= LocateFlags.NoTypePreference;
 
 		return flags;
 	}

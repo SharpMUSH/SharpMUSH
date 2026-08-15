@@ -4,6 +4,23 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
+/// <summary>
+/// PennMUSH's object-type mask (<c>match.c</c>'s <c>type</c> parameter, whose <c>NOTYPE</c> is
+/// <see cref="None"/>). Held apart from <see cref="LocateFlags"/> because a type preference and a
+/// search scope are different questions: <c>ExitsPreference</c> says "prefer an exit", while the
+/// <c>Exits*</c> flags say "walk the exit lists".
+/// </summary>
+[Flags]
+public enum SharpObjectTypes
+{
+	None = 0,
+	Player = 1,
+	Room = 2,
+	Exit = 4,
+	Thing = 8,
+	Any = Player | Room | Exit | Thing
+}
+
 [Flags]
 public enum LocateFlags
 {
