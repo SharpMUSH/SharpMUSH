@@ -43,13 +43,7 @@
 		     so FSharp.Core must be present beside the host binary for plugin loading to succeed. -->
 		<PackageReference Include="FSharp.Core" Version="10.1.302" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.7" />
-		<!-- Transitive pin. Testcontainers requires SSH.NET >= 2025.1.0 and NuGet resolves the
-		     floor, which carries GHSA-q939-rpr3-3284 (high: ScpClient recursive download allows
-		     arbitrary file write from server-controlled filenames). 2026.0.0 is the first patched
-		     release and satisfies the same range, so this is a floor bump rather than an override.
-		     Drop it once Testcontainers raises its own floor. -->
-		<PackageReference Include="SSH.NET" Version="2026.0.0" />
-		<PackageReference Include="Testcontainers.ArangoDb" Version="4.11.0" />
+		<PackageReference Include="Testcontainers.ArangoDb" Version="4.14.0" />
 
 	</ItemGroup>
 	
