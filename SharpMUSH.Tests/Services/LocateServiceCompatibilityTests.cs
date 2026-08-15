@@ -3,6 +3,7 @@ using NSubstitute;
 using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -323,9 +324,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "Long");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Long"), 0);
+		await _locateService.MatchList(state, list, player, "Long");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var exact = state.Exact;
@@ -350,9 +351,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference | LocateFlags.NoPartialMatches, "Long");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference | LocateFlags.NoPartialMatches,
+			HelperFunctions.ParseDbRef("Long"), 0);
+		await _locateService.MatchList(state, list, player, "Long");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 
@@ -578,9 +579,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing, hiddenThing }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "HiddenObject");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("HiddenObject"), 0);
+		await _locateService.MatchList(state, list, player, "HiddenObject");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 
@@ -605,9 +606,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "Nor");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Nor"), 0);
+		await _locateService.MatchList(state, list, player, "Nor");
 		var bestMatch = state.Best;
 		var curr = state.Count; // prefix — must not match exit
 
@@ -628,9 +629,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "North");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("North"), 0);
+		await _locateService.MatchList(state, list, player, "North");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var exact = state.Exact;
@@ -653,9 +654,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "n");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("n"), 0);
+		await _locateService.MatchList(state, list, player, "n");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var exact = state.Exact;
@@ -682,9 +683,9 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { exit }.ToAsyncEnumerable();
 
 		// "north" is a prefix of alias "northwest", but exits use exact matching only
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "north");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("north"), 0);
+		await _locateService.MatchList(state, list, player, "north");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 
@@ -705,9 +706,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { target }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "Admin");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Admin"), 0);
+		await _locateService.MatchList(state, list, player, "Admin");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var exact = state.Exact;
@@ -733,9 +734,9 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { target }.ToAsyncEnumerable();
 
 		// "Admin" is a prefix of alias "Administrator"
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "Admin");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Admin"), 0);
+		await _locateService.MatchList(state, list, player, "Admin");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var exact = state.Exact;
@@ -762,9 +763,9 @@ public class LocateServiceCompatibilityTests
 		// Put prefix first, exact second — exact should win regardless of list order
 		var list = new[] { prefixPlayer, exactPlayer }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "Wiz");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Wiz"), 0);
+		await _locateService.MatchList(state, list, player, "Wiz");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var exact = state.Exact;
@@ -792,9 +793,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { coin1, coin2 }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "Coin");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Coin"), 0);
+		await _locateService.MatchList(state, list, player, "Coin");
 		var curr = state.Count;
 		var rightType = state.RightType;
 		var exact = state.Exact;
@@ -823,9 +824,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { coin1, coin2 }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.UseLastIfAmbiguous, "Coin");
+		var state = new LocateService.MatchState(LocateFlags.UseLastIfAmbiguous,
+			HelperFunctions.ParseDbRef("Coin"), 0);
+		await _locateService.MatchList(state, list, player, "Coin");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var exact = state.Exact;
@@ -852,9 +853,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "Sword");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Sword"), 0);
+		await _locateService.MatchList(state, list, player, "Sword");
 		var curr = state.Count;
 		var rightType = state.RightType;
 		var exact = state.Exact;
@@ -883,9 +884,9 @@ public class LocateServiceCompatibilityTests
 		// Partial first, then exact
 		var list = new[] { partialMatch, exactMatch }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "Sword");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Sword"), 0);
+		await _locateService.MatchList(state, list, player, "Sword");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var exact = state.Exact;
@@ -918,9 +919,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { ownedThing, foreignThing }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.OnlyMatchLookerControlledObjects, "Widget");
+		var state = new LocateService.MatchState(LocateFlags.OnlyMatchLookerControlledObjects,
+			HelperFunctions.ParseDbRef("Widget"), 0);
+		await _locateService.MatchList(state, list, player, "Widget");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var exact = state.Exact;
@@ -944,9 +945,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "testobject");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("testobject"), 0);
+		await _locateService.MatchList(state, list, player, "testobject");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var exact = state.Exact;
@@ -969,9 +970,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "MYWIDGET");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("MYWIDGET"), 0);
+		await _locateService.MatchList(state, list, player, "MYWIDGET");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var exact = state.Exact;
@@ -1000,9 +1001,9 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { sword1, sword2, sword3 }.ToAsyncEnumerable();
 
 		// final=2 means "2nd" — Match_List in English mode counts up to final
-		var state = new LocateService.MatchState(2);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "Sword");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Sword"), 2);
+		await _locateService.MatchList(state, list, player, "Sword");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var flow = state.Done;
@@ -1028,9 +1029,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(1);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "Sword");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Sword"), 1);
+		await _locateService.MatchList(state, list, player, "Sword");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var flow = state.Done;
@@ -1058,9 +1059,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(5);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference, "Sword");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Sword"), 5);
+		await _locateService.MatchList(state, list, player, "Sword");
 		var curr = state.Count;
 		var flow = state.Done;
 
@@ -1086,9 +1087,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { targetPlayer, thing }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.ThingsPreference, "Widget");
+		var state = new LocateService.MatchState(LocateFlags.ThingsPreference,
+			HelperFunctions.ParseDbRef("Widget"), 0);
+		await _locateService.MatchList(state, list, player, "Widget");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var rightType = state.RightType;
@@ -1113,9 +1114,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { targetPlayer, thing }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.ThingsPreference | LocateFlags.OnlyMatchTypePreference, "Widget");
+		var state = new LocateService.MatchState(LocateFlags.ThingsPreference | LocateFlags.OnlyMatchTypePreference,
+			HelperFunctions.ParseDbRef("Widget"), 0);
+		await _locateService.MatchList(state, list, player, "Widget");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 
@@ -1138,9 +1139,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing, targetPlayer }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.PlayersPreference, "Widget");
+		var state = new LocateService.MatchState(LocateFlags.PlayersPreference,
+			HelperFunctions.ParseDbRef("Widget"), 0);
+		await _locateService.MatchList(state, list, player, "Widget");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 		var rightType = state.RightType;
@@ -1249,9 +1250,9 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var state = new LocateService.MatchState(0);
-		await _locateService.MatchList(state, list, player,
-			LocateFlags.NoTypePreference | LocateFlags.NoVisibilityCheck, "TargetObject");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference | LocateFlags.NoVisibilityCheck,
+			HelperFunctions.ParseDbRef("TargetObject"), 0);
+		await _locateService.MatchList(state, list, player, "TargetObject");
 		var bestMatch = state.Best;
 		var curr = state.Count;
 

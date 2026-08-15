@@ -1476,8 +1476,7 @@ public partial class Commands
 			LocateFlags.ExitsInTheRoomOfLooker
 			| LocateFlags.EnglishStyleMatching
 			| LocateFlags.ExitsPreference
-			| LocateFlags.OnlyMatchTypePreference
-			| LocateFlags.FailIfNotPreferred);
+			| LocateFlags.OnlyMatchTypePreference);
 
 		// PennMUSH do_move (move.c:432) answers a failed exit match with "You can't go that way.",
 		// not with the generic locate failure.

@@ -601,7 +601,14 @@ public partial class Functions
 
 		var looker = maybeLooker.AsSharpObject;
 
-		var locateFlags = ParseLocateParameters(parametersArg);
+		var (locateFlags, unknownSwitches) = ParseLocateParameters(parametersArg);
+
+		// fun_locate notifies once per letter it does not recognise and carries on with the rest.
+		foreach (var unknown in unknownSwitches)
+		{
+			await NotifyService!.Notify(executor,
+				string.Format(ErrorMessages.Notifications.LocateUnknownSwitchFormat, unknown));
+		}
 
 		// fun_locate: 's' is refused up front unless the executor controls the looker.
 		if (locateFlags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
@@ -635,12 +642,17 @@ public partial class Functions
 	/// neighbours) into 'N' (no type preference), and 'x' (no partial matches) into 'X' (take the last
 	/// of an ambiguous set), so half the switches meant two things at once.
 	/// </summary>
-	private static LocateFlags ParseLocateParameters(string parameters)
+	private static (LocateFlags Flags, IReadOnlyList<char> Unknown) ParseLocateParameters(string parameters)
 	{
 		var flags = default(LocateFlags);
+		List<char>? unknown = null;
 
 		foreach (var c in parameters)
 		{
+			// ' ' is skipped rather than reported; every other unrecognised letter is fun_locate's
+			// "I don't understand switch '%c'.".
+			if (c != ' ' && !KnownLocateSwitches.Contains(c)) (unknown ??= []).Add(c);
+
 			flags |= c switch
 			{
 				'N' => LocateFlags.NoTypePreference,
@@ -649,7 +661,7 @@ public partial class Functions
 				'R' => LocateFlags.RoomsPreference,
 				'T' => LocateFlags.ThingsPreference,
 				'L' => LocateFlags.PreferLockPass,
-				'F' => LocateFlags.OnlyMatchTypePreference | LocateFlags.FailIfNotPreferred,
+				'F' => LocateFlags.OnlyMatchTypePreference,
 				'X' => LocateFlags.UseLastIfAmbiguous,
 				'*' => LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName |
 							 LocateFlags.ExitsInsideOfLooker,
@@ -674,8 +686,12 @@ public partial class Functions
 		if (Library.Services.LocateService.PreferredTypes(flags) == SharpObjectTypes.None)
 			flags |= LocateFlags.NoTypePreference;
 
-		return flags;
+		return (flags, (IReadOnlyList<char>?)unknown ?? []);
 	}
+
+	/// <summary>Every letter the switch above answers to, in fundb.c's order.</summary>
+	private static readonly System.Buffers.SearchValues<char> KnownLocateSwitches =
+		System.Buffers.SearchValues.Create("NEPRTLFX*acehilmnypzxs");
 
 
 	[SharpFunction(Name = "lock", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

@@ -160,8 +160,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 				// Name-based lookup using mediator query
 				// Note: Parser is null as substitutions should have been pre-evaluated
+				// A name, not a dbref — the dbref case returned above. AbsoluteMatch names no scope, so on
+				// its own it could only ever resolve "#N", which is the branch that already ran.
 				var locateResult = med.Send(
-					new LocateObjectQuery(gatedObj, gatedObj, target, LocateFlags.AbsoluteMatch),
+					new LocateObjectQuery(gatedObj, gatedObj, target, LocateFlags.All),
 					CancellationToken.None)
 					.AsTask()
 					.ConfigureAwait(false).GetAwaiter().GetResult();
@@ -233,8 +235,11 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 			try
 			{
+				// MAT_POSSESSION | MAT_CONTENTS — PennMUSH's MAT_OBJ_CONTENTS shape. MAT_CONTENTS on its own
+				// is a filter over whatever the scopes turn up, not a scope, so it names nowhere to look.
 				var locateResult = med.Send(
-					new LocateObjectQuery(unlockerObj, unlockerObj, target, LocateFlags.OnlyMatchObjectsInLookerInventory),
+					new LocateObjectQuery(unlockerObj, unlockerObj, target,
+						LocateFlags.MatchObjectsInLookerInventory | LocateFlags.OnlyMatchObjectsInLookerInventory),
 					CancellationToken.None)
 					.AsTask()
 					.ConfigureAwait(false).GetAwaiter().GetResult();
@@ -650,9 +655,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 				}
 				else
 				{
-					// Name-based lookup using mediator query
+					// Name-based lookup using mediator query — again, the dbref case is handled above, so
+					// AbsoluteMatch on its own would leave this branch with nowhere to search.
 					var locateResult = med.Send(
-						new LocateObjectQuery(gatedObj, gatedObj, target, LocateFlags.AbsoluteMatch),
+						new LocateObjectQuery(gatedObj, gatedObj, target, LocateFlags.All),
 						CancellationToken.None)
 						.AsTask()
 						.ConfigureAwait(false).GetAwaiter().GetResult();

@@ -355,6 +355,8 @@ public static class ErrorMessages
 		public const string CantFindThatPlayer = "I can't find that player";
 		public const string AmbiguousMatch = "I don't know which one you mean.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string LocateUnknownSwitchFormat = "I don't understand switch '{0}'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DontKnowWhichYouMean = "I don't know which {0} you mean!";
 		public const string DontSeeWhatYouWantToLock = "I don't see what you want to lock!";
 		public const string DontKnowWhichOneToLock = "I don't know which one you want to lock!";

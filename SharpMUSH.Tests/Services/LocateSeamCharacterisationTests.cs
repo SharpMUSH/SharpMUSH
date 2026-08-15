@@ -77,8 +77,14 @@ public class LocateSeamCharacterisationTests
 
 	/// <summary>Contents of one container; anything else stays empty.</summary>
 	private void Holds(SharpRoom container, params AnySharpObject[] contents) =>
+		Holds(container.Object.DBRef.Number, contents);
+
+	private void Holds(AnySharpObject container, params AnySharpObject[] contents) =>
+		Holds(container.Object().DBRef.Number, contents);
+
+	private void Holds(int number, params AnySharpObject[] contents) =>
 		_mediator.CreateStream(
-				Arg.Is<GetContentsQuery>(q => Number(q) == container.Object.DBRef.Number),
+				Arg.Is<GetContentsQuery>(q => Number(q) == number),
 				Arg.Any<CancellationToken>())
 			.Returns(_ => contents.Select(x => x.AsContent).ToAsyncEnumerable());
 
@@ -142,6 +148,8 @@ public class LocateSeamCharacterisationTests
 	[Test]
 	public async Task AnObjectThatSimplyIsNotThereStillSaysSo()
 	{
+		// match.c:485 ends on "I can't see that here." Notifications.NoMatch ("I don't see that here.")
+		// is do_look's string; both live in ErrorMessages and the wrong one was wired up.
 		var room = _factory.CreateRoom(999, "Shared Room");
 		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
 		Holds(room, _factory.CreateThing(3, "Widget", room));
@@ -150,7 +158,7 @@ public class LocateSeamCharacterisationTests
 			LocateFlags.All | LocateFlags.OnlyMatchLookerControlledObjects);
 
 		await Assert.That(result.IsNone).IsTrue();
-		await AssertNotified(ErrorMessages.Notifications.NoMatch);
+		await AssertNotified(ErrorMessages.Notifications.CantSeeThat);
 	}
 
 	[Test]
@@ -354,4 +362,78 @@ public class LocateSeamCharacterisationTests
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(Found(result)).IsEqualTo(room.Object.DBRef);
 	}
+
+	[Test]
+	public async Task AFilterOnItsOwnIsNotAScopeAndStillGetsTheDefaults()
+	{
+		// MAT_CONTENTS narrows whatever the scopes turn up to the looker's own contents; it names nowhere
+		// to look. Treating it as a scope suppressed the default injection and left the search with no
+		// list at all — which is what the CARRY^<name> lock key passes, so every one of them failed.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		var carried = _factory.CreateThing(3, "Sword", room);
+		Holds(looker, carried);
+		Holds(room, looker);
+
+		var result = await _locateService.Locate(_parser, looker, looker, "Sword",
+			LocateFlags.OnlyMatchObjectsInLookerInventory);
+
+		await Assert.That(Found(result)).IsEqualTo(new DBRef(3, 0));
+	}
+
+	[Test]
+	public async Task MyRestrictsTheSearchToTheInventory()
+	{
+		// parse_english's "my " clears MAT_NEIGHBOR (match.c:534). The mask named the exit bit twice and
+		// the neighbour bit not at all, so "my sword" went on searching the room.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(looker); // empty inventory
+		Holds(room, looker, _factory.CreateThing(3, "Sword", room));
+
+		var result = await _locateService.Locate(_parser, looker, looker, "my Sword", LocateFlags.All);
+
+		await Assert.That(result.IsNone).IsTrue();
+	}
+
+	[Test]
+	public async Task TowardKeepsTheExitScopeItSelects()
+	{
+		// parse_english's "toward " clears MAT_NEIGHBOR | MAT_POSSESSION | MAT_CONTAINER (match.c:540) and
+		// pointedly not MAT_EXIT. The mask cleared MAT_EXIT — the one scope the adjective exists to pick —
+		// so no "toward <exit>" could ever match.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var elsewhere = _factory.CreateRoom(998, "Elsewhere");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(looker);
+		Holds(room, looker, _factory.CreateExit(8, "North", ["n"], room, elsewhere));
+
+		var result = await _locateService.Locate(_parser, looker, looker, "toward North", LocateFlags.All);
+
+		await Assert.That(Found(result)).IsEqualTo(new DBRef(8, 0));
+	}
+
+	[Test]
+	public async Task MatTypeWithNoPreferredTypeStillMatchesEverything()
+	{
+		// PennMUSH's NOTYPE is 0xFFFF (flags.h:189), so `type & Typeof(match)` is truthy for anything and
+		// MAT_TYPE with no type named filters nothing. SharpObjectTypes.None is the same sentinel spelt as
+		// zero, which masks to the opposite answer: locate(...,"Fe") walked no exit list and
+		// locate(...,"F*") refused "me".
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var elsewhere = _factory.CreateRoom(998, "Elsewhere");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(looker);
+		Holds(room, looker, _factory.CreateExit(8, "North", ["n"], room, elsewhere));
+
+		// exactly what ParseLocateParameters("Fe") and ("F*") produce
+		var exit = await _locateService.Locate(_parser, looker, looker, "North",
+			LocateFlags.OnlyMatchTypePreference | LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.NoTypePreference);
+		var me = await _locateService.Locate(_parser, looker, looker, "me",
+			LocateFlags.All | LocateFlags.OnlyMatchTypePreference | LocateFlags.NoTypePreference);
+
+		await Assert.That(Found(exit)).IsEqualTo(new DBRef(8, 0));
+		await Assert.That(Found(me)).IsEqualTo(new DBRef(1, 0));
+	}
+
 }

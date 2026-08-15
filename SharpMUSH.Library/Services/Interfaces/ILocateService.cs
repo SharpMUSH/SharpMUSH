@@ -24,6 +24,12 @@ public enum SharpObjectTypes
 [Flags]
 public enum LocateFlags
 {
+	/// <summary>
+	/// fun_locate's <c>N</c> switch: <c>NOTYPE</c>, which is the *absence* of a type preference rather
+	/// than a preference of its own. Nothing reads it — <see cref="LocateService.PreferredTypes"/>
+	/// returning <see cref="SharpObjectTypes.None"/> is the same statement — but the switch is
+	/// documented, so the letter has to land somewhere.
+	/// </summary>
 	NoTypePreference = 1,
 	OnlyMatchTypePreference = NoTypePreference << 1,
 	ExitsPreference = OnlyMatchTypePreference << 1,
@@ -31,8 +37,7 @@ public enum LocateFlags
 	PlayersPreference = PreferLockPass << 1,
 	RoomsPreference = PlayersPreference << 1,
 	ThingsPreference = RoomsPreference << 1,
-	FailIfNotPreferred = ThingsPreference << 1,
-	UseLastIfAmbiguous = FailIfNotPreferred << 1,
+	UseLastIfAmbiguous = ThingsPreference << 1,
 	AbsoluteMatch = UseLastIfAmbiguous << 1,
 	ExitsInTheRoomOfLooker = AbsoluteMatch << 1,
 	ExitsInsideOfLooker = ExitsInTheRoomOfLooker << 1,

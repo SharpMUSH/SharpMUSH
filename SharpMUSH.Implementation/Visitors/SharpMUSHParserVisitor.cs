@@ -1188,8 +1188,7 @@ public class SharpMUSHParserVisitor(
 					LocateFlags.ExitsInTheRoomOfLooker
 					| LocateFlags.EnglishStyleMatching
 					| LocateFlags.ExitsPreference
-					| LocateFlags.OnlyMatchTypePreference
-					| LocateFlags.FailIfNotPreferred);
+					| LocateFlags.OnlyMatchTypePreference);
 
 				if (locate.IsExit)
 				{
