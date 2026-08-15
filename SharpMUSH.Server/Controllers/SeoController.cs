@@ -14,6 +14,13 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET /sitemap.xml — XML sitemap covering the site root, /wiki, and every published wiki page
 ///   GET /robots.txt  — crawler directives pointing at the sitemap
 /// </summary>
+// [ApiController] is required by the Asp.Versioning AV0014 analyzer, which every controller the
+// versioning system sees must satisfy. It is behaviourally inert here: both actions already use
+// attribute routing, bind no parameters (so the automatic 400/ProblemDetails paths are unreachable),
+// and only ever return 200 ContentResult. Version resolution is unaffected because
+// AssumeDefaultVersionWhenUnspecified is on, so these root-served documents keep answering
+// unversioned crawler requests.
+[ApiController]
 public class SeoController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
