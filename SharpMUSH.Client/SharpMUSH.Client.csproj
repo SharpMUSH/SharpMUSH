@@ -41,6 +41,10 @@
 		<TrimmerRootAssembly Include="MudBlazor" />
 		<TrimmerRootAssembly Include="SharpMUSH.Contracts" />
 		<TrimmerRootAssembly Include="SharpMUSH.MarkupString" />
+
+		<!-- Widget config models: reflected over by JsonSerializer and WidgetConfigSchema, including
+		     list element types the trimmer cannot follow. See the file's own comment. -->
+		<TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
 	</ItemGroup>
 
 	<ItemGroup>

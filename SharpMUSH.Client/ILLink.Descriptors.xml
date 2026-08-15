@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget config models are reached only by reflection, from two directions: each widget deserializes
+  its own blob with JsonSerializer, and WidgetConfigSchema walks the properties and their
+  WidgetConfigKeyAttribute to build the layout editor's key reference.
+
+  IPortalWidget.ConfigType carries [DynamicallyAccessedMembers], which roots the config type an
+  attribute names — but not the element type of a list-valued key. QuickLinksConfig.Links is
+  IReadOnlyList<QuickLink>, and QuickLink is reached through GetGenericArguments() at runtime, which
+  the trimmer cannot follow. It survives today by being statically reachable, silently: nothing warns
+  if that stops being true, and the failure would be an empty nested schema in a published build
+  only. Root the namespace so the guarantee is by construction rather than by luck.
+-->
+<linker>
+  <assembly fullname="SharpMUSH.Client">
+    <type fullname="SharpMUSH.Client.Models.Widgets.*" preserve="all" />
+  </assembly>
+</linker>

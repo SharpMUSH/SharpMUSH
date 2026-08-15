@@ -230,6 +230,10 @@ application slug and renders it through the Schema Widget, so a placement keeps 
 the startup application snapshot was empty. If no such application is registered server-side, the
 widget shows "schema unavailable".
 
+That rescue path is not zone-restricted — it only renders placements an admin already made, and
+never appears in the palette, so the application's own zone list is still what governs where the
+widget can be placed.
+
 ## Layout scopes and their defaults
 
 Widgets are arranged per scope, not once for the whole site. Each scope exposes only the zones it

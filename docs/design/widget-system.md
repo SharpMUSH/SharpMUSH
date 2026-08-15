@@ -44,7 +44,8 @@ widgets between zones, reorders, configures per-instance settings.
 public interface IPortalWidget
 {
     string Name { get; }                     // Machine key used in WidgetPlacement.WidgetName
-    string DisplayName { get; }              // SharedResource key for the palette label
+    string DisplayName { get; }              // Palette label: a SharedResource key for built-ins,
+                                             // literal text for application-backed widgets
     WidgetSize DefaultSize { get; }          // Small, Medium, Large
     WidgetZone[] AllowedZones { get; }       // Where this widget can be placed
     Type ComponentType { get; }              // The Razor component that renders it
@@ -89,9 +90,11 @@ Each config property carries a `[WidgetConfigKey("Lay…")]` naming the
 `SharedResource` key for its description; a property without one is configurable
 but invisible in the UI, which is a deliberate omission rather than an oversight.
 
-Documentation is therefore generated from the config model and cannot drift from
-it. Two tests hold the ends together: one fails a `ConfigType` that documents no
-keys at all, another fails a description key missing from the resx.
+The editor reference is therefore generated from the config model and cannot
+drift from it. Two tests hold the ends together: one fails a `ConfigType` that
+documents no keys at all, another fails a description key missing from the resx.
+The guide is a separate hand-written document — worked examples, precedence
+rules, scope defaults — and nothing enforces its accuracy but review.
 
 The editor still takes raw JSON (the Spacer's height is the one typed field);
 the reference sits above the box.

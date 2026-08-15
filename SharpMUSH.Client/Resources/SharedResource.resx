@@ -2126,7 +2126,7 @@
     <value>Locale to render. Unset, each reader gets their own preference.</value>
   </data>
   <data name="LayCfgWikiBodyCharacter" xml:space="preserve">
-    <value>Shorthand for a character's biography. Ignored when a slug is set; on a profile page the route's character is used instead.</value>
+    <value>Shorthand for a character's biography. Ignored when a slug is set, and overrides the character of a profile page this is placed on.</value>
   </data>
   <data name="LayCfgCharacterTarget" xml:space="preserve">
     <value>Character to show. Only used away from a profile page, where the route's character wins.</value>

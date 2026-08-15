@@ -143,9 +143,18 @@ public static class WidgetConfigSchema
 		return typeof(IEnumerable).IsAssignableFrom(t) ? "list" : "object";
 	}
 
-	/// <summary>The element type of a list-valued property, or null when the property is not a list.</summary>
+	/// <summary>
+	/// The element type of a list-valued property, or null when the property is not a list.
+	/// <para>
+	/// The trimmer cannot follow <c>GetGenericArguments()</c>, and the annotation on
+	/// <see cref="IPortalWidget.ConfigType"/> roots the config type itself, not the element type of
+	/// one of its list-valued keys. Element types are instead rooted by the consuming app — the
+	/// client does so in <c>ILLink.Descriptors.xml</c>. A host that reflects over a config model
+	/// with a nested list and does not root it will see an empty nested schema.
+	/// </para>
+	/// </summary>
 	[UnconditionalSuppressMessage("Trimming", "IL2073",
-		Justification = "Element types are the widget config records, rooted through IPortalWidget.ConfigType.")]
+		Justification = "Element types are rooted by the consuming app; see the remarks above.")]
 	[return: DynamicallyAccessedMembers(ConfigMembers)]
 	private static Type? ElementTypeOf(Type type)
 	{
