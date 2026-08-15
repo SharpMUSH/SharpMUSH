@@ -28,7 +28,7 @@ public class AdminConfigServiceTests
 
 		// The mock JSON is incomplete (missing required SharpMUSHOptions properties).
 		// AdminConfigService.ImportFromConfigFileAsync re-throws deserialization exceptions.
-		var client = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.OK,
+		using var client = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.OK,
 			"""{"Configuration":{"Net":{"MudName":"Test MUSH","Port":4201,"SslPort":4202}}, "Metadata":{}}"""))
 		{
 			BaseAddress = new Uri("http://localhost")
@@ -57,7 +57,7 @@ public class AdminConfigServiceTests
 		var logger = Substitute.For<ILogger<AdminConfigService>>();
 		var httpClient = Substitute.For<IHttpClientFactory>();
 
-		var client = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.BadRequest, "Error"))
+		using var client = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.BadRequest, "Error"))
 		{
 			BaseAddress = new Uri("http://localhost")
 		};
@@ -83,7 +83,7 @@ public class AdminConfigServiceTests
 		var logger = Substitute.For<ILogger<AdminConfigService>>();
 		var httpClient = Substitute.For<IHttpClientFactory>();
 
-		var client = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.OK,
+		using var client = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.OK,
 			"""{"Configuration":{"Net":{"MudName":"Test"}}, "Metadata":{}}"""));
 
 		httpClient.CreateClient("api").Returns(client);

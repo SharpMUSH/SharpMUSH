@@ -28,13 +28,13 @@ file sealed class NotFoundHandler : HttpMessageHandler
 /// exactly when <see cref="WikiArticle.IsFallback"/> is set — including on the hero (home) branch, which
 /// has its own body markup and is easy to forget.
 /// </summary>
-public class WikiDisplayFallbackTests : BunitContext
+public class WikiDisplayFallbackTests : TrackingBunitContext
 {
 	private BunitAuthorizationContext Auth { get; }
 
 	public WikiDisplayFallbackTests()
 	{
-		var apiClient = new HttpClient(new NotFoundHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new NotFoundHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 

@@ -43,7 +43,7 @@ file sealed class EmptyRegistryHandler : HttpMessageHandler
 /// really does carry the rule that hides it.
 /// </para>
 /// </summary>
-public class NavGroupVisibilityTests : BunitContext, IAsyncDisposable
+public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _ownedHttpClients = [];
 
@@ -73,7 +73,7 @@ public class NavGroupVisibilityTests : BunitContext, IAsyncDisposable
 
 		// No applications registered: the data-driven half of every group contributes nothing, which
 		// is the state the four seeded personas were actually in.
-		var apiClient = new HttpClient(new EmptyRegistryHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new EmptyRegistryHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);

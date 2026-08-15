@@ -13,7 +13,7 @@ namespace SharpMUSH.Tests.Client.Services;
 /// in for <c>/api/layouts/{scope}</c> so we can assert default fallback (HTTP 204, and 404 from an
 /// older server), caching, stored-layout reads, and the save/reset round-trip.
 /// </summary>
-public class LayoutServiceTests
+public class LayoutServiceTests : TrackingTestContext
 {
 	/// <summary>HttpMessageHandler whose response is produced by a per-request callback, and which counts calls.</summary>
 	private sealed class ScriptedHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
@@ -29,9 +29,9 @@ public class LayoutServiceTests
 		}
 	}
 
-	private static LayoutService Build(ScriptedHandler handler)
+	private LayoutService Build(ScriptedHandler handler)
 	{
-		var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
+		var http = Track(new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 		return new LayoutService(factory, Substitute.For<ILogger<LayoutService>>());

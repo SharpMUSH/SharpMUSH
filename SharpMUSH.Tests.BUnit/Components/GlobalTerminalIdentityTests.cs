@@ -66,7 +66,7 @@ file sealed class GlobalTerminalApiHandler(IReadOnlyList<CharacterSummary> chara
 /// <c>AccountAuth.ActiveCharacter</c> (falling back to the terminal's own ConnectedPlayerName for
 /// direct connects), and it drives exactly the terminal it is given, never an ambient default.
 /// </summary>
-public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
+public class GlobalTerminalIdentityTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _ownedHttpClients = [];
 
@@ -124,7 +124,7 @@ public class GlobalTerminalIdentityTests : BunitContext, IAsyncDisposable
 
 	private async Task<AccountAuthService> CreateLoggedInAuthAsync()
 	{
-		var apiClient = new HttpClient(new GlobalTerminalApiHandler([Alpha, Beta])) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new GlobalTerminalApiHandler([Alpha, Beta])) { BaseAddress = new Uri("https://localhost:8081/") });
 		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);

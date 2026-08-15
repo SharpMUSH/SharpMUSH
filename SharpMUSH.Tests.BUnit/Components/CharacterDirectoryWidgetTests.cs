@@ -44,11 +44,11 @@ file sealed class RosterUnreachableHandler : HttpMessageHandler
 /// categories alphabetical, blanks pooled untitled at the bottom, no invented labels.
 /// (Who is listed at all is MUSH-side policy — FN`CHARVIS — so the widget does no filtering.)
 /// </summary>
-public class CharacterDirectoryWidgetTests : BunitContext
+public class CharacterDirectoryWidgetTests : TrackingBunitContext
 {
-	private static void Wire(BunitContext ctx, HttpMessageHandler handler)
+	private static void Wire(TrackingBunitContext ctx, HttpMessageHandler handler)
 	{
-		var apiClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = ctx.Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 

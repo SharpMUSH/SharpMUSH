@@ -51,13 +51,13 @@ file sealed class LoginApiHandler : HttpMessageHandler
 /// protocol-relative "//host" / "/\host" tricks must fall back to "/" rather than open-redirect
 /// the user off the site.
 /// </summary>
-public class LoginReturnUrlTests : BunitContext, IAsyncDisposable
+public class LoginReturnUrlTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> ownedHttpClients = [];
 
 	private void SeedServices()
 	{
-		var apiClient = new HttpClient(new LoginApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new LoginApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		ownedHttpClients.Add(apiClient);
 
 		var factory = Substitute.For<IHttpClientFactory>();

@@ -65,13 +65,13 @@ internal sealed class RecordingWikiHandler : HttpMessageHandler
 /// locale, so a page that lists the French stream and then fetches revision numbers without
 /// <c>?lang=</c> diffs French against English and renders it as a plausible rewrite rather than an error.
 /// </summary>
-public class WikiHistoryLocaleTests : BunitContext
+public class WikiHistoryLocaleTests : TrackingBunitContext
 {
 	private readonly RecordingWikiHandler _handler = new();
 
 	public WikiHistoryLocaleTests()
 	{
-		var apiClient = new HttpClient(_handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(_handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 

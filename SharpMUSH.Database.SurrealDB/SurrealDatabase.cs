@@ -117,6 +117,35 @@ public partial class SurrealDatabase(
 		error is SurrealDbErrorResult concrete ? (concrete.Details ?? concrete.Status) : error.GetType().Name;
 
 	/// <summary>
+	/// True when SurrealDB refused a commit because another transaction touched the same records. Its own
+	/// message says the transaction can be retried, and on retry a create resolves to "already exists".
+	/// </summary>
+	private static bool IsRetryableConflict(string message)
+		=> message.Contains("read or write conflict", StringComparison.OrdinalIgnoreCase)
+			|| message.Contains("can be retried", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>
+	/// Reports a failed response at a level that matches what it means.
+	/// <para>
+	/// A retryable commit conflict is an ordinary outcome of SurrealDB's optimistic concurrency —
+	/// callers like <c>CreateChannelAsync</c> retry and succeed — so it is a warning, not an error.
+	/// Logging it at Error made healthy runs look broken and actively misdirected diagnosis: one CI
+	/// run carried 270 of these for channel creates that every one of them went on to complete.
+	/// </para>
+	/// </summary>
+	private void LogResponseErrors(string errors, string query)
+	{
+		if (IsRetryableConflict(errors))
+		{
+			logger.LogWarning("SurrealDB retryable conflict (caller may retry): {Errors} for query: {Query}",
+				errors, query);
+			return;
+		}
+
+		logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
+	}
+
+	/// <summary>
 	/// Executes a SurrealQL query and returns the response.
 	/// </summary>
 	private async ValueTask<SurrealDbResponse> ExecuteAsync(
@@ -127,8 +156,7 @@ public partial class SurrealDatabase(
 		var response = await db.RawQuery(query, null, ct);
 		if (response.HasErrors)
 		{
-			var errors = string.Join("; ", response.Errors.Select(FormatError));
-			logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
+			LogResponseErrors(string.Join("; ", response.Errors.Select(FormatError)), query);
 		}
 		return response;
 	}
@@ -167,8 +195,7 @@ public partial class SurrealDatabase(
 		var response = await db.RawQuery(expandedQuery, null, ct);
 		if (response.HasErrors)
 		{
-			var errors = string.Join("; ", response.Errors.Select(FormatError));
-			logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
+			LogResponseErrors(string.Join("; ", response.Errors.Select(FormatError)), query);
 		}
 		return response;
 	}

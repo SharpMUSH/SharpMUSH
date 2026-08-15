@@ -33,7 +33,7 @@ file sealed class StatusHandler(HttpStatusCode status) : HttpMessageHandler
 		=> Task.FromResult(new HttpResponseMessage(status));
 }
 
-public class PluginComponentLoaderTests : BunitContext
+public class PluginComponentLoaderTests : TrackingBunitContext
 {
 	[TUnit.Core.Test]
 	public async Task DynamicComponent_RendersResolvedType()
@@ -51,7 +51,7 @@ public class PluginComponentLoaderTests : BunitContext
 	{
 		// A 404 (the server endpoint when allow_browser_code is off, or an unverified assembly) must make the
 		// loader a no-op — defense in depth on the client side.
-		var http = new HttpClient(new StatusHandler(HttpStatusCode.NotFound)) { BaseAddress = new Uri("http://localhost/") };
+		var http = Track(new HttpClient(new StatusHandler(HttpStatusCode.NotFound)) { BaseAddress = new Uri("http://localhost/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 

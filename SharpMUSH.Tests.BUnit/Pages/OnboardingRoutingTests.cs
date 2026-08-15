@@ -56,7 +56,7 @@ file sealed class OnboardingApiHandler(object[] characters) : HttpMessageHandler
 /// renders a page component BELOW <c>AuthorizeRouteView</c>, so the attribute has no runtime effect
 /// here and a "render anonymously, expect a redirect" test would pass while proving nothing.
 /// </remarks>
-public class OnboardingRoutingTests : BunitContext, IAsyncDisposable
+public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _ownedHttpClients = [];
 
@@ -67,7 +67,7 @@ public class OnboardingRoutingTests : BunitContext, IAsyncDisposable
 
 	private void SeedServices(object[] characters)
 	{
-		var apiClient = new HttpClient(new OnboardingApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new OnboardingApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") });
 		_ownedHttpClients.Add(apiClient);
 
 		var factory = Substitute.For<IHttpClientFactory>();

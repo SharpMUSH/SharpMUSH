@@ -54,12 +54,42 @@ public abstract class MudBlazorTestContext : BunitContext
 		Services.AddSingleton(new ServerInfoService(StubFactoryReturningEmptyList()));
 	}
 
-	private static IHttpClientFactory StubFactoryReturningEmptyList()
+	private IHttpClientFactory StubFactoryReturningEmptyList()
 	{
+		// One client for every CreateClient() call rather than a fresh one each time: the stubs are
+		// stateless, and a client made inside the lambda has no owner to dispose it.
+		var client = TrackClient(new HttpClient(new EmptyJsonArrayHandler())
+		{
+			BaseAddress = new Uri("http://localhost/")
+		});
+
 		var factory = Substitute.For<IHttpClientFactory>();
-		factory.CreateClient(Arg.Any<string>())
-			.Returns(_ => new HttpClient(new EmptyJsonArrayHandler()) { BaseAddress = new Uri("http://localhost/") });
+		factory.CreateClient(Arg.Any<string>()).Returns(_ => client);
 		return factory;
+	}
+
+	private readonly List<IDisposable> _owned = [];
+
+	/// <summary>Takes ownership of a hand-built client so it is disposed with the context.</summary>
+	private HttpClient TrackClient(HttpClient client)
+	{
+		_owned.Add(client);
+		return client;
+	}
+
+	protected override void Dispose(bool disposing)
+	{
+		if (disposing)
+		{
+			foreach (var owned in _owned)
+			{
+				owned.Dispose();
+			}
+
+			_owned.Clear();
+		}
+
+		base.Dispose(disposing);
 	}
 
 	private sealed class EmptyJsonArrayHandler : HttpMessageHandler

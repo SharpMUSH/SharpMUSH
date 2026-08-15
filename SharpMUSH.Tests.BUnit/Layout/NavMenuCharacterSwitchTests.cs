@@ -82,7 +82,7 @@ file sealed class NavMenuSwitchApiHandler(IReadOnlyList<CharacterSummary> charac
 /// tree; the nav panel is now the only switcher, so there is no separate topbar surface to compare
 /// against.
 /// </summary>
-public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
+public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _ownedHttpClients = [];
 	private IConnectionStateService _connection = null!;
@@ -140,7 +140,7 @@ public class NavMenuCharacterSwitchTests : BunitContext, IAsyncDisposable
 
 	private async Task<AccountAuthService> CreateLoggedInAuthAsync(bool failSwitch = false)
 	{
-		var apiClient = new HttpClient(new NavMenuSwitchApiHandler([Alpha, Beta], failSwitch)) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new NavMenuSwitchApiHandler([Alpha, Beta], failSwitch)) { BaseAddress = new Uri("https://localhost:8081/") });
 		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);

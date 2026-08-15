@@ -49,7 +49,7 @@ file sealed class AlwaysFailingHandler : HttpMessageHandler
 /// through it: while the server is unreachable, ChildContent (which is where an
 /// AuthenticationStateProvider would eventually run) must not render at all.
 /// </summary>
-public class ServerStartupGateTests : BunitContext
+public class ServerStartupGateTests : TrackingBunitContext
 {
 	private const string ChildMarker = "child-content-rendered";
 
@@ -62,7 +62,7 @@ public class ServerStartupGateTests : BunitContext
 
 	private void RegisterApiClient(HttpMessageHandler handler)
 	{
-		var apiClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 		Services.AddSingleton(factory);

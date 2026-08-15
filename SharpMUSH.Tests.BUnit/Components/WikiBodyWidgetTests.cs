@@ -34,7 +34,7 @@ file sealed class RecordingWikiHandler : HttpMessageHandler
 /// (<c>/api/wiki/ns/{ns}/{category}/{slug}</c>) is the observable answer, so these assert on the
 /// recorded request rather than on rendered markup.
 /// </summary>
-public class WikiBodyWidgetTests : BunitContext
+public class WikiBodyWidgetTests : TrackingBunitContext
 {
 	// Typed as the base so the file-local handler never appears in this type's member signatures.
 	private readonly HttpMessageHandler _handler = new RecordingWikiHandler();
@@ -43,7 +43,7 @@ public class WikiBodyWidgetTests : BunitContext
 
 	public WikiBodyWidgetTests()
 	{
-		var apiClient = new HttpClient(_handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(_handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 

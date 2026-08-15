@@ -151,14 +151,6 @@ public partial class SurrealDatabase
 		}
 	}
 
-	/// <summary>
-	/// True when SurrealDB refused a commit because another transaction touched the same records. Its own
-	/// message says the transaction can be retried, and on retry the create resolves to "already exists".
-	/// </summary>
-	private static bool IsRetryableConflict(string message)
-		=> message.Contains("read or write conflict", StringComparison.OrdinalIgnoreCase)
-			|| message.Contains("can be retried", StringComparison.OrdinalIgnoreCase);
-
 	public async ValueTask UpdateChannelAsync(SharpChannel channel, MString? name, MString? description, string[]? privs,
 		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock,
 		string? mogrifier, int? buffer, CancellationToken cancellationToken = default)

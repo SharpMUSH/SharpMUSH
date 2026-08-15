@@ -47,7 +47,7 @@ file sealed class PlayPageApiHandler(IReadOnlyList<CharacterSummary> characters,
 /// gives it (say what is missing, offer the action that fixes it), and the terminal is not mounted
 /// at all in that state.
 /// </summary>
-public class PlayPageTests : BunitContext, IAsyncDisposable
+public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _ownedHttpClients = [];
 
@@ -86,7 +86,7 @@ public class PlayPageTests : BunitContext, IAsyncDisposable
 	/// </summary>
 	private void SeedAccount(bool loggedIn, IReadOnlyList<CharacterSummary> characters, int rosterFailures = 0)
 	{
-		var apiClient = new HttpClient(new PlayPageApiHandler(characters, rosterFailures)) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new PlayPageApiHandler(characters, rosterFailures)) { BaseAddress = new Uri("https://localhost:8081/") });
 		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);

@@ -129,13 +129,13 @@ file static class AdminAccountsTestServices
 	/// a per-test handler) so each call must return its own client rather than the container
 	/// silently owning only the last one.
 	/// </summary>
-	public static HttpClient AddAdminAccountsTestServices(this BunitContext ctx, AdminAccountsApiHandler? handler = null)
+	public static HttpClient AddAdminAccountsTestServices(this TrackingBunitContext ctx, AdminAccountsApiHandler? handler = null)
 	{
 		handler ??= new AdminAccountsApiHandler();
-		var apiClient = new HttpClient(handler)
+		var apiClient = ctx.Track(new HttpClient(handler)
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
-		};
+		});
 
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
@@ -160,7 +160,7 @@ file static class AdminAccountsTestServices
 /// <summary>
 /// bUnit tests for the /admin/accounts portal page: row rendering for authorized wizard-role users.
 /// </summary>
-public class AdminAccountsPageTests : BunitContext, IAsyncDisposable
+public class AdminAccountsPageTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> ownedHttpClients = [];
 	private BunitAuthorizationContext Auth { get; }

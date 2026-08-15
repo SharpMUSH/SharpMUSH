@@ -47,7 +47,7 @@ file sealed class UpgradeApiHandler(string? mintOtt) : HttpMessageHandler
 /// everywhere" flow used on character creation (guest / first character). It commits the active
 /// character and cleanly recreates + reconnects BOTH terminals (command and /play) plus the game hub.
 /// </summary>
-public class CharacterUpgradeServiceTests : BunitContext, IAsyncDisposable
+public class CharacterUpgradeServiceTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _clients = [];
 	private static readonly CharacterSummary Beta = new(2, 2L, "Beta", "");
@@ -61,7 +61,7 @@ public class CharacterUpgradeServiceTests : BunitContext, IAsyncDisposable
 
 	private async Task<Rig> BuildAsync(string? mintOtt = "the-ott")
 	{
-		var client = new HttpClient(new UpgradeApiHandler(mintOtt)) { BaseAddress = new Uri("https://localhost:8081/") };
+		var client = Track(new HttpClient(new UpgradeApiHandler(mintOtt)) { BaseAddress = new Uri("https://localhost:8081/") });
 		_clients.Add(client);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(client);

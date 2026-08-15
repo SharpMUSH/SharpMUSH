@@ -56,7 +56,7 @@ file sealed class QuickstartApiHandler(IReadOnlyList<CharacterSummary> character
 	}
 }
 
-public class QuickstartWidgetTests : BunitContext, IAsyncDisposable
+public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _ownedHttpClients = [];
 
@@ -69,7 +69,7 @@ public class QuickstartWidgetTests : BunitContext, IAsyncDisposable
 
 	private AccountAuthService BuildAuth(IReadOnlyList<CharacterSummary> characters)
 	{
-		var apiClient = new HttpClient(new QuickstartApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new QuickstartApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") });
 		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);

@@ -70,7 +70,7 @@ file sealed class NavMenuApiHandler(IReadOnlyList<CharacterSummary> characters) 
 /// so no parameter flow ever reaches it — it must subscribe to
 /// <see cref="AccountAuthService.ActiveCharacterChanged"/> directly.
 /// </summary>
-public class NavMenuActiveCharacterTests : BunitContext, IAsyncDisposable
+public class NavMenuActiveCharacterTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _ownedHttpClients = [];
 	private BunitAuthorizationContext Auth { get; }
@@ -120,7 +120,7 @@ public class NavMenuActiveCharacterTests : BunitContext, IAsyncDisposable
 			new CharacterSummary(2, 2L, "Beta", ""),
 		};
 
-		var apiClient = new HttpClient(new NavMenuApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new NavMenuApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") });
 		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);

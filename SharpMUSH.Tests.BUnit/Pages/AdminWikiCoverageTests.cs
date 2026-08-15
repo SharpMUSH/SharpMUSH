@@ -58,7 +58,7 @@ internal sealed class AdminWikiCoverageHandler(
 /// missing-only filter — a coverage column that only renders locales that exist would look correct while
 /// leaving the gap it exists to surface invisible.
 /// </summary>
-public class AdminWikiCoverageTests : BunitContext
+public class AdminWikiCoverageTests : TrackingBunitContext
 {
 	private static WikiController.WikiPageDto Summary(string slug, string title) => new(
 		Id: slug,
@@ -80,10 +80,10 @@ public class AdminWikiCoverageTests : BunitContext
 		IReadOnlyList<WikiController.WikiPageDto> pages,
 		Dictionary<string, string[]> translations)
 	{
-		var apiClient = new HttpClient(new AdminWikiCoverageHandler(pages, translations))
+		var apiClient = Track(new HttpClient(new AdminWikiCoverageHandler(pages, translations))
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
-		};
+		});
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 

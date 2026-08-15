@@ -81,7 +81,7 @@ file sealed class DynamicAppHandler(IReadOnlyList<CharacterSummary> characters) 
 /// an empty result.
 /// </para>
 /// </summary>
-public class DynamicApplicationPageTests : BunitContext, IAsyncDisposable
+public class DynamicApplicationPageTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _ownedHttpClients = [];
 	private ConcurrentQueue<string> _requests = new();
@@ -95,7 +95,7 @@ public class DynamicApplicationPageTests : BunitContext, IAsyncDisposable
 	{
 		var handler = new DynamicAppHandler(characters);
 		_requests = handler.Requests;
-		var apiClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
@@ -248,7 +248,7 @@ public class DynamicApplicationPageTests : BunitContext, IAsyncDisposable
 /// ADMIN page that manages applications — rather than the name of the application being looked at.
 /// MainLayout now resolves the slug through the startup <see cref="ApplicationCatalog"/>.
 /// </summary>
-public class DynamicApplicationTopbarTests : BunitContext, IAsyncDisposable
+public class DynamicApplicationTopbarTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _ownedHttpClients = [];
 
@@ -260,7 +260,7 @@ public class DynamicApplicationTopbarTests : BunitContext, IAsyncDisposable
 	public DynamicApplicationTopbarTests()
 	{
 		var handler = new DynamicAppHandler([new CharacterSummary(5, 1000L, "Alpha", "")]);
-		var apiClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);

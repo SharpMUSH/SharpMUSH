@@ -35,7 +35,7 @@ file sealed class CountingHandler : HttpMessageHandler
 /// The fix makes every such entry point hydrate for itself first (idempotent, single-flight), so
 /// the latch is observed correctly regardless of what has or hasn't run yet.
 /// </summary>
-public class AccountAuthServiceHydrationRaceTests : BunitContext
+public class AccountAuthServiceHydrationRaceTests : TrackingBunitContext
 {
 	[Test]
 	public async Task GetDebugOttAsync_WithoutPriorInitAsync_LatchedSession_ReturnsNullWithoutCallingServer()

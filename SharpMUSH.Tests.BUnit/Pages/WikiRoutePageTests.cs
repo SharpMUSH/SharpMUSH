@@ -119,7 +119,7 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 file static class WikiServiceSetup
 {
 	/// <summary>Returns the authorization context so a test can grant itself policies.</summary>
-	public static BunitAuthorizationContext AddWikiTestServices(this BunitContext ctx)
+	public static BunitAuthorizationContext AddWikiTestServices(this TrackingBunitContext ctx)
 	{
 		var auth = ctx.AddAuthorization();
 
@@ -128,10 +128,10 @@ file static class WikiServiceSetup
 		// (the HTTP client wrapper) read them back through the same data store.
 		var wikiSvc = new InMemoryWikiService(new WikiMarkdigPipeline());
 
-		var apiClient = new HttpClient(new InMemoryWikiHandler(wikiSvc))
+		var apiClient = ctx.Track(new HttpClient(new InMemoryWikiHandler(wikiSvc))
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
-		};
+		});
 
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
@@ -188,7 +188,7 @@ file static class WikiServiceSetup
 /// bUnit tests verifying that the wiki route pages render WikiView
 /// with the correct Slug and Mode parameters.
 /// </summary>
-public class WikiPageRouteTests : BunitContext
+public class WikiPageRouteTests : TrackingBunitContext
 {
 	public WikiPageRouteTests()
 	{
@@ -250,7 +250,7 @@ public class WikiPageRouteTests : BunitContext
 /// Verifies view-time redlink resolution in WikiDisplay: wiki links to missing
 /// pages gain class="wiki-redlink"; links to existing pages stay unmarked.
 /// </summary>
-public class WikiRedlinkRenderingTests : BunitContext
+public class WikiRedlinkRenderingTests : TrackingBunitContext
 {
 	public WikiRedlinkRenderingTests()
 	{
@@ -283,7 +283,7 @@ public class WikiRedlinkRenderingTests : BunitContext
 	}
 }
 
-public class CharacterRouteTests : BunitContext
+public class CharacterRouteTests : TrackingBunitContext
 {
 	private readonly BunitAuthorizationContext _auth;
 

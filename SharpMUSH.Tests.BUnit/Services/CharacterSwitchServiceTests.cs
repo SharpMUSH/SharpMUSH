@@ -33,7 +33,7 @@ file sealed class SwitchApiHandler(bool succeed = true) : HttpMessageHandler
 /// the tab adopts it, then the hub reconnects so it re-authenticates with that token. It never touches
 /// the terminals (a terminal's character is fixed at connect).
 /// </summary>
-public class CharacterSwitchServiceTests : BunitContext
+public class CharacterSwitchServiceTests : TrackingBunitContext
 {
 	private static readonly CharacterSummary Beta = new(2, 2L, "Beta", "");
 
@@ -44,7 +44,7 @@ public class CharacterSwitchServiceTests : BunitContext
 
 		var api = new SwitchApiHandler(succeed);
 		// Not disposed: the service keeps calling through this client after Build returns.
-		var http = new HttpClient(api) { BaseAddress = new Uri("https://localhost:8081/") };
+		var http = Track(new HttpClient(api) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 
