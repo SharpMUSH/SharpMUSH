@@ -14,7 +14,7 @@
 	</ItemGroup>
 	
   <ItemGroup>
-		<PackageReference Include="Core.Arango" Version="3.12.2" />
+		<PackageReference Include="Core.Arango" Version="3.12.3" />
 		<PackageReference Include="Core.Arango.Serilog" Version="3.12.3" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.2" />
     <PackageReference Include="Scriban" Version="7.2.5" />
@@ -109,7 +109,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Asp.Versioning.Mvc" Version="10.0.0" />
+    <PackageReference Include="Asp.Versioning.Mvc" Version="10.2.1" />
     <PackageReference Include="LibGit2Sharp" Version="0.32.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
     <None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">
