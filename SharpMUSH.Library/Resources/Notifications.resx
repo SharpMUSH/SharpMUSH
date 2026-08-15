@@ -973,14 +973,20 @@
   <data name="FailedToDeleteFlagFormat" xml:space="preserve">
     <value>Failed to delete flag '{0}'.</value>
   </data>
-  <data name="FlagLetterRequiresNameAndSymbol" xml:space="preserve">
-    <value>@FLAG/LETTER requires flag name and new symbol.</value>
+  <data name="FlagLetterRequiresName" xml:space="preserve">
+    <value>@FLAG/LETTER requires a flag name.</value>
   </data>
-  <data name="FlagNameAndSymbolEmptyError" xml:space="preserve">
-    <value>Flag name and symbol cannot be empty.</value>
+  <data name="FlagLetterSetFormat" xml:space="preserve">
+    <value>Letter for flag {0} set to '{1}'.</value>
   </data>
-  <data name="FlagSymbolChangedFormat" xml:space="preserve">
-    <value>Flag '{0}' symbol changed to '{1}'.</value>
+  <data name="FlagLetterClearedFormat" xml:space="preserve">
+    <value>Letter for flag {0} cleared.</value>
+  </data>
+  <data name="FlagCharactersMustBeSingleCharacters" xml:space="preserve">
+    <value>Flag characters must be single characters.</value>
+  </data>
+  <data name="FlagLetterConflictFormat" xml:space="preserve">
+    <value>Letter conflicts with the {0} flag.</value>
   </data>
   <data name="FailedToUpdateFlagFormat" xml:space="preserve">
     <value>Failed to update flag '{0}'.</value>
@@ -2062,7 +2068,7 @@
     <value>@FLAG/{0} requires a flag name.</value>
   </data>
   <data name="FlagUsage" xml:space="preserve">
-    <value>Usage: @flag/list, @flag/add &lt;name&gt;=&lt;symbol&gt;, @flag/delete &lt;name&gt;, @flag/letter &lt;name&gt;=&lt;symbol&gt;, @flag/type &lt;name&gt;=&lt;types&gt;, @flag/alias &lt;name&gt;=&lt;aliases&gt;, @flag/restrict &lt;name&gt;=&lt;permissions&gt;, @flag/decompile &lt;name&gt;</value>
+    <value>Usage: @flag/list, @flag/add &lt;name&gt;=&lt;symbol&gt;, @flag/delete &lt;name&gt;, @flag/letter &lt;name&gt;[=&lt;letter&gt;], @flag/type &lt;name&gt;=&lt;types&gt;, @flag/alias &lt;name&gt;=&lt;aliases&gt;, @flag/restrict &lt;name&gt;=&lt;permissions&gt;, @flag/decompile &lt;name&gt;</value>
   </data>
 
   <!-- @power missing sub-command constants -->
