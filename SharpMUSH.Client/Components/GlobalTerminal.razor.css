@@ -1,7 +1,3 @@
-/* Base padding for the output pane, split out of what used to be an inline Style="..." on the
-   element itself. An inline style beats every stylesheet rule regardless of specificity, so a
-   consumer (Play.razor's focus mode) that wants to shrink this padding could only win by matching
-   !important for !important — this class exists so that fight has a normal winner instead. */
 .sharp-terminal-output {
     padding: 0.75rem 1rem;
 }

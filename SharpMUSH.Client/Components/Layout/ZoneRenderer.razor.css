@@ -1,18 +1,9 @@
 /* Widget zone grid (ZoneRenderer grid mode). Component-scoped via CSS isolation — the isolation
    bundle (SharpMUSH.Client.styles.css) is linked from wwwroot/index.html. The 12-column grid gives
    row + column gaps; align-items:stretch makes same-row cells equal height, and home widgets fill
-   their cell (height:100% in their own markup) so card borders line up.
+   their cell (height:100% in their own markup) so card borders line up. */
 
-   ZoneRenderer renders in more than one place — inside .phosphor-page for ordinary page zones,
-   but also in MainLayout's footer zone, which is a sibling of .phosphor-page, not a descendant,
-   so there is no 'page' container to query there. Declaring a container here (rather than
-   querying page) makes the grid measure its own box and behave the same in both spots.
-
-   Containment sits on the wrapper, not on .zone-grid itself: an element is never its own query
-   container, so a rule targeting .zone-grid from inside a @container it declared would resolve
-   against the nearest *ancestor* container instead — .phosphor-page when there is one, and
-   nothing at all in the footer or an aside. The wrapper is a plain block box that neither the
-   grid nor any of its parents style, so it changes no layout. */
+/* Containment on the wrapper, not on .zone-grid: an element is never its own query container. */
 .zone-grid-container {
     container-type: inline-size;
 }
@@ -24,10 +15,6 @@
     align-items: stretch;
 }
 
-/* Span comes in via the --zone-span custom property (set inline per placement in
-   ZoneRenderer.razor) rather than a plain inline grid-column, specifically so the narrow-tier
-   override below can win without !important — an inline style="grid-column:..." would always
-   beat a stylesheet rule regardless of specificity or cascade layer, custom properties don't. */
 .zone-grid-cell {
     min-width: 0;
     grid-column: span var(--zone-span, 12);

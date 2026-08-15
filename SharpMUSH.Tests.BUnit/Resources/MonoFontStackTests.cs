@@ -10,9 +10,6 @@ namespace SharpMUSH.Tests.BUnit.Resources;
 /// </summary>
 public class MonoFontStackTests
 {
-	// The stylesheet is split by responsibility (tokens / shell / utilities / syntax / globals),
-	// so these assertions read the folder as one sheet rather than pinning a filename that the
-	// next split would silently invalidate.
 	private static string Css() =>
 		string.Join("\n", Directory.EnumerateFiles(ClientSource.CssRoot, "*.css")
 			.OrderBy(f => f, StringComparer.Ordinal)

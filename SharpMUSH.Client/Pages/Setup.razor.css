@@ -125,9 +125,7 @@
 	cursor: not-allowed;
 }
 
-/* .setup-page renders under OnboardingLayout, not MainLayout — there is no .phosphor-page
-   ancestor to name a 'page' container, so this queries OnboardingLayout's own unnamed
-   container (.onboarding-shell) directly, like the dialogs do. */
+/* Unnamed: under OnboardingLayout there is no .phosphor-page, so this queries .onboarding-shell. */
 @container (max-width: 48rem) {
     .setup-page {
         padding: 1rem;

@@ -115,9 +115,6 @@
 
 .dbimport-grid {
 	display: grid;
-	/* min(260px, 100%): a bare 260px minimum forces the single narrow-width column wider
-	   than a container that has less than 260px to give it — the sidebar and any admin-
-	   configured widget aside both cut into that budget beyond what the viewport implies. */
 	grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
 	gap: 0.875rem;
 }

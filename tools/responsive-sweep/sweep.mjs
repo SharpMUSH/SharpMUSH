@@ -1,17 +1,13 @@
-// Drives the portal at four widths and fails on horizontal overflow. Overflow is the one
-// responsive defect that is objective rather than a matter of taste, so it is the part that
-// gates; the screenshots are for the parts that are not.
 import { chromium } from 'playwright-core';
 import { readFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const BASE = process.env.SWEEP_BASE ?? 'https://localhost:7102';
-// fileURLToPath, not `.pathname`: the latter leaves percent-encoding intact (a repo checked out
-// under a path with a space yields `%20`) and prefixes a drive letter on Windows (`/C:/...`).
+// fileURLToPath, not `.pathname`: the latter keeps percent-encoding and prefixes a drive letter
+// on Windows.
 const OUT = fileURLToPath(new URL('./out/', import.meta.url));
 
-// Portrait phone, portrait tablet, thin desktop window, fullscreen desktop.
 const WIDTHS = [
 	{ name: '390', width: 390, height: 844, mobile: true },
 	{ name: '820', width: 820, height: 1180, mobile: true },
@@ -19,14 +15,10 @@ const WIDTHS = [
 	{ name: '2560', width: 2560, height: 1440, mobile: false },
 ];
 
-// Every route renders inside MainLayout's `.phosphor-page` except the handful that opt into
-// OnboardingLayout (`/login`, `/setup`), which renders `.onboarding-body` instead. Either
-// showing up means Blazor has replaced the boot splash with the real component tree.
+// Either selector appearing means Blazor has replaced the boot splash: MainLayout renders
+// .phosphor-page, OnboardingLayout .onboarding-body.
 const READY_SELECTOR = '#app .phosphor-page, #app .onboarding-body';
 
-// Validated rather than read blindly: a trailing `--profile` with no value yielded undefined,
-// which only surfaced ~10 minutes in as a TypeError from path.join on the first screenshot,
-// discarding the sweep. A missing or flag-shaped value is an operator error, so say so now.
 const profileFlag = process.argv.indexOf('--profile');
 if (profileFlag !== -1) {
 	const value = process.argv[profileFlag + 1];
@@ -37,20 +29,11 @@ if (profileFlag !== -1) {
 }
 const profile = profileFlag === -1 ? 'default' : process.argv[profileFlag + 1];
 
-// Capture is opt-out rather than opt-in: it is part of what this harness is for, and a machine
-// where it works should not have to ask for it. But an attempted capture on a host with a
-// broken compositor burns its full 8s timeout on every route/width pair (~25 minutes a sweep
-// here), so an operator who already knows capture is broken needs a way to say so — and the
-// output has to make that deliberate choice distinguishable from capture having succeeded.
 const screenshotsEnabled = !process.argv.includes('--no-screenshots');
 
 const routes = JSON.parse(await readFile(new URL('./routes.json', import.meta.url), 'utf8'));
 const expectedRedirects = routes.expectedRedirects ?? {};
 
-// Parameterized routes are swept through concrete sample URLs declared in routes.json, not
-// skipped. They used to be printed once and dropped, which put 14 routes — including the wiki
-// editor and the layout editor, the two most complex layouts here — outside the gate entirely;
-// both were overflowing at 390px when a reviewer measured them by hand.
 const parameterized = routes.parameterized ?? [];
 const sampleOrigin = new Map(); // sample URL -> { route, content, note }
 for (const entry of parameterized) {
@@ -61,16 +44,11 @@ const placeholders = parameterized.filter((e) => e.content === 'placeholder' && 
 
 const all = [...routes.public, ...routes.authenticated, ...routes.admin, ...sampleOrigin.keys()];
 
-// A sample URL is reported under its pattern, so a failure names the route a reader recognises.
 const describe = (route) => {
 	const origin = sampleOrigin.get(route);
 	return origin ? `${route} [${origin.route}]` : route;
 };
 
-// Printed first and unconditionally: routes.json parsing is the only thing that can happen
-// before this. Every later step can fail or abort, and a reader who lands on a failure needs
-// to know what this run never measured just as much as they need it on a clean pass. It is
-// repeated in the closing summary for the same reason.
 const coverageReport = (log) => {
 	log(
 		`Parameterized routes: ${parameterized.length - uncovered.length}/${parameterized.length} covered by ${sampleOrigin.size} sample URLs.`,
@@ -91,17 +69,10 @@ if (!screenshotsEnabled) {
 	console.log('Screenshots: disabled by --no-screenshots; no images will be written.');
 }
 
-// --disable-gpu: this sandbox has no working GPU device, and chromium's software-rendering
-// fallback (swiftshader) spawns a GPU process that was observed wedging in D-state (blocked on
-// a syscall, immune to SIGKILL) across repeated launches during development of this script.
-// Screenshots don't need GPU compositing; skipping the GPU process avoids that failure mode
-// entirely rather than working around it after the fact.
+// --disable-gpu: chromium's software-rendering fallback spawns a GPU process that has been seen
+// wedging in D-state on this host, and screenshots do not need GPU compositing.
 const browser = await chromium.launch({ args: ['--disable-gpu'] });
 
-// Reachability is checked at the HTTP level, decoupled from whether the app renders. A route
-// that 200s but fails to render is a load failure (see below), not a down server — conflating
-// the two would let a broken dev stack read as "no overflow" and pass the gate for the wrong
-// reason, and would also let one broken route masquerade as the whole stack being down.
 try {
 	const probe = await browser.newContext({ ignoreHTTPSErrors: true });
 	const response = await probe.request.get(BASE, { timeout: 15_000 });
@@ -113,35 +84,15 @@ try {
 	process.exit(2);
 }
 
-// `networkidle` is the wrong readiness signal for this app: MainLayout opens a terminal
-// WebSocket plus a SignalR connection on every route, so "zero network connections for
-// 500ms" may legitimately never occur, and which route trips that race is timing luck rather
-// than a real defect. `waitForSelector` above is the actual "Blazor has rendered" signal;
-// this quiescence wait covers the gap between that marker appearing and the page's own async
-// data fetch finishing, without depending on network activity at all.
-//
-// Polled from Node rather than parked as a single long-lived in-page Promise/MutationObserver:
-// a route that client-side redirects shortly after its first render (several do, transiently,
-// while routing state settles) destroys the JS execution context mid-wait, and a long-lived
-// in-page promise tied to that context can be left permanently unsettled — which hung the sweep
-// outright the first time this ran against a live server. Each poll below is a short, isolated
-// round-trip; if one lands mid-navigation it just throws and gets treated as "still changing"
-// rather than wedging the wait. The loop is bounded by MAX_MS regardless, so a page that never
-// stops mutating (a live terminal appending output) pays that ceiling once and moves on.
-// The stability key is the container geometry, the pathname, and the markup length together —
-// see `probeSettleKey`. Two separate defects drove that. Keying on markup length alone let the
-// bookmark-alias routes (`/admin/restrictions` → `/admin/config/restrictions` and the
-// bannednames/sitelock/settings-characters aliases beside it) settle against whichever page
-// happened to be mounted when the window elapsed; two otherwise identical baseline runs
-// disagreed by exactly one pair. And markup length is only a proxy for layout: a same-length
-// mutation or a late font/image load reflows text without changing it. Polling the measured
-// geometry itself closes both.
+// `networkidle` cannot settle here — MainLayout holds a terminal WebSocket and a SignalR
+// connection open on every route — and the poll runs from Node rather than as a long-lived in-page
+// promise, which a client-side redirect would leave permanently unsettled.
 async function waitForSettled(page) {
 	const QUIET_MS = 400;
 	const POLL_MS = 100;
 	const MAX_MS = 8000;
-	// ~1.5s of uninterrupted failure. A context swap mid-navigation throws for a few polls and
-	// must be ridden out; a page that has genuinely stopped answering must not be.
+	// ~1.5s of uninterrupted failure: a context swap mid-navigation must be ridden out, a page
+	// that has stopped answering must not.
 	const MAX_CONSECUTIVE_FAILURES = 15;
 
 	const deadline = Date.now() + MAX_MS;
@@ -157,10 +108,6 @@ async function waitForSettled(page) {
 		} catch {
 			key = null;
 			consecutiveFailures++;
-			// An unreadable page is an error, not a quiet one. Folding failures into the same
-			// sentinel the stability check reads would let a page that cannot be evaluated at all
-			// satisfy the quiet condition by repeating that sentinel — settled-looking, and
-			// entirely unmeasured.
 			if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
 				throw new Error(`page stopped responding to evaluate for ${consecutiveFailures} consecutive polls`);
 			}
@@ -177,10 +124,6 @@ async function waitForSettled(page) {
 	}
 }
 
-// Defense in depth: whatever hangs — a wedged evaluate, a runaway navigation, anything not
-// already covered by the timeouts above — this bounds it from the Node side, which cannot
-// itself be blocked by anything happening inside the page. No route/width pair can stall the
-// sweep past this ceiling.
 const ROUTE_DEADLINE_MS = 45_000;
 
 async function withDeadline(fn, ms) {
@@ -197,34 +140,14 @@ async function withDeadline(fn, ms) {
 	}
 }
 
-// ── What gets measured, and why not the document ────────────────────────────────────────────
-//
-// The obvious metric — `document.scrollingElement.scrollWidth` vs `window.innerWidth` — cannot
-// fire on this app, and a gate that cannot fire is worse than no gate: it launders unverified
-// work as verified. `.phosphor-shell` is `position:absolute; inset:0; overflow:hidden`
-// (shell.css), so the document is pinned to the viewport no matter what any page does. An
-// earlier baseline taken that way reported 0 of 192 pairs clean across three agreeing runs; a
-// 5000px canary injected into `.phosphor-page` moved the document metric by exactly 0px.
-//
-// The real scroll containers are measured instead, `scrollWidth` vs `clientWidth`:
-//   .phosphor-page   — the container pages render into, and the one page CSS queries.
-//   .phosphor-main   — the scroll pane wrapping it. Its computed `overflow-x` is `auto`, not
-//                      `visible`: CSS promotes `visible` to `auto` when the other axis is not
-//                      visible, so over-wide content here becomes a horizontal scrollbar inside
-//                      the content column rather than being clipped away.
-//   .onboarding-body — OnboardingLayout's equivalent (`/login`, `/setup`), which has neither of
-//                      the above. Routes using it are measured, not skipped.
-//
-// A route where none of the three is present is a measurement failure, recorded and gated on —
-// never a silent pass.
+// The scroll containers, not the document: .phosphor-shell is `position:absolute; inset:0;
+// overflow:hidden`, so document.scrollingElement can never report overflow on this app. Ordered
+// innermost first — attribution below blames the first container that overflowed.
 const CONTAINER_SELECTORS = ['.phosphor-page', '.phosphor-main', '.onboarding-body'];
 
 // 1px of slack: sub-pixel layout rounding is not a defect.
 const SLACK_PX = 1;
 
-// The single in-page measurement. Both the sweep and the canary self-test call *this* function,
-// deliberately — a self-test that exercised a parallel reimplementation would prove nothing
-// about the code that actually gates.
 const measureContainers = (selectors) =>
 	selectors
 		.map((selector) => {
@@ -233,16 +156,8 @@ const measureContainers = (selectors) =>
 		})
 		.filter(Boolean);
 
-// The single Node-side verdict, for the same reason.
 const isOverflowing = (c) => c.scroll > c.client + SLACK_PX;
 
-// The stability signal for `waitForSettled`, and it includes the very quantity the gate reads.
-// Markup length alone is a proxy, and a poor one: a same-length DOM mutation, or a late font or
-// image load that reflows text, moves `scrollWidth` without changing a single character of
-// markup, so the quiet window could close while layout was still moving under it. Polling the
-// container geometry directly removes the proxy — the wait ends when the thing being measured
-// has stopped changing, which is what "settled" has to mean here. Pathname stays in the key so a
-// client-side redirect still resets the window.
 const probeSettleKey = (selectors) => {
 	const geometry = selectors
 		.map((s) => {
@@ -250,34 +165,18 @@ const probeSettleKey = (selectors) => {
 			return el ? `${s}:${el.scrollWidth}x${el.clientWidth}` : `${s}:-`;
 		})
 		.join(',');
+	// Geometry, not just markup length: a same-length mutation or a late font load reflows text
+	// without changing a character of markup.
 	return `${location.pathname}|${document.body.innerHTML.length}|${geometry}`;
 };
 
-// Attribution, run only on a pair that has already failed. "This page overflows" is a poor work
-// item for eight page batches; "this element sticks out 412px" is actionable.
-//
-// This is deliberately NOT part of the gate. Element-level checks have a real false-positive
-// surface — off-canvas drawers, fixed overlays, and the sanctioned `.scroll-x` pattern in
-// utilities.css all legitimately extend past their parent — and a gate that cries wolf gets
-// ignored, which is the same failure mode as a gate that cannot fire. Because it only ever
-// annotates a container failure that has already been established, a false positive here costs
-// a misleading hint, never a false failure or a false pass. Elements inside an ancestor that
-// scrolls or clips horizontally are excluded: those are either the sanctioned escape hatch or
-// already clipped, and in neither case are they what pushed the container wide.
 const attributeOverflow = (containerSelector) => {
 	const container = document.querySelector(containerSelector);
 	if (!container) return [];
 	const rect = container.getBoundingClientRect();
-	// Compare against the container's own content-box right edge, corrected for however far it
-	// is already scrolled, so both sides of the comparison are in the same coordinate space.
-	// The `- scrollLeft` term is load-bearing, not a bug: a descendant's rect moves by exactly
-	// `-scrollLeft` when the container scrolls (that is what scrolling means), and this term
-	// cancels it, which is what makes `over` below scroll-invariant — verified empirically
-	// against a container scrolled to four different offsets with a fixed-overhang child, where
-	// dropping this term (as a since-rejected review comment proposed) made the reported overhang
-	// vary with scroll position instead of holding constant. `clientLeft` (the border-left width,
-	// absent from `rect.left`) was the actual gap: without it this over-reported by exactly the
-	// border width, constant across scroll.
+	// The `- scrollLeft` term cancels the shift a descendant's rect takes on when the container is
+	// scrolled, and `clientLeft` adds the border width `rect.left` omits; both keep `over` correct at
+	// any scroll offset.
 	const limit = rect.left - container.scrollLeft + container.clientLeft + container.clientWidth;
 
 	const culprits = [];
@@ -308,14 +207,10 @@ const attributeOverflow = (containerSelector) => {
 		culprits.push({ selector: `${el.tagName.toLowerCase()}${id}${classes}`, over });
 	}
 
-	// Every ancestor of an offending element inherits its overhang, so an unfiltered list is
-	// mostly the same defect repeated up the tree. The widest few are the ones worth chasing.
 	culprits.sort((a, b) => b.over - a.over);
 	return culprits.slice(0, 3);
 };
 
-// Canary injection and removal, kept as two separate evaluates so the measurement between them
-// is a genuine round-trip through the same path the sweep uses.
 const injectCanary = (width) => {
 	const host = document.querySelector('.phosphor-page') ?? document.querySelector('.onboarding-body');
 	if (!host) return false;
@@ -333,32 +228,11 @@ const removeCanary = () => {
 	void document.body.offsetWidth;
 };
 
-// ── Self-test: prove the gate can fire, before trusting anything it says ────────────────────
-//
-// This runs on every sweep, before any route is measured, and aborts the whole run if it does
-// not behave. The previous version of this harness measured a quantity that was structurally
-// incapable of firing on this app and reported "0 of 192" across three agreeing runs; three
-// agreeing runs of a dead gate agree perfectly. Determinism is not correctness, and the only
-// thing that distinguishes "clean" from "blind" is watching the gate go off on demand.
-//
-// Both halves are asserted. A gate stuck ON is as useless as one stuck OFF, so the canary must
-// raise a failure that was not there before *and* the page must return to its exact prior
-// reading once the canary is removed. The comparison is against the page's own pre-injection
-// state rather than against zero, because a route that already overflows is still a perfectly
-// good host for this test — and on this portal some of them do.
-// `requiredSelector` makes `family` a checked claim instead of a label: without it, a canary
-// route that redirects elsewhere (`/` -> `/setup`, `/` -> `/login`) still measures a container —
-// just the wrong family's — and `before.length > 0` passes, so the self-test reports covering
-// both families while one of them was never actually exercised. The route is also checked
-// against `expectedRedirects`, the same allowlist the main sweep uses: an unexpected landing
-// here means the self-test measured a page nobody asked for, which is a self-test failure, not a
-// quiet pass.
 const CANARY_ROUTES = [
 	{ route: '/', family: '.phosphor-page / .phosphor-main (MainLayout)', requiredSelector: '.phosphor-page' },
 	{ route: '/login', family: '.onboarding-body (OnboardingLayout)', requiredSelector: '.onboarding-body' },
 ];
 
-// Largest overhang across the measured containers — the quantity the canary must move.
 const maxOverhang = (containers) =>
 	containers.reduce((worst, c) => Math.max(worst, c.scroll - c.client), 0);
 
@@ -390,17 +264,7 @@ for (const size of WIDTHS) {
 			continue;
 		}
 
-		// Everything below is a `page.evaluate` round-trip, exactly like the main sweep loop
-		// further down, and for the same reason needs the same boundary: a canary route that
-		// redirects mid-evaluate (or loses its execution context for any other reason) must
-		// become a recorded self-test failure, not an uncaught throw that kills the process
-		// before the exit-3 path below can run. This bit the sweep twice already as a crash
-		// instead of a clean failure.
 		try {
-			// The route actually measured must be the route named, not wherever it landed — a
-			// redirect to a different layout family would let the `requiredSelector` check below
-			// pass against a container that happens to satisfy it for the wrong reason. Same
-			// allowlist the main sweep uses below; the default is to fail.
 			const landed = await page.evaluate(() => location.pathname);
 			const expected = expectedRedirects[route];
 			if (landed !== route && landed !== expected) {
@@ -416,16 +280,12 @@ for (const size of WIDTHS) {
 				continue;
 			}
 			if (!before.some((c) => c.selector === requiredSelector)) {
-				// `family` is a claim, not just a label: this route only proves the
-				// `.phosphor-page`/`.onboarding-body` measurement path if that selector is what
-				// actually got measured, not merely that something did.
 				selfTestFailures.push(
 					`${label}: expected ${requiredSelector} to be present but measured ${before.map((c) => c.selector).join(', ') || '(nothing)'} — this route did not exercise the container family it claims to`,
 				);
 				continue;
 			}
 
-			// Comfortably wider than the container at any viewport, so a miss is unambiguous.
 			const injected = await page.evaluate(injectCanary, size.width + 1000);
 			if (!injected) {
 				selfTestFailures.push(`${label}: canary could not be injected (no host element)`);
@@ -441,13 +301,10 @@ for (const size of WIDTHS) {
 					`${label}: gate did NOT fire — a ${size.width + 1000}px canary produced ${JSON.stringify(during)}`,
 				);
 			} else if (maxOverhang(during) <= maxOverhang(before)) {
-				// It reported overflow, but not because of the canary. That would mean the gate is
-				// pinned on by pre-existing damage and cannot distinguish new breakage from old.
 				selfTestFailures.push(
 					`${label}: gate fired but did not respond to the canary — overhang ${maxOverhang(before)}px before, ${maxOverhang(during)}px during`,
 				);
 			} else if (!sameReading(after, before)) {
-				// Stuck on, or the canary left residue that would poison every later measurement.
 				selfTestFailures.push(
 					`${label}: gate did not clear after canary removal — before ${JSON.stringify(before)}, after ${JSON.stringify(after)}`,
 				);
@@ -475,19 +332,10 @@ console.log(
 const overflowFailures = [];
 const loadFailures = [];
 const unmeasured = [];
-// Non-gating, but always reported: several routes are legitimate bookmark aliases that bounce
-// elsewhere, and a reader comparing the route list against the findings needs to know which
-// pairs measured a different page than their name suggests.
 const redirects = [];
 const captureFailures = [];
 let captured = 0;
 
-// Progress goes to stderr, one line per route/width, and the route is announced *before* it is
-// navigated rather than after it completes. A sweep is minutes long and previously printed
-// nothing at all until the end, so a run that stalled — or was killed for running over — left
-// no record of where it stalled, which made an over-budget run undiagnosable. Writing the
-// label first and the elapsed time second means a killed run's log ends on a bare, unterminated
-// line naming exactly the route/width pair that was in flight.
 const totalPairs = all.length * WIDTHS.length;
 let pairIndex = 0;
 
@@ -512,42 +360,14 @@ for (const size of WIDTHS) {
 				await waitForSettled(page);
 			}, ROUTE_DEADLINE_MS);
 		} catch (err) {
-			// One bad route must not take down the rest of the sweep — eight later tasks need
-			// the complete overflow list, not just the routes that happened to come before the
-			// first failure. Record it and move on to the next route/width pair.
 			process.stderr.write(` LOAD FAILED ${Date.now() - startedAt}ms\n`);
 			loadFailures.push(`${size.name}px ${describe(route)}: ${err.message.split('\n')[0]}`);
 			continue;
 		}
 
-		// Everything that reads from the page lives inside this boundary, not just navigation.
-		// These are all `page.evaluate` round-trips and every one of them can throw — a route
-		// that redirects as the call is in flight destroys the execution context, which is the
-		// exact race `waitForSettled` exists to handle and cannot eliminate. Outside the
-		// boundary a single such throw propagated out of the loop and killed the process, and
-		// because the report block only runs after the loop completes, it took all 192 pairs'
-		// findings with it. "One bad route must not take down the rest of the sweep" has to
-		// cover measurement, not only loading.
 		try {
-			// Where the route actually ended up.
 			const landed = await page.evaluate(() => location.pathname);
 
-			// The invariant: a measurement is only valid if it measured the route that was asked
-			// for. Anything else is a gating failure unless it is on the explicit allowlist in
-			// routes.json — the default is to fail.
-			//
-			// This is deliberately inverted from how it started. The first version special-cased
-			// the one convergent redirect that had bitten me (`/setup`, from an unclaimed game)
-			// and treated every other unexpected landing as a benign alias. But MainLayout has a
-			// second structurally identical forced redirect right below that one — a logged-in
-			// account with `MustChangePassword` bounces *every* route to `/account` — and
-			// `/account` renders under MainLayout with a perfectly measurable `.phosphor-page`.
-			// Under the old default, that would have silently measured `/account` for every
-			// authenticated and admin route and filed each result under the route that was asked
-			// for, reproducing the exact failure the `/setup` guard was written to stop, from a
-			// different trigger. A third instance exists too (the unauthenticated bounce to
-			// `/login` outside the debug-auth dev setup). Guarding instances one at a time loses
-			// that race by construction; only the allowlist closes the class.
 			const expected = expectedRedirects[route];
 			let via = '';
 			if (landed !== route) {
@@ -555,8 +375,6 @@ for (const size of WIDTHS) {
 					via = ` (redirected to ${landed})`;
 					redirects.push(`${size.name}px ${describe(route)} -> ${landed}`);
 				} else {
-					// Name the known convergent redirects, since each has a specific remedy and a
-					// bare pathname would leave the reader to rediscover it.
 					const diagnosis =
 						landed === '/setup'
 							? 'the game is unclaimed, so MainLayout is funnelling every route to the setup wizard — complete first-run setup and re-run'
@@ -576,10 +394,6 @@ for (const size of WIDTHS) {
 			const containers = await page.evaluate(measureContainers, CONTAINER_SELECTORS);
 
 			if (containers.length === 0) {
-				// The page rendered something — it passed the readiness selector — but nothing
-				// this gate knows how to measure, so this pair was NOT checked. Recorded and
-				// gated on rather than skipped, because an unmeasured pair silently omitted from
-				// the results is indistinguishable from a clean one.
 				process.stderr.write(` NO CONTAINER\n`);
 				unmeasured.push(`${size.name}px ${describe(route)}${via}: none of ${CONTAINER_SELECTORS.join(', ')} present`);
 				continue;
@@ -587,9 +401,6 @@ for (const size of WIDTHS) {
 
 			const overflowing = containers.filter(isOverflowing);
 			if (overflowing.length > 0) {
-				// Attribute against the first (innermost) container that overflowed:
-				// `.phosphor-page` sits inside `.phosphor-main`, so when both report it, the page
-				// container localises the culprit more tightly.
 				const culprits = await page.evaluate(attributeOverflow, overflowing[0].selector);
 				const where = overflowing
 					.map((c) => `${c.selector} scrollWidth ${c.scroll} > clientWidth ${c.client}`)
@@ -613,39 +424,22 @@ for (const size of WIDTHS) {
 		const file = join(OUT, profile, size.name, `${route === '/' ? 'index' : route.replaceAll('/', '_')}.png`);
 		await mkdir(dirname(file), { recursive: true });
 		try {
-			// Explicit timeout, well under the 30s default: screenshot capture is the one
-			// operation here that depends on the browser's GPU/compositor process rather than
-			// just its renderer, so it fails differently than everything else in this script —
-			// a broken compositor on the host running the sweep hangs here, not at goto or
-			// evaluate. That's a capture problem, not a rendering one: the overflow finding
-			// above already reflects the real page, so a capture failure shouldn't cost it, and
-			// shouldn't cost the rest of the sweep 30s per route either.
+			// Explicit timeout, well under the 30s default: capture is the one step that depends on the
+			// compositor, and a broken one must not cost 30s per route.
 			await page.screenshot({ path: file, fullPage: true, timeout: 8_000 });
 			captured++;
 		} catch (err) {
-			// Counted, never swallowed. A capture failure doesn't invalidate this route/width's
-			// overflow finding — that came from scrollWidth, which already succeeded — but a run
-			// that captured nothing must never be able to describe itself the way a run that
-			// captured everything does.
 			captureFailures.push(`${size.name}px ${describe(route)}: ${err.message.split('\n')[0]}`);
 		}
 
 		process.stderr.write(` ${Date.now() - startedAt}ms\n`);
 	}
 
-	// Bounded like everything else: a wedged browser process must not be able to stall the
-	// sweep between width groups any more than it can stall a single route.
 	await withDeadline(() => context.close(), 15_000).catch(() => {});
 }
 
-// Reporting happens *before* teardown, deliberately. Everything below is already computed;
-// closing the browser cannot change a single finding, but it can hang — on this host chromium
-// children wedge in uninterruptible D-state (the same fault that breaks screenshot capture),
-// and an observed run measured all 192 route/width pairs in ~10 minutes and then sat in
-// `browser.close()` until it was killed, discarding the entire result set it had just spent
-// those ten minutes producing. Results are printed the moment they exist; cleanup is best
-// effort afterwards and cannot cost them.
-
+// Reported before teardown: browser.close() can hang on this host, and the findings must already
+// be on stdout when it does.
 if (loadFailures.length > 0) {
 	console.error(`Failed to load ${loadFailures.length} route/width pairs:`);
 	for (const f of loadFailures) console.error(`  ${f}`);
@@ -657,8 +451,6 @@ if (unmeasured.length > 0) {
 }
 
 if (redirects.length > 0) {
-	// Deduplicated across widths: the same alias redirects identically at all four, and four
-	// copies of each line would bury the handful of distinct facts here.
 	const distinct = [...new Set(redirects.map((r) => r.replace(/^\d+px /, '')))].sort();
 	console.log(`Routes that redirected (measured at their destination): ${distinct.length}`);
 	for (const r of distinct) console.log(`  ${r}`);
@@ -674,9 +466,6 @@ if (overflowFailures.length > 0) {
 	for (const f of overflowFailures) console.error(`  ${f}`);
 }
 
-// Three distinct strings for three distinct states, printed on every run whatever the verdict:
-// captured everything, deliberately captured nothing, tried and failed. The old code could
-// report a clean sweep having silently written zero images, which read as fully verified.
 const attempted = captured + captureFailures.length;
 const captureSummary = !screenshotsEnabled
 	? 'Screenshots: SKIPPED (--no-screenshots) — none attempted, none written.'
@@ -685,21 +474,8 @@ const captureSummary = !screenshotsEnabled
 		: `Screenshots: ${captured}/${attempted} captured.`;
 console.log(captureSummary);
 
-// Capture failures deliberately do not move the exit code. This code is the overflow gate's
-// channel — the thing CI and the later layout tasks read to answer "is the layout clean?" —
-// and overflow is measured by container scrollWidth/clientWidth, which is unaffected by whether
-// the compositor can also produce a PNG. Folding a host-environment fault into that channel
-// would pin every sweep on a machine with a broken compositor to a permanent non-zero, which is
-// how a gate actually dies: the reader learns the red is meaningless and stops looking. The
-// silence this task exists to eliminate lived in the *reporting*, not the exit code, so that
-// is where it is fixed — the summary above always states the capture outcome, and failures
-// always print. A caller that needs capture to be mandatory can assert on that line.
-//
-// Unmeasured pairs DO gate, unlike capture. They are not an environment fault: they mean this
-// gate was handed a page it does not understand and returned no verdict on it. Letting those
-// pass would reintroduce exactly the defect this harness exists to prevent — a route that was
-// never checked, silently absent from the results and therefore indistinguishable from a clean
-// one.
+// Capture failures deliberately do not gate — this code answers "is the layout clean?", which
+// scrollWidth already decided. Unmeasured pairs do: an unchecked route must not read as a clean one.
 const exitCode =
 	loadFailures.length > 0 || unmeasured.length > 0 || overflowFailures.length > 0 ? 1 : 0;
 
@@ -711,17 +487,11 @@ if (exitCode === 0) {
 	console.log(`Measured ${measuredPairs}/${totalPairs} route/width pairs.`);
 }
 
-// Repeated here, not only at the top: "no overflow" is the line a reader quotes, and it must sit
-// next to the statement of what that number does and does not cover. The opening copy scrolls off
-// behind minutes of per-route progress.
 coverageReport(console.log.bind(console));
 
-// Best-effort teardown, then an explicit exit rather than falling off the end of the script:
-// a chromium child stuck in D-state survives `browser.close()` and keeps handles open that
-// would otherwise hold the node event loop alive indefinitely, turning a finished sweep into a
-// hung command. The findings are already on stdout/stderr by this point, so forcing the exit
-// costs nothing and guarantees the exit code is actually delivered.
 await withDeadline(() => browser.close(), 15_000).catch(() => {
 	console.error('Warning: browser did not shut down cleanly; leaked chromium processes may remain.');
 });
+// Explicit exit: a chromium child stuck in D-state keeps handles open that would otherwise hold the
+// event loop alive forever.
 process.exit(exitCode);

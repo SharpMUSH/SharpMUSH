@@ -333,9 +333,8 @@
             { x => x.WidgetKey, item.WidgetName },
             { x => x.InitialJson, item.Config?.GetRawText() }
         };
-        // FullWidth: the dialog body declares container-type: inline-size so it can query its own
-        // box, and inline-size containment zeroes its contribution to the paper's shrink-to-fit
-        // width — without a definite width the paper collapses to the title bar (measured 246px).
+        // FullWidth is required: the dialog body declares container-type, and inline-size
+        // containment zeroes its contribution to the paper's shrink-to-fit width.
         var dialog = await DialogService.ShowAsync<WidgetConfigDialog>(
             Loc["LayConfigureWidget", item.DisplayName], parameters, new DialogOptions { FullWidth = true });
         var result = await dialog.Result;

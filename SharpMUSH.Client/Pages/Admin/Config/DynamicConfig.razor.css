@@ -39,11 +39,10 @@
     padding: 0;
 }
 
-/* bottom reads --bottomnav-clearance (shell.css), which the shell redefines from 0 only
-   while the fixed touch-chrome bottom nav is on screen — lifting the sticky bar above it
-   without a device/viewport query of our own; a container can't see either signal. */
 .config-section-page ::deep .save-bar {
     position: sticky;
+    /* --bottomnav-clearance is 0 except while the fixed touch bottom nav is on screen (shell.css);
+       a container query cannot see that. */
     bottom: var(--bottomnav-clearance, 0px);
     margin-top: 1.25rem;
     padding: 0.875rem 1.125rem;

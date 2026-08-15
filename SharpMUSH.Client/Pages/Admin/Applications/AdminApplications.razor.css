@@ -84,12 +84,6 @@
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 1rem;
 }
-/* Fixed sidecars (230-340px) stack at the medium tier per the spec's tier table. A 1048px
-   container (1280px viewport, sidebar expanded) leaves a 708px detail pane, which measured
-   clean at every width down to ~950px — the medium tier's 64rem/1024px cutoff is correct as
-   written; a wider threshold was tried and reverted (see task-9 review) because the shell caps
-   .phosphor-page at 1400px above a 1601px viewport, making any max-width tier above 1400px
-   unreachable or flicker-prone in practice. */
 @container page (max-width: 64rem) {
     .appadmin-grid { grid-template-columns: 1fr; }
 }
@@ -184,14 +178,10 @@
 
 .aa-meta-grid {
     display: grid;
-    /* auto-fit reflows the tiles by itself as the container narrows, so no forced two-column
-       override is needed at any tier. */
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     border-bottom: 1px solid var(--border-soft);
 }
 .aa-meta { padding: 0.875rem 1.125rem; border-left: 1px solid var(--border-soft); min-width: 0; }
-/* :first-child rather than :nth-child(3n+1) — the column count now varies with the container,
-   so "first in a row of three" is no longer a fact this stylesheet can know. */
 .aa-meta:first-child { border-left: none; }
 .aa-meta-label {
     font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase;

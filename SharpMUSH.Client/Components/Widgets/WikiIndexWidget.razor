@@ -8,8 +8,7 @@
    pages. Data comes from WikiService (GET /api/wiki/pages); the portal imposes no game policy on
    categories — "General" is just shown first, blanks fall under it. *@
 
-@* .wiki-index-container exists only to carry container-type: the tier in the stylesheet tightens
-   .wiki-index's own padding, and an element cannot query itself. It adds no styling. *@
+@* Wrapper carries the container-type: an element is never its own query container. *@
 <div class="wiki-index-container">
     <div class="wiki-index">
         <div class="wiki-hero">

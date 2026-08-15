@@ -123,7 +123,6 @@
     color: var(--accent);
 }
 
-/* ── Profile rows ── */
 .acct-row {
     display: flex;
     align-items: center;
@@ -191,15 +190,6 @@
     overflow-x: auto;
 }
 
-/* MudTable renders a real <table>, which cannot reflow. Below the narrow tier the rows become
-   stacked blocks, each cell labelled from its column header via the data-label attribute the
-   markup sets — the same pattern verified live on Pages/Admin/AdminAccounts.razor.css. Leading
-   with ::deep rather than anchoring on .acct-table: MudTable never stamps the caller's scope
-   attribute onto the <table> it renders, so `.acct-table ::deep thead` compiles to
-   `.acct-table[b-xxx] thead` — a selector requiring an attribute that is never present on that
-   element, matching nothing. `::deep .acct-table thead` compiles to `[b-xxx] .acct-table thead`,
-   anchored on this component's own wrapper (which does carry the scope attribute), with
-   .acct-table and its descendants left correctly unscoped. */
 @container page (max-width: 48rem) {
     .acct-page {
         padding: var(--cpad-mobile);

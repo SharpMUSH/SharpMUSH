@@ -207,9 +207,8 @@
         {
             { x => x.Existing, existing }
         };
-        // FullWidth: the dialog body declares container-type: inline-size so it can query its own
-        // box, and inline-size containment zeroes its contribution to the paper's shrink-to-fit
-        // width — without a definite width the paper collapses to the title bar (measured 229px).
+        // FullWidth is required: the dialog body declares container-type, and inline-size
+        // containment zeroes its contribution to the paper's shrink-to-fit width.
         var dialog = await DialogService.ShowAsync<ApplicationEditDialog>(
             existing is null ? Loc["LayAppsRegister"] : Loc["LayAppEditTitle", existing.Slug], parameters,
             new DialogOptions { FullWidth = true });

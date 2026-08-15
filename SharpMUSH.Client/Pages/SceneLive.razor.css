@@ -8,12 +8,6 @@
     flex-shrink: 0;
 }
 
-/* The scrolling middle pane between the fixed header and compose bar. overflow-y/
-   overscroll-behavior used to be missing entirely — .scene-live-page had no overflow:hidden
-   either, so the whole page (header and compose bar included) scrolled via .phosphor-main
-   instead of just the pose log. Both are added here together: the pane needs a bound to
-   scroll within, and once it has one, a flick at its end must not also scroll the page
-   behind it. */
 .scene-log--live {
     flex: 1;
     min-height: 0;

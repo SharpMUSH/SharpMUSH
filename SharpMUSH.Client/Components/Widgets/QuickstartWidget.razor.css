@@ -1,10 +1,3 @@
-/* Wrapping div, not a class handed to the MudPaper below: a class handed to a MudBlazor
-   component lands on its outer wrapper, which never carries this file's scope attribute, so a
-   non-::deep rule targeting it would silently match nothing. The card's own content (stacked,
-   full-width buttons) is already fluid at any width; container-type is declared for
-   consistency with the rest of the widget set and so a future rule here has something to
-   query, whether this widget lands on the home page, in a zone cell, or in an
-   admin-configured aside. */
 .quickstart-widget {
     container-type: inline-size;
     height: 100%;

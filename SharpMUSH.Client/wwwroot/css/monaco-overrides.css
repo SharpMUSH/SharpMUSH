@@ -1,22 +1,5 @@
-/* Monaco overrides, and the one global stylesheet that is deliberately NOT in a cascade layer.
-
-   Every other global sheet is imported into a layer (see custom.css) so our scoped, unlayered
-   page CSS beats it without anyone reaching for !important. Monaco is the exception: it does not
-   ship a stylesheet we import — it injects `editor.main.css` plus ~119 further <style> elements
-   into <head> at runtime, all of them unlayered. An unlayered normal declaration beats a layered
-   one whatever the specificity, so these rules lost from inside the `shell` layer and had to be
-   forced with !important, which then outranked every page stylesheet in the app.
-
-   Unlayered, they win on specificity instead — `.mush-editor-fill .monaco-editor` (0,2,0) over
-   Monaco's own `.monaco-editor` (0,1,0) — with no !important anywhere. Verified live on
-   /softcode: with the declarations moved here and the flags dropped, a sentinel background and
-   z-index both took effect over Monaco's runtime CSS, where the same declarations inside the
-   `shell` layer did not.
-
-   Nothing else belongs here. A rule that only has to beat MudBlazor belongs in shell.css, where
-   the layer order already settles it. */
-
-/* Dark background on every Monaco layer, so the editor is dark before the theme loads too. */
+/* Imported without layer(...) on purpose (custom.css): Monaco injects its own unlayered
+   stylesheet at runtime, which no layered rule can outrank. */
 .mush-editor-fill > div,
 .mush-editor-fill .monaco-editor,
 .mush-editor-fill .monaco-editor .overflow-guard,
@@ -25,13 +8,8 @@
     background-color: #1a1a2e;
 }
 
-/* Hover/suggestion widgets above MudBlazor tabs. fixedOverflowWidgets:true already moves them to
-   the document body; this covers the layouts where it does not.
-
-   The class is repeated on purpose. Monaco's own `.monaco-editor .suggest-widget { z-index: 40 }`
-   has exactly the same specificity as the single-class form, and its stylesheet is injected at
-   runtime — always later in document order than this file — so an equal-specificity rule here
-   loses the tie. Doubling the class outranks it (0,3,0 against 0,2,0) without a !important. */
+/* Classes doubled on purpose: Monaco's own rules have the single-class specificity and are
+   injected later in document order, so an equal-specificity rule here would lose the tie. */
 .monaco-editor-overlaymessage.monaco-editor-overlaymessage,
 .monaco-hover.monaco-hover,
 .monaco-editor .suggest-widget.suggest-widget,

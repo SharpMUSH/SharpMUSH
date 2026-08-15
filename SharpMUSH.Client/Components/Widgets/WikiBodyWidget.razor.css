@@ -1,16 +1,7 @@
-/* Wrapping div, not Class="wiki-body-widget" on the MudPaper below: a class handed to a
-   MudBlazor component lands on its outer wrapper, which never carries this file's scope
-   attribute, so a non-::deep rule targeting it would silently match nothing. The wrapper is
-   literal HTML written in this file, so it is a reliable anchor and gives this widget a box
-   to size itself against wherever it renders — a character's profile page, a zone cell, or an
-   admin-configured aside. */
 .wiki-body-widget {
     container-type: inline-size;
 }
 
-/* Replaces the old phone-viewport padding tweak. clamp() driven by cqw (percent of this
-   container's own inline size) tightens the card's padding continuously as its own box
-   narrows, rather than snapping at one arbitrary breakpoint the way a discrete tier would. */
 ::deep .mud-paper {
     padding: clamp(0.875rem, 6cqw, 1.25rem);
 }

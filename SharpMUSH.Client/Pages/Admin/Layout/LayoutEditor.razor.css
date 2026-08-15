@@ -20,8 +20,6 @@
 .le-btn--primary:hover:not(:disabled) { filter: brightness(1.08); }
 
 .layedit ::deep .le-board { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 1rem; }
-/* minmax(0, 1fr), not 1fr: a bare 1fr is minmax(auto, 1fr), so the track floors at the widest
-   item's min-content — the palette's, which measured 402px inside a 330px column. */
 @container page (max-width: 64rem) { .layedit ::deep .le-board { grid-template-columns: minmax(0, 1fr); } }
 
 .le-palette {
@@ -56,10 +54,6 @@
 .layedit ::deep .le-span-7 { grid-column: span 7; } .layedit ::deep .le-span-8 { grid-column: span 8; } .layedit ::deep .le-span-9 { grid-column: span 9; }
 .layedit ::deep .le-span-10 { grid-column: span 10; } .layedit ::deep .le-span-11 { grid-column: span 11; } .layedit ::deep .le-span-12 { grid-column: span 12; }
 @container page (max-width: 48rem) {
-    /* 12-column zone grid keeps its tracks down to the medium tier; only below the narrow
-       threshold does it collapse to one column. The override selector below already
-       outweighs the .le-span-N base rules on specificity (three classes vs. one), so no
-       !important is needed to win regardless of which span class an item carries. */
     .layedit ::deep .le-zone-drop--grid { grid-template-columns: 1fr; }
     .layedit ::deep .le-zone-drop--grid > .mud-drop-item { grid-column: 1 / -1; }
     .layedit-actions { flex-wrap: wrap; }

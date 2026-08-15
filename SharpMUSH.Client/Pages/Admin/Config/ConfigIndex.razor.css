@@ -29,9 +29,6 @@
 
 .config-cat-grid {
     display: grid;
-    /* min(290px, 100%) rather than a bare 290px: the config nav aside eats further into the
-       page container beyond what the viewport alone would suggest, and a bare track minimum
-       wider than the available space forces the single narrow-width column to overflow it. */
     grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr));
     gap: 0.875rem;
 }

@@ -2,12 +2,6 @@ using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Tests.BUnit.Layout;
 
-/// <summary>
-/// The content column's width is not a function of the viewport: the sidebar collapses and both
-/// widget asides are sized from runtime admin settings (MainLayout.razor). Pages therefore size
-/// against a query container rather than the screen, and this fixes the one place that container
-/// is declared.
-/// </summary>
 public class ContentContainerTests
 {
 	private static string Shell() =>
@@ -31,10 +25,6 @@ public class ContentContainerTests
 	[Test]
 	public async Task FullHeightPagesKeepADefiniteHeightThroughTheWrapper()
 	{
-		// Inserting a wrapper between .phosphor-main and the page would otherwise break the pages
-		// that set height:100% on their own root (/play, the wiki editor). Wanting the full window
-		// width and needing a definite height are separate concerns — Mail's three-pane layout
-		// needs only the latter — so the two opt-outs are two selectors, checked independently.
 		var bleed = Regex.Match(Shell(), @"\.phosphor-page:has\(> \.full-bleed\)\s*\{(?<body>[^}]*)\}", RegexOptions.Singleline);
 		await Assert.That(bleed.Success).IsTrue().Because("full-bleed pages need a selector that lifts the reading-width cap");
 		await Assert.That(bleed.Groups["body"].Value).Contains("max-width: none")

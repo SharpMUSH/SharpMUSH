@@ -19,11 +19,6 @@
     overflow: hidden;
 }
 
-/* Object/attribute rail widths, and their collapsed state. Widths used to be computed inline
-   per-render (`style="width:{collapsed ? "46px" : "220px"}"`), which meant only an inline style
-   could ever change them — an @container override could not win against it without !important.
-   A class swap (see the comment on .sc-shell above) is both the fix and, per that comment,
-   already how collapse was documented to work. */
 .sc-pane-objects {
     width: 220px;
     flex-shrink: 0;
@@ -43,9 +38,6 @@
     background: #0c0f14;
 }
 
-/* Split out of an inline Style="" on the element: the narrow tier below releases the
-   min-height so a wrapped toolbar can grow, and an inline declaration beats every
-   stylesheet rule, so that release was dead (computed min-height stayed 40px). */
 .sc-editor-toolbar {
     display: flex;
     align-items: center;

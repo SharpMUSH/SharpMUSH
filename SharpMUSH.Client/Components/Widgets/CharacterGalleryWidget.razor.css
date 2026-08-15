@@ -1,15 +1,7 @@
-/* Renders on a character's profile page (typically full column width) and, as a placeable
-   widget, in a 12-column zone cell or an admin-configured aside — container-type lets the
-   thumbnail grid below react to whichever box it actually gets. */
 .character-gallery-widget {
     container-type: inline-size;
 }
 
-/* MudGrid's sm=4 tile width (33%) comes from a viewport media query (min-width:600px); it has
-   no idea this widget might be rendering in a 280px admin aside or a narrow zone cell, where a
-   third-width thumbnail is too small to be useful even though the viewport is desktop-wide.
-   Override back to a 50% tile whenever this widget's own box is narrow, regardless of the
-   viewport — the case a media query inside this widget could never see. */
 @container (max-width: 48rem) {
     .character-gallery-widget ::deep .mud-grid-item-sm-4 {
         max-width: 50%;

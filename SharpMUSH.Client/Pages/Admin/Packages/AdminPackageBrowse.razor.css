@@ -63,9 +63,6 @@
     color: var(--accent-on);
 }
 
-/* Remote/version pickers carry their max-width via Class= rather than an inline Style=, so the
-   narrow tier below can relax it without !important — an inline max-width on the same element
-   would always win over a stylesheet rule that lacks !important, regardless of specificity. */
 ::deep .pkg-remote-select { max-width: 320px; }
 ::deep .pkg-version-select { max-width: 220px; }
 

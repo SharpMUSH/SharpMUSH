@@ -1,14 +1,7 @@
-/* The clearest case in the widget set for a self-container: MudGrid's sm=3 tile width (25%)
-   comes from a viewport media query (min-width:600px) that has no idea this widget might be
-   rendering in a 280px admin aside — on any ordinary desktop viewport that query is true, so
-   four 25%-wide tiles get crammed into a box a quarter that size, regardless of how wide the
-   window actually is. container-type lets the override below react to this widget's own box
-   instead. */
 .stats-widget {
     container-type: inline-size;
 }
 
-/* Force the tiles back to the xs=6 (50%) width whenever this widget's own box is narrow. */
 @container (max-width: 48rem) {
     .stats-widget ::deep .mud-grid-item-sm-3 {
         max-width: 50%;

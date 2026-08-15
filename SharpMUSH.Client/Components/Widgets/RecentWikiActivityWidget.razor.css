@@ -1,19 +1,8 @@
-/* Wrapping div, not Class="recent-wiki-widget" on the MudPaper below: a class handed to a
-   MudBlazor component lands on its outer wrapper, which never carries this file's scope
-   attribute, so a non-::deep rule targeting it would silently match nothing. This wrapper is
-   literal HTML written in this file, so it is a reliable, always-present anchor regardless of
-   which branch (loading / list / empty) is rendered inside it — and gives the widget a single
-   box to size itself against on the home page, in a zone cell, and in an admin-configured
-   aside alike. */
 .recent-wiki-widget {
     container-type: inline-size;
     height: 100%;
 }
 
-/* Replaces the old phone-viewport padding tweak. clamp() driven by cqw (percent of this
-   container's own inline size) tightens the card's padding continuously as its own box
-   narrows — the 280px admin aside included — rather than snapping at one arbitrary
-   breakpoint the way a discrete tier would. */
 ::deep .mud-paper {
     padding: clamp(0.875rem, 6cqw, 1.25rem);
 }

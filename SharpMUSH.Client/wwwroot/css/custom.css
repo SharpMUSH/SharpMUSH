@@ -1,8 +1,3 @@
-/* Load order and cascade layers for the portal's global stylesheets.
-
-   Vendor CSS is imported into a layer so our unlayered scoped stylesheets
-   (SharpMUSH.Client.styles.css) beat it regardless of selector specificity. That is what
-   the !important declarations across the portal used to do by hand. */
 @layer vendor, tokens, shell, utilities;
 
 @import url("../_content/MudBlazor/MudBlazor.min.css") layer(vendor);
@@ -16,5 +11,5 @@
 @import url("utilities.css") layer(utilities);
 
 /* Deliberately unlayered: it has to beat Monaco's runtime-injected, unlayered stylesheet, which
-   no layered rule can do. See the header in monaco-overrides.css. */
+   no layered rule can do. */
 @import url("monaco-overrides.css");

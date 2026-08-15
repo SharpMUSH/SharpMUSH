@@ -83,12 +83,6 @@ else
         StateHasChanged();
     }
 
-    /// <summary>
-    /// Builds the working copy <see cref="WikiEdit"/> edits, shared by every entry into Edit mode: the
-    /// client-side "Edit" button (<see cref="ActivateEditMode"/>) and a cold load that lands directly in
-    /// Edit mode (the <c>/edit</c> route passing <c>Mode="WikiMode.Edit"</c> from the start). Both must
-    /// populate <see cref="_editDraft"/> identically, or whichever path forgets to becomes a blank editor.
-    /// </summary>
     private WikiArticle BuildEditDraft() =>
         _article is not null
             ? new WikiArticle(_article.Title, _article.Content, _article.Image, _article.RenderedHtml)
@@ -238,10 +232,10 @@ else
             _loadedRevision = _article.RevisionNumber;
         }
 
-        // A cold load that starts in Edit mode (the /edit route) never calls ActivateEditMode, so it must
-        // populate the draft itself — otherwise WikiEdit's `Article is not null` guard renders nothing.
         if (Mode == WikiMode.Edit)
         {
+            // A cold load into Edit mode never calls ActivateEditMode, so it must build the draft
+            // itself or WikiEdit's `Article is not null` guard renders nothing.
             _editDraft = BuildEditDraft();
         }
 

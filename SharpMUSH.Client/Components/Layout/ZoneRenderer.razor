@@ -5,9 +5,7 @@
 {
     @if (Grid)
     {
-        @* The grid's own width is what the tier below asks about, and an element is never its own
-           query container — so containment lives on this wrapper and .zone-grid queries it as an
-           ancestor. The wrapper carries no styling of its own. *@
+        @* Wrapper carries the container-type: an element is never its own query container. *@
         <div class="zone-grid-container">
             <div class="zone-grid">
                 @foreach (var placement in _placements)

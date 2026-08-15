@@ -1,12 +1,4 @@
-/* Renders full-width on the wiki landing route and, as a placeable widget, inside a 12-column
-   zone cell or an admin-configured aside — the container lets the category grid and hero below
-   size to whichever box it actually gets instead of the viewport.
-
-   The container is the wrapper, not .wiki-index, because an element is never its own query
-   container: with container-type on .wiki-index, the tier at the bottom of this file resolved
-   against .phosphor-page (or, in a .phosphor-widget-aside, against nothing) and the root's own
-   padding never tightened while every descendant rule fired. The wrapper is a bare block box
-   that adds no styling of its own. */
+/* Containment on the wrapper, not on .wiki-index: an element is never its own query container. */
 .wiki-index-container {
     container-type: inline-size;
 }

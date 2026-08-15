@@ -34,10 +34,6 @@
     border-color: var(--accent);
 }
 
-/* The body field is the only multi-line MudTextField here (Lines="10"), so it is the only one
-   that renders a <textarea> — To/Subject render <input>. field-sizing: content grows the box to
-   fit what's typed instead of pinning it at the authored row count, so a short reply doesn't
-   leave a ten-row well of empty space and a long one doesn't need its own scrollbar. */
 .mc-card ::deep .mc-field textarea {
     field-sizing: content;
 }

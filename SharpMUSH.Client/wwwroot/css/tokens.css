@@ -1,5 +1,3 @@
-/* Design tokens: :root custom properties, self-hosted @font-face rules, and locale font overrides. */
-
 /* ── Self-hosted Cascadia Mono (OFL 1.1, microsoft/cascadia-code v2407.24) ── */
 @font-face {
     font-family: "Cascadia Mono";
@@ -88,25 +86,14 @@
 	   Sizing is rem (16px root) so type + spacing honor the user's browser font size;
 	   borders, shadows, fixed dimensions, radii, and breakpoints stay px. */
 	--cpad-mobile: 1rem;
-	/* Reading-width cap for the wide tier. A fixed dimension, so px (see the unit rule). */
 	--content-max: 1400px;
-	/* Documentation only: container tiers are 48rem / 64rem / 90rem. A @container condition
-	   cannot read a custom property any more than a @media condition can. */
+	/* Documentation only: a @container condition cannot read a custom property. */
 	--tier-narrow: 48rem;
 	--tier-medium: 64rem;
 	--tier-roomy: 90rem;
-	/* Space reserved above the fixed touch-chrome bottom nav. Zero here; shell.css redefines
-	   it to the bar's real height only while `.phosphor-shell--bottomnav` is on screen, so a
-	   page's own sticky-bottom chrome (e.g. a save bar) can read this custom property instead
-	   of duplicating the media query — custom properties inherit through the DOM regardless of
-	   Blazor's CSS scope attribute, so a scoped stylesheet can consume it with no @media of its
-	   own. */
+	/* Zero until shell.css raises it while the fixed touch bottom nav is on screen; a scoped
+	   stylesheet reads it instead of repeating that media query. */
 	--bottomnav-clearance: 0px;
-	/* Durations for chrome that animates on open (AccountPanel's grow + submenu slide).
-	   globals.css redefines both to 0s under prefers-reduced-motion, and a scoped stylesheet
-	   consumes them with no @media of its own — same mechanism as --bottomnav-clearance above.
-	   It has to be a value rather than an `animation: none` rule: the scoped bundle is unlayered
-	   and these sheets are layered, so a layered override could never win. */
 	--motion-pop: 0.16s;
 	--motion-slide: 0.2s;
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
@@ -209,4 +196,3 @@ body {
 	background-image: var(--mud-palette-background-gradient);
 	background-size: 200% 200%;
 }
-

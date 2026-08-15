@@ -7,6 +7,8 @@
     overflow: hidden;
     outline: none;
     font-family: var(--font-ui);
+    /* Reduced motion arrives as a value: globals.css zeroes --motion-*. A rule here could not do
+       it — this bundle is unlayered and outranks the layered sheet that would carry it. */
     animation: account-panel-grow var(--motion-pop) cubic-bezier(0.16, 1, 0.3, 1);
     transform-origin: bottom left;
 }
@@ -190,11 +192,3 @@
     background: var(--surface);
     color: var(--accent);
 }
-
-/* prefers-reduced-motion reaches this file as a *value*, not a rule: the durations above read
-   --motion-pop / --motion-slide, which globals.css zeroes under the preference. It cannot be a
-   rule, because globals.css is imported into the `shell` cascade layer while this scoped bundle
-   is unlayered, and an unlayered normal declaration outranks every layered one whatever its
-   specificity — a layered `animation: none` here would never have applied. Custom properties
-   inherit through the DOM regardless of Blazor's scope attribute, so the value crosses the
-   boundary the rule could not (same trick as --bottomnav-clearance in tokens.css). */

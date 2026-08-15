@@ -5,11 +5,6 @@
 
 <PageTitle>@Loc["WikiEdit"]: @Slug</PageTitle>
 
-@* WikiView is shared with the read-only /wiki route, which wants the reading-width cap, so the
-   full-bleed/full-height opt-outs can't live on WikiView itself; this page wraps it instead. The
-   split-pane markdown editor (WikiEdit.razor) wants the extra width like the softcode editor does,
-   and its own root sizes to height:100% — the wrapper needs that height passed through too (see
-   shell.css's :has(> .full-height) rule), or it would only be as tall as its content. *@
 <div class="full-bleed full-height wiki-edit-host">
     <WikiView @key="@($"{Ns}:{Category}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns" Category="@Category"
               Locale="@Lang" Mode="WikiView.WikiMode.Edit" />

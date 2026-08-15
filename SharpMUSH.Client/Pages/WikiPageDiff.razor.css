@@ -181,9 +181,6 @@
 }
 .wikidiff-split-head--old { background: rgba(229, 115, 115, 0.08); }
 .wikidiff-split-head--new { background: rgba(var(--glow), 0.07); }
-/* Raw markdown source, not prose: reflowing it with word-break would fold indentation and long
-   lines into something that no longer reads as the source, so each pane scrolls horizontally
-   instead (the shared .scroll-x utility, applied in the markup) rather than wrapping. */
 .wikidiff-pane {
     background: var(--surface-3);
     border: 1px solid var(--border-soft);
@@ -201,8 +198,6 @@
     color: var(--text);
 }
 
-/* The side-by-side split needs real width per pane to stay readable — a diff, unlike prose, has
-   nowhere shorter to reflow to — so it stacks a tier earlier than the general phone breakpoint. */
 @container page (max-width: 64rem) {
     .wikidiff-split { grid-template-columns: minmax(0, 1fr); }
 }

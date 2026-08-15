@@ -40,9 +40,7 @@
     border: 1px solid var(--border);
 }
 
-/* .login-page renders under OnboardingLayout, not MainLayout — there is no .phosphor-page
-   ancestor to name a 'page' container, so these query OnboardingLayout's own unnamed
-   container (.onboarding-shell) directly, like the dialogs do. */
+/* Unnamed: under OnboardingLayout there is no .phosphor-page, so these query .onboarding-shell. */
 @container (max-width: 48rem) {
     .login-page {
         padding: 1rem;

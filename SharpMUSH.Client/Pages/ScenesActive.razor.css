@@ -2,9 +2,6 @@
     padding: var(--cpad);
 }
 
-/* Base layout for the card, split out of what used to be an inline Style="..." on the MudPaper
-   so the narrow tier below can win the flex-direction/gap/padding fight through normal cascade
-   order instead of !important. */
 ::deep .scene-card {
     display: flex;
     align-items: center;
@@ -15,8 +12,6 @@
     background: var(--surface);
 }
 
-/* Same reason as .scene-card above: the narrow tier below re-gaps this row, and an inline
-   Style="" on the element beats any stylesheet rule, so the row-gap it asked for was dead. */
 ::deep .scene-card .scene-meta-row {
     display: flex;
     align-items: center;

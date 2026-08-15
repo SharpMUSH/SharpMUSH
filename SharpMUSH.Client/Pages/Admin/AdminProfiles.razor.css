@@ -108,9 +108,6 @@
     line-height: 1.6;
 }
 
-/* .ph-status-row and .ph-attrs-row are space-between flex rows with a code element
-   whose content length is not ours to bound (attribute paths, handler names). Stack
-   them and let the code wrap instead of pushing the chip past the container edge. */
 @container page (max-width: 48rem) {
     .ph-status-row {
         flex-direction: column;

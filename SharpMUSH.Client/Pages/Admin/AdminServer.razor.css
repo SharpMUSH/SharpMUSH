@@ -32,7 +32,6 @@
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
 }
-/* MudIcon renders its own <svg>, so this class lands outside the page's scope attribute. */
 .adminsrv-card ::deep .adminsrv-card-icon {
     font-size: 1.5rem;
     color: var(--accent);

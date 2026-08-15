@@ -26,9 +26,6 @@
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
 }
-/* MudIcon renders its own element outside this page's scope, so a bare .ph-empty-icon
-   (no ::deep) never matched — the icon inherited default color instead of text-faint.
-   Matches the working selector already used by Players/PlayerDetail. */
 .ph-empty ::deep .ph-empty-icon {
     font-size: 2.5rem;
     color: var(--text-faint);

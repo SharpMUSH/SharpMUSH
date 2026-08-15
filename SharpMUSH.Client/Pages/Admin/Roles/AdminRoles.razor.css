@@ -92,12 +92,6 @@
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 1rem;
 }
-/* Fixed sidecars (230-340px) stack at the medium tier per the spec's tier table. A 1048px
-   container (1280px viewport, sidebar expanded) leaves a 708px detail pane, which measured
-   clean at every width down to ~950px — the medium tier's 64rem/1024px cutoff is correct as
-   written; a wider threshold was tried and reverted (see task-9 review) because the shell caps
-   .phosphor-page at 1400px above a 1601px viewport, making any max-width tier above 1400px
-   unreachable or flicker-prone in practice. */
 @container page (max-width: 64rem) {
     .roleadmin-grid { grid-template-columns: 1fr; }
 }

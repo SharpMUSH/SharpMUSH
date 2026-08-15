@@ -57,19 +57,11 @@
     color: var(--accent-on);
 }
 
-/* External-dbref classification row: MudSelect/MudTextField carry their max-width via Class=
-   rather than an inline Style=, so the narrow tier below can relax it without !important —
-   an inline max-width on the same element would always win over a stylesheet rule that lacks
-   !important, regardless of selector specificity. */
 ::deep .pkg-resolution-select { max-width: 200px; }
 ::deep .pkg-wellknown-select { max-width: 220px; }
 ::deep .pkg-configure-key-field { max-width: 200px; }
 
 @container page (max-width: 48rem) {
-    /* Relaxing the field caps is only half of it: MudStack Row renders an unwrapped
-       `d-flex flex-row`, so the external-ref and metadata rows still lay their (now
-       full-width) children out side by side and push past the column. .flex-row is
-       MudBlazor-rendered, so it needs ::deep behind the page-authored .pkg-page ancestor. */
     .pkg-page ::deep .flex-row { flex-wrap: wrap; }
 
     ::deep .pkg-resolution-select,

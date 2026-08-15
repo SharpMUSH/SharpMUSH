@@ -8,11 +8,6 @@
     grid-template-columns: minmax(0, 1fr) 220px;
     gap: 2.25rem;
 }
-/* The TOC used to disappear entirely here (display:none) once the grid stacked. Stacking
-   still puts it below the article by DOM order, but it stays in the document — position:
-   sticky on .wiki-toc-sticky is harmless in a single-column layout (its row is only as tall
-   as its own content, so it just reads as a normal block) and readers on a tablet-width
-   window keep the page outline instead of losing it. */
 @container page (max-width: 64rem) {
     .wiki-article-grid { grid-template-columns: 1fr; gap: 1.25rem; }
 }
@@ -26,12 +21,6 @@
 
 .wiki-article-main { min-width: 0; }
 
-/* Rendered markdown HTML (server-generated, injected as a MarkupString) — its elements are
-   never part of this component's own markup, so they never carry the scope attribute; ::deep
-   is required for any selector to reach them at all. Unconditional rather than narrow-tier:
-   a wide code block or a table with many columns can overflow at any container width, not
-   only on a phone, so it scrolls inside the column instead of widening the page regardless of
-   size. */
 .wiki-article-body ::deep pre { overflow-x: auto; }
 .wiki-article-body ::deep table { display: block; overflow-x: auto; max-width: 100%; }
 

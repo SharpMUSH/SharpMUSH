@@ -50,23 +50,11 @@
     color: var(--accent-on);
 }
 
-/* Fixed sidecars (230-340px) stack at the medium tier per the spec's tier table. A 1048px
-   container (1280px viewport, sidebar expanded) leaves the remotes column comfortably wide,
-   which measured clean at every width down to ~950px — the medium tier's 64rem/1024px cutoff
-   is correct as written; a wider threshold was tried and reverted (see task-9 review) because
-   the shell caps .phosphor-page at 1400px above a 1601px viewport, making any max-width tier
-   above 1400px unreachable or flicker-prone in practice. */
 @container page (max-width: 64rem) {
     .pkg-cols { grid-template-columns: 1fr; }
 }
 
 @container page (max-width: 48rem) {
-    /* MudTable renders a real <table>, which cannot reflow. Below the narrow tier the rows
-       become stacked blocks, each cell labelled from its column header via data-label.
-       ::deep .pkg-remotes-table (leading ::deep, anchored on this component's own wrapper)
-       rather than .pkg-remotes-table ::deep — MudTable never stamps the caller's scope
-       attribute onto the <table> it renders, so the latter form would require an attribute
-       that is never present and match nothing. */
     ::deep .pkg-remotes-table thead { display: none; }
 
     ::deep .pkg-remotes-table tr {
@@ -88,8 +76,6 @@
         font-size: 0.8125rem;
     }
 
-    /* The trailing actions cell has no header, so it has no data-label either; give it the
-       whole row rather than an 8rem empty label gutter that squeezes the buttons. */
     ::deep .pkg-remotes-table td:last-child {
         grid-template-columns: minmax(0, 1fr);
     }

@@ -58,7 +58,6 @@
     color: var(--text);
 }
 
-/* MudTextField puts Class= on its own wrapper, which this page's scope attribute never reaches. */
 .help-topics ::deep .help-filter {
     margin-bottom: 1rem;
 }
@@ -74,10 +73,6 @@
     overflow-y: auto;
 }
 
-/* A fresh game's corpus runs well past a thousand topics in this one scrolling box, most of them
-   never painted. content-visibility skips layout/paint for whatever is currently off-screen inside
-   it; contain-intrinsic-size gives the skipped rows a remembered placeholder height so the
-   scrollbar doesn't jump as items are measured for real on the way past. */
 .help-topic-list li {
     content-visibility: auto;
     contain-intrinsic-size: auto 1.375rem;

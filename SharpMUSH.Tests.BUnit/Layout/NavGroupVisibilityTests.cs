@@ -163,9 +163,6 @@ public class NavGroupVisibilityTests : BunitContext, IAsyncDisposable
 	[Test]
 	public async Task The_stylesheet_hides_a_nav_group_that_rendered_no_links()
 	{
-		// The stylesheet is split by responsibility (tokens / shell / utilities / syntax / globals), so
-		// this reads the whole folder as one sheet rather than pinning a filename the split moved the
-		// rule out of.
 		var css = string.Join("\n", await Task.WhenAll(
 			Directory.EnumerateFiles(ClientSource.CssRoot, "*.css")
 				.OrderBy(f => f, StringComparer.Ordinal)

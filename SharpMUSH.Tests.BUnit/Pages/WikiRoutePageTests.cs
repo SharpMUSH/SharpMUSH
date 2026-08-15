@@ -234,8 +234,6 @@ public class WikiPageRouteTests : BunitContext
 		var wikiSvc = Services.GetRequiredService<IWikiService>();
 		await wikiSvc.CreateAsync("Magic System", "Content here.", authorDbref: "#1", WikiNamespace.Main);
 
-		// The editor's locale selector is a MudSelect, which needs a MudPopoverProvider in the render
-		// tree, so the page is hosted inside MudHarness (see WikiEditLocaleTests).
 		var host = Render<Components.MudHarness>(p => p
 				.AddChildContent<SharpMUSH.Client.Pages.WikiPageEdit>(cp => cp
 						.Add(c => c.Slug, "magic_system")
@@ -249,24 +247,12 @@ public class WikiPageRouteTests : BunitContext
 		await Assert.That(wikiView.Instance.Mode).IsEqualTo(WikiView.WikiMode.Edit);
 	}
 
-	/// <summary>
-	/// Regression test: a cold load (or refresh) landing directly on <c>/edit</c> only ever set
-	/// <c>Mode</c> to <see cref="WikiView.WikiMode.Edit"/> via the page parameter — it never called
-	/// <c>ActivateEditMode</c>, the client-side "Edit" button handler that used to be the only place
-	/// populating the editor's draft. <c>WikiEdit</c>'s <c>Article is not null</c> render guard then
-	/// left the content column blank with no console error. Asserts the editor component actually
-	/// renders (and with a non-null <c>Article</c>) rather than just checking the parameters passed
-	/// into <c>WikiView</c>, which the earlier test above already covers and which the bug happily
-	/// passed anyway.
-	/// </summary>
 	[TUnit.Core.Test]
 	public async Task WikiPageEdit_ColdLoad_RendersTheEditorInsteadOfABlankColumn()
 	{
 		var wikiSvc = Services.GetRequiredService<IWikiService>();
 		await wikiSvc.CreateAsync("Magic System", "Content here.", authorDbref: "#1", WikiNamespace.Main);
 
-		// The editor's locale selector is a MudSelect, which needs a MudPopoverProvider in the render
-		// tree, so the page is hosted inside MudHarness (see WikiEditLocaleTests).
 		var host = Render<Components.MudHarness>(p => p
 				.AddChildContent<SharpMUSH.Client.Pages.WikiPageEdit>(cp => cp
 						.Add(c => c.Slug, "magic_system")

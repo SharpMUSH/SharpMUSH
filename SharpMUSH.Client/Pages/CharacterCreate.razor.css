@@ -2,10 +2,6 @@
     padding: var(--cpad);
 }
 
-/* Leading ::deep: the class is handed to a MudPaper, and a class on a MudBlazor component lands
-   on the div that component renders, which never carries this file's scope attribute — a plain
-   `.charcreate-card` rule compiles to `.charcreate-card[b-…]` and matches nothing, which silently
-   dropped the whole card box (this used to be an inline Style= on the same element). */
 ::deep .charcreate-card {
     max-width: 560px;
     margin: 0 auto;

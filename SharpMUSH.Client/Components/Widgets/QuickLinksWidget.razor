@@ -4,8 +4,6 @@
 
 @if (_links.Count > 0)
 {
-    @* Wrapper only exists on the branch that has content: a non-admin visitor with no links
-       configured must still render nothing at all, not an empty box. *@
     <div class="quick-links-widget">
         @if (_isSidebar)
         {

@@ -79,9 +79,6 @@
     color: var(--accent);
 }
 
-/* The grid is already fluid (auto-fill/minmax), so this tier only tightens the row
-   itself: the 44px icon and card padding read as oversized once the grid has settled
-   to a single narrow column. */
 @container page (max-width: 48rem) {
     .ph-title {
         font-size: 1.375rem;

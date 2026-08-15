@@ -111,9 +111,6 @@
     line-height: 1.7;
     caret-color: var(--accent);
     border-right: 1px solid var(--border-soft);
-    /* Grow with content instead of relying on the textarea's own internal scrollbar — most
-       useful once the narrow tier below drops the preview pane and the editor is the only
-       thing on screen. Unsupported browsers just keep the old fixed-box-with-scroll behavior. */
     field-sizing: content;
 }
 .wiki-edit-preview {
@@ -163,9 +160,6 @@
     font-family: var(--font-ui); font-size: 0.78125rem; color: var(--text-dim); cursor: pointer;
 }
 
-/* Layout comes from the shared .toolbar-row utility (display/align/wrap); this adds only the
-   savebar's own skin and a slightly wider gap. Without wrapping, the publish button rendered
-   at x=595 inside a 390px column — 205px of overflow. */
 .wiki-edit-savebar {
     gap: 0.875rem;
     margin-top: 0.75rem;
