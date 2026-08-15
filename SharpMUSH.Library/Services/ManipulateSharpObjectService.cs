@@ -272,9 +272,100 @@ public class ManipulateSharpObjectService(
 		return true;
 	}
 
+	/// <summary>
+	/// Resolves a power by name or alias.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="SharpPower.Alias"/> is declared non-nullable but the seeded powers store null for "no alias", so an
+	/// unguarded <c>x.Alias.Equals</c> throws on the first aliasless power the stream yields — which, since the
+	/// predicate runs over every power until one matches, made setting or clearing ANY power a
+	/// <see cref="NullReferenceException"/>. GetPowerQueryHandler already guards the same comparison this way.
+	/// </remarks>
+	public ValueTask<SharpPower?> FindPower(string powerOrPowerAlias) =>
+		mediator.CreateStream(new GetPowersQuery())
+			.FirstOrDefaultAsync(x =>
+				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)
+				|| (x.Alias is not null && x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)));
+
+	/// <summary>
+	/// PennMUSH src/wiz.c do_power, the shared body of the <c>@power &lt;object&gt;=...</c> command and the
+	/// side-effect form of <c>powers()</c>: wizard-only, refuses unregistered players and God, then applies
+	/// each space-separated token, granting it or — with a leading <c>!</c> — revoking it.
+	/// </summary>
+	public async ValueTask<CallState> SetOrUnsetPowers(AnySharpObject executor, AnySharpObject obj,
+		string powerSpecification, bool notify)
+	{
+		if (!await executor.IsWizard())
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.OnlyWizardsMayGrantPowers);
+			}
+			return ErrorMessages.Returns.PermissionDenied;
+		}
+
+		if (await obj.HasFlag("UNREGISTERED"))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor,
+					Definitions.ErrorMessages.Notifications.CantGrantPowersUnregistered);
+			}
+			return ErrorMessages.Returns.PermissionDenied;
+		}
+
+		if (obj.IsGod() && !executor.IsGod())
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.GodIsAlreadyAllPowerful);
+			}
+			return ErrorMessages.Returns.PermissionDenied;
+		}
+
+		var tokens = powerSpecification.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+		if (tokens.Length == 0)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.MustSpecifyPowerToSet);
+			}
+			return ErrorMessages.Returns.PermissionDenied;
+		}
+
+		CallState last = true;
+		foreach (var token in tokens)
+		{
+			// A bare "!" is not a revoke: do_power only strips the token when something follows it.
+			var revoke = token[0] == '!' && token.Length > 1;
+			var powerName = revoke ? token[1..] : token;
+
+			last = revoke
+				? await UnsetPower(executor, obj, powerName, notify)
+				: await SetPower(executor, obj, powerName, notify);
+		}
+
+		return last;
+	}
+
 	public async ValueTask<CallState> SetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias,
 		bool notify)
 	{
+		// PennMUSH src/flags.c set_power resolves the power before any permission check, and names the
+		// *power* — not the object — when it cannot.
+		var found = await FindPower(powerOrPowerAlias);
+
+		if (found is null)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor,
+					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, powerOrPowerAlias));
+			}
+			return ErrorMessages.Returns.NoSuchPower;
+		}
+
 		if (!await permissionService.Controls(executor, obj))
 		{
 			if (notify)
@@ -295,7 +386,7 @@ public class ManipulateSharpObjectService(
 		}
 
 		// Can't make admin (Wizard/Royalty) into guests (PennMUSH src/flags.c)
-		if (powerOrPowerAlias.Equals("Guest", StringComparison.OrdinalIgnoreCase)
+		if (found.Name.Equals("Guest", StringComparison.OrdinalIgnoreCase)
 			&& (await obj.IsWizard() || await obj.IsRoyalty()))
 		{
 			if (notify)
@@ -305,44 +396,23 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		if (await obj.HasPower(powerOrPowerAlias))
+		if (await obj.HasPower(found.Name))
 		{
 			if (notify)
 			{
 				await notifyService.Notify(executor,
-					string.Format(Definitions.ErrorMessages.Notifications.PowerAlreadySet, obj.Object().Name, powerOrPowerAlias));
+					string.Format(Definitions.ErrorMessages.Notifications.PowerAlreadyGranted, obj.Object().Name, found.Name));
 			}
 			return true;
 		}
 
-		var allPowers = mediator.CreateStream(new GetPowersQuery());
-
-		// Alias is declared non-nullable but the seeded powers store null for "no alias", so an unguarded
-		// x.Alias.Equals throws on the first aliasless power the stream yields — which, since the predicate
-		// runs over every power until one matches, made setting or clearing ANY power a NullReferenceException.
-		// GetPowerQueryHandler already guards the same comparison this way.
-		var found = await allPowers
-			.FirstOrDefaultAsync(x =>
-				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)
-				|| (x.Alias is not null && x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)));
-
-		if (found is null)
-		{
-			if (notify)
-			{
-				await notifyService.Notify(executor,
-					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, obj.Object().Name));
-			}
-			return ErrorMessages.Returns.NoSuchPower;
-		}
+		await mediator.Send(new SetObjectPowerCommand(obj, found));
 
 		if (notify)
 		{
 			await notifyService.Notify(executor,
-				string.Format(Definitions.ErrorMessages.Notifications.PowerSet, obj.Object().Name, powerOrPowerAlias));
+				string.Format(Definitions.ErrorMessages.Notifications.PowerGranted, obj.Object().Name, found.Name));
 		}
-
-		await mediator.Send(new SetObjectPowerCommand(obj, found));
 
 		// Powers trigger the same OBJECT`FLAG event as flags.
 		await publisher.Publish(new ObjectFlagChangedNotification(
@@ -358,6 +428,18 @@ public class ManipulateSharpObjectService(
 	public async ValueTask<CallState> UnsetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias,
 		bool notify)
 	{
+		var found = await FindPower(powerOrPowerAlias);
+
+		if (found is null)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor,
+					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, powerOrPowerAlias));
+			}
+			return ErrorMessages.Returns.NoSuchPower;
+		}
+
 		if (!await permissionService.Controls(executor, obj))
 		{
 			if (notify)
@@ -377,44 +459,23 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		if (!await obj.HasPower(powerOrPowerAlias))
+		if (!await obj.HasPower(found.Name))
 		{
 			if (notify)
 			{
 				await notifyService.Notify(executor,
-					string.Format(Definitions.ErrorMessages.Notifications.FlagAlreadyReset, obj.Object().Name, powerOrPowerAlias));
+					string.Format(Definitions.ErrorMessages.Notifications.PowerAlreadyRemoved, obj.Object().Name, found.Name));
 			}
 			return true;
 		}
 
-		var allPowers = mediator.CreateStream(new GetPowersQuery());
-
-		// Alias is declared non-nullable but the seeded powers store null for "no alias", so an unguarded
-		// x.Alias.Equals throws on the first aliasless power the stream yields — which, since the predicate
-		// runs over every power until one matches, made setting or clearing ANY power a NullReferenceException.
-		// GetPowerQueryHandler already guards the same comparison this way.
-		var found = await allPowers
-			.FirstOrDefaultAsync(x =>
-				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)
-				|| (x.Alias is not null && x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)));
-
-		if (found is null)
-		{
-			if (notify)
-			{
-				await notifyService.Notify(executor,
-					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, obj.Object().Name));
-			}
-			return ErrorMessages.Returns.NoSuchPower;
-		}
+		await mediator.Send(new UnsetObjectPowerCommand(obj, found));
 
 		if (notify)
 		{
 			await notifyService.Notify(executor,
-				string.Format(Definitions.ErrorMessages.Notifications.FlagReset, obj.Object().Name, powerOrPowerAlias));
+				string.Format(Definitions.ErrorMessages.Notifications.PowerRemoved, obj.Object().Name, found.Name));
 		}
-
-		await mediator.Send(new UnsetObjectPowerCommand(obj, found));
 
 		// Powers trigger the same OBJECT`FLAG event as flags.
 		await publisher.Publish(new ObjectFlagChangedNotification(

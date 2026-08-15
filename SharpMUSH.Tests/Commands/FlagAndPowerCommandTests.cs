@@ -135,8 +135,10 @@ public class FlagAndPowerCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
 
+		// The notify substitute is a session-wide singleton, so any other test that lists powers as God
+		// also matches this specification. Assert the call happened, not how many times.
 		await NotifyService
-			.Received(1)
+			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Powers:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -369,5 +371,229 @@ public class FlagAndPowerCommandTests
 		await Assert.That(flags.Any(f => f.Name.Equals("TRUST", StringComparison.OrdinalIgnoreCase))).IsTrue();
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+	}
+
+	private async ValueTask<string[]> PowerNamesOf(DBRef dbref)
+	{
+		var node = await Mediator.Send(new GetObjectNodeQuery(dbref));
+		var powers = await node.Object()!.Powers.Value.ToArrayAsync();
+		return powers.Select(p => p.Name).ToArray();
+	}
+
+	/// <summary>
+	/// PennMUSH src/wiz.c do_power: with no switch, <c>@power &lt;object&gt;=&lt;power&gt;</c> grants the power.
+	/// </summary>
+	[Test]
+	public async ValueTask Power_Grant_SetsPowerOnObject()
+	{
+		var createResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("PowerGrant")}"));
+		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=Builder"));
+
+		await Assert.That(await PowerNamesOf(newDb)).Contains("Builder");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+	}
+
+	/// <summary>
+	/// PennMUSH src/flags.c set_power: granting emits "&lt;name&gt; - &lt;power&gt; granted."
+	/// </summary>
+	[Test]
+	public async ValueTask Power_Grant_NotifiesGranted()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("PowerGrantMsg");
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {name}"));
+		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=Builder"));
+
+		// ManipulateSharpObjectService reports flag and power changes with no explicit sender.
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{name} - Builder granted.")),
+				null, INotifyService.NotificationType.Announce);
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+	}
+
+	/// <summary>
+	/// PennMUSH src/wiz.c do_power: a leading <c>!</c> on the power name revokes it.
+	/// </summary>
+	[Test]
+	public async ValueTask Power_Revoke_ClearsPowerOnObject()
+	{
+		var createResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("PowerRevoke")}"));
+		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=Builder"));
+		await Assert.That(await PowerNamesOf(newDb)).Contains("Builder");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=!Builder"));
+		await Assert.That(await PowerNamesOf(newDb)).DoesNotContain("Builder");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+	}
+
+	/// <summary>
+	/// PennMUSH src/wiz.c do_power splits the right-hand side on spaces and applies each token.
+	/// </summary>
+	[Test]
+	public async ValueTask Power_Grant_AppliesEverySpaceSeparatedToken()
+	{
+		var createResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("PowerMulti")}"));
+		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=Builder Boot"));
+		var granted = await PowerNamesOf(newDb);
+		await Assert.That(granted).Contains("Builder");
+		await Assert.That(granted).Contains("Boot");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=!Builder Boot"));
+		var after = await PowerNamesOf(newDb);
+		await Assert.That(after).DoesNotContain("Builder");
+		await Assert.That(after).Contains("Boot");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+	}
+
+	/// <summary>
+	/// PennMUSH src/flags.c set_power reports the unrecognised <b>power</b> name, not the object's name.
+	/// </summary>
+	[Test]
+	public async ValueTask Power_Grant_UnknownPowerNamesThePower()
+	{
+		var createResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("PowerUnknown")}"));
+		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=NOSUCHPOWERXYZ"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+					TestHelpers.MessagePlainTextEquals(s, "NOSUCHPOWERXYZ - I don't recognize that power.")),
+				null, INotifyService.NotificationType.Announce);
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+	}
+
+	/// <summary>
+	/// PennMUSH src/wiz.c do_power: "Only wizards may grant powers."
+	/// </summary>
+	[Test]
+	public async ValueTask Power_Grant_RequiresWizard()
+	{
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PowerNonWiz");
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@power {testPlayer.DbRef}=Builder"));
+
+		await Assert.That(await PowerNamesOf(testPlayer.DbRef)).DoesNotContain("Builder");
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s,
+					ErrorMessages.Notifications.OnlyWizardsMayGrantPowers)),
+				null, INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// PennMUSH src/wiz.c do_power: with no "=", @power shows information about the named power
+	/// (do_flag_info), it does not list the powers on an object.
+	/// </summary>
+	[Test]
+	public async ValueTask Power_NoEquals_ShowsPowerInformation()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@power Builder"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "     Name: Builder")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// PennMUSH src/flags.c do_flag_info: an unknown name reports "No such power."
+	/// </summary>
+	[Test]
+	public async ValueTask Power_NoEquals_UnknownPowerReportsNoSuchPower()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@power NOSUCHPOWERABC"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.NoSuchPowerInfo), executor, executor)).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH src/flags.c: every power *definition* switch is God-only. A wizard is not enough,
+	/// and the switches must never fall through to the object-manipulating form.
+	/// </summary>
+	[Test]
+	public async ValueTask Power_Add_RequiresGod()
+	{
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PowerAddNonGod");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+
+		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@power/add {powerName}=TPOW"));
+
+		await Assert.That(await Mediator.Send(new GetPowerQuery(powerName))).IsNull();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.NotEnoughMagic), testPlayer.DbRef, testPlayer.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH src/fundb.c fun_powers routes the side-effect form through do_power, so powers()
+	/// honours the same "!" revoke prefix as @power.
+	/// </summary>
+	[Test]
+	public async ValueTask PowersFunction_SideEffect_HonoursRevokePrefix()
+	{
+		var createResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("PowerFnRevoke")}"));
+		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=Builder"));
+		await Assert.That(await PowerNamesOf(newDb)).Contains("Builder");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"think [powers({newDb},!Builder)]"));
+		await Assert.That(await PowerNamesOf(newDb)).DoesNotContain("Builder");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+	}
+
+	/// <summary>
+	/// PennMUSH src/flags.c list_all_flags filters the listing by a glob pattern.
+	/// </summary>
+	[Test]
+	public async ValueTask Power_List_FiltersByPattern()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list Buil*"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+					TestHelpers.MessagePlainTextContains(s, "Builder")
+					&& !TestHelpers.MessagePlainTextContains(s, "Announce")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }
