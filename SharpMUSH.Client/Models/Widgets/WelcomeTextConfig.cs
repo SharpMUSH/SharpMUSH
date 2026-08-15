@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Models.Portal.Widgets;
+
 namespace SharpMUSH.Client.Models.Widgets;
 
 /// <summary>
@@ -8,4 +10,8 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// Whether signed-out visitors see the text. Defaults to <c>true</c> so a config that omits the key
 /// stays visible to everyone.
 /// </param>
-public record WelcomeTextConfig(string Markdown, bool ShowToGuests = true);
+public record WelcomeTextConfig(
+	[property: WidgetConfigKey("LayCfgWelcomeMarkdown")]
+	string Markdown,
+	[property: WidgetConfigKey("LayCfgWelcomeShowToGuests")]
+	bool ShowToGuests = true);

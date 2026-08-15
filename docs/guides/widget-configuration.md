@@ -40,10 +40,14 @@ malformed rather than failing the page.
 
 ### Where you type it
 
-The layout editor opens a **raw JSON text box** for every widget except the Spacer, which gets a
-numeric height field. There is no generated form: a descriptor's `ConfigType` records the shape for
-developers and for this document, but nothing renders an editor from it yet. Paste the JSON from the
-examples below and adjust.
+Click a placed widget in the layout editor and it opens a **raw JSON text box** — except the Spacer,
+which gets a numeric height field.
+
+You do not have to bring this page with you. Above that box, the dialog lists the keys the selected
+widget accepts, with type, default, and a one-line description, and an **Insert template** button
+seeds the editor with every key at its default. That table is generated from the widget's config
+model, so it cannot fall out of step with the code. This page is the longer form: worked examples,
+precedence rules, and how the pieces fit together.
 
 ### Layout-level settings
 

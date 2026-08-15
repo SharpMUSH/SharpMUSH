@@ -82,9 +82,19 @@ and passes the placement's config plus the zone name:
 Every widget must declare both parameters even if it ignores them, or
 `DynamicComponent` throws on the unmatched parameter.
 
-`ConfigType` is descriptive metadata: it records the config shape for
-developers and for the reference guide. Nothing generates an editor from it —
-the layout editor opens a raw JSON box for every widget but the Spacer.
+`ConfigType` is load-bearing, not decoration. `WidgetConfigSchema` reflects over
+it to build the key reference the layout editor shows admins — key, JSON type,
+default, description — and the JSON template the "Insert template" button seeds.
+Each config property carries a `[WidgetConfigKey("Lay…")]` naming the
+`SharedResource` key for its description; a property without one is configurable
+but invisible in the UI, which is a deliberate omission rather than an oversight.
+
+Documentation is therefore generated from the config model and cannot drift from
+it. Two tests hold the ends together: one fails a `ConfigType` that documents no
+keys at all, another fails a description key missing from the resx.
+
+The editor still takes raw JSON (the Spacer's height is the one typed field);
+the reference sits above the box.
 
 ## Built-in Widgets
 

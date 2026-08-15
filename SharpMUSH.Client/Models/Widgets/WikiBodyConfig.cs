@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Models.Portal.Widgets;
+
 namespace SharpMUSH.Client.Models.Widgets;
 
 /// <summary>
@@ -20,8 +22,13 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// <see cref="Namespace"/> = <c>character</c>. Ignored when <see cref="Slug"/> is set.
 /// </param>
 public record WikiBodyConfig(
+	[property: WidgetConfigKey("LayCfgWikiBodySlug")]
 	string? Slug = null,
+	[property: WidgetConfigKey("LayCfgWikiBodyNamespace", Default = "\"main\"")]
 	string? Namespace = null,
+	[property: WidgetConfigKey("LayCfgWikiBodyCategory", Default = "\"general\"")]
 	string? Category = null,
+	[property: WidgetConfigKey("LayCfgWikiBodyLocale")]
 	string? Locale = null,
+	[property: WidgetConfigKey("LayCfgWikiBodyCharacter")]
 	string? Character = null);

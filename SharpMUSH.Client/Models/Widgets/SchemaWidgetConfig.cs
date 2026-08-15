@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Models.Portal.Widgets;
+
 namespace SharpMUSH.Client.Models.Widgets;
 
 /// <summary>
@@ -14,4 +16,8 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// Optional route returning the data to bind into the schema. Same token substitution applies; a
 /// <c>{objid}</c> token that cannot be filled skips the data fetch and renders the schema alone.
 /// </param>
-public record SchemaWidgetConfig(string? SchemaUrl = null, string? DataUrl = null);
+public record SchemaWidgetConfig(
+	[property: WidgetConfigKey("LayCfgSchemaUrl")]
+	string? SchemaUrl = null,
+	[property: WidgetConfigKey("LayCfgSchemaDataUrl")]
+	string? DataUrl = null);
