@@ -58,8 +58,6 @@ file sealed class QuickstartApiHandler(IReadOnlyList<CharacterSummary> character
 
 public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
-
 	public QuickstartWidgetTests()
 	{
 		Services.AddMudServices();
@@ -70,7 +68,6 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 	private AccountAuthService BuildAuth(IReadOnlyList<CharacterSummary> characters)
 	{
 		var apiClient = Track(new HttpClient(new QuickstartApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") });
-		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 		return new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
@@ -136,12 +133,5 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(link.TextContent).Contains("WidNewCharacter");
 		await Assert.That(cut.Markup).DoesNotContain("WidNoCharacterYet");
 		await Assert.That(cut.Markup).DoesNotContain("WidCreateYourCharacter");
-	}
-
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var client in _ownedHttpClients)
-			client.Dispose();
-		await base.DisposeAsync();
 	}
 }

@@ -72,7 +72,6 @@ file sealed class NavMenuApiHandler(IReadOnlyList<CharacterSummary> characters) 
 /// </summary>
 public class NavMenuActiveCharacterTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
 	private BunitAuthorizationContext Auth { get; }
 
 	public NavMenuActiveCharacterTests()
@@ -121,7 +120,6 @@ public class NavMenuActiveCharacterTests : TrackingBunitContext, IAsyncDisposabl
 		};
 
 		var apiClient = Track(new HttpClient(new NavMenuApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") });
-		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 		Services.AddSingleton(factory);
@@ -185,19 +183,5 @@ public class NavMenuActiveCharacterTests : TrackingBunitContext, IAsyncDisposabl
 		var cut = RenderNavMenu(auth, isCollapsed: false);
 
 		await Assert.That(cut.Find(".phosphor-avatar").TextContent.Trim()).IsEqualTo("B");
-	}
-
-	/// <summary>
-	/// Disposes the HttpClient(s) created for the substitute IHttpClientFactory. TUnit's disposer
-	/// prefers IAsyncDisposable over IDisposable when a type implements both (as BunitContext
-	/// does), so overriding only Dispose would never run — re-declare DisposeAsync to take over
-	/// the interface's dispatch slot for this type; base.DisposeAsync() still runs to dispose
-	/// bUnit's own service provider.
-	/// </summary>
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var client in _ownedHttpClients)
-			client.Dispose();
-		await base.DisposeAsync();
 	}
 }

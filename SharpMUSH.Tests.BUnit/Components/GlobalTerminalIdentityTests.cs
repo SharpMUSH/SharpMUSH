@@ -68,8 +68,6 @@ file sealed class GlobalTerminalApiHandler(IReadOnlyList<CharacterSummary> chara
 /// </summary>
 public class GlobalTerminalIdentityTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
-
 	private static readonly CharacterSummary Alpha = new(1, 1L, "Alpha", "");
 	private static readonly CharacterSummary Beta = new(2, 2L, "Beta", "");
 
@@ -125,7 +123,6 @@ public class GlobalTerminalIdentityTests : TrackingBunitContext, IAsyncDisposabl
 	private async Task<AccountAuthService> CreateLoggedInAuthAsync()
 	{
 		var apiClient = Track(new HttpClient(new GlobalTerminalApiHandler([Alpha, Beta])) { BaseAddress = new Uri("https://localhost:8081/") });
-		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 		Services.AddSingleton(factory);
@@ -288,12 +285,5 @@ public class GlobalTerminalIdentityTests : TrackingBunitContext, IAsyncDisposabl
 
 		await Assert.That(cut.Markup).Contains("DirectChar");
 		await Assert.That(cut.Markup).DoesNotContain("TermNotLoggedIn");
-	}
-
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var client in _ownedHttpClients)
-			client.Dispose();
-		await base.DisposeAsync();
 	}
 }

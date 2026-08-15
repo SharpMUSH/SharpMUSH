@@ -79,9 +79,10 @@ public abstract class MudBlazorTestContext : BunitContext
 
 	private void ReleaseOwned()
 	{
-		foreach (var owned in _owned)
+		// Reverse order, matching the tracking contract: a later registration may depend on an earlier.
+		for (var i = _owned.Count - 1; i >= 0; i--)
 		{
-			owned.Dispose();
+			_owned[i].Dispose();
 		}
 
 		_owned.Clear();

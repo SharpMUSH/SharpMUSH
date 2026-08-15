@@ -45,8 +45,6 @@ file sealed class EmptyRegistryHandler : HttpMessageHandler
 /// </summary>
 public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
-
 	private BunitAuthorizationContext Auth { get; }
 
 	public NavGroupVisibilityTests()
@@ -74,7 +72,6 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 		// No applications registered: the data-driven half of every group contributes nothing, which
 		// is the state the four seeded personas were actually in.
 		var apiClient = Track(new HttpClient(new EmptyRegistryHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
-		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 		Services.AddSingleton(factory);
@@ -173,17 +170,5 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(rule.Success).IsTrue()
 			.Because("the DOM assertions above only matter if the stylesheet acts on that state");
 		await Assert.That(rule.Groups["body"].Value.Replace(" ", "")).Contains("display:none");
-	}
-
-	/// <summary>
-	/// Disposes the HttpClient created for the substitute IHttpClientFactory. TUnit's disposer prefers
-	/// IAsyncDisposable over IDisposable when a type implements both (as BunitContext does), so
-	/// overriding only Dispose would never run.
-	/// </summary>
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var client in _ownedHttpClients)
-			client.Dispose();
-		await base.DisposeAsync();
 	}
 }

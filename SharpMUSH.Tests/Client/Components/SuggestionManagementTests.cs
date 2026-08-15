@@ -262,11 +262,15 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_LoadingState_ShowsProgressIndicator()
 	{
+		// Declared before the context so it is disposed after it. This request is still in flight at
+		// teardown; disposing the client first cancels the delay, and the continuation would call
+		// StateHasChanged on a context already tearing down.
+		using var httpClient = CreateMockHttpClient(new SuggestionData(), delayMs: 1000);
+
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		using var httpClient = CreateMockHttpClient(new SuggestionData(), delayMs: 1000);
 		var httpFactory = Substitute.For<IHttpClientFactory>();
 		httpFactory.CreateClient("api").Returns(httpClient);
 		ctx.Services.AddScoped(_ => httpFactory);

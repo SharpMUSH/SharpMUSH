@@ -58,8 +58,6 @@ file sealed class OnboardingApiHandler(object[] characters) : HttpMessageHandler
 /// </remarks>
 public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
-
 	private static readonly object[] OneCharacter =
 	[
 		new { dbrefNumber = 5, creationTime = 5L, name = "Gwendolyn", flags = "", isActing = true }
@@ -68,7 +66,6 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 	private void SeedServices(object[] characters)
 	{
 		var apiClient = Track(new HttpClient(new OnboardingApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") });
-		_ownedHttpClients.Add(apiClient);
 
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
@@ -199,12 +196,5 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword").SetResult(bool.FalseString);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.role").SetResult("Player");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.permissions").SetResult("[]");
-	}
-
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var client in _ownedHttpClients)
-			client.Dispose();
-		await base.DisposeAsync();
 	}
 }

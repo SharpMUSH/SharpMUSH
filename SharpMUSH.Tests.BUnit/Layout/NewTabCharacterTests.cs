@@ -105,7 +105,6 @@ file sealed class NewTabApiHandler(IReadOnlyList<CharacterSummary> characters) :
 /// </summary>
 public class NewTabCharacterTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
 	private BunitAuthorizationContext Auth { get; }
 
 	private static readonly CharacterSummary Alpha = new(1, 1L, "Alpha", "");
@@ -161,7 +160,6 @@ public class NewTabCharacterTests : TrackingBunitContext, IAsyncDisposable
 	private async Task<AccountAuthService> CreateLoggedInAuthAsync()
 	{
 		var apiClient = Track(new HttpClient(new NewTabApiHandler([Alpha, Beta])) { BaseAddress = new Uri("https://localhost:8081/") });
-		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 		Services.AddSingleton(factory);
@@ -360,12 +358,5 @@ public class NewTabCharacterTests : TrackingBunitContext, IAsyncDisposable
 		await Task.Delay(50);
 		await Assert.That(auth.ActiveCharacter?.DbrefNumber).IsEqualTo(1);
 		await Assert.That(cut.Markup).IsNotEmpty();
-	}
-
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var client in _ownedHttpClients)
-			client.Dispose();
-		await base.DisposeAsync();
 	}
 }

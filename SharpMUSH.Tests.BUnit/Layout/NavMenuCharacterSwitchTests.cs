@@ -84,7 +84,6 @@ file sealed class NavMenuSwitchApiHandler(IReadOnlyList<CharacterSummary> charac
 /// </summary>
 public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
 	private IConnectionStateService _connection = null!;
 	private BunitAuthorizationContext Auth { get; }
 
@@ -141,7 +140,6 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 	private async Task<AccountAuthService> CreateLoggedInAuthAsync(bool failSwitch = false)
 	{
 		var apiClient = Track(new HttpClient(new NavMenuSwitchApiHandler([Alpha, Beta], failSwitch)) { BaseAddress = new Uri("https://localhost:8081/") });
-		_ownedHttpClients.Add(apiClient);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 		Services.AddSingleton(factory);
@@ -236,12 +234,5 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 				throw new InvalidOperationException("identity not committed yet");
 		});
 		await Assert.That(auth.ActiveCharacter?.Name).IsEqualTo("Beta");
-	}
-
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var client in _ownedHttpClients)
-			client.Dispose();
-		await base.DisposeAsync();
 	}
 }
