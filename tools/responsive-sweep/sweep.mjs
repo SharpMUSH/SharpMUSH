@@ -270,7 +270,15 @@ const attributeOverflow = (containerSelector) => {
 	const rect = container.getBoundingClientRect();
 	// Compare against the container's own content-box right edge, corrected for however far it
 	// is already scrolled, so both sides of the comparison are in the same coordinate space.
-	const limit = rect.left - container.scrollLeft + container.clientWidth;
+	// The `- scrollLeft` term is load-bearing, not a bug: a descendant's rect moves by exactly
+	// `-scrollLeft` when the container scrolls (that is what scrolling means), and this term
+	// cancels it, which is what makes `over` below scroll-invariant — verified empirically
+	// against a container scrolled to four different offsets with a fixed-overhang child, where
+	// dropping this term (as a since-rejected review comment proposed) made the reported overhang
+	// vary with scroll position instead of holding constant. `clientLeft` (the border-left width,
+	// absent from `rect.left`) was the actual gap: without it this over-reported by exactly the
+	// border width, constant across scroll.
+	const limit = rect.left - container.scrollLeft + container.clientLeft + container.clientWidth;
 
 	const culprits = [];
 	for (const el of container.querySelectorAll('*')) {
@@ -338,9 +346,16 @@ const removeCanary = () => {
 // reading once the canary is removed. The comparison is against the page's own pre-injection
 // state rather than against zero, because a route that already overflows is still a perfectly
 // good host for this test — and on this portal some of them do.
+// `requiredSelector` makes `family` a checked claim instead of a label: without it, a canary
+// route that redirects elsewhere (`/` -> `/setup`, `/` -> `/login`) still measures a container —
+// just the wrong family's — and `before.length > 0` passes, so the self-test reports covering
+// both families while one of them was never actually exercised. The route is also checked
+// against `expectedRedirects`, the same allowlist the main sweep uses: an unexpected landing
+// here means the self-test measured a page nobody asked for, which is a self-test failure, not a
+// quiet pass.
 const CANARY_ROUTES = [
-	{ route: '/', family: '.phosphor-page / .phosphor-main (MainLayout)' },
-	{ route: '/login', family: '.onboarding-body (OnboardingLayout)' },
+	{ route: '/', family: '.phosphor-page / .phosphor-main (MainLayout)', requiredSelector: '.phosphor-page' },
+	{ route: '/login', family: '.onboarding-body (OnboardingLayout)', requiredSelector: '.onboarding-body' },
 ];
 
 // Largest overhang across the measured containers — the quantity the canary must move.
@@ -362,7 +377,7 @@ for (const size of WIDTHS) {
 	});
 	const page = await context.newPage();
 
-	for (const { route, family } of CANARY_ROUTES) {
+	for (const { route, family, requiredSelector } of CANARY_ROUTES) {
 		const label = `${size.name}px ${route} [${family}]`;
 		try {
 			await withDeadline(async () => {
@@ -375,38 +390,70 @@ for (const size of WIDTHS) {
 			continue;
 		}
 
-		const before = await page.evaluate(measureContainers, CONTAINER_SELECTORS);
-		if (before.length === 0) {
-			selfTestFailures.push(`${label}: no measurable container present, so the gate cannot be proven here`);
-			continue;
-		}
+		// Everything below is a `page.evaluate` round-trip, exactly like the main sweep loop
+		// further down, and for the same reason needs the same boundary: a canary route that
+		// redirects mid-evaluate (or loses its execution context for any other reason) must
+		// become a recorded self-test failure, not an uncaught throw that kills the process
+		// before the exit-3 path below can run. This bit the sweep twice already as a crash
+		// instead of a clean failure.
+		try {
+			// The route actually measured must be the route named, not wherever it landed — a
+			// redirect to a different layout family would let the `requiredSelector` check below
+			// pass against a container that happens to satisfy it for the wrong reason. Same
+			// allowlist the main sweep uses below; the default is to fail.
+			const landed = await page.evaluate(() => location.pathname);
+			const expected = expectedRedirects[route];
+			if (landed !== route && landed !== expected) {
+				selfTestFailures.push(
+					`${label}: landed on ${landed} instead of ${route} — the self-test must exercise the route it names, not wherever it redirected (add "${route}": "${landed}" to expectedRedirects if this is a legitimate alias)`,
+				);
+				continue;
+			}
 
-		// Comfortably wider than the container at any viewport, so a miss is unambiguous.
-		const injected = await page.evaluate(injectCanary, size.width + 1000);
-		if (!injected) {
-			selfTestFailures.push(`${label}: canary could not be injected (no host element)`);
-			continue;
-		}
+			const before = await page.evaluate(measureContainers, CONTAINER_SELECTORS);
+			if (before.length === 0) {
+				selfTestFailures.push(`${label}: no measurable container present, so the gate cannot be proven here`);
+				continue;
+			}
+			if (!before.some((c) => c.selector === requiredSelector)) {
+				// `family` is a claim, not just a label: this route only proves the
+				// `.phosphor-page`/`.onboarding-body` measurement path if that selector is what
+				// actually got measured, not merely that something did.
+				selfTestFailures.push(
+					`${label}: expected ${requiredSelector} to be present but measured ${before.map((c) => c.selector).join(', ') || '(nothing)'} — this route did not exercise the container family it claims to`,
+				);
+				continue;
+			}
 
-		const during = await page.evaluate(measureContainers, CONTAINER_SELECTORS);
-		await page.evaluate(removeCanary);
-		const after = await page.evaluate(measureContainers, CONTAINER_SELECTORS);
+			// Comfortably wider than the container at any viewport, so a miss is unambiguous.
+			const injected = await page.evaluate(injectCanary, size.width + 1000);
+			if (!injected) {
+				selfTestFailures.push(`${label}: canary could not be injected (no host element)`);
+				continue;
+			}
 
-		if (!during.some(isOverflowing)) {
-			selfTestFailures.push(
-				`${label}: gate did NOT fire — a ${size.width + 1000}px canary produced ${JSON.stringify(during)}`,
-			);
-		} else if (maxOverhang(during) <= maxOverhang(before)) {
-			// It reported overflow, but not because of the canary. That would mean the gate is
-			// pinned on by pre-existing damage and cannot distinguish new breakage from old.
-			selfTestFailures.push(
-				`${label}: gate fired but did not respond to the canary — overhang ${maxOverhang(before)}px before, ${maxOverhang(during)}px during`,
-			);
-		} else if (!sameReading(after, before)) {
-			// Stuck on, or the canary left residue that would poison every later measurement.
-			selfTestFailures.push(
-				`${label}: gate did not clear after canary removal — before ${JSON.stringify(before)}, after ${JSON.stringify(after)}`,
-			);
+			const during = await page.evaluate(measureContainers, CONTAINER_SELECTORS);
+			await page.evaluate(removeCanary);
+			const after = await page.evaluate(measureContainers, CONTAINER_SELECTORS);
+
+			if (!during.some(isOverflowing)) {
+				selfTestFailures.push(
+					`${label}: gate did NOT fire — a ${size.width + 1000}px canary produced ${JSON.stringify(during)}`,
+				);
+			} else if (maxOverhang(during) <= maxOverhang(before)) {
+				// It reported overflow, but not because of the canary. That would mean the gate is
+				// pinned on by pre-existing damage and cannot distinguish new breakage from old.
+				selfTestFailures.push(
+					`${label}: gate fired but did not respond to the canary — overhang ${maxOverhang(before)}px before, ${maxOverhang(during)}px during`,
+				);
+			} else if (!sameReading(after, before)) {
+				// Stuck on, or the canary left residue that would poison every later measurement.
+				selfTestFailures.push(
+					`${label}: gate did not clear after canary removal — before ${JSON.stringify(before)}, after ${JSON.stringify(after)}`,
+				);
+			}
+		} catch (err) {
+			selfTestFailures.push(`${label}: self-test measurement threw — ${err.message.split('\n')[0]}`);
 		}
 	}
 
