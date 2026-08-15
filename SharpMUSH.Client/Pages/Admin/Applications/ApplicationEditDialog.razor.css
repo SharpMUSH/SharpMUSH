@@ -1,0 +1,11 @@
+.application-edit-dialog {
+    container-type: inline-size;
+}
+
+@container (max-width: 48rem) {
+    .application-edit-dialog ::deep .mud-grid-item-sm-6,
+    .application-edit-dialog ::deep .mud-grid-item-sm-4 {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+}

@@ -47,8 +47,10 @@ public class ZoneRendererGridTests : BunitContext
 
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("zone-grid");
-		await Assert.That(markup).Contains("grid-column:span 12");
-		await Assert.That(markup).Contains("grid-column:span 6");
+		// A custom property, not an inline grid-column: an inline declaration would beat the
+		// narrow-tier override in ZoneRenderer.razor.css.
+		await Assert.That(markup).Contains("--zone-span:12;");
+		await Assert.That(markup).Contains("--zone-span:6;");
 		await Assert.That(markup).Contains("AAA");
 		await Assert.That(markup).Contains("BBB");
 	}

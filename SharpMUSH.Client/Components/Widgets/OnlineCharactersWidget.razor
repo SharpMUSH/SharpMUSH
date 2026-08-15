@@ -3,47 +3,49 @@
 @inject CharacterDirectoryService CharacterDirectory
 @inject IStringLocalizer<SharedResource> Loc
 
-<MudPaper Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
-    <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:var(--font-mono);margin-bottom:0.75rem;">@Loc["WidOnlineNow"]</MudText>
-    @if (_loading)
-    {
-        @for (var i = 0; i < 4; i++) { <MudSkeleton Height="32px" Class="mb-1" /> }
-    }
-    @* Three states, not two: the list failed to load is not the same claim as "nobody is here",
-       and saying the latter for the former is the more damaging of the two mistakes. *@
-    else if (_characters is null)
-    {
-        <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Loc["WidUnavailable"]</MudText>
-    }
-    else if (_characters is { Count: > 0 })
-    {
-        @foreach (var c in _characters.Take(8))
+<div class="online-characters-widget">
+    <MudPaper Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
+        <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:var(--font-mono);margin-bottom:0.75rem;">@Loc["WidOnlineNow"]</MudText>
+        @if (_loading)
         {
-            <div style="display:flex;align-items:center;gap:0.625rem;padding:0.3125rem 0;border-bottom:1px solid var(--border-soft);">
-                <div style="position:relative;">
-                    <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(c.Name.GetHashCode()) % 360},55%,35%);font-size:0.6875rem;width:28px;height:28px;")">
-                        @c.Name[0].ToString().ToUpper()
-                    </MudAvatar>
-                    @* Everyone in this list came from lwho(), so the dot is always the connected
-                       colour. It used to be painted faint over the full roster, which made the
-                       whole widget read as presence data it never had. *@
-                    <span style="position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);"></span>
+            @for (var i = 0; i < 4; i++) { <MudSkeleton Height="32px" Class="mb-1" /> }
+        }
+        @* Three states, not two: the list failed to load is not the same claim as "nobody is here",
+           and saying the latter for the former is the more damaging of the two mistakes. *@
+        else if (_characters is null)
+        {
+            <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Loc["WidUnavailable"]</MudText>
+        }
+        else if (_characters is { Count: > 0 })
+        {
+            @foreach (var c in _characters.Take(8))
+            {
+                <div class="online-characters-row">
+                    <div style="position:relative;">
+                        <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(c.Name.GetHashCode()) % 360},55%,35%);font-size:0.6875rem;width:28px;height:28px;")">
+                            @c.Name[0].ToString().ToUpper()
+                        </MudAvatar>
+                        @* Everyone in this list came from lwho(), so the dot is always the connected
+                           colour. It used to be painted faint over the full roster, which made the
+                           whole widget read as presence data it never had. *@
+                        <span style="position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);"></span>
+                    </div>
+                    <MudLink Href="@($"/characters/{c.Objid}")" Style="color:var(--text);font-size:0.8125rem;">@c.Name</MudLink>
                 </div>
-                <MudLink Href="@($"/characters/{c.Objid}")" Style="color:var(--text);font-size:0.8125rem;">@c.Name</MudLink>
-            </div>
+            }
+            @if (_characters.Count > 8)
+            {
+                <MudButton Variant="Variant.Text" Href="/characters" Size="Size.Small" Color="Color.Primary" Class="mt-1">
+                    @Loc["WidViewAllCount", _characters.Count]
+                </MudButton>
+            }
         }
-        @if (_characters.Count > 8)
+        else
         {
-            <MudButton Variant="Variant.Text" Href="/characters" Size="Size.Small" Color="Color.Primary" Class="mt-1">
-                @Loc["WidViewAllCount", _characters.Count]
-            </MudButton>
+            <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Loc["WidNobodyConnected"]</MudText>
         }
-    }
-    else
-    {
-        <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Loc["WidNobodyConnected"]</MudText>
-    }
-</MudPaper>
+    </MudPaper>
+</div>
 
 @code {
     [Parameter] public JsonElement? Config { get; set; }

@@ -108,16 +108,16 @@ else
     <MudCard Class="mb-4">
         <MudCardHeader><MudText Typo="Typo.h6">@Loc["PkgObjectsCount", _plan.Changeset.Objects.Count]</MudText></MudCardHeader>
         <MudCardContent>
-            <MudTable Items="_plan.Changeset.Objects" Dense="true">
+            <MudTable Items="_plan.Changeset.Objects" Dense="true" Class="pkg-objects-table">
                 <HeaderContent>
                     <MudTh>@Loc["PkgRef"]</MudTh><MudTh>@Loc["PkgAction"]</MudTh><MudTh>@Loc["PkgType"]</MudTh><MudTh>@Loc["PkgName"]</MudTh><MudTh>@Loc["PkgDetails"]</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd><code>@context.Ref</code></MudTd>
-                    <MudTd><MudChip T="string" Size="Size.Small" Color="@ObjectColor(context.Action)">@context.Action</MudChip></MudTd>
-                    <MudTd>@context.Type.ToString().ToLowerInvariant()</MudTd>
-                    <MudTd>@context.Name</MudTd>
-                    <MudTd>
+                    <MudTd data-label="@Loc["PkgRef"]"><code>@context.Ref</code></MudTd>
+                    <MudTd data-label="@Loc["PkgAction"]"><MudChip T="string" Size="Size.Small" Color="@ObjectColor(context.Action)">@context.Action</MudChip></MudTd>
+                    <MudTd data-label="@Loc["PkgType"]">@context.Type.ToString().ToLowerInvariant()</MudTd>
+                    <MudTd data-label="@Loc["PkgName"]">@context.Name</MudTd>
+                    <MudTd data-label="@Loc["PkgDetails"]">
                         @if (context.RenamedFromRef is not null)
                         {
                             <MudText Typo="Typo.caption">@Loc["PkgRenamedFrom", context.RenamedFromRef, context.Objid ?? string.Empty]</MudText>

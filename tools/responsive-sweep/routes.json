@@ -1,0 +1,178 @@
+{
+	"public": [
+		"/",
+		"/login",
+		"/register",
+		"/wiki",
+		"/characters",
+		"/help",
+		"/scenes",
+		"/setup",
+		"/not-found"
+	],
+	"authenticated": [
+		"/play",
+		"/account",
+		"/settings",
+		"/settings/theme",
+		"/settings/characters",
+		"/mail",
+		"/mail/compose",
+		"/characters/new",
+		"/scenes/active",
+		"/softcode"
+	],
+	"admin": [
+		"/admin",
+		"/admin/players",
+		"/admin/characters",
+		"/admin/accounts",
+		"/admin/moderation",
+		"/admin/profiles",
+		"/admin/media",
+		"/admin/server",
+		"/admin/wiki",
+		"/admin/wiki/assets",
+		"/admin/config",
+		"/admin/config/bannednames",
+		"/admin/config/restrictions",
+		"/admin/config/sitelock",
+		"/admin/config/sitelockrules",
+		"/admin/config/import",
+		"/admin/database/import",
+		"/admin/layout",
+		"/admin/roles",
+		"/admin/applications",
+		"/admin/packages",
+		"/admin/packages/author",
+		"/admin/packages/browse",
+		"/admin/packages/remotes",
+		"/admin/packages/review",
+		"/admin/restrictions",
+		"/admin/sitelock",
+		"/admin/bannednames",
+		"/admin/suggestions"
+	],
+	"_expectedRedirectsDoc": [
+		"Routes that legitimately bounce elsewhere, each verified against its own component's",
+		"NavigateTo call. A measurement is only valid if it measured the route that was asked",
+		"for, so ANY other landing pathname is a gating failure rather than a benign alias.",
+		"This list is the whole allowlist: the default is to fail, so a forced redirect nobody",
+		"predicted fails loudly instead of quietly filing fiction under the requested route.",
+		"Verified sources: RestrictionsRedirect/SitelockRedirect/BannedNamesRedirect.razor,",
+		"SettingsCharactersRedirect.razor, Register.razor (NavigateTo /login?tab=register),",
+		"Setup.razor (bounces to / once the game is claimed)."
+	],
+	"expectedRedirects": {
+		"/admin/restrictions": "/admin/config/restrictions",
+		"/admin/sitelock": "/admin/config/sitelock",
+		"/admin/bannednames": "/admin/config/bannednames",
+		"/settings/characters": "/account",
+		"/register": "/login",
+		"/setup": "/"
+	},
+	"_parameterizedDoc": [
+		"Routes that take parameters, each with the concrete URL(s) the sweep drives. These used to",
+		"be a bare list of patterns that the sweep printed and skipped, which left 14 routes outside",
+		"the gate — including the two most complex layouts on the branch (the wiki editor and the",
+		"layout editor), both of which were overflowing at 390px when a reviewer measured them by",
+		"hand. A route nobody measures is a route nobody knows about.",
+		"",
+		"`content` says what a sample actually exercises, because that changes what a clean result",
+		"means:",
+		"  real        — the layout renders in full from the route alone; a clean pass covers the page.",
+		"  placeholder — the parameter names a record that need not exist in the swept game, so the",
+		"                sample may render the empty/not-found state instead. Still measured (that",
+		"                state is a layout too), but it does NOT certify the populated page. Seed the",
+		"                game and point the sample at real data to upgrade one of these.",
+		"",
+		"An entry with no samples is reported as NOT COVERED, loudly, in the closing summary as well",
+		"as the opening one — the quiet one-line skip is what let these routes rot."
+	],
+	"parameterized": [
+		{
+			"route": "/character/{name}",
+			"samples": ["/character/One"],
+			"content": "placeholder",
+			"note": "renders the profile shell with empty sections when the character is absent"
+		},
+		{
+			"route": "/wiki/{ns}/{category}/{slug}",
+			"samples": ["/wiki/main/general/welcome"],
+			"content": "placeholder",
+			"note": "falls back to the 'page does not exist yet' state when the wiki has no such slug"
+		},
+		{
+			"route": "/wiki/{ns}/{category}/{slug}/edit",
+			"samples": ["/wiki/main/general/welcome/edit"],
+			"content": "real",
+			"note": "the editor renders in full whether the slug exists or is being created"
+		},
+		{
+			"route": "/wiki/{ns}/{category}/{slug}/history",
+			"samples": ["/wiki/main/general/welcome/history"],
+			"content": "real",
+			"note": "revision-history layout renders with an empty revision list"
+		},
+		{
+			"route": "/wiki/{ns}/{category}/{slug}/diff",
+			"samples": ["/wiki/main/general/welcome/diff"],
+			"content": "real",
+			"note": "the two-pane comparison layout renders with no revisions selected"
+		},
+		{
+			"route": "/help/{topic}",
+			"samples": ["/help/index"],
+			"content": "placeholder",
+			"note": "browser chrome renders; the entry pane shows 'no entry' unless the topic exists"
+		},
+		{
+			"route": "/help/admin/{topic}",
+			"samples": ["/help/admin/index"],
+			"content": "placeholder",
+			"note": "as above, with the administrator breadcrumb"
+		},
+		{
+			"route": "/mail/{id}",
+			"samples": ["/mail/1"],
+			"content": "placeholder",
+			"note": "reader chrome renders; the body is 'message not found' without seeded mail"
+		},
+		{
+			"route": "/apps/{slug}",
+			"samples": ["/apps/example"],
+			"content": "placeholder",
+			"note": "host page renders; the embedded application needs a registered slug"
+		},
+		{
+			"route": "/scenes/{id}",
+			"samples": ["/scenes/1"],
+			"content": "placeholder",
+			"note": "'scene not found' unless the id exists in the swept game"
+		},
+		{
+			"route": "/scenes/{id}/live",
+			"samples": ["/scenes/1/live"],
+			"content": "placeholder",
+			"note": "as above, for the live participation view"
+		},
+		{
+			"route": "/admin/players/{id}",
+			"samples": ["/admin/players/1"],
+			"content": "placeholder",
+			"note": "the detail pane is still a stub in this build"
+		},
+		{
+			"route": "/admin/config/{category}",
+			"samples": ["/admin/config/general"],
+			"content": "real",
+			"note": "the category layout comes from the schema, not from game data"
+		},
+		{
+			"route": "/admin/layout/{scope}",
+			"samples": ["/admin/layout/home", "/admin/layout/profile", "/admin/layout/global"],
+			"content": "real",
+			"note": "one per scope: they differ in zone count, and home/profile overflowed at 390px while only /admin/layout/global was clean"
+		}
+	]
+}

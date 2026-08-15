@@ -149,3 +149,18 @@
     color: var(--mud-palette-error, #e57373);
     border-color: rgba(229, 115, 115, 0.5);
 }
+
+@container page (max-width: 48rem) {
+    .config-add-grid {
+        flex-wrap: wrap;
+    }
+
+    .config-add-grid .config-input {
+        flex-basis: 100%;
+    }
+
+    .config-primary-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

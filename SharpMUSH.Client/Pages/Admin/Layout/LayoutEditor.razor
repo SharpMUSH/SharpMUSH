@@ -10,7 +10,7 @@
 
 <PageTitle>@Loc["LayEditorPageTitle", ScopeLabel] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="layedit">
+<div class="layedit full-bleed">
     <div class="layedit-head">
         <div>
             <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Filled.ArrowBack" Style="font-size:0.8125rem;" /> @Loc["LayAllLayouts"]</a>
@@ -333,7 +333,10 @@
             { x => x.WidgetKey, item.WidgetName },
             { x => x.InitialJson, item.Config?.GetRawText() }
         };
-        var dialog = await DialogService.ShowAsync<WidgetConfigDialog>(Loc["LayConfigureWidget", item.DisplayName], parameters);
+        // FullWidth is required: the dialog body declares container-type, and inline-size
+        // containment zeroes its contribution to the paper's shrink-to-fit width.
+        var dialog = await DialogService.ShowAsync<WidgetConfigDialog>(
+            Loc["LayConfigureWidget", item.DisplayName], parameters, new DialogOptions { FullWidth = true });
         var result = await dialog.Result;
         if (result is null || result.Canceled)
         {

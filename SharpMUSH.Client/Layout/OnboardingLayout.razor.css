@@ -1,9 +1,13 @@
 .onboarding-shell {
+    container-type: size;
     position: relative;
-    min-height: 100vh;
-    min-height: 100svh;
+    height: 100vh;
+    height: 100svh;
     background: linear-gradient(135deg, #101113 0%, #16181b 100%);
-    overflow: hidden;
+    /* overflow-y must scroll, not hide: a definite height plus size containment means anything
+       that does not fit is otherwise clipped and unreachable at short viewport heights. */
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .onboarding-glow {

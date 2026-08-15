@@ -40,9 +40,9 @@
     padding: 1.375rem 1.625rem;
 }
 
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .help-page .help-body {
-        padding: 1rem;
+        padding: var(--cpad-mobile);
     }
 }
 
@@ -58,7 +58,7 @@
     color: var(--text);
 }
 
-.help-filter {
+.help-topics ::deep .help-filter {
     margin-bottom: 1rem;
 }
 
@@ -71,6 +71,11 @@
     gap: 0.125rem 1rem;
     max-height: 32rem;
     overflow-y: auto;
+}
+
+.help-topic-list li {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 1.375rem;
 }
 
 .help-topic-list a {

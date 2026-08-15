@@ -10,10 +10,13 @@ namespace SharpMUSH.Tests.BUnit.Resources;
 /// </summary>
 public class MonoFontStackTests
 {
-	private static string Css() => File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "custom.css"));
+	private static string Css() =>
+		string.Join("\n", Directory.EnumerateFiles(ClientSource.CssRoot, "*.css")
+			.OrderBy(f => f, StringComparer.Ordinal)
+			.Select(File.ReadAllText));
 
 	private static IEnumerable<string> ComponentSources() =>
-		Directory.EnumerateFiles(Path.Join(AppContext.BaseDirectory, "client", "razor"), "*.*", SearchOption.AllDirectories)
+		Directory.EnumerateFiles(ClientSource.RazorRoot, "*.*", SearchOption.AllDirectories)
 			.Where(f => f.EndsWith(".razor", StringComparison.Ordinal) || f.EndsWith(".css", StringComparison.Ordinal));
 
 	[Test]
@@ -92,7 +95,7 @@ public class MonoFontStackTests
 	{
 		// The failure this catches is silent: a hardcoded family renders perfectly in English and only
 		// misaligns once someone selects Chinese, on that one element. Components have no legitimate
-		// reason to name a face — @font-face lives in custom.css, which this sweep deliberately skips.
+		// reason to name a face — @font-face lives in tokens.css, which this sweep deliberately skips.
 		var offenders = new List<string>();
 
 		foreach (var file in ComponentSources())

@@ -4,36 +4,38 @@
 
 @if (_links.Count > 0)
 {
-    @if (_isSidebar)
-    {
-        <MudNavMenu>
-            @foreach (var link in _links)
-            {
-                <MudNavLink Href="@link.Url"
-                            Target="@(link.NewTab ? "_blank" : "_self")"
-                            Icon="@(link.Icon ?? Icons.Material.Filled.Link)">
-                    @link.Label
-                </MudNavLink>
-            }
-        </MudNavMenu>
-    }
-    else
-    {
-        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-            @foreach (var link in _links)
-            {
-                <MudChip T="string"
-                         Href="@link.Url"
-                         Target="@(link.NewTab ? "_blank" : "_self")"
-                         Icon="@(link.Icon ?? Icons.Material.Filled.Link)"
-                         Color="Color.Default"
-                         Size="Size.Small"
-                         Variant="Variant.Outlined">
-                    @link.Label
-                </MudChip>
-            }
-        </MudStack>
-    }
+    <div class="quick-links-widget">
+        @if (_isSidebar)
+        {
+            <MudNavMenu>
+                @foreach (var link in _links)
+                {
+                    <MudNavLink Href="@link.Url"
+                                Target="@(link.NewTab ? "_blank" : "_self")"
+                                Icon="@(link.Icon ?? Icons.Material.Filled.Link)">
+                        @link.Label
+                    </MudNavLink>
+                }
+            </MudNavMenu>
+        }
+        else
+        {
+            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                @foreach (var link in _links)
+                {
+                    <MudChip T="string"
+                             Href="@link.Url"
+                             Target="@(link.NewTab ? "_blank" : "_self")"
+                             Icon="@(link.Icon ?? Icons.Material.Filled.Link)"
+                             Color="Color.Default"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined">
+                        @link.Label
+                    </MudChip>
+                }
+            </MudStack>
+        }
+    </div>
 }
 else
 {

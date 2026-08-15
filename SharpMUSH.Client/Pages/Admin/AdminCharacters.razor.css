@@ -26,7 +26,7 @@
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
 }
-.ph-empty-icon {
+.ph-empty ::deep .ph-empty-icon {
     font-size: 2.5rem;
     color: var(--text-faint);
 }
@@ -35,4 +35,18 @@
     font-size: 0.8125rem;
     letter-spacing: 0.04em;
     color: var(--text-dim);
+}
+
+@container page (max-width: 48rem) {
+    .ph-title {
+        font-size: 1.375rem;
+    }
+
+    .ph-empty {
+        padding: 2.5rem 1.25rem;
+    }
+
+    .ph-empty ::deep .ph-empty-icon {
+        font-size: 2rem;
+    }
 }

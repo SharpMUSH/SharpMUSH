@@ -1,0 +1,2 @@
+/* Intentionally empty: this route renders only <WikiView Mode="View">, whose own stylesheet
+   carries every rule. EveryRoutablePageHasAStylesheet requires the file to exist. */

@@ -1,13 +1,31 @@
+.scene-detail-page {
+    padding: var(--cpad);
+}
+
+.scene-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-dim);
+    font-size: 0.8125rem;
+}
+
+.scene-log {
+    max-height: 65vh;
+    max-height: 65svh;
+    padding: 1rem;
+}
+
 /* Mobile: trim padding, wrap the meta row, and tighten the pose-log padding. */
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .scene-detail-page {
-        padding: 1rem !important;
+        padding: var(--cpad-mobile);
     }
-    .scene-detail-page .scene-detail-meta {
+    .scene-detail-meta {
         flex-wrap: wrap;
         gap: 0.375rem 0.875rem;
     }
-    .scene-detail-page .scene-log {
-        padding: 0.75rem !important;
+    .scene-log {
+        padding: 0.75rem;
     }
 }

@@ -29,7 +29,7 @@
 
 .config-cat-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr));
     gap: 0.875rem;
 }
 
@@ -98,4 +98,20 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--accent);
+}
+
+@container page (max-width: 48rem) {
+    .config-title {
+        font-size: 1.375rem;
+    }
+
+    .config-cat-card {
+        padding: 0.875rem;
+        gap: 0.625rem;
+    }
+
+    .config-cat-icon {
+        width: 36px;
+        height: 36px;
+    }
 }

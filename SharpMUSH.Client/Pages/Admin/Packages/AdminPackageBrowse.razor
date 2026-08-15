@@ -20,7 +20,7 @@
 
     <div class="pkg-toolbar mb-4">
         <MudSelect T="string" @bind-Value="_selectedRemote" Label="@Loc["PkgRemoteLabel"]" Variant="Variant.Outlined"
-                   Margin="Margin.Dense" Style="max-width: 320px">
+                   Margin="Margin.Dense" Class="pkg-remote-select">
             @foreach (var remote in _remotes ?? [])
             {
                 <MudSelectItem Value="@remote.Name">@remote.Name</MudSelectItem>
@@ -68,7 +68,7 @@
                         }
                         <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
                             <MudSelect T="string" Value="@SelectedVersion(entry)" ValueChanged="@(v => _selectedVersions[entry.Path] = v)"
-                                       Label="@Loc["PkgVersionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 220px">
+                                       Label="@Loc["PkgVersionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="pkg-version-select">
                                 @foreach (var version in entry.Versions)
                                 {
                                     <MudSelectItem Value="@version.Version">@version.Version</MudSelectItem>

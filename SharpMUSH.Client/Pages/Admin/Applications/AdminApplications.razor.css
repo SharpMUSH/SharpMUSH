@@ -84,7 +84,7 @@
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 1rem;
 }
-@media (max-width: 820px) {
+@container page (max-width: 64rem) {
     .appadmin-grid { grid-template-columns: 1fr; }
 }
 
@@ -177,14 +177,12 @@
 .aa-icon-btn--danger:hover { color: #e57373; border-color: rgba(229, 115, 115, 0.5); }
 
 .aa-meta-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     border-bottom: 1px solid var(--border-soft);
 }
-@media (max-width: 620px) {
-    .aa-meta-grid { grid-template-columns: 1fr 1fr; }
-}
 .aa-meta { padding: 0.875rem 1.125rem; border-left: 1px solid var(--border-soft); min-width: 0; }
-.aa-meta:nth-child(3n+1) { border-left: none; }
+.aa-meta:first-child { border-left: none; }
 .aa-meta-label {
     font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--text-faint); margin-bottom: 0.375rem;

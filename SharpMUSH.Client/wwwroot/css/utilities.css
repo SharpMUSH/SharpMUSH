@@ -1,0 +1,11 @@
+.scroll-x {
+	overflow-x: auto;
+	min-width: 0;
+}
+
+.toolbar-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}

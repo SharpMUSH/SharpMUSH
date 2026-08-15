@@ -1,3 +1,8 @@
+/* Containment on the wrapper, not on .wiki-index: an element is never its own query container. */
+.wiki-index-container {
+    container-type: inline-size;
+}
+
 .wiki-index {
     padding: var(--cpad);
 }
@@ -173,8 +178,8 @@
     color: var(--text-faint);
 }
 .wiki-page-card ::deep .wiki-page-arrow {
-    font-size: 0.9375rem !important;
-    color: var(--text-faint) !important;
+    font-size: 0.9375rem;
+    color: var(--text-faint);
     flex-shrink: 0;
     margin-top: 0.125rem;
 }
@@ -200,12 +205,12 @@
     border-radius: var(--radius-lg);
 }
 
-/* Phones: tighten the hero + page gutter and force the category grid to a
+/* Narrow box: tighten the hero + page gutter and force the category grid to a
    single full-width column (the scoped rule uses a 340px min track that would
-   otherwise overflow narrow screens). Selectors are qualified to match the
-   scoped (.razor.css) specificity and win on source order. */
-@media (max-width: 760px) {
-    .wiki-index.wiki-index { padding: 1rem 0.75rem; }
+   otherwise overflow a narrow container). Every selector here has the same
+   specificity as the rule it overrides above and wins on source order. */
+@container (max-width: 48rem) {
+    .wiki-index { padding: 1rem 0.75rem; }
     .wiki-index .wiki-hero-body { padding: 1.375rem 1.125rem; }
     .wiki-index .wiki-hero-title { font-size: 1.4375rem; }
     .wiki-index .wiki-hero-search { max-width: none; }
