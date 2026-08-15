@@ -9,7 +9,7 @@
 
 <PageTitle>@Loc["MyAccount"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="acct-page" style="padding:var(--cpad);">
+<div class="acct-page">
 
     @* [Authorize] hands anonymous visitors to RedirectToLogin, so reaching this page without an
        account session now means exactly one thing: a DebugAuth principal whose debug-OTT never
@@ -49,7 +49,7 @@
             {
                 <div class="acct-card-title">@Loc["AuthProfile"]</div>
 
-                <div class="acct-row" style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.875rem;">
+                <div class="acct-row">
                     @if (_editingUsername)
                     {
                         <MudTextField @bind-Value="_newUsername" Label="@Loc["AuthUsername"]"
@@ -68,7 +68,7 @@
                 </div>
             }
 
-            <div class="acct-row" style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:0.25rem;">
+            <div class="acct-row acct-row--password">
                 @if (_editingPassword)
                 {
                     <div style="display:flex;flex-direction:column;gap:0.5rem;flex:1;">
@@ -131,15 +131,15 @@
                             <MudTh>@Loc["AuthColumnActions"]</MudTh>
                         </HeaderContent>
                         <RowTemplate>
-                            <MudTd>@context.Name</MudTd>
-                            <MudTd>#@context.DbrefNumber</MudTd>
-                            <MudTd>
+                            <MudTd data-label="@Loc["AuthColumnName"]">@context.Name</MudTd>
+                            <MudTd data-label="@Loc["AuthColumnDbref"]">#@context.DbrefNumber</MudTd>
+                            <MudTd data-label="@Loc["Flags"]">
                                 @foreach (var flag in (context.Flags ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
                                 {
                                     <span class="acct-flag">@flag</span>
                                 }
                             </MudTd>
-                            <MudTd>
+                            <MudTd data-label="@Loc["AuthColumnActions"]">
                                 <MudIconButton Icon="@Icons.Material.Filled.LinkOff" Size="Size.Small"
                                                Color="Color.Warning" aria-label="@Loc["AuthUnlinkCharacter"]"
                                                OnClick="() => UnlinkCharacterAsync(context.DbrefNumber)" />

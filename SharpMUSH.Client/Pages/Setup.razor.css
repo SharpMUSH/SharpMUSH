@@ -125,7 +125,10 @@
 	cursor: not-allowed;
 }
 
-@media (max-width: 760px) {
+/* .setup-page renders under OnboardingLayout, not MainLayout — there is no .phosphor-page
+   ancestor to name a 'page' container, so this queries OnboardingLayout's own unnamed
+   container (.onboarding-shell) directly, like the dialogs do. */
+@container (max-width: 48rem) {
     .setup-page {
         padding: 1rem;
         min-height: 100vh;

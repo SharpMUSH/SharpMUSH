@@ -82,23 +82,7 @@ public class ResponsiveConventionsTests
 	/// Stylesheets still on the old viewport-query model. Each sweep batch deletes its own entries;
 	/// the list must reach empty, which <see cref="TheMigrationIsFinished"/> asserts.
 	/// </summary>
-	private static readonly HashSet<string> NotYetMigrated = new(StringComparer.Ordinal)
-	{
-		"Pages/Account.razor.css",
-		"Pages/Login.razor.css",
-		"Pages/Mail.razor.css",
-		"Pages/MailCompose.razor.css",
-		"Pages/MailDetail.razor.css",
-		"Pages/Play.razor.css",
-		"Pages/SceneDetail.razor.css",
-		"Pages/SceneLive.razor.css",
-		"Pages/Scenes.razor.css",
-		"Pages/ScenesActive.razor.css",
-		"Pages/Settings.razor.css",
-		"Pages/SettingsTheme.razor.css",
-		"Pages/Setup.razor.css",
-		"Pages/SoftcodeEditor.razor.css",
-	};
+	private static readonly HashSet<string> NotYetMigrated = new(StringComparer.Ordinal);
 
 	/// <summary>
 	/// Routable pages that legitimately ship no stylesheet: they redirect, or render only
@@ -112,11 +96,6 @@ public class ResponsiveConventionsTests
 		"Pages/NotFound.razor",
 		"Pages/SettingsCharactersRedirect.razor",
 		"Pages/WikiIndex.razor",
-
-		// Not by design — these gain stylesheets during the sweep and their entries are
-		// deleted with the task that writes them.
-		"Pages/CharacterCreate.razor",       // Task 13
-		"Pages/Register.razor",              // Task 13
 	};
 
 	private static readonly string[] SanctionedTiers = ["48rem", "64rem", "90rem"];
@@ -401,7 +380,7 @@ public class ResponsiveConventionsTests
 				+ "not silently exempted from it");
 	}
 
-	[Test, Skip("Enabled by the final sweep task, once NotYetMigrated is empty.")]
+	[Test]
 	public async Task TheMigrationIsFinished()
 	{
 		await Assert.That(NotYetMigrated).IsEmpty()

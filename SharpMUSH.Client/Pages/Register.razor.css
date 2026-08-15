@@ -1,0 +1,5 @@
+/* This route renders nothing but a <PageTitle> before OnInitialized redirects to
+   /login?tab=register — no element here carries a class to style. The file exists so
+   EveryRoutablePageHasAStylesheet doesn't have to special-case a route that used to carry
+   its own form and may again; PagesWithoutStylesheetByDesign is for pages that stay bare by
+   design, and a redirect stub is not that. */

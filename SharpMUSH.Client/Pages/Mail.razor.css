@@ -1,9 +1,61 @@
-::deep .active-folder .mud-nav-link-text { color: var(--accent) !important; }
+::deep .active-folder .mud-nav-link-text {
+    color: var(--accent);
+}
+
+/* Three-pane master-detail. These used to be inline Style="..." on each pane's div, which is
+   why the mobile stacking below needed !important to win against them — moved here so the
+   narrow tier can override through normal cascade order instead. */
+.mail-page {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+}
+
+.mail-folders {
+    width: 180px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--surface-3);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.mail-list {
+    width: 320px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--surface);
+}
+
+.mail-list-body {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.mail-reading {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.mail-reading-body {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1.25rem var(--cpad);
+}
 
 /* Mobile: collapse the three-column master-detail (folders | list | reading)
    into a single scrolling column. Each pane spans full width, swaps its
    right border for a bottom divider, and lets the page scroll. */
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .mail-page {
         flex-direction: column;
         height: auto;

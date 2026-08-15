@@ -19,6 +19,30 @@
     overflow: hidden;
 }
 
+/* Object/attribute rail widths, and their collapsed state. Widths used to be computed inline
+   per-render (`style="width:{collapsed ? "46px" : "220px"}"`), which meant only an inline style
+   could ever change them — an @container override could not win against it without !important.
+   A class swap (see the comment on .sc-shell above) is both the fix and, per that comment,
+   already how collapse was documented to work. */
+.sc-pane-objects {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+}
+.sc-pane-attrs {
+    width: 248px;
+    flex-shrink: 0;
+    background: var(--surface);
+}
+.sc-pane--collapsed {
+    width: 46px;
+}
+.sc-pane-editor {
+    flex: 1;
+    min-width: 0;
+    background: #0c0f14;
+}
+
 /* ── Inline search box (prototype searchBox) ── */
 .sc-search {
     display: flex;
@@ -236,22 +260,22 @@
 
 /* Mobile: one full-height pane at a time, chosen by the switcher. The editor pane keeps
    a real height so Monaco lays out; panes scroll internally rather than the page. */
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .sc-mobilebar {
         display: flex;
     }
     .sc-shell {
-        flex-direction: column !important;
-        height: 100% !important;
-        overflow: hidden !important;
-        gap: 0 !important;
-        padding: 0 !important;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+        gap: 0;
+        padding: 0;
     }
     .sc-shell .sc-panel {
-        width: 100% !important;
-        flex: 1 1 auto !important;
-        min-height: 0 !important;
-        min-width: 0 !important;
+        width: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
+        min-width: 0;
     }
     .sc-shell--objects .sc-pane-attrs,
     .sc-shell--objects .sc-pane-editor,
@@ -259,7 +283,7 @@
     .sc-shell--attrs   .sc-pane-editor,
     .sc-shell--editor  .sc-pane-objects,
     .sc-shell--editor  .sc-pane-attrs {
-        display: none !important;
+        display: none;
     }
     /* The editor toolbar has many controls — let them wrap instead of clipping. */
     .sc-editor-toolbar { flex-wrap: wrap; min-height: 0; }

@@ -1,3 +1,7 @@
+.mail-detail-page {
+    padding: var(--cpad);
+}
+
 .md-kicker {
     font-family: var(--font-mono);
     font-size: 0.6875rem;
@@ -32,9 +36,9 @@
 
 /* Mobile: trim padding, wrap long monospace body tokens so they don't force
    horizontal scroll, and make the Reply/Delete buttons full-width & tappable. */
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .mail-detail-page {
-        padding: 1rem !important;
+        padding: var(--cpad-mobile);
     }
     .mail-detail-page .md-body {
         overflow-wrap: anywhere;

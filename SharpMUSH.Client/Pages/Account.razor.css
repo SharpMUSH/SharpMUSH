@@ -1,3 +1,7 @@
+.acct-page {
+    padding: var(--cpad);
+}
+
 .acct-header {
     margin-bottom: 1.75rem;
 }
@@ -132,9 +136,22 @@
     color: var(--accent);
 }
 
+/* ── Profile rows ── */
+.acct-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.875rem;
+}
+
+.acct-row--password {
+    align-items: flex-start;
+    margin-bottom: 0.25rem;
+}
+
 /* ── Token-styled inputs (MudBlazor outlined) ── */
 .acct-card ::deep .acct-input .mud-input-outlined .mud-input-outlined-border {
-    border-color: var(--border) !important;
+    border-color: var(--border);
 }
 
 .acct-card ::deep .acct-input .mud-input-root {
@@ -148,8 +165,8 @@
 }
 
 .acct-card ::deep .acct-input .mud-input.mud-input-focused .mud-input-outlined-border {
-    border-color: var(--accent) !important;
-    border-width: 1px !important;
+    border-color: var(--accent);
+    border-width: 1px;
 }
 
 .acct-card ::deep .acct-input label.mud-input-label {
@@ -166,20 +183,20 @@
 }
 
 .acct-card ::deep .acct-table th {
-    color: var(--text-faint) !important;
+    color: var(--text-faint);
     font-size: 0.6875rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    border-bottom-color: var(--border) !important;
+    border-bottom-color: var(--border);
 }
 
 .acct-card ::deep .acct-table td {
     color: var(--text);
-    border-bottom-color: var(--border-soft) !important;
+    border-bottom-color: var(--border-soft);
 }
 
 .acct-card ::deep .acct-table tr:hover td {
-    background: var(--surface-2) !important;
+    background: var(--surface-2);
 }
 
 /* ── Table scroll wrapper ── */
@@ -187,21 +204,53 @@
     overflow-x: auto;
 }
 
-@media (max-width: 760px) {
+/* MudTable renders a real <table>, which cannot reflow. Below the narrow tier the rows become
+   stacked blocks, each cell labelled from its column header via the data-label attribute the
+   markup sets — the same pattern verified live on Pages/Admin/AdminAccounts.razor.css. Leading
+   with ::deep rather than anchoring on .acct-table: MudTable never stamps the caller's scope
+   attribute onto the <table> it renders, so `.acct-table ::deep thead` compiles to
+   `.acct-table[b-xxx] thead` — a selector requiring an attribute that is never present on that
+   element, matching nothing. `::deep .acct-table thead` compiles to `[b-xxx] .acct-table thead`,
+   anchored on this component's own wrapper (which does carry the scope attribute), with
+   .acct-table and its descendants left correctly unscoped. */
+@container page (max-width: 48rem) {
     .acct-page {
-        padding: var(--cpad-mobile) !important;
+        padding: var(--cpad-mobile);
     }
     .acct-card {
-        padding: var(--cpad-mobile) !important;
+        padding: var(--cpad-mobile);
     }
     .acct-title {
         font-size: 1.375rem;
     }
-    .acct-row {
-        flex-direction: column !important;
-        align-items: stretch !important;
+    .acct-row, .acct-row--password {
+        flex-direction: column;
+        align-items: stretch;
     }
     .acct-row .acct-btn {
         width: 100%;
+    }
+
+    ::deep .acct-table thead {
+        display: none;
+    }
+
+    ::deep .acct-table tr {
+        display: block;
+        border-bottom: 1px solid var(--border);
+        padding-block: 0.5rem;
+    }
+
+    ::deep .acct-table td {
+        display: grid;
+        grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+        gap: 0.5rem;
+        border: none;
+    }
+
+    ::deep .acct-table td::before {
+        content: attr(data-label);
+        color: var(--text-dim);
+        font-size: 0.8125rem;
     }
 }

@@ -1,0 +1,29 @@
+.charcreate-page {
+    padding: var(--cpad);
+}
+
+.charcreate-card {
+    max-width: 560px;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+}
+
+.charcreate-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+}
+
+@container page (max-width: 48rem) {
+    .charcreate-page {
+        padding: var(--cpad-mobile);
+    }
+    .charcreate-actions {
+        flex-direction: column;
+    }
+    .charcreate-actions ::deep .mud-button-root {
+        width: 100%;
+        min-height: 44px;
+    }
+}

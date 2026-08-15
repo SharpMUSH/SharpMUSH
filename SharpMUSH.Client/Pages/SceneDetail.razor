@@ -24,7 +24,7 @@ else if (_notFound)
 else
 {
     <PageTitle>@SceneTitle(_scene!) — @Loc["AppTitle"]</PageTitle>
-    <div class="scene-detail-page" style="padding:var(--cpad);">
+    <div class="scene-detail-page">
 
         <div style="margin-bottom:1.25rem;">
             <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:0.375rem;">
@@ -35,7 +35,7 @@ else
                 }
                 <MudText Typo="Typo.h4" Style="font-weight:700;line-height:1.2;">@SceneTitle(_scene!)</MudText>
             </div>
-            <div class="scene-detail-meta" style="display:flex;align-items:center;gap:1rem;color:var(--text-dim);font-size:0.8125rem;">
+            <div class="scene-detail-meta">
                 <span>
                     <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:0.1875rem;" />
                     @_scene!.RoomName
@@ -73,7 +73,7 @@ else
         else
         {
             <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;">
-                <div class="scene-log" style="max-height:65vh;max-height:65svh;padding:1rem;">
+                <div class="scene-log">
                     @foreach (var pose in visible)
                     {
                         <ScenePoseLine Pose="pose" />
