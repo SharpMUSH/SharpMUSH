@@ -26,6 +26,25 @@ public abstract class TrackingBunitContext : BunitContext
 	/// </summary>
 	public T Track<T>(T disposable) where T : IDisposable => _tracker.Track(disposable);
 
+	/// <summary>
+	/// The teardown path that actually runs. bUnit's <see cref="BunitContext.DisposeAsync"/> calls
+	/// <see cref="DisposeAsyncCore"/> and then <c>Dispose(disposing: false)</c>, and TUnit disposes an
+	/// <see cref="IAsyncDisposable"/> test class asynchronously — so releasing only under
+	/// <c>disposing: true</c> releases nothing at all. Both overrides are here because either entry
+	/// point may be the one used; <see cref="DisposableTracker"/> is idempotent.
+	/// </summary>
+	protected override async ValueTask DisposeAsyncCore()
+	{
+		try
+		{
+			_tracker.Dispose();
+		}
+		finally
+		{
+			await base.DisposeAsyncCore();
+		}
+	}
+
 	protected override void Dispose(bool disposing)
 	{
 		if (disposing)

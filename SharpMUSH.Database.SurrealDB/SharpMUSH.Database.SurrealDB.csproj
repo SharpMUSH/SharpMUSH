@@ -9,6 +9,11 @@
 	</PropertyGroup>
 
   <ItemGroup>
+    <!-- IsRetryableConflict gates both retry and log level; the tests pin its message matching. -->
+    <InternalsVisibleTo Include="SharpMUSH.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="SurrealDb.Embedded.InMemory" Version="0.9.0" />
     <PackageReference Include="SurrealDb.Embedded.RocksDb" Version="0.9.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />

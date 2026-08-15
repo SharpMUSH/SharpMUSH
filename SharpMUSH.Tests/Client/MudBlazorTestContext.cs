@@ -77,16 +77,37 @@ public abstract class MudBlazorTestContext : BunitContext
 		return client;
 	}
 
+	private void ReleaseOwned()
+	{
+		foreach (var owned in _owned)
+		{
+			owned.Dispose();
+		}
+
+		_owned.Clear();
+	}
+
+	/// <summary>
+	/// The teardown path that actually runs: bUnit's DisposeAsync calls this and then
+	/// Dispose(disposing: false), so releasing only under disposing: true releases nothing.
+	/// </summary>
+	protected override async ValueTask DisposeAsyncCore()
+	{
+		try
+		{
+			ReleaseOwned();
+		}
+		finally
+		{
+			await base.DisposeAsyncCore();
+		}
+	}
+
 	protected override void Dispose(bool disposing)
 	{
 		if (disposing)
 		{
-			foreach (var owned in _owned)
-			{
-				owned.Dispose();
-			}
-
-			_owned.Clear();
+			ReleaseOwned();
 		}
 
 		base.Dispose(disposing);

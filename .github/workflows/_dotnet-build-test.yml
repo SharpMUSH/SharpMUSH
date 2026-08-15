@@ -56,8 +56,10 @@ jobs:
   test:
     needs: [build]
     runs-on: ubuntu-latest
-    # Backstop so a genuine hang cannot run to 3 x timeout_minutes below.
-    timeout-minutes: 45
+    # Backstop only. It must clear the retry budget below (3 x 20 minutes) plus ~3 minutes of
+    # checkout, restore and build, or it would truncate the third attempt — reintroducing the
+    # killed-mid-run failure this timeout exists to prevent.
+    timeout-minutes: 70
     strategy:
       matrix:
         database: [arangodb, memgraph, surrealdb]

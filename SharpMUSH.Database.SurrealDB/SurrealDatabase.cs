@@ -119,10 +119,17 @@ public partial class SurrealDatabase(
 	/// <summary>
 	/// True when SurrealDB refused a commit because another transaction touched the same records. Its own
 	/// message says the transaction can be retried, and on retry a create resolves to "already exists".
+	/// <para>
+	/// Both phrases come from one message — "Failed to commit transaction due to a read or write
+	/// conflict. This transaction can be retried." — and every occurrence across a full CI run carried
+	/// both. The second clause is matched as <c>transaction can be retried</c> rather than the bare
+	/// <c>can be retried</c> so an unrelated error that happens to say a thing is retryable cannot buy
+	/// itself eight retries and a demotion to warning.
+	/// </para>
 	/// </summary>
-	private static bool IsRetryableConflict(string message)
+	internal static bool IsRetryableConflict(string message)
 		=> message.Contains("read or write conflict", StringComparison.OrdinalIgnoreCase)
-			|| message.Contains("can be retried", StringComparison.OrdinalIgnoreCase);
+			|| message.Contains("transaction can be retried", StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// Reports a failed response at a level that matches what it means.
