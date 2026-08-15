@@ -56,6 +56,8 @@ jobs:
   test:
     needs: [build]
     runs-on: ubuntu-latest
+    # Backstop so a genuine hang cannot run to 3 x timeout_minutes below.
+    timeout-minutes: 45
     strategy:
       matrix:
         database: [arangodb, memgraph, surrealdb]
@@ -83,7 +85,17 @@ jobs:
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
           SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
         with:
-          timeout_minutes: 10
+          # The surrealdb leg runs 6-10 minutes depending on runner contention — it has been in that
+          # band since July, and arangodb/memgraph sit at 5.5-7.5 on the same suite. A 10 minute
+          # timeout was inside that range, so a slow-but-healthy run got killed rather than finishing.
+          #
+          # That kill is not a clean abort: it disposes the host's IServiceProvider underneath the
+          # tests still running, and every in-flight parse then fails resolving a service. Run
+          # 31890423646 reported 98 failures, all ObjectDisposedException/BeforeTest hook failures
+          # stamped one second past the ten minute mark. Nothing was wrong with the tests.
+          #
+          # 20 minutes puts the wall clear of the band instead of inside it.
+          timeout_minutes: 20
           max_attempts: 3
           command: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed
 
