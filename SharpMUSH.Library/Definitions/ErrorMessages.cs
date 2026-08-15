@@ -1449,7 +1449,7 @@ public static class ErrorMessages
 		public const string PowerCharactersMustBeSingleCharacters = "Power characters must be single characters.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PowerLetterConflictFormat = "Letter conflicts with the {0} power.";
-		public const string PowerUsage = "Usage: @power <power>, @power <object>=[!]<power>, @power/list, @power/add <name>=<alias>, @power/delete <name>, @power/alias <name>=<alias>, @power/letter <name>[=<letter>], @power/type <name>=<types>, @power/restrict <name>=<permissions>, @power/decompile <name>";
+		public const string PowerUsage = "Usage: @power <power>, @power <object>=[!]<power> [[!]<power>...], @power/list, @power/add <name>=<alias>, @power/delete <name>, @power/alias <name>=<alias>, @power/letter <name>[=<letter>], @power/type <name>=<types>, @power/restrict <name>=<permissions>, @power/decompile <name>";
 
 		public const string FullMotdCleared = "Full MOTD cleared.";
 		public const string RejectMotdUsage = "Usage: @rejectmotd <message>";

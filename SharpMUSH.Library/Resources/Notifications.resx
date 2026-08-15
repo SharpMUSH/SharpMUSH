@@ -2130,7 +2130,7 @@
     <value>Letter conflicts with the {0} power.</value>
   </data>
   <data name="PowerUsage" xml:space="preserve">
-    <value>Usage: @power &lt;power&gt;, @power &lt;object&gt;=[!]&lt;power&gt;, @power/list, @power/add &lt;name&gt;=&lt;alias&gt;, @power/delete &lt;name&gt;, @power/alias &lt;name&gt;=&lt;alias&gt;, @power/letter &lt;name&gt;[=&lt;letter&gt;], @power/type &lt;name&gt;=&lt;types&gt;, @power/restrict &lt;name&gt;=&lt;permissions&gt;, @power/decompile &lt;name&gt;</value>
+    <value>Usage: @power &lt;power&gt;, @power &lt;object&gt;=[!]&lt;power&gt; [[!]&lt;power&gt;...], @power/list, @power/add &lt;name&gt;=&lt;alias&gt;, @power/delete &lt;name&gt;, @power/alias &lt;name&gt;=&lt;alias&gt;, @power/letter &lt;name&gt;[=&lt;letter&gt;], @power/type &lt;name&gt;=&lt;types&gt;, @power/restrict &lt;name&gt;=&lt;permissions&gt;, @power/decompile &lt;name&gt;</value>
   </data>
 
   <!-- @rejectmotd / @wizmotd -->
