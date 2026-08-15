@@ -1,0 +1,18 @@
+/* Imported without layer(...) on purpose (custom.css): Monaco injects its own unlayered
+   stylesheet at runtime, which no layered rule can outrank. */
+.mush-editor-fill > div,
+.mush-editor-fill .monaco-editor,
+.mush-editor-fill .monaco-editor .overflow-guard,
+.mush-editor-fill .monaco-editor-background,
+.mush-editor-fill .inputarea.ime-input {
+    background-color: #1a1a2e;
+}
+
+/* Classes doubled on purpose: Monaco's own rules have the single-class specificity and are
+   injected later in document order, so an equal-specificity rule here would lose the tie. */
+.monaco-editor-overlaymessage.monaco-editor-overlaymessage,
+.monaco-hover.monaco-hover,
+.monaco-editor .suggest-widget.suggest-widget,
+.monaco-editor .parameter-hints-widget.parameter-hints-widget {
+    z-index: 10000;
+}

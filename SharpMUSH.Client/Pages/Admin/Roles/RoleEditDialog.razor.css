@@ -1,0 +1,10 @@
+.role-edit-dialog {
+    container-type: inline-size;
+}
+
+@container (max-width: 48rem) {
+    .role-edit-dialog ::deep .mud-grid-item-sm-6 {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+}

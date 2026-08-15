@@ -182,3 +182,24 @@
 	border: 1px solid var(--border-soft);
 	border-radius: var(--radius);
 }
+
+@container page (max-width: 48rem) {
+	.config-actions {
+		flex-direction: column-reverse;
+		align-items: stretch;
+	}
+
+	.config-primary-btn,
+	.config-ghost-btn {
+		justify-content: center;
+	}
+
+	.config-file-row {
+		flex-wrap: wrap;
+	}
+
+	.config-list-name {
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+}

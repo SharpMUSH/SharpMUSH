@@ -6,64 +6,66 @@
 
 <PageTitle>@Loc["AdmAccountsTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
-<MudText Typo="Typo.h5" Class="mb-4">@Loc["AdmAccountsTitle"]</MudText>
+<div class="accounts-page">
+    <MudText Typo="Typo.h5" Class="mb-4">@Loc["AdmAccountsTitle"]</MudText>
 
-<MudTextField T="string" @bind-Value="_search" Placeholder="@Loc["AdmAccountsSearchPlaceholder"]"
-              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-              Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnSearchDebouncedAsync" Class="mb-4" />
+    <MudTextField T="string" @bind-Value="_search" Placeholder="@Loc["AdmAccountsSearchPlaceholder"]"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnSearchDebouncedAsync" Class="mb-4" />
 
-@if (_loading)
-{
-    <MudProgressLinear Indeterminate="true" />
-}
-else
-{
-    <MudTable Items="_rows" Dense="true" Hover="true">
-        <HeaderContent>
-            <MudTh>@Loc["AdmUsername"]</MudTh>
-            <MudTh>@Loc["AdmEmail"]</MudTh>
-            <MudTh>@Loc["AdmStatus"]</MudTh>
-            <MudTh>@Loc["Characters"]</MudTh>
-            <MudTh />
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>@context.Username</MudTd>
-            <MudTd>@(context.Email ?? "—")</MudTd>
-            <MudTd>
-                <MudChip T="string" Color="@StatusColor(context.Status)" Size="Size.Small">
-                    @Loc[$"AdmAccountStatus{context.Status}"]
-                </MudChip>
-                @if (context.MustChangePassword)
-                {
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">@Loc["AdmAccountMustChangePasswordChip"]</MudChip>
-                }
-            </MudTd>
-            <MudTd>
-                @foreach (var character in context.Characters)
-                {
-                    <MudChip T="string" Size="Size.Small"
-                             OnClose="@(() => UnlinkAsync(context, character))">
-                        @character.Name (#@character.DbrefNumber)
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else
+    {
+        <MudTable Items="_rows" Dense="true" Hover="true" Class="accounts-table">
+            <HeaderContent>
+                <MudTh>@Loc["AdmUsername"]</MudTh>
+                <MudTh>@Loc["AdmEmail"]</MudTh>
+                <MudTh>@Loc["AdmStatus"]</MudTh>
+                <MudTh>@Loc["Characters"]</MudTh>
+                <MudTh />
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd data-label="@Loc["AdmUsername"]">@context.Username</MudTd>
+                <MudTd data-label="@Loc["AdmEmail"]">@(context.Email ?? "—")</MudTd>
+                <MudTd data-label="@Loc["AdmStatus"]">
+                    <MudChip T="string" Color="@StatusColor(context.Status)" Size="Size.Small">
+                        @Loc[$"AdmAccountStatus{context.Status}"]
                     </MudChip>
-                }
-            </MudTd>
-            <MudTd>
-                <MudButton Size="Size.Small" OnClick="@(() => OpenResetAsync(context))">@Loc["AdmResetPassword"]</MudButton>
-                @if (!context.IsReserved)
-                {
-                    @foreach (var target in StatusTargets(context.Status))
+                    @if (context.MustChangePassword)
                     {
-                        <MudButton Size="Size.Small" data-testid="account-status-action"
-                                   Color="@(target == "Active" ? Color.Success : Color.Error)"
-                                   OnClick="@(() => SetStatusAsync(context, target))">
-                            @Loc[$"AdmAccountAction{target}"]
-                        </MudButton>
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">@Loc["AdmAccountMustChangePasswordChip"]</MudChip>
                     }
-                }
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
-}
+                </MudTd>
+                <MudTd data-label="@Loc["Characters"]">
+                    @foreach (var character in context.Characters)
+                    {
+                        <MudChip T="string" Size="Size.Small"
+                                 OnClose="@(() => UnlinkAsync(context, character))">
+                            @character.Name (#@character.DbrefNumber)
+                        </MudChip>
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudButton Size="Size.Small" OnClick="@(() => OpenResetAsync(context))">@Loc["AdmResetPassword"]</MudButton>
+                    @if (!context.IsReserved)
+                    {
+                        @foreach (var target in StatusTargets(context.Status))
+                        {
+                            <MudButton Size="Size.Small" data-testid="account-status-action"
+                                       Color="@(target == "Active" ? Color.Success : Color.Error)"
+                                       OnClick="@(() => SetStatusAsync(context, target))">
+                                @Loc[$"AdmAccountAction{target}"]
+                            </MudButton>
+                        }
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</div>
 
 @code {
     private IReadOnlyList<AdminAccountsService.AdminAccountRow> _rows = [];

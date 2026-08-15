@@ -5,8 +5,8 @@
 /* On phones the widget grid (composed by the layout scope) collapses to one
    column via the shell's responsive rules; here we just tighten the page gutter
    so stacked widgets get the full width. */
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .home-dash {
-        padding: 1rem 0.75rem;
+        padding: var(--cpad-mobile);
     }
 }

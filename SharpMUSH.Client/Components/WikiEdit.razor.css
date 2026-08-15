@@ -111,6 +111,7 @@
     line-height: 1.7;
     caret-color: var(--accent);
     border-right: 1px solid var(--border-soft);
+    field-sizing: content;
 }
 .wiki-edit-preview {
     overflow-y: auto;
@@ -160,8 +161,6 @@
 }
 
 .wiki-edit-savebar {
-    display: flex;
-    align-items: center;
     gap: 0.875rem;
     margin-top: 0.75rem;
     padding: 0.75rem 1rem;
@@ -216,7 +215,7 @@
 .wiki-edit-foot a { color: var(--accent); text-decoration: none; }
 .wiki-edit-foot a:hover { text-decoration: underline; }
 
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .wiki-edit-split { grid-template-columns: 1fr; }
     .wiki-edit-preview { display: none; }
 }

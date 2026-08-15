@@ -1,0 +1,12 @@
+.active-scene-widget {
+    container-type: inline-size;
+    height: 100%;
+}
+
+.active-scene-widget-head {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}

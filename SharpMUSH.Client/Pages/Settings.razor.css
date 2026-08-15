@@ -46,7 +46,7 @@
     background: var(--surface-2);
 }
 .settings-nav-item ::deep .settings-nav-icon {
-    font-size: 1.375rem !important;
+    font-size: 1.375rem;
     color: var(--accent);
     flex-shrink: 0;
 }
@@ -69,7 +69,7 @@
     color: var(--text-dim);
 }
 .settings-nav-item ::deep .settings-nav-arrow {
-    font-size: 1.125rem !important;
+    font-size: 1.125rem;
     color: var(--text-faint);
     flex-shrink: 0;
     transition: color 0.12s ease, transform 0.12s ease;
@@ -79,9 +79,9 @@
     transform: translateX(2px);
 }
 
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .settings-page {
-        padding: 1rem;
+        padding: var(--cpad-mobile);
     }
     .settings-title {
         font-size: 1.375rem;

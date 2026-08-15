@@ -8,23 +8,21 @@
     grid-template-columns: minmax(0, 1fr) 220px;
     gap: 2.25rem;
 }
-@media (max-width: 860px) {
+@container page (max-width: 64rem) {
     .wiki-article-grid { grid-template-columns: 1fr; gap: 1.25rem; }
-    .wiki-toc { display: none; }
 }
 
-/* Phones: tighten gutters, shrink the display title, and keep wide prose
-   elements (code blocks, tables) scrolling inside the column instead of
-   widening the page. */
-@media (max-width: 760px) {
+/* Phones: tighten gutters and shrink the display title. */
+@container page (max-width: 48rem) {
     .wiki-article-grid,
-    .wiki-article { padding: 1rem 0.75rem; }
+    .wiki-article { padding: var(--cpad-mobile); }
     .wiki-article-title { font-size: 1.625rem; }
-    .wiki-article-body pre { overflow-x: auto; }
-    .wiki-article-body table { display: block; overflow-x: auto; max-width: 100%; }
 }
 
 .wiki-article-main { min-width: 0; }
+
+.wiki-article-body ::deep pre { overflow-x: auto; }
+.wiki-article-body ::deep table { display: block; overflow-x: auto; max-width: 100%; }
 
 .wiki-back {
     display: inline-flex;

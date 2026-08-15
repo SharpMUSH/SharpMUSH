@@ -9,64 +9,66 @@
 
 <MudDialog>
     <DialogContent>
-        <MudGrid>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_slug" Label="@Loc["LayAppSlug"]" Required="true" Variant="Variant.Outlined"
-                              Disabled="@(!_isNew)" HelperText="@Loc["LayAppSlugHelper"]" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_displayName" Label="@Loc["LayAppDisplayName"]" Required="true" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect T="ApplicationKind" @bind-Value="_kind" Label="@Loc["LayAppKind"]" Variant="Variant.Outlined">
-                    <MudSelectItem T="ApplicationKind" Value="ApplicationKind.Page">@Loc["LayAppKindPage"]</MudSelectItem>
-                    <MudSelectItem T="ApplicationKind" Value="ApplicationKind.Widget">@Loc["LayAppKindWidget"]</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect T="PortalRole" @bind-Value="_minimumRole" Label="@Loc["LayAppMinimumRole"]" Variant="Variant.Outlined">
-                    @foreach (var role in Enum.GetValues<PortalRole>())
-                    {
-                        <MudSelectItem T="PortalRole" Value="role">@role</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_schemaUrl" Label="@Loc["LayAppSchemaUrl"]" Required="true" Variant="Variant.Outlined"
-                              HelperText="@Loc["LayAppSchemaUrlHelper"]" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_dataUrl" Label="@Loc["LayAppDataUrlOptional"]" Variant="Variant.Outlined"
-                              HelperText="@Loc["LayAppDataUrlHelper"]" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_submitRoute" Label="@Loc["LayAppSubmitRouteOptional"]" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="4">
-                <MudTextField @bind-Value="_icon" Label="@Loc["LayAppIconOptional"]" Variant="Variant.Outlined"
-                              HelperText="@Loc["LayAppIconHelper"]" />
-            </MudItem>
-            <MudItem xs="12" sm="4">
-                <MudTextField @bind-Value="_navPlacement" Label="@Loc["LayAppNavPlacementOptional"]" Variant="Variant.Outlined"
-                              HelperText="@Loc["LayAppNavPlacementHelper"]" />
-            </MudItem>
-            <MudItem xs="12" sm="4">
-                <MudNumericField @bind-Value="_order" Label="@Loc["LayAppOrder"]" Variant="Variant.Outlined" />
-            </MudItem>
-            @if (_kind == ApplicationKind.Widget)
-            {
-                <MudItem xs="12">
-                    <MudSelect T="WidgetZone" @bind-SelectedValues="_zones" MultiSelection="true"
-                               Label="@Loc["LayAppAllowedZones"]" Variant="Variant.Outlined"
-                               MultiSelectionTextFunc="@(zones => string.Join(", ", zones.Select(z => Loc[Enum.Parse<WidgetZone>(z).ResourceKey()].Value)))">
-                        @foreach (var zone in Enum.GetValues<WidgetZone>())
+        <div class="application-edit-dialog">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_slug" Label="@Loc["LayAppSlug"]" Required="true" Variant="Variant.Outlined"
+                                  Disabled="@(!_isNew)" HelperText="@Loc["LayAppSlugHelper"]" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_displayName" Label="@Loc["LayAppDisplayName"]" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="ApplicationKind" @bind-Value="_kind" Label="@Loc["LayAppKind"]" Variant="Variant.Outlined">
+                        <MudSelectItem T="ApplicationKind" Value="ApplicationKind.Page">@Loc["LayAppKindPage"]</MudSelectItem>
+                        <MudSelectItem T="ApplicationKind" Value="ApplicationKind.Widget">@Loc["LayAppKindWidget"]</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="PortalRole" @bind-Value="_minimumRole" Label="@Loc["LayAppMinimumRole"]" Variant="Variant.Outlined">
+                        @foreach (var role in Enum.GetValues<PortalRole>())
                         {
-                            <MudSelectItem T="WidgetZone" Value="zone">@Loc[zone.ResourceKey()]</MudSelectItem>
+                            <MudSelectItem T="PortalRole" Value="role">@role</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-            }
-        </MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_schemaUrl" Label="@Loc["LayAppSchemaUrl"]" Required="true" Variant="Variant.Outlined"
+                                  HelperText="@Loc["LayAppSchemaUrlHelper"]" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_dataUrl" Label="@Loc["LayAppDataUrlOptional"]" Variant="Variant.Outlined"
+                                  HelperText="@Loc["LayAppDataUrlHelper"]" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_submitRoute" Label="@Loc["LayAppSubmitRouteOptional"]" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_icon" Label="@Loc["LayAppIconOptional"]" Variant="Variant.Outlined"
+                                  HelperText="@Loc["LayAppIconHelper"]" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_navPlacement" Label="@Loc["LayAppNavPlacementOptional"]" Variant="Variant.Outlined"
+                                  HelperText="@Loc["LayAppNavPlacementHelper"]" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_order" Label="@Loc["LayAppOrder"]" Variant="Variant.Outlined" />
+                </MudItem>
+                @if (_kind == ApplicationKind.Widget)
+                {
+                    <MudItem xs="12">
+                        <MudSelect T="WidgetZone" @bind-SelectedValues="_zones" MultiSelection="true"
+                                   Label="@Loc["LayAppAllowedZones"]" Variant="Variant.Outlined"
+                                   MultiSelectionTextFunc="@(zones => string.Join(", ", zones.Select(z => Loc[Enum.Parse<WidgetZone>(z).ResourceKey()].Value)))">
+                            @foreach (var zone in Enum.GetValues<WidgetZone>())
+                            {
+                                <MudSelectItem T="WidgetZone" Value="zone">@Loc[zone.ResourceKey()]</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+            </MudGrid>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="_saving">@Loc["Cancel"]</MudButton>

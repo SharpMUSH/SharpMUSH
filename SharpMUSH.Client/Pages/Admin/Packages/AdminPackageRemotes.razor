@@ -29,15 +29,15 @@
                 }
                 else
                 {
-                    <MudTable Items="_remotes" Dense="true">
+                    <MudTable Items="_remotes" Dense="true" Class="pkg-remotes-table">
                         <HeaderContent>
                             <MudTh>@Loc["PkgName"]</MudTh><MudTh>@Loc["PkgUrl"]</MudTh><MudTh>@Loc["PkgTrust"]</MudTh><MudTh>@Loc["PkgBranch"]</MudTh><MudTh />
                         </HeaderContent>
                         <RowTemplate>
-                            <MudTd>@context.Name</MudTd>
-                            <MudTd><MudText Typo="Typo.caption">@context.Url</MudText></MudTd>
-                            <MudTd><TrustBadge Trust="@context.Trust" /></MudTd>
-                            <MudTd>@(context.Branch ?? Loc["PkgDefaultBranch"])</MudTd>
+                            <MudTd data-label="@Loc["PkgName"]">@context.Name</MudTd>
+                            <MudTd data-label="@Loc["PkgUrl"]"><MudText Typo="Typo.caption">@context.Url</MudText></MudTd>
+                            <MudTd data-label="@Loc["PkgTrust"]"><TrustBadge Trust="@context.Trust" /></MudTd>
+                            <MudTd data-label="@Loc["PkgBranch"]">@(context.Branch ?? Loc["PkgDefaultBranch"])</MudTd>
                             <MudTd>
                                 <MudIconButton Icon="@Icons.Material.Filled.TravelExplore" Size="Size.Small"
                                                title="@Loc["PkgBrowse"]" Href="@($"/admin/packages/browse?remote={Uri.EscapeDataString(context.Name)}")" />

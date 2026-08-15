@@ -12,6 +12,10 @@
     line-height: 1.1;
     color: var(--text);
 }
+.mail-compose-page {
+    padding: var(--cpad);
+}
+
 .mc-card {
     max-width: 720px;
     background: var(--surface);
@@ -24,17 +28,21 @@
     background: var(--surface-3);
 }
 .mc-card ::deep .mc-field .mud-input-outlined-border {
-    border-color: var(--border) !important;
+    border-color: var(--border);
 }
 .mc-card ::deep .mc-field.mud-input-control:focus-within .mud-input-outlined-border {
-    border-color: var(--accent) !important;
+    border-color: var(--accent);
+}
+
+.mc-card ::deep .mc-field textarea {
+    field-sizing: content;
 }
 
 /* Mobile: trim the page padding and make the Send/Cancel buttons full-width,
    comfortably tappable, stacked rows. */
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .mail-compose-page {
-        padding: 1rem !important;
+        padding: var(--cpad-mobile);
     }
     .mail-compose-page .mc-actions {
         flex-direction: column;

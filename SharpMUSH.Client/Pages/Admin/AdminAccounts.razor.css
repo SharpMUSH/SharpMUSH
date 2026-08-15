@@ -1,0 +1,36 @@
+.accounts-page {
+    padding: var(--cpad);
+}
+
+@container page (max-width: 48rem) {
+    ::deep .accounts-table thead {
+        display: none;
+    }
+
+    ::deep .accounts-table tr {
+        display: block;
+        border-bottom: 1px solid var(--border);
+        padding-block: 0.5rem;
+    }
+
+    ::deep .accounts-table td {
+        display: grid;
+        grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+        gap: 0.5rem;
+        border: none;
+    }
+
+    ::deep .accounts-table td::before {
+        content: attr(data-label);
+        color: var(--text-dim);
+        font-size: 0.8125rem;
+    }
+
+    ::deep .accounts-table td:last-child {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    ::deep .accounts-table td:last-child::before {
+        content: none;
+    }
+}

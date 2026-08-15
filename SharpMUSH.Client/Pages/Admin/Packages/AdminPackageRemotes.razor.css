@@ -26,9 +26,6 @@
     gap: 1rem;
     align-items: start;
 }
-@media (max-width: 960px) {
-    .pkg-cols { grid-template-columns: 1fr; }
-}
 .pkg-card {
     background: var(--surface);
     border: 1px solid var(--border-soft);
@@ -49,15 +46,48 @@
 }
 .pkg-card-body { padding: 1rem 1.125rem; }
 .pkg-card-body ::deep .pkg-btn-primary {
-    background: var(--accent) !important;
-    color: var(--accent-on) !important;
+    background: var(--accent);
+    color: var(--accent-on);
 }
 
-@media (max-width: 760px) {
-    /* "Add a remote" trust+branch row and community-listing rows stack; fields go full width.
-       The remotes table keeps its own horizontal scroll (mud-table-container).
-       .flex-row and .mud-input-control are MudBlazor-rendered (MudStack / MudTextField),
-       so they need ::deep behind the page-authored .pkg-page ancestor. */
+@container page (max-width: 64rem) {
+    .pkg-cols { grid-template-columns: 1fr; }
+}
+
+@container page (max-width: 48rem) {
+    ::deep .pkg-remotes-table thead { display: none; }
+
+    ::deep .pkg-remotes-table tr {
+        display: block;
+        border-bottom: 1px solid var(--border-soft);
+        padding-block: 0.5rem;
+    }
+
+    ::deep .pkg-remotes-table td {
+        display: grid;
+        grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+        gap: 0.5rem;
+        border: none;
+    }
+
+    ::deep .pkg-remotes-table td::before {
+        content: attr(data-label);
+        color: var(--text-dim);
+        font-size: 0.8125rem;
+    }
+
+    ::deep .pkg-remotes-table td:last-child {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    ::deep .pkg-remotes-table td:last-child::before {
+        content: none;
+    }
+
+    /* "Add a remote" trust+branch row and the community-listing rows: MudStack Row renders an
+       unwrapped `d-flex flex-row`, so without this the (now full-width) fields stay side by
+       side and overflow. .flex-row is MudBlazor-rendered, hence ::deep. */
     .pkg-page ::deep .flex-row { flex-wrap: wrap; }
-    .pkg-page ::deep .mud-input-control { max-width: 100% !important; }
+
+    ::deep .mud-input-control { max-width: 100%; }
 }

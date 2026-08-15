@@ -1,6 +1,6 @@
-/* Mobile: keep wide pose text (and long unbroken tokens / pasted URLs) inside
+/* Narrow: keep wide pose text (and long unbroken tokens / pasted URLs) inside
    the column instead of forcing the whole scene log to scroll sideways. */
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .scene-line {
         min-width: 0;
     }

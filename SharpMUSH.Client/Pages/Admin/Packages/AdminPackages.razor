@@ -10,7 +10,7 @@
 
 <PageTitle>@Loc["PkgPackages"] — @Loc["PkgAdminSection"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="pkg-page" style="padding:var(--cpad);">
+<div class="pkg-page">
     <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.25rem;">
         <MudText Typo="Typo.h4" Style="font-weight:700;">@Loc["PkgSoftcodePackages"]</MudText>
         <MudSpacer />
@@ -27,7 +27,7 @@
         @Loc["PkgInstalledDescription"]
     </MudText>
 
-    <div class="pkg-stat-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:1.25rem;">
+    <div class="pkg-stat-grid">
         @{
             var updatesAvailable = _installed is not null ? _installed.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable) : 0;
         }
@@ -102,7 +102,7 @@
                 var p = pkg;
                 _updates.TryGetValue(p.Package.Id, out var update);
                 <MudPaper Elevation="0"
-                          Style="display:flex;align-items:center;gap:1rem;padding:0.875rem 1.125rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);"
+                          Style="display:flex;align-items:center;gap:1rem;padding:0.875rem 1.125rem;border-radius:var(--radius);background:var(--surface);"
                           Class="pkg-row">
                     <MudIcon Icon="@Icons.Material.Filled.Archive"
                              Style="font-size:1.25rem;color:var(--accent);flex-shrink:0;" />
@@ -111,7 +111,7 @@
                             <MudText Style="font-size:0.875rem;font-weight:600;">@p.Package.Id</MudText>
                             <MudChip T="string" Size="Size.Small"
                                      Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;border:1px solid var(--border);">
-                                v@p.Package.Version
+                                v@(p.Package.Version)
                             </MudChip>
                             @if (!string.IsNullOrEmpty(p.Package.SourceRepo))
                             {
