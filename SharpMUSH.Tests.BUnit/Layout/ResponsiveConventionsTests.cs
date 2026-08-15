@@ -268,9 +268,10 @@ public class ResponsiveConventionsTests
 
 		foreach (var file in ScopedStylesheets())
 		{
-			foreach (var m in NamedPageContainerConditions(StripComments(File.ReadAllText(file))))
+			var values = NamedPageContainerConditions(StripComments(File.ReadAllText(file)))
+				.Select(m => m.Groups["value"].Value.Trim());
+			foreach (var value in values)
 			{
-				var value = m.Groups["value"].Value.Trim();
 				if (!SanctionedTiers.Contains(value))
 					offenders.Add($"{Rel(file)}: {value}");
 			}
@@ -288,10 +289,10 @@ public class ResponsiveConventionsTests
 
 		foreach (var file in ScopedStylesheets())
 		{
-			foreach (var m in NamedPageContainerConditions(StripComments(File.ReadAllText(file))))
+			var conditions = NamedPageContainerConditions(StripComments(File.ReadAllText(file)))
+				.Select(m => (value: m.Groups["value"].Value.Trim(), dir: m.Groups["dir"].Value));
+			foreach (var (value, dir) in conditions)
 			{
-				var value = m.Groups["value"].Value.Trim();
-				var dir = m.Groups["dir"].Value;
 				if (RequiredTierDirection.TryGetValue(value, out var required) && dir != required)
 					offenders.Add($"{Rel(file)}: {dir}-width: {value} (must be {required}-width)");
 			}

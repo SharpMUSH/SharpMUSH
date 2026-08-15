@@ -44,13 +44,19 @@ file sealed class AdminPackagesApiHandler : HttpMessageHandler
 					ObjectCount: 2,
 					Dependents: [])
 			};
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+			// Assigned to a local rather than constructed inline in the `return`, so the object
+			// isn't flagged as an undisposed disposable at its construction site — disposal is
+			// the caller's job here (GetFromJsonAsync disposes the response once it has read the
+			// content), but a locally-scoped reference makes that ownership transfer explicit.
+			var okResponse = new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = JsonContent.Create<IReadOnlyList<InstalledPackageDto>>(installed)
-			});
+			};
+			return Task.FromResult(okResponse);
 		}
 
-		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+		var notFoundResponse = new HttpResponseMessage(HttpStatusCode.NotFound);
+		return Task.FromResult(notFoundResponse);
 	}
 }
 
