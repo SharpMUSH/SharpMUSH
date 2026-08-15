@@ -181,6 +181,9 @@
 }
 .wikidiff-split-head--old { background: rgba(229, 115, 115, 0.08); }
 .wikidiff-split-head--new { background: rgba(var(--glow), 0.07); }
+/* Raw markdown source, not prose: reflowing it with word-break would fold indentation and long
+   lines into something that no longer reads as the source, so each pane scrolls horizontally
+   instead (the shared .scroll-x utility, applied in the markup) rather than wrapping. */
 .wikidiff-pane {
     background: var(--surface-3);
     border: 1px solid var(--border-soft);
@@ -190,8 +193,7 @@
     font-family: var(--font-mono);
     font-size: 0.78125rem;
     line-height: 1.7;
-    white-space: pre-wrap;
-    word-break: break-word;
+    white-space: pre;
     margin: 0;
     max-height: 70vh;
     max-height: 70svh;
@@ -199,12 +201,14 @@
     color: var(--text);
 }
 
-/* Phones: drop the page gutter, let the header (title + mode toggle) stack,
-   and collapse the side-by-side panes into a single stacked column. Diff
-   text already wraps (pre-wrap + break-word), so no horizontal scroll needed. */
-@media (max-width: 760px) {
-    .wikidiff { padding: 1rem 0.75rem; }
-    .wikidiff-head { flex-direction: column; align-items: flex-start; }
+/* The side-by-side split needs real width per pane to stay readable — a diff, unlike prose, has
+   nowhere shorter to reflow to — so it stacks a tier earlier than the general phone breakpoint. */
+@container page (max-width: 64rem) {
     .wikidiff-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+@container page (max-width: 48rem) {
+    .wikidiff { padding: var(--cpad-mobile); }
+    .wikidiff-head { flex-direction: column; align-items: flex-start; }
     .wikidiff-pane { max-height: 50vh; max-height: 50svh; }
 }

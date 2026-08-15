@@ -106,15 +106,26 @@
     color: var(--accent);
 }
 
-/* Card grid */
+/* Card grid. auto-fill already reflows continuously as the container narrows — down to one
+   column once it can no longer fit a 280px card — so this needs no width breakpoint of its own.
+   grid-auto-rows repeats its two tracks for every implicit row the auto-placed cards create, which
+   is what lets each .char-card below subgrid onto them: without it, a plain grid only stretches
+   each card to the row's full height and leaves the gap at the bottom, so a card with no category
+   chip (an empty footer span) would keep its footer flush under its own top block while a
+   neighbour's footer sits lower — subgrid instead gives every card in the row the same two row
+   tracks, so every footer in that row lands on the same baseline regardless of what came above it. */
 .char-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-auto-rows: auto auto;
     gap: 0.875rem;
 }
 
 .char-card {
-    display: block;
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    row-gap: 0.875rem;
     padding: 1rem;
     background: var(--surface);
     border: 1px solid var(--border-soft);
@@ -134,7 +145,6 @@
     display: flex;
     gap: 0.8125rem;
     align-items: center;
-    margin-bottom: 0.875rem;
 }
 
 .char-avatar {
@@ -222,7 +232,7 @@
     border-radius: var(--radius-lg);
 }
 
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .char-page .char-grid {
         grid-template-columns: minmax(0, 1fr);
     }

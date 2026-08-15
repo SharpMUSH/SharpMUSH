@@ -1,0 +1,4 @@
+/* WikiPage.razor's own render tree is just <PageTitle> + <WikiView Mode="View">; every element a
+   reader sees belongs to WikiView/WikiDisplay's own stylesheets, so there is nothing here for this
+   page's own container tiers to say. The file exists so EveryRoutablePageHasAStylesheet keeps
+   checking this route rather than the exemption list quietly going stale underneath it. */

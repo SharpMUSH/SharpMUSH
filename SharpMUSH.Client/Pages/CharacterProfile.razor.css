@@ -1,5 +1,13 @@
-@media (max-width: 760px) {
+/* Base height lives here rather than in the inline style on the element: an inline style beats
+   any stylesheet rule short of !important, so the narrow-tier override below could not have won
+   without one. Moving the (static) height out of the C# interpolated style string and into a
+   plain class rule lets the container query control it normally. */
+.char-profile-banner {
+    height: 160px;
+}
+
+@container page (max-width: 48rem) {
     .char-profile-banner {
-        height: 110px !important;
+        height: 110px;
     }
 }

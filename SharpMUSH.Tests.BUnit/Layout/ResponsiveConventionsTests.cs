@@ -85,13 +85,6 @@ public class ResponsiveConventionsTests
 	private static readonly HashSet<string> NotYetMigrated = new(StringComparer.Ordinal)
 	{
 		"Pages/Account.razor.css",
-		"Pages/CharacterProfile.razor.css",
-		"Pages/Characters.razor.css",
-		"Pages/DynamicApplication.razor.css",
-		"Pages/Help.razor.css",
-		"Pages/HelpAdminTopic.razor.css",
-		"Pages/HelpTopic.razor.css",
-		"Pages/Home.razor.css",
 		"Pages/Login.razor.css",
 		"Pages/Mail.razor.css",
 		"Pages/MailCompose.razor.css",
@@ -105,8 +98,6 @@ public class ResponsiveConventionsTests
 		"Pages/SettingsTheme.razor.css",
 		"Pages/Setup.razor.css",
 		"Pages/SoftcodeEditor.razor.css",
-		"Pages/WikiPageDiff.razor.css",
-		"Pages/WikiPageHistory.razor.css",
 	};
 
 	/// <summary>
@@ -124,7 +115,6 @@ public class ResponsiveConventionsTests
 
 		// Not by design — these gain stylesheets during the sweep and their entries are
 		// deleted with the task that writes them.
-		"Pages/WikiPage.razor",              // Task 12
 		"Pages/CharacterCreate.razor",       // Task 13
 		"Pages/Register.razor",              // Task 13
 	};

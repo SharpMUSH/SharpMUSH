@@ -1066,83 +1066,17 @@
     font-size: 0.85em;
 }
 
-/* ── Wiki revision history dialog ── */
-
-.wiki-revision-item {
-    cursor: pointer;
-    border-radius: 4px;
-}
-
-.wiki-revision-item--selected {
-    background: rgba(255, 255, 255, 0.06);
-}
-
-/* Line diff: revision → current */
-.wiki-diff {
-    font-family: Consolas, 'Courier New', monospace;
-    font-size: 0.75rem;
-    line-height: 1.5;
-    background: #0d0d0d;
-    border: 1px solid var(--mud-palette-lines-default, #333);
-    border-radius: 4px;
-    padding: 0.5rem 0.75rem;
-    max-height: 320px;
-    overflow: auto;
-}
-
-.wiki-diff-line {
-    white-space: pre-wrap;
-    word-break: break-word;
-    padding: 0 0.25rem;
-}
-
-.wiki-diff-line--added {
-    background: rgba(80, 200, 120, 0.12);
-    color: #a3e8a0;
-}
-
-.wiki-diff-line--removed {
-    background: rgba(244, 67, 54, 0.12);
-    color: #e57373;
-    text-decoration: line-through;
-}
-
-/* Wiki images — lazy loading, constrained width, lightbox-ready */
+/* Wiki images — lazy loading, constrained width */
 .wiki-img {
     max-width: 100%;
     display: block;
     margin: 0.5rem 0;
-    cursor: zoom-in;
 }
 
 /* Only auto-size images that don't carry an explicit height attribute
    (authors can size via ![alt](src){width=200 height=100}) */
 .wiki-img:not([height]) {
     height: auto;
-}
-
-/* Lightbox overlay: activated by JS adding data-lightbox-open to <body> */
-.wiki-img-lightbox-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.85);
-    z-index: 9999;
-    justify-content: center;
-    align-items: center;
-    cursor: zoom-out;
-}
-
-.wiki-img-lightbox-overlay.is-open {
-    display: flex;
-}
-
-.wiki-img-lightbox-overlay img {
-    max-width: 90vw;
-    max-height: 90vh;
-    object-fit: contain;
-    border-radius: 4px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
