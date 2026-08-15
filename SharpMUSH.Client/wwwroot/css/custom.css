@@ -14,3 +14,7 @@
 @import url("mush-syntax.css") layer(shell);
 @import url("globals.css") layer(shell);
 @import url("utilities.css") layer(utilities);
+
+/* Deliberately unlayered: it has to beat Monaco's runtime-injected, unlayered stylesheet, which
+   no layered rule can do. See the header in monaco-overrides.css. */
+@import url("monaco-overrides.css");

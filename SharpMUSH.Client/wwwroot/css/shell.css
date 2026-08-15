@@ -71,9 +71,10 @@
 	background: var(--surface-2);
 	color: var(--text);
 }
-.phosphor-icon-btn--active {
-	color: var(--accent) !important;
-	background: rgba(var(--glow), 0.12) !important;
+.phosphor-icon-btn--active,
+.phosphor-icon-btn--active:hover {
+	color: var(--accent);
+	background: rgba(var(--glow), 0.12);
 }
 
 /* ── Topbar search box ── */
@@ -364,11 +365,11 @@
 	box-shadow: 0 0 8px rgba(var(--glow), 0.7);
 }
 .phosphor-nav-icon {
-	font-size: 1.125rem !important;
+	font-size: 1.125rem;
 	width: 18px;
 	height: 18px;
 	flex-shrink: 0;
-	color: inherit !important;
+	color: inherit;
 }
 .phosphor-nav-text {
 	flex: 1;
@@ -458,13 +459,13 @@
 	white-space: nowrap;
 }
 .phosphor-profile-chevron {
-	font-size: 1rem !important;
+	font-size: 1rem;
 	flex-shrink: 0;
-	color: var(--text-faint) !important;
+	color: var(--text-faint);
 	transition: transform 0.14s ease, color 0.14s ease;
 }
 .phosphor-profile-card[aria-expanded="true"] .phosphor-profile-chevron {
-	color: var(--accent) !important;
+	color: var(--accent);
 	transform: rotate(180deg);
 }
 
@@ -504,24 +505,6 @@
 /* Stable scrollbar gutter prevents layout shift when content overflows */
 .sharp-terminal-output {
     scrollbar-gutter: stable;
-}
-
-/* Bottom terminal drawer: ensure mud-drawer-content is flex so GlobalTerminal fills it */
-.terminal-bottom-drawer .mud-drawer-content {
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-    height: 100% !important;
-    padding: 0 !important;
-}
-
-/* Softcode editor terminal tab: make tab panel a flex column */
-.softcode-editor-tabs .mud-tab-panel {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
 }
 
 .terminal-line {
@@ -671,28 +654,8 @@
     height: 100%;
 }
 
-/* Force dark background on all Monaco editor layers so it's dark even before theme loads */
-.mush-editor-fill > div,
-.mush-editor-fill .monaco-editor,
-.mush-editor-fill .monaco-editor .overflow-guard,
-.mush-editor-fill .monaco-editor-background,
-.mush-editor-fill .inputarea.ime-input {
-    background-color: #1a1a2e !important;
-}
-
-/* Keep flex-panel inside MudTabs filling available height */
-.flex-panel {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Bottom terminal drawer */
-.terminal-bottom-drawer .mud-drawer-content {
-    padding: 0;
-}
+/* Monaco's own layers (editor background, suggestion/hover widgets) are overridden in
+   monaco-overrides.css, which is deliberately unlayered — see the header there. */
 
 /* ── Dark DataGrid (attribute list) ── */
 .mush-dark-grid .mud-table-root,
@@ -700,26 +663,26 @@
 .mush-dark-grid .mud-table,
 .mush-dark-grid thead tr,
 .mush-dark-grid tbody tr {
-    background-color: transparent !important;
+    background-color: transparent;
 }
 .mush-dark-grid thead tr th {
-    background-color: #1a1a1a !important;
-    border-bottom: 1px solid #333 !important;
-    color: rgba(255,255,255,0.6) !important;
-    font-size: 0.6875rem !important;
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #333;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 .mush-dark-grid tbody tr td {
-    border-bottom: 1px solid #282828 !important;
-    color: rgba(255,255,255,0.87) !important;
+    border-bottom: 1px solid #282828;
+    color: rgba(255,255,255,0.87);
 }
 .mush-dark-grid tbody tr:hover td {
-    background-color: rgba(255,255,255,0.04) !important;
+    background-color: rgba(255,255,255,0.04);
 }
 .mush-dark-grid .mud-table-pagination {
-    background-color: #1a1a1a !important;
-    border-top: 1px solid #333 !important;
+    background-color: #1a1a1a;
+    border-top: 1px solid #333;
 }
 
 /* ── Eval result panel ── */
@@ -734,28 +697,6 @@
     border-top: 1px solid #333;
     max-height: 120px;
     overflow-y: auto;
-}
-
-/* ── Monaco Editor: ensure hover/suggestion widgets appear above MudBlazor tabs ── */
-/* fixedOverflowWidgets:true moves them to document body, but belt-and-suspenders z-index */
-.monaco-editor-overlaymessage,
-.monaco-hover,
-.monaco-editor .suggest-widget,
-.monaco-editor .parameter-hints-widget {
-    z-index: 10000 !important;
-}
-
-/* ── MUSH Help Dialog content ── */
-.mush-help-content pre {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    padding: 0.5rem 0.75rem;
-    border-radius: 4px;
-    overflow-x: auto;
-}
-.mush-help-content code {
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 0.9em;
 }
 
 /* ── HelpDrawer markdown rendering ── */
@@ -1135,7 +1076,7 @@
 	transition: color 0.14s;
 }
 .phosphor-bottomtab-icon {
-	font-size: 1.375rem !important;
+	font-size: 1.375rem;
 }
 .phosphor-bottomtab-label {
 	max-width: 100%;
@@ -1159,7 +1100,7 @@
 	.phosphor-topbar { gap: 0.375rem; padding: 0 0.625rem; }
 	.phosphor-search,
 	.phosphor-search-kbd,
-	.phosphor-lang { display: none !important; }
+	.phosphor-lang { display: none; }
 	.phosphor-topbar-title {
 		min-width: 0;
 		overflow: hidden;
@@ -1180,7 +1121,7 @@
 		top: 0;
 		left: 0;
 		bottom: 0;
-		width: 248px !important;
+		width: 248px;
 		z-index: 1001;
 		transform: translateX(-100%);
 		transition: transform 0.22s ease;
@@ -1188,7 +1129,7 @@
 	}
 	.phosphor-shell--nav-open .phosphor-sidebar { transform: translateX(0); }
 	/* Keep brand/labels/text visible even if the desktop rail was collapsed. */
-	.phosphor-sidebar--collapsed { width: 248px !important; }
+	.phosphor-sidebar--collapsed { width: 248px; }
 
 	/* Dimmed backdrop, shown only while the drawer is open. */
 	.phosphor-nav-backdrop {
@@ -1210,7 +1151,7 @@
 	.phosphor-content-col { width: 100%; }
 
 	/* Global widget asides step aside so content keeps the full width. */
-	.phosphor-widget-aside { display: none !important; }
+	.phosphor-widget-aside { display: none; }
 
 	/* Bottom command-terminal drawer: svh keeps the input row on-screen under the
 	   address bar without resizing on scroll. */
