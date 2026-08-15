@@ -189,7 +189,7 @@ Progress goes to stderr, one line per route/width pair, with the pair announced 
 navigated and its elapsed time appended after:
 
 ```
-[  4/192] 390px /wiki 1565ms
+[  4/256] 390px /wiki 1565ms
 ```
 
 The label-first ordering is the point. A sweep runs for minutes; if it stalls or is killed for
@@ -243,14 +243,14 @@ Every run ends with exactly one of three `Screenshots:` lines, and they are not
 interchangeable:
 
 ```
-Screenshots: 192/192 captured.
+Screenshots: 256/256 captured.
 Screenshots: SKIPPED (--no-screenshots) — none attempted, none written.
-Screenshots: 0/192 captured, 192 FAILED (listed above).
+Screenshots: 0/256 captured, 256 FAILED (listed above).
 ```
 
 Failures are counted and each one is printed on stderr under `Failed to capture N screenshots`.
 This matters more than it sounds: before this, a capture failure was swallowed entirely, so a
-sweep that wrote **zero** images still ended on a bare "No horizontal overflow across 48
+sweep that wrote **zero** images still ended on a bare "No horizontal overflow across 64
 routes" and read as fully verified.
 
 Capture failures do **not** change the exit code (see Exit codes above): the exit code answers
@@ -280,14 +280,33 @@ Four groups:
 - `authenticated` — requires a logged-in account.
 - `admin` — requires a Wizard+ session.
 - `parameterized` — routes with a path segment (`/character/{name}`, `/wiki/{ns}/{category}/{slug}`,
-  `/mail/{id}`, …). The sweep does not visit these: there is no seed data to substitute for
-  `{name}`, `{slug}`, or `{id}` that would be meaningful across every dev environment, and
-  guessing an ID risks silently testing a 404/empty state instead of the real page. Rather
-  than drop them — which would make an incomplete sweep look complete — `sweep.mjs` prints
-  the full `parameterized` list on every run under "Not covered", so the gap stays visible
-  instead of being read as coverage. A future task can wire real fixture IDs/slugs into this
-  list once seed data exists; until then, the layout of a parameterized page's shell is
-  still exercised indirectly by whichever static route links into it.
+  `/mail/{id}`, …), each declaring the concrete sample URL(s) the sweep drives:
+
+  ```json
+  { "route": "/admin/layout/{scope}",
+    "samples": ["/admin/layout/home", "/admin/layout/profile", "/admin/layout/global"],
+    "content": "real",
+    "note": "one per scope: they differ in zone count" }
+  ```
+
+  These used to be printed once and skipped, on the reasoning that no ID is meaningful across
+  every dev environment. That reasoning had a hole: it left the branch's two most complex
+  layouts — the wiki editor and the layout editor — outside the gate, and both were
+  overflowing at 390px (205px and 42px) when a reviewer measured them by hand. A route nobody
+  measures is a route nobody knows about.
+
+  `content` states what a clean result actually certifies:
+
+  - `real` — the layout renders in full from the URL alone (the editors, the history and diff
+    views, the schema-driven config categories). A clean pass covers the page.
+  - `placeholder` — the parameter names a record that need not exist in the swept game, so the
+    sample may render the empty/not-found state. Still measured, because that state is a layout
+    too, but it does **not** certify the populated page. Seed the game and repoint the sample to
+    upgrade one of these to `real`.
+
+  An entry with an empty `samples` array is reported as **NOT COVERED** — loudly, in the
+  closing summary as well as the opening one, because the quiet one-line skip is exactly what
+  let these routes rot.
 
 The three swept groups (`public` + `authenticated` + `admin`) are driven identically —
 `sweep.mjs` does not currently perform a login flow. In a Development build the portal's

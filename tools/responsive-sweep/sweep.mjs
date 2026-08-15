@@ -36,17 +36,47 @@ const profile = process.argv.includes('--profile')
 const screenshotsEnabled = !process.argv.includes('--no-screenshots');
 
 const routes = JSON.parse(await readFile(new URL('./routes.json', import.meta.url), 'utf8'));
-const all = [...routes.public, ...routes.authenticated, ...routes.admin];
-const skipped = routes.parameterized ?? [];
 const expectedRedirects = routes.expectedRedirects ?? {};
+
+// Parameterized routes are swept through concrete sample URLs declared in routes.json, not
+// skipped. They used to be printed once and dropped, which put 14 routes — including the wiki
+// editor and the layout editor, the two most complex layouts here — outside the gate entirely;
+// both were overflowing at 390px when a reviewer measured them by hand.
+const parameterized = routes.parameterized ?? [];
+const sampleOrigin = new Map(); // sample URL -> { route, content, note }
+for (const entry of parameterized) {
+	for (const sample of entry.samples ?? []) sampleOrigin.set(sample, entry);
+}
+const uncovered = parameterized.filter((e) => (e.samples ?? []).length === 0);
+const placeholders = parameterized.filter((e) => e.content === 'placeholder' && (e.samples ?? []).length > 0);
+
+const all = [...routes.public, ...routes.authenticated, ...routes.admin, ...sampleOrigin.keys()];
+
+// A sample URL is reported under its pattern, so a failure names the route a reader recognises.
+const describe = (route) => {
+	const origin = sampleOrigin.get(route);
+	return origin ? `${route} [${origin.route}]` : route;
+};
 
 // Printed first and unconditionally: routes.json parsing is the only thing that can happen
 // before this. Every later step can fail or abort, and a reader who lands on a failure needs
-// to know what this run never measured just as much as they need it on a clean pass.
-if (skipped.length > 0) {
-	console.log(`Not covered (parameterized, no seed data): ${skipped.length} routes`);
-	for (const s of skipped) console.log(`  ${s}`);
-}
+// to know what this run never measured just as much as they need it on a clean pass. It is
+// repeated in the closing summary for the same reason.
+const coverageReport = (log) => {
+	log(
+		`Parameterized routes: ${parameterized.length - uncovered.length}/${parameterized.length} covered by ${sampleOrigin.size} sample URLs.`,
+	);
+	if (placeholders.length > 0) {
+		log(`  ${placeholders.length} sampled with placeholder parameters — a clean result covers the empty/not-found layout, NOT the populated page:`);
+		for (const e of placeholders) log(`    ${e.route} -> ${e.samples.join(', ')} (${e.note})`);
+	}
+	if (uncovered.length > 0) {
+		log(`  NOT COVERED — ${uncovered.length} parameterized routes have no sample URL and were NOT measured:`);
+		for (const e of uncovered) log(`    ${e.route}${e.note ? ` (${e.note})` : ''}`);
+	}
+};
+
+coverageReport(console.log.bind(console));
 
 if (!screenshotsEnabled) {
 	console.log('Screenshots: disabled by --no-screenshots; no images will be written.');
@@ -417,7 +447,7 @@ for (const size of WIDTHS) {
 	for (const route of all) {
 		pairIndex++;
 		const startedAt = Date.now();
-		process.stderr.write(`[${String(pairIndex).padStart(3)}/${totalPairs}] ${size.name}px ${route}`);
+		process.stderr.write(`[${String(pairIndex).padStart(3)}/${totalPairs}] ${size.name}px ${describe(route)}`);
 
 		try {
 			await withDeadline(async () => {
@@ -430,7 +460,7 @@ for (const size of WIDTHS) {
 			// the complete overflow list, not just the routes that happened to come before the
 			// first failure. Record it and move on to the next route/width pair.
 			process.stderr.write(` LOAD FAILED ${Date.now() - startedAt}ms\n`);
-			loadFailures.push(`${size.name}px ${route}: ${err.message.split('\n')[0]}`);
+			loadFailures.push(`${size.name}px ${describe(route)}: ${err.message.split('\n')[0]}`);
 			continue;
 		}
 
@@ -467,7 +497,7 @@ for (const size of WIDTHS) {
 			if (landed !== route) {
 				if (landed === expected) {
 					via = ` (redirected to ${landed})`;
-					redirects.push(`${size.name}px ${route} -> ${landed}`);
+					redirects.push(`${size.name}px ${describe(route)} -> ${landed}`);
 				} else {
 					// Name the known convergent redirects, since each has a specific remedy and a
 					// bare pathname would leave the reader to rediscover it.
@@ -481,7 +511,7 @@ for (const size of WIDTHS) {
 									: 'unexpected destination';
 					process.stderr.write(` BOUNCED -> ${landed}\n`);
 					unmeasured.push(
-						`${size.name}px ${route}: landed on ${landed} instead — ${diagnosis}. This route was NOT measured. If this redirect is a legitimate alias, add "${route}": "${landed}" to expectedRedirects in routes.json.`,
+						`${size.name}px ${describe(route)}: landed on ${landed} instead — ${diagnosis}. This route was NOT measured. If this redirect is a legitimate alias, add "${route}": "${landed}" to expectedRedirects in routes.json.`,
 					);
 					continue;
 				}
@@ -495,7 +525,7 @@ for (const size of WIDTHS) {
 				// gated on rather than skipped, because an unmeasured pair silently omitted from
 				// the results is indistinguishable from a clean one.
 				process.stderr.write(` NO CONTAINER\n`);
-				unmeasured.push(`${size.name}px ${route}${via}: none of ${CONTAINER_SELECTORS.join(', ')} present`);
+				unmeasured.push(`${size.name}px ${describe(route)}${via}: none of ${CONTAINER_SELECTORS.join(', ')} present`);
 				continue;
 			}
 
@@ -511,11 +541,11 @@ for (const size of WIDTHS) {
 				const blame = culprits.length > 0
 					? ` — widest: ${culprits.map((c) => `${c.selector} +${c.over}px`).join(', ')}`
 					: ' — no unclipped element isolated (check a horizontally scrolling descendant)';
-				overflowFailures.push(`${size.name}px ${route}${via}: ${where}${blame}`);
+				overflowFailures.push(`${size.name}px ${describe(route)}${via}: ${where}${blame}`);
 			}
 		} catch (err) {
 			process.stderr.write(` MEASURE FAILED ${Date.now() - startedAt}ms\n`);
-			unmeasured.push(`${size.name}px ${route}: measurement threw — ${err.message.split('\n')[0]}`);
+			unmeasured.push(`${size.name}px ${describe(route)}: measurement threw — ${err.message.split('\n')[0]}`);
 			continue;
 		}
 
@@ -541,7 +571,7 @@ for (const size of WIDTHS) {
 			// overflow finding — that came from scrollWidth, which already succeeded — but a run
 			// that captured nothing must never be able to describe itself the way a run that
 			// captured everything does.
-			captureFailures.push(`${size.name}px ${route}: ${err.message.split('\n')[0]}`);
+			captureFailures.push(`${size.name}px ${describe(route)}: ${err.message.split('\n')[0]}`);
 		}
 
 		process.stderr.write(` ${Date.now() - startedAt}ms\n`);
@@ -624,6 +654,11 @@ if (exitCode === 0) {
 } else {
 	console.log(`Measured ${measuredPairs}/${totalPairs} route/width pairs.`);
 }
+
+// Repeated here, not only at the top: "no overflow" is the line a reader quotes, and it must sit
+// next to the statement of what that number does and does not cover. The opening copy scrolls off
+// behind minutes of per-route progress.
+coverageReport(console.log.bind(console));
 
 // Best-effort teardown, then an explicit exit rather than falling off the end of the script:
 // a chromium child stuck in D-state survives `browser.close()` and keeps handles open that
