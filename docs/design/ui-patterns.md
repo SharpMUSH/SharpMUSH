@@ -1153,8 +1153,8 @@ sizes to content height. Two independent classes on a page's root override
 that, and a page carries either, both, or neither depending on what it
 actually needs:
 
-- `full-bleed` — removes the 1400px reading cap (a wide diff view, a
-  three-pane mail layout).
+- `full-bleed` — removes the 1400px reading cap (the wiki diff view, the
+  layout editor's board, the softcode editor's three panes).
 - `full-height` — gives the wrapper a definite `height: 100%` instead of just
   `min-height`, so a page whose own layout depends on percentage heights
   (`height: 100%` nested content) doesn't collapse to `auto`.
@@ -1173,10 +1173,23 @@ a containing block for `position: fixed`, so fixed chrome anchors to the
 content column instead of the viewport if it ends up in page CSS); no scoped
 stylesheet uses `!important` (unlayered scoped CSS already beats the vendor
 cascade layer, so `!important` there is only ever hiding a real conflict);
-and every routable page ships a stylesheet (a page with nowhere to declare
+**no global stylesheet uses `!important` either** — global sheets are
+imported into cascade layers, and a layered `!important` outranks every
+unlayered scoped rule in the app, which is the exact inversion this boundary
+exists to delete; multi-tier stylesheets state their tiers roomy → medium →
+narrow, because both `max-width` tiers match below 48rem and narrow only wins
+by being authored last; every page stylesheet declares at least one tier or
+appears in `PagesWithoutContainerTiersByDesign` with a stated reason; and
+every routable page ships a stylesheet (a page with nowhere to declare
 tiers ends up responsive by accident, not by design — `PagesWithoutStylesheetByDesign`
 is the sole, deliberately narrow exception, for redirect-only routes with no
 markup of their own).
+
+When a vendor ships CSS the app cannot import into a layer — Monaco injects
+its own stylesheet at runtime — the answer is an *unlayered* global sheet
+(`css/monaco-overrides.css`, imported without `layer(...)`), which wins on
+specificity from outside the layer stack. Not `!important`, which would also
+outrank every page.
 
 ### Traps that cost real time
 

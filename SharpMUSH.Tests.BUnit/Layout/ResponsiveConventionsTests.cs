@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -13,6 +14,19 @@ public class ResponsiveConventionsTests
 {
 	private static IEnumerable<string> ScopedStylesheets() =>
 		Directory.EnumerateFiles(ClientSource.RazorRoot, "*.razor.css", SearchOption.AllDirectories);
+
+	/// <summary>
+	/// Scoped stylesheets belonging to a routable page — the ones the tier rules are about. A
+	/// component's stylesheet is excluded: it sizes to its own box wherever it is placed, and may
+	/// legitimately carry no page tier at all.
+	/// </summary>
+	private static IEnumerable<string> PageStylesheets() =>
+		Directory.EnumerateFiles(Path.Join(ClientSource.RazorRoot, "Pages"), "*.razor.css", SearchOption.AllDirectories)
+			.Where(f =>
+			{
+				var razor = f[..^".css".Length];
+				return File.Exists(razor) && Regex.IsMatch(File.ReadAllText(razor), @"^[ \t]*@page\b", RegexOptions.Multiline);
+			});
 
 	private static string Rel(string path) =>
 		Path.GetRelativePath(ClientSource.RazorRoot, path).Replace('\\', '/');
@@ -93,6 +107,26 @@ public class ResponsiveConventionsTests
 	};
 
 	private static readonly string[] SanctionedTiers = ["48rem", "64rem", "90rem"];
+
+	/// <summary>
+	/// Page stylesheets that declare no container tier, each with the reason it needs none. The
+	/// spec's verification item #5 requires every page to either state its tiers or be named here:
+	/// a page with neither is responsive by accident, and nobody notices which of the two it is.
+	/// </summary>
+	private static readonly Dictionary<string, string> PagesWithoutContainerTiersByDesign = new(StringComparer.Ordinal)
+	{
+		["Pages/Admin/AdminMedia.razor.css"] =
+			"the asset grid is a repeat(auto-fit, minmax(...)) grid on a child component; it re-flows "
+			+ "by track count, so a tier would only restate what auto-fit already does",
+		["Pages/Admin/AdminWiki.razor.css"] =
+			"same — its stat grid is repeat(auto-fit, minmax(180px, 1fr)), which self-tiers",
+		["Pages/Register.razor.css"] =
+			"the route renders a <PageTitle> and redirects to /login?tab=register; there is no layout here",
+		["Pages/WikiPage.razor.css"] =
+			"renders only <WikiView Mode=\"View\">, whose own stylesheet carries the tiers",
+		["Pages/WikiPageEdit.razor.css"] =
+			"renders only <WikiView Mode=\"Edit\"> behind a height:100% wrapper; WikiEdit carries the tiers",
+	};
 
 	/// <summary>
 	/// Narrow and medium are downgrades applied as the container shrinks, so they gate on
@@ -206,8 +240,16 @@ public class ResponsiveConventionsTests
 	/// yields every width test inside it, not just the first.
 	/// </summary>
 	private static IEnumerable<Match> NamedPageContainerConditions(string css) =>
+		NamedPageContainerBlocks(css)
+			.SelectMany(header => Regex.Matches(header, @"(?<dir>min|max)-width:\s*(?<value>[^)]+)\)"));
+
+	/// <summary>
+	/// The same block headers, in source order, one entry per <c>@container page</c> rule — the
+	/// unit the cascade actually resolves, which the flattened condition list above cannot express.
+	/// </summary>
+	private static IEnumerable<string> NamedPageContainerBlocks(string css) =>
 		Regex.Matches(css, @"@container\s+page\s*(?<header>\([^{]*)\{")
-			.SelectMany(block => Regex.Matches(block.Groups["header"].Value, @"(?<dir>min|max)-width:\s*(?<value>[^)]+)\)"));
+			.Select(block => block.Groups["header"].Value);
 
 	[Test]
 	public async Task ContainerTiersUseOnlyTheSanctionedLiterals()
@@ -307,6 +349,119 @@ public class ResponsiveConventionsTests
 
 		await Assert.That(offenders).IsEmpty()
 			.Because("unlayered scoped CSS already beats the vendor layer; !important hides real conflicts");
+	}
+
+	[Test]
+	public async Task GlobalStylesheetsCarryNoImportantDeclarations()
+	{
+		// The scoped-CSS rule below is only half the story, and the weaker half. Global sheets are
+		// imported into cascade layers (custom.css) while the scoped bundle is unlayered, and an
+		// !important in a *layered* rule beats an unlayered normal declaration whatever its
+		// specificity — so an !important here silently outranks every page stylesheet in the app,
+		// which is the inversion this whole boundary exists to delete. Layer order already puts
+		// these sheets above `vendor`, so the flag buys nothing and costs that.
+		//
+		// monaco-overrides.css is unlayered rather than exempt: Monaco injects its own unlayered
+		// stylesheet at runtime, which no layered rule can outrank, so those overrides win on
+		// specificity from outside the layers instead of by force. That is the sanctioned answer
+		// when a vendor ships CSS we cannot import — never !important.
+		var offenders = Directory.EnumerateFiles(ClientSource.CssRoot, "*.css")
+			.Where(f => StripComments(File.ReadAllText(f)).Contains("!important", StringComparison.Ordinal))
+			.Select(Path.GetFileName)
+			.Order(StringComparer.Ordinal)
+			.ToList();
+
+		await Assert.That(offenders).IsEmpty()
+			.Because("a layered !important outranks every unlayered page stylesheet; layer order "
+				+ "already beats vendor CSS, and an unlayered override beats what layers cannot reach");
+	}
+
+	[Test]
+	public async Task MultiTierStylesheetsStateTheirTiersRoomyThenMediumThenNarrow()
+	{
+		// Both max-width tiers match below 48rem, so the narrow block only wins by being authored
+		// last. A file that states narrow before medium disables narrow outright, and nothing about
+		// the rendered page says so — it just quietly gets the medium layout at phone width. The
+		// spec fixes the order at roomy (min-width) → medium (max-width: 64rem) → narrow
+		// (max-width: 48rem) so the cascade is uniform across every stylesheet, not merely correct
+		// in the files someone happened to check.
+		var offenders = new List<string>();
+
+		foreach (var file in ScopedStylesheets())
+		{
+			var tiers = NamedPageContainerBlocks(StripComments(File.ReadAllText(file)))
+				.Select(header => Regex.Match(header, @"(?<dir>min|max)-width:\s*(?<value>[\d.]+)rem"))
+				.Where(m => m.Success)
+				.Select(m => (Dir: m.Groups["dir"].Value, Value: decimal.Parse(m.Groups["value"].Value, CultureInfo.InvariantCulture)))
+				.ToList();
+
+			var sawMax = false;
+			var previousMax = decimal.MaxValue;
+
+			foreach (var (dir, value) in tiers)
+			{
+				if (dir == "min")
+				{
+					if (sawMax)
+						offenders.Add($"{Rel(file)}: min-width: {value}rem comes after a max-width tier");
+					continue;
+				}
+
+				sawMax = true;
+				if (value > previousMax)
+					offenders.Add($"{Rel(file)}: max-width: {value}rem comes after max-width: {previousMax}rem (must descend)");
+				previousMax = value;
+			}
+		}
+
+		await Assert.That(offenders).IsEmpty()
+			.Because("a narrower max-width tier authored before a wider one is dead below the "
+				+ "narrower threshold, because the wider block matches there too and wins on order");
+	}
+
+	[Test]
+	public async Task EveryPageStylesheetDeclaresAContainerTierOrIsExempt()
+	{
+		// Verification item #5 of the design spec, and the one that was never built. A page with no
+		// tier is not necessarily wrong — an auto-fit grid re-flows on its own, and a page that
+		// renders one child component delegates to that component's stylesheet — but "right by
+		// design" and "nobody ever looked" are indistinguishable without a list that says which.
+		var offenders = PageStylesheets()
+			.Where(f => !Regex.IsMatch(StripComments(File.ReadAllText(f)), @"@container\b"))
+			.Select(Rel)
+			.Where(r => !PagesWithoutContainerTiersByDesign.ContainsKey(r))
+			.Order(StringComparer.Ordinal)
+			.ToList();
+
+		await Assert.That(offenders).IsEmpty()
+			.Because("a page that states no tier is either delegating or unconsidered, and only an "
+				+ "explicit exemption with a reason tells the next reader which one it is");
+	}
+
+	[Test]
+	public async Task TheContainerTierExemptionListHasNoStaleEntries()
+	{
+		// Same rot as the stylesheet exemption below it: once an exempt page grows a tier, the
+		// entry stops describing reality and starts hiding the page from the check above.
+		var stale = PagesWithoutContainerTiersByDesign.Keys
+			.Where(r =>
+			{
+				var path = Path.Join(ClientSource.RazorRoot, r);
+				return File.Exists(path) && Regex.IsMatch(StripComments(File.ReadAllText(path)), @"@container\b");
+			})
+			.Order(StringComparer.Ordinal)
+			.ToList();
+
+		var missing = PagesWithoutContainerTiersByDesign.Keys
+			.Where(r => !File.Exists(Path.Join(ClientSource.RazorRoot, r)))
+			.Order(StringComparer.Ordinal)
+			.ToList();
+
+		await Assert.That(stale).IsEmpty()
+			.Because("a page that now declares a tier must be checked by "
+				+ "EveryPageStylesheetDeclaresAContainerTierOrIsExempt, not exempted from it");
+		await Assert.That(missing).IsEmpty()
+			.Because("an exemption naming a file that no longer exists documents nothing");
 	}
 
 	[Test]

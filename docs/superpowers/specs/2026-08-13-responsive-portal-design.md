@@ -105,6 +105,13 @@ shadows, fixed dimensions and radii in `px`):
 | Medium | `@container page (max-width: 64rem)` | 3+ column grids → 2; fixed sidecars (230–340px) stack; portrait tablet and thin desktop windows land here |
 | Roomy | `@container page (min-width: 90rem)` | optional richer layouts; most pages need nothing |
 
+**Roomy is barely reachable, and no stylesheet uses it.** 90rem is 1440px, and the shell caps
+`.phosphor-page` at 1400px once the viewport passes 1601px — so the container only exceeds
+1440px in a narrow band: sidebar collapsed, viewport roughly 1502–1601px. Past 1601px the cap
+takes over and the tier switches back *off*. Reach for it only if that band is genuinely the
+case being served; a fluid `clamp()` or an `auto-fit` grid is almost always the better answer,
+and is why this tier has no users today.
+
 Roomy gates on `min-width`, not `max-width` — it is an upgrade applied as the container grows,
 the reverse of narrow/medium. A `max-width` tier at 90rem or wider is not just off-spec: the
 shell caps `.phosphor-page` at `--content-max` (1400px) once the viewport passes 1601px (see
@@ -205,7 +212,7 @@ width workaround, and the mobile toolkit in one 1565-line file. It becomes a man
 |---|---|
 | `css/tokens.css` | design tokens, font faces, per-`:lang` mono stack |
 | `css/shell.css` | shell, sidebar, topbar, terminal drawer, bottom nav, `.phosphor-page`, **all viewport media queries** |
-| `css/utilities.css` | `.scroll-x`, `.toolbar-row`, `.mobile-only`, `.desktop-only`, tap-target helpers |
+| `css/utilities.css` | `.scroll-x`, `.toolbar-row` (`.mobile-only`/`.desktop-only` were planned and never needed — a container tier says the same thing where the layout already is) |
 | `css/mush-syntax.css` | `.mush-*` token colours (content styling, not layout) |
 | `css/globals.css` | documented escape hatches — styles that *must* be global because scoped CSS cannot reach them (e.g. `.char-picker`, which sits on a `MudPaper` carrying MudBlazor's scope) |
 | `css/custom.css` | `@layer` declaration + `@import`s only |
@@ -310,13 +317,22 @@ A convention test over the source tree, so regressions cannot land silently:
 3. No `position: fixed` in any `*.razor.css`. *(containment safety)*
 4. Every routable page has a scoped stylesheet, or appears on an explicit exemption list
    with a stated reason.
-5. Every page stylesheet declares at least one container tier, or is exempt.
+5. Every page stylesheet declares at least one container tier, or appears in
+   `PagesWithoutContainerTiersByDesign` with a stated reason (auto-fit grids and pages that
+   render a single child component are the legitimate cases), with a companion test that
+   fails once an exempt page grows a tier.
 6. `@container page (...)` conditions use only the three sanctioned literals (`48rem`,
    `64rem`, `90rem`), in the required direction — prevents page-tier drift. Unnamed
    component queries (`@container (...)`) are outside this rule; a component's own
    container has no relationship to `.phosphor-page`'s bounded width.
 7. Viewport breakpoint literals in `shell.css` match `sharpmushLayout` in `layout.js`.
-8. No `!important` in scoped CSS. *(guards the layer work — the reason they existed is gone)*
+8. No `!important` in scoped CSS, **and none in the global sheets either** — they are
+   imported into cascade layers, and a layered `!important` outranks every unlayered scoped
+   rule, inverting the boundary this whole design exists to establish. Where a vendor's CSS is
+   injected at runtime and so cannot be layered (Monaco), the override lives in an unlayered
+   sheet (`css/monaco-overrides.css`) and wins on specificity instead.
+9. Multi-tier stylesheets state their tiers roomy → medium → narrow. Both `max-width` tiers
+   match below 48rem, so a narrow block authored before a medium one is silently dead.
 
 ### Playwright sweep
 
