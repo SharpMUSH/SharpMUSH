@@ -40,25 +40,12 @@
     margin-bottom: 1rem;
 }
 
-.acct-subtitle {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--text-dim);
-    margin-bottom: 0.625rem;
-}
-
 .acct-label {
     font-size: 0.6875rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--text-faint);
     margin-right: 0.5rem;
-}
-
-.acct-divider {
-    height: 1px;
-    background: var(--border-soft);
-    margin: 1.125rem 0;
 }
 
 /* ── Buttons ── */

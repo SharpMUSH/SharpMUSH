@@ -21,6 +21,14 @@
     background: var(--surface);
 }
 
+/* Same reason as .scene-card above: the narrow tier below re-gaps this row, and an inline
+   Style="" on the element beats any stylesheet rule, so the row-gap it asked for was dead. */
+::deep .scene-card .scene-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
 /* Mobile: stack each scene card so the title block sits above its actions,
    trim the page padding, and let the meta row wrap instead of overflowing. */
 @container page (max-width: 48rem) {

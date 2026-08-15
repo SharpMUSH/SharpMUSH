@@ -194,7 +194,7 @@
 
     <div class="sc-panel sc-pane-editor">
 
-        <div class="sc-editor-toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.5625rem 0.875rem;border-bottom:1px solid var(--border-soft);background:var(--surface-3);flex-shrink:0;min-height:40px;">
+        <div class="sc-editor-toolbar">
             @if (ActiveTab is not null)
             {
                 <span class="sc-kind-badge" style="@KindBadgeStyle(ActiveTab.Attr)" title="@Loc[AttrKindLabelKey(ActiveTab.Attr)]">@AttrKindBadge(ActiveTab.Attr)</span>
