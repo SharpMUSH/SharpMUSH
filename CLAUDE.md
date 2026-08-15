@@ -122,6 +122,8 @@ Widgets are composable portal units. Adding a new widget requires:
 
 `IPortalWidget` declares: `Name` (machine key), `ComponentType` (Razor type), `ConfigType` (optional config model), `AllowedZones`, `DefaultSize`.
 
+A widget that accepts config must declare `ConfigType` and document its keys in `docs/guides/widget-configuration.md` — that guide is the reference admins read, and the layout editor offers only a raw JSON box for everything but the Spacer.
+
 ### Server-Side: Commands & Functions
 
 Commands use `[SharpCommand]` attribute on static methods:

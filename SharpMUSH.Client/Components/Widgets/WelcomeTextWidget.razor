@@ -1,8 +1,9 @@
 @using System.Text.Json
+@using Microsoft.AspNetCore.Components.Authorization
 @using SharpMUSH.Client.Models.Widgets
 @using Markdig
 
-@if (!string.IsNullOrWhiteSpace(_html))
+@if (_visible && !string.IsNullOrWhiteSpace(_html))
 {
     <div class="welcome-text-widget">
         @((MarkupString)_html)
@@ -18,9 +19,12 @@
     /// </summary>
     [Parameter] public string Zone { get; set; } = string.Empty;
 
-    private string _html = string.Empty;
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
-    protected override void OnParametersSet()
+    private string _html = string.Empty;
+    private bool _visible = true;
+
+    protected override async Task OnParametersSetAsync()
     {
         if (Config is null)
         {
@@ -28,9 +32,10 @@
             return;
         }
 
+        WelcomeTextConfig? cfg;
         try
         {
-            var cfg = Config.Value.Deserialize<WelcomeTextConfig>(
+            cfg = Config.Value.Deserialize<WelcomeTextConfig>(
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 
             _html = cfg is not null && !string.IsNullOrWhiteSpace(cfg.Markdown)
@@ -40,15 +45,25 @@
         catch (JsonException)
         {
             _html = string.Empty;
+            return;
         }
         catch (NotSupportedException)
         {
             _html = string.Empty;
+            return;
         }
         catch (ArgumentException)
         {
             // Invalid markdown input — fall back to empty
             _html = string.Empty;
+            return;
         }
+
+        // "Members only" welcome text: hide from signed-out visitors. With no cascading auth state
+        // (e.g. a bare component test) treat the viewer as a guest, so the stricter setting wins.
+        _visible = (cfg?.ShowToGuests ?? true) || await IsAuthenticatedAsync();
     }
+
+    private async Task<bool> IsAuthenticatedAsync()
+        => AuthState is not null && (await AuthState).User.Identity?.IsAuthenticated == true;
 }
