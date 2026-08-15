@@ -81,7 +81,7 @@ public class LocateServiceCompatibilityTests
 			.Returns(true);
 
 		var result = await _locateService.Locate(_parser, player, player, "TestObject",
-			LocateFlags.MatchObjectsInLookerInventory);
+			LocateFlags.MatchObjectsInLookerLocation);
 
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
@@ -123,9 +123,11 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	public async Task LocateMatch_MeMatching_ShouldRespectNoTypePreference()
+	public async Task LocateMatch_MeMatching_IsRefusedOnlyByOnlyMatchTypePreference()
 	{
-		// This test verifies the fix for the NoTypePreference check
+		// MATCH_TYPE is the tri-state: with no preferred type and MAT_TYPE unset it returns -1, which is
+		// truthy in C, so "me" matches. Only MAT_TYPE — OnlyMatchTypePreference — turns a looker of the
+		// wrong type into a refusal. Reading NoTypePreference as "do not match me" had it backwards.
 
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
@@ -143,17 +145,22 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Use PreferLockPass to prevent auto-adding flags that would interfere
-		var resultWithNoTypePreference = await _locateService.Locate(_parser, player, player, "me",
+		var withNoTypePreference = await _locateService.Locate(_parser, player, player, "me",
 			LocateFlags.NoTypePreference | LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 
-		var resultWithoutNoTypePreference = await _locateService.Locate(_parser, player, player, "me",
+		var withoutNoTypePreference = await _locateService.Locate(_parser, player, player, "me",
 			LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 
-		await Assert.That(resultWithNoTypePreference.IsNone || resultWithNoTypePreference.IsError).IsTrue();
-		await Assert.That(resultWithoutNoTypePreference.IsValid()).IsTrue();
-		await Assert.That(resultWithoutNoTypePreference.WithoutError().WithoutNone().Object().DBRef)
+		// A room preference plus MAT_TYPE: the looker is a player, so "me" is not matchable at all.
+		var wrongTypeUnderMatType = await _locateService.Locate(_parser, player, player, "me",
+			LocateFlags.RoomsPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.MatchMeForLooker |
+			LocateFlags.PreferLockPass);
+
+		await Assert.That(withNoTypePreference.WithoutError().WithoutNone().Object().DBRef)
 			.IsEqualTo(new DBRef(1, 0));
+		await Assert.That(withoutNoTypePreference.WithoutError().WithoutNone().Object().DBRef)
+			.IsEqualTo(new DBRef(1, 0));
+		await Assert.That(wrongTypeUnderMatType.IsNone).IsTrue();
 	}
 
 	[Test]
@@ -200,8 +207,9 @@ public class LocateServiceCompatibilityTests
 		var resultUncontrolled = await _locateService.Locate(_parser, player, target, "me",
 			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
 
-		await Assert.That(resultUncontrolled.IsError).IsTrue();
-		await Assert.That(resultUncontrolled.AsError.Value).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		// match.c returns on a control pass and otherwise sets nocontrol and falls through, so an
+		// uncontrolled "me" is a search that finds nothing rather than an error.
+		await Assert.That(resultUncontrolled.IsNone).IsTrue();
 	}
 
 	[Test]
@@ -476,7 +484,7 @@ public class LocateServiceCompatibilityTests
 			.Returns(true);
 
 		var resultLast = await _locateService.Locate(_parser, player, player, "Coin",
-			LocateFlags.MatchObjectsInLookerInventory | LocateFlags.UseLastIfAmbiguous);
+			LocateFlags.MatchObjectsInLookerLocation | LocateFlags.UseLastIfAmbiguous);
 
 		await Assert.That(resultLast.IsValid()).IsTrue();
 		await Assert.That(resultLast.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(4);
@@ -1144,10 +1152,11 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	public async Task Locate_HereWithOnlyMatchControlled_ErrorWhenLockerNotControlRoom()
+	public async Task Locate_HereWithOnlyMatchControlled_FallsThroughWhenTheExecutorDoesNotControlIt()
 	{
-		// When MatchHereForLookerLocation and OnlyMatchLookerControlledObjects are set,
-		// and the executor does not control the looker → ErrorPerm.
+		// match.c returns on a control *pass* and otherwise sets nocontrol and carries on, so this is a
+		// search that finds nothing — not an error. The noisy path is where the refusal is reported, and
+		// AnObjectRefusedForControlSaysSoRatherThanClaimingItIsNotThere covers that.
 
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
@@ -1162,8 +1171,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchHereForLookerLocation | LocateFlags.OnlyMatchLookerControlledObjects |
 			LocateFlags.PreferLockPass);
 
-		await Assert.That(result.IsError).IsTrue();
-		await Assert.That(result.AsError.Value).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.IsNone).IsTrue();
 	}
 
 	[Test]

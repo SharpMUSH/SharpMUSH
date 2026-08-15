@@ -56,9 +56,23 @@ public enum LocateFlags
 	/// </summary>
 	NoVisibilityCheck = OnlyMatchLookerControlledObjects << 1,
 
-	All = (MatchMeForLooker | MatchHereForLookerLocation | AbsoluteMatch | MatchOptionalWildCardForPlayerName |
-				 MatchObjectsInLookerLocation | MatchObjectsInLookerInventory | ExitsInTheRoomOfLooker | EnglishStyleMatching |
-				 MatchRemoteContents)
+	/// <summary>
+	/// <c>MAT_GLOBAL</c> — search the Master Room's exits. Its own flag, and deliberately not part of
+	/// <see cref="All"/>: <c>MAT_EVERYTHING</c> does not include it either, and the master-room scope
+	/// used to be gated on <c>HasFlag(All)</c>, which is a different question.
+	/// </summary>
+	MatchGlobalExits = NoVisibilityCheck << 1,
+
+	/// <summary>
+	/// <c>MAT_EVERYTHING</c>, member for member. <c>MAT_CONTAINER</c>
+	/// (<see cref="MatchAgainstLookerLocationName"/>), <c>MAT_CARRIED_EXIT</c>
+	/// (<see cref="ExitsInsideOfLooker"/>), <c>MAT_REMOTES</c> (<see cref="MatchRemoteContents"/>) and
+	/// <see cref="MatchGlobalExits"/> are all outside it; <c>fun_locate</c> adds the first two by hand
+	/// when it injects a default, which is why they are not folded in here.
+	/// </summary>
+	All = MatchMeForLooker | MatchHereForLookerLocation | AbsoluteMatch | MatchWildCardForPlayerName |
+				MatchObjectsInLookerLocation | MatchObjectsInLookerInventory | ExitsInTheRoomOfLooker |
+				EnglishStyleMatching
 }
 
 public interface ILocateService

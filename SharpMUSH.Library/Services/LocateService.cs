@@ -135,6 +135,26 @@ public partial class LocateService(
 		=> (await LocateWithDiagnosis(looker, executor, name, flags)).Result;
 
 	/// <summary>
+	/// Everything that is not a place to look, and so does not count as having named a scope.
+	///
+	/// match_result takes the preferred <c>type</c> as a parameter *separate* from <c>flags</c>, and
+	/// fun_locate's injection tests only <c>match_flags &amp; ~(MAT_CHECK_KEYS | MAT_TYPE | MAT_EXACT |
+	/// MAT_CONTROL)</c> — so a bare type preference leaves match_flags empty and the default set is
+	/// injected. SharpMUSH folds the type into the same word, which is why the type bits have to be
+	/// named here: without them `LocateFlags.PlayersPreference` alone reads as a scope, suppresses the
+	/// injection, and leaves a search with nowhere to look that can only ever return nothing.
+	/// </summary>
+	private const LocateFlags NonScopeFlags =
+		// match.c's four modifiers.
+		LocateFlags.PreferLockPass | LocateFlags.OnlyMatchTypePreference | LocateFlags.NoPartialMatches |
+		LocateFlags.OnlyMatchLookerControlledObjects |
+		// The `type` parameter, which is not part of match_flags at all.
+		LocateFlags.NoTypePreference | LocateFlags.PlayersPreference | LocateFlags.RoomsPreference |
+		LocateFlags.ThingsPreference | LocateFlags.ExitsPreference |
+		// SharpMUSH's own, and MAT_LAST, which fun_locate applies at the call rather than in match_flags.
+		LocateFlags.FailIfNotPreferred | LocateFlags.UseLastIfAmbiguous | LocateFlags.NoVisibilityCheck;
+
+	/// <summary>
 	/// <see cref="Locate"/>, plus the one thing a caller cannot read off its answer: whether the search
 	/// came up empty because a candidate was refused for control. Only the noisy entry points want it,
 	/// and it stays off the public surface because it changes nothing about what is found.
@@ -145,18 +165,19 @@ public partial class LocateService(
 		string name,
 		LocateFlags flags)
 	{
-		if (!flags.HasFlag(LocateFlags.PreferLockPass)
-				&& !flags.HasFlag(LocateFlags.FailIfNotPreferred)
-				&& !flags.HasFlag(LocateFlags.NoPartialMatches)
-				&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation))
+		// fun_locate: with no scope named there is nowhere to search, so inject the default set. The old
+		// test asked whether four unrelated flags were absent, which is a different question and fired
+		// even when a scope had been named.
+		if ((flags & ~NonScopeFlags) == 0)
 		{
 			flags |= LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker;
 		}
 
 		if ((flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation)
+				 || flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
 				 || flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory)
 				 || flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
-				 || flags.HasFlag(LocateFlags.ExitsPreference)
+				 || flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker)
 				 || flags.HasFlag(LocateFlags.ExitsInsideOfLooker)) &&
 				// Cheapest first: See_All is a flag read, Nearby resolves up to two locations.
 				!await executor.IsSee_All() && !await Nearby(executor, looker) &&
@@ -194,9 +215,12 @@ public partial class LocateService(
 	// Locate()'s post-match dark/can-examine gate from rejecting a perfectly valid player just because
 	// an unprivileged looker (e.g. the profile http_handler #4) is neither near nor a controller —
 	// which 404'd GET /api/profile/<name> for every character.
+	// AbsoluteMatch because lookup_player resolves "#1" as readily as a name, and every caller of this
+	// helper hands it whatever the user typed. It used to arrive by accident: the flag set names a scope,
+	// so nothing was injected, and a dbref reached no scope at all.
 	private const LocateFlags PlayerMatchFlags =
 		LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
-		LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.NoVisibilityCheck;
+		LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.AbsoluteMatch | LocateFlags.NoVisibilityCheck;
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(IMUSHCodeParser parser,
 		AnySharpObject looker, AnySharpObject executor,
@@ -223,131 +247,130 @@ public partial class LocateService(
 		=>
 			Locate(parser, looker, executor, name, PlayerMatchFlags);
 
-	// PennMUSH's match_result has one object; SharpMUSH splits it. `executor` is the permission
-	// subject — every Controls/CanInteract/HasLongFingers question is asked of it. `looker` is the
-	// search origin: whose surroundings are walked, and whose "me" and "here" these are.
+	// PennMUSH's match_result_internal has one object; SharpMUSH splits it. `executor` is match.c's
+	// `who` — the permission subject every Controls/CanInteract/Nearby/Long_Fingers question is asked
+	// of. `looker` is its `where` — the search origin, whose surroundings are walked and whose "me"
+	// and "here" these are.
+	//
+	// None of the special-case blocks fails the search. match.c returns on a control *pass* and
+	// otherwise sets nocontrol and falls through to normal matching, so "me" with MAT_CONTROL over an
+	// object you do not control is not an error — it is a search that carries on and reports
+	// "Permission denied." if it finds nothing else.
 	private async ValueTask<(AnyOptionalSharpObjectOrError Match, bool NoControl)> LocateMatch(
 		AnySharpObject executor,
 		AnySharpObject looker,
 		LocateFlags flags,
 		string name)
 	{
-		AnyOptionalSharpObjectOrError match;
-		AnySharpContainer location;
-		var final = 0;
+		var preferred = PreferredTypes(flags);
+		var noControl = false;
 
-		if (looker.IsRoom)
-		{
-			location = looker.MinusExit();
-		}
-		else if (looker.IsExit)
-		{
-			// Search the exit's destination; an unlinked exit has none, so fall back to the room it sits in.
-			var destination = await looker.MinusRoom().Home();
-			location = destination.IsNone ? await FriendlyWhereIs(looker) : destination.WithoutNone();
-		}
-		else
-		{
-			location = await FriendlyWhereIs(looker);
-		}
+		// match.c: loc = where for a room, Source(where) for an exit — the room it sits in, not where it
+		// leads — and Location(where) otherwise. FriendlyWhereIs is all three.
+		var location = await FriendlyWhereIs(looker);
 
-		if (!flags.HasFlag(LocateFlags.NoTypePreference)
+		// MATCH_CONTENTS: under MAT_CONTENTS a candidate has to be in the looker's own contents.
+		async ValueTask<bool> InLookerContents(AnySharpObject candidate)
+			=> !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
+				 || (await FriendlyWhereIs(candidate)).Object().DBRef == looker.Object().DBRef;
+
+		// "me"
+		if (IsMatchableType(preferred, flags, looker)
 				&& flags.HasFlag(LocateFlags.MatchMeForLooker)
 				&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
-				&& name.Equals("me", StringComparison.InvariantCultureIgnoreCase))
+				&& name.Equals("me", StringComparison.OrdinalIgnoreCase))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 					|| await permissionService.Controls(executor, looker))
 			{
-				return (looker.WithNoneOption().WithErrorOption(), false);
+				return (looker.WithNoneOption().WithErrorOption(), noControl);
 			}
 
-			return (new Error<string>(ErrorMessages.Returns.PermissionDenied), true);
+			noControl = true;
 		}
 
-		if (flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
+		// "here" — match.c takes Location(where), and NOTHING when where is itself a room, so a room
+		// looking for "here" falls through to normal matching rather than answering with itself.
+		if (!looker.IsRoom
+				&& flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
 				&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
-				&& name.Equals("here", StringComparison.InvariantCultureIgnoreCase))
+				&& name.Equals("here", StringComparison.OrdinalIgnoreCase)
+				&& IsMatchableType(preferred, flags, location.WithExitOption()))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					|| await permissionService.Controls(executor, looker))
+					|| await permissionService.Controls(executor, location.WithExitOption()))
 			{
-				return ((await FriendlyWhereIs(looker)).WithExitOption().WithNoneOption().WithErrorOption(), false);
+				return (location.WithExitOption().WithNoneOption().WithErrorOption(), noControl);
 			}
 
-			return (new Error<string>(ErrorMessages.Returns.PermissionDenied), true);
+			noControl = true;
 		}
 
+		// "*<player>" under MAT_PLAYER, or any name at all under MAT_PMATCH.
 		if ((flags.HasFlag(LocateFlags.MatchOptionalWildCardForPlayerName)
-				 || (flags.HasFlag(LocateFlags.PlayersPreference) && name.StartsWith('*')))
-				&& (flags.HasFlag(LocateFlags.PlayersPreference) || flags.HasFlag(LocateFlags.NoTypePreference)))
+				 || (flags.HasFlag(LocateFlags.MatchWildCardForPlayerName) && name.StartsWith('*')))
+				&& ((preferred & SharpObjectTypes.Player) != SharpObjectTypes.None
+						|| !flags.HasFlag(LocateFlags.OnlyMatchTypePreference)))
 		{
-			// In PennMUSH, a name starting with '*' in locate() is a player-name prefix indicator, not a regex
-			// wildcard. Strip the leading '*' before doing the global player lookup so that
-			// locate(%#, "*God", "p") correctly finds the player named "God".
+			// The leading '*' is a player-name indicator, not a wildcard: strip it before the lookup so
+			// locate(%#, "*God", "p") finds the player named God.
 			var playerName = name.StartsWith('*') ? name[1..] : name;
-			var maybeMatch = await mediator
-				.CreateStream(new GetPlayerQuery(playerName))
-				.FirstOrDefaultAsync();
+			var player = await mediator.CreateStream(new GetPlayerQuery(playerName)).FirstOrDefaultAsync();
 
-			match = maybeMatch is null
-				? new None()
-				: maybeMatch;
-			// A player-name match is GLOBAL — pmatch(name) resolves any player by name, regardless of
-			// whether they are near the looker. Returning the found player must NOT require
-			// MatchObjectsInLookerInventory (which pmatch does not set); gating on it dropped the match
-			// and fell through to location matching, so pmatch failed for any player not co-located with
-			// the looker (e.g. the profile http_handler #4 matching God).
-			if (maybeMatch is not null)
+			if (player is not null)
 			{
-				var found = match.WithoutError().WithoutNone();
-				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
-						|| await executor.HasLongFingers()
-						|| await Nearby(looker, found)
-						|| await permissionService.Controls(executor, found))
+				AnySharpObject found = player;
+				if (await InLookerContents(found)
+						&& (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
+								|| await executor.HasLongFingers()
+								|| await Nearby(executor, found)
+								|| await permissionService.Controls(executor, found)))
 				{
 					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 							|| await permissionService.Controls(executor, found))
 					{
-						return (match, false);
+						return (found.WithNoneOption().WithErrorOption(), noControl);
 					}
 
-					return (new Error<string>(ErrorMessages.Returns.PermissionDenied), true);
+					noControl = true;
 				}
 			}
 		}
 
+		// "#<dbref>"
 		var abs = HelperFunctions.ParseDbRef(name);
-		if (abs.IsSome())
+		if (abs.IsSome() && flags.HasFlag(LocateFlags.AbsoluteMatch))
 		{
-			var absObject = await mediator.Send(new GetObjectNodeQuery(abs.AsValue()));
-			match = absObject.WithErrorOption();
-			if (!match.IsNone && (flags & LocateFlags.AbsoluteMatch) != 0)
+			var absolute = (await mediator.Send(new GetObjectNodeQuery(abs.AsValue()))).WithErrorOption();
+			if (!absolute.IsNone)
 			{
-				var found = match.WithoutError().WithoutNone();
-				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
-						|| await executor.HasLongFingers()
-						|| await Nearby(looker, found)
-						|| await permissionService.Controls(executor, found))
+				var found = absolute.WithoutError().WithoutNone();
+				if (IsMatchableType(preferred, flags, found)
+						&& await InLookerContents(found)
+						&& (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
+								|| await executor.HasLongFingers()
+								|| await Nearby(executor, found)
+								|| await permissionService.Controls(executor, found)))
 				{
 					// MATCH_CONTROLS is per candidate — the object that matched, never the search origin.
 					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 							|| await permissionService.Controls(executor, found))
 					{
-						return (match, false);
+						return (absolute, noControl);
 					}
 
-					return (new Error<string>(ErrorMessages.Returns.PermissionDenied), true);
+					noControl = true;
 				}
 			}
 		}
 
+		var final = 0;
 		if (flags.HasFlag(LocateFlags.EnglishStyleMatching))
 		{
 			(name, flags, final) = ParseEnglish(name, flags);
 		}
 
-		var state = new MatchState(final);
+		var state = new MatchState(final) { NoControl = noControl };
 		await MatchList(state, Candidates(looker, location, flags), executor, flags, name);
 
 		// match.c: a `final` search that never reached the Nth item leaves bestmatch NOTHING, and
@@ -366,7 +389,15 @@ public partial class LocateService(
 	}
 
 	/// <summary>
-	/// Every place a name may be found, in PennMUSH's order, as one lazy stream. Each scope is gated on
+	/// match.c's <c>MATCH_TYPE</c>, whose third state is the point: a wrong-type object is only rejected
+	/// under <c>MAT_TYPE</c>, and is otherwise still matchable and merely loses in ChooseThing.
+	/// </summary>
+	private static bool IsMatchableType(SharpObjectTypes preferred, LocateFlags flags, AnySharpObject obj)
+		=> (preferred & TypeOf(obj)) != SharpObjectTypes.None
+			 || !flags.HasFlag(LocateFlags.OnlyMatchTypePreference);
+
+	/// <summary>
+	/// Every place a name may be found, in match.c's order, as one lazy stream. Each scope is gated on
 	/// the flag that says *where to look*; a type preference says what to prefer once looked, and is no
 	/// longer spelt with the same bits. Laziness is what MATCH_LIST's opening <c>if (done) break</c>
 	/// buys: <see cref="MatchList"/> stops enumerating on the Nth ordinal match, so a scope past it is
@@ -378,25 +409,34 @@ public partial class LocateService(
 		LocateFlags flags)
 	{
 		var reader = new ContentsReader(mediator);
+		var sameSpot = location.Object().DBRef == looker.Object().DBRef;
+		var contentsOnly = flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory);
 
+		// Exits are only walked when they are a preferred type, or when nothing is being filtered by
+		// type at all — match.c's `(type & TYPE_EXIT) || !(flags & MAT_TYPE)`, which wraps both exit
+		// scopes and neither of the others.
+		var walksExits = (PreferredTypes(flags) & SharpObjectTypes.Exit) != SharpObjectTypes.None
+										 || !flags.HasFlag(LocateFlags.OnlyMatchTypePreference);
+
+		// MAT_POSSESSION — the looker's own contents.
 		if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) && looker.IsContainer)
 		{
 			foreach (var candidate in ContentsOf(await reader.Of(looker.AsContainer))) yield return candidate;
 		}
 
-		if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
-				&& location.Object().DBRef != looker.Object().DBRef)
+		// MAT_NEIGHBOR — what is in the room with the looker.
+		if (flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation) && !contentsOnly && !sameSpot)
 		{
 			foreach (var candidate in ContentsOf(await reader.Of(location))) yield return candidate;
 		}
 
-		if (flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker) && location.IsRoom)
+		// MAT_EXIT, and note the order: the zone master room and the master room are searched *before*
+		// the looker's own room, not after.
+		if (walksExits && flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker) && location.IsRoom)
 		{
-			foreach (var candidate in ExitsIn(await reader.Of(location))) yield return candidate;
+			var remote = !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation) && !contentsOnly;
 
-			var remote = !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
-																	LocateFlags.OnlyMatchObjectsInLookerInventory);
-
+			// MAT_REMOTES — the Zone Master Room's exits.
 			if (flags.HasFlag(LocateFlags.MatchRemoteContents) && remote)
 			{
 				var zone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
@@ -406,18 +446,28 @@ public partial class LocateService(
 				}
 			}
 
-			if (flags.HasFlag(LocateFlags.All) && remote)
+			// MAT_GLOBAL — the Master Room's exits.
+			if (flags.HasFlag(LocateFlags.MatchGlobalExits) && remote)
 			{
 				var masterRoom = new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.MasterRoom));
 				foreach (var candidate in ExitsIn(await reader.Of(masterRoom))) yield return candidate;
 			}
+
+			foreach (var candidate in ExitsIn(await reader.Of(location))) yield return candidate;
 		}
 
-		// Exits carried by a looker that is itself a room.
-		if (flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
+		// MAT_CONTAINER — the looker's location, matched by its *own* name. One candidate, not its
+		// contents: that is MAT_NEIGHBOR above, and the two were crossed for as long as this existed.
+		if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName) && !contentsOnly)
+		{
+			yield return location.WithExitOption();
+		}
+
+		// MAT_CARRIED_EXIT — exits held by a looker that is itself a room.
+		if (walksExits
+				&& flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
 				&& looker.IsRoom
-				&& (location.Object().DBRef != looker.Object().DBRef
-						|| !flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker)))
+				&& (!sameSpot || !flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker)))
 		{
 			foreach (var candidate in ExitsIn(await reader.Of(looker.AsContainer))) yield return candidate;
 		}

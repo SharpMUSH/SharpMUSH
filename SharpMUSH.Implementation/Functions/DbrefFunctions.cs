@@ -603,8 +603,12 @@ public partial class Functions
 
 		var locateFlags = ParseLocateParameters(parametersArg);
 
-		var preferredTypes = GetPreferredTypes(parametersArg);
-		var requireExactType = parametersArg.Contains('F', StringComparison.OrdinalIgnoreCase);
+		// fun_locate: 's' is refused up front unless the executor controls the looker.
+		if (locateFlags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
+				&& !await PermissionService!.Controls(executor, looker))
+		{
+			return "#-1";
+		}
 
 		var maybeFound = await LocateService.Locate(parser, looker, executor, nameArg, locateFlags);
 
@@ -618,88 +622,61 @@ public partial class Functions
 			return "#-1";
 		}
 
-		var found = maybeFound.WithoutError().WithoutNone();
-
-		if (preferredTypes.Any())
-		{
-			var foundType = GetObjectType(found);
-			if (!preferredTypes.Contains(foundType))
-			{
-				if (requireExactType)
-				{
-					return "#-1";
-				}
-			}
-		}
-
-		return $"#{found.Object().DBRef.Number}";
+		// No post-hoc type filter: 'F' is MAT_TYPE, which the search itself honours now. Filtering the
+		// winner afterwards could only ever turn a legitimate match into #-1 while the wrong-type
+		// candidate had already displaced the right-type one during matching.
+		return $"#{maybeFound.WithoutError().WithoutNone().Object().DBRef.Number}";
 	}
 
+	/// <summary>
+	/// fun_locate's switch, which is <b>case-sensitive</b>: uppercase letters name a preferred type or a
+	/// modifier, lowercase ones name a place to search. Upper-casing the argument first — which this did
+	/// — folded 'l' (match the location's name) into 'L' (prefer a lock pass), 'n' (the looker's
+	/// neighbours) into 'N' (no type preference), and 'x' (no partial matches) into 'X' (take the last
+	/// of an ambiguous set), so half the switches meant two things at once.
+	/// </summary>
 	private static LocateFlags ParseLocateParameters(string parameters)
 	{
 		var flags = default(LocateFlags);
-		var paramUpper = parameters.ToUpperInvariant().Replace(" ", "");
 
-		if (paramUpper.Contains('*'))
+		foreach (var c in parameters)
 		{
-			return LocateFlags.All;
+			flags |= c switch
+			{
+				'N' => LocateFlags.NoTypePreference,
+				'E' => LocateFlags.ExitsPreference,
+				'P' => LocateFlags.PlayersPreference,
+				'R' => LocateFlags.RoomsPreference,
+				'T' => LocateFlags.ThingsPreference,
+				'L' => LocateFlags.PreferLockPass,
+				'F' => LocateFlags.OnlyMatchTypePreference | LocateFlags.FailIfNotPreferred,
+				'X' => LocateFlags.UseLastIfAmbiguous,
+				'*' => LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName |
+							 LocateFlags.ExitsInsideOfLooker,
+				'a' => LocateFlags.AbsoluteMatch,
+				'c' => LocateFlags.ExitsInsideOfLooker,
+				'e' => LocateFlags.ExitsInTheRoomOfLooker,
+				'h' => LocateFlags.MatchHereForLookerLocation,
+				'i' => LocateFlags.MatchObjectsInLookerInventory,
+				'l' => LocateFlags.MatchAgainstLookerLocationName,
+				'm' => LocateFlags.MatchMeForLooker,
+				'n' => LocateFlags.MatchObjectsInLookerLocation,
+				'y' => LocateFlags.MatchOptionalWildCardForPlayerName,
+				'p' => LocateFlags.MatchWildCardForPlayerName,
+				'z' => LocateFlags.EnglishStyleMatching,
+				'x' => LocateFlags.NoPartialMatches,
+				's' => LocateFlags.OnlyMatchLookerControlledObjects,
+				_ => default
+			};
 		}
 
-		if (paramUpper.Contains('A')) flags |= LocateFlags.AbsoluteMatch;
-		if (paramUpper.Contains('C')) flags |= LocateFlags.ExitsInTheRoomOfLooker;
-		if (paramUpper.Contains('E')) flags |= LocateFlags.ExitsInsideOfLooker;
-		if (paramUpper.Contains('H')) flags |= LocateFlags.MatchHereForLookerLocation;
-		if (paramUpper.Contains('I')) flags |= LocateFlags.MatchObjectsInLookerInventory;
-		if (paramUpper.Contains('L')) flags |= LocateFlags.MatchAgainstLookerLocationName;
-		if (paramUpper.Contains('M')) flags |= LocateFlags.MatchMeForLooker;
-		if (paramUpper.Contains('N')) flags |= LocateFlags.MatchObjectsInLookerLocation;
-		if (paramUpper.Contains('P')) flags |= LocateFlags.MatchWildCardForPlayerName;
-		if (paramUpper.Contains('Y')) flags |= LocateFlags.MatchOptionalWildCardForPlayerName;
-		if (paramUpper.Contains('Z')) flags |= LocateFlags.EnglishStyleMatching;
-		if (paramUpper.Contains('X')) flags |= LocateFlags.NoPartialMatches | LocateFlags.UseLastIfAmbiguous;
-		if (paramUpper.Contains('S')) flags |= LocateFlags.OnlyMatchLookerControlledObjects;
-
-		// Parse type preference flags (note: some letters are reused)
-		if (paramUpper.Contains('E')) flags |= LocateFlags.ExitsPreference;
-		if (paramUpper.Contains('P')) flags |= LocateFlags.PlayersPreference;
-		if (paramUpper.Contains('R')) flags |= LocateFlags.RoomsPreference;
-		if (paramUpper.Contains('T')) flags |= LocateFlags.ThingsPreference;
-		if (paramUpper.Contains('L')) flags |= LocateFlags.PreferLockPass;
-		// F is "fail if not of the preferred type" — MAT_TYPE, the flag that turns the preference
-		// into a filter during matching rather than only into a post-hoc check on the winner.
-		if (paramUpper.Contains('F')) flags |= LocateFlags.FailIfNotPreferred | LocateFlags.OnlyMatchTypePreference;
-
-		// NOTYPE only when no type letter was given. Setting it unconditionally alongside a preference
-		// said both "prefer things" and "have no preference", and left right_type at zero — which made
-		// every single-match locate() report #-2 WHICH ONE.
+		// NOTYPE is the absence of a preference, not a flag anyone sets alongside one.
 		if (Library.Services.LocateService.PreferredTypes(flags) == SharpObjectTypes.None)
 			flags |= LocateFlags.NoTypePreference;
 
 		return flags;
 	}
 
-	private static HashSet<string> GetPreferredTypes(string parameters)
-	{
-		var types = new HashSet<string>();
-		var paramUpper = parameters.ToUpperInvariant();
-
-		if (paramUpper.Contains('E')) types.Add("EXIT");
-		if (paramUpper.Contains('P')) types.Add("PLAYER");
-		if (paramUpper.Contains('R')) types.Add("ROOM");
-		if (paramUpper.Contains('T')) types.Add("THING");
-
-		return types;
-	}
-
-	private static string GetObjectType(AnySharpObject obj)
-	{
-		return obj.Match(
-			_ => "PLAYER",
-			_ => "ROOM",
-			_ => "EXIT",
-			_ => "THING"
-		);
-	}
 
 	[SharpFunction(Name = "lock", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Lock(IMUSHCodeParser parser, SharpFunctionAttribute _2)

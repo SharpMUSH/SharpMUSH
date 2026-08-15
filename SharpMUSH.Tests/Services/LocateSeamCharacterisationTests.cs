@@ -154,6 +154,59 @@ public class LocateSeamCharacterisationTests
 	}
 
 	[Test]
+	public async Task TheLocationsOwnNameIsMatchedOnlyUnderMatchAgainstLookerLocationName()
+	{
+		// MAT_CONTAINER matches the looker's location *by its own name*; MAT_NEIGHBOR matches what is
+		// inside it. MatchAgainstLookerLocationName was wired to the second, so the scope its name
+		// describes did not exist and the one it gated was another flag's.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(room, _factory.CreateThing(3, "Sword", room));
+
+		var asNeighbour = await _locateService.Locate(_parser, looker, looker, "Shared Room",
+			LocateFlags.MatchObjectsInLookerLocation);
+		var asContainer = await _locateService.Locate(_parser, looker, looker, "Shared Room",
+			LocateFlags.MatchAgainstLookerLocationName);
+
+		await Assert.That(asNeighbour.IsNone).IsTrue();
+		await Assert.That(Found(asContainer)).IsEqualTo(room.Object.DBRef);
+	}
+
+	[Test]
+	public async Task HereDoesNotAnswerForARoomLooker()
+	{
+		// match.c takes Location(where) for "here" and NOTHING when where is a room, so a room asked for
+		// "here" falls through to normal matching rather than answering with itself.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var executor = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(room);
+
+		var result = await _locateService.Locate(_parser, room, executor, "here",
+			LocateFlags.MatchHereForLookerLocation | LocateFlags.PreferLockPass);
+
+		await Assert.That(result.IsNone).IsTrue();
+	}
+
+	[Test]
+	public async Task NamingAScopeSuppressesTheDefaultInjection()
+	{
+		// fun_locate injects the default set only when nothing but the four modifier flags was given.
+		// The old test asked whether four unrelated flags were absent, so asking for the inventory alone
+		// quietly searched the room as well.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(room, _factory.CreateThing(3, "Sword", room));
+
+		var inventoryOnly = await _locateService.Locate(_parser, looker, looker, "Sword",
+			LocateFlags.MatchObjectsInLookerInventory);
+		var modifiersOnly = await _locateService.Locate(_parser, looker, looker, "Sword",
+			LocateFlags.PreferLockPass);
+
+		await Assert.That(inventoryOnly.IsNone).IsTrue();
+		await Assert.That(Found(modifiersOnly)).IsEqualTo(new DBRef(3, 0));
+	}
+
+	[Test]
 	public async Task AnEnglishOrdinalPicksTheNthMatchRatherThanFailing()
 	{
 		// match.c: MATCHED sets bestmatch and done=1 on curr == final. Match_List does this correctly;
@@ -235,11 +288,10 @@ public class LocateSeamCharacterisationTests
 	}
 
 	[Test]
-	public async Task TheDefaultFlagsReachTheGlobalExitsInTheMasterRoom()
+	public async Task TheMasterRoomsGlobalExitsNeedMatchGlobalExits()
 	{
-		// The master-room scope is the one exits can only be reached through. It gates on
-		// ExitsPreference, which LocateFlags.All does not carry (All has ExitsInTheRoomOfLooker
-		// where MAT_EVERYTHING has MAT_EXIT), so no exit list is searched under the default flags.
+		// MAT_GLOBAL is its own flag and is not in MAT_EVERYTHING, so All must not reach the master room
+		// — the scope used to be gated on HasFlag(All), which is a different question and answered yes.
 		var room = _factory.CreateRoom(999, "Shared Room");
 		var elsewhere = _factory.CreateRoom(998, "Elsewhere");
 		var masterRoom = _factory.CreateRoom(MasterRoomNumber, "Master Room");
@@ -247,10 +299,12 @@ public class LocateSeamCharacterisationTests
 		Holds(room);
 		Holds(masterRoom, _factory.CreateExit(8, "Global", ["g"], masterRoom, elsewhere));
 
-		var result = await _locateService.Locate(_parser, looker, looker, "Global", LocateFlags.All);
+		var withoutTheFlag = await _locateService.Locate(_parser, looker, looker, "Global", LocateFlags.All);
+		var withTheFlag = await _locateService.Locate(_parser, looker, looker, "Global",
+			LocateFlags.All | LocateFlags.MatchGlobalExits);
 
-		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(Found(result)).IsEqualTo(new DBRef(8, 0));
+		await Assert.That(withoutTheFlag.IsNone).IsTrue();
+		await Assert.That(Found(withTheFlag)).IsEqualTo(new DBRef(8, 0));
 	}
 
 	[Test]
