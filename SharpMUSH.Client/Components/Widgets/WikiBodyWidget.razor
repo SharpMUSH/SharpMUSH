@@ -33,20 +33,29 @@
     {
         var cfg = ParseConfig();
 
-        if (!string.IsNullOrWhiteSpace(cfg?.Slug))
+        // Blank is not the same as absent to WikiService — it defaults on null only, so a config with
+        // "namespace": "" would build /api/wiki/ns//general/{slug}. Normalize before handing it over.
+        var ns = Blank(cfg?.Namespace);
+        var category = Blank(cfg?.Category);
+        var locale = Blank(cfg?.Locale);
+        var slug = Blank(cfg?.Slug);
+
+        if (slug is not null)
         {
-            (_slug, _namespace, _category, _locale) = (cfg.Slug, cfg.Namespace, cfg.Category, cfg.Locale);
+            (_slug, _namespace, _category, _locale) = (slug, ns, category, locale);
             return;
         }
 
         // No explicit page — fall back to a character biography, from config or from the page context.
-        var character = cfg?.Character is { } configured && !string.IsNullOrWhiteSpace(configured)
-            ? configured
-            : PageContext?.CharacterName;
+        var character = Blank(cfg?.Character) ?? Blank(PageContext?.CharacterName);
 
         (_slug, _namespace, _category, _locale) =
-            (character, WikiRoutes.CharacterNamespace, cfg?.Category, cfg?.Locale);
+            (character, WikiRoutes.CharacterNamespace, category, locale);
     }
+
+    /// <summary>Trims a config value, mapping blank to null so downstream defaults apply.</summary>
+    private static string? Blank(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private WikiBodyConfig? ParseConfig()
     {

@@ -109,6 +109,43 @@ public class WidgetConfigSchemaTests
 	}
 
 	[Test]
+	public async Task TemplateJson_StringDefaultNeedingEscapes_StaysValidJson()
+	{
+		var quoted = JsonSerializer.Serialize("say \"hi\"\\now");
+		var field = new WidgetConfigField("greeting", "string", quoted, "LayCfgNone", []);
+
+		using var doc = JsonDocument.Parse(WidgetConfigSchema.TemplateJson([field]));
+
+		await Assert.That(doc.RootElement.GetProperty("greeting").GetString()).IsEqualTo("say \"hi\"\\now");
+	}
+
+	[Test]
+	public async Task TemplateJson_MalformedAttributeDefault_FallsBackToThePlaceholder()
+	{
+		// A hand-written attribute default that is not a JSON literal must degrade the template
+		// rather than emit something the editor cannot parse.
+		var field = new WidgetConfigField("greeting", "string", "main", "LayCfgNone", []);
+
+		using var doc = JsonDocument.Parse(WidgetConfigSchema.TemplateJson([field]));
+
+		await Assert.That(doc.RootElement.GetProperty("greeting").GetString()).IsEqualTo(string.Empty);
+	}
+
+	[Test]
+	public async Task Describe_OrdersByPrimaryConstructorPosition_NotReflectionOrder()
+	{
+		// GetProperties() order is unspecified; the reference table and Insert template both depend
+		// on declaration order, so it is pinned to the record's parameter positions.
+		var links = WidgetConfigSchema.Describe(typeof(QuickLinksConfig))[0];
+		var order = string.Join(",", links.Children.Select(c => c.Key));
+
+		await Assert.That(order).IsEqualTo("label,url,icon,newTab");
+
+		var wikiBody = string.Join(",", WidgetConfigSchema.Describe(typeof(WikiBodyConfig)).Select(f => f.Key));
+		await Assert.That(wikiBody).IsEqualTo("slug,namespace,category,locale,character");
+	}
+
+	[Test]
 	public async Task EveryDescriptorThatDeclaresAConfigType_DocumentsAtLeastOneKey()
 	{
 		IPortalWidget[] descriptors =

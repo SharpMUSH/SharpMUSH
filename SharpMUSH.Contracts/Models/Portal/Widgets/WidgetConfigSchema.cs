@@ -48,12 +48,16 @@ public static class WidgetConfigSchema
 			return [];
 		}
 
-		var defaults = ConstructorDefaults(configType);
+		var primary = PrimaryConstructor(configType);
 
+		// Type.GetProperties() order is explicitly unspecified, so sort by the primary constructor's
+		// parameter positions — for a positional record that IS declaration order. OrderBy is stable,
+		// so anything not in the constructor keeps its relative metadata order at the end.
 		return configType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
 			.Select(p => (Property: p, Attribute: p.GetCustomAttribute<WidgetConfigKeyAttribute>()))
 			.Where(x => x.Attribute is not null)
-			.Select(x => Field(x.Property, x.Attribute!, defaults, depth))
+			.OrderBy(x => primary.Positions.TryGetValue(x.Property.Name, out var i) ? i : int.MaxValue)
+			.Select(x => Field(x.Property, x.Attribute!, primary.Defaults, depth))
 			.ToList();
 	}
 
@@ -73,19 +77,30 @@ public static class WidgetConfigSchema
 			elementType is null ? [] : Describe(elementType, depth + 1));
 	}
 
+	/// <summary>Parameter positions and default values of the primary constructor.</summary>
+	private sealed record ConstructorShape(
+		IReadOnlyDictionary<string, int> Positions,
+		IReadOnlyDictionary<string, object?> Defaults);
+
 	/// <summary>
-	/// Default values from the record's primary constructor. Positional records expose their
-	/// defaults there and nowhere else, so this is the only place to read them from.
+	/// Reads the record's primary constructor. Positional records expose both their declaration
+	/// order and their defaults there and nowhere else, so this is the only place to read them from.
 	/// </summary>
-	private static IReadOnlyDictionary<string, object?> ConstructorDefaults(
+	private static ConstructorShape PrimaryConstructor(
 		[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type configType)
-		=> configType.GetConstructors()
+	{
+		var parameters = configType.GetConstructors()
 			.OrderByDescending(c => c.GetParameters().Length)
 			.FirstOrDefault()
 			?.GetParameters()
-			.Where(p => p.HasDefaultValue && p.Name is not null)
-			.ToDictionary(p => p.Name!, p => p.DefaultValue, StringComparer.OrdinalIgnoreCase)
-			?? new Dictionary<string, object?>();
+			.Where(p => p.Name is not null)
+			.ToList() ?? [];
+
+		return new ConstructorShape(
+			parameters.ToDictionary(p => p.Name!, p => p.Position, StringComparer.OrdinalIgnoreCase),
+			parameters.Where(p => p.HasDefaultValue)
+				.ToDictionary(p => p.Name!, p => p.DefaultValue, StringComparer.OrdinalIgnoreCase));
+	}
 
 	private static string? ClrDefault(string propertyName, IReadOnlyDictionary<string, object?> defaults)
 		=> defaults.TryGetValue(propertyName, out var value) && value is not null
@@ -95,7 +110,9 @@ public static class WidgetConfigSchema
 	private static string Literal(object value) => value switch
 	{
 		bool b => b ? "true" : "false",
-		string s => $"\"{s}\"",
+		// Serialize rather than hand-quote: a default containing a quote, backslash or control
+		// character would otherwise emit a template that is not valid JSON.
+		string s => JsonSerializer.Serialize(s),
 		_ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty
 	};
 
@@ -174,13 +191,34 @@ public static class WidgetConfigSchema
 			}
 			else
 			{
-				builder.Append(field.Default ?? Placeholder(field.TypeLabel));
+				builder.Append(DefaultLiteral(field));
 			}
 
 			builder.Append(i < fields.Count - 1 ? ",\n" : "\n");
 		}
 
 		builder.Append(new string(' ', (indent - 1) * 2)).Append('}');
+	}
+
+	/// <summary>
+	/// The value to seed a key with. A <see cref="WidgetConfigKeyAttribute.Default"/> is written by
+	/// hand as a JSON literal, so anything that does not parse falls back to the type placeholder —
+	/// a mistyped attribute degrades the template rather than emitting invalid JSON.
+	/// </summary>
+	private static string DefaultLiteral(WidgetConfigField field)
+		=> field.Default is { } literal && IsJson(literal) ? literal : Placeholder(field.TypeLabel);
+
+	private static bool IsJson(string text)
+	{
+		try
+		{
+			using var _ = JsonDocument.Parse(text);
+			return true;
+		}
+		catch (JsonException)
+		{
+			return false;
+		}
 	}
 
 	private static string Placeholder(string typeLabel) => typeLabel switch

@@ -128,6 +128,32 @@ public class WikiBodyWidgetTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task BlankNamespaceAndCategory_FallBackToTheWikiDefaults()
+	{
+		// WikiService defaults on null only, so a blank must not reach it as "".
+		var path = RenderAndCapture(p => p.Add(x => x.Config,
+			BuildConfig(new { Slug = "house-rules", Namespace = "", Category = "   " })));
+
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/general/house-rules");
+	}
+
+	[TUnit.Core.Test]
+	public async Task SurroundingWhitespace_IsTrimmedFromThePageAddress()
+	{
+		var path = RenderAndCapture(p => p.Add(x => x.Config,
+			BuildConfig(new { Slug = " house-rules ", Namespace = " main " })));
+
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/general/house-rules");
+	}
+
+	[TUnit.Core.Test]
+	public async Task BlankSlug_FallsBackToTheProfileContext()
+	{
+		var path = RenderInProfileAndCapture("Gandalf", BuildConfig(new { Slug = "  " }));
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/character/general/Gandalf");
+	}
+
+	[TUnit.Core.Test]
 	public async Task ExplicitSlug_OutranksProfileContext()
 	{
 		// An admin who configures a page means it, even on a profile page.
