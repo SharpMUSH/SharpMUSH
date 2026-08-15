@@ -259,20 +259,30 @@
 
         @if (_openTabs.Count > 0)
         {
-            <div style="display:flex;overflow-x:auto;background:var(--surface-3);border-bottom:1px solid var(--border);min-height:30px;align-items:stretch;flex-shrink:0;">
+            <div class="sc-tabstrip">
                 @for (int i = 0; i < _openTabs.Count; i++)
                 {
                     var idx = i;
                     var tab = _openTabs[i];
-                    var isActive = idx == _activeTabIndex;
-                    <div style="@($"display:flex;align-items:center;gap:0.25rem;padding:0 0.625rem 0 0.75rem;cursor:pointer;white-space:nowrap;border-right:1px solid var(--border);font-size:0.6875rem;font-family:var(--font-mono);background:{(isActive ? "var(--surface)" : "transparent")};color:{(isActive ? "var(--accent)" : "var(--text-faint)")};border-top:{(isActive ? "2px solid var(--accent)" : "2px solid transparent")}")"
-                         @onclick="() => SwitchTabAsync(idx)">
-                        <span>#@tab.Obj.Dbref&amp;@tab.Attr.Name@(tab.IsDirty ? " ●" : "")</span>
-                        <span @onclick:stopPropagation="true" @onclick="() => CloseTabAsync(idx)">
-                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                                           Style="padding:0;min-width:14px;height:14px;width:14px;"
-                                           Color="@(tab.IsDirty ? Color.Warning : Color.Default)" />
-                        </span>
+                    // '#8/DESCRIBE' is how softcode itself addresses an attribute — get(), u(), @force.
+                    // The '&' sigil belongs to the '&DESCRIBE #8=…' set syntax, so '#8&DESCRIBE' is
+                    // neither form and reads as a typo.
+                    var reference = $"#{tab.Obj.Dbref}/{tab.Attr.Name}";
+                    <div class="sc-tab @(idx == _activeTabIndex ? "sc-tab--on" : "")">
+                        <button type="button" class="sc-tab-label" title="@reference"
+                                @onclick="() => SwitchTabAsync(idx)"><span class="sc-tab-ref">#@tab.Obj.Dbref/</span>@tab.Attr.Name</button>
+                        @if (tab.IsDirty)
+                        {
+                            <span class="sc-tab-dirty" title="@Loc["TermUnsaved"]" aria-hidden="true">●</span>
+                        }
+                        @* A button of its own, not a click handler on a wrapper around a MudIconButton:
+                           MudBlazor's buttons stop click propagation unconditionally, so a handler on
+                           any ancestor of one never fires and the 'x' did nothing at all. *@
+                        <button type="button" class="sc-tab-close"
+                                @onclick="() => CloseTabAsync(idx)"
+                                title="@Loc["TermCloseTab", reference]" aria-label="@Loc["TermCloseTab", reference]">
+                            <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.75rem;" />
+                        </button>
                     </div>
                 }
             </div>

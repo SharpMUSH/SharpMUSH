@@ -3468,6 +3468,10 @@
     <value>Törlés</value>
     <comment>MT</comment>
   </data>
+  <data name="TermCloseTab" xml:space="preserve">
+    <value>{0} bezárása</value>
+    <comment>MT — Hungarian nominalises the verb after its object.</comment>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminál törlése</value>
     <comment>MT</comment>
