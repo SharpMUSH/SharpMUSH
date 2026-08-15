@@ -129,7 +129,7 @@
             </div>
         }
 
-        <div class="wiki-edit-savebar">
+        <div class="wiki-edit-savebar toolbar-row">
             <div class="wiki-edit-summary">
                 <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:0.875rem;color:var(--text-faint);" />
                 <input value="@_summary" @oninput="@(e => _summary = e.Value?.ToString() ?? string.Empty)"

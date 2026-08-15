@@ -20,7 +20,9 @@
 .le-btn--primary:hover:not(:disabled) { filter: brightness(1.08); }
 
 .layedit ::deep .le-board { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 1rem; }
-@container page (max-width: 64rem) { .layedit ::deep .le-board { grid-template-columns: 1fr; } }
+/* minmax(0, 1fr), not 1fr: a bare 1fr is minmax(auto, 1fr), so the track floors at the widest
+   item's min-content — the palette's, which measured 402px inside a 330px column. */
+@container page (max-width: 64rem) { .layedit ::deep .le-board { grid-template-columns: minmax(0, 1fr); } }
 
 .le-palette {
     background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg);

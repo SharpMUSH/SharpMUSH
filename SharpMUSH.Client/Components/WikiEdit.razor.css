@@ -163,9 +163,10 @@
     font-family: var(--font-ui); font-size: 0.78125rem; color: var(--text-dim); cursor: pointer;
 }
 
+/* Layout comes from the shared .toolbar-row utility (display/align/wrap); this adds only the
+   savebar's own skin and a slightly wider gap. Without wrapping, the publish button rendered
+   at x=595 inside a 390px column — 205px of overflow. */
 .wiki-edit-savebar {
-    display: flex;
-    align-items: center;
     gap: 0.875rem;
     margin-top: 0.75rem;
     padding: 0.75rem 1rem;
