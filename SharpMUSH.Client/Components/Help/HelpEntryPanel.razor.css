@@ -1,5 +1,9 @@
 /* The entry body is HTML the server rendered from the helpfile markdown, so every rule that has to
    reach inside it needs ::deep. */
+.help-entry {
+    overflow-wrap: anywhere;
+}
+
 .help-entry ::deep h1 {
     margin: 0 0 0.75rem;
     font-family: var(--font-display);

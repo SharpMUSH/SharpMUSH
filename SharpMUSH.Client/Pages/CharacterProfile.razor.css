@@ -1,5 +1,9 @@
-@media (max-width: 760px) {
+.char-profile-banner {
+    height: 160px;
+}
+
+@container page (max-width: 48rem) {
     .char-profile-banner {
-        height: 110px !important;
+        height: 110px;
     }
 }

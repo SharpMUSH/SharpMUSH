@@ -34,7 +34,7 @@
 }
 .lay-badge--on { color: var(--accent); background: rgba(var(--glow), 0.12); border-color: rgba(var(--glow), 0.3); }
 
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     /* minmax(300px,1fr) can overflow very narrow phones — force one column. */
-    .laybrowse-grid { grid-template-columns: 1fr !important; }
+    .laybrowse-grid { grid-template-columns: 1fr; }
 }

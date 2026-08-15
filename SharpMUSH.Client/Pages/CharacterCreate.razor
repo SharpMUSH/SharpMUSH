@@ -8,9 +8,8 @@
 
 <PageTitle>@Loc["NavCreateCharacter"] — @Loc["AppTitle"]</PageTitle>
 
-<div style="padding:var(--cpad);">
-    <MudPaper Elevation="0" Class="pa-6"
-              Style="max-width:560px;margin:0 auto;background:var(--surface);border:1px solid var(--border-soft);">
+<div class="charcreate-page">
+    <MudPaper Elevation="0" Class="charcreate-card pa-6">
         @* An account with no character yet is mid-onboarding, not short of a permission. Login
            routes it straight here, and this line says why it landed here rather than the portal. *@
         @if (_onboarding)
@@ -35,7 +34,7 @@
             <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
         }
 
-        <div style="display:flex;gap:0.5rem;margin-top:1.25rem;">
+        <div class="charcreate-actions">
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy"
                        OnClick="CreateAsync">@Loc["NavCreateCharacter"]</MudButton>
             <MudButton Variant="Variant.Text" Href="/account">@Loc["Cancel"]</MudButton>

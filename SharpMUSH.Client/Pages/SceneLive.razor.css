@@ -1,15 +1,43 @@
+.scene-live-header {
+    padding: 0.75rem var(--cpad);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-3);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.scene-log--live {
+    flex: 1;
+    min-height: 0;
+    padding: 1rem var(--cpad);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.scene-live-compose {
+    padding: 0.625rem var(--cpad);
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
 /* Mobile: let the live header wrap, and trim the generous --cpad horizontal
    padding on the header / pose-log / compose bar so content isn't cramped. */
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .scene-live-header {
         flex-wrap: wrap;
-        gap: 0.5rem !important;
-        padding: 0.625rem 0.875rem !important;
+        gap: 0.5rem;
+        padding: 0.625rem 0.875rem;
     }
-    .scene-live-page .scene-log {
-        padding: 0.75rem 0.875rem !important;
+    .scene-log--live {
+        padding: 0.75rem 0.875rem;
     }
     .scene-live-compose {
-        padding: 0.625rem 0.875rem !important;
+        padding: 0.625rem 0.875rem;
     }
 }

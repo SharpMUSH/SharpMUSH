@@ -1,0 +1,2 @@
+/* Intentionally empty: this route renders a <PageTitle> and redirects to /login?tab=register.
+   EveryRoutablePageHasAStylesheet requires the file to exist. */

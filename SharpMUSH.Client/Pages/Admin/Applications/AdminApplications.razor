@@ -207,8 +207,11 @@
         {
             { x => x.Existing, existing }
         };
+        // FullWidth is required: the dialog body declares container-type, and inline-size
+        // containment zeroes its contribution to the paper's shrink-to-fit width.
         var dialog = await DialogService.ShowAsync<ApplicationEditDialog>(
-            existing is null ? Loc["LayAppsRegister"] : Loc["LayAppEditTitle", existing.Slug], parameters);
+            existing is null ? Loc["LayAppsRegister"] : Loc["LayAppEditTitle", existing.Slug], parameters,
+            new DialogOptions { FullWidth = true });
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
             await LoadAsync();

@@ -1,3 +1,7 @@
+.acct-page {
+    padding: var(--cpad);
+}
+
 .acct-header {
     margin-bottom: 1.75rem;
 }
@@ -36,25 +40,12 @@
     margin-bottom: 1rem;
 }
 
-.acct-subtitle {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--text-dim);
-    margin-bottom: 0.625rem;
-}
-
 .acct-label {
     font-size: 0.6875rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--text-faint);
     margin-right: 0.5rem;
-}
-
-.acct-divider {
-    height: 1px;
-    background: var(--border-soft);
-    margin: 1.125rem 0;
 }
 
 /* ── Buttons ── */
@@ -132,9 +123,21 @@
     color: var(--accent);
 }
 
+.acct-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.875rem;
+}
+
+.acct-row--password {
+    align-items: flex-start;
+    margin-bottom: 0.25rem;
+}
+
 /* ── Token-styled inputs (MudBlazor outlined) ── */
 .acct-card ::deep .acct-input .mud-input-outlined .mud-input-outlined-border {
-    border-color: var(--border) !important;
+    border-color: var(--border);
 }
 
 .acct-card ::deep .acct-input .mud-input-root {
@@ -148,8 +151,8 @@
 }
 
 .acct-card ::deep .acct-input .mud-input.mud-input-focused .mud-input-outlined-border {
-    border-color: var(--accent) !important;
-    border-width: 1px !important;
+    border-color: var(--accent);
+    border-width: 1px;
 }
 
 .acct-card ::deep .acct-input label.mud-input-label {
@@ -166,20 +169,20 @@
 }
 
 .acct-card ::deep .acct-table th {
-    color: var(--text-faint) !important;
+    color: var(--text-faint);
     font-size: 0.6875rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    border-bottom-color: var(--border) !important;
+    border-bottom-color: var(--border);
 }
 
 .acct-card ::deep .acct-table td {
     color: var(--text);
-    border-bottom-color: var(--border-soft) !important;
+    border-bottom-color: var(--border-soft);
 }
 
 .acct-card ::deep .acct-table tr:hover td {
-    background: var(--surface-2) !important;
+    background: var(--surface-2);
 }
 
 /* ── Table scroll wrapper ── */
@@ -187,21 +190,44 @@
     overflow-x: auto;
 }
 
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .acct-page {
-        padding: var(--cpad-mobile) !important;
+        padding: var(--cpad-mobile);
     }
     .acct-card {
-        padding: var(--cpad-mobile) !important;
+        padding: var(--cpad-mobile);
     }
     .acct-title {
         font-size: 1.375rem;
     }
-    .acct-row {
-        flex-direction: column !important;
-        align-items: stretch !important;
+    .acct-row, .acct-row--password {
+        flex-direction: column;
+        align-items: stretch;
     }
     .acct-row .acct-btn {
         width: 100%;
+    }
+
+    ::deep .acct-table thead {
+        display: none;
+    }
+
+    ::deep .acct-table tr {
+        display: block;
+        border-bottom: 1px solid var(--border);
+        padding-block: 0.5rem;
+    }
+
+    ::deep .acct-table td {
+        display: grid;
+        grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+        gap: 0.5rem;
+        border: none;
+    }
+
+    ::deep .acct-table td::before {
+        content: attr(data-label);
+        color: var(--text-dim);
+        font-size: 0.8125rem;
     }
 }

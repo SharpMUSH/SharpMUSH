@@ -10,7 +10,7 @@
     @{
         var hue = Math.Abs((Name ?? "").GetHashCode()) % 360;
     }
-    <div class="char-profile-banner" style="@($"height:160px;background:linear-gradient(135deg,hsl({hue},40%,14%) 0%,hsl({(hue+40)%360},30%,10%) 100%);position:relative;")">
+    <div class="char-profile-banner" style="@($"background:linear-gradient(135deg,hsl({hue},40%,14%) 0%,hsl({(hue+40)%360},30%,10%) 100%);position:relative;")">
         <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(var(--glow),0.12) 0%,transparent 60%);pointer-events:none;"></div>
     </div>
 

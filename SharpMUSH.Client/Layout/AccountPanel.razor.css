@@ -7,7 +7,9 @@
     overflow: hidden;
     outline: none;
     font-family: var(--font-ui);
-    animation: account-panel-grow 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+    /* Reduced motion arrives as a value: globals.css zeroes --motion-*. A rule here could not do
+       it — this bundle is unlayered and outranks the layered sheet that would carry it. */
+    animation: account-panel-grow var(--motion-pop) cubic-bezier(0.16, 1, 0.3, 1);
     transform-origin: bottom left;
 }
 
@@ -27,7 +29,7 @@
 .account-panel-track {
     display: flex;
     width: 200%;
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform var(--motion-slide) cubic-bezier(0.16, 1, 0.3, 1);
     transform: translateX(0%);
 }
 
@@ -189,14 +191,4 @@
 .account-panel-newtab:hover {
     background: var(--surface);
     color: var(--accent);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .account-panel {
-        animation: none;
-    }
-
-    .account-panel-track {
-        transition: none;
-    }
 }

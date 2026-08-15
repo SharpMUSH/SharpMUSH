@@ -1,0 +1,23 @@
+/* CharacterPicker popover width. Global (not scoped .razor.css) because the class sits
+   on the component's root <MudPaper>, which carries MudPaper's scope, not the picker's —
+   a scoped `::deep` rule has no HTML ancestor to anchor to. */
+.char-picker {
+	min-width: 320px;
+}
+@media (max-width: 760px) {
+	.char-picker {
+		min-width: 0;
+		width: 100%;
+		box-sizing: border-box;
+	}
+}
+
+/* A user preference, not a viewport size, so it belongs to neither the shell's breakpoints nor a
+   page's tiers. Zeroing the tokens rather than declaring `animation: none`: this sheet is layered
+   and the scoped bundle is not, so a rule here could never win. */
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--motion-pop: 0s;
+		--motion-slide: 0s;
+	}
+}

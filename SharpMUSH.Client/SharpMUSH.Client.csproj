@@ -67,7 +67,6 @@
 		<AdditionalFiles Include="Components\WikiDisplay.razor" />
 		<AdditionalFiles Include="Components\WikiEdit.razor" />
 		<AdditionalFiles Include="Components\WikiView.razor" />
-		<AdditionalFiles Include="Pages\Admin\AdminConfig.razor" />
 	</ItemGroup>
 
 	<ItemGroup>

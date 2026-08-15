@@ -4,35 +4,37 @@
 @inject WikiService WikiService
 @inject IStringLocalizer<SharedResource> Loc
 
-<MudPaper Class="recent-wiki-widget" Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
-    <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:var(--font-mono);margin-bottom:0.75rem;">@Loc["WidRecentWikiActivity"]</MudText>
-    @if (_loading)
-    {
-        @for (var i = 0; i < 4; i++)
+<div class="recent-wiki-widget">
+    <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
+        <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:var(--font-mono);margin-bottom:0.75rem;">@Loc["WidRecentWikiActivity"]</MudText>
+        @if (_loading)
         {
-            <MudSkeleton Height="32px" Class="mb-1" />
+            @for (var i = 0; i < 4; i++)
+            {
+                <MudSkeleton Height="32px" Class="mb-1" />
+            }
         }
-    }
-    else if (_recentChanges is { Count: > 0 })
-    {
-        @foreach (var wp in _recentChanges.Take(6))
+        else if (_recentChanges is { Count: > 0 })
         {
-            <div style="display:flex;align-items:center;gap:0.625rem;padding:0.375rem 0;border-bottom:1px solid var(--border-soft);">
-                <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(wp.Title.GetHashCode()) % 360},55%,35%);font-size:0.6875rem;width:26px;height:26px;")">
-                    @(wp.Title.Length > 0 ? wp.Title[0].ToString().ToUpper() : "W")
-                </MudAvatar>
-                <div style="flex:1;min-width:0;">
-                    <MudLink Href="@WikiRoutes.PathFor(wp.Namespace, wp.Category, wp.Slug)" Style="color:var(--text);font-size:0.8125rem;font-weight:500;">@wp.Title</MudLink>
-                    <MudText Style="font-size:0.6875rem;color:var(--text-faint);">@wp.UpdatedAt.ToLocalTime().ToString("MMM d")</MudText>
+            @foreach (var wp in _recentChanges.Take(6))
+            {
+                <div style="display:flex;align-items:center;gap:0.625rem;padding:0.375rem 0;border-bottom:1px solid var(--border-soft);">
+                    <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(wp.Title.GetHashCode()) % 360},55%,35%);font-size:0.6875rem;width:26px;height:26px;")">
+                        @(wp.Title.Length > 0 ? wp.Title[0].ToString().ToUpper() : "W")
+                    </MudAvatar>
+                    <div style="flex:1;min-width:0;">
+                        <MudLink Href="@WikiRoutes.PathFor(wp.Namespace, wp.Category, wp.Slug)" Style="color:var(--text);font-size:0.8125rem;font-weight:500;">@wp.Title</MudLink>
+                        <MudText Style="font-size:0.6875rem;color:var(--text-faint);">@wp.UpdatedAt.ToLocalTime().ToString("MMM d")</MudText>
+                    </div>
                 </div>
-            </div>
+            }
         }
-    }
-    else
-    {
-        <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Loc["WidNoRecentWikiActivity"]</MudText>
-    }
-</MudPaper>
+        else
+        {
+            <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Loc["WidNoRecentWikiActivity"]</MudText>
+        }
+    </MudPaper>
+</div>
 
 @code {
     [Parameter] public JsonElement? Config { get; set; }

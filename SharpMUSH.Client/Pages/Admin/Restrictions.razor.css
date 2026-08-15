@@ -197,10 +197,10 @@
 }
 
 .config-section-page ::deep .config-tabs .mud-tab-slider {
-    background: var(--accent) !important;
+    background: var(--accent);
 }
 
-@media (max-width: 700px) {
+@container page (max-width: 48rem) {
     .config-add-fields {
         flex-direction: column;
         align-items: stretch;

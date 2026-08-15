@@ -184,7 +184,7 @@
     border-color: rgba(229, 115, 115, 0.5);
 }
 
-@media (max-width: 700px) {
+@container page (max-width: 48rem) {
     .config-add-fields {
         flex-direction: column;
         align-items: stretch;

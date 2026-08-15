@@ -6,9 +6,22 @@
     align-items: start;
 }
 
-@media (max-width: 900px) {
+.config-section-nav,
+.config-section-body {
+    min-width: 0;
+}
+
+@container page (max-width: 64rem) {
     .config-shell {
         grid-template-columns: 1fr;
         gap: 0.875rem;
+    }
+
+    .config-section-nav {
+        max-height: 17.5rem;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
     }
 }

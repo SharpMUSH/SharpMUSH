@@ -58,12 +58,11 @@
 .play-shell--focus ::deep .sharp-terminal-connbar {
     display: none;
 }
-/* Trim the inner inset: the output carries an inline 0.75rem 1rem pad (needs
-   !important), and the header/input divider lines go too — so output, header,
+/* Trim the inner inset: the header/input divider lines go too, so output, header,
    and input read as one seamless surface filling the page. A hair of padding
    keeps glyphs off the very edge. */
 .play-shell--focus ::deep .sharp-terminal-output {
-    padding: 0.25rem 0.5rem !important;
+    padding: 0.25rem 0.5rem;
 }
 .play-shell--focus .play-term-header {
     border-bottom: none;
@@ -202,6 +201,7 @@
     flex-direction: column;
     gap: 0.875rem;
     overflow-y: auto;
+    overscroll-behavior: contain;
     min-height: 0;
     min-width: 0;
 }
@@ -274,16 +274,16 @@
 }
 /* ::deep — the icon class sits on a child <MudIcon>, so it has no page scope. */
 .play-action ::deep .play-action-icon {
-    font-size: 0.9375rem !important;
+    font-size: 0.9375rem;
     width: 15px;
     height: 15px;
     flex-shrink: 0;
-    color: var(--accent) !important;
+    color: var(--accent);
 }
 
-/* ── Mobile: stack the terminal over the side panel and let the page scroll.
-   The two-column grid + height:100%/overflow:hidden is desktop-only. ── */
-@media (max-width: 760px) {
+/* Stack the terminal over the side panel and let the page scroll. The two-column grid +
+   height:100%/overflow:hidden is above this tier only. */
+@container page (max-width: 64rem) {
     .play-shell {
         grid-template-columns: minmax(0, 1fr);
         height: auto;

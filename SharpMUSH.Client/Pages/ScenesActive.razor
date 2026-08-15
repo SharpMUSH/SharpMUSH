@@ -6,7 +6,7 @@
 
 <PageTitle>@Loc["WidActiveScenes"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="scenes-active-page" style="padding:var(--cpad);">
+<div class="scenes-active-page">
     <div style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:var(--font-mono);">@Loc["SceneArchive"]</div>
     <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:0.25rem;">@Loc["WidActiveScenes"]</MudText>
     <div style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.5rem;">@Loc["ResActiveScenesSubtitle"]</div>
@@ -29,8 +29,7 @@
         <div style="display:flex;flex-direction:column;gap:0.625rem;">
             @foreach (var scene in _scenes)
             {
-                <MudPaper Elevation="0" Class="scene-card"
-                          Style="display:flex;align-items:center;gap:1rem;padding:0.875rem 1.125rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+                <MudPaper Elevation="0" Class="scene-card">
                     <div style="flex:1;min-width:0;">
                         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.1875rem;">
                             <MudChip T="string" Color="Color.Success" Size="Size.Small"
@@ -39,7 +38,7 @@
                                 @SceneTitle(scene)
                             </MudText>
                         </div>
-                        <div class="scene-meta-row" style="display:flex;align-items:center;gap:0.875rem;">
+                        <div class="scene-meta-row">
                             <MudText Style="font-size:0.75rem;color:var(--text-dim);">
                                 <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:0.125rem;font-size:0.8125rem;" />
                                 @scene.RoomName

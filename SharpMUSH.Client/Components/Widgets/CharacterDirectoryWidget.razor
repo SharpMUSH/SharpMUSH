@@ -2,7 +2,7 @@
 @inject CharacterDirectoryService Directory
 @inject IStringLocalizer<SharedResource> Loc
 
-<div>
+<div class="char-dir-widget">
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
         <MudTextField @bind-Value="_search" Immediate="true"
                       Placeholder="@Loc["SearchCharacters"]"
@@ -39,7 +39,7 @@
 
     @if (_loading)
     {
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.875rem;">
+        <div class="char-dir-grid--loading">
             @for (var i = 0; i < 8; i++)
             {
                 <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="80px" Style="border-radius:var(--radius);" />
@@ -67,7 +67,7 @@
                 </MudText>
             }
 
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.75rem;margin-bottom:1.25rem;">
+            <div class="char-dir-grid">
                 @foreach (var character in group)
                 {
                     var hue = Math.Abs(character.Name.GetHashCode()) % 360;

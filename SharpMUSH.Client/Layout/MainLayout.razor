@@ -71,7 +71,9 @@
         </header>
 
         <main class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
-            @Body
+            <div class="phosphor-page">
+                @Body
+            </div>
         </main>
 
         @if (_layout is not null && _layout.Settings.FooterEnabled)

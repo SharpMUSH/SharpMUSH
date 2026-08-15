@@ -89,7 +89,7 @@
     border-left-color: #e5484d;
 }
 
-@media (max-width: 760px) {
+@container page (max-width: 48rem) {
     .app-page {
         padding: var(--cpad-mobile);
     }

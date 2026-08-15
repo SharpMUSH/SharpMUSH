@@ -1,3 +1,7 @@
-@media (max-width: 760px) {
-    ::deep .wiki-body-widget { padding: 0.875rem !important; }
+.wiki-body-widget {
+    container-type: inline-size;
+}
+
+::deep .mud-paper {
+    padding: clamp(0.875rem, 6cqw, 1.25rem);
 }
