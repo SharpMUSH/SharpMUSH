@@ -1,5 +1,9 @@
 using Mediator;
 using NSubstitute;
+using OneOf;
+using OneOf.Types;
+using System.Collections.Concurrent;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -49,6 +53,26 @@ public class LocateSeamCharacterisationTests
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
 			Arg.Any<IPermissionService.InteractType>()).Returns(true);
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
+
+		// The noisy entry points read parser.CurrentState to name the notification's sender.
+		_parser.CurrentState.Returns(new ParserState(
+			Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
+			IterationRegisters: [],
+			RegexRegisters: [],
+			SwitchStack: [],
+			ExecutionStack: [],
+			EnvironmentRegisters: [],
+			CurrentEvaluation: null,
+			ParserFunctionDepth: 0,
+			Function: null,
+			Command: null,
+			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
+			Switches: [],
+			Arguments: [],
+			Executor: null,
+			Enactor: null,
+			Caller: null,
+			Handle: null));
 	}
 
 	/// <summary>Contents of one container; anything else stays empty.</summary>
@@ -62,6 +86,72 @@ public class LocateSeamCharacterisationTests
 
 	private static DBRef Found(AnyOptionalSharpObjectOrError result) =>
 		result.WithoutError().WithoutNone().Object().DBRef;
+
+	private async Task AssertNotified(string message) =>
+		await _notifyService.Received(1).Notify(
+			Arg.Any<AnySharpObject>(),
+			Arg.Is<OneOf<MString, string>>(w => w.IsT1 && w.AsT1 == message),
+			Arg.Any<AnySharpObject>(),
+			Arg.Any<INotifyService.NotificationType>());
+
+	private int ContentsReadsOf(SharpRoom container) =>
+		_mediator.ReceivedCalls()
+			.Count(c => c.GetMethodInfo().Name == nameof(IMediator.CreateStream)
+									&& c.GetArguments()[0] is GetContentsQuery q
+									&& Number(q) == container.Object.DBRef.Number);
+
+	[Test]
+	public async Task ARoomIsReadOnceEvenThoughTwoScopesDrawFromIt()
+	{
+		// The neighbour scope wants the room's non-exits and the exit scope wants its exits, so the room
+		// was queried twice per search. GetContentsQuery's only cache tag is ObjectContents, which any
+		// object moving anywhere in the game invalidates, so the second read is not reliably free.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var elsewhere = _factory.CreateRoom(998, "Elsewhere");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(room,
+			_factory.CreateThing(3, "Sword", room),
+			_factory.CreateExit(8, "North", ["n"], room, elsewhere));
+
+		var result = await _locateService.Locate(_parser, looker, looker, "North", LocateFlags.All);
+
+		await Assert.That(Found(result)).IsEqualTo(new DBRef(8, 0));
+		await Assert.That(ContentsReadsOf(room)).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AnObjectRefusedForControlSaysSoRatherThanClaimingItIsNotThere()
+	{
+		// match.c's nocontrol: the search still fails, but "I don't see that here" is a lie when the
+		// object is in front of you and the answer is that it is not yours.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		var widget = _factory.CreateThing(3, "Widget", room);
+		Holds(room, widget);
+
+		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Is<AnySharpObject>(o => o.Id() == widget.Id()))
+			.Returns(false);
+
+		var result = await _locateService.LocateAndNotifyIfInvalid(_parser, looker, looker, "Widget",
+			LocateFlags.All | LocateFlags.OnlyMatchLookerControlledObjects);
+
+		await Assert.That(result.IsValid()).IsFalse();
+		await AssertNotified(ErrorMessages.Notifications.PermissionDenied);
+	}
+
+	[Test]
+	public async Task AnObjectThatSimplyIsNotThereStillSaysSo()
+	{
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(room, _factory.CreateThing(3, "Widget", room));
+
+		var result = await _locateService.LocateAndNotifyIfInvalid(_parser, looker, looker, "Anvil",
+			LocateFlags.All | LocateFlags.OnlyMatchLookerControlledObjects);
+
+		await Assert.That(result.IsNone).IsTrue();
+		await AssertNotified(ErrorMessages.Notifications.NoMatch);
+	}
 
 	[Test]
 	public async Task AnEnglishOrdinalPicksTheNthMatchRatherThanFailing()

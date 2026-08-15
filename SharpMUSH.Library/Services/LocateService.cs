@@ -45,23 +45,44 @@ public partial class LocateService(
 
 		/// <summary>The Nth item of an ordinal search has been found; every remaining scope is skipped.</summary>
 		public bool Done { get; set; }
+
+		/// <summary>
+		/// match.c's <c>nocontrol</c>: something answered to the name and was dropped only because
+		/// <c>MAT_CONTROL</c> was set and the executor does not control it. It does not change what is
+		/// returned — the search still fails — it changes what the noisy path *says*, since "I can't see
+		/// that here" is a lie when the object is right there and the answer is that it isn't yours.
+		/// </summary>
+		public bool NoControl { get; set; }
 	}
 
-	private static string LocateNotifyMessage(AnyOptionalSharpObjectOrError loc)
-		=> loc.IsNone
-			? ErrorMessages.Notifications.NoMatch
-			: loc.AsError.Value == ErrorMessages.Returns.CantSeeThat
-				? ErrorMessages.Notifications.CantSeeThat
-				: loc.AsError.Value;
+	// Notify's sender is nullable and a locate need not have a caller — a system-originated one has
+	// none. WithoutNone() threw ArgumentException there, so the notification the caller asked for became
+	// an exception instead.
+	private static AnySharpObject? Sender(AnyOptionalSharpObject caller)
+		=> caller.IsNone ? null : caller.WithoutNone();
+
+	/// <summary>What a failed noisy locate tells the executor. match.c picks between exactly these three.</summary>
+	private static string LocateNotifyMessage(AnyOptionalSharpObjectOrError loc, bool noControl)
+		=> loc switch
+		{
+			{ IsError: true, AsError.Value: var e } when e == ErrorMessages.Returns.AmbiguousMatch
+				=> ErrorMessages.Notifications.AmbiguousMatch,
+			_ when noControl => ErrorMessages.Notifications.PermissionDenied,
+			{ IsNone: true } => ErrorMessages.Notifications.NoMatch,
+			{ IsError: true, AsError.Value: var e } when e == ErrorMessages.Returns.CantSeeThat
+				=> ErrorMessages.Notifications.CantSeeThat,
+			{ IsError: true, AsError.Value: var e } => e,
+			_ => ErrorMessages.Notifications.NoMatch
+		};
 
 	public async ValueTask<AnyOptionalSharpObjectOrError> LocateAndNotifyIfInvalid(IMUSHCodeParser parser,
 		AnySharpObject looker, AnySharpObject executor, string name, LocateFlags flags)
 	{
-		var loc = await Locate(parser, looker, executor, name, flags);
+		var (loc, noControl) = await LocateWithDiagnosis(looker, executor, name, flags);
 		var caller = await parser.CurrentState.CallerObject(mediator);
 		if (!loc.IsValid())
 		{
-			await notifyService.Notify(executor, LocateNotifyMessage(loc), caller.WithoutNone());
+			await notifyService.Notify(executor, LocateNotifyMessage(loc, noControl), Sender(caller));
 		}
 
 		return loc;
@@ -71,14 +92,14 @@ public partial class LocateService(
 		AnySharpObject looker, AnySharpObject executor,
 		string name, LocateFlags flags)
 	{
-		var loc = await Locate(parser, looker, executor, name, flags);
+		var (loc, noControl) = await LocateWithDiagnosis(looker, executor, name, flags);
 		var caller = await parser.CurrentState.CallerObject(mediator);
 		if (loc.IsValid())
 		{
 			return loc.AsAnyObject;
 		}
 
-		await notifyService.Notify(executor, LocateNotifyMessage(loc), caller.WithoutNone());
+		await notifyService.Notify(executor, LocateNotifyMessage(loc, noControl), Sender(caller));
 		var callStateMessage = loc.IsError ? loc.AsError.Value : ErrorMessages.Returns.NoMatch;
 
 		return new Error<CallState>(new CallState(callStateMessage));
@@ -111,6 +132,18 @@ public partial class LocateService(
 		AnySharpObject executor,
 		string name,
 		LocateFlags flags)
+		=> (await LocateWithDiagnosis(looker, executor, name, flags)).Result;
+
+	/// <summary>
+	/// <see cref="Locate"/>, plus the one thing a caller cannot read off its answer: whether the search
+	/// came up empty because a candidate was refused for control. Only the noisy entry points want it,
+	/// and it stays off the public surface because it changes nothing about what is found.
+	/// </summary>
+	private async ValueTask<(AnyOptionalSharpObjectOrError Result, bool NoControl)> LocateWithDiagnosis(
+		AnySharpObject looker,
+		AnySharpObject executor,
+		string name,
+		LocateFlags flags)
 	{
 		if (!flags.HasFlag(LocateFlags.PreferLockPass)
 				&& !flags.HasFlag(LocateFlags.FailIfNotPreferred)
@@ -129,19 +162,19 @@ public partial class LocateService(
 				!await executor.IsSee_All() && !await Nearby(executor, looker) &&
 				!await permissionService.Controls(executor, looker))
 		{
-			return new Error<string>(ErrorMessages.Returns.CannotEvaluateOnLooker);
+			return (new Error<string>(ErrorMessages.Returns.CannotEvaluateOnLooker), false);
 		}
 
-		var match = await LocateMatch(executor, looker, flags, name);
-		if (match.IsError) return match.AsError;
-		if (match.IsNone) return match.AsNone;
+		var (match, noControl) = await LocateMatch(executor, looker, flags, name);
+		if (match.IsError) return (match.AsError, noControl);
+		if (match.IsNone) return (match.AsNone, noControl);
 
 		var result = match.WithoutError().WithoutNone();
 
 		// PennMUSH: absolute dbref matches (#N) always bypass visibility checks.
 		if (flags.HasFlag(LocateFlags.NoVisibilityCheck) || HelperFunctions.ParseDbRef(name).IsSome())
 		{
-			return result.WithNoneOption().WithErrorOption();
+			return (result.WithNoneOption().WithErrorOption(), noControl);
 		}
 
 		var location = await FriendlyWhereIs(result);
@@ -150,10 +183,10 @@ public partial class LocateService(
 				((!await result.IsDarkLegal() || await location.WithExitOption().IsLight() || await result.IsLight()) &&
 				 await permissionService.CanInteract(executor, result, IPermissionService.InteractType.See)))
 		{
-			return result.WithNoneOption().WithErrorOption();
+			return (result.WithNoneOption().WithErrorOption(), noControl);
 		}
 
-		return new Error<string>(ErrorMessages.Returns.CantSeeThat);
+		return (new Error<string>(ErrorMessages.Returns.CantSeeThat), noControl);
 	}
 
 	// A player-name match is GLOBAL in PennMUSH: pmatch()/player lookup resolves any player by name
@@ -193,7 +226,7 @@ public partial class LocateService(
 	// PennMUSH's match_result has one object; SharpMUSH splits it. `executor` is the permission
 	// subject — every Controls/CanInteract/HasLongFingers question is asked of it. `looker` is the
 	// search origin: whose surroundings are walked, and whose "me" and "here" these are.
-	private async ValueTask<AnyOptionalSharpObjectOrError> LocateMatch(
+	private async ValueTask<(AnyOptionalSharpObjectOrError Match, bool NoControl)> LocateMatch(
 		AnySharpObject executor,
 		AnySharpObject looker,
 		LocateFlags flags,
@@ -226,10 +259,10 @@ public partial class LocateService(
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 					|| await permissionService.Controls(executor, looker))
 			{
-				return looker.WithNoneOption().WithErrorOption();
+				return (looker.WithNoneOption().WithErrorOption(), false);
 			}
 
-			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+			return (new Error<string>(ErrorMessages.Returns.PermissionDenied), true);
 		}
 
 		if (flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
@@ -239,10 +272,10 @@ public partial class LocateService(
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 					|| await permissionService.Controls(executor, looker))
 			{
-				return (await FriendlyWhereIs(looker)).WithExitOption().WithNoneOption().WithErrorOption();
+				return ((await FriendlyWhereIs(looker)).WithExitOption().WithNoneOption().WithErrorOption(), false);
 			}
 
-			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+			return (new Error<string>(ErrorMessages.Returns.PermissionDenied), true);
 		}
 
 		if ((flags.HasFlag(LocateFlags.MatchOptionalWildCardForPlayerName)
@@ -276,10 +309,10 @@ public partial class LocateService(
 					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 							|| await permissionService.Controls(executor, found))
 					{
-						return match;
+						return (match, false);
 					}
 
-					return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+					return (new Error<string>(ErrorMessages.Returns.PermissionDenied), true);
 				}
 			}
 		}
@@ -301,10 +334,10 @@ public partial class LocateService(
 					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 							|| await permissionService.Controls(executor, found))
 					{
-						return match;
+						return (match, false);
 					}
 
-					return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+					return (new Error<string>(ErrorMessages.Returns.PermissionDenied), true);
 				}
 			}
 		}
@@ -319,17 +352,17 @@ public partial class LocateService(
 
 		// match.c: a `final` search that never reached the Nth item leaves bestmatch NOTHING, and
 		// ambiguity is only ever considered for a non-ordinal search that matched more than once.
-		if (state.Best.IsNone) return new None();
+		if (state.Best.IsNone) return (new None(), state.NoControl);
 
 		if (state.Final == 0
 				&& state.Count > 1
 				&& state.RightType != 1
 				&& !flags.HasFlag(LocateFlags.UseLastIfAmbiguous))
 		{
-			return new Error<string>(ErrorMessages.Returns.AmbiguousMatch);
+			return (new Error<string>(ErrorMessages.Returns.AmbiguousMatch), state.NoControl);
 		}
 
-		return state.Best;
+		return (state.Best, state.NoControl);
 	}
 
 	/// <summary>
@@ -344,20 +377,22 @@ public partial class LocateService(
 		AnySharpContainer location,
 		LocateFlags flags)
 	{
+		var reader = new ContentsReader(mediator);
+
 		if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) && looker.IsContainer)
 		{
-			await foreach (var candidate in ContentsOf(looker.AsContainer)) yield return candidate;
+			foreach (var candidate in ContentsOf(await reader.Of(looker.AsContainer))) yield return candidate;
 		}
 
 		if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
 				&& location.Object().DBRef != looker.Object().DBRef)
 		{
-			await foreach (var candidate in ContentsOf(location)) yield return candidate;
+			foreach (var candidate in ContentsOf(await reader.Of(location))) yield return candidate;
 		}
 
 		if (flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker) && location.IsRoom)
 		{
-			await foreach (var candidate in ExitsIn(location)) yield return candidate;
+			foreach (var candidate in ExitsIn(await reader.Of(location))) yield return candidate;
 
 			var remote = !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
 																	LocateFlags.OnlyMatchObjectsInLookerInventory);
@@ -367,14 +402,14 @@ public partial class LocateService(
 				var zone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
 				if (!zone.IsNone && zone.Known.IsRoom)
 				{
-					await foreach (var candidate in ExitsIn(zone.Known.AsRoom)) yield return candidate;
+					foreach (var candidate in ExitsIn(await reader.Of(zone.Known.AsRoom))) yield return candidate;
 				}
 			}
 
 			if (flags.HasFlag(LocateFlags.All) && remote)
 			{
 				var masterRoom = new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.MasterRoom));
-				await foreach (var candidate in ExitsIn(masterRoom)) yield return candidate;
+				foreach (var candidate in ExitsIn(await reader.Of(masterRoom))) yield return candidate;
 			}
 		}
 
@@ -384,26 +419,47 @@ public partial class LocateService(
 				&& (location.Object().DBRef != looker.Object().DBRef
 						|| !flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker)))
 		{
-			await foreach (var candidate in ExitsIn(looker.AsContainer)) yield return candidate;
+			foreach (var candidate in ExitsIn(await reader.Of(looker.AsContainer))) yield return candidate;
+		}
+	}
+
+	/// <summary>
+	/// One read of a container per locate. The neighbour scope and the room's exit scope draw from the
+	/// same container, so a search read it twice — and <see cref="GetContentsQuery"/>'s only cache tag is
+	/// <c>ObjectContents</c>, which any object moving anywhere in the game invalidates, so the second
+	/// read is not reliably a cache hit. Holding the list costs nothing that was not already paid:
+	/// <c>StreamQueryCachingBehavior</c> materialises the stream a layer down regardless.
+	/// </summary>
+	private sealed class ContentsReader(IMediator mediator)
+	{
+		private readonly Dictionary<int, IReadOnlyList<AnySharpContent>> _read = [];
+
+		public ValueTask<IReadOnlyList<AnySharpContent>> Of(AnySharpContainer container)
+			=> Of(container.Object().DBRef.Number, new GetContentsQuery(container));
+
+		public ValueTask<IReadOnlyList<AnySharpContent>> Of(DBRef container)
+			=> Of(container.Number, new GetContentsQuery(container));
+
+		private async ValueTask<IReadOnlyList<AnySharpContent>> Of(int number, GetContentsQuery query)
+		{
+			if (_read.TryGetValue(number, out var already)) return already;
+
+			var stream = mediator.CreateStream(query);
+			IReadOnlyList<AnySharpContent> contents = stream is null ? [] : await stream.ToListAsync();
+
+			_read[number] = contents;
+			return contents;
 		}
 	}
 
 	// PennMUSH keeps exits on their own chain, so Contents() never yields one and the neighbour scope
 	// and the exit scope cannot overlap. GetContentsQuery returns both, so the exclusion is ours: without
 	// it an exit in the room is matched twice — once here, once in ExitsIn — and reads as ambiguous.
-	private IAsyncEnumerable<AnySharpObject> ContentsOf(AnySharpContainer container)
-		=> mediator.CreateStream(new GetContentsQuery(container))?.Where(x => !x.IsExit).Select(x => x.WithRoomOption())
-			 ?? AsyncEnumerable.Empty<AnySharpObject>();
+	private static IEnumerable<AnySharpObject> ContentsOf(IReadOnlyList<AnySharpContent> contents)
+		=> contents.Where(x => !x.IsExit).Select(x => x.WithRoomOption());
 
-	private IAsyncEnumerable<AnySharpObject> ExitsIn(AnySharpContainer container)
-		=> ExitsIn(new GetContentsQuery(container));
-
-	private IAsyncEnumerable<AnySharpObject> ExitsIn(DBRef container)
-		=> ExitsIn(new GetContentsQuery(container));
-
-	private IAsyncEnumerable<AnySharpObject> ExitsIn(GetContentsQuery query)
-		=> mediator.CreateStream(query)?.Where(x => x.IsExit).Select(x => new AnySharpObject(x.AsExit))
-			 ?? AsyncEnumerable.Empty<AnySharpObject>();
+	private static IEnumerable<AnySharpObject> ExitsIn(IReadOnlyList<AnySharpContent> contents)
+		=> contents.Where(x => x.IsExit).Select(x => new AnySharpObject(x.AsExit));
 
 	/// <summary>PennMUSH's <c>MATCH_LIST</c> over one candidate list, accumulating into <paramref name="state"/>.</summary>
 	public async ValueTask MatchList(
@@ -525,7 +581,9 @@ public partial class LocateService(
 				&& !await permissionService.Controls(executor, cur))
 		{
 			// match.c sets nocontrol and continues: an uncontrolled candidate is skipped, and any
-			// previously found controlled match survives.
+			// previously found controlled match survives. The flag is what makes the failure say
+			// "Permission denied." rather than "I don't see that here."
+			state.NoControl = true;
 			return;
 		}
 
