@@ -901,8 +901,6 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	// PennMUSH's /letter switch is deliberately absent: SharpPower has no single-letter abbreviation to
-	// change, so offering the switch would only ever be a no-op.
 	[SharpCommand(Name = "@POWER",
 		Switches = ["ADD", "TYPE", "LIST", "RESTRICT", "DELETE", "ALIAS", "DISABLE", "ENABLE", "DECOMPILE"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "power"])]
@@ -913,8 +911,7 @@ public partial class Commands
 
 		if (switches.Contains("LIST"))
 		{
-			// PennMUSH src/flags.c list_all_flags filters by a glob pattern and hides disabled
-			// definitions from everyone but God.
+			// list_all_flags hides disabled definitions from everyone but God.
 			var pattern = parser.CurrentState.Arguments.Count > 0
 				? parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim()
 				: string.Empty;
@@ -949,8 +946,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Everything below manipulates power *definitions*, which PennMUSH src/flags.c reserves for God.
-		// /decompile only reads, so it stays open like /list.
+		// Editing power definitions is God-only in flags.c; /decompile only reads, so it stays open like /list.
 		if (!switches.Contains("DECOMPILE") && switches.Any() && !executor.IsGod())
 		{
 			await NotifyService!.NotifyLocalized(executor,
@@ -1269,23 +1265,20 @@ public partial class Commands
 			}
 		}
 
-		// Any switch that reached here is one we declare but do not handle; never let it fall through
-		// into the object-manipulating form below.
+		// A declared-but-unhandled switch must not fall through into the grant form below.
 		if (switches.Any())
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerUsage), executor);
 			return CallState.Empty;
 		}
 
-		// No switch: PennMUSH src/cmds.c cmd_power falls through to src/wiz.c do_power.
 		var powerArgs = parser.CurrentState.Arguments;
 		var objectArg = powerArgs.Count > 0 ? powerArgs["0"].Message!.ToPlainText().Trim() : string.Empty;
 		var powerArg = powerArgs.Count > 1 ? powerArgs["1"].Message!.ToPlainText() : string.Empty;
 
 		if (string.IsNullOrWhiteSpace(powerArg))
 		{
-			// "@power <power>" reports on the power itself — do_power delegates to do_flag_info("POWER", ...).
-			// It does NOT list the powers held by an object.
+			// "@power <power>" describes the power itself. It does NOT list an object's powers.
 			if (string.IsNullOrWhiteSpace(objectArg))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerUsage), executor);
@@ -1310,9 +1303,8 @@ public partial class Commands
 			return new CallState(MModule.single(namedPower.Name));
 		}
 
-		// "@power <object>=[!]<power> [[!]<power>...]" grants or revokes powers, and is wizard-only.
-		// do_power refuses non-wizards before it even tries to resolve <object>, so a non-wizard is told
-		// they may not grant powers rather than that the object could not be found.
+		// do_power refuses non-wizards before resolving <object>, so a non-wizard is told they may not
+		// grant powers rather than that the object could not be found.
 		if (!await executor.IsWizard())
 		{
 			await NotifyService!.Notify(executor, ErrorMessages.Notifications.OnlyWizardsMayGrantPowers);

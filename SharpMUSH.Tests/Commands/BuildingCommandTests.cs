@@ -676,8 +676,7 @@ public class BuildingCommandTests
 
 		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("look"));
 
-		// The @descformat evaluation is queued, so the notification can land after CommandParse
-		// returns; poll for it rather than asserting into the race.
+		// The @descformat evaluation is queued, so it can land after CommandParse returns.
 		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"THINGDESC_{token.ToUpper()}");
 
 		await NotifyService
@@ -708,8 +707,7 @@ public class BuildingCommandTests
 
 		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("look"));
 
-		// The @idescformat evaluation is queued, so the notification can land after CommandParse
-		// returns; poll for it rather than asserting into the race.
+		// The @idescformat evaluation is queued, so it can land after CommandParse returns.
 		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"INSIDEDESC_{token.ToUpper()}");
 
 		await NotifyService

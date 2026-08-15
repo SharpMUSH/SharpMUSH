@@ -276,10 +276,8 @@ public class ManipulateSharpObjectService(
 	/// Resolves a power by name or alias.
 	/// </summary>
 	/// <remarks>
-	/// <see cref="SharpPower.Alias"/> is declared non-nullable but the seeded powers store null for "no alias", so an
-	/// unguarded <c>x.Alias.Equals</c> throws on the first aliasless power the stream yields — which, since the
-	/// predicate runs over every power until one matches, made setting or clearing ANY power a
-	/// <see cref="NullReferenceException"/>. GetPowerQueryHandler already guards the same comparison this way.
+	/// <see cref="SharpPower.Alias"/> is declared non-nullable but the seeded powers store null for "no alias", so the
+	/// null guard is load-bearing: without it the predicate throws on the first aliasless power the stream yields.
 	/// </remarks>
 	public ValueTask<SharpPower?> FindPower(string powerOrPowerAlias) =>
 		mediator.CreateStream(new GetPowersQuery())
@@ -288,9 +286,8 @@ public class ManipulateSharpObjectService(
 				|| (x.Alias is not null && x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)));
 
 	/// <summary>
-	/// PennMUSH src/wiz.c do_power, the shared body of the <c>@power &lt;object&gt;=...</c> command and the
-	/// side-effect form of <c>powers()</c>: wizard-only, refuses unregistered players and God, then applies
-	/// each space-separated token, granting it or — with a leading <c>!</c> — revoking it.
+	/// PennMUSH src/wiz.c do_power: the shared body of <c>@power &lt;object&gt;=...</c> and the side-effect
+	/// form of <c>powers()</c>.
 	/// </summary>
 	public async ValueTask<CallState> SetOrUnsetPowers(AnySharpObject executor, AnySharpObject obj,
 		string powerSpecification, bool notify)
@@ -352,8 +349,7 @@ public class ManipulateSharpObjectService(
 	public async ValueTask<CallState> SetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias,
 		bool notify)
 	{
-		// PennMUSH src/flags.c set_power resolves the power before any permission check, and names the
-		// *power* — not the object — when it cannot.
+		// set_power resolves the power before any permission check, and names the *power* when it cannot.
 		var found = await FindPower(powerOrPowerAlias);
 
 		if (found is null)

@@ -135,8 +135,7 @@ public class FlagAndPowerCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
 
-		// The notify substitute is a session-wide singleton, so any other test that lists powers as God
-		// also matches this specification. Assert the call happened, not how many times.
+		// The notify substitute is a session-wide singleton, so assert the call happened, not how many times.
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -380,9 +379,7 @@ public class FlagAndPowerCommandTests
 		return powers.Select(p => p.Name).ToArray();
 	}
 
-	/// <summary>
-	/// PennMUSH src/wiz.c do_power: with no switch, <c>@power &lt;object&gt;=&lt;power&gt;</c> grants the power.
-	/// </summary>
+	// PennMUSH src/wiz.c do_power: with no switch, @power <object>=<power> grants the power.
 	[Test]
 	public async ValueTask Power_Grant_SetsPowerOnObject()
 	{
@@ -397,9 +394,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
 	}
 
-	/// <summary>
-	/// PennMUSH src/flags.c set_power: granting emits "&lt;name&gt; - &lt;power&gt; granted."
-	/// </summary>
+	// PennMUSH src/flags.c set_power: granting emits "<name> - <power> granted."
 	[Test]
 	public async ValueTask Power_Grant_NotifiesGranted()
 	{
@@ -420,9 +415,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
 	}
 
-	/// <summary>
-	/// PennMUSH src/wiz.c do_power: a leading <c>!</c> on the power name revokes it.
-	/// </summary>
+	// PennMUSH src/wiz.c do_power: a leading ! on the power name revokes it.
 	[Test]
 	public async ValueTask Power_Revoke_ClearsPowerOnObject()
 	{
@@ -439,9 +432,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
 	}
 
-	/// <summary>
-	/// PennMUSH src/wiz.c do_power splits the right-hand side on spaces and applies each token.
-	/// </summary>
+	// PennMUSH src/wiz.c do_power splits the right-hand side on spaces and applies each token.
 	[Test]
 	public async ValueTask Power_Grant_AppliesEverySpaceSeparatedToken()
 	{
@@ -462,9 +453,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
 	}
 
-	/// <summary>
-	/// PennMUSH src/flags.c set_power reports the unrecognised <b>power</b> name, not the object's name.
-	/// </summary>
+	// PennMUSH src/flags.c set_power reports the unrecognised power name, not the object's name.
 	[Test]
 	public async ValueTask Power_Grant_UnknownPowerNamesThePower()
 	{
@@ -485,9 +474,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
 	}
 
-	/// <summary>
-	/// PennMUSH src/wiz.c do_power: "Only wizards may grant powers."
-	/// </summary>
+	// PennMUSH src/wiz.c do_power: "Only wizards may grant powers."
 	[Test]
 	public async ValueTask Power_Grant_RequiresWizard()
 	{
@@ -506,10 +493,7 @@ public class FlagAndPowerCommandTests
 				null, INotifyService.NotificationType.Announce);
 	}
 
-	/// <summary>
-	/// PennMUSH src/wiz.c do_power: with no "=", @power shows information about the named power
-	/// (do_flag_info), it does not list the powers on an object.
-	/// </summary>
+	// PennMUSH src/wiz.c do_power: with no "=", @power describes the named power; it does not list an object's powers.
 	[Test]
 	public async ValueTask Power_NoEquals_ShowsPowerInformation()
 	{
@@ -524,9 +508,7 @@ public class FlagAndPowerCommandTests
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
-	/// <summary>
-	/// PennMUSH src/flags.c do_flag_info: an unknown name reports "No such power."
-	/// </summary>
+	// PennMUSH src/flags.c do_flag_info: an unknown name reports "No such power."
 	[Test]
 	public async ValueTask Power_NoEquals_UnknownPowerReportsNoSuchPower()
 	{
@@ -538,10 +520,7 @@ public class FlagAndPowerCommandTests
 			nameof(ErrorMessages.Notifications.NoSuchPowerInfo), executor, executor)).IsTrue();
 	}
 
-	/// <summary>
-	/// PennMUSH src/flags.c: every power *definition* switch is God-only. A wizard is not enough,
-	/// and the switches must never fall through to the object-manipulating form.
-	/// </summary>
+	// PennMUSH src/flags.c: every power definition switch is God-only; a wizard is not enough.
 	[Test]
 	public async ValueTask Power_Add_RequiresGod()
 	{
@@ -558,10 +537,7 @@ public class FlagAndPowerCommandTests
 			nameof(ErrorMessages.Notifications.NotEnoughMagic), testPlayer.DbRef, testPlayer.DbRef)).IsTrue();
 	}
 
-	/// <summary>
-	/// PennMUSH src/fundb.c fun_powers routes the side-effect form through do_power, so powers()
-	/// honours the same "!" revoke prefix as @power.
-	/// </summary>
+	// PennMUSH src/fundb.c fun_powers routes powers() through do_power, so it honours the same "!" revoke prefix.
 	[Test]
 	public async ValueTask PowersFunction_SideEffect_HonoursRevokePrefix()
 	{
@@ -578,9 +554,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
 	}
 
-	/// <summary>
-	/// PennMUSH src/flags.c list_all_flags filters the listing by a glob pattern.
-	/// </summary>
+	// PennMUSH src/flags.c list_all_flags filters the listing by a glob pattern.
 	[Test]
 	public async ValueTask Power_List_FiltersByPattern()
 	{
