@@ -52,6 +52,43 @@ public class WidgetConfigDialogTests : BunitContext
 		return provider;
 	}
 
+	/// <summary>Clicks Apply and returns the dialog markup, which carries any validation error.</summary>
+	private static string SaveAndRead(IRenderedComponent<MudDialogProvider> provider)
+	{
+		provider.FindAll("button").First(b => b.TextContent.Contains("LayApply")).Click();
+		return provider.Markup;
+	}
+
+	[TUnit.Core.Test]
+	[Arguments("[1, 2, 3]")]
+	[Arguments("\"just a string\"")]
+	[Arguments("42")]
+	[Arguments("null")]
+	public async Task NonObjectJson_IsRejected(string json)
+	{
+		// These all parse, and every widget then ignores them — so saving one would look like it
+		// worked and change nothing.
+		var provider = await RenderDialogAsync("WikiBody", json);
+
+		await Assert.That(SaveAndRead(provider)).Contains("LayCfgNotAnObject");
+	}
+
+	[TUnit.Core.Test]
+	public async Task ObjectJson_IsAccepted()
+	{
+		var provider = await RenderDialogAsync("WikiBody", "{\"slug\":\"house-rules\"}");
+
+		await Assert.That(SaveAndRead(provider)).DoesNotContain("LayCfgNotAnObject");
+	}
+
+	[TUnit.Core.Test]
+	public async Task MalformedJson_StillReportsAParseError()
+	{
+		var provider = await RenderDialogAsync("WikiBody", "{not json");
+
+		await Assert.That(SaveAndRead(provider)).Contains("LayInvalidJson");
+	}
+
 	[TUnit.Core.Test]
 	public async Task ConfigurableWidget_ListsItsKeysAndDefaults()
 	{

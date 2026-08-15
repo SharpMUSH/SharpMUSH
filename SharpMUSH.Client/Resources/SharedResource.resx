@@ -2116,6 +2116,9 @@
   <data name="LayCfgInsertTemplate" xml:space="preserve">
     <value>Insert template</value>
   </data>
+  <data name="LayCfgNotAnObject" xml:space="preserve">
+    <value>Configuration must be a JSON object, like { "key": "value" }.</value>
+  </data>
   <data name="LayCfgWikiBodySlug" xml:space="preserve">
     <value>Slug of the page to render. Set this to show any wiki page.</value>
   </data>

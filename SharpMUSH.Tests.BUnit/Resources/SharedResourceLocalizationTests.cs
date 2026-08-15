@@ -125,7 +125,7 @@ public class SharedResourceLocalizationTests
 		string[] keys =
 		[
 			"LayCfgReferenceTitle", "LayCfgNone", "LayCfgColKey", "LayCfgColType",
-			"LayCfgColDefault", "LayCfgColDescription", "LayCfgInsertTemplate"
+			"LayCfgColDefault", "LayCfgColDescription", "LayCfgInsertTemplate", "LayCfgNotAnObject"
 		];
 
 		await Assert.That(keys.Where(k => loc[k].ResourceNotFound).ToList()).IsEmpty();

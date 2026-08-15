@@ -165,7 +165,15 @@
 
         try
         {
-            using var _ = JsonDocument.Parse(_json);
+            using var parsed = JsonDocument.Parse(_json);
+
+            // Every widget reads its config as an object and ignores anything else, so an array or a
+            // scalar would save cleanly and then silently do nothing. Refuse it here instead.
+            if (parsed.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                _error = Loc["LayCfgNotAnObject"];
+                return;
+            }
         }
         catch (JsonException ex)
         {
