@@ -92,7 +92,9 @@ public class WidgetConfigDialogTests : BunitContext
 
 		cut.FindAll("button").First(b => b.TextContent.Contains("LayCfgInsertTemplate")).Click();
 
-		var json = cut.FindComponent<MudTextField<string>>().Instance.Value;
+		// Read the rendered editor rather than the MudTextField instance — reaching into a component's
+		// bound parameter is what MUD0012 warns about, and the DOM is what an admin actually sees.
+		var json = cut.Find("textarea").TextContent;
 		await Assert.That(json).Contains("\"slug\"");
 		await Assert.That(json).Contains("\"namespace\": \"main\"");
 	}
