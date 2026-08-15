@@ -2,14 +2,20 @@
    ancestor and no container named 'page' to query — this is the container for whatever the
    route places in .onboarding-body (Login, Setup, Register, ...), which query it unnamed,
    exactly like the dialogs. container-type: size (not inline-size): Login's brand block needs
-   a max-height query on short viewports, and size containment covers both axes — safe here
-   because min-height below already gives the shell a definite block size independent of its
-   content, which is what size containment requires. */
+   a max-height query on short viewports, and size containment covers both axes.
+
+   That needs a genuinely definite block size, which min-height alone does not give: with no
+   height, the box's block size is still 'auto', and size containment then has nothing to
+   resolve it against (containment removes the content contribution but doesn't invent a
+   replacement), so the container's block axis stays indefinite and a max-height query against
+   it matches unconditionally — verified live: min-height alone rendered the short-viewport
+   brand sizing at every viewport height tested, including 1600px. height (not min-height)
+   makes the block size definite, so the query only matches when it's actually short. */
 .onboarding-shell {
     container-type: size;
     position: relative;
-    min-height: 100vh;
-    min-height: 100svh;
+    height: 100vh;
+    height: 100svh;
     background: linear-gradient(135deg, #101113 0%, #16181b 100%);
     overflow: hidden;
 }
