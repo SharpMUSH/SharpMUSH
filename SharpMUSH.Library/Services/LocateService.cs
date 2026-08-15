@@ -20,13 +20,32 @@ public partial class LocateService(
 {
 	private static readonly Regex NthRegex = Nth();
 
-	public enum ControlFlow
+	/// <summary>
+	/// What PennMUSH's <c>match_result_internal</c> keeps in locals and its macros mutate in place.
+	/// The C macros are textually inlined, so their <c>continue</c>/<c>break</c> reach the caller's
+	/// loop; carrying that across as a control-flow token and a six-tuple only ever encoded
+	/// "keep going" and "stop", so <see cref="Done"/> is the whole of it.
+	/// </summary>
+	/// <param name="final">The N of an English ordinal match; 0 when the search is not one.</param>
+	public sealed class MatchState(int final)
 	{
-		Break,
-		Continue,
-		Return,
-		None
-	};
+		/// <summary>match.c's <c>bestmatch</c>.</summary>
+		public AnyOptionalSharpObjectOrError Best { get; set; } = new None();
+
+		public int Final { get; } = final;
+
+		/// <summary>match.c's <c>curr</c> — how many candidates have matched.</summary>
+		public int Count { get; set; }
+
+		/// <summary>How many of those were of the preferred type. Exactly one breaks a tie.</summary>
+		public int RightType { get; set; }
+
+		/// <summary>Whether any match so far was exact, which retires the partial ones.</summary>
+		public bool Exact { get; set; }
+
+		/// <summary>The Nth item of an ordinal search has been found; every remaining scope is skipped.</summary>
+		public bool Done { get; set; }
+	}
 
 	private static string LocateNotifyMessage(AnyOptionalSharpObjectOrError loc)
 		=> loc.IsNone
@@ -106,10 +125,11 @@ public partial class LocateService(
 				 || flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
 				 || flags.HasFlag(LocateFlags.ExitsPreference)
 				 || flags.HasFlag(LocateFlags.ExitsInsideOfLooker)) &&
-				!await Nearby(executor, looker) && !await executor.IsSee_All() &&
+				// Cheapest first: See_All is a flag read, Nearby resolves up to two locations.
+				!await executor.IsSee_All() && !await Nearby(executor, looker) &&
 				!await permissionService.Controls(executor, looker))
 		{
-			return new Error<string>("#-1 NOT PERMITTED TO EVALUATE ON LOOKER");
+			return new Error<string>(ErrorMessages.Returns.CannotEvaluateOnLooker);
 		}
 
 		var match = await LocateMatch(executor, looker, flags, name);
@@ -180,13 +200,8 @@ public partial class LocateService(
 		string name)
 	{
 		AnyOptionalSharpObjectOrError match;
-		AnyOptionalSharpObjectOrError bestMatch = new None();
 		AnySharpContainer location;
-		ControlFlow c;
 		var final = 0;
-		var curr = 0;
-		var exact = false;
-		var rightType = 0;
 
 		if (looker.IsRoom)
 		{
@@ -299,97 +314,78 @@ public partial class LocateService(
 			(name, flags, final) = ParseEnglish(name, flags);
 		}
 
-		// The scopes, in PennMUSH's order. Each is gated on the flag that says *where to look*; a type
-		// preference says what to prefer once looked, and is no longer spelt with the same bits.
-		while (true)
-		{
-			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) && looker.IsContainer)
-			{
-				(bestMatch, final, curr, rightType, exact, c) =
-					await Match_List(ContentsOf(looker.AsContainer), executor, looker, bestMatch, exact, final, curr,
-						rightType, flags, name);
-
-				if (c == ControlFlow.Break) break;
-			}
-
-			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
-					&& location.Object().DBRef != looker.Object().DBRef)
-			{
-				(bestMatch, final, curr, rightType, exact, c) =
-					await Match_List(ContentsOf(location), executor, looker, bestMatch, exact, final, curr, rightType,
-						flags, name);
-
-				if (c == ControlFlow.Break) break;
-			}
-
-			if (flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker) && location.IsRoom)
-			{
-				// Exits in the current location.
-				(bestMatch, final, curr, rightType, exact, c) =
-					await Match_List(ExitsIn(location), executor, looker, bestMatch, exact, final, curr, rightType,
-						flags, name);
-
-				if (c == ControlFlow.Break) break;
-
-				var searchesRemoteExits = !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
-																								 LocateFlags.OnlyMatchObjectsInLookerInventory);
-
-				// Exits in the Zone Master Room.
-				if (flags.HasFlag(LocateFlags.MatchRemoteContents) && searchesRemoteExits)
-				{
-					var locationZone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
-					if (!locationZone.IsNone && locationZone.Known.IsRoom)
-					{
-						(bestMatch, final, curr, rightType, exact, c) =
-							await Match_List(ExitsIn(locationZone.Known.AsRoom), executor, looker, bestMatch, exact, final,
-								curr, rightType, flags, name);
-
-						if (c == ControlFlow.Break) break;
-					}
-				}
-
-				// Global exits in the Master Room.
-				if (flags.HasFlag(LocateFlags.All) && searchesRemoteExits)
-				{
-					var masterRoom = new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.MasterRoom));
-
-					(bestMatch, final, curr, rightType, exact, c) =
-						await Match_List(ExitsIn(masterRoom), executor, looker, bestMatch, exact, final, curr, rightType,
-							flags, name);
-
-					if (c == ControlFlow.Break) break;
-				}
-			}
-
-			// Exits carried by a looker that is itself a room.
-			if (flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
-					&& looker.IsRoom
-					&& (location.Object().DBRef != looker.Object().DBRef
-							|| !flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker)))
-			{
-				(bestMatch, final, curr, rightType, exact, c) =
-					await Match_List(ExitsIn(looker.AsContainer), executor, looker, bestMatch, exact, final, curr,
-						rightType, flags, name);
-
-				if (c == ControlFlow.Break) break;
-			}
-
-			break;
-		}
+		var state = new MatchState(final);
+		await MatchList(state, Candidates(looker, location, flags), executor, flags, name);
 
 		// match.c: a `final` search that never reached the Nth item leaves bestmatch NOTHING, and
 		// ambiguity is only ever considered for a non-ordinal search that matched more than once.
-		if (bestMatch.IsNone) return new None();
+		if (state.Best.IsNone) return new None();
 
-		if (final == 0
-				&& curr > 1
-				&& rightType != 1
+		if (state.Final == 0
+				&& state.Count > 1
+				&& state.RightType != 1
 				&& !flags.HasFlag(LocateFlags.UseLastIfAmbiguous))
 		{
 			return new Error<string>(ErrorMessages.Returns.AmbiguousMatch);
 		}
 
-		return bestMatch;
+		return state.Best;
+	}
+
+	/// <summary>
+	/// Every place a name may be found, in PennMUSH's order, as one lazy stream. Each scope is gated on
+	/// the flag that says *where to look*; a type preference says what to prefer once looked, and is no
+	/// longer spelt with the same bits. Laziness is what MATCH_LIST's opening <c>if (done) break</c>
+	/// buys: <see cref="MatchList"/> stops enumerating on the Nth ordinal match, so a scope past it is
+	/// never queried.
+	/// </summary>
+	private async IAsyncEnumerable<AnySharpObject> Candidates(
+		AnySharpObject looker,
+		AnySharpContainer location,
+		LocateFlags flags)
+	{
+		if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) && looker.IsContainer)
+		{
+			await foreach (var candidate in ContentsOf(looker.AsContainer)) yield return candidate;
+		}
+
+		if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
+				&& location.Object().DBRef != looker.Object().DBRef)
+		{
+			await foreach (var candidate in ContentsOf(location)) yield return candidate;
+		}
+
+		if (flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker) && location.IsRoom)
+		{
+			await foreach (var candidate in ExitsIn(location)) yield return candidate;
+
+			var remote = !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
+																	LocateFlags.OnlyMatchObjectsInLookerInventory);
+
+			if (flags.HasFlag(LocateFlags.MatchRemoteContents) && remote)
+			{
+				var zone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
+				if (!zone.IsNone && zone.Known.IsRoom)
+				{
+					await foreach (var candidate in ExitsIn(zone.Known.AsRoom)) yield return candidate;
+				}
+			}
+
+			if (flags.HasFlag(LocateFlags.All) && remote)
+			{
+				var masterRoom = new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.MasterRoom));
+				await foreach (var candidate in ExitsIn(masterRoom)) yield return candidate;
+			}
+		}
+
+		// Exits carried by a looker that is itself a room.
+		if (flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
+				&& looker.IsRoom
+				&& (location.Object().DBRef != looker.Object().DBRef
+						|| !flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker)))
+		{
+			await foreach (var candidate in ExitsIn(looker.AsContainer)) yield return candidate;
+		}
 	}
 
 	// PennMUSH keeps exits on their own chain, so Contents() never yields one and the neighbour scope
@@ -409,83 +405,76 @@ public partial class LocateService(
 		=> mediator.CreateStream(query)?.Where(x => x.IsExit).Select(x => new AnySharpObject(x.AsExit))
 			 ?? AsyncEnumerable.Empty<AnySharpObject>();
 
-	public async ValueTask<(AnyOptionalSharpObjectOrError BestMatch, int Final, int Curr, int RightType, bool Exact
-			, ControlFlow c)>
-		Match_List(
-			IAsyncEnumerable<AnySharpObject> list,
-			AnySharpObject looker,
-			AnySharpObject where,
-			AnyOptionalSharpObjectOrError bestMatch,
-			bool exact,
-			int final,
-			int curr,
-			int rightType,
-			LocateFlags flags,
-			string name)
+	/// <summary>PennMUSH's <c>MATCH_LIST</c> over one candidate list, accumulating into <paramref name="state"/>.</summary>
+	public async ValueTask MatchList(
+		MatchState state,
+		IAsyncEnumerable<AnySharpObject> list,
+		AnySharpObject executor,
+		LocateFlags flags,
+		string name)
 	{
-		ControlFlow flow = ControlFlow.Continue;
 		var preferred = PreferredTypes(flags);
 		var abs = HelperFunctions.ParseDbRef(name);
+		var filterByType = preferred != SharpObjectTypes.None && flags.HasFlag(LocateFlags.OnlyMatchTypePreference);
+		var allowPartial = !flags.HasFlag(LocateFlags.NoPartialMatches);
 
-		await foreach (var item in list)
+		await foreach (var cur in list)
 		{
-			var cur = item;
 			// match.c MATCH_TYPE: a wrong-type object is only *skipped* under MAT_TYPE. Otherwise it
 			// stays a candidate and merely loses to a preferred-type one in ChooseThing.
-			if (preferred != SharpObjectTypes.None
-					&& (preferred & TypeOf(cur)) == SharpObjectTypes.None
-					&& flags.HasFlag(LocateFlags.OnlyMatchTypePreference))
+			if (filterByType && (preferred & TypeOf(cur)) == SharpObjectTypes.None) continue;
+
+			// An absolute dbref match is taken ahead of can_interact, as match.c does.
+			var absolute = abs.IsSome() && cur.Object().DBRef.Matches(abs.AsValue());
+			var kind = absolute
+				? MatchKind.Exact
+				// Once an exact match exists, a partial one is not a candidate at all: without that guard
+				// it still runs ChooseThing and still bumps Count, so an exact match reads as ambiguous.
+				: Classify(cur, name, allowPartial && (!state.Exact || !state.Best.IsValid()));
+
+			if (kind == MatchKind.None) continue;
+
+			// match.c asks can_interact before comparing names. A candidate whose name does not match is
+			// skipped either way, so asking only about the ones that matched is the same answer for
+			// fewer questions — and this is a per-candidate permission call.
+			if (!absolute
+					&& !await permissionService.CanInteract(executor, cur, IPermissionService.InteractType.Match))
 			{
 				continue;
 			}
 
-			if (abs.IsSome() && cur.Object().DBRef.Matches(abs.AsValue()))
-			{
-				(bestMatch, final, curr, rightType, exact, flow) =
-					await Matched(true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
+			await Matched(state, cur, kind == MatchKind.Exact, executor, flags);
+			if (state.Done) return;
+		}
+	}
 
-				if (flow == ControlFlow.Break) break;
-				if (flow == ControlFlow.Continue) continue;
-				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
-			}
-			else if (!await permissionService.CanInteract(looker, cur, IPermissionService.InteractType.Match))
-			{
-				continue;
-			}
-			// Exact name/alias match (full == true → 'exact' match in PennMUSH terms)
-			else if (
-				(cur.IsPlayer && cur.Aliases.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase)))
-				|| (cur.IsExit && (cur.Aliases.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase)) ||
-													 cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-				|| (!cur.IsExit && string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
-			{
-				(bestMatch, final, curr, rightType, exact, flow) =
-					await Matched(true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
+	private enum MatchKind
+	{
+		None,
+		Partial,
+		Exact
+	}
 
-				if (flow == ControlFlow.Break) break;
-				if (flow == ControlFlow.Continue) continue;
-				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
-			}
-			// Partial (prefix) match for non-exit objects and player aliases, matching PennMUSH string_match().
-			// Guarded by (!exact || !GoodObject(bestmatch)): once an exact match exists, partial matches are
-			// not candidates at all — without this they still run ChooseThing and still bump curr, so an
-			// exact match reads as ambiguous.
-			else if (!flags.HasFlag(LocateFlags.NoPartialMatches)
-							 && (!exact || !bestMatch.IsValid())
-							 && ((cur.IsPlayer && cur.Aliases.Any(a => a.StartsWith(name, StringComparison.OrdinalIgnoreCase)))
-									 || (!cur.IsExit && cur.Object().Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))))
-			{
-				(bestMatch, final, curr, rightType, exact, flow) =
-					await Matched(false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
-
-				if (flow == ControlFlow.Break) break;
-				if (flow == ControlFlow.Continue) continue;
-				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
-			}
+	/// <summary>
+	/// How <paramref name="cur"/> answers to <paramref name="name"/>. Aliases are a player's and an
+	/// exit's only (match.c's <c>match_aliases</c>), and a partial match is <c>string_match</c> —
+	/// a prefix, and never against an exit.
+	/// </summary>
+	private static MatchKind Classify(AnySharpObject cur, string name, bool allowPartial)
+	{
+		if (((cur.IsPlayer || cur.IsExit)
+				 && cur.Aliases.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase)))
+				|| cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+		{
+			return MatchKind.Exact;
 		}
 
-		return (bestMatch, final, curr, rightType, exact,
-			flow == ControlFlow.Break ? ControlFlow.Break : ControlFlow.Continue);
+		if (!allowPartial) return MatchKind.None;
+
+		return (cur.IsPlayer && cur.Aliases.Any(a => a.StartsWith(name, StringComparison.OrdinalIgnoreCase)))
+					 || (!cur.IsExit && cur.Object().Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+			? MatchKind.Partial
+			: MatchKind.None;
 	}
 
 	public async ValueTask<AnyOptionalSharpObject> ChooseThing(AnySharpObject who,
@@ -524,75 +513,65 @@ public partial class LocateService(
 		return thing2;
 	}
 
-	public async ValueTask<(AnyOptionalSharpObjectOrError BestMatch, int Final, int Curr, int RightType, bool Exact
-			, ControlFlow c)>
-		Matched(
-			bool full,
-			bool exact,
-			int final,
-			int curr,
-			int right_type,
-			AnySharpObject looker,
-			AnySharpObject where,
-			AnySharpObject cur,
-			AnyOptionalSharpObjectOrError bestMatch,
-			LocateFlags flags)
+	/// <summary>PennMUSH's <c>MATCHED</c> macro: fold one matched candidate into the running state.</summary>
+	public async ValueTask Matched(
+		MatchState state,
+		AnySharpObject cur,
+		bool full,
+		AnySharpObject executor,
+		LocateFlags flags)
 	{
 		if (flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-				&& !await permissionService.Controls(looker, cur))
+				&& !await permissionService.Controls(executor, cur))
 		{
-			// PennMUSH match_list: uncontrolled objects are silently skipped (continue),
-			// preserving any previously found controlled match.
-			return (bestMatch, final, curr, right_type, exact, ControlFlow.Continue);
+			// match.c sets nocontrol and continues: an uncontrolled candidate is skipped, and any
+			// previously found controlled match survives.
+			return;
 		}
 
-		if (final != 0) // An English ordinal match: count, and take only the Nth.
+		if (state.Final != 0) // An English ordinal match: count, and take only the Nth.
 		{
-			curr++;
-			return curr == final
-				? (cur.WithNoneOption().WithErrorOption(), final, curr, right_type, exact, ControlFlow.Break)
-				// match.c assigns bestmatch only on the Nth item — anything else leaves it alone, or a
-				// search that never reaches N returns whatever it happened to walk past last.
-				: (bestMatch, final, curr, right_type, exact, ControlFlow.Continue);
+			state.Count++;
+			// match.c assigns bestmatch only on the Nth item; anything else leaves it alone, or a search
+			// that never reaches N returns whatever it happened to walk past last.
+			if (state.Count != state.Final) return;
+
+			state.Best = cur.WithNoneOption().WithErrorOption();
+			state.Done = true;
+			return;
 		}
 
-		bestMatch = (await ChooseThing(looker, flags, bestMatch.WithoutError(), cur.WithNoneOption()))
+		state.Best = (await ChooseThing(executor, flags, state.Best.WithoutError(), cur.WithNoneOption()))
 			.WithErrorOption();
-		if (bestMatch.IsValid() && bestMatch.WithoutError().WithoutNone().Object().DBRef != cur.Object().DBRef)
+
+		// A previously matched item won on type or @lock — it stays, and cur is not counted.
+		if (state.Best.IsValid() && state.Best.WithoutError().WithoutNone().Object().DBRef != cur.Object().DBRef)
 		{
-			return (bestMatch, final, curr, right_type, exact, ControlFlow.Continue);
+			return;
 		}
 
-		if (full)
+		if (full && !state.Exact)
 		{
-			if (exact)
-			{
-				curr++;
-			}
-			else
-			{
-				//  Ignore any previous partial matches now we have an exact match
-				exact = true;
-				curr = 1;
-				right_type = 0;
-			}
+			// Ignore any previous partial matches now we have an exact match.
+			state.Exact = true;
+			state.Count = 1;
+			state.RightType = 0;
 		}
 		else
 		{
-			curr++;
+			state.Count++;
 		}
 
 		// match.c: `if (type != NOTYPE && (Typeof(bestmatch) & type)) right_type++` — whether the winner
-		// is *of the preferred type*. Comparing it to cur's type is a tautology here: bestMatch is cur.
+		// is *of the preferred type*. Comparing it to cur's type is a tautology here: they are the same
+		// object by the time this runs.
 		var preferred = PreferredTypes(flags);
 		if (preferred != SharpObjectTypes.None
-				&& bestMatch.IsValid()
-				&& (preferred & TypeOf(bestMatch.WithoutError().WithoutNone())) != SharpObjectTypes.None)
+				&& state.Best.IsValid()
+				&& (preferred & TypeOf(state.Best.WithoutError().WithoutNone())) != SharpObjectTypes.None)
 		{
-			right_type++;
+			state.RightType++;
 		}
-
-		return (bestMatch, final, curr, right_type, exact, ControlFlow.Continue);
 	}
 
 
@@ -611,32 +590,23 @@ public partial class LocateService(
 
 	public async ValueTask<AnySharpContainer> Room(AnySharpObject content)
 	{
-		var currentLocation = await FriendlyWhereIs(content);
-
-		// Depth limit to prevent infinite loops from corrupted containment chains.
-		// PennMUSH uses MAX_PARENTS (10) as a depth limit for similar traversals.
+		// One location fetch per hop: the old loop awaited Location() in the condition and again in the
+		// body, so every step of the containment chain cost two. A corrupted chain is caught by the
+		// visited set; maxDepth bounds a pathologically long acyclic one.
 		const int maxDepth = 50;
-		var depth = 0;
-		var visited = new HashSet<string> { currentLocation.Object().DBRef.ToString() };
 
-		while (currentLocation.Id != (await currentLocation.Location()).Id)
+		var current = await FriendlyWhereIs(content);
+		var visited = new HashSet<DBRef> { current.Object().DBRef };
+
+		while (visited.Count <= maxDepth)
 		{
-			depth++;
-			if (depth > maxDepth)
-			{
-				break;
-			}
+			var next = await current.Location();
+			if (next.Id == current.Id || !visited.Add(next.Object().DBRef)) break;
 
-			currentLocation = await currentLocation.Location();
-
-			var dbRefStr = currentLocation.Object().DBRef.ToString();
-			if (!visited.Add(dbRefStr))
-			{
-				break;
-			}
+			current = next;
 		}
 
-		return currentLocation;
+		return current;
 	}
 
 	public static async ValueTask<AnySharpContainer> FriendlyWhereIs(AnySharpObject obj) => await obj.Match(

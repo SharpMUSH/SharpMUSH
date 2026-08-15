@@ -41,6 +41,7 @@ public static class ErrorMessages
 		public const string AttrSetPermissions = "#-1 NO PERMISSION TO SET ATTRIBUTE";
 		public const string AttrWipPermissions = "#-1 NO PERMISSION TO WIPE ATTRIBUTE";
 		public const string CannotTeleport = "#-1 NO PERMISSION TO TELEPORT OBJECT";
+		public const string CannotEvaluateOnLooker = "#-1 NOT PERMITTED TO EVALUATE ON LOOKER";
 
 		public const string InvalidArgument = "#-1 INVALID ARGUMENT";
 		public const string Integer = "#-1 ARGUMENT MUST BE INTEGER";
