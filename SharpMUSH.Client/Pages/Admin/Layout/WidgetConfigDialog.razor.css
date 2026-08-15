@@ -2,7 +2,13 @@
    query. The dialog declares its own container; there is currently nothing inside it wide
    enough to need a narrow-tier override (the JSON textarea and numeric field are already
    single-column), but the declaration keeps this dialog consistent with the others and
-   ready for the day its content grows a second column. */
+   ready for the day its content grows a second column.
+
+   Its ShowAsync call passes DialogOptions { FullWidth = true }, and must: inline-size
+   containment removes this box's contribution to the paper's shrink-to-fit width, so without a
+   definite width the paper collapses to whatever the title bar needs (measured 163/229/246px
+   across the three dialogs). Setting width:100% here does not help — the paper is the box that
+   needs the width. */
 .widget-config-dialog {
     container-type: inline-size;
 }

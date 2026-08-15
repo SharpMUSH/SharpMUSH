@@ -312,7 +312,11 @@
 
     private async Task NewRole()
     {
-        var dialog = await DialogService.ShowAsync<RoleEditDialog>(Loc["RolNewRole"]);
+        // FullWidth: the dialog body declares container-type: inline-size so it can query its own
+        // box, and inline-size containment zeroes its contribution to the paper's shrink-to-fit
+        // width — without a definite width the paper collapses to the title bar (measured 163px).
+        var dialog = await DialogService.ShowAsync<RoleEditDialog>(
+            Loc["RolNewRole"], new DialogOptions { FullWidth = true });
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
         {

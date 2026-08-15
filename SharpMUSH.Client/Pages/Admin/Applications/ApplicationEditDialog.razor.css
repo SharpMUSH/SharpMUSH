@@ -1,5 +1,11 @@
 /* Rendered into MudBlazor's body-level portal, so there is no .phosphor-page ancestor to
-   query. The dialog is its own container. */
+   query. The dialog is its own container.
+
+   Its ShowAsync call passes DialogOptions { FullWidth = true }, and must: inline-size
+   containment removes this box's contribution to the paper's shrink-to-fit width, so without a
+   definite width the paper collapses to whatever the title bar needs (measured 163/229/246px
+   across the three dialogs). Setting width:100% here does not help — the paper is the box that
+   needs the width. */
 .application-edit-dialog {
     container-type: inline-size;
 }
@@ -9,7 +15,13 @@
    while the dialog itself is well under 48rem. ::deep is required because MudItem stamps
    these classes on a div this component's markup never wrote; .application-edit-dialog is
    our own literal element and does carry this component's scope attribute, so leading with
-   it here is not the ::deep trap. */
+   it here is not the ::deep trap.
+
+   Note the query is currently always true: the paper is FullWidth at MudBlazor's default
+   MaxWidth.Small, so it measures 600px — under 48rem (768px) at every viewport. It stays a
+   query rather than a plain rule because it is conditional on the dialog's box, not on the
+   value MaxWidth happens to hold: widen the dialog past 768px and these fields should go back
+   to two across without anyone having to remember this rule exists. */
 @container (max-width: 48rem) {
     .application-edit-dialog ::deep .mud-grid-item-sm-6,
     .application-edit-dialog ::deep .mud-grid-item-sm-4 {

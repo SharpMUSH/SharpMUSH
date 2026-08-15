@@ -17,7 +17,14 @@
     height: 100vh;
     height: 100svh;
     background: linear-gradient(135deg, #101113 0%, #16181b 100%);
-    overflow: hidden;
+    /* overflow-y must scroll, not hide. A definite height plus size containment means the shell
+       neither grows for its content nor lets it reach the document scroller, so `hidden` here
+       simply amputated whatever did not fit: measured live, the CONNECT button was clipped at a
+       320px-tall viewport and entirely unreachable at 288px — exactly what an on-screen keyboard
+       leaves while a user is typing a password. overflow-x stays hidden so the decorative glow
+       cannot open a horizontal scrollbar. */
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .onboarding-glow {
