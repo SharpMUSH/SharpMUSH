@@ -185,7 +185,7 @@ public class FlagAndPowerCommandTests
 		var alias = "TPOW";
 
 		var createdPower = await Mediator.Send(new CreatePowerCommand(
-			powerName, alias, false,
+			powerName, alias, string.Empty, false,
 			["FLAG^WIZARD"], ["FLAG^WIZARD"], ["PLAYER"]
 		));
 		await Assert.That(createdPower).IsNotNull();
@@ -552,6 +552,189 @@ public class FlagAndPowerCommandTests
 		await Assert.That(await PowerNamesOf(newDb)).DoesNotContain("Builder");
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+	}
+
+	// Every built-in power carries letter '\0' (PennMUSH hdrs/flag_tab.h power_table) and SharpMUSH
+	// refuses to redefine a system power, so each /letter test needs a power of its own. Each also
+	// picks a letter no other test uses: the collision check is global and these run in parallel.
+	private async ValueTask<string> CreateLetterlessPower(string[]? types = null)
+	{
+		var powerName = $"TEST_POWER_LTR_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var created = await Mediator.Send(new CreatePowerCommand(
+			powerName, string.Empty, string.Empty, false,
+			["FLAG^WIZARD"], ["FLAG^WIZARD"], types ?? ["PLAYER"]));
+		await Assert.That(created).IsNotNull();
+		await Assert.That(created!.Symbol).IsEqualTo(string.Empty);
+		return powerName;
+	}
+
+	// PennMUSH src/flags.c:2790 do_flag_letter: "Letter for power <name> set to '<c>'."
+	[Test]
+	public async ValueTask Power_Letter_SetsTheLetter()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var powerName = await CreateLetterlessPower();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}=Q"));
+
+		var updated = await Mediator.Send(new GetPowerQuery(powerName));
+		await Assert.That(updated).IsNotNull();
+		await Assert.That(updated!.Symbol).IsEqualTo("Q");
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.PowerLetterSetFormat), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
+	// PennMUSH src/flags.c:2793 do_flag_letter: an empty or absent letter clears it.
+	[Test]
+	public async ValueTask Power_Letter_ClearsTheLetterWhenNoneGiven()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var powerName = await CreateLetterlessPower();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}=V"));
+		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Symbol).IsEqualTo("V");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}"));
+
+		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Symbol).IsEqualTo(string.Empty);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.PowerLetterClearedFormat), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
+	// PennMUSH src/flags.c:2778 do_flag_letter: "Power characters must be single characters."
+	[Test]
+	public async ValueTask Power_Letter_RejectsMultipleCharacters()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var powerName = await CreateLetterlessPower();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}=ABC"));
+
+		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Symbol).IsEqualTo(string.Empty);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.PowerCharactersMustBeSingleCharacters), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
+	// PennMUSH src/flags.c:2784 do_flag_letter: "Letter conflicts with the <other> power."
+	[Test]
+	public async ValueTask Power_Letter_RejectsLetterTakenByAnotherPower()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var holder = await CreateLetterlessPower();
+		var claimant = await CreateLetterlessPower();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {holder}=Z"));
+		await Assert.That((await Mediator.Send(new GetPowerQuery(holder)))!.Symbol).IsEqualTo("Z");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {claimant}=Z"));
+
+		await Assert.That((await Mediator.Send(new GetPowerQuery(claimant)))!.Symbol).IsEqualTo(string.Empty);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.PowerLetterConflictFormat), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeletePowerCommand(holder));
+		await Mediator.Send(new DeletePowerCommand(claimant));
+	}
+
+	// PennMUSH src/flags.c:961 letter_to_flagptr only conflicts when the two definitions share an
+	// object type; game/txt/hlp/pennv177.hlp:20 records that as a deliberate fix.
+	[Test]
+	public async ValueTask Power_Letter_AllowsSameLetterOnADisjointType()
+	{
+		var playerPower = await CreateLetterlessPower(["PLAYER"]);
+		var roomPower = await CreateLetterlessPower(["ROOM"]);
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {playerPower}=Y"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {roomPower}=Y"));
+
+		await Assert.That((await Mediator.Send(new GetPowerQuery(playerPower)))!.Symbol).IsEqualTo("Y");
+		await Assert.That((await Mediator.Send(new GetPowerQuery(roomPower)))!.Symbol).IsEqualTo("Y");
+
+		await Mediator.Send(new DeletePowerCommand(playerPower));
+		await Mediator.Send(new DeletePowerCommand(roomPower));
+	}
+
+	// PennMUSH src/flags.c:2764 do_flag_letter refuses anyone but God; a wizard is not enough.
+	[Test]
+	public async ValueTask Power_Letter_RequiresGod()
+	{
+		var powerName = await CreateLetterlessPower();
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PowerLetterNonGod");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@power/letter {powerName}=J"));
+
+		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Symbol).IsEqualTo(string.Empty);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.NotEnoughMagic), testPlayer.DbRef, testPlayer.DbRef)).IsTrue();
+
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
+	// A divergence from PennMUSH, which has no notion of a system power and lets God letter anything.
+	[Test]
+	public async ValueTask Power_Letter_RefusesSystemPower()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var builder = await Mediator.Send(new GetPowerQuery("BUILDER"));
+		await Assert.That(builder).IsNotNull();
+		await Assert.That(builder!.System).IsTrue();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/letter BUILDER=B"));
+
+		await Assert.That((await Mediator.Send(new GetPowerQuery("BUILDER")))!.Symbol).IsEqualTo(string.Empty);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, executor)).IsTrue();
+	}
+
+	// PennMUSH src/flags.c list_all_flags FLAG_LIST_NAMECHAR renders the letter beside the name.
+	[Test]
+	public async ValueTask Power_List_ShowsTheLetter()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var powerName = await CreateLetterlessPower();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}=K"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/list {powerName}"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+					TestHelpers.MessagePlainTextContains(s, powerName)
+					&& TestHelpers.MessagePlainTextContains(s, "Symbol")
+					&& TestHelpers.MessagePlainTextContains(s, "K")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
+	// PennMUSH src/flags.c do_flag_info prints a "Character:" line between Name and Aliases.
+	[Test]
+	public async ValueTask Power_NoEquals_ShowsTheCharacter()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var powerName = await CreateLetterlessPower();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}=X"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {powerName}"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+					TestHelpers.MessagePlainTextContains(s, "Character: X")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+
+		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
 
 	// PennMUSH src/flags.c list_all_flags filters the listing by a glob pattern.

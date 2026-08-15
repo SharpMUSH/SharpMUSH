@@ -56,7 +56,9 @@ public partial class ArangoDatabase
 		new()
 		{
 			Id = arg.Id,
-			Alias = arg.Alias,
+			// The seeded system powers omit Alias and Symbol entirely, so both arrive as null.
+			Alias = arg.Alias ?? string.Empty,
+			Symbol = arg.Symbol ?? string.Empty,
 			Name = arg.Name,
 			System = arg.System,
 			Disabled = arg.Disabled,
@@ -168,10 +170,6 @@ public partial class ArangoDatabase
 			Aliases = x.Aliases,
 			TypeRestrictions = x.TypeRestrictions
 		};
-	public IAsyncEnumerable<SharpPower> GetObjectPowersAsync(string id, CancellationToken ct = default)
-		=> arangoDb.Query.ExecuteStreamAsync<SharpPower>(handle,
-			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphPowers} RETURN v", cache: true,
-			cancellationToken: ct);
 	public async ValueTask<SharpObjectFlag?> CreateObjectFlagAsync(string name, string[]? aliases, string symbol,
 		bool system, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken ct = default)
@@ -235,13 +233,14 @@ public partial class ArangoDatabase
 		return true;
 	}
 
-	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, bool system,
+	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, string symbol, bool system,
 		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken ct = default)
 	{
 		var request = new SharpPowerCreateRequest(
 			name,
 			alias,
+			symbol,
 			system,
 			false,
 			setPermissions,
@@ -263,6 +262,7 @@ public partial class ArangoDatabase
 				Id = result.Id,
 				Name = name,
 				Alias = alias,
+				Symbol = symbol,
 				System = system,
 				SetPermissions = setPermissions,
 				UnsetPermissions = unsetPermissions,
@@ -344,7 +344,7 @@ public partial class ArangoDatabase
 		return true;
 	}
 
-	public async ValueTask<bool> UpdatePowerAsync(string name, string alias,
+	public async ValueTask<bool> UpdatePowerAsync(string name, string alias, string symbol,
 		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken ct = default)
 	{
@@ -367,6 +367,7 @@ public partial class ArangoDatabase
 			{
 				Key = key,
 				Alias = alias,
+				Symbol = symbol,
 				SetPermissions = setPermissions,
 				UnsetPermissions = unsetPermissions,
 				TypeRestrictions = typeRestrictions

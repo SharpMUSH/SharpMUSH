@@ -1435,7 +1435,16 @@ public static class ErrorMessages
 		public const string FailedToDisablePowerFormat = "Failed to disable power '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToEnablePowerFormat = "Failed to enable power '{0}'.";
-		public const string PowerUsage = "Usage: @power <power>, @power <object>=[!]<power>, @power/list, @power/add <name>=<alias>, @power/delete <name>, @power/alias <name>=<alias>, @power/type <name>=<types>, @power/restrict <name>=<permissions>, @power/decompile <name>";
+		// PennMUSH src/flags.c do_flag_letter.
+		public const string PowerLetterRequiresName = "@POWER/LETTER requires a power name.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerLetterSetFormat = "Letter for power {0} set to '{1}'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerLetterClearedFormat = "Letter for power {0} cleared.";
+		public const string PowerCharactersMustBeSingleCharacters = "Power characters must be single characters.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerLetterConflictFormat = "Letter conflicts with the {0} power.";
+		public const string PowerUsage = "Usage: @power <power>, @power <object>=[!]<power>, @power/list, @power/add <name>=<alias>, @power/delete <name>, @power/alias <name>=<alias>, @power/letter <name>[=<letter>], @power/type <name>=<types>, @power/restrict <name>=<permissions>, @power/decompile <name>";
 
 		public const string FullMotdCleared = "Full MOTD cleared.";
 		public const string RejectMotdUsage = "Usage: @rejectmotd <message>";
