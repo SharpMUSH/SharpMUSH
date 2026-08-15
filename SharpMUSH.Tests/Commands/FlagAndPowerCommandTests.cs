@@ -754,6 +754,27 @@ public class FlagAndPowerCommandTests
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
+	// GetObjectFlagQuery is ICacheable, so a read before the write leaves a FusionCache entry that only
+	// an ICacheInvalidating command clears. Reading first is the whole point of the test.
+	[Test]
+	public async ValueTask UpdateObjectFlag_InvalidatesTheCachedDefinition()
+	{
+		var flagName = await CreateLetterlessFlag();
+
+		var before = await Mediator.Send(new GetObjectFlagQuery(flagName));
+		await Assert.That(before!.Symbol).IsEqualTo(string.Empty);
+
+		await Mediator.Send(new UpdateObjectFlagCommand(
+			flagName, before.Aliases, "9", before.SetPermissions, before.UnsetPermissions,
+			before.TypeRestrictions));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Symbol)
+			.IsEqualTo("9")
+			.Because("a stale flag-definition entry survives the write when the command does not invalidate");
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
 	// The seed already spends most of the alphabet, so each /letter test claims a digit no other flag
 	// or test uses: the collision check is global and these run in parallel.
 	private async ValueTask<string> CreateLetterlessFlag(string[]? types = null)
