@@ -509,6 +509,7 @@ RETURN ownerObj, ownerTyped
 			Id = $"Power/{name}",
 			Name = name,
 			Alias = node.Properties.ContainsKey("alias") ? node["alias"].As<string>() : "",
+			Symbol = node.Properties.ContainsKey("symbol") ? node["symbol"].As<string>() : "",
 			System = node.Properties.ContainsKey("system") && node["system"].As<bool>(),
 			Disabled = node.Properties.ContainsKey("disabled") && node["disabled"].As<bool>(),
 			SetPermissions = node.Properties.ContainsKey("setPermissions")

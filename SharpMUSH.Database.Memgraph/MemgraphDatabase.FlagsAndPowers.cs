@@ -125,17 +125,18 @@ RETURN count(r) AS cnt
 		return result.Result.Count > 0 && result.Result[0]["cnt"].As<long>() > 0;
 	}
 
-	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, bool system,
+	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, string symbol, bool system,
 	string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 	CancellationToken cancellationToken = default)
 	{
 		await ExecuteWithRetryAsync("""
-CREATE (p:Power {name: $name, alias: $alias, system: $system, disabled: false,
+CREATE (p:Power {name: $name, alias: $alias, symbol: $symbol, system: $system, disabled: false,
 setPermissions: $setPerms, unsetPermissions: $unsetPerms, typeRestrictions: $typeRestrictions})
 """, new
 		{
 			name,
 			alias,
+			symbol,
 			system,
 			setPerms = setPermissions,
 			unsetPerms = unsetPermissions,
@@ -144,7 +145,7 @@ setPermissions: $setPerms, unsetPermissions: $unsetPerms, typeRestrictions: $typ
 
 		return new SharpPower
 		{
-			Id = PowerId(name), Name = name, Alias = alias, System = system,
+			Id = PowerId(name), Name = name, Alias = alias, Symbol = symbol, System = system,
 			SetPermissions = setPermissions, UnsetPermissions = unsetPermissions, TypeRestrictions = typeRestrictions
 		};
 	}
@@ -195,7 +196,7 @@ f.typeRestrictions = $typeRestrictions
 		return true;
 	}
 
-	public async ValueTask<bool> UpdatePowerAsync(string name, string alias,
+	public async ValueTask<bool> UpdatePowerAsync(string name, string alias, string symbol,
 	string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 	CancellationToken cancellationToken = default)
 	{
@@ -204,10 +205,10 @@ f.typeRestrictions = $typeRestrictions
 
 		await ExecuteWithRetryAsync("""
 MATCH (p:Power {name: $name})
-SET p.alias = $alias,
+SET p.alias = $alias, p.symbol = $symbol,
 p.setPermissions = $setPerms, p.unsetPermissions = $unsetPerms,
 p.typeRestrictions = $typeRestrictions
-""", new { name, alias, setPerms = setPermissions, unsetPerms = unsetPermissions, typeRestrictions }, cancellationToken);
+""", new { name, alias, symbol, setPerms = setPermissions, unsetPerms = unsetPermissions, typeRestrictions }, cancellationToken);
 		return true;
 	}
 

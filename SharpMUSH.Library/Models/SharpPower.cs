@@ -19,6 +19,13 @@ public class SharpPower
 
 	public required string Alias { get; set; }
 
+	/// <summary>
+	/// The power's one-character abbreviation, or the empty string for none — PennMUSH's
+	/// <c>FLAG.letter</c>, set with <c>@power/letter</c>. Two powers that can apply to the same
+	/// object type may not share one; see PennMUSH src/flags.c letter_to_flagptr.
+	/// </summary>
+	public string Symbol { get; set; } = string.Empty;
+
 	public required string[] SetPermissions { get; set; }
 
 	public required string[] UnsetPermissions { get; set; }

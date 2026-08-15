@@ -255,18 +255,19 @@ public partial class Commands
 			output.AppendLine(header);
 
 			var headerLine = useLowercase
-				? "name                 alias              type restrictions"
-				: "NAME                 ALIAS              TYPE RESTRICTIONS";
+				? "name                 symbol alias              type restrictions"
+				: "NAME                 SYMBOL ALIAS              TYPE RESTRICTIONS";
 			output.AppendLine(headerLine);
-			output.AppendLine("-------------------- ------------------ -------------------");
+			output.AppendLine("-------------------- ------ ------------------ -------------------");
 
 			var powers = Mediator!.CreateStream(new GetPowersQuery());
 			await foreach (var power in powers)
 			{
 				var powerName = useLowercase ? power.Name.ToLower() : power.Name;
 				var alias = useLowercase ? power.Alias.ToLower() : power.Alias;
+				// A power's letter is case-sensitive, so /lowercase never folds it.
 				var types = string.Join(",", power.TypeRestrictions.Select(t => useLowercase ? t.ToLower() : t));
-				output.AppendLine($"{powerName,-20} {alias,-18} {types}");
+				output.AppendLine($"{powerName,-20} {power.Symbol,-6} {alias,-18} {types}");
 			}
 
 			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);

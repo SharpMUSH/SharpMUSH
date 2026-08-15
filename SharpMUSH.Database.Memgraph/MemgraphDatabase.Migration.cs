@@ -634,9 +634,10 @@ ON CREATE SET f.symbol = $symbol, f.system = true, f.inheritable = $inheritable
 
 		foreach (var p in powers)
 		{
+			// symbol = '': every entry in PennMUSH hdrs/flag_tab.h power_table has letter '\0'.
 			await ExecuteWithRetryAsync("""
 MERGE (p:Power {name: $name})
-ON CREATE SET p.alias = $alias, p.system = true, p.disabled = false,
+ON CREATE SET p.alias = $alias, p.symbol = '', p.system = true, p.disabled = false,
 p.setPermissions = $setPerms, p.unsetPermissions = $unsetPerms,
 p.typeRestrictions = $typeRestrictions
 """, new
@@ -648,6 +649,10 @@ p.typeRestrictions = $typeRestrictions
 				typeRestrictions = new[] { "ROOM", "PLAYER", "EXIT", "THING" }
 			}, ct);
 		}
+
+		// ON CREATE SET skips powers that already exist, and @power/letter's collision scan must read
+		// the same shape from every power node.
+		await ExecuteWithRetryAsync("MATCH (p:Power) WHERE p.symbol IS NULL SET p.symbol = ''", ct: ct);
 	}
 
 	private async Task CreateInitialAttributeEntries(CancellationToken ct)

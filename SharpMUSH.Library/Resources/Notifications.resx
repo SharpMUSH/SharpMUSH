@@ -252,6 +252,9 @@
   <data name="DontLookLikeGod" xml:space="preserve">
     <value>You don't look like God.</value>
   </data>
+  <data name="NotEnoughMagic" xml:space="preserve">
+    <value>You don't have enough magic for that.</value>
+  </data>
   <data name="NotAnAdmin" xml:space="preserve">
     <value>You don't look like an admin to me.</value>
   </data>
@@ -505,11 +508,29 @@
   <data name="DontRecognizePower" xml:space="preserve">
     <value>{0} - I don't recognize that power.</value>
   </data>
-  <data name="PowerSet" xml:space="preserve">
-    <value>{0} - {1} set.</value>
+  <data name="PowerGranted" xml:space="preserve">
+    <value>{0} - {1} granted.</value>
   </data>
-  <data name="PowerAlreadySet" xml:space="preserve">
-    <value>{0} - {1} (already) set.</value>
+  <data name="PowerAlreadyGranted" xml:space="preserve">
+    <value>{0} - {1} (already) granted.</value>
+  </data>
+  <data name="PowerRemoved" xml:space="preserve">
+    <value>{0} - {1} removed.</value>
+  </data>
+  <data name="PowerAlreadyRemoved" xml:space="preserve">
+    <value>{0} - {1} (already) removed.</value>
+  </data>
+  <data name="OnlyWizardsMayGrantPowers" xml:space="preserve">
+    <value>Only wizards may grant powers.</value>
+  </data>
+  <data name="GodIsAlreadyAllPowerful" xml:space="preserve">
+    <value>God is already all-powerful.</value>
+  </data>
+  <data name="MustSpecifyPowerToSet" xml:space="preserve">
+    <value>You must specify a power to set.</value>
+  </data>
+  <data name="NoSuchPowerInfo" xml:space="preserve">
+    <value>No such power.</value>
   </data>
 
   <!-- Attribute set messages -->
@@ -2087,8 +2108,23 @@
   <data name="FailedToEnablePowerFormat" xml:space="preserve">
     <value>Failed to enable power '{0}'.</value>
   </data>
+  <data name="PowerLetterRequiresName" xml:space="preserve">
+    <value>@POWER/LETTER requires a power name.</value>
+  </data>
+  <data name="PowerLetterSetFormat" xml:space="preserve">
+    <value>Letter for power {0} set to '{1}'.</value>
+  </data>
+  <data name="PowerLetterClearedFormat" xml:space="preserve">
+    <value>Letter for power {0} cleared.</value>
+  </data>
+  <data name="PowerCharactersMustBeSingleCharacters" xml:space="preserve">
+    <value>Power characters must be single characters.</value>
+  </data>
+  <data name="PowerLetterConflictFormat" xml:space="preserve">
+    <value>Letter conflicts with the {0} power.</value>
+  </data>
   <data name="PowerUsage" xml:space="preserve">
-    <value>Usage: @power/list, @power/add &lt;name&gt;=&lt;alias&gt;, @power/delete &lt;name&gt;, @power/alias &lt;name&gt;=&lt;alias&gt;, @power/type &lt;name&gt;=&lt;types&gt;, @power/restrict &lt;name&gt;=&lt;permissions&gt;, @power/decompile &lt;name&gt;</value>
+    <value>Usage: @power &lt;power&gt;, @power &lt;object&gt;=[!]&lt;power&gt; [[!]&lt;power&gt;...], @power/list, @power/add &lt;name&gt;=&lt;alias&gt;, @power/delete &lt;name&gt;, @power/alias &lt;name&gt;=&lt;alias&gt;, @power/letter &lt;name&gt;[=&lt;letter&gt;], @power/type &lt;name&gt;=&lt;types&gt;, @power/restrict &lt;name&gt;=&lt;permissions&gt;, @power/decompile &lt;name&gt;</value>
   </data>
 
   <!-- @rejectmotd / @wizmotd -->

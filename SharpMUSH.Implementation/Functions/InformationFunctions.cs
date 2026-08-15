@@ -364,10 +364,13 @@ public partial class Functions
 						return ErrorMessages.Returns.NoSideFx;
 					}
 
+					// PennMUSH src/fundb.c fun_powers hands the side-effect form straight to do_power, so it
+					// gets the same wizard-only check and the same "!" revoke handling as @power.
 					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 						parser, executor, executor, obj!.Message!.ToPlainText(), LocateFlags.All,
 						async found =>
-							await ManipulateSharpObjectService!.SetPower(executor, found, power!.Message!.ToPlainText(), true));
+							await ManipulateSharpObjectService!.SetOrUnsetPowers(executor, found,
+								power!.Message!.ToPlainText(), true));
 				}
 		}
 	}

@@ -18,6 +18,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
 
@@ -910,19 +911,46 @@ public partial class Commands
 
 		if (switches.Contains("LIST"))
 		{
+			// list_all_flags hides disabled definitions from everyone but God.
+			var pattern = parser.CurrentState.Arguments.Count > 0
+				? parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim()
+				: string.Empty;
+			var patternRegex = string.IsNullOrEmpty(pattern)
+				? null
+				: new Regex(MModule.getWildcardMatchAsRegex2(pattern), RegexOptions.IgnoreCase);
+			var showDisabled = executor.IsGod();
+
 			var output = new System.Text.StringBuilder();
 			output.AppendLine("Object Powers:");
-			output.AppendLine("Name                 Alias              Type Restrictions");
-			output.AppendLine("-------------------- ------------------ -------------------");
+			output.AppendLine("Name                 Symbol Alias              Type Restrictions");
+			output.AppendLine("-------------------- ------ ------------------ -------------------");
 
 			var powers = Mediator!.CreateStream(new GetPowersQuery());
 			await foreach (var power in powers)
 			{
+				if (power.Disabled && !showDisabled)
+				{
+					continue;
+				}
+
+				if (patternRegex is not null && !patternRegex.IsMatch(power.Name))
+				{
+					continue;
+				}
+
 				var types = string.Join(",", power.TypeRestrictions);
-				output.AppendLine($"{power.Name,-20} {power.Alias,-18} {types}");
+				output.AppendLine($"{power.Name,-20} {power.Symbol,-6} {power.Alias,-18} {types}");
 			}
 
 			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			return CallState.Empty;
+		}
+
+		// Editing power definitions is God-only in flags.c; /decompile only reads, so it stays open like /list.
+		if (!switches.Contains("DECOMPILE") && switches.Any() && !executor.IsGod())
+		{
+			await NotifyService!.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.NotEnoughMagic), executor);
 			return CallState.Empty;
 		}
 
@@ -946,6 +974,7 @@ public partial class Commands
 			var result = await Mediator!.Send(new CreatePowerCommand(
 				powerName.ToUpper(),
 				alias.ToUpper(),
+				string.Empty, // PennMUSH @power/add defaults <letter> to none
 				false, // system - user-created powers are NEVER system powers
 				["FLAG^WIZARD"], // default set permissions
 				["FLAG^WIZARD"], // default unset permissions
@@ -1040,6 +1069,7 @@ public partial class Commands
 			var result = await Mediator!.Send(new UpdatePowerCommand(
 				powerName.ToUpper(),
 				newAlias.ToUpper(),
+				power.Symbol,
 				power.SetPermissions,
 				power.UnsetPermissions,
 				power.TypeRestrictions
@@ -1055,6 +1085,108 @@ public partial class Commands
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
+		}
+
+		if (switches.Contains("LETTER"))
+		{
+			// PennMUSH src/flags.c do_flag_letter, via src/cmds.c cmd_power with ns "POWER".
+			if (parser.CurrentState.Arguments.Count < 1)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterRequiresName), executor);
+				return CallState.Empty;
+			}
+
+			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
+
+			if (string.IsNullOrWhiteSpace(powerName))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameCannotBeEmpty), executor);
+				return CallState.Empty;
+			}
+
+			// do_flag_letter treats an absent and an empty letter alike: both clear it.
+			var newLetter = parser.CurrentState.Arguments.Count > 1
+				? parser.CurrentState.Arguments["1"].Message!.ToPlainText().Trim()
+				: string.Empty;
+
+			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			if (power == null)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
+				return CallState.Empty;
+			}
+
+			if (power.System)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
+				return CallState.Empty;
+			}
+
+			if (newLetter.Length > 1)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerCharactersMustBeSingleCharacters), executor);
+				return CallState.Empty;
+			}
+
+			if (newLetter.Length == 1)
+			{
+				// PennMUSH src/flags.c:955 letter_to_flagptr scopes the search to definitions whose types
+				// overlap, and compares case-sensitively. Its `n->tab == &ptab_flag` guard (:961) makes it
+				// unreachable for powers; this implements the check as written, not as reached.
+				SharpPower? conflict = null;
+				await foreach (var other in Mediator!.CreateStream(new GetPowersQuery()))
+				{
+					if (other.Name.Equals(power.Name, StringComparison.OrdinalIgnoreCase))
+					{
+						continue;
+					}
+
+					if (!string.Equals(other.Symbol, newLetter, StringComparison.Ordinal))
+					{
+						continue;
+					}
+
+					if (!other.TypeRestrictions.Intersect(power.TypeRestrictions, StringComparer.OrdinalIgnoreCase).Any())
+					{
+						continue;
+					}
+
+					conflict = other;
+					break;
+				}
+
+				if (conflict is not null)
+				{
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterConflictFormat), executor, conflict.Name);
+					return CallState.Empty;
+				}
+			}
+
+			var lettered = await Mediator!.Send(new UpdatePowerCommand(
+				power.Name,
+				power.Alias,
+				newLetter,
+				power.SetPermissions,
+				power.UnsetPermissions,
+				power.TypeRestrictions
+			));
+
+			if (!lettered)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
+				return CallState.Empty;
+			}
+
+			if (newLetter.Length == 1)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterSetFormat), executor, power.Name, newLetter);
+			}
+			else
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterClearedFormat), executor, power.Name);
+			}
+
+			return new CallState(MModule.single(power.Name));
 		}
 
 		if (switches.Contains("TYPE"))
@@ -1094,6 +1226,7 @@ public partial class Commands
 			var result = await Mediator!.Send(new UpdatePowerCommand(
 				powerName.ToUpper(),
 				power.Alias,
+				power.Symbol,
 				power.SetPermissions,
 				power.UnsetPermissions,
 				types
@@ -1146,6 +1279,7 @@ public partial class Commands
 			var result = await Mediator!.Send(new UpdatePowerCommand(
 				powerName.ToUpper(),
 				power.Alias,
+				power.Symbol,
 				perms,
 				perms,
 				power.TypeRestrictions
@@ -1182,6 +1316,7 @@ public partial class Commands
 
 			var output = new System.Text.StringBuilder();
 			output.AppendLine($"Power: {power.Name}");
+			output.AppendLine($"Symbol: {power.Symbol}");
 			output.AppendLine($"Alias: {power.Alias}");
 			output.AppendLine($"System: {(power.System ? "Yes" : "No")}");
 			output.AppendLine($"Disabled: {(power.Disabled ? "Yes" : "No")}");
@@ -1237,7 +1372,60 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerUsage), executor);
+		// A declared-but-unhandled switch must not fall through into the grant form below.
+		if (switches.Any())
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerUsage), executor);
+			return CallState.Empty;
+		}
+
+		var powerArgs = parser.CurrentState.Arguments;
+		var objectArg = powerArgs.Count > 0 ? powerArgs["0"].Message!.ToPlainText().Trim() : string.Empty;
+		var powerArg = powerArgs.Count > 1 ? powerArgs["1"].Message!.ToPlainText() : string.Empty;
+
+		if (string.IsNullOrWhiteSpace(powerArg))
+		{
+			// "@power <power>" describes the power itself. It does NOT list an object's powers.
+			if (string.IsNullOrWhiteSpace(objectArg))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerUsage), executor);
+				return CallState.Empty;
+			}
+
+			var namedPower = await ManipulateSharpObjectService!.FindPower(objectArg);
+			if (namedPower is null)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoSuchPowerInfo), executor);
+				return CallState.Empty;
+			}
+
+			var info = new System.Text.StringBuilder();
+			info.AppendLine($"{"Name",9}: {namedPower.Name}");
+			info.AppendLine($"{"Character",9}: {namedPower.Symbol}");
+			info.AppendLine($"{"Aliases",9}: {namedPower.Alias}");
+			info.AppendLine($"{"Type(s)",9}: {string.Join(" ", namedPower.TypeRestrictions)}");
+			info.AppendLine($"{"Perms",9}: {string.Join(" ", namedPower.SetPermissions)}");
+			info.Append($"{"ResetPrms",9}: {string.Join(" ", namedPower.UnsetPermissions)}");
+
+			await NotifyService!.Notify(executor, info.ToString(), executor);
+			return new CallState(MModule.single(namedPower.Name));
+		}
+
+		// do_power refuses non-wizards before resolving <object>, so a non-wizard is told they may not
+		// grant powers rather than that the object could not be found.
+		if (!await executor.IsWizard())
+		{
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.OnlyWizardsMayGrantPowers);
+			return CallState.Empty;
+		}
+
+		var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, objectArg, LocateFlags.All);
+		if (!maybeTarget.IsValid())
+		{
+			return CallState.Empty;
+		}
+
+		await ManipulateSharpObjectService!.SetOrUnsetPowers(executor, maybeTarget.WithoutError().Known(), powerArg, true);
 		return CallState.Empty;
 	}
 
