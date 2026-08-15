@@ -273,7 +273,12 @@
                                 @onclick="() => SwitchTabAsync(idx)"><span class="sc-tab-ref">#@tab.Obj.Dbref/</span>@tab.Attr.Name</button>
                         @if (tab.IsDirty)
                         {
-                            <span class="sc-tab-dirty" title="@Loc["TermUnsaved"]" aria-hidden="true">●</span>
+                            @* role="img" + aria-label, not aria-hidden: the dot is the only thing
+                               distinguishing a tab with unsaved edits, so hiding it from assistive
+                               tech would leave that state with no representation at all. A bare
+                               aria-label on a <span> is not reliably announced without the role. *@
+                            <span class="sc-tab-dirty" role="img"
+                                  title="@Loc["TermUnsaved"]" aria-label="@Loc["TermUnsaved"]">●</span>
                         }
                         @* A button of its own, not a click handler on a wrapper around a MudIconButton:
                            MudBlazor's buttons stop click propagation unconditionally, so a handler on

@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using BlazorMonaco;
+using BlazorMonaco.Editor;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -31,12 +33,23 @@ file sealed class ObjectApiHandler(ObjectSummaryDto summary, IReadOnlyList<Attri
 			_ => null,
 		};
 
-		return Task.FromResult(body is null
-			? new HttpResponseMessage(HttpStatusCode.NotFound)
-			: new HttpResponseMessage(HttpStatusCode.OK)
+		// Built into a local and returned rather than composed inline: ownership passes to the
+		// HttpClient that disposes it, and a conditional expression full of `new` reads to analysis
+		// as a temporary nobody disposes.
+		HttpResponseMessage response;
+		if (body is null)
+		{
+			response = new HttpResponseMessage(HttpStatusCode.NotFound);
+		}
+		else
+		{
+			response = new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(JsonSerializer.Serialize(body, CamelCase), Encoding.UTF8, "application/json")
-			});
+			};
+		}
+
+		return Task.FromResult(response);
 	}
 }
 
@@ -46,6 +59,8 @@ file sealed class ObjectApiHandler(ObjectSummaryDto summary, IReadOnlyList<Attri
 /// </summary>
 public class SoftcodeEditorTabsTests : BunitContext
 {
+	private readonly HttpClient _api;
+
 	public SoftcodeEditorTabsTests()
 	{
 		var terminal = Substitute.For<ITerminalService>();
@@ -58,8 +73,10 @@ public class SoftcodeEditorTabsTests : BunitContext
 		var handler = new ObjectApiHandler(
 			new ObjectSummaryDto("#8", "Widget", "THING", "Wizard(#1)", []),
 			[new AttributeDto("DESCRIBE", "A widget.", [])]);
+		// Held in a field and disposed at teardown; disposing the client disposes the handler with it.
+		_api = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
 		var factory = Substitute.For<IHttpClientFactory>();
-		factory.CreateClient("api").Returns(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
+		factory.CreateClient("api").Returns(_api);
 
 		// Rendering the page directly bypasses the router's [Authorize] gate, so no auth setup is needed.
 		Services
@@ -126,4 +143,28 @@ public class SoftcodeEditorTabsTests : BunitContext
 
 		await Assert.That(cut.Markup).Contains("TermNoAttributeSelected");
 	}
+
+	[TUnit.Core.Test]
+	public async Task AnUnsavedTabAnnouncesThatStateRatherThanHidingIt()
+	{
+		var cut = await RenderWithOneOpenTabAsync();
+
+		// Monaco is stubbed, so its buffer reads back empty — which differs from the stored value
+		// and is exactly what makes the tab dirty. Raising the editor's change event is the only
+		// route to that state; IsDirty is derived, never set directly.
+		var editor = cut.FindComponent<StandaloneCodeEditor>();
+		await cut.InvokeAsync(() => editor.Instance.OnDidChangeModelContent.InvokeAsync(new ModelContentChangedEvent()));
+
+		var dirty = cut.Find(".sc-tab-dirty");
+
+		// The dot is the only thing marking a tab as unsaved, so aria-hidden would erase that state
+		// for assistive tech entirely.
+		await Assert.That(dirty.GetAttribute("aria-hidden")).IsNull();
+		await Assert.That(dirty.GetAttribute("role")).IsEqualTo("img");
+		await Assert.That(dirty.GetAttribute("aria-label")).IsEqualTo("TermUnsaved");
+	}
+
+	/// <summary>Disposes the HttpClient this fixture owns; the handler goes with it.</summary>
+	[After(Test)]
+	public void DisposeApiClient() => _api.Dispose();
 }
