@@ -28,6 +28,16 @@ public class ResponsiveConventionsTests
 				return File.Exists(razor) && Regex.IsMatch(File.ReadAllText(razor), @"^[ \t]*@page\b", RegexOptions.Multiline);
 			});
 
+	/// <summary>
+	/// Scoped stylesheets paired with the <c>.razor</c> whose markup they are scoped to. The pair is
+	/// the unit both reachability rules need: what a scoped selector can match is decided by what
+	/// that one file's markup declares, not by anything in the stylesheet alone.
+	/// </summary>
+	private static IEnumerable<(string Css, string Razor)> ScopedPairs() =>
+		ScopedStylesheets()
+			.Select(css => (Css: css, Razor: css[..^".css".Length]))
+			.Where(pair => File.Exists(pair.Razor));
+
 	private static string Rel(string path) =>
 		Path.GetRelativePath(ClientSource.RazorRoot, path).Replace('\\', '/');
 
@@ -513,5 +523,399 @@ public class ResponsiveConventionsTests
 		await Assert.That(stale).IsEmpty()
 			.Because("a page that now has a stylesheet must be checked by EveryRoutablePageHasAStylesheet, "
 				+ "not silently exempted from it");
+	}
+
+	// ── Reachability: selectors that compile fine and match nothing ──────────────────────────────
+	//
+	// Both rules below exist because the same two mistakes shipped repeatedly on this branch and
+	// were each caught only by someone opening a browser. Neither produces a warning, a build
+	// error, or a visible difference in the file — a dead rule looks exactly like a live one.
+
+	/// <summary>
+	/// The innermost rules of a stylesheet: those whose body holds declarations rather than more
+	/// rules. Nested at-rule headers (<c>@media</c>, <c>@container</c>, <c>@supports</c>) never
+	/// surface as a rule of their own — their body contains braces, so the pattern cannot close on
+	/// them and the match restarts inside the block instead. Callers that need the at-rule as a
+	/// unit ask for it separately.
+	/// </summary>
+	private static IEnumerable<(string Prelude, string Body)> Rules(string css) =>
+		Regex.Matches(css, @"(?<prelude>[^{}]+)\{(?<body>[^{}]*)\}")
+			.Select(m => (Prelude: m.Groups["prelude"].Value.Trim(), Body: m.Groups["body"].Value))
+			.Where(rule => rule.Prelude.Length > 0 && rule.Prelude[0] != '@');
+
+	private static IEnumerable<string> Selectors(string css) =>
+		Rules(css)
+			.SelectMany(rule => rule.Prelude.Split(','))
+			.Select(selector => selector.Trim())
+			.Where(selector => selector.Length > 0);
+
+	/// <summary>
+	/// The classes on a selector's <em>subject</em> — the rightmost compound, the element the rule
+	/// actually styles. This is the compound that matters for CSS isolation: Blazor appends the
+	/// scope attribute to the last compound (<c>.a .b</c> becomes <c>.a .b[b-xyz]</c>, verified
+	/// against the generated <c>.rz.scp.css</c>), so only the subject has to be an element this
+	/// component's own markup declares. Ancestor compounds are ordinary matching and need nothing.
+	/// </summary>
+	private static IEnumerable<string> SubjectClasses(string selector)
+	{
+		var subject = Regex.Split(selector.Trim(), @"[\s>+~]+").Last();
+		// Pseudo-classes and pseudo-elements are dropped whole, arguments included, so a class
+		// mentioned inside :not(...) is never mistaken for the subject's own class.
+		subject = Regex.Replace(subject, @"::?[A-Za-z-]+(\([^)]*\))?", string.Empty);
+		return Regex.Matches(subject, @"\.(?<name>[A-Za-z][\w-]*)").Select(m => m.Groups["name"].Value);
+	}
+
+	/// <summary>
+	/// Every <c>class="…"</c> / <c>Class="…"</c> value in a .razor, with the tag that carries it and
+	/// the value's span in the source. The tag is found by walking forward and skipping each tag's
+	/// quoted attribute values wholesale, so a generic type argument (<c>T="List&lt;Thing&gt;"</c>)
+	/// is never read as a nested tag — which would attribute the Class beside it to the wrong owner.
+	/// </summary>
+	private static IEnumerable<(string Tag, int Start, int Length)> ClassAttributeValues(string razor)
+	{
+		var i = 0;
+
+		while (i < razor.Length)
+		{
+			if (razor[i] != '<' || i + 1 >= razor.Length || !char.IsLetter(razor[i + 1]))
+			{
+				i++;
+				continue;
+			}
+
+			var nameEnd = i + 1;
+			while (nameEnd < razor.Length && (char.IsLetterOrDigit(razor[nameEnd]) || razor[nameEnd] is '_' or '.'))
+				nameEnd++;
+
+			var tag = razor[(i + 1)..nameEnd];
+			var end = nameEnd;
+			var quote = '\0';
+
+			while (end < razor.Length)
+			{
+				var c = razor[end];
+				if (quote != '\0')
+				{
+					if (c == quote) quote = '\0';
+				}
+				else if (c is '"' or '\'')
+				{
+					quote = c;
+				}
+				else if (c == '>')
+				{
+					break;
+				}
+
+				end++;
+			}
+
+			var attributes = razor[nameEnd..Math.Min(end, razor.Length)];
+			foreach (Match m in Regex.Matches(attributes, @"(?<![\w-])class\s*=\s*""(?<value>[^""]*)""", RegexOptions.IgnoreCase))
+				yield return (tag, nameEnd + m.Groups["value"].Index, m.Groups["value"].Length);
+
+			i = end + 1;
+		}
+	}
+
+	/// <summary>
+	/// The literal class names in a <c>Class="…"</c> value, with every Razor expression removed.
+	/// A class chosen by C# — <c>@(_on ? "a" : "b")</c>, <c>@_cls</c>, an interpolated name — is
+	/// not something this check can read, and inventing names from an expression is how a lint
+	/// starts crying wolf and gets switched off.
+	/// </summary>
+	private static IEnumerable<string> LiteralClassTokens(string value)
+	{
+		var literal = new StringBuilder();
+		var i = 0;
+
+		while (i < value.Length)
+		{
+			if (value[i] != '@')
+			{
+				literal.Append(value[i]);
+				i++;
+				continue;
+			}
+
+			i++;
+			if (i < value.Length && value[i] == '(')
+			{
+				var depth = 0;
+				while (i < value.Length)
+				{
+					if (value[i] == '(')
+					{
+						depth++;
+					}
+					else if (value[i] == ')' && --depth == 0)
+					{
+						i++;
+						break;
+					}
+
+					i++;
+				}
+
+				continue;
+			}
+
+			while (i < value.Length && (char.IsLetterOrDigit(value[i]) || value[i] is '_' or '.'))
+				i++;
+		}
+
+		return literal.ToString()
+			.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+			.Where(token => Regex.IsMatch(token, @"^[A-Za-z][\w-]*$"));
+	}
+
+	/// <summary>
+	/// Class names this .razor hands to a component and mentions nowhere else. Blazor stamps the
+	/// scope attribute only on elements the component's own markup declares; a <c>Class</c>
+	/// parameter is passed to the component, which puts it on markup carrying a different scope.
+	///
+	/// "Mentions nowhere else" is deliberately blunt: the name is cleared only if every occurrence
+	/// in the file sits inside a component <c>Class</c> literal. A class that also appears on a
+	/// plain element, or in a C# helper that builds it, or anywhere else at all, is left alone —
+	/// this check would rather miss a dead rule than report a live one.
+	/// </summary>
+	private static IReadOnlySet<string> ClassesOnlyComponentsReceive(string razor)
+	{
+		var candidates = new HashSet<string>(StringComparer.Ordinal);
+		var masked = new StringBuilder(razor);
+
+		foreach (var (tag, start, length) in ClassAttributeValues(razor))
+		{
+			if (!char.IsUpper(tag[0]))
+				continue;
+
+			foreach (var token in LiteralClassTokens(razor.Substring(start, length)))
+				candidates.Add(token);
+
+			for (var i = start; i < start + length; i++)
+				masked[i] = ' ';
+		}
+
+		var elsewhere = masked.ToString();
+		candidates.RemoveWhere(name => Regex.IsMatch(elsewhere, $@"(?<![\w-]){Regex.Escape(name)}(?![\w-])"));
+		return candidates;
+	}
+
+	/// <summary>
+	/// Scoped selectors that can never match anything, one message per selector.
+	/// </summary>
+	private static IEnumerable<string> UnreachableScopedSelectors(string css, string razor)
+	{
+		var componentOnly = ClassesOnlyComponentsReceive(razor);
+		if (componentOnly.Count == 0)
+			yield break;
+
+		foreach (var selector in Selectors(css))
+		{
+			// ::deep anywhere moves the scope attribute off the subject and onto the compound
+			// before it, so the subject is unscoped and free to match a component's own markup —
+			// which is exactly the fix this rule asks for.
+			if (selector.Contains("::deep", StringComparison.Ordinal))
+				continue;
+
+			var dead = SubjectClasses(selector)
+				.Where(componentOnly.Contains)
+				.Distinct(StringComparer.Ordinal)
+				.Order(StringComparer.Ordinal)
+				.ToList();
+
+			if (dead.Count > 0)
+				yield return $"`{selector}` — {string.Join(", ", dead.Select(name => "." + name))} "
+					+ "only ever lands on a component's own markup, which this scope attribute never reaches; "
+					+ "lead with `::deep` anchored on an element this file declares";
+		}
+	}
+
+	[Test]
+	public async Task ScopedSelectorsDoNotTargetClassesOnlyAComponentEverReceives()
+	{
+		var offenders = ScopedPairs()
+			.SelectMany(pair => UnreachableScopedSelectors(StripComments(File.ReadAllText(pair.Css)), File.ReadAllText(pair.Razor))
+				.Select(message => $"{Rel(pair.Css)}: {message}"))
+			.Order(StringComparer.Ordinal)
+			.ToList();
+
+		await Assert.That(offenders).IsEmpty()
+			.Because("this exact mistake shipped four separate times on this branch — an empty-state icon, a "
+				+ "WelcomeTextWidget image, the AdminAccounts MudTable, and .charcreate-card — and every one of "
+				+ "them compiled clean, matched nothing, and was found only by looking in a browser");
+	}
+
+	[Test]
+	public async Task AClassOnlyAComponentReceivesIsRecognisedAsUnreachable()
+	{
+		// The .charcreate-card shape, reduced: MudPaper takes the class, so the scoped selector
+		// resolves against an element that never carries the scope attribute.
+		const string razor = """
+			<div class="cc-page">
+			    <MudPaper Class="charcreate-card">
+			        <span class="charcreate-title">x</span>
+			    </MudPaper>
+			</div>
+			""";
+		const string css = """
+			.cc-page { padding: 1rem; }
+			.charcreate-card { border-radius: 8px; }
+			.charcreate-card .charcreate-title { font-weight: 600; }
+			.cc-page ::deep .charcreate-card { box-shadow: none; }
+			""";
+
+		var offenders = UnreachableScopedSelectors(css, razor).ToList();
+
+		await Assert.That(offenders.Count).IsEqualTo(1)
+			.Because("only the bare `.charcreate-card` rule is dead: `.charcreate-card .charcreate-title` "
+				+ "styles a plain <span> and merely *reads* the component class as an ancestor, and the "
+				+ "::deep rule is the sanctioned fix");
+		await Assert.That(offenders[0]).Contains("`.charcreate-card`");
+		await Assert.That(offenders[0]).Contains("::deep");
+	}
+
+	[Test]
+	public async Task ClassOriginsRefuseToGuessWhenTheClassCouldBeReachable()
+	{
+		// The four ways this check could cry wolf, all in one fixture. A rule that reports any of
+		// these gets switched off, which leaves the branch exactly as unprotected as no rule at all.
+		const string razor = """
+			<div class="dual">a plain element and a component both carry this one</div>
+			<MudPaper Class="dual" />
+			<MudChip Class="@(_on ? "computed-on" : "computed-off")" />
+			<MudCard Class="@($"tile tile--{_size}")" />
+			<MudChip Class="from-helper" />
+			<MudTable T="List<Thing>" Class="admin-accounts-table" />
+			@code {
+			    private void Apply(ElementReference e) => Js.InvokeVoidAsync("addClass", e, "from-helper");
+			}
+			""";
+
+		var componentOnly = ClassesOnlyComponentsReceive(razor);
+
+		await Assert.That(componentOnly).DoesNotContain("dual")
+			.Because("a class on both a component and a plain element still matches on the plain element");
+		await Assert.That(componentOnly).DoesNotContain("computed-on")
+			.Because("a class chosen by a C# expression is not a literal this check may read");
+		await Assert.That(componentOnly).DoesNotContain("tile")
+			.Because("an interpolated Class value names no class the checker can be sure of");
+		await Assert.That(componentOnly).DoesNotContain("from-helper")
+			.Because("a name that also appears in C# may be applied from there to a plain element");
+		await Assert.That(componentOnly).Contains("admin-accounts-table")
+			.Because("a literal Class on a component tag, mentioned nowhere else, cannot be reached — "
+				+ "and the generic type argument beside it must not confuse the owning tag");
+	}
+
+	/// <summary>
+	/// Classes whose own rule establishes a query container. Only the subject compound counts:
+	/// <c>container-type</c> applies to the element the rule styles.
+	/// </summary>
+	private static IReadOnlySet<string> ContainerDeclaringClasses(string css) =>
+		Rules(css)
+			.Where(rule => Regex.IsMatch(rule.Body, @"(^|[;\s])container(-type)?\s*:"))
+			.SelectMany(rule => rule.Prelude.Split(','))
+			.SelectMany(SubjectClasses)
+			.ToHashSet(StringComparer.Ordinal);
+
+	/// <summary>
+	/// Selectors inside <em>unnamed</em> <c>@container</c> blocks — a component querying the
+	/// container it declared itself. A named <c>@container page (…)</c> query is a different
+	/// relationship entirely (the shell's container, always an ancestor) and never appears here.
+	/// </summary>
+	private static IEnumerable<string> UnnamedContainerSelectors(string css)
+	{
+		foreach (Match m in Regex.Matches(css, @"@container\s*\("))
+		{
+			var open = css.IndexOf('{', m.Index);
+			if (open < 0)
+				continue;
+
+			var depth = 0;
+			var close = open;
+			for (; close < css.Length; close++)
+			{
+				if (css[close] == '{')
+					depth++;
+				else if (css[close] == '}' && --depth == 0)
+					break;
+			}
+
+			foreach (var selector in Selectors(css[(open + 1)..Math.Min(close, css.Length)]))
+				yield return selector;
+		}
+	}
+
+	/// <summary>
+	/// Rules inside a component's own <c>@container</c> block whose subject is the very element
+	/// that declares the container.
+	/// </summary>
+	private static IEnumerable<string> SelfContainerQueries(string css)
+	{
+		var containers = ContainerDeclaringClasses(css);
+		if (containers.Count == 0)
+			yield break;
+
+		foreach (var selector in UnnamedContainerSelectors(css))
+		{
+			// A combinator means the subject is some other element and the container class, if
+			// present, is only an ancestor qualifier — `.widget ::deep .mud-grid-item` matches
+			// perfectly well, because matching an ancestor has nothing to do with querying it.
+			if (Regex.IsMatch(selector, @"[\s>+~]"))
+				continue;
+
+			var self = SubjectClasses(selector)
+				.Where(containers.Contains)
+				.Distinct(StringComparer.Ordinal)
+				.Order(StringComparer.Ordinal)
+				.ToList();
+
+			if (self.Count > 0)
+				yield return $"`{selector}` — {string.Join(", ", self.Select(name => "." + name))} declares "
+					+ "container-type on this same element, and an element is never its own query container; "
+					+ "move containment to a wrapper so the root becomes a descendant of it";
+		}
+	}
+
+	[Test]
+	public async Task NoComponentQueriesAContainerItDeclaresOnItself()
+	{
+		var offenders = ScopedStylesheets()
+			.SelectMany(file => SelfContainerQueries(StripComments(File.ReadAllText(file)))
+				.Select(message => $"{Rel(file)}: {message}"))
+			.Order(StringComparer.Ordinal)
+			.ToList();
+
+		await Assert.That(offenders).IsEmpty()
+			.Because("such a rule resolves against the nearest *ancestor* container instead — .phosphor-page "
+				+ "when the component sits on a page, and nothing at all in a footer or a widget aside — so "
+				+ "every descendant rule in the block fires while the root's own rule silently does not");
+	}
+
+	[Test]
+	public async Task AnElementQueryingItsOwnContainerIsRecognised()
+	{
+		// The WikiIndexWidget shape, reduced — including the `.widget.widget` doubling that was
+		// written to buy specificity and only made the dead rule harder to spot.
+		const string css = """
+			.widget { container-type: inline-size; padding: 2rem; }
+			.widget-body { padding: 1rem; }
+			@container (max-width: 30rem) {
+				.widget.widget { padding: 1rem; }
+				.widget .widget-body { padding: 0; }
+				.widget ::deep .mud-grid-item { flex: 1 1 100%; }
+			}
+			@container page (max-width: 48rem) {
+				.widget { padding: 0; }
+			}
+			""";
+
+		var offenders = SelfContainerQueries(css).ToList();
+
+		await Assert.That(offenders.Count).IsEqualTo(1)
+			.Because("the descendant rules query the container correctly, and a named `@container page` "
+				+ "query asks the shell's container — an ancestor — which is always legitimate");
+		await Assert.That(offenders[0]).Contains("`.widget.widget`");
+		await Assert.That(offenders[0]).Contains("wrapper");
 	}
 }
