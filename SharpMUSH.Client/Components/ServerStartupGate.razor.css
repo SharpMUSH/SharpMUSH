@@ -53,15 +53,18 @@
     line-height: 1.15;
 }
 
-.startup-gate-spinner {
+/* MudProgressCircular and MudText put Class= on the element they render internally, which never
+   carries this component's scope attribute — so these three must anchor on .startup-gate-body,
+   an element this file does declare, and reach past the scope boundary with ::deep. */
+.startup-gate-body ::deep .startup-gate-spinner {
     margin-top: 0.5rem;
 }
 
-.startup-gate-message {
+.startup-gate-body ::deep .startup-gate-message {
     color: var(--text);
     font-weight: 600;
 }
 
-.startup-gate-submessage {
+.startup-gate-body ::deep .startup-gate-submessage {
     color: var(--text-faint);
 }

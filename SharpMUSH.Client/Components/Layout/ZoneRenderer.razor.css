@@ -5,10 +5,19 @@
 
    ZoneRenderer renders in more than one place — inside .phosphor-page for ordinary page zones,
    but also in MainLayout's footer zone, which is a sibling of .phosphor-page, not a descendant,
-   so there is no 'page' container to query there. Declaring container-type here (rather than
-   querying page) makes the grid measure its own box and behave the same in both spots. */
-.zone-grid {
+   so there is no 'page' container to query there. Declaring a container here (rather than
+   querying page) makes the grid measure its own box and behave the same in both spots.
+
+   Containment sits on the wrapper, not on .zone-grid itself: an element is never its own query
+   container, so a rule targeting .zone-grid from inside a @container it declared would resolve
+   against the nearest *ancestor* container instead — .phosphor-page when there is one, and
+   nothing at all in the footer or an aside. The wrapper is a plain block box that neither the
+   grid nor any of its parents style, so it changes no layout. */
+.zone-grid-container {
     container-type: inline-size;
+}
+
+.zone-grid {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
     gap: 1rem;

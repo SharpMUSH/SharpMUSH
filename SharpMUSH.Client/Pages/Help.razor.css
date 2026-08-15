@@ -58,7 +58,8 @@
     color: var(--text);
 }
 
-.help-filter {
+/* MudTextField puts Class= on its own wrapper, which this page's scope attribute never reaches. */
+.help-topics ::deep .help-filter {
     margin-bottom: 1rem;
 }
 
