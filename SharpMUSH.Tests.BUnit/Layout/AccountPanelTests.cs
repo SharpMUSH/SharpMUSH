@@ -85,7 +85,7 @@ file sealed class AccountPanelTestHost : ComponentBase
 ///   the card only needs the cascaded ClaimsPrincipal (<c>Auth.SetAuthorized</c>) to render, not an
 ///   actually-logged-in <see cref="AccountAuthService"/>.
 /// </summary>
-public class AccountPanelTests : BunitContext
+public class AccountPanelTests : TrackingBunitContext
 {
 	private BunitAuthorizationContext Auth { get; }
 
@@ -164,7 +164,7 @@ public class AccountPanelTests : BunitContext
 		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 
-		var apiClient = new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 		Services.AddSingleton(factory);
@@ -201,7 +201,7 @@ public class AccountPanelTests : BunitContext
 		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 
-		var apiClient = new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 		Services.AddSingleton(factory);

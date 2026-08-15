@@ -31,7 +31,7 @@ file sealed class SequencedSetupStatusHandler(params HttpResponseMessage[] respo
 /// MainLayout's EnsureAccountRoutingAsync know to retry on the next navigation instead of
 /// latching a stale "setup already done."
 /// </summary>
-public class AccountAuthServiceSetupStatusTests : BunitContext
+public class AccountAuthServiceSetupStatusTests : TrackingBunitContext
 {
 	[TUnit.Core.Test]
 	public async Task NeedsSetupAsync_ServerError_ReturnsFailureNotFalse()

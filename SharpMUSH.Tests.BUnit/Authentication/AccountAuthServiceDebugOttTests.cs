@@ -78,11 +78,12 @@ file sealed class NeverExpectedHandler : HttpMessageHandler
 /// now single-flights following the exact <c>_initTask ??= ...</c> pattern already used by
 /// <see cref="AccountAuthService.InitAsync"/>.
 /// </summary>
-public class AccountAuthServiceDebugOttTests : BunitContext
+public class AccountAuthServiceDebugOttTests : TrackingBunitContext
 {
-	private static IHttpClientFactory FactoryFor(HttpMessageHandler handler)
+	// Instance, not static: the context owns the client it builds here and disposes it with the test.
+	private IHttpClientFactory FactoryFor(HttpMessageHandler handler)
 	{
-		var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var http = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 		return factory;

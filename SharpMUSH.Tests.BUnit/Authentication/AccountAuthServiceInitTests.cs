@@ -34,7 +34,7 @@ file sealed class FakeSuccessLoginHandler : HttpMessageHandler
 /// state in that case rather than restoring Username from localStorage — otherwise a returning
 /// user in a new tab gets a phantom identity with no live session.
 /// </summary>
-public class AccountAuthServiceInitTests : BunitContext
+public class AccountAuthServiceInitTests : TrackingBunitContext
 {
 	[TUnit.Core.Test]
 	public async Task InitAsync_NoSessionToken_ClearsStateEvenWhenLocalStorageHasUsername()

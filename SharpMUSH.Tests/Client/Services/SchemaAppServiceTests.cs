@@ -13,7 +13,7 @@ namespace SharpMUSH.Tests.Client.Services;
 /// shows "unavailable" instead of crashing the Blazor renderer with an unhandled JsonException.
 /// A failed action POST degrades to an <c>Ok=false</c> envelope with a <c>_global</c> error.
 /// </summary>
-public class SchemaAppServiceTests
+public class SchemaAppServiceTests : TrackingTestContext
 {
 	private sealed class CannedHandler(HttpStatusCode statusCode, string responseBody) : HttpMessageHandler
 	{
@@ -24,9 +24,9 @@ public class SchemaAppServiceTests
 			});
 	}
 
-	private static SchemaAppService BuildService(HttpStatusCode code, string body)
+	private SchemaAppService BuildService(HttpStatusCode code, string body)
 	{
-		var http = new HttpClient(new CannedHandler(code, body)) { BaseAddress = new Uri("http://localhost") };
+		var http = Track(new HttpClient(new CannedHandler(code, body)) { BaseAddress = new Uri("http://localhost") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 		return new SchemaAppService(factory, Substitute.For<ILogger<SchemaAppService>>());

@@ -150,13 +150,13 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	}
 }
 
-public class SceneSurfaceTests : BunitContext
+public class SceneSurfaceTests : TrackingBunitContext
 {
 	private readonly FakeSceneHub _hub = new();
 
 	public SceneSurfaceTests()
 	{
-		var apiClient = new HttpClient(new SceneApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new SceneApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 

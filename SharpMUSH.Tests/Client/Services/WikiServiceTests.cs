@@ -18,7 +18,7 @@ namespace SharpMUSH.Tests.Client.Services;
 /// They complement the HTTP controller integration tests
 /// (WikiHttpControllerTests) which verify the server side of the same contract.
 /// </summary>
-public class WikiServiceTests
+public class WikiServiceTests : TrackingTestContext
 {
 	/// <summary>
 	/// Returns a canned HTTP response and records the request for later inspection.
@@ -68,17 +68,17 @@ public class WikiServiceTests
 		}
 		""";
 
-	private static WikiService BuildService(HttpMessageHandler handler, out CapturingHandler? capturing)
+	private WikiService BuildService(HttpMessageHandler handler, out CapturingHandler? capturing)
 	{
 		capturing = handler as CapturingHandler;
-		var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
+		var http = Track(new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 		var logger = Substitute.For<ILogger<WikiService>>();
 		return new WikiService(factory, logger);
 	}
 
-	private static WikiService BuildService(HttpStatusCode code, string body, out CapturingHandler capturing)
+	private WikiService BuildService(HttpStatusCode code, string body, out CapturingHandler capturing)
 	{
 		var handler = new CapturingHandler(code, body);
 		capturing = handler;

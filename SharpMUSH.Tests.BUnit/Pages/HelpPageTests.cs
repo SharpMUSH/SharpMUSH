@@ -120,7 +120,7 @@ file sealed class HelpApiHandler(IHelpTopicResolver resolver, bool isStaff) : Ht
 /// assertions below are about what a reader actually sees: real index content, a real entry, a
 /// disambiguation list, a plain miss — and never an invitation to author a wiki page.
 /// </remarks>
-public class HelpPageTests : BunitContext
+public class HelpPageTests : TrackingBunitContext
 {
 	private const string IndexBody = """
 		# help
@@ -170,10 +170,10 @@ public class HelpPageTests : BunitContext
 	private void AddHelpServices(bool isStaff)
 	{
 		var resolver = new HelpTopicResolver(new DictionaryTextFileService(Corpora));
-		var client = new HttpClient(new HelpApiHandler(resolver, isStaff))
+		var client = Track(new HttpClient(new HelpApiHandler(resolver, isStaff))
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
-		};
+		});
 
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(client);

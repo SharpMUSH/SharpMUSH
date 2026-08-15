@@ -44,7 +44,7 @@ file sealed class FakeAccountAuthState : IAccountAuthState
 /// <c>POST api/auth/switch-character</c> endpoint (Task 7), not the retired <c>jwt-switch-character</c>
 /// flow.
 /// </summary>
-public class AccountAuthServiceHubTokenTests : BunitContext
+public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 {
 	/// <summary>
 	/// Core requirement from the task brief: the hub's <c>AccessTokenProvider</c> must read the

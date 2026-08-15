@@ -47,10 +47,8 @@ file sealed class PlayPageApiHandler(IReadOnlyList<CharacterSummary> characters,
 /// gives it (say what is missing, offer the action that fixes it), and the terminal is not mounted
 /// at all in that state.
 /// </summary>
-public class PlayPageTests : BunitContext, IAsyncDisposable
+public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
-
 	public PlayPageTests()
 	{
 		Services.AddMudServices();
@@ -86,8 +84,7 @@ public class PlayPageTests : BunitContext, IAsyncDisposable
 	/// </summary>
 	private void SeedAccount(bool loggedIn, IReadOnlyList<CharacterSummary> characters, int rosterFailures = 0)
 	{
-		var apiClient = new HttpClient(new PlayPageApiHandler(characters, rosterFailures)) { BaseAddress = new Uri("https://localhost:8081/") };
-		_ownedHttpClients.Add(apiClient);
+		var apiClient = Track(new HttpClient(new PlayPageApiHandler(characters, rosterFailures)) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 		Services.AddSingleton(factory);
@@ -228,19 +225,5 @@ public class PlayPageTests : BunitContext, IAsyncDisposable
 
 		await Assert.That(cut.Markup).DoesNotContain("NavPlayRosterUnavailable");
 		await Assert.That(cut.FindAll(".sharp-terminal-container")).IsNotEmpty();
-	}
-
-	/// <summary>
-	/// Disposes the HttpClient(s) created for the substitute IHttpClientFactory. TUnit's disposer
-	/// prefers IAsyncDisposable over IDisposable when a type implements both (as BunitContext does),
-	/// so overriding only Dispose would never run — re-declare DisposeAsync to take over the
-	/// interface's dispatch slot for this type; base.DisposeAsync() still disposes bUnit's own
-	/// service provider.
-	/// </summary>
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var client in _ownedHttpClients)
-			client.Dispose();
-		await base.DisposeAsync();
 	}
 }

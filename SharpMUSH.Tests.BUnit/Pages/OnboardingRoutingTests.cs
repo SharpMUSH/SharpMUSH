@@ -56,10 +56,8 @@ file sealed class OnboardingApiHandler(object[] characters) : HttpMessageHandler
 /// renders a page component BELOW <c>AuthorizeRouteView</c>, so the attribute has no runtime effect
 /// here and a "render anonymously, expect a redirect" test would pass while proving nothing.
 /// </remarks>
-public class OnboardingRoutingTests : BunitContext, IAsyncDisposable
+public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
-
 	private static readonly object[] OneCharacter =
 	[
 		new { dbrefNumber = 5, creationTime = 5L, name = "Gwendolyn", flags = "", isActing = true }
@@ -67,8 +65,7 @@ public class OnboardingRoutingTests : BunitContext, IAsyncDisposable
 
 	private void SeedServices(object[] characters)
 	{
-		var apiClient = new HttpClient(new OnboardingApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") };
-		_ownedHttpClients.Add(apiClient);
+		var apiClient = Track(new HttpClient(new OnboardingApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") });
 
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
@@ -199,12 +196,5 @@ public class OnboardingRoutingTests : BunitContext, IAsyncDisposable
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword").SetResult(bool.FalseString);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.role").SetResult("Player");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.permissions").SetResult("[]");
-	}
-
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var client in _ownedHttpClients)
-			client.Dispose();
-		await base.DisposeAsync();
 	}
 }

@@ -58,7 +58,7 @@ file sealed class TerminalLoginApiHandler : HttpMessageHandler
 /// character, and opens the terminal socket. It is NOT a switch: no terminal ever changes character
 /// in place.
 /// </summary>
-public class TerminalLoginServiceTests : BunitContext, IAsyncDisposable
+public class TerminalLoginServiceTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> _clients = [];
 	private static readonly CharacterSummary Beta = new(2, 2L, "Beta", "");
@@ -78,7 +78,7 @@ public class TerminalLoginServiceTests : BunitContext, IAsyncDisposable
 		string? mintOtt = "the-ott")
 	{
 		var handler = new TerminalLoginApiHandler { MintOtt = mintOtt };
-		var client = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var client = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		_clients.Add(client);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(client);

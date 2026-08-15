@@ -28,7 +28,7 @@ file sealed class EmptyArrayHandler : HttpMessageHandler
 /// Smoke tests for the drag-and-drop layout editor: the widget palette is filtered to widgets whose
 /// allowed zones overlap the scope's zones, and the scope's zones are rendered as drop targets.
 /// </summary>
-public class LayoutEditorTests : BunitContext
+public class LayoutEditorTests : TrackingBunitContext
 {
 	private ILayoutService _layout = default!;
 
@@ -49,7 +49,7 @@ public class LayoutEditorTests : BunitContext
 		_layout = Substitute.For<ILayoutService>();
 		_layout.GetLayoutAsync(LayoutScopes.WikiIndex).Returns(Task.FromResult(layout));
 
-		var apiClient = new HttpClient(new EmptyArrayHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new EmptyArrayHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 

@@ -124,11 +124,11 @@ file sealed class BadCharsetHandler : HttpMessageHandler
 /// character) while painting a presence dot on each row, so seeded principals like Package Manager
 /// appeared to be connected.
 /// </summary>
-public class OnlineCharactersWidgetTests : BunitContext
+public class OnlineCharactersWidgetTests : TrackingBunitContext
 {
-	private static void Wire(BunitContext ctx, HttpMessageHandler handler)
+	private static void Wire(TrackingBunitContext ctx, HttpMessageHandler handler)
 	{
-		var apiClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = ctx.Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 

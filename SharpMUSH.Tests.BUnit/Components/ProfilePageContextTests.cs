@@ -30,11 +30,11 @@ file sealed class EmptyGalleryHandler : HttpMessageHandler
 /// controls (the file-upload input) appear only when the context grants edit rights — the mechanism by
 /// which the profile page hands the route's character and edit rights to zone-placed widgets.
 /// </summary>
-public class ProfilePageContextTests : BunitContext
+public class ProfilePageContextTests : TrackingBunitContext
 {
 	public ProfilePageContextTests()
 	{
-		var apiClient = new HttpClient(new EmptyGalleryHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new EmptyGalleryHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 

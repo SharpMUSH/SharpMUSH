@@ -6,6 +6,10 @@ Widgets are Blazor components placed into zones by admins. Five zones:
 TopBar, LeftSidebar, RightSidebar, MainContent, Footer. Admin drags
 widgets between zones, reorders, configures per-instance settings.
 
+> **Per-widget config keys live in
+> [docs/guides/widget-configuration.md](../guides/widget-configuration.md).** This page covers the
+> architecture; that one is the reference for what each shipped widget accepts.
+
 ## Zone Model
 
 ```
@@ -39,11 +43,12 @@ widgets between zones, reorders, configures per-instance settings.
 ```csharp
 public interface IPortalWidget
 {
-    string Name { get; }
-    string DisplayName { get; }
-    string Description { get; }
+    string Name { get; }                     // Machine key used in WidgetPlacement.WidgetName
+    string DisplayName { get; }              // Palette label: a SharedResource key for built-ins,
+                                             // literal text for application-backed widgets
     WidgetSize DefaultSize { get; }          // Small, Medium, Large
     WidgetZone[] AllowedZones { get; }       // Where this widget can be placed
+    Type ComponentType { get; }              // The Razor component that renders it
     Type? ConfigType { get; }                // Optional config schema (null = no config)
 }
 
@@ -64,95 +69,90 @@ public enum WidgetSize
 }
 ```
 
-Each widget is a Razor component that implements `IPortalWidget` metadata
-and renders its own content. Widgets receive their config via a parameter:
+Each widget is a Razor component paired with a descriptor class carrying that
+metadata. `ZoneRenderer` instantiates the component through `DynamicComponent`
+and passes the placement's config plus the zone name:
 
 ```csharp
 @code {
     [Parameter] public JsonElement? Config { get; set; }
+    [Parameter] public string Zone { get; set; } = string.Empty;
 }
 ```
 
+Every widget must declare both parameters even if it ignores them, or
+`DynamicComponent` throws on the unmatched parameter.
+
+`ConfigType` is load-bearing, not decoration. `WidgetConfigSchema` reflects over
+it to build the key reference the layout editor shows admins — key, JSON type,
+default, description — and the JSON template the "Insert template" button seeds.
+Each config property carries a `[WidgetConfigKey("Lay…")]` naming the
+`SharedResource` key for its description; a property without one is configurable
+but invisible in the UI, which is a deliberate omission rather than an oversight.
+
+The editor reference is therefore generated from the config model and cannot
+drift from it. Two tests hold the ends together: one fails a `ConfigType` that
+documents no keys at all, another fails a description key missing from the resx.
+The guide is a separate hand-written document — worked examples, precedence
+rules, scope defaults — and nothing enforces its accuracy but review.
+
+The editor still takes raw JSON (the Spacer's height is the one typed field);
+the reference sits above the box.
+
 ## Built-in Widgets
 
-### Active Scenes
-- **Zones:** MainContent, LeftSidebar, RightSidebar
-- **Shows:** List of in-progress scenes (title, participant count, last activity)
-- **Config:** max_shown (default: 5)
-- **Updates:** Real-time via SignalR (scene start/end/new pose)
+Registered in `SharpMUSH.Client/Program.cs`; descriptors live in
+`SharpMUSH.Client/Widgets/`. Config keys for each are documented in
+[the configuration guide](../guides/widget-configuration.md).
 
-### Recent Wiki Edits
-- **Zones:** MainContent, LeftSidebar, RightSidebar
-- **Shows:** Last N wiki edits (page name, editor, timestamp)
-- **Config:** max_shown (default: 10)
-- **Updates:** On page load + SignalR push on new edits
+| Widget | Name | Zones | Config |
+| --- | --- | --- | --- |
+| Game Stats | `Stats` | Main | — |
+| Active Scene | `ActiveScene` | Main, Left, Right | — |
+| Recent Wiki Activity | `RecentWikiActivity` | Main, Left, Right | — |
+| Online Characters | `OnlineCharacters` | Main, Left, Right | — |
+| Quickstart | `Quickstart` | Main, Left, Right | — |
+| Character Directory | `CharacterDirectory` | Main, Left, Right | — |
+| Wiki Index | `WikiIndex` | Main | — |
+| Character Gallery | `CharacterGallery` | Main, Right | `CharacterTargetConfig` |
+| Wiki Body | `WikiBody` | Main | `WikiBodyConfig` |
+| Quick Links | `QuickLinks` | Top, Left, Right, Footer | `QuickLinksConfig` |
+| Welcome Text | `WelcomeText` | Main | `WelcomeTextConfig` |
+| Spacer | `Spacer` | Main, Left, Right, Footer | `SpacerConfig` |
+| Schema Widget | `SchemaWidget` | Main, Left, Right | `SchemaWidgetConfig` |
 
-### Online Characters
-- **Zones:** LeftSidebar, RightSidebar, MainContent
-- **Shows:** Currently connected characters (name, idle time)
-- **Config:** show_idle_time (bool), max_shown (default: 20)
-- **Updates:** Real-time via SignalR (connect/disconnect/idle)
+Widget-kind Dynamic Applications (Area 21) join the palette at startup under
+their own slug, bridged in as `ApplicationPortalWidget`.
 
-### Quick Links
-- **Zones:** TopBar, LeftSidebar, RightSidebar, Footer
-- **Shows:** Admin-configured list of links (internal or external)
-- **Config:** links: [{label, url, icon?, new_tab?}]
-- **Updates:** Static (changes on admin save only)
-
-### Welcome Text
-- **Zones:** MainContent
-- **Shows:** Markdown-rendered welcome message for the front page
-- **Config:** markdown (string), show_to_guests (bool)
-- **Updates:** Static (changes on admin save only)
-
-### Upcoming Events
-- **Zones:** MainContent, RightSidebar
-- **Shows:** Next N events/scheduled scenes from calendar (when BBS/events exist)
-- **Config:** max_shown (default: 5), days_ahead (default: 7)
-- **Updates:** On page load
-- **Note:** Placeholder until Events system is built (Area 16)
-
-### System Status
-- **Zones:** Footer, LeftSidebar
-- **Shows:** Player count, uptime, game version
-- **Config:** show_uptime (bool), show_version (bool)
-- **Updates:** Periodic (every 60s via SignalR)
-
-### Character Switcher
-- **Zones:** TopBar
-- **Shows:** Dropdown of user's characters, current character highlighted
-- **Config:** None
-- **Updates:** Static per session (changes require re-login to add new chars)
+Two widgets read a character from the cascading `ProfilePageContext` rather than
+from a parameter, so they work identically whether a page positions them
+directly or an admin places them through the layout editor: Wiki Body and
+Character Gallery. The Schema Widget uses the same context to fill `{objid}` and
+`{character}` tokens in its routes.
 
 ## Layout Configuration
 
-Layout is stored as a JSON structure in site config:
+A layout is stored as one JSON blob per scope, keyed by zone. `LayoutSerialization`
+is the single definition of that shape, shared by every database provider, and it
+serializes camelCase:
 
 ```json
 {
   "zones": {
-    "topBar": [
-      { "widget": "QuickLinks", "config": { "links": [...] } },
-      { "widget": "CharacterSwitcher" }
+    "TopBar": [
+      { "widgetName": "QuickLinks", "order": 0, "span": 12, "config": { "links": [] } }
     ],
-    "leftSidebar": [
-      { "widget": "OnlineCharacters", "config": { "max_shown": 15 } },
-      { "widget": "RecentWikiEdits" }
-    ],
-    "rightSidebar": [],
-    "mainContent": [
-      { "widget": "WelcomeText", "config": { "markdown": "# Welcome..." } },
-      { "widget": "ActiveScenes" }
-    ],
-    "footer": [
-      { "widget": "SystemStatus" },
-      { "widget": "QuickLinks", "config": { "links": [...] } }
+    "MainContent": [
+      { "widgetName": "WelcomeText", "order": 0, "span": 12, "config": { "markdown": "# Welcome" } },
+      { "widgetName": "Stats", "order": 1, "span": 8, "config": null }
     ]
   },
   "settings": {
     "leftSidebarEnabled": true,
     "rightSidebarEnabled": false,
-    "footerEnabled": true
+    "footerEnabled": true,
+    "leftSidebarWidth": "280px",
+    "rightSidebarWidth": "280px"
   }
 }
 ```
@@ -160,8 +160,9 @@ Layout is stored as a JSON structure in site config:
 **Key points:**
 - A widget can appear in multiple zones (e.g., Quick Links in TopBar AND Footer)
 - Each instance has its own config
+- `span` lays a zone out on a 12-column grid; omitted or `0` means full width
 - Empty sidebar → auto-hidden (main content fills the space)
-- Layout JSON saved to config store, cached, invalidated on admin save
+- Layout JSON saved to the layout store, cached, invalidated on admin save
 
 ## Layout Editor (Admin Panel)
 
@@ -177,17 +178,33 @@ Located at `/admin/layout`.
 - "Preview" button opens site in new tab with draft layout
 - "Publish" saves and broadcasts layout change via NATS
 
-**No per-page layouts in v1.** One layout for the entire site. Pages like
-`/play` (terminal) or `/admin` use their own fixed layouts regardless of
-the widget layout config.
+## Layout Scopes
 
-## Custom Widgets (Future — Area 18)
+Layouts are per-scope, not one arrangement for the whole site. `LayoutScopes`
+holds the editable set, and each scope exposes only the zones it renders:
 
-Deferred. When implemented:
-- Admin uploads a Razor component (compiled .dll or Razor class library)
-- Or: declarative JSON widget (title + REST endpoint + template)
-- Registered in widget palette alongside built-ins
-- Same zone/config system applies
+| Scope | Zones | Drives |
+| --- | --- | --- |
+| `global` | TopBar, LeftSidebar, RightSidebar, Footer | The shell chrome (`MainLayout`) |
+| `home` | MainContent | The front page |
+| `wiki-index` | MainContent | The wiki landing page |
+| `profile` | MainContent, RightSidebar | `/character/{name}` |
 
-For v1, only built-in widgets ship. The interface is designed so custom
-widgets can be added later without changing the zone/layout infrastructure.
+A page composes itself from a scope with `<ScopedZone Scope="..." Zone="..." />`,
+which reloads live when an admin saves that scope. Each scope has a built-in
+default layout (`LayoutService.GetDefaultLayout`) used until an admin saves one;
+the defaults are listed in [the configuration guide](../guides/widget-configuration.md#layout-scopes-and-their-defaults).
+
+Pages like `/play` (terminal) and `/admin` use their own fixed layouts regardless
+of the widget layout config.
+
+## Custom Widgets
+
+Shipped as **Dynamic Applications** (Area 21) rather than uploaded assemblies: an
+application declares a schema/data route pair served by softcode HTTP handlers,
+and one of kind *Widget* is registered into the palette at startup under its own
+slug. It renders through the shared `SchemaWidget`, so it needs no per-placement
+config. See [Dynamic Applications](../guides/dynamic-applications-admin.md).
+
+Plugins can also contribute compiled Razor components; see
+[custom-widgets.md](custom-widgets.md) and [plugin-system.md](plugin-system.md).

@@ -81,9 +81,8 @@ file sealed class DynamicAppHandler(IReadOnlyList<CharacterSummary> characters) 
 /// an empty result.
 /// </para>
 /// </summary>
-public class DynamicApplicationPageTests : BunitContext, IAsyncDisposable
+public class DynamicApplicationPageTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
 	private ConcurrentQueue<string> _requests = new();
 
 	private static readonly PortalApplication CharacterHeader = new(
@@ -95,8 +94,7 @@ public class DynamicApplicationPageTests : BunitContext, IAsyncDisposable
 	{
 		var handler = new DynamicAppHandler(characters);
 		_requests = handler.Requests;
-		var apiClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
-		_ownedHttpClients.Add(apiClient);
+		var apiClient = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 
@@ -230,17 +228,6 @@ public class DynamicApplicationPageTests : BunitContext, IAsyncDisposable
 		await Assert.That(profileRequest).IsEqualTo("/http/profile?objid=%235%3A1000");
 	}
 
-	/// <summary>
-	/// Disposes the HttpClient(s) created for the substitute IHttpClientFactory. TUnit's disposer
-	/// prefers IAsyncDisposable over IDisposable when a type implements both (as BunitContext does),
-	/// so overriding only Dispose would never run.
-	/// </summary>
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var client in _ownedHttpClients)
-			client.Dispose();
-		await base.DisposeAsync();
-	}
 }
 
 /// <summary>
@@ -248,10 +235,8 @@ public class DynamicApplicationPageTests : BunitContext, IAsyncDisposable
 /// ADMIN page that manages applications — rather than the name of the application being looked at.
 /// MainLayout now resolves the slug through the startup <see cref="ApplicationCatalog"/>.
 /// </summary>
-public class DynamicApplicationTopbarTests : BunitContext, IAsyncDisposable
+public class DynamicApplicationTopbarTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
-
 	private static readonly PortalApplication CharacterHeader = new(
 		"character-header", "Character Header", "Badge", "Widget",
 		"http/profile/schema", "http/profile?objid={objid}", null, "Guest", null,
@@ -260,8 +245,7 @@ public class DynamicApplicationTopbarTests : BunitContext, IAsyncDisposable
 	public DynamicApplicationTopbarTests()
 	{
 		var handler = new DynamicAppHandler([new CharacterSummary(5, 1000L, "Alpha", "")]);
-		var apiClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
-		_ownedHttpClients.Add(apiClient);
+		var apiClient = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 
@@ -323,13 +307,5 @@ public class DynamicApplicationTopbarTests : BunitContext, IAsyncDisposable
 		var cut = Render<SharpMUSH.Client.Layout.MainLayout>();
 
 		await Assert.That(cut.Find(".phosphor-topbar-title").TextContent.Trim()).IsEqualTo("Some other app");
-	}
-
-	/// <summary>Disposes the HttpClient created for the substitute IHttpClientFactory.</summary>
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var client in _ownedHttpClients)
-			client.Dispose();
-		await base.DisposeAsync();
 	}
 }

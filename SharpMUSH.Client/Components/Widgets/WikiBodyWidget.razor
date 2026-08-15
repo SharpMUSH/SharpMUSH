@@ -1,16 +1,20 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Components
 @using SharpMUSH.Client.Models.Widgets
+@using SharpMUSH.Library.Services
 
-@* Renders a character's free-form wiki biography: the Character-namespace page whose slug is the
-   character name. The character comes from the cascading ProfilePageContext when placed on the
-   profile page; it falls back to a "character" key in the widget config for standalone placements. *@
+@* Renders one wiki page. Which page, in precedence order: an explicit slug in the widget config; a
+   "character" shorthand in the config (the Character-namespace page whose slug is that name); or the
+   character from the cascading ProfilePageContext when placed on the profile page. Explicit config
+   outranks the context so a fixed page can sit on a profile. *@
 
-@if (!string.IsNullOrWhiteSpace(_name))
+@if (!string.IsNullOrWhiteSpace(_slug))
 {
+    @* The wrapper is the container-query context; its scoped CSS clamps the paper's padding. *@
     <div class="wiki-body-widget">
         <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
-            <WikiView Slug="@_name" Namespace="@WikiRoutes.CharacterNamespace" Mode="WikiView.WikiMode.View" />
+            <WikiView Slug="@_slug" Namespace="@_namespace" Category="@_category" Locale="@_locale"
+                      Mode="WikiView.WikiMode.View" />
         </MudPaper>
     </div>
 }
@@ -23,18 +27,58 @@
     /// <summary>Injected by ZoneRenderer; declared so DynamicComponent does not throw for the unmatched parameter.</summary>
     [Parameter] public string Zone { get; set; } = string.Empty;
 
-    private string? _name;
+    private string? _slug;
+    private string? _namespace;
+    private string? _category;
+    private string? _locale;
 
     protected override void OnParametersSet()
-        => _name = PageContext?.CharacterName ?? ConfigCharacter();
-
-    private string? ConfigCharacter()
     {
-        if (Config is { } cfg && cfg.ValueKind == JsonValueKind.Object
-            && cfg.TryGetProperty("character", out var prop) && prop.ValueKind == JsonValueKind.String)
+        var cfg = ParseConfig();
+
+        // Blank is not the same as absent to WikiService — it defaults on null only, so a config with
+        // "namespace": "" would build /api/wiki/ns//general/{slug}. Normalize before handing it over.
+        var ns = Blank(cfg?.Namespace);
+        var category = Blank(cfg?.Category);
+        var locale = Blank(cfg?.Locale);
+        var slug = Blank(cfg?.Slug);
+
+        if (slug is not null)
         {
-            return prop.GetString();
+            (_slug, _namespace, _category, _locale) = (slug, ns, category, locale);
+            return;
         }
-        return null;
+
+        // No explicit page — fall back to a character biography, from config or from the page context.
+        var character = Blank(cfg?.Character) ?? Blank(PageContext?.CharacterName);
+
+        (_slug, _namespace, _category, _locale) =
+            (character, WikiRoutes.CharacterNamespace, category, locale);
+    }
+
+    /// <summary>Trims a config value, mapping blank to null so downstream defaults apply.</summary>
+    private static string? Blank(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private WikiBodyConfig? ParseConfig()
+    {
+        if (Config is not { ValueKind: JsonValueKind.Object } cfg)
+        {
+            return null;
+        }
+
+        try
+        {
+            return cfg.Deserialize<WikiBodyConfig>(
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
     }
 }

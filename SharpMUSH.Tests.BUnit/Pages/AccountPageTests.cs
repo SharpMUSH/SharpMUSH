@@ -43,7 +43,7 @@ file sealed class AccountPageApiHandler : HttpMessageHandler
 /// report implicated (logged-in normal, logged-in MustChangePassword, logged-out/post-logout)
 /// and simply assert no exception escapes Render — that's the whole regression surface.
 /// </summary>
-public class AccountPageTests : BunitContext, IAsyncDisposable
+public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> ownedHttpClients = [];
 	private BunitAuthorizationContext Auth { get; }
@@ -64,7 +64,7 @@ public class AccountPageTests : BunitContext, IAsyncDisposable
 	/// </summary>
 	private void SeedAuthState(bool loggedIn, bool mustChangePassword = false)
 	{
-		var apiClient = new HttpClient(new AccountPageApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new AccountPageApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		ownedHttpClients.Add(apiClient);
 
 		var factory = Substitute.For<IHttpClientFactory>();

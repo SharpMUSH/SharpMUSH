@@ -34,17 +34,15 @@ file sealed class CharacterCreateApiHandler(bool succeed) : HttpMessageHandler
 /// and a successful create returns the player to <c>/account</c>. Character creation was split out of
 /// the account page into its own surface.
 /// </summary>
-public class CharacterCreatePageTests : BunitContext, IAsyncDisposable
+public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 {
-	private readonly List<HttpClient> _ownedHttpClients = [];
 	private ICharacterUpgradeService _upgrade = null!;
 
 	private void SeedLoggedIn(bool createSucceeds)
 	{
 		this.AddAuthorization().SetAuthorized("headwiz");
 
-		var apiClient = new HttpClient(new CharacterCreateApiHandler(createSucceeds)) { BaseAddress = new Uri("https://localhost:8081/") };
-		_ownedHttpClients.Add(apiClient);
+		var apiClient = Track(new HttpClient(new CharacterCreateApiHandler(createSucceeds)) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 
@@ -101,11 +99,5 @@ public class CharacterCreatePageTests : BunitContext, IAsyncDisposable
 				throw new InvalidOperationException("did not navigate to /play yet");
 		});
 		await _upgrade.Received(1).PlayAsAsync(Arg.Is<AccountAuthService.CharacterSummary>(c => c.Name == "Bob"));
-	}
-
-	public new async ValueTask DisposeAsync()
-	{
-		foreach (var c in _ownedHttpClients) c.Dispose();
-		await base.DisposeAsync();
 	}
 }

@@ -90,7 +90,7 @@ file abstract class BindingAwareHandler(IReadOnlyList<CharacterSummary> characte
 file sealed class FakeAccountHandler(IReadOnlyList<CharacterSummary> characters, bool refuseSwitch = false)
 	: BindingAwareHandler(characters, refuseSwitch);
 
-public class AccountAuthServiceActiveCharacterTests
+public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 {
 	private static AccountAuthService MakeService() =>
 		new(Substitute.For<IHttpClientFactory>(),
@@ -119,12 +119,12 @@ public class AccountAuthServiceActiveCharacterTests
 	/// completed task instead of re-running <c>InitCoreAsync</c>, so it can never clobber the real
 	/// <c>AccountSessionToken</c> that <see cref="AccountAuthService.LoginAsync"/> sets afterward.
 	/// </remarks>
-	private static async Task<AccountAuthService> MakeUnlinkableServiceAsync(IReadOnlyList<CharacterSummary> characters)
+	private async Task<AccountAuthService> MakeUnlinkableServiceAsync(IReadOnlyList<CharacterSummary> characters)
 	{
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		// Not disposed here on purpose: the returned service keeps calling through this same
 		// HttpClient (e.g. for UnlinkCharacterAsync) after this helper returns.
-		var http = new HttpClient(new FakeAccountHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") };
+		var http = Track(new HttpClient(new FakeAccountHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") });
 		httpClientFactory.CreateClient("api").Returns(http);
 
 		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>(), Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());

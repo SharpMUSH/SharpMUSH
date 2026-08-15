@@ -36,11 +36,11 @@ file sealed class WikiListHandler : HttpMessageHandler
 /// Confirms the Wiki Index widget renders the category grid from the REST page list: a named category,
 /// the "General" fallback for an uncategorized page, and the page titles.
 /// </summary>
-public class WikiIndexWidgetTests : BunitContext
+public class WikiIndexWidgetTests : TrackingBunitContext
 {
 	public WikiIndexWidgetTests()
 	{
-		var apiClient = new HttpClient(new WikiListHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new WikiListHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 

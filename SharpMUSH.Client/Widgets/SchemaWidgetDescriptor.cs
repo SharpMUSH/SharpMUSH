@@ -1,4 +1,5 @@
 using SharpMUSH.Client.Components.Widgets;
+using SharpMUSH.Client.Models.Widgets;
 using SharpMUSH.Library.Models.Portal.Widgets;
 
 namespace SharpMUSH.Client.Widgets;
@@ -16,5 +17,5 @@ public sealed class SchemaWidgetDescriptor : IPortalWidget
 	public WidgetSize DefaultSize => WidgetSize.Medium;
 	public WidgetZone[] AllowedZones => [WidgetZone.MainContent, WidgetZone.LeftSidebar, WidgetZone.RightSidebar];
 	public Type ComponentType => typeof(SchemaWidget);
-	public Type? ConfigType => null;
+	public Type? ConfigType => typeof(SchemaWidgetConfig);
 }

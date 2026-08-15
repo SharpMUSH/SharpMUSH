@@ -60,11 +60,11 @@ file sealed class ProfileAppHandler : HttpMessageHandler
 /// from the application catalog by slug and fills the {objid} token from the cascading profile page
 /// context — i.e. the Character Header application renders the routed character.
 /// </summary>
-public class SchemaWidgetApplicationTests : BunitContext
+public class SchemaWidgetApplicationTests : TrackingBunitContext
 {
 	public SchemaWidgetApplicationTests()
 	{
-		var apiClient = new HttpClient(new ProfileAppHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new ProfileAppHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 
@@ -111,11 +111,11 @@ public class SchemaWidgetApplicationTests : BunitContext
 /// still renders by lazily fetching its application by slug (GET /api/applications/{slug}). This is the
 /// path that fixes "the header shows nothing" when the startup snapshot was empty.
 /// </summary>
-public class SchemaWidgetLazyFetchTests : BunitContext
+public class SchemaWidgetLazyFetchTests : TrackingBunitContext
 {
 	public SchemaWidgetLazyFetchTests()
 	{
-		var apiClient = new HttpClient(new ProfileAppHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var apiClient = Track(new HttpClient(new ProfileAppHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 

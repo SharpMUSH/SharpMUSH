@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace SharpMUSH.Library.Models.Portal.Widgets;
 
 /// <summary>
@@ -31,6 +33,13 @@ public interface IPortalWidget
 	/// <summary>
 	/// Optional deserialized config type.
 	/// <c>null</c> means the widget has no configuration.
+	/// <para>
+	/// Its properties should carry <see cref="WidgetConfigKeyAttribute"/>: the layout editor builds
+	/// the admin-facing key reference from them through <see cref="WidgetConfigSchema"/>, so a
+	/// config model without them is configurable but undocumented.
+	/// </para>
 	/// </summary>
+	[DynamicallyAccessedMembers(
+		DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicConstructors)]
 	Type? ConfigType { get; }
 }

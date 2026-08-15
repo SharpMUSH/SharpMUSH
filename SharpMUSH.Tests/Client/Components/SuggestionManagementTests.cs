@@ -16,6 +16,7 @@ namespace SharpMUSH.Tests.Client.Components;
 /// </summary>
 public class SuggestionManagementTests
 {
+	/// <summary>The caller owns the returned client — every call site takes it with <c>using</c>.</summary>
 	private static HttpClient CreateMockHttpClient(SuggestionData data, int delayMs = 0)
 	{
 		var handler = new MockHttpMessageHandler(data, delayMs);
@@ -29,7 +30,7 @@ public class SuggestionManagementTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		var httpClient = CreateMockHttpClient(new SuggestionData());
+		using var httpClient = CreateMockHttpClient(new SuggestionData());
 		var httpFactory = Substitute.For<IHttpClientFactory>();
 		httpFactory.CreateClient("api").Returns(httpClient);
 		ctx.Services.AddScoped(_ => httpFactory);
@@ -48,7 +49,7 @@ public class SuggestionManagementTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		var httpClient = CreateMockHttpClient(new SuggestionData
+		using var httpClient = CreateMockHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
 			{
@@ -74,7 +75,7 @@ public class SuggestionManagementTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		var httpClient = CreateMockHttpClient(new SuggestionData
+		using var httpClient = CreateMockHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
 			{
@@ -101,7 +102,7 @@ public class SuggestionManagementTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		var httpClient = CreateMockHttpClient(new SuggestionData
+		using var httpClient = CreateMockHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
 			{
@@ -132,7 +133,7 @@ public class SuggestionManagementTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		var httpClient = CreateMockHttpClient(new SuggestionData());
+		using var httpClient = CreateMockHttpClient(new SuggestionData());
 		var httpFactory = Substitute.For<IHttpClientFactory>();
 		httpFactory.CreateClient("api").Returns(httpClient);
 		ctx.Services.AddScoped(_ => httpFactory);
@@ -151,7 +152,7 @@ public class SuggestionManagementTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		var httpClient = CreateMockHttpClient(new SuggestionData());
+		using var httpClient = CreateMockHttpClient(new SuggestionData());
 		var httpFactory = Substitute.For<IHttpClientFactory>();
 		httpFactory.CreateClient("api").Returns(httpClient);
 		ctx.Services.AddScoped(_ => httpFactory);
@@ -169,7 +170,7 @@ public class SuggestionManagementTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		var httpClient = CreateMockHttpClient(new SuggestionData());
+		using var httpClient = CreateMockHttpClient(new SuggestionData());
 		var httpFactory = Substitute.For<IHttpClientFactory>();
 		httpFactory.CreateClient("api").Returns(httpClient);
 		ctx.Services.AddScoped(_ => httpFactory);
@@ -187,7 +188,7 @@ public class SuggestionManagementTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		var httpClient = CreateMockHttpClient(new SuggestionData());
+		using var httpClient = CreateMockHttpClient(new SuggestionData());
 		var httpFactory = Substitute.For<IHttpClientFactory>();
 		httpFactory.CreateClient("api").Returns(httpClient);
 		ctx.Services.AddScoped(_ => httpFactory);
@@ -205,7 +206,7 @@ public class SuggestionManagementTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		var httpClient = CreateMockHttpClient(new SuggestionData
+		using var httpClient = CreateMockHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
 			{
@@ -236,7 +237,7 @@ public class SuggestionManagementTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		var httpClient = CreateMockHttpClient(new SuggestionData
+		using var httpClient = CreateMockHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
 			{
@@ -261,11 +262,15 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_LoadingState_ShowsProgressIndicator()
 	{
+		// Declared before the context so it is disposed after it. This request is still in flight at
+		// teardown; disposing the client first cancels the delay, and the continuation would call
+		// StateHasChanged on a context already tearing down.
+		using var httpClient = CreateMockHttpClient(new SuggestionData(), delayMs: 1000);
+
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
-		var httpClient = CreateMockHttpClient(new SuggestionData(), delayMs: 1000);
 		var httpFactory = Substitute.For<IHttpClientFactory>();
 		httpFactory.CreateClient("api").Returns(httpClient);
 		ctx.Services.AddScoped(_ => httpFactory);

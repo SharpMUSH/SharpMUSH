@@ -2095,6 +2095,78 @@
   <data name="LayConfigJsonLabel" xml:space="preserve">
     <value>Config JSON</value>
   </data>
+  <data name="LayCfgReferenceTitle" xml:space="preserve">
+    <value>Configuration keys</value>
+  </data>
+  <data name="LayCfgNone" xml:space="preserve">
+    <value>This widget takes no configuration.</value>
+  </data>
+  <data name="LayCfgColKey" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="LayCfgColType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="LayCfgColDefault" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="LayCfgColDescription" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="LayCfgInsertTemplate" xml:space="preserve">
+    <value>Insert template</value>
+  </data>
+  <data name="LayCfgNotAnObject" xml:space="preserve">
+    <value>Configuration must be a JSON object, like { "key": "value" }.</value>
+  </data>
+  <data name="LayCfgWikiBodySlug" xml:space="preserve">
+    <value>Slug of the page to render. Set this to show any wiki page.</value>
+  </data>
+  <data name="LayCfgWikiBodyNamespace" xml:space="preserve">
+    <value>Wiki namespace the page lives in. Only applies alongside a slug.</value>
+  </data>
+  <data name="LayCfgWikiBodyCategory" xml:space="preserve">
+    <value>Category segment of the page's identity.</value>
+  </data>
+  <data name="LayCfgWikiBodyLocale" xml:space="preserve">
+    <value>Locale to render. Unset, each reader gets their own preference.</value>
+  </data>
+  <data name="LayCfgWikiBodyCharacter" xml:space="preserve">
+    <value>Shorthand for a character's biography. Ignored when a slug is set, and overrides the character of a profile page this is placed on.</value>
+  </data>
+  <data name="LayCfgCharacterTarget" xml:space="preserve">
+    <value>Character to show. Only used away from a profile page, where the route's character wins.</value>
+  </data>
+  <data name="LayCfgWelcomeMarkdown" xml:space="preserve">
+    <value>Markdown source for the body. Empty shows nothing.</value>
+  </data>
+  <data name="LayCfgWelcomeShowToGuests" xml:space="preserve">
+    <value>Whether signed-out visitors see the text. Set false for a members-only notice.</value>
+  </data>
+  <data name="LayCfgSpacerHeight" xml:space="preserve">
+    <value>Height of the empty space in pixels. Width follows the placement's column span.</value>
+  </data>
+  <data name="LayCfgQuickLinks" xml:space="preserve">
+    <value>The links to show. Empty shows nothing.</value>
+  </data>
+  <data name="LayCfgQuickLinkLabel" xml:space="preserve">
+    <value>Link text.</value>
+  </data>
+  <data name="LayCfgQuickLinkUrl" xml:space="preserve">
+    <value>Where the link goes, internal or external.</value>
+  </data>
+  <data name="LayCfgQuickLinkIcon" xml:space="preserve">
+    <value>Icon SVG path. Unset uses a generic link icon.</value>
+  </data>
+  <data name="LayCfgQuickLinkNewTab" xml:space="preserve">
+    <value>Open the link in a new tab.</value>
+  </data>
+  <data name="LayCfgSchemaUrl" xml:space="preserve">
+    <value>Route returning the schema document. Supports the {objid} and {character} tokens.</value>
+  </data>
+  <data name="LayCfgSchemaDataUrl" xml:space="preserve">
+    <value>Optional route returning the data bound into the schema. Same tokens apply.</value>
+  </data>
   <data name="LayApply" xml:space="preserve">
     <value>Apply</value>
   </data>

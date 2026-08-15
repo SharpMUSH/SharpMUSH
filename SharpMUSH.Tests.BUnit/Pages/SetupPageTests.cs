@@ -104,15 +104,15 @@ file static class SetupTestServices
 	/// substitute instead).
 	/// </summary>
 	public static HttpClient AddSetupTestServices(
-			this BunitContext ctx, bool needsSetup, HttpStatusCode completeStatus = HttpStatusCode.OK,
+			this TrackingBunitContext ctx, bool needsSetup, HttpStatusCode completeStatus = HttpStatusCode.OK,
 			string? completeBody = null, string completeSessionToken = "test-session-token",
 			Task? statusGate = null, bool statusUnavailable = false)
 	{
-		var apiClient = new HttpClient(
+		var apiClient = ctx.Track(new HttpClient(
 				new SetupApiHandler(needsSetup, completeStatus, completeBody, completeSessionToken, statusGate, statusUnavailable))
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
-		};
+		});
 
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
@@ -135,7 +135,7 @@ file static class SetupTestServices
 /// bUnit tests for the first-run setup wizard: password-confirmation validation and
 /// 409-conflict error mapping ("someone else completed setup" / username taken).
 /// </summary>
-public class SetupPageTests : BunitContext, IAsyncDisposable
+public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> ownedHttpClients = [];
 

@@ -37,7 +37,7 @@ file sealed class CannedResponseHandler(HttpStatusCode status, string? json = nu
 /// bUnit tests for <see cref="WikiDirectiveBlock"/> — the live-listing component
 /// hydrating wiki directive placeholders (category / tag / pagelist / recent).
 /// </summary>
-public class WikiDirectiveBlockTests : BunitContext
+public class WikiDirectiveBlockTests : TrackingBunitContext
 {
 	public WikiDirectiveBlockTests()
 	{
@@ -51,7 +51,7 @@ public class WikiDirectiveBlockTests : BunitContext
 	{
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(
-			new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
+			Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") }));
 		Services.AddSingleton(factory);
 	}
 

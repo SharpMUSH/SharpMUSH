@@ -122,6 +122,8 @@ Widgets are composable portal units. Adding a new widget requires:
 
 `IPortalWidget` declares: `Name` (machine key), `ComponentType` (Razor type), `ConfigType` (optional config model), `AllowedZones`, `DefaultSize`.
 
+A widget that accepts config must declare `ConfigType` and tag each property of that model with `[WidgetConfigKey("Lay…")]`, naming a `SharedResource` key for its description. The layout editor generates its key reference from those via `WidgetConfigSchema`, so an untagged property is configurable but undocumented — and tests fail a `ConfigType` documenting no keys, or a description key missing from the resx. Add worked examples to `docs/guides/widget-configuration.md`.
+
 ### Server-Side: Commands & Functions
 
 Commands use `[SharpCommand]` attribute on static methods:

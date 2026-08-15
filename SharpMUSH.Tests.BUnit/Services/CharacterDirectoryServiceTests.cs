@@ -57,11 +57,11 @@ file sealed class EmptyListHandler : HttpMessageHandler
 /// stopped wanting an answer (a navigation away, a superseded render) — and reporting "unavailable"
 /// for it would be the same class of lie in the other direction. It propagates.
 /// </summary>
-public class CharacterDirectoryServiceTests
+public class CharacterDirectoryServiceTests : TrackingTestContext
 {
-	private static CharacterDirectoryService Build(HttpMessageHandler handler, TimeSpan? timeout = null)
+	private CharacterDirectoryService Build(HttpMessageHandler handler, TimeSpan? timeout = null)
 	{
-		var client = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var client = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		if (timeout is { } value)
 		{
 			client.Timeout = value;

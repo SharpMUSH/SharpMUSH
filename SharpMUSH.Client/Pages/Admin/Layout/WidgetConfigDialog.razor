@@ -1,6 +1,9 @@
 @using System.Net
 @using System.Text.Json
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models.Portal.Widgets
 @inject IStringLocalizer<SharedResource> Loc
+@inject IWidgetRegistry Registry
 
 <MudDialog>
     <DialogContent>
@@ -18,6 +21,48 @@
                 <MudText Typo="Typo.body2" Class="mb-2" Style="color:var(--text-dim);">
                     @((MarkupString)string.Format(Loc["LayConfigJsonHelp"].Value, $"<strong>{WebUtility.HtmlEncode(WidgetName)}</strong>"))
                 </MudText>
+
+                @* The key reference, generated from the widget's ConfigType. Admins type raw JSON here,
+                   so the accepted keys have to be on screen — a docs page they have to go find is not
+                   documentation they will read at the moment they need it. *@
+                <MudPaper Elevation="0" Class="layout-config-schema mb-3"
+                          Style="border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem;background:var(--surface);">
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">@Loc["LayCfgReferenceTitle"]</MudText>
+                    @if (_fields.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Style="color:var(--text-dim);">@Loc["LayCfgNone"]</MudText>
+                    }
+                    else
+                    {
+                        <MudSimpleTable Dense="true" Bordered="false" Striped="false" Style="background:transparent;">
+                            <thead>
+                                <tr>
+                                    <th>@Loc["LayCfgColKey"]</th>
+                                    <th>@Loc["LayCfgColType"]</th>
+                                    <th>@Loc["LayCfgColDefault"]</th>
+                                    <th>@Loc["LayCfgColDescription"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var field in _fields)
+                                {
+                                    @RenderField(field, depth: 0)
+                                    @foreach (var child in field.Children)
+                                    {
+                                        @RenderField(child, depth: 1)
+                                    }
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Class="mt-1"
+                                   StartIcon="@Icons.Material.Filled.DataObject"
+                                   Disabled="@(!string.IsNullOrWhiteSpace(_json))"
+                                   OnClick="InsertTemplate">
+                            @Loc["LayCfgInsertTemplate"]
+                        </MudButton>
+                    }
+                </MudPaper>
+
                 <MudTextField @bind-Value="_json" Variant="Variant.Outlined" Lines="10"
                               Label="@Loc["LayConfigJsonLabel"]" Class="layout-config-json"
                               Style="font-family:var(--font-mono);font-size:0.78125rem;" />
@@ -40,7 +85,7 @@
     /// <summary>Human-readable widget name (shown in the JSON editor header).</summary>
     [Parameter] public string WidgetName { get; set; } = string.Empty;
 
-    /// <summary>Machine widget key, used to offer typed editors for known widgets (e.g. the Spacer).</summary>
+    /// <summary>Machine widget key. Resolves the descriptor, and so the config schema shown here.</summary>
     [Parameter] public string? WidgetKey { get; set; }
 
     /// <summary>The placement's current config as raw JSON (null when unset).</summary>
@@ -51,6 +96,7 @@
     private string _json = string.Empty;
     private string? _error;
     private int _height = DefaultSpacerHeight;
+    private IReadOnlyList<WidgetConfigField> _fields = [];
 
     private bool IsSpacer => string.Equals(WidgetKey, "Spacer", StringComparison.OrdinalIgnoreCase);
 
@@ -60,8 +106,22 @@
         if (IsSpacer)
         {
             _height = ReadHeight(InitialJson) ?? DefaultSpacerHeight;
+            return;
         }
+
+        _fields = WidgetConfigSchema.Describe(
+            WidgetKey is null ? null : Registry.GetWidget(WidgetKey)?.ConfigType);
     }
+
+    private RenderFragment RenderField(WidgetConfigField field, int depth) =>
+        @<tr>
+            <td style="@($"font-family:var(--font-mono);padding-left:{depth * 1.25}rem;")">@field.Key</td>
+            <td style="color:var(--text-dim);">@field.TypeLabel</td>
+            <td style="font-family:var(--font-mono);color:var(--text-dim);">@(field.Default ?? "—")</td>
+            <td>@Loc[field.DescriptionKey]</td>
+        </tr>;
+
+    private void InsertTemplate() => _json = WidgetConfigSchema.TemplateJson(_fields);
 
     private static int? ReadHeight(string? json)
     {
@@ -105,7 +165,15 @@
 
         try
         {
-            using var _ = JsonDocument.Parse(_json);
+            using var parsed = JsonDocument.Parse(_json);
+
+            // Every widget reads its config as an object and ignores anything else, so an array or a
+            // scalar would save cleanly and then silently do nothing. Refuse it here instead.
+            if (parsed.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                _error = Loc["LayCfgNotAnObject"];
+                return;
+            }
         }
         catch (JsonException ex)
         {

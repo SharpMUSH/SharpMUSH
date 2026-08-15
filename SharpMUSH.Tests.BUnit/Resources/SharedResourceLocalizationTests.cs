@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Resources;
+using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
@@ -86,6 +87,48 @@ public class SharedResourceLocalizationTests
 			.ToList();
 
 		await Assert.That(raw).IsEmpty();
+	}
+
+	/// <summary>
+	/// The layout editor renders these descriptions straight into the config dialog, so a config key
+	/// added without its resource entry ships a raw key like "LayCfgWikiBodySlug" to admins.
+	/// </summary>
+	[Test]
+	public async Task Every_widget_config_key_has_a_description_in_the_resx()
+	{
+		var loc = PortalLocalizer.Create();
+
+		IPortalWidget[] descriptors =
+		[
+			new QuickLinksWidgetDescriptor(), new WelcomeTextWidgetDescriptor(),
+			new SpacerWidgetDescriptor(), new WikiBodyWidgetDescriptor(),
+			new CharacterGalleryWidgetDescriptor(), new SchemaWidgetDescriptor()
+		];
+
+		var missing = descriptors
+			.SelectMany(d => WidgetConfigSchema.Describe(d.ConfigType))
+			.SelectMany(f => f.Children.Prepend(f))
+			.Select(f => f.DescriptionKey)
+			.Distinct()
+			.Where(k => loc[k].ResourceNotFound)
+			.ToList();
+
+		await Assert.That(missing).IsEmpty();
+	}
+
+	/// <summary>Chrome for the config dialog's reference table.</summary>
+	[Test]
+	public async Task Every_widget_config_dialog_string_is_in_the_resx()
+	{
+		var loc = PortalLocalizer.Create();
+
+		string[] keys =
+		[
+			"LayCfgReferenceTitle", "LayCfgNone", "LayCfgColKey", "LayCfgColType",
+			"LayCfgColDefault", "LayCfgColDescription", "LayCfgInsertTemplate", "LayCfgNotAnObject"
+		];
+
+		await Assert.That(keys.Where(k => loc[k].ResourceNotFound).ToList()).IsEmpty();
 	}
 
 	[Test]
