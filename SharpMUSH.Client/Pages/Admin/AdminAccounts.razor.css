@@ -37,4 +37,15 @@
         color: var(--text-dim);
         font-size: 0.8125rem;
     }
+
+    /* The trailing actions cell has no column header, so it carries no data-label; attr() would
+       yield an empty ::before that still reserves the 8rem label gutter, leaving the reset and
+       status buttons ~135px of a 390px column. Give that one cell the whole row instead. */
+    ::deep .accounts-table td:last-child {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    ::deep .accounts-table td:last-child::before {
+        content: none;
+    }
 }

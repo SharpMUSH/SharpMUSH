@@ -102,6 +102,13 @@
 	   Blazor's CSS scope attribute, so a scoped stylesheet can consume it with no @media of its
 	   own. */
 	--bottomnav-clearance: 0px;
+	/* Durations for chrome that animates on open (AccountPanel's grow + submenu slide).
+	   globals.css redefines both to 0s under prefers-reduced-motion, and a scoped stylesheet
+	   consumes them with no @media of its own — same mechanism as --bottomnav-clearance above.
+	   It has to be a value rather than an `animation: none` rule: the scoped bundle is unlayered
+	   and these sheets are layered, so a layered override could never win. */
+	--motion-pop: 0.16s;
+	--motion-slide: 0.2s;
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
 	--font-mono: "Cascadia Mono", "DejaVu Sans Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;

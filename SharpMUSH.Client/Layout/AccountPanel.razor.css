@@ -7,7 +7,7 @@
     overflow: hidden;
     outline: none;
     font-family: var(--font-ui);
-    animation: account-panel-grow 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: account-panel-grow var(--motion-pop) cubic-bezier(0.16, 1, 0.3, 1);
     transform-origin: bottom left;
 }
 
@@ -27,7 +27,7 @@
 .account-panel-track {
     display: flex;
     width: 200%;
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform var(--motion-slide) cubic-bezier(0.16, 1, 0.3, 1);
     transform: translateX(0%);
 }
 
@@ -191,7 +191,10 @@
     color: var(--accent);
 }
 
-/* prefers-reduced-motion override for .account-panel / .account-panel-track lives in
-   globals.css: AccountPanel renders inside a MudPopover portal outside .phosphor-page, and a
-   user-preference media feature belongs to neither the shell's device breakpoints nor a
-   page's @container tiers — see the comment there. */
+/* prefers-reduced-motion reaches this file as a *value*, not a rule: the durations above read
+   --motion-pop / --motion-slide, which globals.css zeroes under the preference. It cannot be a
+   rule, because globals.css is imported into the `shell` cascade layer while this scoped bundle
+   is unlayered, and an unlayered normal declaration outranks every layered one whatever its
+   specificity — a layered `animation: none` here would never have applied. Custom properties
+   inherit through the DOM regardless of Blazor's scope attribute, so the value crosses the
+   boundary the rule could not (same trick as --bottomnav-clearance in tokens.css). */

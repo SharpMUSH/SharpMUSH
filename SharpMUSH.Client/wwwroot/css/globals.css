@@ -15,17 +15,17 @@
 }
 
 /* AccountPanel's open/submenu-slide animations. Global (not scoped AccountPanel.razor.css)
-   because AccountPanel renders inside a MudPopover, which teleports its content into a
-   body-level portal outside .phosphor-page — and separately, prefers-reduced-motion is a user
-   preference, not a viewport size, so it belongs in neither the shell's device breakpoints nor
-   a page's @container tiers. This is the only @media a migrated scoped stylesheet is allowed
-   to lean on instead of writing itself. */
-@media (prefers-reduced-motion: reduce) {
-	.account-panel {
-		animation: none;
-	}
+   because prefers-reduced-motion is a user preference, not a viewport size, so it belongs in
+   neither the shell's device breakpoints nor a page's @container tiers. This is the only @media
+   a migrated scoped stylesheet is allowed to lean on instead of writing itself.
 
-	.account-panel-track {
-		transition: none;
+   Zeroing the duration tokens rather than declaring `animation: none` on .account-panel: this
+   sheet is imported into the `shell` cascade layer, the scoped bundle carrying the animation is
+   unlayered, and an unlayered normal declaration beats every layered one regardless of
+   specificity — so a rule here could not reach it, while an inherited custom property can. */
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--motion-pop: 0s;
+		--motion-slide: 0s;
 	}
 }

@@ -88,5 +88,20 @@
         font-size: 0.8125rem;
     }
 
+    /* The trailing actions cell has no header, so it has no data-label either; give it the
+       whole row rather than an 8rem empty label gutter that squeezes the buttons. */
+    ::deep .pkg-remotes-table td:last-child {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    ::deep .pkg-remotes-table td:last-child::before {
+        content: none;
+    }
+
+    /* "Add a remote" trust+branch row and the community-listing rows: MudStack Row renders an
+       unwrapped `d-flex flex-row`, so without this the (now full-width) fields stay side by
+       side and overflow. .flex-row is MudBlazor-rendered, hence ::deep. */
+    .pkg-page ::deep .flex-row { flex-wrap: wrap; }
+
     ::deep .mud-input-control { max-width: 100%; }
 }

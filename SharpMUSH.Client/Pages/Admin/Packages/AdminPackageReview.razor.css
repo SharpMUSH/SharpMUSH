@@ -26,5 +26,10 @@
         font-size: 0.8125rem;
     }
 
+    /* Header action stack and the configure/merge rows: MudStack Row renders an unwrapped
+       `d-flex flex-row`, so without this the (now full-width) inputs stay side by side and
+       overflow. .flex-row is MudBlazor-rendered, hence ::deep behind .pkg-review. */
+    .pkg-review ::deep .flex-row { flex-wrap: wrap; }
+
     ::deep .mud-input-control { max-width: 100%; }
 }

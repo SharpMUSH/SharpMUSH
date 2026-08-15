@@ -24,9 +24,18 @@ const WIDTHS = [
 // showing up means Blazor has replaced the boot splash with the real component tree.
 const READY_SELECTOR = '#app .phosphor-page, #app .onboarding-body';
 
-const profile = process.argv.includes('--profile')
-	? process.argv[process.argv.indexOf('--profile') + 1]
-	: 'default';
+// Validated rather than read blindly: a trailing `--profile` with no value yielded undefined,
+// which only surfaced ~10 minutes in as a TypeError from path.join on the first screenshot,
+// discarding the sweep. A missing or flag-shaped value is an operator error, so say so now.
+const profileFlag = process.argv.indexOf('--profile');
+if (profileFlag !== -1) {
+	const value = process.argv[profileFlag + 1];
+	if (value === undefined || value.startsWith('--')) {
+		console.error('--profile needs a name (e.g. --profile baseline).');
+		process.exit(2);
+	}
+}
+const profile = profileFlag === -1 ? 'default' : process.argv[profileFlag + 1];
 
 // Capture is opt-out rather than opt-in: it is part of what this harness is for, and a machine
 // where it works should not have to ask for it. But an attempted capture on a host with a
