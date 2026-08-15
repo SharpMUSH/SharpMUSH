@@ -18,10 +18,10 @@
 		<!-- Mocking and assertions -->
 		<PackageReference Include="NSubstitute" Version="5.3.0" />
 		<!-- Test containers -->
-		<PackageReference Include="Testcontainers.ArangoDb" Version="4.11.0" />
-		<PackageReference Include="Testcontainers.MySql" Version="4.11.0" />
-		<PackageReference Include="Testcontainers.Nats" Version="4.11.0" />
-		<PackageReference Include="Testcontainers.PostgreSql" Version="4.11.0" />
+		<PackageReference Include="Testcontainers.ArangoDb" Version="4.14.0" />
+		<PackageReference Include="Testcontainers.MySql" Version="4.14.0" />
+		<PackageReference Include="Testcontainers.Nats" Version="4.14.0" />
+		<PackageReference Include="Testcontainers.PostgreSql" Version="4.14.0" />
 		<PackageReference Include="MySqlConnector" Version="2.5.0" />
 		<!-- Logging (Microsoft.Extensions.Logging.Abstractions flows in transitively via
 		     Microsoft.AspNetCore.Mvc.Testing and TUnit.AspNetCore, so no direct pin needed). -->
