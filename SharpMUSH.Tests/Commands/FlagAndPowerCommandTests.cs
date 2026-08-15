@@ -754,6 +754,49 @@ public class FlagAndPowerCommandTests
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
+	// GetPowerQuery is ICacheable, so a read before the write leaves a FusionCache entry that only an
+	// ICacheInvalidating command clears. Reading first is the whole point of the test.
+	[Test]
+	public async ValueTask UpdatePower_InvalidatesTheCachedDefinition()
+	{
+		var powerName = await CreateLetterlessPower();
+
+		var before = await Mediator.Send(new GetPowerQuery(powerName));
+		await Assert.That(before!.Symbol).IsEqualTo(string.Empty);
+
+		await Mediator.Send(new UpdatePowerCommand(
+			powerName, before.Alias, "9", before.SetPermissions, before.UnsetPermissions,
+			before.TypeRestrictions));
+
+		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Symbol)
+			.IsEqualTo("9")
+			.Because("a stale power-definition entry survives the write when the command does not invalidate");
+
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
+	// The same hole through the stream query that @power/list and the /letter collision check both read.
+	[Test]
+	public async ValueTask UpdatePower_InvalidatesTheCachedPowerList()
+	{
+		var powerName = await CreateLetterlessPower();
+
+		var before = await Mediator.CreateStream(new GetPowersQuery()).ToListAsync();
+		await Assert.That(before.Single(p => p.Name == powerName).Symbol).IsEqualTo(string.Empty);
+
+		var definition = await Mediator.Send(new GetPowerQuery(powerName));
+		await Mediator.Send(new UpdatePowerCommand(
+			powerName, definition!.Alias, "8", definition.SetPermissions, definition.UnsetPermissions,
+			definition.TypeRestrictions));
+
+		var after = await Mediator.CreateStream(new GetPowersQuery()).ToListAsync();
+		await Assert.That(after.Single(p => p.Name == powerName).Symbol)
+			.IsEqualTo("8")
+			.Because("a stale global power list survives the write when the command does not invalidate");
+
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
 	// GetObjectFlagQuery is ICacheable, so a read before the write leaves a FusionCache entry that only
 	// an ICacheInvalidating command clears. Reading first is the whole point of the test.
 	[Test]
