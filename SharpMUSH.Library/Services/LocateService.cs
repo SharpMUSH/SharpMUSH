@@ -593,7 +593,7 @@ public partial class LocateService(
 		// not even worth fetching otherwise.
 		ReadOnlySpan<string> aliases = cur.IsPlayer || cur.IsExit ? cur.Aliases : [];
 
-		if (AnyAlias(aliases, name, prefix: false)
+		if (AnyAlias(aliases, name, AliasMatch.Whole)
 				|| objectName.Equals(name, StringComparison.OrdinalIgnoreCase))
 		{
 			return MatchKind.Exact;
@@ -601,7 +601,7 @@ public partial class LocateService(
 
 		if (!allowPartial) return MatchKind.None;
 
-		return (cur.IsPlayer && AnyAlias(aliases, name, prefix: true))
+		return (cur.IsPlayer && AnyAlias(aliases, name, AliasMatch.Prefix))
 					 || (!cur.IsExit && StringMatch(objectName, name))
 			? MatchKind.Partial
 			: MatchKind.None;
@@ -640,15 +640,24 @@ public partial class LocateService(
 		return false;
 	}
 
+	/// <summary>How <see cref="AnyAlias"/> compares. An enum rather than a <c>bool</c> so the call sites read.</summary>
+	private enum AliasMatch
+	{
+		/// <summary>check_alias's comparison: the whole entry, case-insensitively.</summary>
+		Whole,
+		Prefix
+	}
+
 	/// <summary>
-	/// A span walk rather than <c>aliases.Any(a =&gt; …)</c>: this runs up to twice per candidate per
-	/// locate, and the predicate would capture <paramref name="name"/> into a fresh closure every time.
+	/// A span walk rather than <c>aliases.Any(a =&gt; …)</c> or <c>Contains(name, comparer)</c>: this runs
+	/// up to twice per candidate per locate. The predicate overload would capture <paramref name="name"/>
+	/// into a fresh closure each time, and the comparer overload still boxes the array's enumerator.
 	/// </summary>
-	private static bool AnyAlias(ReadOnlySpan<string> aliases, string name, bool prefix)
+	private static bool AnyAlias(ReadOnlySpan<string> aliases, string name, AliasMatch how)
 	{
 		foreach (var alias in aliases)
 		{
-			if (prefix
+			if (how is AliasMatch.Prefix
 						? alias.StartsWith(name, StringComparison.OrdinalIgnoreCase)
 						: alias.Equals(name, StringComparison.OrdinalIgnoreCase))
 			{

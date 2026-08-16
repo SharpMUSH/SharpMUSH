@@ -651,11 +651,11 @@ public partial class Functions
 		// enclosing room, and a room's own dbref is not its location. For an exit db[x].location is
 		// Destination(); for a room it is the drop-to, which is usually unset — and "unset" is exactly
 		// what selects fun_locate's second arm, so this cannot be approximated by `found.IsRoom`.
-		var loc = found.IsRoom
-			? await found.AsRoom.Location.WithCancellation(CancellationToken.None)
-			: found.IsExit
-				? await found.AsExit.Home.WithCancellation(CancellationToken.None)
-				: (await Library.Services.LocateService.FriendlyWhereIs(found)).WithNoneOption();
+		var loc = await found.Match<ValueTask<AnyOptionalSharpContainer>>(
+			async player => (await player.Location.WithCancellation(CancellationToken.None)).WithNoneOption(),
+			room => new(room.Location.WithCancellation(CancellationToken.None)),
+			exit => new(exit.Home.WithCancellation(CancellationToken.None)),
+			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).WithNoneOption());
 
 		// can_interact is the last term of both arms, so it is only asked once Can_Examine has declined
 		// and the dark test has passed — as the else-if ordering has it. It can run softcode through an
