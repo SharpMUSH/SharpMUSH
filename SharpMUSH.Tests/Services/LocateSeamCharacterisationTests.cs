@@ -460,4 +460,51 @@ public class LocateSeamCharacterisationTests
 
 		await Assert.That(result.IsValid()).IsEqualTo(found);
 	}
+
+	[Test]
+	public async Task ParseEnglishRestoresANonOrdinalDigitToken()
+	{
+		// match.c:590 — '0th'/'12nd' "wasn't really a count adjective. Reset and press on." And
+		// match.c:560 quick-exits a count with no noun after it. Both used to consume the token, so a
+		// thing named "5 Swords" was searched for as "Swords" and never found.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(looker);
+		Holds(room, looker, _factory.CreateThing(3, "5 Swords", room), _factory.CreateThing(4, "2nd", room));
+
+		var noSuffix = await _locateService.Locate(_parser, looker, looker, "5 Swords", LocateFlags.All);
+		var countNoNoun = await _locateService.Locate(_parser, looker, looker, "2nd", LocateFlags.All);
+
+		await Assert.That(Found(noSuffix)).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(Found(countNoNoun)).IsEqualTo(new DBRef(4, 0));
+	}
+
+	[Test]
+	public async Task NearbyUsesAnExitsDestination()
+	{
+		// nearby() resolves each side with where_is() (predicat.c:1225), which is Home() for an exit —
+		// its destination — and NOTHING for a room. match.c uses Source for its own `loc`, so the two
+		// disagree deliberately; Nearby needs where_is's answer.
+		var source = _factory.CreateRoom(999, "Source");
+		var destination = _factory.CreateRoom(998, "Destination");
+		var exit = _factory.CreateExit(8, "North", ["n"], source, destination);
+		var traveller = _factory.CreatePlayer(1, "Traveller", destination);
+		var stayer = _factory.CreatePlayer(2, "Stayer", source);
+
+		await Assert.That(await LocateService.Nearby(exit, traveller)).IsTrue();
+		await Assert.That(await LocateService.Nearby(exit, stayer)).IsFalse();
+	}
+
+	[Test]
+	public async Task TwoRoomsAreNeverNearbyAndNeitherAreTwoObjectsNowhere()
+	{
+		// where_is() is NOTHING for a room, and NOTHING == NOTHING must not read as "same location".
+		var roomA = _factory.CreateRoom(999, "A");
+		var roomB = _factory.CreateRoom(998, "B");
+		var inA = _factory.CreatePlayer(1, "InA", roomA);
+
+		await Assert.That(await LocateService.Nearby(roomA, roomB)).IsFalse();
+		await Assert.That(await LocateService.Nearby(roomA, inA)).IsTrue();
+		await Assert.That(await LocateService.Nearby(inA, roomA)).IsTrue();
+	}
 }

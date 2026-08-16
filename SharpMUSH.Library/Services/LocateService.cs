@@ -786,17 +786,38 @@ public partial class LocateService(
 			thing => new(thing.Location.WithCancellation(CancellationToken.None))
 		);
 
+	/// <summary>
+	/// PennMUSH's <c>where_is</c> (predicat.c:1225), which is <em>not</em> <see cref="FriendlyWhereIs"/>:
+	/// <c>NOTHING</c> for a room and <c>Home()</c> — the destination — for an exit. match.c deliberately
+	/// uses the other one for its <c>loc</c>, taking an exit's <c>Source</c>, so the two disagree on
+	/// purpose and <see cref="Nearby"/> needs this one.
+	/// </summary>
+	private static async ValueTask<DBRef?> WhereIs(AnySharpObject thing)
+	{
+		if (thing.IsRoom) return null;
+		if (!thing.IsExit) return (await FriendlyWhereIs(thing)).Object().DBRef;
+
+		var destination = await thing.MinusRoom().Home();
+		return destination.IsNone ? null : destination.WithoutNone().Object().DBRef;
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>nearby</c> (predicat.c:1251), member for member. The nullable is load-bearing:
+	/// <c>where_is</c> answers <c>NOTHING</c> for a room, and <c>NOTHING == NOTHING</c> must not read as
+	/// "same location" — two objects nowhere are not near each other.
+	/// </summary>
 	public static async ValueTask<bool> Nearby(
 		AnySharpObject obj1,
 		AnySharpObject obj2)
 	{
 		if (obj1.IsRoom && obj2.IsRoom) return false;
 
-		var loc1 = (await FriendlyWhereIs(obj1)).Object().DBRef;
+		var loc1 = await WhereIs(obj1);
 
-		if (loc1 == obj2.Object().DBRef) return true;
+		if (loc1 is not null && loc1 == obj2.Object().DBRef) return true;
 
-		var loc2 = (await FriendlyWhereIs(obj2)).Object().DBRef;
+		var loc2 = await WhereIs(obj2);
+		if (loc2 is null) return false;
 
 		return loc2 == obj1.Object().DBRef || loc2 == loc1;
 	}
@@ -881,38 +902,48 @@ public partial class LocateService(
 			return (name, flags, 0);
 		}
 
-		var mName = name.Split(' ').FirstOrDefault();
-		if (string.IsNullOrWhiteSpace(mName))
+		// match.c:560 — `mname = strchr(*name, ' '); if (!mname) return 0;`. A count with no noun after it
+		// is not a count adjective at all, and the name stands as typed. Split(' ').FirstOrDefault()
+		// hands back the *whole string* when there is no space, so a search for "2nd" became an ordinal
+		// search for the empty string instead of a search for an object named "2nd".
+		var space = name.IndexOf(' ');
+		if (space < 0)
 		{
 			return (name, flags, 0);
 		}
 
+		var mName = name[..space];
 		var ordinalMatch = NthRegex.Match(mName);
 
-		if (ordinalMatch.Success)
+		// match.c:590 — an error like '0th' or '12nd' "wasn't really a count adjective. Reset and press
+		// on", restoring the name rather than consuming the token. Falling through to the shared return
+		// stripped it, so a thing named "5 Swords" was searched for as "Swords" and never found.
+		if (!ordinalMatch.Success)
 		{
-			count = int.Parse(ordinalMatch.Groups["Number"].Value);
-			var ordinal = ordinalMatch.Groups["Ordinal"].Value;
+			return (name, flags, 0);
+		}
 
-			// Validate the ordinal suffix, following PennMUSH parse_english() rules:
-			//   11th, 12th, 13th  → always "th"  (teen exception – not st/nd/rd)
-			//   *1  (excl. 11)    → "st"
-			//   *2  (excl. 12)    → "nd"
-			//   *3  (excl. 13)    → "rd"
-			//   everything else   → "th"
-			var mod100 = count % 100;
-			var isTeen = mod100 >= 11 && mod100 <= 13;
-			var mod10 = count % 10;
+		count = int.Parse(ordinalMatch.Groups["Number"].Value);
+		var ordinal = ordinalMatch.Groups["Ordinal"].Value;
 
-			string expectedSuffix = (isTeen || mod10 == 0 || mod10 > 3) ? "th"
-				: mod10 == 1 ? "st"
-				: mod10 == 2 ? "nd"
-				: "rd";
+		// Validate the ordinal suffix, following PennMUSH parse_english() rules:
+		//   11th, 12th, 13th  → always "th"  (teen exception – not st/nd/rd)
+		//   *1  (excl. 11)    → "st"
+		//   *2  (excl. 12)    → "nd"
+		//   *3  (excl. 13)    → "rd"
+		//   everything else   → "th"
+		var mod100 = count % 100;
+		var isTeen = mod100 >= 11 && mod100 <= 13;
+		var mod10 = count % 10;
 
-			if (count < 1 || !ordinal.Equals(expectedSuffix, StringComparison.CurrentCultureIgnoreCase))
-			{
-				return (name, flags, 0);
-			}
+		string expectedSuffix = (isTeen || mod10 == 0 || mod10 > 3) ? "th"
+			: mod10 == 1 ? "st"
+			: mod10 == 2 ? "nd"
+			: "rd";
+
+		if (count < 1 || !ordinal.Equals(expectedSuffix, StringComparison.CurrentCultureIgnoreCase))
+		{
+			return (name, flags, 0);
 		}
 
 		return (name[mName.Length..].TrimStart(), flags, count);
