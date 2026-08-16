@@ -617,11 +617,19 @@ public partial class Functions
 			return "#-1";
 		}
 
-		var maybeFound = await LocateService.Locate(parser, looker, executor, nameArg, locateFlags);
+		// fun_locate passes `looker` as match_result's `who` as well as its `where`, so every
+		// can_interact / controls / Long_Fingers / nearby question inside the match is asked about the
+		// looker. The executor is the subject only of the two gates that bracket the call — the 's'
+		// check above, and the visibility check below.
+		var maybeFound = await LocateService.Locate(parser, looker, looker, nameArg, locateFlags);
 
+		// fun_locate writes the dbref itself on every failure path: safe_str("#-1") for the looker gate,
+		// safe_dbref(item) for NOTHING/AMBIGUOUS, safe_dbref(NOTHING) for a failed visibility check. It
+		// never emits a "#-1 SOMETHING" string, and softcode compares against these — a decorated one
+		// will not `=` a bare #-1.
 		if (maybeFound.IsError)
 		{
-			return maybeFound.AsError.Value;
+			return maybeFound.AsError.Value == ErrorMessages.Returns.AmbiguousMatch ? "#-2" : "#-1";
 		}
 
 		if (maybeFound.IsNone)
@@ -629,10 +637,37 @@ public partial class Functions
 			return "#-1";
 		}
 
-		// No post-hoc type filter: 'F' is MAT_TYPE, which the search itself honours now. Filtering the
-		// winner afterwards could only ever turn a legitimate match into #-1 while the wrong-type
-		// candidate had already displaced the right-type one during matching.
-		return $"#{maybeFound.WithoutError().WithoutNone().Object().DBRef.Number}";
+		var found = maybeFound.WithoutError().WithoutNone();
+
+		// fun_locate's own visibility check, which match_result does not do and no other caller gets:
+		//   loc = Location(item);
+		//   if (GoodObject(loc)) Can_Examine(executor, loc)
+		//                        || ((!DarkLegal(item) || Light(loc) || Light(item)) && can_interact(...))
+		//   else                 (See_All(executor) || !DarkLegal(item) || Light(item)) && can_interact(...)
+		// A room has no location to examine, which is the `else` — it was missing entirely, and asking
+		// Can_Examine about the room itself is a different question with a different answer.
+		var canSee = await PermissionService!.CanInteract(executor, found, IPermissionService.InteractType.See);
+
+		if (found.IsRoom)
+		{
+			return (await executor.IsSee_All() || !await found.IsDarkLegal() || await found.IsLight()) && canSee
+				? $"#{found.Object().DBRef.Number}"
+				: "#-1";
+		}
+
+		// Location(item), the immediate container — not Room(), which walks the chain to the enclosing room.
+		var loc = (await Library.Services.LocateService.FriendlyWhereIs(found)).WithExitOption();
+
+		if (await PermissionService.CanExamine(executor, loc)
+				|| ((!await found.IsDarkLegal() || await loc.IsLight() || await found.IsLight()) && canSee))
+		{
+			// No post-hoc type filter: 'F' is MAT_TYPE, which the search itself honours now. Filtering the
+			// winner afterwards could only ever turn a legitimate match into #-1 while the wrong-type
+			// candidate had already displaced the right-type one during matching.
+			return $"#{found.Object().DBRef.Number}";
+		}
+
+		return "#-1";
 	}
 
 	/// <summary>

@@ -409,7 +409,7 @@ public partial class Functions
 		var toLocate = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, toLocate, LocateFlags.All | LocateFlags.NoVisibilityCheck,
+			parser, executor, executor, toLocate, LocateFlags.All,
 			async found => new CallState(await found.IsApproved()));
 	}
 

@@ -1230,37 +1230,6 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(42, 0));
 	}
 
-	[Test]
-	public async Task MatchList_NoVisibilityCheck_Flag_PreservesMatchWhenPostMatchVisibilityFails()
-	{
-		// The NoVisibilityCheck flag bypasses the post-match CanExamine/CanInteract check
-		// in Locate(). This test verifies the flag independently of absolute DBRef behavior
-		// by using Match_List directly (which has no post-match visibility check).
-		// The visibility check that NoVisibilityCheck bypasses is in Locate(), not Match_List.
-		// So this test verifies that a non-visible object in Match_List is found when
-		// CanInteract returns true (Match_List only skips objects where CanInteract is false).
-
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "TargetObject", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
-
-		var list = new[] { thing }.ToAsyncEnumerable();
-
-		var state = new LocateService.MatchState(LocateFlags.NoTypePreference | LocateFlags.NoVisibilityCheck,
-			HelperFunctions.ParseDbRef("TargetObject"), 0);
-		await _locateService.MatchList(state, list, player, "TargetObject");
-		var bestMatch = state.Best;
-		var curr = state.Count;
-
-		await Assert.That(curr).IsEqualTo(1);
-		await Assert.That(bestMatch.IsValid()).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
-	}
-
 	/// <summary>
 	/// Verifies that the ordinal validation logic (matching PennMUSH parse_english())
 	/// correctly accepts well-formed ordinals and rejects malformed ones.

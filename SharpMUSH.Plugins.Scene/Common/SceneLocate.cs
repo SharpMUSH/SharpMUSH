@@ -33,8 +33,7 @@ public static class SceneLocate
 	// so spell out a player-matching set that also covers those two forms the scene softcode relies on.
 	private const LocateFlags PlayerFlags =
 		LocateFlags.PlayersPreference | LocateFlags.MatchMeForLooker | LocateFlags.AbsoluteMatch |
-		LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.EnglishStyleMatching |
-		LocateFlags.NoVisibilityCheck;
+		LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.EnglishStyleMatching;
 
 	/// <summary>
 	/// Resolves a room/object reference to a concrete dbref string, or returns <paramref name="name"/>

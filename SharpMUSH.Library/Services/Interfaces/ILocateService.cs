@@ -54,19 +54,13 @@ public enum LocateFlags
 	EnglishStyleMatching = MatchOptionalWildCardForPlayerName << 1,
 	NoPartialMatches = EnglishStyleMatching << 1,
 	OnlyMatchLookerControlledObjects = NoPartialMatches << 1,
-	/// <summary>
-	/// Skips the visibility check after locating the object. Used by functions like
-	/// hasflag() that should work on any object the executor can reference by dbref,
-	/// matching PennMUSH behavior.
-	/// </summary>
-	NoVisibilityCheck = OnlyMatchLookerControlledObjects << 1,
 
 	/// <summary>
 	/// <c>MAT_GLOBAL</c> — search the Master Room's exits. Its own flag, and deliberately not part of
 	/// <see cref="All"/>: <c>MAT_EVERYTHING</c> does not include it either, and the master-room scope
 	/// used to be gated on <c>HasFlag(All)</c>, which is a different question.
 	/// </summary>
-	MatchGlobalExits = NoVisibilityCheck << 1,
+	MatchGlobalExits = OnlyMatchLookerControlledObjects << 1,
 
 	/// <summary>
 	/// <c>MAT_EVERYTHING</c>, member for member. <c>MAT_CONTAINER</c>

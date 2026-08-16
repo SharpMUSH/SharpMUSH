@@ -174,7 +174,7 @@ public partial class LocateService(
 		LocateFlags.NoTypePreference | LocateFlags.PlayersPreference | LocateFlags.RoomsPreference |
 		LocateFlags.ThingsPreference | LocateFlags.ExitsPreference |
 		// SharpMUSH's own, and MAT_LAST, which fun_locate applies at the call rather than in match_flags.
-		LocateFlags.UseLastIfAmbiguous | LocateFlags.NoVisibilityCheck;
+		LocateFlags.UseLastIfAmbiguous;
 
 	/// <summary>
 	/// The scopes that make a search depend on where the looker stands, and so require the executor to
@@ -218,41 +218,26 @@ public partial class LocateService(
 		// of those was re-running the same GeneratedRegex over the same string.
 		var absolute = HelperFunctions.ParseDbRef(name);
 
-		var (match, noControl) = await LocateMatch(executor, looker, flags, name, absolute);
-		if (match.IsError) return (match.AsError, noControl);
-		if (match.IsNone) return (match.AsNone, noControl);
-
-		var result = match.WithoutError().WithoutNone();
-
-		// PennMUSH: absolute dbref matches (#N) always bypass visibility checks.
-		if (flags.HasFlag(LocateFlags.NoVisibilityCheck) || absolute.IsSome())
-		{
-			return (result.WithNoneOption().WithErrorOption(), noControl);
-		}
-
-		var location = await FriendlyWhereIs(result);
-
-		if (await permissionService.CanExamine(executor, location.WithExitOption()) ||
-				((!await result.IsDarkLegal() || await location.WithExitOption().IsLight() || await result.IsLight()) &&
-				 await permissionService.CanInteract(executor, result, IPermissionService.InteractType.See)))
-		{
-			return (result.WithNoneOption().WithErrorOption(), noControl);
-		}
-
-		return (new Error<string>(ErrorMessages.Returns.CantSeeThat), noControl);
+		// And that is the whole of it. match_result_internal asks exactly one permission question of a
+		// candidate — can_interact(match, who, INTERACT_MATCH), which MatchList does per candidate — and
+		// there is no Can_Examine, DarkLegal or INTERACT_SEE anywhere in match.c. That block belongs to
+		// fun_locate, which applies it to what match_result hands back; it lives in Functions.Locate now.
+		// Having it here put fun_locate's filter on every caller, so commands rejected objects PennMUSH
+		// resolves and reported them as "I can't see that here" rather than as a suppressed match.
+		return await LocateMatch(executor, looker, flags, name, absolute);
 	}
 
 	// A player-name match is GLOBAL in PennMUSH: pmatch()/player lookup resolves any player by name
-	// regardless of where they stand or whether the looker can "see" them. NoVisibilityCheck keeps
-	// Locate()'s post-match dark/can-examine gate from rejecting a perfectly valid player just because
-	// an unprivileged looker (e.g. the profile http_handler #4) is neither near nor a controller —
-	// which 404'd GET /api/profile/<name> for every character.
+	// regardless of where they stand or whether the looker can "see" them. It no longer needs a flag to
+	// say so — the dark/can-examine gate that used to reject a perfectly valid player here (404'ing
+	// GET /api/profile/<name> for every character, since the profile http_handler #4 is neither near nor
+	// a controller) was fun_locate's, and has gone back there.
 	// AbsoluteMatch because lookup_player resolves "#1" as readily as a name, and every caller of this
 	// helper hands it whatever the user typed. It used to arrive by accident: the flag set names a scope,
 	// so nothing was injected, and a dbref reached no scope at all.
 	private const LocateFlags PlayerMatchFlags =
 		LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
-		LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.AbsoluteMatch | LocateFlags.NoVisibilityCheck;
+		LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.AbsoluteMatch;
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(IMUSHCodeParser parser,
 		AnySharpObject looker, AnySharpObject executor,
