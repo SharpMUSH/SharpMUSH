@@ -480,7 +480,7 @@ public class LocateSeamCharacterisationTests
 	}
 
 	[Test]
-	public async Task NearbyUsesAnExitsSourceRoom()
+	public async Task NearbyUsesTheSourceRoomOfAnExit()
 	{
 		// where_is() returns Home(thing) for an exit, and Home/Source/Exits are all db[x].exits
 		// (dbdefs.h:35-40) — so it is the room the exit sits in, not where it leads. Destination() is the

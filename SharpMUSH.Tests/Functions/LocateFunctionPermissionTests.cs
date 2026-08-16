@@ -59,4 +59,29 @@ public class LocateFunctionPermissionTests
 		await Assert.That(mortalSees).IsEqualTo("#-1");
 		await Assert.That(godSees).IsEqualTo($"#{target.Number}");
 	}
+
+	[Test]
+	[NotInParallel]
+	public async Task TheGateSurvivesDefaultScopeInjection()
+	{
+		// fun_locate injects the default scope set *before* it gates (fundb.c), so a flags string that
+		// names no scope at all still ends up searching the looker's surroundings — and still has to
+		// clear the gate. 'N' is NOTYPE: not a scope, so the injection fires and MAT_NEIGHBOR and
+		// friends arrive implicitly. Gating on the flags as typed reads no relative-scope bit and waves
+		// the call through.
+		var room = DBRef.Parse((await God("@dig LocateInjectRoom")).Trim().Split(' ')[^1].Trim());
+		var looker = DBRef.Parse((await God("@create LocateInjectLooker")).Trim());
+		var target = DBRef.Parse((await God("@create LocateInjectTarget")).Trim());
+		await God($"@tel #{looker.Number}=#{room.Number}");
+		await God($"@tel #{target.Number}=#{room.Number}");
+
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LocateInject");
+
+		var mortalSees = await EvalAs(mortal.DbRef, $"locate(#{looker.Number},LocateInjectTarget,N)");
+		var godSees = await EvalAs(new DBRef(1), $"locate(#{looker.Number},LocateInjectTarget,N)");
+
+		await Assert.That(mortalSees).IsEqualTo("#-1");
+		await Assert.That(godSees).IsEqualTo($"#{target.Number}");
+	}
 }

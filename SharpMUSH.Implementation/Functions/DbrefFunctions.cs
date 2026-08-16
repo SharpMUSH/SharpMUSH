@@ -617,6 +617,12 @@ public partial class Functions
 			return "#-1";
 		}
 
+		// fun_locate injects the default scope set *before* it gates, and the order is load-bearing: a
+		// flags string naming no scope ('N' is one) picks up MAT_NEIGHBOR and friends here, and must
+		// then clear the gate like any other relative-scope search. Gating on the flags as typed sees no
+		// relative-scope bit and lets the call through.
+		locateFlags = Library.Services.LocateService.ApplyDefaultScopes(locateFlags);
+
 		// fun_locate's relative-scope gate, and it has to live here: it asks whether *executor* may
 		// evaluate against *looker* (fundb.c), while the match below runs with looker as its own
 		// permission subject. Folding both into one Locate call makes the gate ask Nearby(looker, looker),

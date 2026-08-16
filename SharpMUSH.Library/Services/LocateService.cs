@@ -178,6 +178,23 @@ public partial class LocateService(
 		LocateFlags.UseLastIfAmbiguous;
 
 	/// <summary>
+	/// fun_locate's default-scope injection: with no scope named there is nowhere to search, so the
+	/// default set is supplied. The old test asked whether four unrelated flags were absent, which is a
+	/// different question and fired even when a scope had been named.
+	/// </summary>
+	/// <remarks>
+	/// Public because ordering matters and fun_locate has it one way round: it injects <em>before</em>
+	/// applying <see cref="LookerRelativeScopes"/> (fundb.c), so a flags string naming no scope — <c>N</c>
+	/// is one — still acquires MAT_NEIGHBOR and friends and still has to clear the gate. Gating on the
+	/// flags as typed reads no relative-scope bit and waves the call through, which is a permission
+	/// bypass rather than a missed search. Callers that gate must resolve first, with this.
+	/// </remarks>
+	public static LocateFlags ApplyDefaultScopes(LocateFlags flags)
+		=> (flags & ~NonScopeFlags) == 0
+			? flags | LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker
+			: flags;
+
+	/// <summary>
 	/// The scopes that make a search depend on where the looker stands, and so require the executor to
 	/// be able to stand there too. fun_locate gates on exactly this set (fundb.c: <c>MAT_NEIGHBOR |
 	/// MAT_CONTAINER | MAT_POSSESSION | MAT_HERE | MAT_EXIT | MAT_CARRIED_EXIT</c>).
@@ -202,13 +219,7 @@ public partial class LocateService(
 		string name,
 		LocateFlags flags)
 	{
-		// fun_locate: with no scope named there is nowhere to search, so inject the default set. The old
-		// test asked whether four unrelated flags were absent, which is a different question and fired
-		// even when a scope had been named.
-		if ((flags & ~NonScopeFlags) == 0)
-		{
-			flags |= LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker;
-		}
+		flags = ApplyDefaultScopes(flags);
 
 		if ((flags & LookerRelativeScopes) != 0
 				// Cheapest first: See_All is a flag read, Nearby resolves up to two locations.
