@@ -518,15 +518,22 @@ public class LocateSeamCharacterisationTests
 	{
 		// NthRegex's \d accepts every Unicode decimal digit and caps no length, so int.Parse used to
 		// answer these with OverflowException/FormatException out of a path any player can type.
-		// match.c's strtoul saturates and then fails the suffix test, so the name stands as typed.
+		// match.c's strtoul saturates and then fails the suffix test, so the token is restored and the
+		// whole string stands as the name.
+		//
+		// The decoy named "Sword" is what makes this discriminating. Asserting "found nothing" would
+		// pass either way — a leading token wrongly consumed leaves an ordinal search for "Sword" that
+		// also finds nothing. With the decoy present, consuming the token finds *it* (or, for a count
+		// that survives, nothing), where restoring the token must find the object actually so named.
 		var room = _factory.CreateRoom(999, "Shared Room");
 		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
 		Holds(looker);
-		Holds(room, looker, _factory.CreateThing(3, "Sword", room));
+		Holds(room, looker,
+			_factory.CreateThing(3, "Sword", room),
+			_factory.CreateThing(4, search, room));
 
 		var result = await _locateService.Locate(_parser, looker, looker, search, LocateFlags.All);
 
-		// Not a count, so the whole string is the name — and nothing is called that.
-		await Assert.That(result.IsNone).IsTrue();
+		await Assert.That(Found(result)).IsEqualTo(new DBRef(4, 0));
 	}
 }
