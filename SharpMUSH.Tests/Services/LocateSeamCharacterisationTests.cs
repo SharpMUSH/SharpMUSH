@@ -509,4 +509,24 @@ public class LocateSeamCharacterisationTests
 		await Assert.That(await LocateService.Nearby(roomA, inA)).IsTrue();
 		await Assert.That(await LocateService.Nearby(inA, roomA)).IsTrue();
 	}
+
+	[Test]
+	[Arguments("99999999999999999999th Sword")]
+	[Arguments("12345678901st Sword")]
+	[Arguments("\u0663rd Sword")]
+	public async Task AnOrdinalTooBigOrNotAsciiIsNotACount(string search)
+	{
+		// NthRegex's \d accepts every Unicode decimal digit and caps no length, so int.Parse used to
+		// answer these with OverflowException/FormatException out of a path any player can type.
+		// match.c's strtoul saturates and then fails the suffix test, so the name stands as typed.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(looker);
+		Holds(room, looker, _factory.CreateThing(3, "Sword", room));
+
+		var result = await _locateService.Locate(_parser, looker, looker, search, LocateFlags.All);
+
+		// Not a count, so the whole string is the name — and nothing is called that.
+		await Assert.That(result.IsNone).IsTrue();
+	}
 }

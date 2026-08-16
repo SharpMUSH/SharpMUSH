@@ -8,6 +8,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services;
@@ -917,7 +918,18 @@ public partial class LocateService(
 			return (name, flags, 0);
 		}
 
-		count = int.Parse(ordinalMatch.Groups["Number"].Value);
+		// `\d` matches every Unicode decimal digit and caps no length, so this group can hold "\u0663" or
+		// twenty nines — int.Parse answers those with FormatException and OverflowException, out of a
+		// path any player reaches by typing `get 99999999999999999999th thing`. match.c runs strtoul,
+		// which saturates and then fails the suffix test, so declining to read it as a count is the same
+		// answer: the name stands as typed. NumberStyles.None also refuses a sign, which `\d+` cannot
+		// produce but which int.Parse would otherwise accept.
+		if (!int.TryParse(ordinalMatch.Groups["Number"].ValueSpan, NumberStyles.None,
+					CultureInfo.InvariantCulture, out count))
+		{
+			return (name, flags, 0);
+		}
+
 		var ordinal = ordinalMatch.Groups["Ordinal"].Value;
 
 		// Validate the ordinal suffix, following PennMUSH parse_english() rules:
