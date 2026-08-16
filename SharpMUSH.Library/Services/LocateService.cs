@@ -593,7 +593,7 @@ public partial class LocateService(
 		// not even worth fetching otherwise.
 		ReadOnlySpan<string> aliases = cur.IsPlayer || cur.IsExit ? cur.Aliases : [];
 
-		if (AnyAlias(aliases, name, AliasMatch.Whole)
+		if (AnyAliasMatches(aliases, name)
 				|| objectName.Equals(name, StringComparison.OrdinalIgnoreCase))
 		{
 			return MatchKind.Exact;
@@ -601,7 +601,7 @@ public partial class LocateService(
 
 		if (!allowPartial) return MatchKind.None;
 
-		return (cur.IsPlayer && AnyAlias(aliases, name, AliasMatch.Prefix))
+		return (cur.IsPlayer && AnyAliasStartsWith(aliases, name))
 					 || (!cur.IsExit && StringMatch(objectName, name))
 			? MatchKind.Partial
 			: MatchKind.None;
@@ -640,29 +640,37 @@ public partial class LocateService(
 		return false;
 	}
 
-	/// <summary>How <see cref="AnyAlias"/> compares. An enum rather than a <c>bool</c> so the call sites read.</summary>
-	private enum AliasMatch
-	{
-		/// <summary>check_alias's comparison: the whole entry, case-insensitively.</summary>
-		Whole,
-		Prefix
-	}
-
 	/// <summary>
-	/// A span walk rather than <c>aliases.Any(a =&gt; …)</c> or <c>Contains(name, comparer)</c>: this runs
-	/// up to twice per candidate per locate. The predicate overload would capture <paramref name="name"/>
-	/// into a fresh closure each time, and the comparer overload still boxes the array's enumerator.
+	/// match.c's <c>match_aliases</c>, whose <c>check_alias</c> compares each <c>;</c>-separated entry
+	/// for equality.
 	/// </summary>
-	private static bool AnyAlias(ReadOnlySpan<string> aliases, string name, AliasMatch how)
+	/// <remarks>
+	/// A span walk rather than <c>Any(a =&gt; …)</c> or <c>Contains(name, comparer)</c>: this runs once
+	/// per candidate per locate, and the predicate overload captures <paramref name="name"/> into a fresh
+	/// closure each time while the comparer overload still boxes the array's enumerator.
+	/// </remarks>
+	private static bool AnyAliasMatches(ReadOnlySpan<string> aliases, string name)
 	{
 		foreach (var alias in aliases)
 		{
-			if (how is AliasMatch.Prefix
-						? alias.StartsWith(name, StringComparison.OrdinalIgnoreCase)
-						: alias.Equals(name, StringComparison.OrdinalIgnoreCase))
-			{
-				return true;
-			}
+			if (alias.Equals(name, StringComparison.OrdinalIgnoreCase)) return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Prefix-matching against a player's aliases, which PennMUSH does <b>not</b> do — MATCH_LIST's
+	/// partial branch tests <c>string_match(Name(match), name)</c> and no aliases at all. Penn serves the
+	/// same intent through <c>visible_short_page</c> on the player-match path instead. Kept separate from
+	/// <see cref="AnyAliasMatches"/> rather than folded behind a mode flag so that removing it is a
+	/// deletion: see issue #794.
+	/// </summary>
+	private static bool AnyAliasStartsWith(ReadOnlySpan<string> aliases, string name)
+	{
+		foreach (var alias in aliases)
+		{
+			if (alias.StartsWith(name, StringComparison.OrdinalIgnoreCase)) return true;
 		}
 
 		return false;
