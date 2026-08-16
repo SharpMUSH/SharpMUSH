@@ -181,8 +181,12 @@ public partial class LocateService(
 	/// The scopes that make a search depend on where the looker stands, and so require the executor to
 	/// be able to stand there too. fun_locate gates on exactly this set (fundb.c: <c>MAT_NEIGHBOR |
 	/// MAT_CONTAINER | MAT_POSSESSION | MAT_HERE | MAT_EXIT | MAT_CARRIED_EXIT</c>).
+	///
+	/// Public because <c>fun_locate</c> has to apply this gate itself: it asks it of <c>executor</c>
+	/// against <c>looker</c>, while passing <c>looker</c> as the match subject, so the two cannot be
+	/// folded into one call.
 	/// </summary>
-	private const LocateFlags LookerRelativeScopes =
+	public const LocateFlags LookerRelativeScopes =
 		LocateFlags.MatchObjectsInLookerLocation | LocateFlags.MatchAgainstLookerLocationName |
 		LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchHereForLookerLocation |
 		LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsInsideOfLooker;

@@ -617,10 +617,22 @@ public partial class Functions
 			return "#-1";
 		}
 
+		// fun_locate's relative-scope gate, and it has to live here: it asks whether *executor* may
+		// evaluate against *looker* (fundb.c), while the match below runs with looker as its own
+		// permission subject. Folding both into one Locate call makes the gate ask Nearby(looker, looker),
+		// which is always true — so a non-privileged executor could search a remote looker's neighbours.
+		if ((locateFlags & Library.Services.LocateService.LookerRelativeScopes) != 0
+				&& !await executor.IsSee_All()
+				&& !await Library.Services.LocateService.Nearby(executor, looker)
+				&& !await PermissionService!.Controls(executor, looker))
+		{
+			return "#-1";
+		}
+
 		// fun_locate passes `looker` as match_result's `who` as well as its `where`, so every
 		// can_interact / controls / Long_Fingers / nearby question inside the match is asked about the
-		// looker. The executor is the subject only of the two gates that bracket the call — the 's'
-		// check above, and the visibility check below.
+		// looker. The executor is the subject only of the gates that bracket the call — the 's' check
+		// above, this one, and the visibility check below.
 		var maybeFound = await LocateService.Locate(parser, looker, looker, nameArg, locateFlags);
 
 		// fun_locate writes the dbref itself on every failure path: safe_str("#-1") for the looker gate,
