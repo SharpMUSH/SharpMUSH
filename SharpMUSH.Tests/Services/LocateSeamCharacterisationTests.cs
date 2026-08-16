@@ -436,4 +436,28 @@ public class LocateSeamCharacterisationTests
 		await Assert.That(Found(me)).IsEqualTo(new DBRef(1, 0));
 	}
 
+
+	[Test]
+	[Arguments("Big Sword", "Sword", true)]
+	[Arguments("Big Sword", "Big", true)]
+	[Arguments("Big Sword", "word", false)]
+	[Arguments("BBS - Myrddin's Global BBS", "Myrddin", true)]
+	[Arguments("BBS - Myrddin's Global BBS", "s", true)]
+	[Arguments("mbboard", "bboard", false)]
+	[Arguments("oak door", "do", true)]
+	[Arguments("oak door", "oor", false)]
+	public async Task PartialMatchingFollowsStringMatchWordBoundaries(string objectName, string search, bool found)
+	{
+		// PennMUSH's string_match (strutil.c) tests whether the search term prefixes *any word* of the
+		// name, not just the whole string — it rescans at each isalnum boundary. Testing only the first
+		// word left every multi-word object reachable by its leading word or in full and no other way,
+		// which is not how players refer to things.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(room, looker, _factory.CreateThing(3, objectName, room));
+
+		var result = await _locateService.Locate(_parser, looker, looker, search, LocateFlags.All);
+
+		await Assert.That(result.IsValid()).IsEqualTo(found);
+	}
 }

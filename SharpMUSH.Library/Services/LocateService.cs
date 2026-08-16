@@ -601,9 +601,42 @@ public partial class LocateService(
 		if (!allowPartial) return MatchKind.None;
 
 		return (cur.IsPlayer && AnyAlias(aliases, name, prefix: true))
-					 || (!cur.IsExit && objectName.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+					 || (!cur.IsExit && StringMatch(objectName, name))
 			? MatchKind.Partial
 			: MatchKind.None;
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>string_match</c> (strutil.c): <paramref name="sub"/> is a prefix of <em>any word</em>
+	/// of <paramref name="src"/>, not just of the whole string. `sword` matches `Big Sword`, which is how
+	/// players ordinarily refer to things — most object names are more than one word, and testing only
+	/// the first left every one of them reachable by its leading word or in full and no other way.
+	/// </summary>
+	/// <remarks>
+	/// The word separator is <c>isalnum</c>, not whitespace: `Myrddin's` advances past the apostrophe to
+	/// `s`, so splitting on spaces is not the same function. Runs once per candidate per locate, so it
+	/// walks spans rather than allocating.
+	/// </remarks>
+	private static bool StringMatch(ReadOnlySpan<char> src, ReadOnlySpan<char> sub)
+	{
+		if (sub.IsEmpty) return false;
+
+		while (!src.IsEmpty)
+		{
+			if (src.StartsWith(sub, StringComparison.OrdinalIgnoreCase)) return true;
+
+			// Scan to the beginning of the next word, exactly as string_match does. IsLetterOrDigit stands
+			// in for isalnum, which PennMUSH runs under a UTF-8 ctype locale, so both are Unicode-aware.
+			var i = 0;
+			while (i < src.Length && char.IsLetterOrDigit(src[i])) i++;
+			while (i < src.Length && !char.IsLetterOrDigit(src[i])) i++;
+
+			// One of those two scans always advances, so i >= 1 — but this is a per-candidate loop and a
+			// hang here would be a denial of service, so don't rest the whole thing on that reasoning.
+			src = src[Math.Max(i, 1)..];
+		}
+
+		return false;
 	}
 
 	/// <summary>
