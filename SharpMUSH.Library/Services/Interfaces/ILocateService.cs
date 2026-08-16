@@ -21,6 +21,17 @@ public enum SharpObjectTypes
 	Any = Player | Room | Exit | Thing
 }
 
+/// <remarks>
+/// <b>Bit positions are explicit and fixed.</b> This enum is public in a package external plugins
+/// reference (see the contract note in SharpMUSH.Library.csproj), so its numeric values are part of
+/// that contract. Written as a <c>&lt;&lt; 1</c> chain, removing any member silently renumbered every
+/// member below it — which is exactly what happened twice: <c>FailIfNotPreferred</c> (bit 7) and
+/// <c>NoVisibilityCheck</c> (bit 25) were each dropped, shifting the tail down and leaving a plugin
+/// built against 1.0.0 passing one flag and this server reading another.
+///
+/// Both slots stay reserved rather than reused, so every surviving member keeps the value it was
+/// published with. Add new members at the first free bit; never renumber an existing one.
+/// </remarks>
 [Flags]
 public enum LocateFlags
 {
@@ -30,43 +41,41 @@ public enum LocateFlags
 	/// returning <see cref="SharpObjectTypes.None"/> is the same statement — but the switch is
 	/// documented, so the letter has to land somewhere.
 	/// </summary>
-	NoTypePreference = 1,
-	OnlyMatchTypePreference = NoTypePreference << 1,
-	ExitsPreference = OnlyMatchTypePreference << 1,
-	PreferLockPass = ExitsPreference << 1,
-	PlayersPreference = PreferLockPass << 1,
-	RoomsPreference = PlayersPreference << 1,
-	ThingsPreference = RoomsPreference << 1,
-	UseLastIfAmbiguous = ThingsPreference << 1,
-	AbsoluteMatch = UseLastIfAmbiguous << 1,
-	ExitsInTheRoomOfLooker = AbsoluteMatch << 1,
-	ExitsInsideOfLooker = ExitsInTheRoomOfLooker << 1,
-	MatchHereForLookerLocation = ExitsInsideOfLooker << 1,
-	MatchObjectsInLookerInventory = MatchHereForLookerLocation << 1,
-	MatchAgainstLookerLocationName = MatchObjectsInLookerInventory << 1,
-	OnlyMatchObjectsInLookerInventory = MatchAgainstLookerLocationName << 1,
-	MatchRemoteContents = OnlyMatchObjectsInLookerInventory << 1,
-	MatchMeForLooker = MatchRemoteContents << 1,
-	OnlyMatchObjectsInLookerLocation = MatchMeForLooker << 1,
-	MatchObjectsInLookerLocation = OnlyMatchObjectsInLookerLocation << 1,
-	MatchWildCardForPlayerName = MatchObjectsInLookerLocation << 1,
-	MatchOptionalWildCardForPlayerName = MatchWildCardForPlayerName << 1,
-	EnglishStyleMatching = MatchOptionalWildCardForPlayerName << 1,
-	NoPartialMatches = EnglishStyleMatching << 1,
-	OnlyMatchLookerControlledObjects = NoPartialMatches << 1,
-	/// <summary>
-	/// Skips the visibility check after locating the object. Used by functions like
-	/// hasflag() that should work on any object the executor can reference by dbref,
-	/// matching PennMUSH behavior.
-	/// </summary>
-	NoVisibilityCheck = OnlyMatchLookerControlledObjects << 1,
+	NoTypePreference = 1 << 0,
+	OnlyMatchTypePreference = 1 << 1,
+	ExitsPreference = 1 << 2,
+	PreferLockPass = 1 << 3,
+	PlayersPreference = 1 << 4,
+	RoomsPreference = 1 << 5,
+	ThingsPreference = 1 << 6,
+	// 1 << 7 — reserved, was FailIfNotPreferred: set by 'F' alongside OnlyMatchTypePreference and read
+	// nowhere. Do not reuse.
+	UseLastIfAmbiguous = 1 << 8,
+	AbsoluteMatch = 1 << 9,
+	ExitsInTheRoomOfLooker = 1 << 10,
+	ExitsInsideOfLooker = 1 << 11,
+	MatchHereForLookerLocation = 1 << 12,
+	MatchObjectsInLookerInventory = 1 << 13,
+	MatchAgainstLookerLocationName = 1 << 14,
+	OnlyMatchObjectsInLookerInventory = 1 << 15,
+	MatchRemoteContents = 1 << 16,
+	MatchMeForLooker = 1 << 17,
+	OnlyMatchObjectsInLookerLocation = 1 << 18,
+	MatchObjectsInLookerLocation = 1 << 19,
+	MatchWildCardForPlayerName = 1 << 20,
+	MatchOptionalWildCardForPlayerName = 1 << 21,
+	EnglishStyleMatching = 1 << 22,
+	NoPartialMatches = 1 << 23,
+	OnlyMatchLookerControlledObjects = 1 << 24,
+	// 1 << 25 — reserved, was NoVisibilityCheck: it opted out of fun_locate's dark/can-examine gate,
+	// which no longer runs for any caller but locate() itself. Do not reuse.
 
 	/// <summary>
 	/// <c>MAT_GLOBAL</c> — search the Master Room's exits. Its own flag, and deliberately not part of
 	/// <see cref="All"/>: <c>MAT_EVERYTHING</c> does not include it either, and the master-room scope
 	/// used to be gated on <c>HasFlag(All)</c>, which is a different question.
 	/// </summary>
-	MatchGlobalExits = NoVisibilityCheck << 1,
+	MatchGlobalExits = 1 << 26,
 
 	/// <summary>
 	/// <c>MAT_EVERYTHING</c>, member for member. <c>MAT_CONTAINER</c>

@@ -8,6 +8,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services;
@@ -174,14 +175,35 @@ public partial class LocateService(
 		LocateFlags.NoTypePreference | LocateFlags.PlayersPreference | LocateFlags.RoomsPreference |
 		LocateFlags.ThingsPreference | LocateFlags.ExitsPreference |
 		// SharpMUSH's own, and MAT_LAST, which fun_locate applies at the call rather than in match_flags.
-		LocateFlags.UseLastIfAmbiguous | LocateFlags.NoVisibilityCheck;
+		LocateFlags.UseLastIfAmbiguous;
+
+	/// <summary>
+	/// fun_locate's default-scope injection: with no scope named there is nowhere to search, so the
+	/// default set is supplied. The old test asked whether four unrelated flags were absent, which is a
+	/// different question and fired even when a scope had been named.
+	/// </summary>
+	/// <remarks>
+	/// Public because ordering matters and fun_locate has it one way round: it injects <em>before</em>
+	/// applying <see cref="LookerRelativeScopes"/> (fundb.c), so a flags string naming no scope — <c>N</c>
+	/// is one — still acquires MAT_NEIGHBOR and friends and still has to clear the gate. Gating on the
+	/// flags as typed reads no relative-scope bit and waves the call through, which is a permission
+	/// bypass rather than a missed search. Callers that gate must resolve first, with this.
+	/// </remarks>
+	public static LocateFlags ApplyDefaultScopes(LocateFlags flags)
+		=> (flags & ~NonScopeFlags) == 0
+			? flags | LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker
+			: flags;
 
 	/// <summary>
 	/// The scopes that make a search depend on where the looker stands, and so require the executor to
 	/// be able to stand there too. fun_locate gates on exactly this set (fundb.c: <c>MAT_NEIGHBOR |
 	/// MAT_CONTAINER | MAT_POSSESSION | MAT_HERE | MAT_EXIT | MAT_CARRIED_EXIT</c>).
+	///
+	/// Public because <c>fun_locate</c> has to apply this gate itself: it asks it of <c>executor</c>
+	/// against <c>looker</c>, while passing <c>looker</c> as the match subject, so the two cannot be
+	/// folded into one call.
 	/// </summary>
-	private const LocateFlags LookerRelativeScopes =
+	public const LocateFlags LookerRelativeScopes =
 		LocateFlags.MatchObjectsInLookerLocation | LocateFlags.MatchAgainstLookerLocationName |
 		LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchHereForLookerLocation |
 		LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsInsideOfLooker;
@@ -197,13 +219,7 @@ public partial class LocateService(
 		string name,
 		LocateFlags flags)
 	{
-		// fun_locate: with no scope named there is nowhere to search, so inject the default set. The old
-		// test asked whether four unrelated flags were absent, which is a different question and fired
-		// even when a scope had been named.
-		if ((flags & ~NonScopeFlags) == 0)
-		{
-			flags |= LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker;
-		}
+		flags = ApplyDefaultScopes(flags);
 
 		if ((flags & LookerRelativeScopes) != 0
 				// Cheapest first: See_All is a flag read, Nearby resolves up to two locations.
@@ -218,41 +234,26 @@ public partial class LocateService(
 		// of those was re-running the same GeneratedRegex over the same string.
 		var absolute = HelperFunctions.ParseDbRef(name);
 
-		var (match, noControl) = await LocateMatch(executor, looker, flags, name, absolute);
-		if (match.IsError) return (match.AsError, noControl);
-		if (match.IsNone) return (match.AsNone, noControl);
-
-		var result = match.WithoutError().WithoutNone();
-
-		// PennMUSH: absolute dbref matches (#N) always bypass visibility checks.
-		if (flags.HasFlag(LocateFlags.NoVisibilityCheck) || absolute.IsSome())
-		{
-			return (result.WithNoneOption().WithErrorOption(), noControl);
-		}
-
-		var location = await FriendlyWhereIs(result);
-
-		if (await permissionService.CanExamine(executor, location.WithExitOption()) ||
-				((!await result.IsDarkLegal() || await location.WithExitOption().IsLight() || await result.IsLight()) &&
-				 await permissionService.CanInteract(executor, result, IPermissionService.InteractType.See)))
-		{
-			return (result.WithNoneOption().WithErrorOption(), noControl);
-		}
-
-		return (new Error<string>(ErrorMessages.Returns.CantSeeThat), noControl);
+		// And that is the whole of it. match_result_internal asks exactly one permission question of a
+		// candidate — can_interact(match, who, INTERACT_MATCH), which MatchList does per candidate — and
+		// there is no Can_Examine, DarkLegal or INTERACT_SEE anywhere in match.c. That block belongs to
+		// fun_locate, which applies it to what match_result hands back; it lives in Functions.Locate now.
+		// Having it here put fun_locate's filter on every caller, so commands rejected objects PennMUSH
+		// resolves and reported them as "I can't see that here" rather than as a suppressed match.
+		return await LocateMatch(executor, looker, flags, name, absolute);
 	}
 
 	// A player-name match is GLOBAL in PennMUSH: pmatch()/player lookup resolves any player by name
-	// regardless of where they stand or whether the looker can "see" them. NoVisibilityCheck keeps
-	// Locate()'s post-match dark/can-examine gate from rejecting a perfectly valid player just because
-	// an unprivileged looker (e.g. the profile http_handler #4) is neither near nor a controller —
-	// which 404'd GET /api/profile/<name> for every character.
+	// regardless of where they stand or whether the looker can "see" them. It no longer needs a flag to
+	// say so — the dark/can-examine gate that used to reject a perfectly valid player here (404'ing
+	// GET /api/profile/<name> for every character, since the profile http_handler #4 is neither near nor
+	// a controller) was fun_locate's, and has gone back there.
 	// AbsoluteMatch because lookup_player resolves "#1" as readily as a name, and every caller of this
 	// helper hands it whatever the user typed. It used to arrive by accident: the flag set names a scope,
 	// so nothing was injected, and a dbref reached no scope at all.
 	private const LocateFlags PlayerMatchFlags =
 		LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
-		LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.AbsoluteMatch | LocateFlags.NoVisibilityCheck;
+		LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.AbsoluteMatch;
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(IMUSHCodeParser parser,
 		AnySharpObject looker, AnySharpObject executor,
@@ -607,7 +608,7 @@ public partial class LocateService(
 		// not even worth fetching otherwise.
 		ReadOnlySpan<string> aliases = cur.IsPlayer || cur.IsExit ? cur.Aliases : [];
 
-		if (AnyAlias(aliases, name, prefix: false)
+		if (AnyAliasMatches(aliases, name)
 				|| objectName.Equals(name, StringComparison.OrdinalIgnoreCase))
 		{
 			return MatchKind.Exact;
@@ -615,26 +616,76 @@ public partial class LocateService(
 
 		if (!allowPartial) return MatchKind.None;
 
-		return (cur.IsPlayer && AnyAlias(aliases, name, prefix: true))
-					 || (!cur.IsExit && objectName.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+		return (cur.IsPlayer && AnyAliasStartsWith(aliases, name))
+					 || (!cur.IsExit && StringMatch(objectName, name))
 			? MatchKind.Partial
 			: MatchKind.None;
 	}
 
 	/// <summary>
-	/// A span walk rather than <c>aliases.Any(a =&gt; …)</c>: this runs up to twice per candidate per
-	/// locate, and the predicate would capture <paramref name="name"/> into a fresh closure every time.
+	/// PennMUSH's <c>string_match</c> (strutil.c): <paramref name="sub"/> is a prefix of <em>any word</em>
+	/// of <paramref name="src"/>, not just of the whole string. `sword` matches `Big Sword`, which is how
+	/// players ordinarily refer to things — most object names are more than one word, and testing only
+	/// the first left every one of them reachable by its leading word or in full and no other way.
 	/// </summary>
-	private static bool AnyAlias(ReadOnlySpan<string> aliases, string name, bool prefix)
+	/// <remarks>
+	/// The word separator is <c>isalnum</c>, not whitespace: `Myrddin's` advances past the apostrophe to
+	/// `s`, so splitting on spaces is not the same function. Runs once per candidate per locate, so it
+	/// walks spans rather than allocating.
+	/// </remarks>
+	private static bool StringMatch(ReadOnlySpan<char> src, ReadOnlySpan<char> sub)
+	{
+		if (sub.IsEmpty) return false;
+
+		while (!src.IsEmpty)
+		{
+			if (src.StartsWith(sub, StringComparison.OrdinalIgnoreCase)) return true;
+
+			// Scan to the beginning of the next word, exactly as string_match does. IsLetterOrDigit stands
+			// in for isalnum, which PennMUSH runs under a UTF-8 ctype locale, so both are Unicode-aware.
+			var i = 0;
+			while (i < src.Length && char.IsLetterOrDigit(src[i])) i++;
+			while (i < src.Length && !char.IsLetterOrDigit(src[i])) i++;
+
+			// One of those two scans always advances, so i >= 1 — but this is a per-candidate loop and a
+			// hang here would be a denial of service, so don't rest the whole thing on that reasoning.
+			src = src[Math.Max(i, 1)..];
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// match.c's <c>match_aliases</c>, whose <c>check_alias</c> compares each <c>;</c>-separated entry
+	/// for equality.
+	/// </summary>
+	/// <remarks>
+	/// A span walk rather than <c>Any(a =&gt; …)</c> or <c>Contains(name, comparer)</c>: this runs once
+	/// per candidate per locate, and the predicate overload captures <paramref name="name"/> into a fresh
+	/// closure each time while the comparer overload still boxes the array's enumerator.
+	/// </remarks>
+	private static bool AnyAliasMatches(ReadOnlySpan<string> aliases, string name)
 	{
 		foreach (var alias in aliases)
 		{
-			if (prefix
-						? alias.StartsWith(name, StringComparison.OrdinalIgnoreCase)
-						: alias.Equals(name, StringComparison.OrdinalIgnoreCase))
-			{
-				return true;
-			}
+			if (alias.Equals(name, StringComparison.OrdinalIgnoreCase)) return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Prefix-matching against a player's aliases, which PennMUSH does <b>not</b> do — MATCH_LIST's
+	/// partial branch tests <c>string_match(Name(match), name)</c> and no aliases at all. Penn serves the
+	/// same intent through <c>visible_short_page</c> on the player-match path instead. Kept separate from
+	/// <see cref="AnyAliasMatches"/> rather than folded behind a mode flag so that removing it is a
+	/// deletion: see issue #794.
+	/// </summary>
+	private static bool AnyAliasStartsWith(ReadOnlySpan<string> aliases, string name)
+	{
+		foreach (var alias in aliases)
+		{
+			if (alias.StartsWith(name, StringComparison.OrdinalIgnoreCase)) return true;
 		}
 
 		return false;
@@ -768,6 +819,21 @@ public partial class LocateService(
 			thing => new(thing.Location.WithCancellation(CancellationToken.None))
 		);
 
+	/// <summary>
+	/// PennMUSH's <c>nearby</c> (predicat.c:1251), which resolves each side with <c>where_is</c>.
+	/// </summary>
+	/// <remarks>
+	/// <c>where_is</c> returns <c>Home(thing)</c> for an exit, and <c>Home(x)</c>, <c>Source(x)</c> and
+	/// <c>Exits(x)</c> are all the same field — <c>db[x].exits</c> (dbdefs.h:35-40). So an exit's
+	/// <c>where_is</c> is the room it <em>sits in</em>, not where it leads; <c>Destination(x)</c> is the
+	/// separate <c>db[x].location</c> field. <see cref="FriendlyWhereIs"/> already answers that, because
+	/// <see cref="SharpExit.Location"/> is documented as <c>Source()</c>.
+	///
+	/// The other divergence, <c>where_is</c> answering <c>NOTHING</c> for a room where this hands back
+	/// the room itself, does not reach an observable difference: the only arms it could change are
+	/// guarded by the both-rooms early return, and a room's own dbref answers the two remaining
+	/// comparisons the same way <c>NOTHING</c> would fail them.
+	/// </remarks>
 	public static async ValueTask<bool> Nearby(
 		AnySharpObject obj1,
 		AnySharpObject obj2)
@@ -863,38 +929,59 @@ public partial class LocateService(
 			return (name, flags, 0);
 		}
 
-		var mName = name.Split(' ').FirstOrDefault();
-		if (string.IsNullOrWhiteSpace(mName))
+		// match.c:560 — `mname = strchr(*name, ' '); if (!mname) return 0;`. A count with no noun after it
+		// is not a count adjective at all, and the name stands as typed. Split(' ').FirstOrDefault()
+		// hands back the *whole string* when there is no space, so a search for "2nd" became an ordinal
+		// search for the empty string instead of a search for an object named "2nd".
+		var space = name.IndexOf(' ');
+		if (space < 0)
 		{
 			return (name, flags, 0);
 		}
 
+		var mName = name[..space];
 		var ordinalMatch = NthRegex.Match(mName);
 
-		if (ordinalMatch.Success)
+		// match.c:590 — an error like '0th' or '12nd' "wasn't really a count adjective. Reset and press
+		// on", restoring the name rather than consuming the token. Falling through to the shared return
+		// stripped it, so a thing named "5 Swords" was searched for as "Swords" and never found.
+		if (!ordinalMatch.Success)
 		{
-			count = int.Parse(ordinalMatch.Groups["Number"].Value);
-			var ordinal = ordinalMatch.Groups["Ordinal"].Value;
+			return (name, flags, 0);
+		}
 
-			// Validate the ordinal suffix, following PennMUSH parse_english() rules:
-			//   11th, 12th, 13th  → always "th"  (teen exception – not st/nd/rd)
-			//   *1  (excl. 11)    → "st"
-			//   *2  (excl. 12)    → "nd"
-			//   *3  (excl. 13)    → "rd"
-			//   everything else   → "th"
-			var mod100 = count % 100;
-			var isTeen = mod100 >= 11 && mod100 <= 13;
-			var mod10 = count % 10;
+		// `\d` matches every Unicode decimal digit and caps no length, so this group can hold "\u0663" or
+		// twenty nines — int.Parse answers those with FormatException and OverflowException, out of a
+		// path any player reaches by typing `get 99999999999999999999th thing`. match.c runs strtoul,
+		// which saturates and then fails the suffix test, so declining to read it as a count is the same
+		// answer: the name stands as typed. NumberStyles.None also refuses a sign, which `\d+` cannot
+		// produce but which int.Parse would otherwise accept.
+		if (!int.TryParse(ordinalMatch.Groups["Number"].ValueSpan, NumberStyles.None,
+					CultureInfo.InvariantCulture, out count))
+		{
+			return (name, flags, 0);
+		}
 
-			string expectedSuffix = (isTeen || mod10 == 0 || mod10 > 3) ? "th"
-				: mod10 == 1 ? "st"
-				: mod10 == 2 ? "nd"
-				: "rd";
+		var ordinal = ordinalMatch.Groups["Ordinal"].Value;
 
-			if (count < 1 || !ordinal.Equals(expectedSuffix, StringComparison.CurrentCultureIgnoreCase))
-			{
-				return (name, flags, 0);
-			}
+		// Validate the ordinal suffix, following PennMUSH parse_english() rules:
+		//   11th, 12th, 13th  → always "th"  (teen exception – not st/nd/rd)
+		//   *1  (excl. 11)    → "st"
+		//   *2  (excl. 12)    → "nd"
+		//   *3  (excl. 13)    → "rd"
+		//   everything else   → "th"
+		var mod100 = count % 100;
+		var isTeen = mod100 >= 11 && mod100 <= 13;
+		var mod10 = count % 10;
+
+		string expectedSuffix = (isTeen || mod10 == 0 || mod10 > 3) ? "th"
+			: mod10 == 1 ? "st"
+			: mod10 == 2 ? "nd"
+			: "rd";
+
+		if (count < 1 || !ordinal.Equals(expectedSuffix, StringComparison.CurrentCultureIgnoreCase))
+		{
+			return (name, flags, 0);
 		}
 
 		return (name[mName.Length..].TrimStart(), flags, count);

@@ -436,4 +436,104 @@ public class LocateSeamCharacterisationTests
 		await Assert.That(Found(me)).IsEqualTo(new DBRef(1, 0));
 	}
 
+
+	[Test]
+	[Arguments("Big Sword", "Sword", true)]
+	[Arguments("Big Sword", "Big", true)]
+	[Arguments("Big Sword", "word", false)]
+	[Arguments("BBS - Myrddin's Global BBS", "Myrddin", true)]
+	[Arguments("BBS - Myrddin's Global BBS", "s", true)]
+	[Arguments("mbboard", "bboard", false)]
+	[Arguments("oak door", "do", true)]
+	[Arguments("oak door", "oor", false)]
+	public async Task PartialMatchingFollowsStringMatchWordBoundaries(string objectName, string search, bool found)
+	{
+		// PennMUSH's string_match (strutil.c) tests whether the search term prefixes *any word* of the
+		// name, not just the whole string — it rescans at each isalnum boundary. Testing only the first
+		// word left every multi-word object reachable by its leading word or in full and no other way,
+		// which is not how players refer to things.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(room, looker, _factory.CreateThing(3, objectName, room));
+
+		var result = await _locateService.Locate(_parser, looker, looker, search, LocateFlags.All);
+
+		await Assert.That(result.IsValid()).IsEqualTo(found);
+	}
+
+	[Test]
+	public async Task ParseEnglishRestoresANonOrdinalDigitToken()
+	{
+		// match.c:590 — '0th'/'12nd' "wasn't really a count adjective. Reset and press on." And
+		// match.c:560 quick-exits a count with no noun after it. Both used to consume the token, so a
+		// thing named "5 Swords" was searched for as "Swords" and never found.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(looker);
+		Holds(room, looker, _factory.CreateThing(3, "5 Swords", room), _factory.CreateThing(4, "2nd", room));
+
+		var noSuffix = await _locateService.Locate(_parser, looker, looker, "5 Swords", LocateFlags.All);
+		var countNoNoun = await _locateService.Locate(_parser, looker, looker, "2nd", LocateFlags.All);
+
+		await Assert.That(Found(noSuffix)).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(Found(countNoNoun)).IsEqualTo(new DBRef(4, 0));
+	}
+
+	[Test]
+	public async Task NearbyUsesTheSourceRoomOfAnExit()
+	{
+		// where_is() returns Home(thing) for an exit, and Home/Source/Exits are all db[x].exits
+		// (dbdefs.h:35-40) — so it is the room the exit sits in, not where it leads. Destination() is the
+		// separate db[x].location field. SharpExit.Location is documented as Source(), so FriendlyWhereIs
+		// is already the right answer here.
+		var source = _factory.CreateRoom(999, "Source");
+		var destination = _factory.CreateRoom(998, "Destination");
+		var exit = _factory.CreateExit(8, "North", ["n"], source, destination);
+		var traveller = _factory.CreatePlayer(1, "Traveller", destination);
+		var stayer = _factory.CreatePlayer(2, "Stayer", source);
+
+		await Assert.That(await LocateService.Nearby(exit, stayer)).IsTrue();
+		await Assert.That(await LocateService.Nearby(exit, traveller)).IsFalse();
+	}
+
+	[Test]
+	public async Task ARoomIsNearbyWhatItContainsButNotAnotherRoom()
+	{
+		// nearby() early-returns for two rooms; the room-vs-content arms are the ones where where_is's
+		// NOTHING and FriendlyWhereIs's own-dbref could have differed, and do not.
+		var roomA = _factory.CreateRoom(999, "A");
+		var roomB = _factory.CreateRoom(998, "B");
+		var inA = _factory.CreatePlayer(1, "InA", roomA);
+
+		await Assert.That(await LocateService.Nearby(roomA, roomB)).IsFalse();
+		await Assert.That(await LocateService.Nearby(roomA, inA)).IsTrue();
+		await Assert.That(await LocateService.Nearby(inA, roomA)).IsTrue();
+	}
+
+	[Test]
+	[Arguments("99999999999999999999th Sword")]
+	[Arguments("12345678901st Sword")]
+	[Arguments("\u0663rd Sword")]
+	public async Task AnOrdinalTooBigOrNotAsciiIsNotACount(string search)
+	{
+		// NthRegex's \d accepts every Unicode decimal digit and caps no length, so int.Parse used to
+		// answer these with OverflowException/FormatException out of a path any player can type.
+		// match.c's strtoul saturates and then fails the suffix test, so the token is restored and the
+		// whole string stands as the name.
+		//
+		// The decoy named "Sword" is what makes this discriminating. Asserting "found nothing" would
+		// pass either way — a leading token wrongly consumed leaves an ordinal search for "Sword" that
+		// also finds nothing. With the decoy present, consuming the token finds *it* (or, for a count
+		// that survives, nothing), where restoring the token must find the object actually so named.
+		var room = _factory.CreateRoom(999, "Shared Room");
+		var looker = _factory.CreatePlayer(1, "TestPlayer", room);
+		Holds(looker);
+		Holds(room, looker,
+			_factory.CreateThing(3, "Sword", room),
+			_factory.CreateThing(4, search, room));
+
+		var result = await _locateService.Locate(_parser, looker, looker, search, LocateFlags.All);
+
+		await Assert.That(Found(result)).IsEqualTo(new DBRef(4, 0));
+	}
 }

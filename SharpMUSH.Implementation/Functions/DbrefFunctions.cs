@@ -617,11 +617,37 @@ public partial class Functions
 			return "#-1";
 		}
 
-		var maybeFound = await LocateService.Locate(parser, looker, executor, nameArg, locateFlags);
+		// fun_locate injects the default scope set *before* it gates, and the order is load-bearing: a
+		// flags string naming no scope ('N' is one) picks up MAT_NEIGHBOR and friends here, and must
+		// then clear the gate like any other relative-scope search. Gating on the flags as typed sees no
+		// relative-scope bit and lets the call through.
+		locateFlags = Library.Services.LocateService.ApplyDefaultScopes(locateFlags);
 
+		// fun_locate's relative-scope gate, and it has to live here: it asks whether *executor* may
+		// evaluate against *looker* (fundb.c), while the match below runs with looker as its own
+		// permission subject. Folding both into one Locate call makes the gate ask Nearby(looker, looker),
+		// which is always true — so a non-privileged executor could search a remote looker's neighbours.
+		if ((locateFlags & Library.Services.LocateService.LookerRelativeScopes) != 0
+				&& !await executor.IsSee_All()
+				&& !await Library.Services.LocateService.Nearby(executor, looker)
+				&& !await PermissionService!.Controls(executor, looker))
+		{
+			return "#-1";
+		}
+
+		// fun_locate passes `looker` as match_result's `who` as well as its `where`, so every
+		// can_interact / controls / Long_Fingers / nearby question inside the match is asked about the
+		// looker. The executor is the subject only of the gates that bracket the call — the 's' check
+		// above, this one, and the visibility check below.
+		var maybeFound = await LocateService.Locate(parser, looker, looker, nameArg, locateFlags);
+
+		// fun_locate writes the dbref itself on every failure path: safe_str("#-1") for the looker gate,
+		// safe_dbref(item) for NOTHING/AMBIGUOUS, safe_dbref(NOTHING) for a failed visibility check. It
+		// never emits a "#-1 SOMETHING" string, and softcode compares against these — a decorated one
+		// will not `=` a bare #-1.
 		if (maybeFound.IsError)
 		{
-			return maybeFound.AsError.Value;
+			return maybeFound.AsError.Value == ErrorMessages.Returns.AmbiguousMatch ? "#-2" : "#-1";
 		}
 
 		if (maybeFound.IsNone)
@@ -629,10 +655,47 @@ public partial class Functions
 			return "#-1";
 		}
 
+		var found = maybeFound.WithoutError().WithoutNone();
+
+		// fun_locate's own visibility check, which match_result does not do and no other caller gets:
+		//   loc = Location(item);
+		//   if (GoodObject(loc)) Can_Examine(executor, loc)
+		//                        || ((!DarkLegal(item) || Light(loc) || Light(item)) && can_interact(...))
+		//   else                 (See_All(executor) || !DarkLegal(item) || Light(item)) && can_interact(...)
+		// A room has no location to examine, which is the `else` — it was missing entirely, and asking
+		// Can_Examine about the room itself is a different question with a different answer.
+		// PennMUSH's Location(x) is db[x].location, which is none of the three helpers that look like it:
+		// FriendlyWhereIs is match.c's `loc` and takes an exit's Source, Room() walks the chain to the
+		// enclosing room, and a room's own dbref is not its location. For an exit db[x].location is
+		// Destination(); for a room it is the drop-to, which is usually unset — and "unset" is exactly
+		// what selects fun_locate's second arm, so this cannot be approximated by `found.IsRoom`.
+		var loc = await found.Match<ValueTask<AnyOptionalSharpContainer>>(
+			async player => (await player.Location.WithCancellation(CancellationToken.None)).WithNoneOption(),
+			room => new(room.Location.WithCancellation(CancellationToken.None)),
+			exit => new(exit.Home.WithCancellation(CancellationToken.None)),
+			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).WithNoneOption());
+
+		// can_interact is the last term of both arms, so it is only asked once Can_Examine has declined
+		// and the dark test has passed — as the else-if ordering has it. It can run softcode through an
+		// @interact lock, so hoisting it out is neither free nor side-effect-free.
+		bool visible;
+		if (loc.IsNone)
+		{
+			visible = (await executor.IsSee_All() || !await found.IsDarkLegal() || await found.IsLight())
+								&& await PermissionService!.CanInteract(executor, found, IPermissionService.InteractType.See);
+		}
+		else
+		{
+			var container = loc.WithoutNone().WithExitOption();
+			visible = await PermissionService!.CanExamine(executor, container)
+								|| ((!await found.IsDarkLegal() || await container.IsLight() || await found.IsLight())
+										&& await PermissionService.CanInteract(executor, found, IPermissionService.InteractType.See));
+		}
+
 		// No post-hoc type filter: 'F' is MAT_TYPE, which the search itself honours now. Filtering the
 		// winner afterwards could only ever turn a legitimate match into #-1 while the wrong-type
 		// candidate had already displaced the right-type one during matching.
-		return $"#{maybeFound.WithoutError().WithoutNone().Object().DBRef.Number}";
+		return visible ? $"#{found.Object().DBRef.Number}" : "#-1";
 	}
 
 	/// <summary>

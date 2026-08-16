@@ -353,7 +353,8 @@ public static class ErrorMessages
 		public const string CouldNotFind = "Could not find that.";
 		public const string CouldNotFindPlayer = "Could not find that player.";
 		public const string CantFindThatPlayer = "I can't find that player";
-		public const string AmbiguousMatch = "I don't know which one you mean.";
+		// match.c:481 — with the exclamation mark. The neighbouring two are already exact.
+		public const string AmbiguousMatch = "I don't know which one you mean!";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string LocateUnknownSwitchFormat = "I don't understand switch '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
