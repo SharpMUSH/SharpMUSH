@@ -787,37 +787,31 @@ public partial class LocateService(
 		);
 
 	/// <summary>
-	/// PennMUSH's <c>where_is</c> (predicat.c:1225), which is <em>not</em> <see cref="FriendlyWhereIs"/>:
-	/// <c>NOTHING</c> for a room and <c>Home()</c> — the destination — for an exit. match.c deliberately
-	/// uses the other one for its <c>loc</c>, taking an exit's <c>Source</c>, so the two disagree on
-	/// purpose and <see cref="Nearby"/> needs this one.
+	/// PennMUSH's <c>nearby</c> (predicat.c:1251), which resolves each side with <c>where_is</c>.
 	/// </summary>
-	private static async ValueTask<DBRef?> WhereIs(AnySharpObject thing)
-	{
-		if (thing.IsRoom) return null;
-		if (!thing.IsExit) return (await FriendlyWhereIs(thing)).Object().DBRef;
-
-		var destination = await thing.MinusRoom().Home();
-		return destination.IsNone ? null : destination.WithoutNone().Object().DBRef;
-	}
-
-	/// <summary>
-	/// PennMUSH's <c>nearby</c> (predicat.c:1251), member for member. The nullable is load-bearing:
-	/// <c>where_is</c> answers <c>NOTHING</c> for a room, and <c>NOTHING == NOTHING</c> must not read as
-	/// "same location" — two objects nowhere are not near each other.
-	/// </summary>
+	/// <remarks>
+	/// <c>where_is</c> returns <c>Home(thing)</c> for an exit, and <c>Home(x)</c>, <c>Source(x)</c> and
+	/// <c>Exits(x)</c> are all the same field — <c>db[x].exits</c> (dbdefs.h:35-40). So an exit's
+	/// <c>where_is</c> is the room it <em>sits in</em>, not where it leads; <c>Destination(x)</c> is the
+	/// separate <c>db[x].location</c> field. <see cref="FriendlyWhereIs"/> already answers that, because
+	/// <see cref="SharpExit.Location"/> is documented as <c>Source()</c>.
+	///
+	/// The other divergence, <c>where_is</c> answering <c>NOTHING</c> for a room where this hands back
+	/// the room itself, does not reach an observable difference: the only arms it could change are
+	/// guarded by the both-rooms early return, and a room's own dbref answers the two remaining
+	/// comparisons the same way <c>NOTHING</c> would fail them.
+	/// </remarks>
 	public static async ValueTask<bool> Nearby(
 		AnySharpObject obj1,
 		AnySharpObject obj2)
 	{
 		if (obj1.IsRoom && obj2.IsRoom) return false;
 
-		var loc1 = await WhereIs(obj1);
+		var loc1 = (await FriendlyWhereIs(obj1)).Object().DBRef;
 
-		if (loc1 is not null && loc1 == obj2.Object().DBRef) return true;
+		if (loc1 == obj2.Object().DBRef) return true;
 
-		var loc2 = await WhereIs(obj2);
-		if (loc2 is null) return false;
+		var loc2 = (await FriendlyWhereIs(obj2)).Object().DBRef;
 
 		return loc2 == obj1.Object().DBRef || loc2 == loc1;
 	}

@@ -480,25 +480,27 @@ public class LocateSeamCharacterisationTests
 	}
 
 	[Test]
-	public async Task NearbyUsesAnExitsDestination()
+	public async Task NearbyUsesAnExitsSourceRoom()
 	{
-		// nearby() resolves each side with where_is() (predicat.c:1225), which is Home() for an exit —
-		// its destination — and NOTHING for a room. match.c uses Source for its own `loc`, so the two
-		// disagree deliberately; Nearby needs where_is's answer.
+		// where_is() returns Home(thing) for an exit, and Home/Source/Exits are all db[x].exits
+		// (dbdefs.h:35-40) — so it is the room the exit sits in, not where it leads. Destination() is the
+		// separate db[x].location field. SharpExit.Location is documented as Source(), so FriendlyWhereIs
+		// is already the right answer here.
 		var source = _factory.CreateRoom(999, "Source");
 		var destination = _factory.CreateRoom(998, "Destination");
 		var exit = _factory.CreateExit(8, "North", ["n"], source, destination);
 		var traveller = _factory.CreatePlayer(1, "Traveller", destination);
 		var stayer = _factory.CreatePlayer(2, "Stayer", source);
 
-		await Assert.That(await LocateService.Nearby(exit, traveller)).IsTrue();
-		await Assert.That(await LocateService.Nearby(exit, stayer)).IsFalse();
+		await Assert.That(await LocateService.Nearby(exit, stayer)).IsTrue();
+		await Assert.That(await LocateService.Nearby(exit, traveller)).IsFalse();
 	}
 
 	[Test]
-	public async Task TwoRoomsAreNeverNearbyAndNeitherAreTwoObjectsNowhere()
+	public async Task ARoomIsNearbyWhatItContainsButNotAnotherRoom()
 	{
-		// where_is() is NOTHING for a room, and NOTHING == NOTHING must not read as "same location".
+		// nearby() early-returns for two rooms; the room-vs-content arms are the ones where where_is's
+		// NOTHING and FriendlyWhereIs's own-dbref could have differed, and do not.
 		var roomA = _factory.CreateRoom(999, "A");
 		var roomB = _factory.CreateRoom(998, "B");
 		var inA = _factory.CreatePlayer(1, "InA", roomA);

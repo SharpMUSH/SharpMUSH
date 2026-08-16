@@ -646,28 +646,38 @@ public partial class Functions
 		//   else                 (See_All(executor) || !DarkLegal(item) || Light(item)) && can_interact(...)
 		// A room has no location to examine, which is the `else` — it was missing entirely, and asking
 		// Can_Examine about the room itself is a different question with a different answer.
-		var canSee = await PermissionService!.CanInteract(executor, found, IPermissionService.InteractType.See);
+		// PennMUSH's Location(x) is db[x].location, which is none of the three helpers that look like it:
+		// FriendlyWhereIs is match.c's `loc` and takes an exit's Source, Room() walks the chain to the
+		// enclosing room, and a room's own dbref is not its location. For an exit db[x].location is
+		// Destination(); for a room it is the drop-to, which is usually unset — and "unset" is exactly
+		// what selects fun_locate's second arm, so this cannot be approximated by `found.IsRoom`.
+		var loc = found.IsRoom
+			? await found.AsRoom.Location.WithCancellation(CancellationToken.None)
+			: found.IsExit
+				? await found.AsExit.Home.WithCancellation(CancellationToken.None)
+				: (await Library.Services.LocateService.FriendlyWhereIs(found)).WithNoneOption();
 
-		if (found.IsRoom)
+		// can_interact is the last term of both arms, so it is only asked once Can_Examine has declined
+		// and the dark test has passed — as the else-if ordering has it. It can run softcode through an
+		// @interact lock, so hoisting it out is neither free nor side-effect-free.
+		bool visible;
+		if (loc.IsNone)
 		{
-			return (await executor.IsSee_All() || !await found.IsDarkLegal() || await found.IsLight()) && canSee
-				? $"#{found.Object().DBRef.Number}"
-				: "#-1";
+			visible = (await executor.IsSee_All() || !await found.IsDarkLegal() || await found.IsLight())
+								&& await PermissionService!.CanInteract(executor, found, IPermissionService.InteractType.See);
+		}
+		else
+		{
+			var container = loc.WithoutNone().WithExitOption();
+			visible = await PermissionService!.CanExamine(executor, container)
+								|| ((!await found.IsDarkLegal() || await container.IsLight() || await found.IsLight())
+										&& await PermissionService.CanInteract(executor, found, IPermissionService.InteractType.See));
 		}
 
-		// Location(item), the immediate container — not Room(), which walks the chain to the enclosing room.
-		var loc = (await Library.Services.LocateService.FriendlyWhereIs(found)).WithExitOption();
-
-		if (await PermissionService.CanExamine(executor, loc)
-				|| ((!await found.IsDarkLegal() || await loc.IsLight() || await found.IsLight()) && canSee))
-		{
-			// No post-hoc type filter: 'F' is MAT_TYPE, which the search itself honours now. Filtering the
-			// winner afterwards could only ever turn a legitimate match into #-1 while the wrong-type
-			// candidate had already displaced the right-type one during matching.
-			return $"#{found.Object().DBRef.Number}";
-		}
-
-		return "#-1";
+		// No post-hoc type filter: 'F' is MAT_TYPE, which the search itself honours now. Filtering the
+		// winner afterwards could only ever turn a legitimate match into #-1 while the wrong-type
+		// candidate had already displaced the right-type one during matching.
+		return visible ? $"#{found.Object().DBRef.Number}" : "#-1";
 	}
 
 	/// <summary>
