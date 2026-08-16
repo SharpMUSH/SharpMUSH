@@ -2592,8 +2592,11 @@ public partial class Commands
 		var zoneName = args["1"].Message!.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
+		// A player by name, so MAT_PMATCH: MAT_EVERYTHING carries MAT_PLAYER, which only answers to a
+		// leading '*'.
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, playerName, LocateFlags.All,
+			executor, executor, playerName,
+			LocateFlags.All | LocateFlags.MatchOptionalWildCardForPlayerName,
 			async player =>
 			{
 				if (!player.IsPlayer)

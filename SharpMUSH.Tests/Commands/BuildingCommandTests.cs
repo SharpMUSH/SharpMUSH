@@ -728,10 +728,12 @@ public class BuildingCommandTests
 
 		await testParser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@desc #99999=test description"));
 
+		// do_set's failed match is match.c:485's "I can't see that here."; "I don't see that here." is
+		// look.c/move.c's string, for the commands that match for themselves.
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(testPlayer.DbRef),
+				TestHelpers.MessagePlainTextEquals(msg, "I can't see that here.")), TestHelpers.MatchingObject(testPlayer.DbRef),
 				INotifyService.NotificationType.Announce);
 	}
 

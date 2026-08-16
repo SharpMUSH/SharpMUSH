@@ -140,8 +140,10 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzoneInvalidObject()
 	{
-		// Pattern C: "I don't see that here." is sent by many LocateService calls across the session
-		// to executor #1. Use a unique receiver (fresh player) so Received(1) is sound.
+		// Pattern C: the failed-locate notification is sent by many LocateService calls across the
+		// session to executor #1. Use a unique receiver (fresh player) so Received(1) is sound.
+		// @chzone matches via match_controlled -> noisy_match_result, so the wording is match.c:485's
+		// "I can't see that here." — "I don't see that here." is look.c/move.c's string.
 		var freshPlayer = await CreateTestPlayerWithHandleAsync("ZT_InvalidObj");
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@chzone #99999=#1"));
@@ -149,15 +151,15 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "I can't see that here.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask ChzoneInvalidZone()
 	{
-		// Pattern C: "I don't see that here." is sent by many LocateService calls to #1 across the
-		// session. Use a fresh player as the unique executor so Received(1) is unambiguous.
+		// Pattern C: the failed-locate notification is sent by many LocateService calls to #1 across
+		// the session. Use a fresh player as the unique executor so Received(1) is unambiguous.
 		var freshPlayer = await CreateTestPlayerWithHandleAsync("ZT_InvalidZone");
 
 		// Create a unique object as the fresh player (they will own it → controls check passes)
@@ -172,7 +174,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "I can't see that here.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 

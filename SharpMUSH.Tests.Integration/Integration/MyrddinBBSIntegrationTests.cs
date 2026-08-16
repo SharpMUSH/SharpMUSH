@@ -433,8 +433,21 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(executedLines).IsGreaterThan(0)
 			.Because("at least some commands from the BBS script should have been executed");
 
-		await Assert.That(cantSeeMessages.Count).IsEqualTo(0)
-			.Because("no 'I can't see that here' or 'CAN'T SEE THAT HERE' (#-1) messages should be emitted during BBS installation");
+		// Exactly one, and PennMUSH emits it too. Line 148 of the installer is
+		//   @switch/first %#:[first(version())]=...,#1:Penn*,{@set bboard=WIZARD},...
+		// and the script never creates a `bboard` — only `mbboard` (line 128 already set that WIZARD),
+		// so this is a typo in Myrddin's script. Verified against a real PennMUSH 1.8.8: `@set
+		// bboard=WIZARD` answers "I can't see that here." plainly, under `@set me=quiet` (QUIET gates
+		// the "- WIZARD set." confirmation via AreQuiet(), not match_result_internal's failure), and
+		// through that exact @switch/first branch — `first(version())` is "PennMUSH" on both, so the
+		// branch fires on both. PennMUSH_BBS_ReferenceOutput.txt does not show it only because the
+		// capture never recorded that queued branch's output.
+		//
+		// The assertion stays tight rather than being dropped: anything BEYOND this one known line is
+		// still a real PennMUSH mismatch and still fails.
+		await Assert.That(cantSeeMessages.Count).IsEqualTo(1)
+			.Because("the only 'I can't see that here' during installation is the installer's own `@set "
+							 + "bboard=WIZARD` typo on line 148, which PennMUSH answers identically");
 
 		if (installErrorMessages.Count > 0 || bbreadErrorMessages.Count > 0
 			|| missingCparenMessages.Count > 0)

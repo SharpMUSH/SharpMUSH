@@ -3,6 +3,7 @@ using NSubstitute;
 using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -39,9 +40,23 @@ public class LocateServiceCompatibilityTests
 		_locateService = new LocateService(_mediator, _notifyService, _permissionService, wrapper);
 	}
 
+	/// <summary>
+	/// Contents of exactly one container; every other container is empty. A stub that answers every
+	/// GetContentsQuery puts the same object in the looker's inventory *and* in the room, so it matches
+	/// twice and the search reports ambiguity that the real database could not produce.
+	/// </summary>
+	private void Holds(SharpRoom container, IAsyncEnumerable<AnySharpObject> contents)
+	{
+		_mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
+		_mediator.CreateStream(
+				Arg.Is<GetContentsQuery>(q =>
+					q.DBRef.Match(d => d, c => c.Object().DBRef).Number == container.Object.DBRef.Number),
+				Arg.Any<CancellationToken>())
+			.Returns(_ => contents.Select(x => x.AsContent));
+	}
+
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Skip for now")]
 	public async Task LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits()
 	{
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
@@ -51,11 +66,10 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
+		Holds(sharedRoom, contents);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -68,7 +82,7 @@ public class LocateServiceCompatibilityTests
 			.Returns(true);
 
 		var result = await _locateService.Locate(_parser, player, player, "TestObject",
-			LocateFlags.MatchObjectsInLookerInventory);
+			LocateFlags.MatchObjectsInLookerLocation);
 
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
@@ -88,11 +102,10 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
+		Holds(sharedRoom, contents);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -111,15 +124,17 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	public async Task LocateMatch_MeMatching_ShouldRespectNoTypePreference()
+	public async Task LocateMatch_MeMatching_IsRefusedOnlyByOnlyMatchTypePreference()
 	{
-		// This test verifies the fix for the NoTypePreference check
+		// MATCH_TYPE is the tri-state: with no preferred type and MAT_TYPE unset it returns -1, which is
+		// truthy in C, so "me" matches. Only MAT_TYPE — OnlyMatchTypePreference — turns a looker of the
+		// wrong type into a refusal. Reading NoTypePreference as "do not match me" had it backwards.
 
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -131,17 +146,22 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Use PreferLockPass to prevent auto-adding flags that would interfere
-		var resultWithNoTypePreference = await _locateService.Locate(_parser, player, player, "me",
+		var withNoTypePreference = await _locateService.Locate(_parser, player, player, "me",
 			LocateFlags.NoTypePreference | LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 
-		var resultWithoutNoTypePreference = await _locateService.Locate(_parser, player, player, "me",
+		var withoutNoTypePreference = await _locateService.Locate(_parser, player, player, "me",
 			LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 
-		await Assert.That(resultWithNoTypePreference.IsNone || resultWithNoTypePreference.IsError).IsTrue();
-		await Assert.That(resultWithoutNoTypePreference.IsValid()).IsTrue();
-		await Assert.That(resultWithoutNoTypePreference.WithoutError().WithoutNone().Object().DBRef)
+		// A room preference plus MAT_TYPE: the looker is a player, so "me" is not matchable at all.
+		var wrongTypeUnderMatType = await _locateService.Locate(_parser, player, player, "me",
+			LocateFlags.RoomsPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.MatchMeForLooker |
+			LocateFlags.PreferLockPass);
+
+		await Assert.That(withNoTypePreference.WithoutError().WithoutNone().Object().DBRef)
 			.IsEqualTo(new DBRef(1, 0));
+		await Assert.That(withoutNoTypePreference.WithoutError().WithoutNone().Object().DBRef)
+			.IsEqualTo(new DBRef(1, 0));
+		await Assert.That(wrongTypeUnderMatType.IsNone).IsTrue();
 	}
 
 	[Test]
@@ -153,16 +173,13 @@ public class LocateServiceCompatibilityTests
 		var player = _factory.CreatePlayer(1, "TestPlayer", room1);
 		var target = _factory.CreatePlayer(2, "TargetPlayer", room2);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
-		_permissionService.Controls(player, player)
-			.Returns(true);
-
-		_permissionService.Controls(player, target)
-			.Returns(false);
-
-		_permissionService.Controls(target, target)
+		// "me" is the looker's, and MAT_CONTROL asks whether the permission subject — the executor —
+		// controls the object being returned. It used to ask whether the executor controlled itself,
+		// which is what the looker/where swap in LocateMatch made it look like.
+		_permissionService.Controls(target, player)
 			.Returns(true);
 
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
@@ -179,16 +196,21 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 
 		await Assert.That(resultWithControlRequired.IsValid()).IsTrue();
+		await Assert.That(resultWithControlRequired.WithoutError().WithoutNone().Object().DBRef)
+			.IsEqualTo(new DBRef(1, 0));
 		await Assert.That(resultWithoutControlRequired.IsValid()).IsTrue();
+		await Assert.That(resultWithoutControlRequired.WithoutError().WithoutNone().Object().DBRef)
+			.IsEqualTo(new DBRef(1, 0));
 
-		_permissionService.Controls(target, target)
+		_permissionService.Controls(target, player)
 			.Returns(false);
 
-		var resultNoSelfControl = await _locateService.Locate(_parser, player, target, "me",
+		var resultUncontrolled = await _locateService.Locate(_parser, player, target, "me",
 			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
 
-		await Assert.That(resultNoSelfControl.IsError).IsTrue();
-		await Assert.That(resultNoSelfControl.AsError.Value).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		// match.c returns on a control pass and otherwise sets nocontrol and falls through, so an
+		// uncontrolled "me" is a search that finds nothing rather than an error.
+		await Assert.That(resultUncontrolled.IsNone).IsTrue();
 	}
 
 	[Test]
@@ -197,12 +219,11 @@ public class LocateServiceCompatibilityTests
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 
-		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo =>
-				ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(AsyncEnumerable.Empty<AnySharpContent>()));
+		_mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -232,8 +253,8 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 42), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<AnyOptionalSharpObject>(thing.WithNoneOption()));
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -253,8 +274,6 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Skip for now")]
 	public async Task LocateMatch_TypePreference_ShouldRespectPlayerPreference()
 	{
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
@@ -264,12 +283,11 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing, targetPlayer }.ToAsyncEnumerable();
 
-		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
+		Holds(sharedRoom, contents);
 
 		var playerResults = new[] { targetPlayer.AsPlayer }.ToAsyncEnumerable();
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => q.Name.Contains("Bob")), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(playerResults));
+		_mediator.CreateStream(Arg.Is<GetPlayerQuery>(q => q.Name.Contains("Bob")), Arg.Any<CancellationToken>())
+			.Returns(_ => playerResults);
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -306,18 +324,12 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
-			_parser,
-			list,
-			player,
-			player,
-			new None(),
-			false,
-			0,
-			0,
-			0,
-			LocateFlags.NoTypePreference,
-			"Long");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Long"), 0);
+		await _locateService.MatchList(state, list, player, "Long");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var exact = state.Exact;
 
 		// Assert - prefix match should count one hit and mark it as a partial (non-exact) match
 		await Assert.That(curr).IsEqualTo(1);
@@ -339,28 +351,22 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
-			_parser,
-			list,
-			player,
-			player,
-			new None(),
-			false,
-			0,
-			0,
-			0,
-			LocateFlags.NoTypePreference | LocateFlags.NoPartialMatches,
-			"Long");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference | LocateFlags.NoPartialMatches,
+			HelperFunctions.ParseDbRef("Long"), 0);
+		await _locateService.MatchList(state, list, player, "Long");
+		var bestMatch = state.Best;
+		var curr = state.Count;
 
 		await Assert.That(curr).IsEqualTo(0);
 		await Assert.That(bestMatch.IsNone).IsTrue();
 	}
 
 	[Test]
-	public async Task LocateMatch_PartialMatching_ShouldFindObjectByPartialName()
+	public async Task LocateMatch_PartialMatching_InventoryOnlyDoesNotReachTheRoom()
 	{
-		// PennMUSH string_match() uses a prefix comparison, so searching for "Long"
-		// must locate an object named "LongObjectName".
+		// LongObjectName sits in the room, not in the looker's hands, and PreferLockPass suppresses the
+		// default flag injection — so the inventory scope is the only one that runs and finds nothing.
+		// Prefix matching itself is covered by MatchList_PartialMatching_* and the seam tests.
 
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
@@ -368,11 +374,10 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
+		Holds(sharedRoom, contents);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -384,9 +389,6 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Tests that prefix matching correctly rejects the room when its name does not
-		// match the search prefix. End-to-end prefix matching is verified by the
-		// MatchList_PartialMatching_* tests above.
 		var result = await _locateService.Locate(_parser, player, player, "Long",
 			LocateFlags.MatchObjectsInLookerInventory | LocateFlags.PreferLockPass);
 
@@ -403,11 +405,10 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
+		Holds(sharedRoom, contents);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -426,8 +427,6 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Skip for now")]
 	public async Task LocateMatch_MatchObjectsInLookerLocation_ShouldFindObjectsInSameRoom()
 	{
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
@@ -436,11 +435,10 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing, player }.ToAsyncEnumerable();
 
-		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
+		Holds(sharedRoom, contents);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -460,8 +458,6 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Skip for now")]
 	public async Task LocateMatch_MultipleObjects_ShouldHandleAmbiguousMatches()
 	{
 		// In PennMUSH, this typically returns an ambiguous match or the first/last depending on flags
@@ -473,11 +469,10 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing1, thing2 }.ToAsyncEnumerable();
 
-		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
+		Holds(sharedRoom, contents);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -490,7 +485,7 @@ public class LocateServiceCompatibilityTests
 			.Returns(true);
 
 		var resultLast = await _locateService.Locate(_parser, player, player, "Coin",
-			LocateFlags.MatchObjectsInLookerInventory | LocateFlags.UseLastIfAmbiguous);
+			LocateFlags.MatchObjectsInLookerLocation | LocateFlags.UseLastIfAmbiguous);
 
 		await Assert.That(resultLast.IsValid()).IsTrue();
 		await Assert.That(resultLast.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(4);
@@ -505,11 +500,10 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
+		Holds(sharedRoom, contents);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -539,11 +533,10 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
+		Holds(room2, contents);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		// Set up permissions - executor doesn't control looker (critical for this test)
 		_permissionService.Controls(executor, looker)
@@ -586,9 +579,11 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing, hiddenThing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "HiddenObject");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("HiddenObject"), 0);
+		await _locateService.MatchList(state, list, player, "HiddenObject");
+		var bestMatch = state.Best;
+		var curr = state.Count;
 
 		// HiddenObject is not interactable → skipped → not found
 		await Assert.That(curr).IsEqualTo(0);
@@ -611,9 +606,11 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "Nor"); // prefix — must not match exit
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Nor"), 0);
+		await _locateService.MatchList(state, list, player, "Nor");
+		var bestMatch = state.Best;
+		var curr = state.Count; // prefix — must not match exit
 
 		await Assert.That(curr).IsEqualTo(0);
 		await Assert.That(bestMatch.IsNone).IsTrue();
@@ -632,9 +629,12 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "North");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("North"), 0);
+		await _locateService.MatchList(state, list, player, "North");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var exact = state.Exact;
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
@@ -654,9 +654,12 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "n");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("n"), 0);
+		await _locateService.MatchList(state, list, player, "n");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var exact = state.Exact;
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
@@ -680,9 +683,11 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { exit }.ToAsyncEnumerable();
 
 		// "north" is a prefix of alias "northwest", but exits use exact matching only
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "north");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("north"), 0);
+		await _locateService.MatchList(state, list, player, "north");
+		var bestMatch = state.Best;
+		var curr = state.Count;
 
 		await Assert.That(curr).IsEqualTo(0);
 		await Assert.That(bestMatch.IsNone).IsTrue();
@@ -701,9 +706,12 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { target }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "Admin");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Admin"), 0);
+		await _locateService.MatchList(state, list, player, "Admin");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var exact = state.Exact;
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
@@ -726,9 +734,12 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { target }.ToAsyncEnumerable();
 
 		// "Admin" is a prefix of alias "Administrator"
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "Admin");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Admin"), 0);
+		await _locateService.MatchList(state, list, player, "Admin");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var exact = state.Exact;
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsFalse(); // partial match
@@ -752,9 +763,12 @@ public class LocateServiceCompatibilityTests
 		// Put prefix first, exact second — exact should win regardless of list order
 		var list = new[] { prefixPlayer, exactPlayer }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "Wiz");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Wiz"), 0);
+		await _locateService.MatchList(state, list, player, "Wiz");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var exact = state.Exact;
 
 		// After both are processed: exact match resets counter, partial removed
 		await Assert.That(exact).IsTrue();
@@ -779,9 +793,12 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { coin1, coin2 }.ToAsyncEnumerable();
 
-		var (_, _, curr, rightType, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "Coin");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Coin"), 0);
+		await _locateService.MatchList(state, list, player, "Coin");
+		var curr = state.Count;
+		var rightType = state.RightType;
+		var exact = state.Exact;
 
 		// Two exact matches → curr=2; with NoTypePreference, right_type is not tracked (stays 0),
 		// but right_type != 1 is still true → LocateMatch would return ErrorAmbiguous.
@@ -807,9 +824,12 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { coin1, coin2 }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.UseLastIfAmbiguous, "Coin");
+		var state = new LocateService.MatchState(LocateFlags.UseLastIfAmbiguous,
+			HelperFunctions.ParseDbRef("Coin"), 0);
+		await _locateService.MatchList(state, list, player, "Coin");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var exact = state.Exact;
 
 		// Both matched → bestMatch is the last one (coin2 = #4)
 		await Assert.That(curr).IsEqualTo(2);
@@ -833,9 +853,12 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var (_, _, curr, rightType, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "Sword");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Sword"), 0);
+		await _locateService.MatchList(state, list, player, "Sword");
+		var curr = state.Count;
+		var rightType = state.RightType;
+		var exact = state.Exact;
 
 		await Assert.That(curr).IsEqualTo(2); // both partial-matched
 		await Assert.That(exact).IsFalse(); // all were partial matches
@@ -861,9 +884,12 @@ public class LocateServiceCompatibilityTests
 		// Partial first, then exact
 		var list = new[] { partialMatch, exactMatch }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "Sword");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Sword"), 0);
+		await _locateService.MatchList(state, list, player, "Sword");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var exact = state.Exact;
 
 		// Exact match resets: curr=1, exact=true, bestMatch = exactMatch
 		await Assert.That(curr).IsEqualTo(1);
@@ -893,9 +919,12 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { ownedThing, foreignThing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.OnlyMatchLookerControlledObjects, "Widget");
+		var state = new LocateService.MatchState(LocateFlags.OnlyMatchLookerControlledObjects,
+			HelperFunctions.ParseDbRef("Widget"), 0);
+		await _locateService.MatchList(state, list, player, "Widget");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var exact = state.Exact;
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
@@ -916,9 +945,12 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "testobject");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("testobject"), 0);
+		await _locateService.MatchList(state, list, player, "testobject");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var exact = state.Exact;
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
@@ -938,9 +970,12 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference, "MYWIDGET");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("MYWIDGET"), 0);
+		await _locateService.MatchList(state, list, player, "MYWIDGET");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var exact = state.Exact;
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
@@ -966,12 +1001,15 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { sword1, sword2, sword3 }.ToAsyncEnumerable();
 
 		// final=2 means "2nd" — Match_List in English mode counts up to final
-		var (bestMatch, _, curr, _, _, flow) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 2, 0, 0,
-			LocateFlags.NoTypePreference, "Sword");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Sword"), 2);
+		await _locateService.MatchList(state, list, player, "Sword");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var flow = state.Done;
 
 		await Assert.That(curr).IsEqualTo(2);
-		await Assert.That(flow).IsEqualTo(LocateService.ControlFlow.Break); // found exact nth → Break
+		await Assert.That(flow).IsTrue(); // found the Nth item → every remaining scope is skipped
 		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(4, 0));
 	}
 
@@ -991,12 +1029,15 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, flow) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 1, 0, 0,
-			LocateFlags.NoTypePreference, "Sword");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Sword"), 1);
+		await _locateService.MatchList(state, list, player, "Sword");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var flow = state.Done;
 
-		await Assert.That(curr).IsEqualTo(1);
-		await Assert.That(flow).IsEqualTo(LocateService.ControlFlow.Break);
+		await Assert.That(flow).IsTrue();
+		await Assert.That(flow).IsTrue();
 		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
@@ -1018,18 +1059,23 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var (_, _, curr, _, _, flow) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 5, 0, 0,
-			LocateFlags.NoTypePreference, "Sword");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Sword"), 5);
+		await _locateService.MatchList(state, list, player, "Sword");
+		var curr = state.Count;
+		var flow = state.Done;
 
 		// Only 2 swords; asked for 5th → list exhausted without breaking
 		await Assert.That(curr).IsEqualTo(2);
-		await Assert.That(flow).IsEqualTo(LocateService.ControlFlow.Continue); // never found the 5th → no Break
+		await Assert.That(flow).IsFalse(); // never found the 5th → the search keeps going
 	}
 
 	[Test]
-	public async Task MatchList_ThingsPreference_SkipsNonThings()
+	public async Task MatchList_ThingsPreference_PrefersTheThingButStillCountsThePlayer()
 	{
+		// MATCH_TYPE returns -1 for a wrong-type object when MAT_TYPE is unset, so it is still a
+		// candidate: curr counts both, ChooseThing hands back the thing, and right_type == 1 is what
+		// keeps that from reading as ambiguous.
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var targetPlayer = _factory.CreatePlayer(5, "Widget", sharedRoom);
@@ -1041,9 +1087,38 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { targetPlayer, thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.ThingsPreference, "Widget");
+		var state = new LocateService.MatchState(LocateFlags.ThingsPreference,
+			HelperFunctions.ParseDbRef("Widget"), 0);
+		await _locateService.MatchList(state, list, player, "Widget");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var rightType = state.RightType;
+
+		await Assert.That(curr).IsEqualTo(2);
+		await Assert.That(rightType).IsEqualTo(1);
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(6, 0));
+	}
+
+	[Test]
+	public async Task MatchList_ThingsPreferenceWithOnlyMatchTypePreference_SkipsNonThings()
+	{
+		// MAT_TYPE — the flag that turns the preference into a filter.
+		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
+		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
+		var targetPlayer = _factory.CreatePlayer(5, "Widget", sharedRoom);
+		var thing = _factory.CreateThing(6, "Widget", sharedRoom, player);
+
+		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
+				Arg.Any<IPermissionService.InteractType>())
+			.Returns(true);
+
+		var list = new[] { targetPlayer, thing }.ToAsyncEnumerable();
+
+		var state = new LocateService.MatchState(LocateFlags.ThingsPreference | LocateFlags.OnlyMatchTypePreference,
+			HelperFunctions.ParseDbRef("Widget"), 0);
+		await _locateService.MatchList(state, list, player, "Widget");
+		var bestMatch = state.Best;
+		var curr = state.Count;
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(bestMatch.WithoutError().WithoutNone().IsPlayer).IsFalse();
@@ -1051,7 +1126,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	public async Task MatchList_PlayersPreference_SkipsNonPlayers()
+	public async Task MatchList_PlayersPreference_PrefersThePlayerButStillCountsTheThing()
 	{
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
@@ -1064,26 +1139,31 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing, targetPlayer }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.PlayersPreference, "Widget");
+		var state = new LocateService.MatchState(LocateFlags.PlayersPreference,
+			HelperFunctions.ParseDbRef("Widget"), 0);
+		await _locateService.MatchList(state, list, player, "Widget");
+		var bestMatch = state.Best;
+		var curr = state.Count;
+		var rightType = state.RightType;
 
-		await Assert.That(curr).IsEqualTo(1);
+		await Assert.That(curr).IsEqualTo(2);
+		await Assert.That(rightType).IsEqualTo(1);
 		await Assert.That(bestMatch.WithoutError().WithoutNone().IsPlayer).IsTrue();
 		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
-	public async Task Locate_HereWithOnlyMatchControlled_ErrorWhenLockerNotControlRoom()
+	public async Task Locate_HereWithOnlyMatchControlled_FallsThroughWhenTheExecutorDoesNotControlIt()
 	{
-		// When MatchHereForLookerLocation and OnlyMatchLookerControlledObjects are set,
-		// and the executor (looker in LocateMatch) does not control themselves → ErrorPerm.
+		// match.c returns on a control *pass* and otherwise sets nocontrol and carries on, so this is a
+		// search that finds nothing — not an error. The noisy path is where the refusal is reported, and
+		// AnObjectRefusedForControlSaysSoRatherThanClaimingItIsNotThere covers that.
 
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		// executor doesn't control themselves → the "here" OnlyMatchLookerControlledObjects check fails
 		_permissionService.Controls(player, player).Returns(false);
@@ -1092,8 +1172,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchHereForLookerLocation | LocateFlags.OnlyMatchLookerControlledObjects |
 			LocateFlags.PreferLockPass);
 
-		await Assert.That(result.IsError).IsTrue();
-		await Assert.That(result.AsError.Value).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.IsNone).IsTrue();
 	}
 
 	[Test]
@@ -1104,8 +1183,8 @@ public class LocateServiceCompatibilityTests
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(player, player).Returns(true);
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
@@ -1134,8 +1213,8 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 42), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<AnyOptionalSharpObject>(thing.WithNoneOption()));
 
-		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
-			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
@@ -1171,9 +1250,11 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
-			_parser, list, player, player, new None(), false, 0, 0, 0,
-			LocateFlags.NoTypePreference | LocateFlags.NoVisibilityCheck, "TargetObject");
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference | LocateFlags.NoVisibilityCheck,
+			HelperFunctions.ParseDbRef("TargetObject"), 0);
+		await _locateService.MatchList(state, list, player, "TargetObject");
+		var bestMatch = state.Best;
+		var curr = state.Count;
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(bestMatch.IsValid()).IsTrue();

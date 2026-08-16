@@ -29,6 +29,13 @@
 	     full parser surface (or behind a parser-abstractions seam), carve the plugin-author types into a
 	     dedicated SharpMUSH.Plugin.Abstractions package and demote this back to an internal project.
 	     ============================================================================================ -->
+	<ItemGroup>
+		<!-- LocateService's match.c bookkeeping (MatchState, MatchList) is internal: it is a
+		     transcription detail, not something a plugin author should bind to, and this project is the
+		     published plugin contract surface. The compatibility suite drives it directly. -->
+		<InternalsVisibleTo Include="SharpMUSH.Tests" />
+	</ItemGroup>
+
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
 		<PackageId>SharpMUSH.Library</PackageId>

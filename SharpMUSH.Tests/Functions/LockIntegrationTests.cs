@@ -323,4 +323,37 @@ public class LockIntegrationTests
 		var result = await Eval($"testlock($#{obj.Number},%#)");
 		await Assert.That(result).IsEqualTo("1");
 	}
+
+	// The carry and owner keys both branch on whether the target parses as a dbref, and only the dbref
+	// side was covered — so the name side could resolve to nothing without a test noticing. It did:
+	// the name branches asked Locate for MAT_CONTENTS and MAT_ABSOLUTE respectively, neither of which
+	// names a scope, so neither had anywhere to look.
+	[Test]
+	[NotInParallel]
+	public async Task Testlock_CarryPrefix_CarriedObjectByName()
+	{
+		var obj = await CreateObject("CarryLockByName");
+		await Command($"@tel #{obj.Number}=%#");
+		var result = await Eval("testlock(+CarryLockByName,%#)");
+		await Assert.That(result).IsEqualTo("1");
+	}
+
+	[Test]
+	[NotInParallel]
+	public async Task Testlock_CarryPrefix_UncarriedObjectByName()
+	{
+		var obj = await CreateObject("UncarriedLockByName");
+		await Command($"@tel #{obj.Number}=#0");
+		var result = await Eval("testlock(+UncarriedLockByName,%#)");
+		await Assert.That(result).IsEqualTo("0");
+	}
+
+	[Test]
+	[NotInParallel]
+	public async Task Testlock_OwnerPrefix_ByName()
+	{
+		await CreateObject("OwnerLockByName");
+		var result = await Eval("testlock($OwnerLockByName,%#)");
+		await Assert.That(result).IsEqualTo("1");
+	}
 }
