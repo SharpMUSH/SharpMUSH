@@ -54,7 +54,7 @@
 		     components. Referenced directly: it used to arrive transitively through
 		     Microsoft.AspNetCore.Components.WebAssembly.Authentication, which was only ever needed by
 		     the OIDC RemoteAuthenticatorView page and went away with it. -->
-		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.11" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.8" />
