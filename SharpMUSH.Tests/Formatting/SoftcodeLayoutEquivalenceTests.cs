@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
@@ -62,6 +63,29 @@ public class SoftcodeLayoutEquivalenceTests
 	/// </summary>
 	private SoftcodeCallKind ClassifyFunction(string name)
 		=> (_classifier ??= SoftcodeLayout.ClassifierFor(OracleParser))(name);
+
+	/// <summary>
+	/// Ruling 20. Lexes through <see cref="IMUSHCodeParser.Tokenize"/> — the entry point
+	/// <c>SoftcodeFormatter</c> feeds the layout engine from, and therefore what <c>@examine</c> really
+	/// runs. It is <b>not</b> the stream the evaluator parses: four of the five lexing sites in
+	/// <c>MUSHCodeParser</c> rewrite an orphaned <c>]</c>/<c>}</c> to literal text first and
+	/// <c>Tokenize</c> does not (see <see cref="OrphanedClosers_LexDifferentlyForTheFormatterThanForTheEvaluator"/>).
+	/// <para>
+	/// Lexing the corpus any other way would prove safety over a stream production never lays out. So
+	/// the pipeline under test is end-to-end genuine: production's <c>Tokenize</c>, production's
+	/// <c>SoftcodeLayout</c>, compared against production's evaluator.
+	/// </para>
+	/// </summary>
+	private IReadOnlyList<TokenInfo> Lex(string source) => OracleParser.Tokenize(MModule.single(source));
+
+	/// <summary>Lays out and renders <paramref name="source"/> exactly as the formatter would.</summary>
+	private string Format(string source, int width, ParseType parseType = ParseType.Function)
+	{
+		var tokens = Lex(source);
+
+		return SoftcodeRenderer.Render(tokens,
+			SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction, parseType: parseType));
+	}
 
 	/// <summary>
 	/// Parses, and evaluates to something a stray newline would visibly damage. Guarded below to
@@ -139,12 +163,13 @@ public class SoftcodeLayoutEquivalenceTests
 		// outer breaks, the inner must not.
 		() => "strcat(aaaaaaaaaa,lit(bbbbbbbbbb,cccccccccc),dddddddddd)",
 
-		// Ruling 13. An orphaned ']' is rewritten to literal text before parsing
-		// (MUSHCodeParser.RewriteOrphanedBracketClosers), so the layout must see the same stream.
+		// Ruling 20. An orphaned ']' is literal text to the evaluator, which rewrites it before parsing,
+		// but still a CBRACK to Tokenize, which the formatter lexes with. These entries are where those
+		// two streams disagree, so they are the ones the corpus most needs.
 		() => "strcat(aaaaaaaaaa,bbbbbbbbbb] and a tail,cccccccccc)",
 		() => "[strcat(aaaaaaaaaa,bbbbbbbbbb)]] an orphaned closer after a real one",
 
-		// Ruling 13, braces: an orphaned '}' likewise becomes text rather than closing anything.
+		// Ruling 20, braces: an orphaned '}' likewise.
 		() => "strcat(aaaaaaaaaa,bbbbbbbbbb} and a tail,cccccccccc)",
 
 		// Literal commas in text position: prose commas are not separators (Task 2, Critical 1).
@@ -205,7 +230,16 @@ public class SoftcodeLayoutEquivalenceTests
 		// beginGenericText's COMMAWS predicate (SharpMUSHParser.g4:159) is false. Position 41.
 		() => "switch(a,[ansi(hr,a long stretch of text),y],{b,c},trailing prose, and more)",
 		() => "switch(a,b,c",
-		() => "add(1,add(1,add(1,add(1,5)))"
+		() => "add(1,add(1,add(1,add(1,5)))",
+
+		// Ruling 20. The reviewer's brute-force divergence case and two siblings. The two token streams
+		// disagree only where an orphaned closer is the last token *inside* an unclosed group — and a
+		// group unclosed at end of input is a parse error, which is why every such input lands here. See
+		// OrphanedCloserAtTheEnd_CostsExactlyTheBreakTheEvaluatorsStreamWouldAllow for the structural
+		// half, which is the part that can still be asserted precisely.
+		() => "aaaaaaaaaaf(aaaaaaaaaa]",
+		() => "strcat(aaaaaaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbbbbbb]",
+		() => "aaaaaaaaaastrcat(aaaaaaaaaa,bbbbbbbbbb}"
 	];
 
 	/// <summary>
@@ -249,7 +283,7 @@ public class SoftcodeLayoutEquivalenceTests
 	{
 		foreach (var width in Widths)
 		{
-			var formatted = SoftcodeRenderer.Format(source, width, ClassifyFunction);
+			var formatted = Format(source, width);
 			var actual = await Eval(formatted);
 
 			await Assert.That(actual).IsEqualTo(expected)
@@ -303,7 +337,7 @@ public class SoftcodeLayoutEquivalenceTests
 
 		foreach (var width in Widths)
 		{
-			var formatted = SoftcodeRenderer.Format(source, width, ClassifyFunction);
+			var formatted = Format(source, width);
 
 			await Assert.That(IsParseFailure(await Eval(formatted))).IsTrue()
 				.Because($"width {width} turned a parse failure into something else for [{source}]. "
@@ -329,7 +363,7 @@ public class SoftcodeLayoutEquivalenceTests
 
 		foreach (var width in Widths)
 		{
-			var formatted = SoftcodeRenderer.Format(source, width, ClassifyFunction, ParseType.CommandList);
+			var formatted = Format(source, width, ParseType.CommandList);
 			var actual = await EvalCommandList(formatted);
 
 			await Assert.That(actual).IsEqualTo(expected)
@@ -361,13 +395,13 @@ public class SoftcodeLayoutEquivalenceTests
 	public async Task RootSemicolon_IsABreakPositionOnlyInTheCommandListDialect()
 	{
 		const string source = "aaaaaaaaaaaaaaaaaaaa;bbbbbbbbbbbbbbbbbbbb";
-		var tokens = TestLexer.Lex(source);
+		var tokens = Lex(source);
 
 		foreach (var width in Widths)
 		{
 			await Assert.That(SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction)).IsEmpty()
 				.Because($"width {width} broke at a semicolon that is literal text in this dialect");
-			await Assert.That(SoftcodeRenderer.Format(source, width, ClassifyFunction)).IsEqualTo(source);
+			await Assert.That(Format(source, width)).IsEqualTo(source);
 		}
 
 		await Assert.That(await Eval(source)).IsEqualTo(source);
@@ -378,7 +412,7 @@ public class SoftcodeLayoutEquivalenceTests
 		await Assert.That(commandBreaks).Count().IsEqualTo(1);
 		await Assert.That(tokens[commandBreaks[0].TokenIndex].Type).IsEqualTo("SEMICOLON");
 
-		var asCommandList = SoftcodeRenderer.Format(source, 20, ClassifyFunction, ParseType.CommandList);
+		var asCommandList = Format(source, 20, ParseType.CommandList);
 		await Assert.That(await Eval(asCommandList)).IsNotEqualTo(await Eval(source))
 			.Because("if the command-list layout round-tripped as a function too, this guard would be idle");
 	}
@@ -393,7 +427,7 @@ public class SoftcodeLayoutEquivalenceTests
 	[Test]
 	public async Task OnlyTheCommandListDialectBreaksAtASemicolon()
 	{
-		var tokens = TestLexer.Lex("aaaaaaaaaaaaaaaaaaaa;bbbbbbbbbbbbbbbbbbbb");
+		var tokens = Lex("aaaaaaaaaaaaaaaaaaaa;bbbbbbbbbbbbbbbbbbbb");
 
 		foreach (var parseType in Enum.GetValues<ParseType>())
 		{
@@ -479,7 +513,7 @@ public class SoftcodeLayoutEquivalenceTests
 		{
 			foreach (var source in entries.Select(entry => entry()))
 			{
-				var tokens = TestLexer.Lex(source);
+				var tokens = Lex(source);
 				foreach (var width in Widths)
 				{
 					var breaks = SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction,
@@ -519,13 +553,13 @@ public class SoftcodeLayoutEquivalenceTests
 	public async Task OpenBracket_IsSafeWhenItIsTheOnlyBreak()
 	{
 		const string source = "[aaaaaaaaaaaa,bbbbbbbbbbbb]";
-		var tokens = TestLexer.Lex(source);
+		var tokens = Lex(source);
 		var breaks = SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: ClassifyFunction);
 
 		await Assert.That(breaks).Count().IsEqualTo(1);
 		await Assert.That(tokens[breaks[0].TokenIndex].Type).IsEqualTo("OBRACK");
 
-		var formatted = SoftcodeRenderer.Format(source, width: 20, ClassifyFunction);
+		var formatted = Format(source, 20);
 		await Assert.That(formatted).IsNotEqualTo(source);
 		await Assert.That(await Eval(formatted)).IsEqualTo(await Eval(source))
 			.Because($"breaking after '[' changed evaluation. Formatted:\n{formatted}");
@@ -541,12 +575,12 @@ public class SoftcodeLayoutEquivalenceTests
 		const string source = "notafunction(aaaaaaaaaa,bbbbbbbbbb,cccccccccc)";
 		await Assert.That(ClassifyFunction("notafunction")).IsEqualTo(SoftcodeCallKind.Unresolved);
 
-		var tokens = TestLexer.Lex(source);
+		var tokens = Lex(source);
 		foreach (var width in Widths)
 		{
 			await Assert.That(SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction)).IsEmpty()
 				.Because($"width {width} broke into a call the parser reproduces as text");
-			await Assert.That(SoftcodeRenderer.Format(source, width, ClassifyFunction)).IsEqualTo(source);
+			await Assert.That(Format(source, width)).IsEqualTo(source);
 		}
 
 		await Assert.That(await Eval(source)).IsEqualTo(source);
@@ -570,18 +604,18 @@ public class SoftcodeLayoutEquivalenceTests
 
 		foreach (var source in sources)
 		{
-			var tokens = TestLexer.Lex(source);
+			var tokens = Lex(source);
 			foreach (var width in Widths)
 			{
 				await Assert.That(SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction))
 					.IsEmpty().Because($"width {width} broke inside [{source}], whose source is copied verbatim");
-				await Assert.That(SoftcodeRenderer.Format(source, width, ClassifyFunction)).IsEqualTo(source);
+				await Assert.That(Format(source, width)).IsEqualTo(source);
 			}
 		}
 
 		// The outer call still breaks; only the source-copying one is left alone.
 		const string nested = "strcat(aaaaaaaaaa,lit(bbbbbbbbbb,cccccccccc),dddddddddd)";
-		var nestedTokens = TestLexer.Lex(nested);
+		var nestedTokens = Lex(nested);
 		var breaks = SoftcodeLayout.Compute(nestedTokens, width: 20, classifyFunction: ClassifyFunction);
 		var litOpen = nestedTokens.Index().First(x => x.Item.Text.StartsWith("lit(", StringComparison.Ordinal)).Index;
 		var litClose = nestedTokens.Index().First(x => x.Index > litOpen && x.Item.Type == "CPAREN").Index;
@@ -602,33 +636,108 @@ public class SoftcodeLayoutEquivalenceTests
 		const string source = "lit(aaaaaaaaaa,bbbbbbbbbb,cccccccccc)";
 
 		// What the pre-Ruling-12 layout would have produced: classify lit as an ordinary function.
-		var asIfEvaluating = SoftcodeRenderer.Format(source, 20,
-			name => name == "lit" ? SoftcodeCallKind.EvaluatesArguments : ClassifyFunction(name));
+		var litTokens = Lex(source);
+		var asIfEvaluating = SoftcodeRenderer.Render(litTokens, SoftcodeLayout.Compute(litTokens, width: 20,
+			classifyFunction: name =>
+				name == "lit" ? SoftcodeCallKind.EvaluatesArguments : ClassifyFunction(name)));
 
 		await Assert.That(asIfEvaluating).IsNotEqualTo(source);
 		await Assert.That(await Eval(asIfEvaluating)).IsNotEqualTo(await Eval(source))
 			.Because("if lit() round-tripped under the old classification, Ruling 12 would be idle");
 
 		// What it produces now.
-		await Assert.That(SoftcodeRenderer.Format(source, 20, ClassifyFunction)).IsEqualTo(source);
+		await Assert.That(Format(source, 20)).IsEqualTo(source);
 		await Assert.That(await Eval(source)).IsEqualTo("aaaaaaaaaa,bbbbbbbbbb,cccccccccc");
 	}
 
 	/// <summary>
-	/// Ruling 13. <c>TestLexer</c> applies the orphaned-closer rewrite the evaluation path applies
-	/// (<c>MUSHCodeParser.cs:353-354</c>), so the layout engine and the evaluator see the same stream.
-	/// A corpus lexed differently from what it evaluates proves nothing about what it evaluates.
+	/// Ruling 20, pinned. <c>Tokenize</c> is the only lexing site in <c>MUSHCodeParser</c> that does
+	/// <b>not</b> rewrite an orphaned <c>]</c>/<c>}</c> to literal text — <c>ParseInternal</c>
+	/// (<c>:353-354</c>), <c>CommandListParseVisitor</c> (<c>:531-532</c>),
+	/// <c>ValidateAndGetErrors</c> (<c>:694-695</c>) and <c>GetSemanticTokens</c> (<c>:795-796</c>) all
+	/// do. This test states that difference rather than assuming it away, because the doc comment that
+	/// previously claimed the two streams differed only in the EOF token is what let the corpus lex the
+	/// wrong stream for four rounds.
+	/// <para>
+	/// The divergence is safe in one direction only, and that is why the corpus can live with it. The
+	/// two consumers of the token type are the closer-matching in <c>BuildGroupTree</c> — where an
+	/// orphaned <c>CBRACK</c> at bracket depth 0 cannot match the group on top of the stack anyway, so
+	/// it is already ignored — and the trailing-closer scan in <c>Layout</c>, which walks
+	/// <c>lastContent</c> backwards past closer-typed tokens. Seeing a <c>CBRACK</c> where the evaluator
+	/// sees text can only make <c>lastContent</c> <em>smaller</em>, and every break condition is
+	/// <c>… &lt; lastContent</c>, so it can only ever yield <b>fewer</b> breaks. Never a break the
+	/// evaluator would not tolerate.
+	/// </para>
 	/// </summary>
 	[Test]
-	public async Task OrphanedClosers_AreLexedAsTextJustAsTheEvaluatorLexesThem()
+	public async Task OrphanedClosers_LexDifferentlyForTheFormatterThanForTheEvaluator()
 	{
-		await Assert.That(TestLexer.Lex("a]b").Select(t => t.Type)).DoesNotContain("CBRACK");
-		await Assert.That(TestLexer.Lex("a}b").Select(t => t.Type)).DoesNotContain("CBRACE");
+		// What the formatter sees: still a closer token.
+		await Assert.That(Lex("a]b").Select(t => t.Type)).Contains("CBRACK");
+		await Assert.That(Lex("a}b").Select(t => t.Type)).Contains("CBRACE");
 
-		// A matched pair is untouched; only the closer with nothing to close is rewritten.
-		await Assert.That(TestLexer.Lex("[a]").Select(t => t.Type)).Contains("CBRACK");
-		await Assert.That(TestLexer.Lex("[a]]").Count(t => t.Type == "CBRACK")).IsEqualTo(1);
-		await Assert.That(TestLexer.Lex("{a}").Select(t => t.Type)).Contains("CBRACE");
+		// A matched pair is a closer for everyone, so those inputs say nothing either way.
+		await Assert.That(Lex("[a]").Select(t => t.Type)).Contains("CBRACK");
+		await Assert.That(Lex("{a}").Select(t => t.Type)).Contains("CBRACE");
+
+		// TestLexer, which the Task 2 unit tests use, must agree with Tokenize token for token —
+		// otherwise those tests drift onto a third stream nobody produces.
+		string[] probes =
+		[
+			"a]b", "a}b", "[a]", "{a}", "[a]]", "aaaaaaaaaaf(aaaaaaaaaa]",
+			"strcat(aaaaaaaaaa,bbbbbbbbbb] and a tail,cccccccccc)"
+		];
+
+		foreach (var probe in probes)
+		{
+			await Assert.That(TestLexer.Lex(probe).Select(t => $"{t.Type}:{t.Text}"))
+				.IsEquivalentTo(Lex(probe).Select(t => $"{t.Type}:{t.Text}"))
+				.Because($"TestLexer and MUSHCodeParser.Tokenize disagree on [{probe}]");
+		}
+	}
+
+	/// <summary>
+	/// Ruling 20's worked example, isolated to one variable. The reviewer's brute-force search found the
+	/// divergent shape to be an orphaned closer at the end of a group: the evaluator's rewrite makes it
+	/// text and it counts as content, while to <c>Tokenize</c> it stays closer-typed and <c>Layout</c>'s
+	/// trailing-closer scan walks past it, lowering <c>lastContent</c>. Every break condition is
+	/// <c>… &lt; lastContent</c>, so the formatter's stream can only ever produce <b>fewer</b> breaks.
+	/// <para>
+	/// The two sources here differ in exactly one character, chosen so the token counts match and only
+	/// the final token's type differs — <c>X</c> lexes as ordinary text, which is precisely what the
+	/// evaluator's rewrite turns the <c>]</c> into. A resolved name so the classifier is not also
+	/// suppressing — it has to start the input, because <c>FUNCHAR</c> is <c>[0-9a-zA-Z_~@`]+ '('</c>
+	/// and would otherwise swallow any preceding word into a name that resolves to nothing — and an
+	/// argument long enough that the call does not simply fit flat.
+	/// </para>
+	/// <para>
+	/// This is asserted structurally rather than by evaluation because the divergence is only reachable
+	/// when the orphan sits inside a group left unclosed at end of input, and that is a parse error —
+	/// which is why the corresponding corpus entries are in <see cref="UnparseableCorpus"/>.
+	/// </para>
+	/// </summary>
+	[Test]
+	public async Task OrphanedCloserAtTheEnd_CostsExactlyTheBreakTheEvaluatorsStreamWouldAllow()
+	{
+		const string withOrphan = "strcat(aaaaaaaaaaaaaaaaaaaa,]";
+		const string asEvaluatorSeesIt = "strcat(aaaaaaaaaaaaaaaaaaaa,X";
+
+		var orphanTokens = Lex(withOrphan);
+		await Assert.That(orphanTokens[^1].Type).IsEqualTo("CBRACK")
+			.Because("Tokenize does not rewrite the orphan; that is the whole finding");
+		await Assert.That(Lex(asEvaluatorSeesIt)[^1].Type).IsEqualTo("OTHER");
+		await Assert.That(Lex(asEvaluatorSeesIt)).Count().IsEqualTo(orphanTokens.Count);
+
+		var withOrphanBreaks = SoftcodeLayout.Compute(orphanTokens, width: 20, classifyFunction: ClassifyFunction);
+		var asTextBreaks = SoftcodeLayout.Compute(Lex(asEvaluatorSeesIt), width: 20,
+			classifyFunction: ClassifyFunction);
+
+		// One break lost: the comma, whose `i < lastContent` now fails. The opener break survives.
+		await Assert.That(withOrphanBreaks).Count().IsEqualTo(1);
+		await Assert.That(asTextBreaks).Count().IsEqualTo(2);
+		await Assert.That(orphanTokens[withOrphanBreaks[0].TokenIndex].Type).IsEqualTo("FUNCHAR");
+		await Assert.That(withOrphanBreaks.Count).IsLessThan(asTextBreaks.Count)
+			.Because("the formatter's stream must be the conservative one, never the other way round");
 	}
 
 	/// <summary>
@@ -638,7 +747,7 @@ public class SoftcodeLayoutEquivalenceTests
 	[Test]
 	public async Task WithoutAnOracle_NoCallIsBrokenInto()
 	{
-		var tokens = TestLexer.Lex("strcat(alpha,bravo,charlie,delta,echo,foxtrot,golf,hotel,india,juliet)");
+		var tokens = Lex("strcat(alpha,bravo,charlie,delta,echo,foxtrot,golf,hotel,india,juliet)");
 
 		await Assert.That(SoftcodeLayout.Compute(tokens, width: 20)).IsEmpty();
 		await Assert.That(SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: ClassifyFunction)).IsNotEmpty();
@@ -653,11 +762,11 @@ public class SoftcodeLayoutEquivalenceTests
 	[Test]
 	public async Task SuppressionPropagatesInwardButABracketClearsIt()
 	{
-		var suppressed = TestLexer.Lex("notafunction(aaaa,strcat(bbbbbbbbbb,cccccccccc),dddd)");
+		var suppressed = Lex("notafunction(aaaa,strcat(bbbbbbbbbb,cccccccccc),dddd)");
 		await Assert.That(SoftcodeLayout.Compute(suppressed, width: 20, classifyFunction: ClassifyFunction))
 			.IsEmpty().Because("a call inside an unresolved call is reproduced as text as well");
 
-		var bracketed = TestLexer.Lex("notafunction(aaaa,[strcat(bbbbbbbbbb,cccccccccc)],dddd)");
+		var bracketed = Lex("notafunction(aaaa,[strcat(bbbbbbbbbb,cccccccccc)],dddd)");
 		var breaks = SoftcodeLayout.Compute(bracketed, width: 20, classifyFunction: ClassifyFunction);
 
 		var open = bracketed.Index().First(x => x.Item.Type == "OBRACK").Index;
@@ -676,13 +785,13 @@ public class SoftcodeLayoutEquivalenceTests
 	public async Task ProseCommas_ProduceNoBreakAndNoTextChange()
 	{
 		const string source = "@emit A long line of prose, and more prose here";
-		var tokens = TestLexer.Lex(source);
+		var tokens = Lex(source);
 
 		foreach (var width in Widths)
 		{
 			await Assert.That(SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction)).IsEmpty()
 				.Because($"width {width} broke at a prose comma");
-			await Assert.That(SoftcodeRenderer.Format(source, width, ClassifyFunction)).IsEqualTo(source);
+			await Assert.That(Format(source, width)).IsEqualTo(source);
 		}
 
 		await Assert.That(await Eval(source)).IsEqualTo(source);
@@ -698,7 +807,7 @@ public class SoftcodeLayoutEquivalenceTests
 	public async Task BareParenthesisGroup_ProducesNoBreakAndNoTextChange()
 	{
 		const string source = "@emit a long parenthetical (with several words, inside it) and then more";
-		var tokens = TestLexer.Lex(source);
+		var tokens = Lex(source);
 
 		await Assert.That(tokens.Select(t => t.Type)).Contains("OPAREN");
 
@@ -706,7 +815,7 @@ public class SoftcodeLayoutEquivalenceTests
 		{
 			await Assert.That(SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction)).IsEmpty()
 				.Because($"width {width} broke at a bare parenthesis");
-			await Assert.That(SoftcodeRenderer.Format(source, width, ClassifyFunction)).IsEqualTo(source);
+			await Assert.That(Format(source, width)).IsEqualTo(source);
 		}
 
 		await Assert.That(await Eval(source)).IsEqualTo(source);

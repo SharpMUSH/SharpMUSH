@@ -121,10 +121,23 @@ public static class SoftcodeFormatter
 	/// for text no token covers. That asymmetry is deliberate, not an oversight: <c>Render</c> must
 	/// tolerate a token list that fails to tile its input because a caller could hand it any
 	/// <c>IReadOnlyList&lt;SemanticToken&gt;</c>, but <paramref name="tokens"/> here always comes from a
-	/// full lex of <paramref name="colored"/>'s own source — <c>MUSHCodeParser.Tokenize</c> in production,
-	/// <c>TestLexer.Lex</c> in tests — both of which drop only the synthetic EOF token, so the tiling
-	/// guarantee already holds. A future token source that doesn't tile would need this brought in line
-	/// with <c>Render</c>'s gap handling; it isn't needed today.
+	/// full lex of <paramref name="colored"/>'s own source — <c>MUSHCodeParser.Tokenize</c> in
+	/// production, and <c>TestLexer.Lex</c>, which mirrors it, in the pure-unit layout tests. Both drop
+	/// only the synthetic EOF token, so the tiling guarantee already holds. A future token source that
+	/// doesn't tile would need this brought in line with <c>Render</c>'s gap handling; it isn't needed
+	/// today.
+	/// </para>
+	/// <para>
+	/// <b>That stream is not the one the evaluator parses.</b> <c>Tokenize</c> (<c>MUSHCodeParser.cs:648-681</c>)
+	/// is the only lexing site in <c>MUSHCodeParser</c> that skips
+	/// <c>RewriteOrphanedBracketClosers</c>/<c>RewriteOrphanedBraceClosers</c>; <c>ParseInternal</c>
+	/// (<c>:353-354</c>), <c>CommandListParseVisitor</c> (<c>:531-532</c>), <c>ValidateAndGetErrors</c>
+	/// (<c>:694-695</c>) and <c>GetSemanticTokens</c> (<c>:795-796</c>) all apply it. So a <c>]</c> or
+	/// <c>}</c> that closes nothing is literal text everywhere except here, where it stays a closer
+	/// token. The layout engine only reads that type to match closers and to skip trailing ones, and
+	/// both readings can only shrink the content range, so the effect is strictly fewer breaks — never
+	/// a break the evaluator would not tolerate. <c>SoftcodeLayoutEquivalenceTests</c> lexes its corpus
+	/// through <c>Tokenize</c> for exactly this reason and pins the divergence.
 	/// </para>
 	/// </summary>
 	private static MString ApplyBreaks(MString colored, IReadOnlyList<TokenInfo> tokens, IReadOnlyList<SoftcodeBreak> breaks)
