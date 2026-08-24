@@ -172,6 +172,13 @@ public class SoftcodeLayoutEquivalenceTests
 		// Ruling 20, braces: an orphaned '}' likewise.
 		() => "strcat(aaaaaaaaaa,bbbbbbbbbb} and a tail,cccccccccc)",
 
+		// Ruling 20, channel 1, and the entry that matters most in this group: a **parseable** input on
+		// which the formatter's stream and the evaluator's genuinely disagree. At width 20 Tokenize
+		// yields one break (the opener) where the evaluator's rewritten stream would yield two, because
+		// the ']' is closer-typed here and text there. Evaluating to `aaaaaaaaaaaaaaaaaaaa]` either way
+		// is the proof that a divergence does not have to cost correctness.
+		() => "strcat(aaaaaaaaaaaaaaaaaaaa,])",
+
 		// Literal commas in text position: prose commas are not separators (Task 2, Critical 1).
 		() => "@emit A long line of prose, and more prose here, and yet more besides",
 
@@ -232,14 +239,26 @@ public class SoftcodeLayoutEquivalenceTests
 		() => "switch(a,b,c",
 		() => "add(1,add(1,add(1,add(1,5)))",
 
-		// Ruling 20. The reviewer's brute-force divergence case and two siblings. The two token streams
-		// disagree only where an orphaned closer is the last token *inside* an unclosed group — and a
-		// group unclosed at end of input is a parse error, which is why every such input lands here. See
-		// OrphanedCloserAtTheEnd_CostsExactlyTheBreakTheEvaluatorsStreamWouldAllow for the structural
-		// half, which is the part that can still be asserted precisely.
+		// Ruling 20, channel 2 — the one that runs in the UNSAFE direction, and the reason deferring the
+		// Tokenize fix is defensible. RewriteOrphanedBracketClosers counts depth flat and globally while
+		// BuildGroupTree matches on a stack (SoftcodeLayout.cs:349), so here the first ']' is consumed by
+		// the flat counter but ignored by the stack — leaving the second ']' an orphan to the evaluator
+		// and a real CBRACK to Tokenize. Tokenize therefore pops the OBRACK and makes `,c` a strcat
+		// separator: a break the evaluator's stream would not have. It is only ever reachable when a ']'
+		// sits where the grammar — itself a stack machine — cannot accept one, which is a syntax error.
+		// Hence unparseable, always. See OrphanedClosers_LexDifferentlyForTheFormatterThanForTheEvaluator.
+		() => "strcat([strcat(a],b)],c)",
+		() => "strcat([strcat(aaaaaaaaaa],bbbbbbbbbb)],cccccccccc)",
+
+		// Ruling 20. The reviewer's brute-force case and a sibling. Both emit zero breaks — f is
+		// unresolved, and the trailing closer takes the rest — so the per-width assertion re-checks one
+		// unchanged string. They are here to pin their *classification*, that an orphan closing an
+		// unclosed group is a parse failure, not to exercise formatting. The entry below them does break,
+		// and OrphanedCloserAtTheEnd_CostsExactlyTheBreakTheEvaluatorsStreamWouldAllow carries the
+		// structural claim.
 		() => "aaaaaaaaaaf(aaaaaaaaaa]",
-		() => "strcat(aaaaaaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbbbbbb]",
-		() => "aaaaaaaaaastrcat(aaaaaaaaaa,bbbbbbbbbb}"
+		() => "aaaaaaaaaastrcat(aaaaaaaaaa,bbbbbbbbbb}",
+		() => "strcat(aaaaaaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbbbbbb]"
 	];
 
 	/// <summary>
@@ -659,14 +678,33 @@ public class SoftcodeLayoutEquivalenceTests
 	/// previously claimed the two streams differed only in the EOF token is what let the corpus lex the
 	/// wrong stream for four rounds.
 	/// <para>
-	/// The divergence is safe in one direction only, and that is why the corpus can live with it. The
-	/// two consumers of the token type are the closer-matching in <c>BuildGroupTree</c> — where an
-	/// orphaned <c>CBRACK</c> at bracket depth 0 cannot match the group on top of the stack anyway, so
-	/// it is already ignored — and the trailing-closer scan in <c>Layout</c>, which walks
-	/// <c>lastContent</c> backwards past closer-typed tokens. Seeing a <c>CBRACK</c> where the evaluator
-	/// sees text can only make <c>lastContent</c> <em>smaller</em>, and every break condition is
-	/// <c>… &lt; lastContent</c>, so it can only ever yield <b>fewer</b> breaks. Never a break the
-	/// evaluator would not tolerate.
+	/// <b>The divergence has two channels, and only one of them is conservative.</b> An earlier version
+	/// of this comment claimed the effect was always fewer breaks; that was wrong, and it was wrong in
+	/// the direction that matters, so it is spelled out properly here.
+	/// </para>
+	/// <para>
+	/// <b>Channel 1 — conservative.</b> Where the rewrite's flat depth count and <c>BuildGroupTree</c>'s
+	/// stack agree that a closer closes nothing, the only consumer that notices is <c>Layout</c>'s
+	/// trailing-closer scan, which walks <c>lastContent</c> back past closer-typed tokens. Every break
+	/// condition is <c>… &lt; lastContent</c>, so a smaller <c>lastContent</c> yields strictly
+	/// <b>fewer</b> breaks. Reachable on parseable input — <c>strcat(aaaa…,])</c> is in
+	/// <see cref="ParseableEchoingCorpus"/> for that reason, and evaluates identically either way.
+	/// </para>
+	/// <para>
+	/// <b>Channel 2 — not conservative.</b> The two counters can desynchronise:
+	/// <c>RewriteOrphanedBracketClosers</c> counts <c>[</c>/<c>]</c> globally, while
+	/// <c>BuildGroupTree</c> ignores a closer whose opener is not on top of its stack
+	/// (<c>SoftcodeLayout.cs:349</c>). In <c>strcat([strcat(a],b)],c)</c> the first <c>]</c> is consumed
+	/// by the flat count but ignored by the stack, so the second is an orphan to the evaluator and a live
+	/// <c>CBRACK</c> here — this engine pops the <c>OBRACK</c>, and <c>,c</c> becomes a <c>strcat</c>
+	/// separator and a break the evaluator's stream would never permit. <b>More</b> breaks, unsafe.
+	/// </para>
+	/// <para>
+	/// What rescues it is not monotonicity but the grammar: channel 2 needs a <c>]</c> in a position a
+	/// stack machine cannot accept — <c>bracketPattern</c> requires a complete <c>evaluationString</c>
+	/// before its <c>CBRACK</c>, and <c>function</c> a <c>CPAREN</c> before that — so such input is a
+	/// syntax error. Both channel-2 entries sit in <see cref="UnparseableCorpus"/>, and the assertion
+	/// below records that each takes the divergent path here while failing to parse there.
 	/// </para>
 	/// </summary>
 	[Test]
@@ -694,14 +732,38 @@ public class SoftcodeLayoutEquivalenceTests
 				.IsEquivalentTo(Lex(probe).Select(t => $"{t.Type}:{t.Text}"))
 				.Because($"TestLexer and MUSHCodeParser.Tokenize disagree on [{probe}]");
 		}
+
+		// Channel 2, pinned: this engine really does take the divergent path — it pops the OBRACK the
+		// evaluator's stream leaves open, so the second comma becomes a strcat separator and breaks —
+		// and the input really is a parse failure, which is what keeps the unsafe channel unreachable.
+		// If a future grammar change made this parse, this assertion fails and Tokenize must be fixed
+		// before the formatter can be trusted on it.
+		const string channelTwo = "strcat([strcat(a],b)],c)";
+		var channelTwoTokens = Lex(channelTwo);
+		var channelTwoBreaks = SoftcodeLayout.Compute(channelTwoTokens, width: 20,
+			classifyFunction: ClassifyFunction);
+		var lastBracket = channelTwoTokens.Index().Last(x => x.Item.Type == "CBRACK").Index;
+
+		await Assert.That(channelTwoBreaks.Any(b => b.TokenIndex > lastBracket
+			&& channelTwoTokens[b.TokenIndex].Type == "COMMAWS")).IsTrue()
+			.Because("the desynchronised stack pops the bracket group and promotes the trailing comma");
+		await Assert.That(IsParseFailure(await Eval(channelTwo))).IsTrue()
+			.Because("channel 2 needs a ']' the grammar's own stack cannot accept, so it never parses");
 	}
 
 	/// <summary>
-	/// Ruling 20's worked example, isolated to one variable. The reviewer's brute-force search found the
-	/// divergent shape to be an orphaned closer at the end of a group: the evaluator's rewrite makes it
-	/// text and it counts as content, while to <c>Tokenize</c> it stays closer-typed and <c>Layout</c>'s
-	/// trailing-closer scan walks past it, lowering <c>lastContent</c>. Every break condition is
-	/// <c>… &lt; lastContent</c>, so the formatter's stream can only ever produce <b>fewer</b> breaks.
+	/// Ruling 20, <b>channel 1</b> — the conservative one — isolated to a single variable. The
+	/// evaluator's rewrite makes the trailing orphan text, so it counts as content; to <c>Tokenize</c> it
+	/// stays closer-typed and <c>Layout</c>'s trailing-closer scan walks past it, lowering
+	/// <c>lastContent</c>. Every break condition is <c>… &lt; lastContent</c>, so <b>within this
+	/// channel</b> the formatter's stream can only produce fewer breaks.
+	/// <para>
+	/// That monotonicity argument covers channel 1 and nothing else — see
+	/// <see cref="OrphanedClosers_LexDifferentlyForTheFormatterThanForTheEvaluator"/> for channel 2,
+	/// where the two counters desynchronise and the layout engine emits <em>more</em> breaks than the
+	/// evaluator's stream would allow. It is not monotonicity that makes the divergence tolerable
+	/// overall; it is that channel 2 is always a syntax error.
+	/// </para>
 	/// <para>
 	/// The two sources here differ in exactly one character, chosen so the token counts match and only
 	/// the final token's type differs — <c>X</c> lexes as ordinary text, which is precisely what the
@@ -711,9 +773,11 @@ public class SoftcodeLayoutEquivalenceTests
 	/// argument long enough that the call does not simply fit flat.
 	/// </para>
 	/// <para>
-	/// This is asserted structurally rather than by evaluation because the divergence is only reachable
-	/// when the orphan sits inside a group left unclosed at end of input, and that is a parse error —
-	/// which is why the corresponding corpus entries are in <see cref="UnparseableCorpus"/>.
+	/// These two particular sources are asserted structurally rather than by evaluation because both
+	/// leave the call unclosed at end of input, which is a parse error. That is a property of <em>these
+	/// inputs</em>, not of the divergence: <c>strcat(aaaa…,])</c> in
+	/// <see cref="ParseableEchoingCorpus"/> is the same channel-1 divergence on input that parses, and
+	/// it carries the evaluation claim across it.
 	/// </para>
 	/// </summary>
 	[Test]

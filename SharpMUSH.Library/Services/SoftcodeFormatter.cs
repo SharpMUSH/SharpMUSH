@@ -134,10 +134,25 @@ public static class SoftcodeFormatter
 	/// (<c>:353-354</c>), <c>CommandListParseVisitor</c> (<c>:531-532</c>), <c>ValidateAndGetErrors</c>
 	/// (<c>:694-695</c>) and <c>GetSemanticTokens</c> (<c>:795-796</c>) all apply it. So a <c>]</c> or
 	/// <c>}</c> that closes nothing is literal text everywhere except here, where it stays a closer
-	/// token. The layout engine only reads that type to match closers and to skip trailing ones, and
-	/// both readings can only shrink the content range, so the effect is strictly fewer breaks — never
-	/// a break the evaluator would not tolerate. <c>SoftcodeLayoutEquivalenceTests</c> lexes its corpus
-	/// through <c>Tokenize</c> for exactly this reason and pins the divergence.
+	/// token. <c>SoftcodeLayoutEquivalenceTests</c> lexes its corpus through <c>Tokenize</c> for exactly
+	/// this reason.
+	/// </para>
+	/// <para>
+	/// The divergence has <b>two</b> channels, and only the first is conservative. <b>Channel 1:</b>
+	/// where the rewrite's flat depth count and <c>SoftcodeLayout</c>'s stack agree that a closer closes
+	/// nothing, the only consequence is that <c>Layout</c>'s trailing-closer scan walks past it, lowering
+	/// <c>lastContent</c>. Every break condition is <c>… &lt; lastContent</c>, so this yields strictly
+	/// <b>fewer</b> breaks — safe, and reachable on input that parses (<c>strcat(aaaa…,])</c> breaks once
+	/// here and would break twice on the evaluator's stream). <b>Channel 2:</b> the two counters can
+	/// <em>desynchronise</em>, because the rewrite counts <c>[</c>/<c>]</c> globally while
+	/// <c>BuildGroupTree</c> ignores a closer whose opener is not on top of its stack. A closer the flat
+	/// count consumes but the stack does not leaves a later one orphaned for the evaluator and live here,
+	/// so this engine pops a group the evaluator leaves open and a following comma becomes an argument
+	/// separator — <b>more</b> breaks, in the unsafe direction. That channel is nonetheless unreachable
+	/// in practice: it needs a <c>]</c> in a position the grammar, itself a stack machine
+	/// (<c>bracketPattern</c> wants a complete <c>evaluationString</c> before its <c>CBRACK</c>), cannot
+	/// accept — which is a syntax error. Verified: <c>strcat([strcat(a],b)],c)</c> takes that path here
+	/// and is a <c>#-1 PARSER FAILURE</c> in the evaluator.
 	/// </para>
 	/// </summary>
 	private static MString ApplyBreaks(MString colored, IReadOnlyList<TokenInfo> tokens, IReadOnlyList<SoftcodeBreak> breaks)
