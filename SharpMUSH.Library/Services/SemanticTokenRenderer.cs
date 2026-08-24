@@ -29,13 +29,18 @@ public static class SemanticTokenRenderer
 	/// likely to fall in an untokenized gap or straddle a token boundary, so per-token consultation
 	/// would not serve that use case.
 	/// </param>
-	/// <returns><paramref name="source"/> unstyled when <paramref name="tokens"/> is empty.</returns>
+	/// <returns><paramref name="source"/> unstyled when <paramref name="tokens"/> is empty and <paramref name="overrideAt"/> is
+	/// <c>null</c>. An empty <paramref name="tokens"/> list with a non-null <paramref name="overrideAt"/>
+	/// still runs the render loop — the whole source is one gap span, and gap spans consult
+	/// <paramref name="overrideAt"/> too — which matters to a caller like <c>SoftcodeFormatter</c>
+	/// highlighting a parse error over source that produced no semantic tokens at all (e.g. input
+	/// that failed to parse before any token could be classified).</returns>
 	public static MString Render(
 		MString source,
 		IReadOnlyList<SemanticToken> tokens,
 		Func<int, Ansi?>? overrideAt = null)
 	{
-		if (tokens.Count == 0)
+		if (tokens.Count == 0 && overrideAt is null)
 			return source;
 
 		var lineStarts = BuildLineStartTable(MModule.plainText(source));

@@ -40,6 +40,26 @@ public class SemanticTokenRendererTests
 		await Assert.That(MModule.render("ansi", styled)).IsNotEqualTo(MModule.render("ansi", src));
 	}
 
+	/// <summary>
+	/// Boy-scout regression for a caller like <c>SoftcodeFormatter</c> highlighting a parse error over
+	/// source that produced no semantic tokens at all — e.g. input that failed to parse before any token
+	/// could be classified. Before this fix, <c>Render</c> returned <paramref name="src"/> unstyled
+	/// whenever <c>tokens.Count == 0</c>, regardless of whether an <c>overrideAt</c> was supplied, which
+	/// silently dropped error highlighting for exactly the inputs most likely to need it.
+	/// </summary>
+	[Test]
+	public async Task OverrideStillAppliesWhenThereAreNoSemanticTokensAtAll()
+	{
+		var src = MModule.single("add(1,2)");
+		var red = AnsiCodeParser.ParseCodes("r");
+
+		var result = SemanticTokenRenderer.Render(src, [], offset => offset < 3 ? red : null);
+
+		await Assert.That(MModule.plainText(result)).IsEqualTo("add(1,2)");
+		await Assert.That(StyleDetailsAt(result, 0)).IsEqualTo(red.Details);
+		await Assert.That(StyleDetailsAt(result, 3)).IsNull();
+	}
+
 	[Test]
 	public async Task OverrideTakesPrecedenceOverPalette()
 	{
