@@ -19,7 +19,7 @@ public static class TestLexer
 		var stream = new CommonTokenStream(lexer);
 		stream.Fill();
 
-		return stream.GetTokens()
+		var tokens = stream.GetTokens()
 			.Where(t => t.Type != TokenConstants.EOF)
 			.Select(t => new TokenInfo
 			{
@@ -32,5 +32,46 @@ public static class TestLexer
 				Channel = t.Channel
 			})
 			.ToList();
+
+		RewriteOrphanedClosers(tokens, "OBRACK", "CBRACK");
+		RewriteOrphanedClosers(tokens, "OBRACE", "CBRACE");
+
+		return tokens;
+	}
+
+	/// <summary>
+	/// Mirrors <c>MUSHCodeParser.RewriteOrphanedBracketClosers</c> / <c>…BraceClosers</c>, which every
+	/// evaluation entry point runs over the token stream before parsing (<c>MUSHCodeParser.cs:353-354</c>,
+	/// <c>:531-532</c>, <c>:694-695</c>): a closer at depth 0 has nothing to close and becomes a literal
+	/// <c>OTHER</c>.
+	/// <para>
+	/// Reimplemented rather than called because both methods are <c>internal</c> and take a
+	/// <c>BufferedTokenSpanStream</c>, which is also internal, and there is no
+	/// <c>InternalsVisibleTo</c> for this assembly. Same algorithm, same depth counting, over the token
+	/// type names. Without it a safety corpus would be proving something about a token stream nobody
+	/// evaluates.
+	/// </para>
+	/// </summary>
+	private static void RewriteOrphanedClosers(List<TokenInfo> tokens, string opener, string closer)
+	{
+		var depth = 0;
+		for (var i = 0; i < tokens.Count; i++)
+		{
+			if (tokens[i].Type == opener)
+			{
+				depth++;
+			}
+			else if (tokens[i].Type == closer)
+			{
+				if (depth > 0)
+				{
+					depth--;
+				}
+				else
+				{
+					tokens[i] = tokens[i] with { Type = "OTHER" };
+				}
+			}
+		}
 	}
 }

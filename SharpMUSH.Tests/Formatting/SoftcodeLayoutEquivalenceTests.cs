@@ -55,16 +55,34 @@ public class SoftcodeLayoutEquivalenceTests
 	private static readonly int[] Widths = [20, 40, 78];
 
 	/// <summary>
-	/// The oracle Ruling 9 requires, backed by the real parser and following
+	/// The classifier Rulings 9 and 12 require, backed by the real parser and following
 	/// <c>SharpMUSHParserVisitor.CallFunction</c>'s resolution order exactly: the parser's
 	/// <c>FunctionLibrary</c> first (a <c>FunctionLibraryService</c>, so <c>OrdinalIgnoreCase</c>),
 	/// then the <c>@function</c> registry. Deliberately a plain lookup rather than a case-folded one,
 	/// so that if the library ever stopped being case-insensitive this would resolve fewer names and
 	/// the formatter would break less — never more.
+	/// <para>
+	/// The flag test is <see cref="SoftcodeLayout.Classify"/> rather than a local one, so this test and
+	/// every production caller apply the same rule; a hard-coded <c>lit</c>/<c>localize</c> pair would
+	/// rot the moment someone declares a third source-copying function.
+	/// </para>
+	/// <para>
+	/// A resolved <c>@function</c> entry is synthesized with <c>Flags = FunctionFlags.Regular</c>
+	/// (<c>SharpMUSHParserVisitor.ResolveUserDefinedFunction</c>, <c>:965-973</c>), so it always
+	/// evaluates its arguments.
+	/// </para>
 	/// </summary>
-	private bool IsKnownFunction(string name)
-		=> OracleParser.FunctionLibrary.ContainsKey(name)
-			 || OracleParser.ServiceProvider.GetService<IUserDefinedFunctionService>()?.Resolve(name) is not null;
+	private SoftcodeCallKind ClassifyFunction(string name)
+	{
+		if (OracleParser.FunctionLibrary.TryGetValue(name, out var entry))
+		{
+			return SoftcodeLayout.Classify(entry.LibraryInformation.Attribute);
+		}
+
+		return OracleParser.ServiceProvider.GetService<IUserDefinedFunctionService>()?.Resolve(name) is not null
+			? SoftcodeCallKind.EvaluatesArguments
+			: SoftcodeCallKind.Unresolved;
+	}
 
 	/// <summary>
 	/// Parses, and evaluates to something a stray newline would visibly damage. Guarded below to
@@ -123,6 +141,32 @@ public class SoftcodeLayoutEquivalenceTests
 
 		// Ruling 9, outward: a resolved call is not tainted by an unresolved one among its arguments.
 		() => "strcat(aaaa,notafunction(bbbbbbbbbb,cccccccccc),dddd)",
+
+		// Ruling 12. lit is Literal | NoParse (StringFunctions.cs:53) and resolves perfectly well —
+		// resolving is what makes it dangerous. LiteralArgumentText slices from just past the '(' to the
+		// ')', so both the opener's and every comma's absorbed whitespace lands in the result.
+		() => "lit(a,bbbbbbbbbbbbbbbbbbbb)",
+		() => "lit(aaaaaaaaaa,bbbbbbbbbb,cccccccccc,dddddddddd)",
+
+		// Ruling 12, and why a source-copying call must be atomic rather than merely unbroken at its own
+		// delimiters: nothing visits this span, so the bracket inside is not safe either.
+		() => "lit(aaaaaaaaaa,[strcat(bbbbbbbbbb,cccccccccc)],dddddddddd)",
+
+		// Ruling 12. localize is NoParse with MaxArgs 1 (DbrefFunctions.cs:576), which returns
+		// MModule.substring over the whole function context.
+		() => "localize(strcat(aaaaaaaaaa,bbbbbbbbbb,cccccccccc))",
+
+		// Ruling 12, nested: a source-copying call inside a call that does evaluate its arguments. The
+		// outer breaks, the inner must not.
+		() => "strcat(aaaaaaaaaa,lit(bbbbbbbbbb,cccccccccc),dddddddddd)",
+
+		// Ruling 13. An orphaned ']' is rewritten to literal text before parsing
+		// (MUSHCodeParser.RewriteOrphanedBracketClosers), so the layout must see the same stream.
+		() => "strcat(aaaaaaaaaa,bbbbbbbbbb] and a tail,cccccccccc)",
+		() => "[strcat(aaaaaaaaaa,bbbbbbbbbb)]] an orphaned closer after a real one",
+
+		// Ruling 13, braces: an orphaned '}' likewise becomes text rather than closing anything.
+		() => "strcat(aaaaaaaaaa,bbbbbbbbbb} and a tail,cccccccccc)",
 
 		// Literal commas in text position: prose commas are not separators (Task 2, Critical 1).
 		() => "@emit A long line of prose, and more prose here, and yet more besides",
@@ -226,7 +270,7 @@ public class SoftcodeLayoutEquivalenceTests
 	{
 		foreach (var width in Widths)
 		{
-			var formatted = SoftcodeRenderer.Format(source, width, IsKnownFunction);
+			var formatted = SoftcodeRenderer.Format(source, width, ClassifyFunction);
 			var actual = await Eval(formatted);
 
 			await Assert.That(actual).IsEqualTo(expected)
@@ -280,7 +324,7 @@ public class SoftcodeLayoutEquivalenceTests
 
 		foreach (var width in Widths)
 		{
-			var formatted = SoftcodeRenderer.Format(source, width, IsKnownFunction);
+			var formatted = SoftcodeRenderer.Format(source, width, ClassifyFunction);
 
 			await Assert.That(IsParseFailure(await Eval(formatted))).IsTrue()
 				.Because($"width {width} turned a parse failure into something else for [{source}]. "
@@ -306,7 +350,7 @@ public class SoftcodeLayoutEquivalenceTests
 
 		foreach (var width in Widths)
 		{
-			var formatted = SoftcodeRenderer.Format(source, width, IsKnownFunction, ParseType.CommandList);
+			var formatted = SoftcodeRenderer.Format(source, width, ClassifyFunction, ParseType.CommandList);
 			var actual = await EvalCommandList(formatted);
 
 			await Assert.That(actual).IsEqualTo(expected)
@@ -342,20 +386,20 @@ public class SoftcodeLayoutEquivalenceTests
 
 		foreach (var width in Widths)
 		{
-			await Assert.That(SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction)).IsEmpty()
+			await Assert.That(SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction)).IsEmpty()
 				.Because($"width {width} broke at a semicolon that is literal text in this dialect");
-			await Assert.That(SoftcodeRenderer.Format(source, width, IsKnownFunction)).IsEqualTo(source);
+			await Assert.That(SoftcodeRenderer.Format(source, width, ClassifyFunction)).IsEqualTo(source);
 		}
 
 		await Assert.That(await Eval(source)).IsEqualTo(source);
 
-		var commandBreaks = SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: IsKnownFunction,
+		var commandBreaks = SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: ClassifyFunction,
 			parseType: ParseType.CommandList);
 
 		await Assert.That(commandBreaks).Count().IsEqualTo(1);
 		await Assert.That(tokens[commandBreaks[0].TokenIndex].Type).IsEqualTo("SEMICOLON");
 
-		var asCommandList = SoftcodeRenderer.Format(source, 20, IsKnownFunction, ParseType.CommandList);
+		var asCommandList = SoftcodeRenderer.Format(source, 20, ClassifyFunction, ParseType.CommandList);
 		await Assert.That(await Eval(asCommandList)).IsNotEqualTo(await Eval(source))
 			.Because("if the command-list layout round-tripped as a function too, this guard would be idle");
 	}
@@ -374,7 +418,7 @@ public class SoftcodeLayoutEquivalenceTests
 
 		foreach (var parseType in Enum.GetValues<ParseType>())
 		{
-			var breaks = SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: IsKnownFunction,
+			var breaks = SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: ClassifyFunction,
 				parseType: parseType);
 
 			await Assert.That(breaks.Count > 0).IsEqualTo(parseType == ParseType.CommandList)
@@ -397,20 +441,34 @@ public class SoftcodeLayoutEquivalenceTests
 	}
 
 	/// <summary>
-	/// The oracle is what decides whether a call is broken into at all, so a broken oracle would make
-	/// the whole suite pass by emitting almost no breaks. This pins both of its answers.
+	/// The classifier is what decides whether a call is broken into at all, so a broken one would make
+	/// the whole suite pass by emitting almost no breaks. This pins all three of its answers against the
+	/// real function library, including the two source-copying declarations Ruling 12 is about.
 	/// </summary>
 	[Test]
-	public async Task Oracle_AnswersForResolvedAndUnresolvedNames()
+	public async Task Classifier_AnswersAllThreeKindsFromTheRealLibrary()
 	{
-		string[] corpusFunctions = ["add", "strcat", "switch", "iter", "ansi", "ucstr"];
+		string[] evaluating = ["add", "strcat", "switch", "iter", "ansi", "ucstr"];
 
-		foreach (var name in corpusFunctions)
+		foreach (var name in evaluating)
 		{
-			await Assert.That(IsKnownFunction(name)).IsTrue().Because($"the corpus calls {name}()");
+			await Assert.That(ClassifyFunction(name)).IsEqualTo(SoftcodeCallKind.EvaluatesArguments)
+				.Because($"the corpus calls {name}(), which evaluates its arguments");
 		}
 
-		await Assert.That(IsKnownFunction("notafunction")).IsFalse();
+		// lit: Literal | NoParse (StringFunctions.cs:53). localize: NoParse, MaxArgs 1
+		// (DbrefFunctions.cs:576). Both reach a raw-source branch of CallFunction.
+		foreach (var name in (string[])["lit", "localize"])
+		{
+			await Assert.That(ClassifyFunction(name)).IsEqualTo(SoftcodeCallKind.CopiesArgumentSource)
+				.Because($"{name}() copies the source between its parentheses instead of evaluating it");
+		}
+
+		await Assert.That(ClassifyFunction("notafunction")).IsEqualTo(SoftcodeCallKind.Unresolved);
+
+		// switch and iter are NoParse with MaxArgs > 1, the branch that slices each argument from its
+		// own start index. If that were ever reclassified, most of the corpus would stop breaking.
+		await Assert.That(ClassifyFunction("switch")).IsEqualTo(SoftcodeCallKind.EvaluatesArguments);
 	}
 
 	/// <summary>
@@ -445,7 +503,7 @@ public class SoftcodeLayoutEquivalenceTests
 				var tokens = TestLexer.Lex(source);
 				foreach (var width in Widths)
 				{
-					var breaks = SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction,
+					var breaks = SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction,
 						parseType: dialect);
 
 					foreach (var b in breaks)
@@ -483,12 +541,12 @@ public class SoftcodeLayoutEquivalenceTests
 	{
 		const string source = "[aaaaaaaaaaaa,bbbbbbbbbbbb]";
 		var tokens = TestLexer.Lex(source);
-		var breaks = SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: IsKnownFunction);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: ClassifyFunction);
 
 		await Assert.That(breaks).Count().IsEqualTo(1);
 		await Assert.That(tokens[breaks[0].TokenIndex].Type).IsEqualTo("OBRACK");
 
-		var formatted = SoftcodeRenderer.Format(source, width: 20, IsKnownFunction);
+		var formatted = SoftcodeRenderer.Format(source, width: 20, ClassifyFunction);
 		await Assert.That(formatted).IsNotEqualTo(source);
 		await Assert.That(await Eval(formatted)).IsEqualTo(await Eval(source))
 			.Because($"breaking after '[' changed evaluation. Formatted:\n{formatted}");
@@ -502,17 +560,96 @@ public class SoftcodeLayoutEquivalenceTests
 	public async Task UnresolvedFunctionName_ProducesNoBreakAndNoTextChange()
 	{
 		const string source = "notafunction(aaaaaaaaaa,bbbbbbbbbb,cccccccccc)";
-		await Assert.That(IsKnownFunction("notafunction")).IsFalse();
+		await Assert.That(ClassifyFunction("notafunction")).IsEqualTo(SoftcodeCallKind.Unresolved);
 
 		var tokens = TestLexer.Lex(source);
 		foreach (var width in Widths)
 		{
-			await Assert.That(SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction)).IsEmpty()
+			await Assert.That(SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction)).IsEmpty()
 				.Because($"width {width} broke into a call the parser reproduces as text");
-			await Assert.That(SoftcodeRenderer.Format(source, width, IsKnownFunction)).IsEqualTo(source);
+			await Assert.That(SoftcodeRenderer.Format(source, width, ClassifyFunction)).IsEqualTo(source);
 		}
 
 		await Assert.That(await Eval(source)).IsEqualTo(source);
+	}
+
+	/// <summary>
+	/// Ruling 12, structurally. A call that copies its argument source is atomic: <c>Compute</c> emits
+	/// nothing at all inside its span, including at a bracket, because no visitor ever runs over that
+	/// span to discard a delimiter's absorbed whitespace.
+	/// </summary>
+	[Test]
+	public async Task SourceCopyingCalls_AreAtomic()
+	{
+		string[] sources =
+		[
+			"lit(a,bbbbbbbbbbbbbbbbbbbb)",
+			"lit(aaaaaaaaaa,bbbbbbbbbb,cccccccccc,dddddddddd)",
+			"lit(aaaaaaaaaa,[strcat(bbbbbbbbbb,cccccccccc)],dddddddddd)",
+			"localize(strcat(aaaaaaaaaa,bbbbbbbbbb,cccccccccc))"
+		];
+
+		foreach (var source in sources)
+		{
+			var tokens = TestLexer.Lex(source);
+			foreach (var width in Widths)
+			{
+				await Assert.That(SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction))
+					.IsEmpty().Because($"width {width} broke inside [{source}], whose source is copied verbatim");
+				await Assert.That(SoftcodeRenderer.Format(source, width, ClassifyFunction)).IsEqualTo(source);
+			}
+		}
+
+		// The outer call still breaks; only the source-copying one is left alone.
+		const string nested = "strcat(aaaaaaaaaa,lit(bbbbbbbbbb,cccccccccc),dddddddddd)";
+		var nestedTokens = TestLexer.Lex(nested);
+		var breaks = SoftcodeLayout.Compute(nestedTokens, width: 20, classifyFunction: ClassifyFunction);
+		var litOpen = nestedTokens.Index().First(x => x.Item.Text.StartsWith("lit(", StringComparison.Ordinal)).Index;
+		var litClose = nestedTokens.Index().First(x => x.Index > litOpen && x.Item.Type == "CPAREN").Index;
+
+		await Assert.That(breaks).IsNotEmpty();
+		await Assert.That(breaks.Any(b => b.TokenIndex >= litOpen && b.TokenIndex <= litClose)).IsFalse()
+			.Because("nothing inside lit() may be broken, however deeply the enclosing call is broken");
+	}
+
+	/// <summary>
+	/// Ruling 12's sharpest case, by evaluation. Without the fix this is the exact input that goes red:
+	/// <c>lit</c> resolves, so the name-resolution oracle alone would have permitted an opener break and
+	/// two comma breaks, and <c>LiteralArgumentText</c> would have copied all three newlines out.
+	/// </summary>
+	[Test]
+	public async Task LiteralCall_WouldLeakItsDelimiterWhitespaceIfBroken()
+	{
+		const string source = "lit(aaaaaaaaaa,bbbbbbbbbb,cccccccccc)";
+
+		// What the pre-Ruling-12 layout would have produced: classify lit as an ordinary function.
+		var asIfEvaluating = SoftcodeRenderer.Format(source, 20,
+			name => name == "lit" ? SoftcodeCallKind.EvaluatesArguments : ClassifyFunction(name));
+
+		await Assert.That(asIfEvaluating).IsNotEqualTo(source);
+		await Assert.That(await Eval(asIfEvaluating)).IsNotEqualTo(await Eval(source))
+			.Because("if lit() round-tripped under the old classification, Ruling 12 would be idle");
+
+		// What it produces now.
+		await Assert.That(SoftcodeRenderer.Format(source, 20, ClassifyFunction)).IsEqualTo(source);
+		await Assert.That(await Eval(source)).IsEqualTo("aaaaaaaaaa,bbbbbbbbbb,cccccccccc");
+	}
+
+	/// <summary>
+	/// Ruling 13. <c>TestLexer</c> applies the orphaned-closer rewrite the evaluation path applies
+	/// (<c>MUSHCodeParser.cs:353-354</c>), so the layout engine and the evaluator see the same stream.
+	/// A corpus lexed differently from what it evaluates proves nothing about what it evaluates.
+	/// </summary>
+	[Test]
+	public async Task OrphanedClosers_AreLexedAsTextJustAsTheEvaluatorLexesThem()
+	{
+		await Assert.That(TestLexer.Lex("a]b").Select(t => t.Type)).DoesNotContain("CBRACK");
+		await Assert.That(TestLexer.Lex("a}b").Select(t => t.Type)).DoesNotContain("CBRACE");
+
+		// A matched pair is untouched; only the closer with nothing to close is rewritten.
+		await Assert.That(TestLexer.Lex("[a]").Select(t => t.Type)).Contains("CBRACK");
+		await Assert.That(TestLexer.Lex("[a]]").Count(t => t.Type == "CBRACK")).IsEqualTo(1);
+		await Assert.That(TestLexer.Lex("{a}").Select(t => t.Type)).Contains("CBRACE");
 	}
 
 	/// <summary>
@@ -525,7 +662,7 @@ public class SoftcodeLayoutEquivalenceTests
 		var tokens = TestLexer.Lex("strcat(alpha,bravo,charlie,delta,echo,foxtrot,golf,hotel,india,juliet)");
 
 		await Assert.That(SoftcodeLayout.Compute(tokens, width: 20)).IsEmpty();
-		await Assert.That(SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: IsKnownFunction)).IsNotEmpty();
+		await Assert.That(SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: ClassifyFunction)).IsNotEmpty();
 	}
 
 	/// <summary>
@@ -538,11 +675,11 @@ public class SoftcodeLayoutEquivalenceTests
 	public async Task SuppressionPropagatesInwardButABracketClearsIt()
 	{
 		var suppressed = TestLexer.Lex("notafunction(aaaa,strcat(bbbbbbbbbb,cccccccccc),dddd)");
-		await Assert.That(SoftcodeLayout.Compute(suppressed, width: 20, isKnownFunction: IsKnownFunction))
+		await Assert.That(SoftcodeLayout.Compute(suppressed, width: 20, classifyFunction: ClassifyFunction))
 			.IsEmpty().Because("a call inside an unresolved call is reproduced as text as well");
 
 		var bracketed = TestLexer.Lex("notafunction(aaaa,[strcat(bbbbbbbbbb,cccccccccc)],dddd)");
-		var breaks = SoftcodeLayout.Compute(bracketed, width: 20, isKnownFunction: IsKnownFunction);
+		var breaks = SoftcodeLayout.Compute(bracketed, width: 20, classifyFunction: ClassifyFunction);
 
 		var open = bracketed.Index().First(x => x.Item.Type == "OBRACK").Index;
 		var close = bracketed.Index().First(x => x.Item.Type == "CBRACK").Index;
@@ -564,9 +701,9 @@ public class SoftcodeLayoutEquivalenceTests
 
 		foreach (var width in Widths)
 		{
-			await Assert.That(SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction)).IsEmpty()
+			await Assert.That(SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction)).IsEmpty()
 				.Because($"width {width} broke at a prose comma");
-			await Assert.That(SoftcodeRenderer.Format(source, width, IsKnownFunction)).IsEqualTo(source);
+			await Assert.That(SoftcodeRenderer.Format(source, width, ClassifyFunction)).IsEqualTo(source);
 		}
 
 		await Assert.That(await Eval(source)).IsEqualTo(source);
@@ -588,9 +725,9 @@ public class SoftcodeLayoutEquivalenceTests
 
 		foreach (var width in Widths)
 		{
-			await Assert.That(SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction)).IsEmpty()
+			await Assert.That(SoftcodeLayout.Compute(tokens, width, classifyFunction: ClassifyFunction)).IsEmpty()
 				.Because($"width {width} broke at a bare parenthesis");
-			await Assert.That(SoftcodeRenderer.Format(source, width, IsKnownFunction)).IsEqualTo(source);
+			await Assert.That(SoftcodeRenderer.Format(source, width, ClassifyFunction)).IsEqualTo(source);
 		}
 
 		await Assert.That(await Eval(source)).IsEqualTo(source);

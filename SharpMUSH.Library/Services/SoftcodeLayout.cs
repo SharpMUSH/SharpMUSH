@@ -1,7 +1,42 @@
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services;
+
+/// <summary>
+/// What a <c>name(...)</c> does with the text between its parentheses. This — not "is it a function" —
+/// is what decides whether a line break inside the call is safe, because the delimiters absorb the
+/// whitespace that follows them and only a construct that <em>evaluates</em> its contents throws that
+/// whitespace away.
+/// </summary>
+public enum SoftcodeCallKind
+{
+	/// <summary>
+	/// Resolves to nothing the parser will dispatch. <c>LiteralFunctionCall</c> reproduces the call as
+	/// text, slicing its <c>FUNCHAR</c>, <c>COMMAWS</c> and <c>CPAREN</c> terminals verbatim from the
+	/// source, so none of those may be broken at. Its arguments <em>are</em> still visited, so a
+	/// <c>[...]</c> inside re-enables evaluation and may be broken at.
+	/// </summary>
+	Unresolved,
+
+	/// <summary>
+	/// An ordinary function: its arguments are evaluated, so its delimiters are structural and the
+	/// whitespace they absorb never reaches the output. Includes <c>NoParse</c> functions with more
+	/// than one argument, whose deferred text is sliced from each argument's own start index and so
+	/// excludes the preceding delimiter's whitespace.
+	/// </summary>
+	EvaluatesArguments,
+
+	/// <summary>
+	/// Copies the source between its parentheses instead of evaluating it — <c>Literal</c> via
+	/// <c>LiteralArgumentText</c>, or <c>NoParse</c> with one argument via the whole-context
+	/// <c>MModule.substring</c>. <b>Nothing</b> inside such a call may be broken at, not even a
+	/// bracket, because no visitor ever runs over that span to discard the whitespace.
+	/// </summary>
+	CopiesArgumentSource
+}
 
 /// <summary>
 /// A single line break in a softcode rendering: after emitting <paramref name="TokenIndex"/>'s text
@@ -27,14 +62,14 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// </para>
 /// <list type="bullet">
 /// <item><description>
-/// After a <c>FUNCHAR</c> that opens a call the parser will actually dispatch. <c>FUNCHAR</c> is the
-/// only way <c>SharpMUSHParser.g4</c> opens a <c>function</c> (see its <c>function:</c> rule), but
-/// that is not sufficient: a name resolving to no function is copied through as text by
-/// <c>SharpMUSHParserVisitor.LiteralFunctionCall</c>, which slices its <c>FUNCHAR</c>,
-/// <c>COMMAWS</c> and <c>CPAREN</c> terminals verbatim from the source — absorbed whitespace
-/// included. So resolution decides it, and the caller supplies the oracle. A bare <c>OPAREN</c>
-/// reaches the parser through <c>beginGenericText</c> and is plain text, so it is neither a group nor
-/// a break position.
+/// After a <c>FUNCHAR</c> that opens a call which <b>evaluates</b> what is between its parentheses.
+/// <c>FUNCHAR</c> is the only way <c>SharpMUSHParser.g4</c> opens a <c>function</c> (see its
+/// <c>function:</c> rule), but that is not sufficient, and neither is "the name resolves":
+/// <c>LiteralFunctionCall</c> reproduces an unresolved call from its terminals sliced verbatim, and
+/// <c>LiteralArgumentText</c> reproduces a <c>Literal</c> call's contents from a raw source span. Both
+/// carry the absorbed whitespace into the output. So the caller classifies each name — see
+/// <see cref="SoftcodeCallKind"/>. A bare <c>OPAREN</c> reaches the parser through
+/// <c>beginGenericText</c> and is plain text, so it is neither a group nor a break position.
 /// </description></item>
 /// <item><description>
 /// After a <c>COMMAWS</c> whose immediately-enclosing group is opened by such a <c>FUNCHAR</c> — that
@@ -64,8 +99,10 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// final argument. Closers cuddle the last item.
 /// </description></item>
 /// <item><description>
-/// Never break inside a brace group. Brace contents are literal in some contexts and re-parsed as
-/// code in others, so a brace group is atomic here: always rendered flat, never recursed into.
+/// Never break inside a brace group, nor inside a <see cref="SoftcodeCallKind.CopiesArgumentSource"/>
+/// call. Brace contents are literal in some contexts and re-parsed as code in others, and a
+/// source-copying call's contents are never visited at all, so both are atomic here: always rendered
+/// flat, never recursed into.
 /// </description></item>
 /// </list>
 /// <para>
@@ -102,15 +139,16 @@ public static class SoftcodeLayout
 	/// <param name="tokens">The lexed softcode, in source order.</param>
 	/// <param name="width">Target line width in columns.</param>
 	/// <param name="indentUnit">Columns of indent added per nesting level.</param>
-	/// <param name="isKnownFunction">
-	/// Answers whether a name resolves to something the parser will call — consult the same sources
-	/// <c>SharpMUSHParserVisitor.CallFunction</c> does, in the same order: the parser's
-	/// <c>FunctionLibrary</c>, then the <c>@function</c> registry. A name that does not resolve is
-	/// reproduced as text with its delimiters' whitespace intact, so its call is laid out flat.
+	/// <param name="classifyFunction">
+	/// Classifies a function name — see <see cref="SoftcodeCallKind"/>. Resolve names the way
+	/// <c>SharpMUSHParserVisitor.CallFunction</c> does, in the same order (the parser's
+	/// <c>FunctionLibrary</c>, then the <c>@function</c> registry), and pass a resolved entry's
+	/// <see cref="SharpFunctionAttribute"/> to <see cref="Classify"/> rather than testing its flags by
+	/// hand.
 	/// <para>
-	/// <b>Omitting this is the safe choice, not the convenient one:</b> the default treats every name
-	/// as unresolved, so a caller with no oracle gets no <c>FUNCHAR</c> or <c>COMMAWS</c> breaks at all
-	/// rather than optimistic ones that might insert a newline into literal text.
+	/// <b>Omitting this is the safe choice, not the convenient one:</b> the default classifies every
+	/// name as <see cref="SoftcodeCallKind.CopiesArgumentSource"/>, the most restrictive answer, so a
+	/// caller with no classifier renders every call flat rather than guessing optimistically.
 	/// </para>
 	/// </param>
 	/// <param name="parseType">
@@ -125,7 +163,7 @@ public static class SoftcodeLayout
 	/// </param>
 	/// <returns>The breaks, in ascending token order. Empty when everything fits flat.</returns>
 	public static IReadOnlyList<SoftcodeBreak> Compute(IReadOnlyList<TokenInfo> tokens, int width,
-		int indentUnit = 2, Func<string, bool>? isKnownFunction = null,
+		int indentUnit = 2, Func<string, SoftcodeCallKind>? classifyFunction = null,
 		ParseType parseType = ParseType.Function)
 	{
 		if (tokens.Count == 0)
@@ -135,7 +173,8 @@ public static class SoftcodeLayout
 
 		var effectiveWidth = Math.Max(1, width);
 		var effectiveIndentUnit = Math.Max(0, indentUnit);
-		var root = BuildGroupTree(tokens, isKnownFunction ?? (_ => false), SeparatesCommands(parseType));
+		var root = BuildGroupTree(tokens, classifyFunction ?? (_ => SoftcodeCallKind.CopiesArgumentSource),
+			SeparatesCommands(parseType));
 		MeasureFlat(root, tokens);
 
 		var breaks = new List<SoftcodeBreak>();
@@ -143,6 +182,30 @@ public static class SoftcodeLayout
 
 		return breaks;
 	}
+
+	/// <summary>
+	/// Classifies a <em>resolved</em> function from its declaration, so that every caller building a
+	/// <c>classifyFunction</c> delegate applies one rule rather than three divergent copies of it.
+	/// <para>
+	/// The two source-copying branches of <c>SharpMUSHParserVisitor.CallFunction</c> are:
+	/// <c>Literal</c> (<c>:795-803</c>), whose single argument is <c>LiteralArgumentText</c> — the raw
+	/// span from just past the <c>(</c> to the <c>)</c>, so every delimiter's absorbed whitespace is
+	/// inside it — and <c>NoParse</c> with <c>MaxArgs == 1</c> (<c>:818-826</c>), which returns
+	/// <c>MModule.substring</c> over the whole function context.
+	/// </para>
+	/// <para>
+	/// <c>NoParse</c> with more than one argument is <b>not</b> in that set (<c>:827-839</c>): each
+	/// argument's deferred text is <c>GetContextText(x)</c>, sliced from that argument's own
+	/// <c>Start.StartIndex</c>, which begins after the preceding <c>COMMAWS</c> and so excludes the
+	/// whitespace it absorbed. <c>switch</c> (<c>MaxArgs = int.MaxValue</c>) and <c>iter</c>
+	/// (<c>MaxArgs = 4</c>) are both in that branch and both round-trip in the equivalence corpus.
+	/// </para>
+	/// </summary>
+	public static SoftcodeCallKind Classify(SharpFunctionAttribute attribute) =>
+		attribute.Flags.HasFlag(FunctionFlags.Literal)
+		|| (attribute.Flags.HasFlag(FunctionFlags.NoParse) && attribute.MaxArgs == 1)
+			? SoftcodeCallKind.CopiesArgumentSource
+			: SoftcodeCallKind.EvaluatesArguments;
 
 	/// <summary>
 	/// Whether a root-level <c>;</c> is a command separator in this dialect, and so a break position.
@@ -188,8 +251,8 @@ public static class SoftcodeLayout
 	/// recognition off is text, so it opens no break positions.
 	/// </para>
 	/// </summary>
-	private static Group BuildGroupTree(IReadOnlyList<TokenInfo> tokens, Func<string, bool> isKnownFunction,
-		bool semicolonsSeparateCommands)
+	private static Group BuildGroupTree(IReadOnlyList<TokenInfo> tokens,
+		Func<string, SoftcodeCallKind> classifyFunction, bool semicolonsSeparateCommands)
 	{
 		var root = new Group(openIndex: -1, openType: string.Empty);
 		var stack = new Stack<Group>();
@@ -201,17 +264,22 @@ public static class SoftcodeLayout
 			if (Array.IndexOf(Openers, type) >= 0)
 			{
 				var enclosingSuppresses = stack.Peek().SuppressesFunctions;
+				var kind = type == "FUNCHAR"
+					? classifyFunction(FunctionName(tokens[i].Text))
+					: SoftcodeCallKind.EvaluatesArguments;
 				var child = new Group(i, type)
 				{
 					SuppressesFunctions = type switch
 					{
-						// A bracket re-enables function recognition, however deeply it is buried.
+						// A bracket re-enables function recognition, however deeply it is buried — but only
+						// where a visitor actually runs over it, which CopiesSource below rules out.
 						"OBRACK" => false,
-						// A call the parser will not dispatch is text, and so is everything inside it.
-						"FUNCHAR" => enclosingSuppresses || !isKnownFunction(FunctionName(tokens[i].Text)),
+						// Anything but a call that evaluates its arguments is text at its own delimiters.
+						"FUNCHAR" => enclosingSuppresses || kind != SoftcodeCallKind.EvaluatesArguments,
 						// Braces are never recursed into, so their own state is never consulted.
 						_ => enclosingSuppresses
-					}
+					},
+					CopiesSource = kind == SoftcodeCallKind.CopiesArgumentSource
 				};
 				stack.Peek().Children.Add(child);
 				stack.Push(child);
@@ -304,9 +372,11 @@ public static class SoftcodeLayout
 	private static int Layout(Group group, IReadOnlyList<TokenInfo> tokens, int depth, int column, int width,
 		int indentUnit, List<SoftcodeBreak> breaks)
 	{
-		// A brace group is atomic: its contents may be literal text, so it is never broken into.
+		// A brace group and a source-copying call are both atomic: their contents reach the output as
+		// raw source, so no break anywhere inside them is safe — not even at a bracket, since no visitor
+		// runs over that span to discard the whitespace a delimiter absorbed.
 		// Anything else stays flat only if it is genuinely one line and that line fits.
-		if (group.OpenType == "OBRACE" || (!group.HasNewline && column + group.FlatWidth <= width))
+		if (group.IsAtomic || (!group.HasNewline && column + group.FlatWidth <= width))
 		{
 			return group.HasNewline ? group.FlatWidth : column + group.FlatWidth;
 		}
@@ -412,5 +482,16 @@ public static class SoftcodeLayout
 		/// state opens no break positions: its delimiters' absorbed whitespace reaches the output.
 		/// </summary>
 		public bool SuppressesFunctions { get; init; }
+
+		/// <summary>
+		/// Whether this group is a call whose contents are copied from the source rather than evaluated
+		/// (<see cref="SoftcodeCallKind.CopiesArgumentSource"/>).
+		/// </summary>
+		public bool CopiesSource { get; init; }
+
+		/// <summary>
+		/// Whether the group is rendered flat unconditionally, so that nothing inside it is ever broken.
+		/// </summary>
+		public bool IsAtomic => OpenType == "OBRACE" || CopiesSource;
 	}
 }
