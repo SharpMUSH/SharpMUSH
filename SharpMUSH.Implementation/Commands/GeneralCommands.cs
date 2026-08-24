@@ -1086,8 +1086,14 @@ public partial class Commands
 
 			if (atrs.IsAttribute)
 			{
-				var showPublicOnly = Configuration!.CurrentValue.Cosmetic.ExaminePublicAttributes;
 				var showAll = switches.Contains("ALL");
+
+				var executorConnection = await ConnectionService!.Get(executor.Object().DBRef).FirstOrDefaultAsync();
+				var width = executorConnection is not null
+					&& executorConnection.Metadata.TryGetValue("WIDTH", out var widthStr)
+					&& int.TryParse(widthStr, out var parsedWidth)
+						? parsedWidth
+						: 78;
 
 				foreach (var attr in atrs.AsAttributes)
 				{
@@ -1105,9 +1111,24 @@ public partial class Commands
 						continue;
 					}
 
-					await NotifyService!.Notify(enactor,
-						Format($"{MModule.single($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight()}{attr.Value}"),
-						enactor);
+					var header = MModule.single($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight();
+					var parseType = attr.SyntaxParseType();
+
+					if (parseType is null)
+					{
+						await NotifyService!.Notify(enactor, Format($"{header}{attr.Value}"), enactor);
+						continue;
+					}
+
+					await NotifyService!.Notify(enactor, header, enactor);
+
+					var source = attr.Value;
+					var tokens = parser.Tokenize(source);
+					var semanticTokens = parser.GetSemanticTokens(source, parseType.Value);
+					var errors = parser.ValidateAndGetErrors(source, parseType.Value);
+					var formatted = SoftcodeFormatter.Format(source, tokens, semanticTokens, errors, width, parser, parseType.Value);
+
+					await NotifyService!.Notify(enactor, formatted, enactor);
 				}
 			}
 
