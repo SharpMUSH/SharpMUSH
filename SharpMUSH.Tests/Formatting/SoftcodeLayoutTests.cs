@@ -6,25 +6,8 @@ namespace SharpMUSH.Tests.Formatting;
 public class SoftcodeLayoutTests
 {
 	/// <summary>Renders a token list plus its breaks back to text, so tests read as before/after.</summary>
-	private static string Render(IReadOnlyList<TokenInfo> tokens, IReadOnlyList<SoftcodeBreak> breaks)
-	{
-		var byIndex = breaks.ToDictionary(b => b.TokenIndex, b => b.Indent);
-		var sb = new System.Text.StringBuilder();
-		for (var i = 0; i < tokens.Count; i++)
-		{
-			if (byIndex.TryGetValue(i, out var indent))
-			{
-				sb.Append(tokens[i].Text.TrimEnd());
-				sb.Append('\n').Append(new string(' ', indent));
-			}
-			else
-			{
-				sb.Append(tokens[i].Text);
-			}
-		}
-
-		return sb.ToString();
-	}
+	private static string Render(IReadOnlyList<TokenInfo> tokens, IReadOnlyList<SoftcodeBreak> breaks) =>
+		SoftcodeRenderer.Render(tokens, breaks);
 
 	private static IReadOnlyList<TokenInfo> Lex(string source) => TestLexer.Lex(source);
 
