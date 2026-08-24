@@ -22,9 +22,12 @@ public static class SemanticTokenRenderer
 	/// </param>
 	/// <param name="tokens">The semantic tokens describing spans of <paramref name="source"/>.</param>
 	/// <param name="overrideAt">
-	/// Consulted with each token's start offset before falling back to the palette; a non-null
-	/// result takes precedence over <see cref="SemanticTokenAnsiPalette"/>. Used by callers that
-	/// need to layer additional styling (e.g. error spans) over the semantic colours.
+	/// Consulted per character offset — not once per token — before falling back to the palette; a
+	/// non-null result takes precedence over <see cref="SemanticTokenAnsiPalette"/>. Gap spans (text
+	/// no token covers) consult it too. Used by callers that need to layer additional styling (e.g.
+	/// syntax-error spans) over the semantic colours; those spans are exactly the characters most
+	/// likely to fall in an untokenized gap or straddle a token boundary, so per-token consultation
+	/// would not serve that use case.
 	/// </param>
 	/// <returns><paramref name="source"/> unstyled when <paramref name="tokens"/> is empty.</returns>
 	public static MString Render(
@@ -50,29 +53,78 @@ public static class SemanticTokenRenderer
 		var cursor = 0;
 		foreach (var token in sortedTokens)
 		{
-			var start = ToOffset(lineStarts, token.Range.Start);
-			var end = ToOffset(lineStarts, token.Range.End);
+			var tokenStart = ToOffset(lineStarts, token.Range.Start);
+			var tokenEnd = ToOffset(lineStarts, token.Range.End);
+
+			// A token entirely consumed by a preceding (overlapping) token contributes nothing.
+			// The renderer must not depend on the LSP non-overlapping-token convention.
+			if (tokenEnd <= cursor)
+				continue;
+
+			// Clamp instead of trusting tokenStart: an overlapping token's covered prefix was
+			// already emitted by an earlier token and must not be sliced out (and styled) again.
+			var start = Math.Max(tokenStart, cursor);
 
 			if (start > cursor)
-				parts.Add(MModule.substring(cursor, start - cursor, source));
+				EmitStyledRuns(source, cursor, start, null, overrideAt, parts);
 
-			if (end > start)
-			{
-				var span = MModule.substring(start, end - start, source);
-				var style = overrideAt?.Invoke(start) ?? SemanticTokenAnsiPalette.GetStyle(token.TokenType, token.Modifiers);
-				parts.Add(style is null ? span : MModule.MarkupSingle2(style, span));
-			}
+			var baseStyle = SemanticTokenAnsiPalette.GetStyle(token.TokenType, token.Modifiers);
+			EmitStyledRuns(source, start, tokenEnd, baseStyle, overrideAt, parts);
 
-			cursor = Math.Max(cursor, end);
+			cursor = tokenEnd;
 		}
 
 		var totalLength = MModule.getLength(source);
 		if (cursor < totalLength)
-			parts.Add(MModule.substring(cursor, totalLength - cursor, source));
+			EmitStyledRuns(source, cursor, totalLength, null, overrideAt, parts);
 
 		// ConcatMany (a single StringBuilder pass) — never MModule.concat in a loop, which is
 		// O(n) per call and quadratic over a token list.
 		return MModule.multiple(parts);
+	}
+
+	/// <summary>
+	/// Emits one <see cref="MString"/> piece per contiguous run of <c>source[start, end)</c> that
+	/// shares the same effective style, where the effective style at an offset is
+	/// <c>overrideAt(offset) ?? baseStyle</c>. When <paramref name="overrideAt"/> is <c>null</c> the
+	/// whole range shares <paramref name="baseStyle"/> and is emitted as a single piece — the common,
+	/// override-free path (help-file rendering) costs no extra per-character calls and produces
+	/// exactly the same number of pieces as before this fix. When an override is supplied, its answer
+	/// is sampled once per character to find the offsets where it changes, but only one piece is
+	/// emitted per run — never one piece per character, which would defeat <c>ConcatMany</c>.
+	/// </summary>
+	private static void EmitStyledRuns(
+		MString source, int start, int end, Ansi? baseStyle, Func<int, Ansi?>? overrideAt, List<MString> parts)
+	{
+		if (end <= start)
+			return;
+
+		if (overrideAt is null)
+		{
+			EmitRun(source, start, end, baseStyle, parts);
+			return;
+		}
+
+		var runStart = start;
+		var runStyle = overrideAt(start) ?? baseStyle;
+		for (var offset = start + 1; offset < end; offset++)
+		{
+			var style = overrideAt(offset) ?? baseStyle;
+			if (!ReferenceEquals(style, runStyle))
+			{
+				EmitRun(source, runStart, offset, runStyle, parts);
+				runStart = offset;
+				runStyle = style;
+			}
+		}
+
+		EmitRun(source, runStart, end, runStyle, parts);
+	}
+
+	private static void EmitRun(MString source, int start, int end, Ansi? style, List<MString> parts)
+	{
+		var span = MModule.substring(start, end - start, source);
+		parts.Add(style is null ? span : MModule.MarkupSingle2(style, span));
 	}
 
 	/// <summary>
