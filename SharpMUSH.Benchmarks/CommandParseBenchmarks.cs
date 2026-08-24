@@ -14,6 +14,7 @@ public class CommandParseBenchmarks : BaseBenchmark
 	private static readonly MString ThinkNameSubstInput = MModule.single("think %N");
 	private static readonly MString PemitSelfInput = MModule.single("@pemit me=Hello World");
 	private static readonly MString SetAttrInput = MModule.single("@set me=SAFE");
+	private static readonly MString PemitWithFunctionInput = MModule.single("@pemit me=[add(1,2)]");
 
 	public override async ValueTask Setup()
 	{
@@ -36,6 +37,10 @@ public class CommandParseBenchmarks : BaseBenchmark
 	[Benchmark(Description = "@pemit me=Hello World")]
 	public async Task PemitSelf() =>
 		await _parser!.CommandParse(PemitSelfInput);
+
+	[Benchmark(Description = "@pemit me=[add(1,2)] (function call in command argument)")]
+	public async Task PemitWithFunctionInArgument() =>
+		await _parser!.CommandParse(PemitWithFunctionInput);
 
 	[Benchmark(Description = "@set me=SAFE (flag toggle)")]
 	public async Task SetFlag() =>

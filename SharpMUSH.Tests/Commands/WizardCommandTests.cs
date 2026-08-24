@@ -135,6 +135,27 @@ public class WizardCommandTests
 			.Because("@force should evaluate [add(1,1)] to 2 before the & command stores it");
 	}
 
+	/// <summary>
+	/// Regression test for the command-argument subtree-reuse optimization (ArgumentSplit /
+	/// SharpMUSHParserVisitor.EvaluateArgumentSubtree): @FORCE is EqSplit + RSBrace WITHOUT
+	/// NoParse/RSNoParse, so its RHS is both (a) brace-preserved by the NoParse boundary-finding
+	/// pass (CommandBehavior.RSBrace -> ParserStateFlags.PreserveBraces) and (b) eagerly
+	/// function-evaluated afterwards — exercising the brace-preservation and subtree-reuse paths
+	/// together in the same argument.
+	/// </summary>
+	[Test]
+	public async ValueTask ForceCommand_PreservesBraces_WhileEvaluatingFunctionInside()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@force me={@pemit me=[add(1,2)]}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), "3", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
 	[Test]
 	public async ValueTask NotifyCommand()
 	{

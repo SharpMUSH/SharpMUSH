@@ -74,6 +74,25 @@ public class CommunicationCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
+	/// <summary>
+	/// Regression test for the command-argument subtree-reuse optimization (ArgumentSplit /
+	/// SharpMUSHParserVisitor.EvaluateArgumentSubtree): a function call with nested brackets inside
+	/// an EqSplit command's RHS argument must still evaluate correctly when the argument's parse
+	/// subtree is re-visited directly instead of being re-lexed from scratch a third time.
+	/// </summary>
+	[Test]
+	[Arguments("@pemit #1=[add(1,2)]", "3")]
+	[Arguments("@pemit #1=[add(1,[mul(2,3)])]", "7")]
+	public async ValueTask PemitWithFunctionCallInArgument(string command, string expected)
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
 	[Test]
 	[Arguments("@emit Test broadcast", "Test broadcast")]
 	[Arguments("@emit Another broadcast message", "Another broadcast message")]
