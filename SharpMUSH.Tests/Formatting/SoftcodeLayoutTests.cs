@@ -123,17 +123,129 @@ public class SoftcodeLayoutTests
 		await Assert.That(breaks.All(b => b.Indent <= 20)).IsTrue();
 	}
 
-	[Test]
-	public async Task EveryBreakFollowsAWhitespaceAbsorbingToken()
+	/// <summary>
+	/// Re-derives, from the token text alone, the innermost delimiter enclosing a token — returning the
+	/// opening token's index, or -1 at root. Deliberately independent of <see cref="SoftcodeLayout"/>'s
+	/// own group bookkeeping, so a test built on it can contradict the implementation. A name followed
+	/// by <c>(</c> opens a function call and <c>[</c>/<c>{</c> open their own groups; a bare <c>(</c>
+	/// does not, because <c>SharpMUSHParser.g4</c> opens <c>function</c> on <c>FUNCHAR</c> only and
+	/// routes a lone paren through <c>beginGenericText</c> as plain text.
+	/// </summary>
+	private static int EnclosingOpener(IReadOnlyList<TokenInfo> tokens, int index)
 	{
-		const string src = "switch(words(%0),0,nothing,1,[ucstr(%0)],{literal, text},done)";
+		var stack = new Stack<int>();
+		for (var i = 0; i < index; i++)
+		{
+			var text = tokens[i].Text.TrimEnd();
+			if ((text.Length > 1 && text.EndsWith('(')) || text is "[" or "{")
+			{
+				stack.Push(i);
+			}
+			else if (text is ")" or "]" or "}" && stack.Count > 0)
+			{
+				stack.Pop();
+			}
+		}
+
+		return stack.Count == 0 ? -1 : stack.Peek();
+	}
+
+	/// <summary>
+	/// The semantic-safety claim, asserted structurally. A COMMAWS is an argument separator only inside
+	/// name(...) and a SEMICOLON separates commands only at root; anywhere else the whitespace those
+	/// tokens absorb is literal program data, because VisitBeginGenericText emits the raw token text.
+	/// </summary>
+	[Test]
+	public async Task BreaksLandOnlyOnStructuralDelimiters()
+	{
+		string[] sources =
+		[
+			"switch(words(%0),0,nothing,1,[ucstr(%0)],{literal, text},done)",
+			"@emit A long line of prose, and more prose here;@pemit %#=a, b, c",
+			"switch(a,[ansi(hr,a long stretch of text),y],{b,c},trailing prose, and more)",
+			"iter(%0,a long chunk (with a parenthetical) of prose here,%b,%b)"
+		];
+
+		foreach (var src in sources)
+		{
+			var tokens = Lex(src);
+			foreach (var b in SoftcodeLayout.Compute(tokens, width: 20))
+			{
+				var opener = EnclosingOpener(tokens, b.TokenIndex);
+				switch (tokens[b.TokenIndex].Type)
+				{
+					case "COMMAWS":
+						await Assert.That(opener).IsNotEqualTo(-1).Because($"comma break at root in [{src}]");
+						await Assert.That(tokens[opener].Type).IsEqualTo("FUNCHAR")
+							.Because($"comma break outside an argument list in [{src}]");
+						break;
+					case "SEMICOLON":
+						await Assert.That(opener).IsEqualTo(-1).Because($"semicolon break inside a group in [{src}]");
+						break;
+					default:
+						// The only other break position is a group opener, which must be the token that
+						// this independent walk also treats as opening a group.
+						await Assert.That(EnclosingOpener(tokens, b.TokenIndex + 1)).IsEqualTo(b.TokenIndex)
+							.Because($"break after a non-delimiter in [{src}]");
+						break;
+				}
+			}
+		}
+	}
+
+	[Test]
+	public async Task RootLevelProse_IsNeverBrokenAtItsCommas()
+	{
+		const string src = "@emit A long line of prose, and more prose here, and yet more besides";
 		var tokens = Lex(src);
 		var breaks = SoftcodeLayout.Compute(tokens, width: 20);
 
-		string[] safe = ["FUNCHAR", "OPAREN", "OBRACK", "OBRACE", "COMMAWS", "EQUALS", "SEMICOLON"];
-		foreach (var b in breaks)
-		{
-			await Assert.That(safe).Contains(tokens[b.TokenIndex].Type);
-		}
+		await Assert.That(breaks).IsEmpty();
+	}
+
+	[Test]
+	public async Task BareParens_AreTextNotGroups()
+	{
+		// A lone '(' is beginGenericText, so it neither opens a group nor absorbs whitespace
+		// structurally; breaking after it would insert a literal newline into the emitted text.
+		// Two content tokens inside the parens, so that treating '(' as an opener would produce a break
+		// rather than being masked by the empty-group guard.
+		const string src = "@emit a long parenthetical (with several words, inside it) and then some more";
+		var tokens = Lex(src);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 20);
+
+		await Assert.That(breaks).IsEmpty();
+		await Assert.That(tokens.Select(t => t.Type)).Contains("OPAREN");
+	}
+
+	[Test]
+	public async Task StrayCloser_NeverLandsOnItsOwnLine()
+	{
+		const string src = "aaaaaaaaaaaaaaaaaaaa;)";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 10));
+
+		await Assert.That(rendered).DoesNotContain("\n)");
+	}
+
+	[Test]
+	public async Task EmptyCall_KeepsItsDelimitersTogether()
+	{
+		var tokens = Lex("rand()");
+		var breaks = SoftcodeLayout.Compute(tokens, width: 1);
+
+		await Assert.That(breaks).IsEmpty();
+	}
+
+	[Test]
+	public async Task LiteralNewlines_ResetTheColumn()
+	{
+		// Attributes have held literal newlines since PR #775. The bracket group starts a fresh line,
+		// so it is measured from column 0 and fits — accumulating the first line's width would break it.
+		const string src = "aaaaaaaaaaaaaaaaaaaaaaaaaa\n[switch(1,a,b)]";
+		var tokens = Lex(src);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 30);
+
+		await Assert.That(breaks).IsEmpty();
 	}
 }

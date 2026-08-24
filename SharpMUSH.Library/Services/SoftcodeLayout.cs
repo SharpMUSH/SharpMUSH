@@ -13,24 +13,45 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// <summary>
 /// Decides where a line break may be inserted when displaying MUSH softcode.
 /// <para>
-/// Softcode is whitespace-significant: whitespace is literal data almost everywhere. The single
-/// exception is the lexer's <c>fragment WS: [ \r\n\f\t]*</c>, which is attached to exactly seven
-/// token rules — <c>OBRACK</c>, <c>OBRACE</c>, <c>COMMAWS</c>, <c>EQUALS</c>, <c>SEMICOLON</c>,
-/// <c>OPAREN</c> and <c>FUNCHAR</c>. Whitespace immediately following one of those is absorbed by
-/// the token and is semantically invisible, so a newline plus indent there is free. Anywhere else
-/// it changes the program's meaning.
+/// Softcode is whitespace-significant: whitespace is literal data almost everywhere. Seven lexer
+/// rules carry <c>fragment WS: [ \r\n\f\t]*</c> and so swallow the whitespace that follows them —
+/// <c>OBRACK</c>, <c>OBRACE</c>, <c>COMMAWS</c>, <c>EQUALS</c>, <c>SEMICOLON</c>, <c>OPAREN</c> and
+/// <c>FUNCHAR</c>. That absorption is <b>not</b> on its own a licence to break.
+/// <c>VisitBeginGenericText</c> emits <c>GetContextText</c> — the raw token text, absorbed
+/// whitespace included — so wherever one of those tokens is not acting as a structural delimiter,
+/// its whitespace is literal program data and a newline inserted there changes the output.
 /// </para>
 /// <para>
-/// This engine therefore only ever breaks immediately after a group opener
-/// (<c>FUNCHAR</c>/<c>OPAREN</c>/<c>OBRACK</c>) or after a <c>COMMAWS</c>/<c>SEMICOLON</c>
-/// separator. <c>EQUALS</c> and <c>OBRACE</c> are equally safe but reserved for a later version.
-/// Two consequences follow and must not be weakened:
+/// A break is therefore emitted only where the token is <em>structural</em>:
+/// </para>
+/// <list type="bullet">
+/// <item><description>
+/// After a <c>FUNCHAR</c>, which is the only way <c>SharpMUSHParser.g4</c> opens a
+/// <c>function</c> (see its <c>function:</c> rule). A bare <c>OPAREN</c> reaches the parser through
+/// <c>beginGenericText</c> and is plain text, so it is neither a group nor a break position.
+/// </description></item>
+/// <item><description>
+/// After a <c>COMMAWS</c> whose immediately-enclosing group is opened by a <c>FUNCHAR</c> — that is,
+/// a genuine argument separator. A comma anywhere else is prose.
+/// </description></item>
+/// <item><description>
+/// After a <c>SEMICOLON</c> at root, where it separates commands. A <c>;</c> inside a function's
+/// arguments is literal.
+/// </description></item>
+/// <item><description>
+/// After an <c>OBRACK</c>. <b>Provisional</b>: bracket groups are treated as structural for now, but
+/// this is gated on Task 3's equivalence corpus proving it by evaluating formatted output. If that
+/// disproves it, drop <c>OBRACK</c> from <see cref="Openers"/> exactly as <c>OPAREN</c> was dropped.
+/// </description></item>
+/// </list>
+/// <para>
+/// Two further rules, neither of which may be weakened:
 /// </para>
 /// <list type="number">
 /// <item><description>
-/// Never break before a closing delimiter. There is no whitespace absorption at <c>CPAREN</c>,
-/// <c>CBRACK</c> or <c>CBRACE</c>, so a newline there becomes literal text inside the final
-/// argument. Closers cuddle the last item.
+/// Never break immediately before a closing delimiter. There is no whitespace absorption at
+/// <c>CPAREN</c>, <c>CBRACK</c> or <c>CBRACE</c>, so a newline there becomes literal text inside the
+/// final argument. Closers cuddle the last item.
 /// </description></item>
 /// <item><description>
 /// Never break inside a brace group. Brace contents are literal in some contexts and re-parsed as
@@ -38,15 +59,19 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// </description></item>
 /// </list>
 /// <para>
-/// Because every break sits immediately after a whitespace-absorbing token, a poor grouping
-/// decision can only produce ugly output — never a change of meaning.
+/// <c>EQUALS</c> and <c>OBRACE</c> absorb whitespace too, and are structural in some positions, but
+/// v1 never breaks at either.
 /// </para>
 /// </summary>
 public static class SoftcodeLayout
 {
-	private static readonly string[] Openers = ["FUNCHAR", "OPAREN", "OBRACK", "OBRACE"];
+	/// <summary>
+	/// Token types that open a group. <c>OPAREN</c> is deliberately absent: the grammar opens
+	/// <c>function</c> on <c>FUNCHAR</c> alone, so a bare <c>(</c> is text, not structure.
+	/// </summary>
+	private static readonly string[] Openers = ["FUNCHAR", "OBRACK", "OBRACE"];
+
 	private static readonly string[] Closers = ["CPAREN", "CBRACK", "CBRACE"];
-	private static readonly string[] Separators = ["COMMAWS", "SEMICOLON"];
 
 	/// <summary>
 	/// Computes the breaks needed to fit <paramref name="tokens"/> within <paramref name="width"/> columns.
@@ -54,7 +79,7 @@ public static class SoftcodeLayout
 	/// <param name="tokens">The lexed softcode, in source order.</param>
 	/// <param name="width">Target line width in columns.</param>
 	/// <param name="indentUnit">Columns of indent added per nesting level.</param>
-	/// <returns>The breaks, ordered by token index. Empty when everything fits flat.</returns>
+	/// <returns>The breaks, in ascending token order. Empty when everything fits flat.</returns>
 	public static IReadOnlyList<SoftcodeBreak> Compute(IReadOnlyList<TokenInfo> tokens, int width, int indentUnit = 2)
 	{
 		if (tokens.Count == 0)
@@ -65,19 +90,18 @@ public static class SoftcodeLayout
 		var effectiveWidth = Math.Max(1, width);
 		var effectiveIndentUnit = Math.Max(0, indentUnit);
 		var root = BuildGroupTree(tokens);
-		ComputeFlatWidths(root, tokens);
+		MeasureFlat(root, tokens);
 
 		var breaks = new List<SoftcodeBreak>();
 		Layout(root, tokens, depth: 0, column: 0, effectiveWidth, effectiveIndentUnit, breaks);
-		breaks.Sort((a, b) => a.TokenIndex.CompareTo(b.TokenIndex));
 
 		return breaks;
 	}
 
 	/// <summary>
-	/// Walks the tokens with a stack, from a synthetic root group. Unbalanced input never throws:
-	/// a closer with nothing but the root on the stack is ignored, and groups still open at end of
-	/// input close implicitly at the last token.
+	/// Walks the tokens with a stack, from a synthetic root group, recording each group's structural
+	/// break points as it goes. Unbalanced input never throws: a closer with nothing but the root on
+	/// the stack is ignored, and groups still open at end of input close implicitly at the last token.
 	/// </summary>
 	private static Group BuildGroupTree(IReadOnlyList<TokenInfo> tokens)
 	{
@@ -99,16 +123,25 @@ public static class SoftcodeLayout
 				// A closer with only the root left is stray text; drop it rather than unwinding the root.
 				if (stack.Count > 1)
 				{
-					var closed = stack.Pop();
-					closed.CloseIndex = i;
-					closed.HasCloser = true;
+					stack.Pop().CloseIndex = i;
 				}
 			}
-			else if (Array.IndexOf(Separators, type) >= 0)
+			else if (type == "COMMAWS")
 			{
-				// A separator belongs to the innermost group enclosing it, never to an ancestor —
-				// so a comma inside {...} is the brace group's, and is therefore never a break point.
-				stack.Peek().Separators.Add(i);
+				// Only an argument separator inside name(...). Elsewhere — at root, or inside a bracket
+				// or brace group — the comma is prose and its absorbed whitespace is literal.
+				if (stack.Peek().OpenType == "FUNCHAR")
+				{
+					stack.Peek().BreakPoints.Add(i);
+				}
+			}
+			else if (type == "SEMICOLON")
+			{
+				// Only a command separator at root. Inside a function's arguments a ';' is literal.
+				if (stack.Peek().OpenIndex < 0)
+				{
+					stack.Peek().BreakPoints.Add(i);
+				}
 			}
 		}
 
@@ -121,22 +154,43 @@ public static class SoftcodeLayout
 		return root;
 	}
 
-	/// <summary>Bottom-up: a group's flat width is the summed text length of its whole token span.</summary>
-	private static void ComputeFlatWidths(Group group, IReadOnlyList<TokenInfo> tokens)
+	/// <summary>
+	/// Bottom-up measurement of each group rendered on one line. Attribute text may contain literal
+	/// newlines, so this records both the column a flat rendering ends on and whether it spans lines.
+	/// </summary>
+	private static void MeasureFlat(Group group, IReadOnlyList<TokenInfo> tokens)
 	{
 		foreach (var child in group.Children)
 		{
-			ComputeFlatWidths(child, tokens);
+			MeasureFlat(child, tokens);
 		}
 
 		var start = group.OpenIndex < 0 ? 0 : group.OpenIndex;
-		var flat = 0;
+		var column = 0;
+		var hasNewline = false;
 		for (var i = start; i <= group.CloseIndex; i++)
 		{
-			flat += tokens[i].Text.Length;
+			var text = tokens[i].Text;
+			hasNewline |= text.Contains('\n');
+			column = Advance(column, text);
 		}
 
-		group.FlatWidth = flat;
+		group.FlatWidth = column;
+		group.HasNewline = hasNewline;
+	}
+
+	/// <summary>
+	/// Advances a column past a token's text. Attributes have held literal newlines since PR #775, so
+	/// a token carrying one starts a fresh line and the column becomes the width of that final line
+	/// rather than an accumulation across the whole token.
+	/// </summary>
+	private static int Advance(int column, string text)
+	{
+		var lastNewline = text.LastIndexOf('\n');
+
+		return lastNewline < 0
+			? column + text.Length
+			: text.Length - lastNewline - 1;
 	}
 
 	/// <summary>
@@ -146,34 +200,49 @@ public static class SoftcodeLayout
 		int indentUnit, List<SoftcodeBreak> breaks)
 	{
 		// A brace group is atomic: its contents may be literal text, so it is never broken into.
-		if (group.OpenType == "OBRACE" || column + group.FlatWidth <= width)
+		// Anything else stays flat only if it is genuinely one line and that line fits.
+		if (group.OpenType == "OBRACE" || (!group.HasNewline && column + group.FlatWidth <= width))
 		{
-			return column + group.FlatWidth;
+			return group.HasNewline ? group.FlatWidth : column + group.FlatWidth;
 		}
 
 		var indent = Math.Min(depth * indentUnit, width / 2);
 		var start = group.OpenIndex < 0 ? 0 : group.OpenIndex;
-		var end = group.CloseIndex;
 
-		// Breaking immediately before a closer would put a literal newline inside the last argument,
-		// so the final content token never carries a break.
-		var lastContent = group.HasCloser ? end - 1 : end;
+		// Breaking immediately before a closer would put a literal newline inside the last argument, so
+		// the last real content token never carries a break. Trailing closers are skipped rather than
+		// assumed to be exactly one: a group closed implicitly by end of input has none, and the root
+		// may end in any number of stray ones.
+		var lastContent = group.CloseIndex;
+		while (lastContent >= start && Array.IndexOf(Closers, tokens[lastContent].Type) >= 0)
+		{
+			lastContent--;
+		}
 
 		var i = start;
 		if (group.OpenIndex >= 0)
 		{
-			// The synthetic root has no opening delimiter and so emits no opener break; it breaks
-			// only at its own direct-child separators.
-			breaks.Add(new SoftcodeBreak(group.OpenIndex, indent));
-			column = indent;
+			// The synthetic root has no opening delimiter and so emits no opener break; it breaks only
+			// at its own structural separators. An empty group emits none either — there is nothing to
+			// put on the next line but the closer.
+			if (group.OpenIndex + 1 < lastContent)
+			{
+				breaks.Add(new SoftcodeBreak(group.OpenIndex, indent));
+				column = indent;
+			}
+			else
+			{
+				column = Advance(column, tokens[group.OpenIndex].Text);
+			}
+
 			i++;
 		}
 
-		var separators = group.Separators;
-		var separatorCursor = 0;
+		var breakPoints = group.BreakPoints;
+		var breakCursor = 0;
 		var childCursor = 0;
 
-		while (i <= end)
+		while (i <= group.CloseIndex)
 		{
 			if (childCursor < group.Children.Count && group.Children[childCursor].OpenIndex == i)
 			{
@@ -183,16 +252,16 @@ public static class SoftcodeLayout
 				continue;
 			}
 
-			column += tokens[i].Text.Length;
+			column = Advance(column, tokens[i].Text);
 
-			while (separatorCursor < separators.Count && separators[separatorCursor] < i)
+			while (breakCursor < breakPoints.Count && breakPoints[breakCursor] < i)
 			{
-				separatorCursor++;
+				breakCursor++;
 			}
 
-			if (separatorCursor < separators.Count && separators[separatorCursor] == i && i < lastContent)
+			if (breakCursor < breakPoints.Count && breakPoints[breakCursor] == i && i < lastContent)
 			{
-				separatorCursor++;
+				breakCursor++;
 				breaks.Add(new SoftcodeBreak(i, indent));
 				column = indent;
 			}
@@ -215,16 +284,20 @@ public static class SoftcodeLayout
 		/// <summary>Index of the last token in the group, inclusive — the closer when there is one.</summary>
 		public int CloseIndex { get; set; }
 
-		/// <summary>False when the group was closed implicitly by end of input rather than by a closer.</summary>
-		public bool HasCloser { get; set; }
-
-		/// <summary>Indices of this group's own direct-child separators, ascending.</summary>
-		public List<int> Separators { get; } = [];
+		/// <summary>
+		/// Indices of this group's own structural separators, ascending. Only separators that are
+		/// genuinely delimiters in this group's context are recorded; prose commas and literal
+		/// semicolons never reach here.
+		/// </summary>
+		public List<int> BreakPoints { get; } = [];
 
 		/// <summary>Nested groups, in source order.</summary>
 		public List<Group> Children { get; } = [];
 
-		/// <summary>Width of the group rendered on one line.</summary>
+		/// <summary>Column a flat rendering of the group ends on, measured from column 0.</summary>
 		public int FlatWidth { get; set; }
+
+		/// <summary>Whether the group's text already contains a literal newline.</summary>
+		public bool HasNewline { get; set; }
 	}
 }
