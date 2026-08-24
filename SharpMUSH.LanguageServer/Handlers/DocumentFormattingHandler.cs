@@ -21,16 +21,19 @@ namespace SharpMUSH.LanguageServer.Handlers;
 /// actually breaks instead of staying on one long line.
 /// </para>
 /// <para>
-/// <b>Not <c>.mush</c>/<c>.mu</c>.</b> <c>ForFileName</c> maps those to
-/// <see cref="MushAnalysisMode.CommandsPerLine"/>, whose <c>ToParseType()</c> returns
-/// <see cref="ParseType.Command"/> — and <c>SoftcodeLayout</c> only treats a root <c>;</c> as a
-/// break position under <see cref="ParseType.CommandList"/>. So a <c>.mush</c> file's semicolons
-/// still never break here. The gap is that <c>FormatIndented</c>, unlike <c>Validate</c>, has no
-/// per-line handling for <c>CommandsPerLine</c> (<c>Validate</c> special-cases it via
-/// <c>ValidatePerLine</c> — parsing and offsetting each line independently); nothing analogous
-/// exists for layout. The result is conservative, not incorrect — a <c>.mush</c> document simply
-/// gets no semicolon-driven breaking yet, same as under the default mode — but it is a real
-/// shortfall, left deliberately unclosed rather than folding line-by-line layout into this task.
+/// <b>A <c>.mush</c>/<c>.mu</c> document is not formatted at all.</b> <c>ForFileName</c> maps those to
+/// <see cref="MushAnalysisMode.CommandsPerLine"/>: each non-blank line is its own command, which is
+/// how a quote file is actually executed. <c>FormatIndented</c>, unlike <c>Validate</c>, has no
+/// per-line handling for that mode (<c>Validate</c> special-cases it via <c>ValidatePerLine</c>,
+/// parsing and offsetting each line independently); nothing analogous exists for layout, so it would
+/// lay the whole file out as one expression — and, because everything here is a whole-document
+/// <see cref="TextEdit"/>, write the result to disk. On a line such as
+/// <c>&amp;CMD #1=$give [a,b] to *:@pemit %#=ok</c> that is a destructive edit, not a cosmetic one.
+/// </para>
+/// <para>
+/// So this returns <b>no edit</b> for those documents. Formatting one is a no-op until per-line
+/// layout exists; a <c>.mushcmd</c>/<c>.mushfn</c>/<c>.fun</c> document, whose whole buffer really is
+/// one unit, formats normally.
 /// </para>
 /// </summary>
 public class DocumentFormattingHandler : DocumentFormattingHandlerBase
@@ -56,10 +59,18 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 			return Task.FromResult<TextEditContainer?>(null);
 		}
 
+		var mode = MushParseMode.ForFileName(uri);
+
+		// See the type doc: whole-buffer layout of a one-command-per-line file would rewrite the file
+		// on disk, so there is nothing safe to return for this mode yet.
+		if (mode == MushAnalysisMode.CommandsPerLine)
+		{
+			return Task.FromResult<TextEditContainer?>(null);
+		}
+
 		try
 		{
 			var original = document.Text;
-			var mode = MushParseMode.ForFileName(uri);
 			var formatted = _analyzer.FormatIndented(original, mode: mode);
 
 			if (formatted != original)
