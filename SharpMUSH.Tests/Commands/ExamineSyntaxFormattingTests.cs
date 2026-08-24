@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
@@ -20,7 +21,16 @@ namespace SharpMUSH.Tests.Commands;
 /// asserts on a fragment the formatter alone produces for this exact input (a specific broken line with
 /// its 2-space indent), not a substring that also appears in the raw, unformatted attribute value.
 /// </para>
+/// <para>
+/// <c>[NotInParallel]</c>: with <see cref="NotifyService"/> shared across the whole session, a test
+/// running concurrently with this class could record a <c>Notify</c> call between one test's
+/// <c>ClearReceivedCalls()</c> and its own assertion, corrupting order-sensitive checks like
+/// <see cref="FlaggedAttribute_WithEmptyValue_EmitsNoStrayBlankLine"/>'s "the call right after the
+/// header" lookup. Matches the same guard already used by <c>CommunicationCommandTests</c> and
+/// <c>UtilityCommandTests</c> for the identical reason.
+/// </para>
 /// </summary>
+[NotInParallel]
 public class ExamineSyntaxFormattingTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -28,6 +38,7 @@ public class ExamineSyntaxFormattingTests
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	// Comfortably longer than the 78-column fallback width, so it must break.
@@ -108,14 +119,59 @@ public class ExamineSyntaxFormattingTests
 		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"examine {obj}/EMPTYFN"));
 
-		var attributeNotifications = NotifyService.ReceivedCalls()
+		// Every Notify call's plain text, in the order they were sent this command.
+		var texts = NotifyService.ReceivedCalls()
 			.Select(c => c.GetArguments())
-			.Where(args => args.Length >= 2 && args[1] is OneOf<MString, string> msg
-				&& TestHelpers.MessageContains(msg, "EMPTYFN ["))
+			.Where(args => args.Length >= 2 && args[1] is OneOf<MString, string>)
+			.Select(args => ((OneOf<MString, string>)args[1]!).Match(ms => ms.ToPlainText(), s => s))
 			.ToList();
 
-		// One line for the header, none for an empty formatted block — matching the unflagged path,
-		// which renders a bare attribute with no value as a single line too.
-		await Assert.That(attributeNotifications.Count).IsEqualTo(1);
+		var headerIndex = texts.FindIndex(t => t.StartsWith("EMPTYFN ["));
+
+		// First confirm the header itself still fires — otherwise "no blank line" would be true for the
+		// trivial (and wrong) reason that nothing at all was notified for this attribute.
+		await Assert.That(headerIndex).IsNotEqualTo(-1);
+
+		// The bug this guards against is a *second* Notify right after the header, for the empty
+		// formatted block (which -- because an empty funsyntax body is itself a parse error -- is not
+		// literally an empty string but a parser-failure summary; asserting "not empty" would have missed
+		// that). @examine's structure after the attribute loop is fixed: the very next line is always
+		// "Home:" (for a Thing/Player) or the room's exits/contents section, never anything derived from
+		// the attribute just rendered. So the guard is intact exactly when nothing sits between the
+		// header and that next structural line.
+		await Assert.That(texts[headerIndex + 1]).StartsWith("Home:");
+	}
+
+	[Test]
+	public async ValueTask FlaggedAttribute_WithZeroWidthConnection_FallsBackTo78()
+	{
+		// RFC 1073: a NAWS WIDTH of 0 means "unspecified" from the client, not "wrap at column zero" --
+		// but it's client-controlled metadata that parses as a perfectly valid int. A player who reports
+		// 0 (or a broken client that always does) must still get the 78-column fallback, not a
+		// SoftcodeLayout.Compute clamp to width 1.
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamFmtWidth0");
+		ConnectionService.Update(testPlayer.Handle, "WIDTH", "0");
+
+		// A fresh mortal can't @set or examine an object it doesn't own; God's WIZARD bit lets this
+		// player create, flag and examine its own attribute in one identity, keeping the connection
+		// (and its WIDTH=0 metadata) tied to the same executor throughout.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamFmtWidth0Obj");
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {obj}/LONGFN=funsyntax"));
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine {obj}/LONGFN"));
+
+		// Same break as the no-connection fallback case: proves WIDTH=0 was rejected and 78 was used,
+		// not that width silently became 1 (which would break after nearly every character instead).
+		await NotifyService.Received().Notify(
+			TestHelpers.MatchingObject(testPlayer.DbRef),
+			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextContains(m, "\n  words(%0),")),
+			Arg.Any<AnySharpObject?>(),
+			Arg.Any<INotifyService.NotificationType>());
 	}
 }

@@ -1094,9 +1094,15 @@ public partial class Commands
 				async ValueTask<int> ExecutorWidthAsync()
 				{
 					var executorConnection = await ConnectionService!.Get(executor.Object().DBRef).FirstOrDefaultAsync();
+
+					// NAWS WIDTH is client-controlled, unvalidated metadata. Per RFC 1073, 0 means
+					// "unspecified" from the client's end, not "wrap every token" -- and it parses
+					// fine, so it must be rejected explicitly rather than relying on TryParse to catch
+					// it. A parsed value <= 0 falls back to 78 exactly like a missing one.
 					return executorConnection is not null
 						&& executorConnection.Metadata.TryGetValue("WIDTH", out var widthStr)
 						&& int.TryParse(widthStr, out var parsedWidth)
+						&& parsedWidth > 0
 							? parsedWidth
 							: 78;
 				}
@@ -1135,6 +1141,18 @@ public partial class Commands
 
 					width ??= await ExecutorWidthAsync();
 
+					// Cost per flagged, non-empty attribute: 3 lexes and 2 full parses of `source`.
+					// Tokenize lexes once (no parse). GetSemanticTokens and ValidateAndGetErrors each
+					// independently construct their own lexer + parser and run the parseType grammar
+					// rule again -- one to walk the parse tree for token classification, the other with
+					// a custom ParserErrorListener attached. Neither IMUSHCodeParser method exposes a
+					// way to reuse the other's lex/parse, and there's no third overload that returns
+					// tokens + semantic tokens + errors from one pass. Collapsing this to one lex/parse
+					// would need a new combined method on IMUSHCodeParser (e.g. an
+					// `Analyze(MString, ParseType) -> (TokenInfo[], SemanticToken[], ParseError[])` that
+					// attaches an error listener to the same parser instance AnalyzeSemanticTokens already
+					// walks) -- an interface change, deliberately not made here per review instruction;
+					// left as the known, documented cost of this path instead.
 					var source = attr.Value;
 					var tokens = parser.Tokenize(source);
 					var semanticTokens = parser.GetSemanticTokens(source, parseType.Value);
