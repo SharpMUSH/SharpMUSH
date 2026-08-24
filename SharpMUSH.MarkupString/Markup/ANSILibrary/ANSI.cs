@@ -29,12 +29,15 @@ public abstract record AnsiColor
 	/// </remarks>
 	public sealed record ANSI(byte[] Value) : AnsiColor
 	{
-		public bool Equals(ANSI? other) => other is not null && Value.AsSpan().SequenceEqual(other.Value);
+		// Value is declared non-nullable, but JSON deserialization can leave it null (the polymorphic
+		// converter constructs the record from whatever the payload carries), so neither of these may
+		// dereference it unguarded.
+		public bool Equals(ANSI? other) => other is not null && (Value ?? []).AsSpan().SequenceEqual(other.Value ?? []);
 
 		public override int GetHashCode()
 		{
 			var hash = new HashCode();
-			foreach (var b in Value)
+			foreach (var b in Value ?? [])
 				hash.Add(b);
 			return hash.ToHashCode();
 		}

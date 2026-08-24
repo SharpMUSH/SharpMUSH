@@ -209,11 +209,24 @@ public class MushCodeAnalyzerIndentTests
 		await Assert.That(result).IsEqualTo(src);
 	}
 
+	/// <summary>
+	/// Each line is deliberately far wider than <c>FormatIndented</c>'s 78-column default and full of
+	/// genuine break positions, so <c>FormatIndented</c> really would reflow it — the assertion below
+	/// goes red if <see cref="MushCodeAnalyzer.Format"/>'s body is ever swapped for the indenting one.
+	/// A short input (which was here before) breaks nowhere at 78 and so passes either way, asserting
+	/// nothing about the contract the MCP <c>format</c> tool depends on.
+	/// </summary>
 	[Test]
 	public async Task Format_StillPreservesLineCount()
 	{
 		var analyzer = AnalyzerWithLibraries();
-		const string src = "add(1,2)\nsub(3,4)\nmul(5,6)";
+		const string wide =
+			"switch(words(%0),0,you said absolutely nothing at all,1,you said just one word,many words here)";
+		var src = $"{wide}\n{wide}\n{wide}";
+
+		// Guard the guard: if this ever stopped reflowing, the assertion below would be idle again.
+		await Assert.That(analyzer.FormatIndented(wide).Split('\n')).Count().IsGreaterThan(1);
+
 		await Assert.That(analyzer.Format(src).Split('\n')).Count().IsEqualTo(3);
 	}
 }
