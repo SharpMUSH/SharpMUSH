@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace SharpMUSH.Library.Models;
 
 /// <summary>
@@ -31,6 +33,7 @@ public record Range
 	/// </summary>
 	/// <param name="start">The start position.</param>
 	/// <param name="end">The end position (exclusive).</param>
+	[SetsRequiredMembers]
 	public Range(Position start, Position end)
 	{
 		Start = start;
@@ -44,6 +47,7 @@ public record Range
 	/// <param name="startCharacter">Start character (zero-based).</param>
 	/// <param name="endLine">End line (zero-based).</param>
 	/// <param name="endCharacter">End character (zero-based, exclusive).</param>
+	[SetsRequiredMembers]
 	public Range(int startLine, int startCharacter, int endLine, int endCharacter)
 	{
 		Start = new Position(startLine, startCharacter);

@@ -106,6 +106,13 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// source-copying call's contents are never visited at all, so both are atomic here: always rendered
 /// flat, never recursed into.
 /// </description></item>
+/// <item><description>
+/// Never break inside a leading <c>$pattern:</c> or <c>^pattern:</c> — see <see cref="SoftcodeSource"/>.
+/// That half of the value is compiled to a match regex, not parsed, so it is inert to the evaluator in
+/// exactly the way a source-copying call's body is; and it is the headline case for <c>cmdsyntax</c>,
+/// the flag a player puts on a <c>$</c>-command. Those tokens are excluded from the group tree
+/// altogether, so a <c>[</c> or a <c>name(</c> in the pattern opens nothing.
+/// </description></item>
 /// </list>
 /// <para>
 /// <c>EQUALS</c> and <c>OBRACE</c> absorb whitespace too, and are structural in some positions, but
@@ -163,8 +170,9 @@ public static class SoftcodeLayout
 	/// <param name="parseType">
 	/// The dialect the text will be evaluated as — the same value <c>SharpAttribute.SyntaxParseType()</c>
 	/// returns for a <c>CMDSYNTAX</c>/<c>FUNSYNTAX</c>-flagged attribute, and the same one
-	/// <c>IMUSHCodeParser.ValidateAndGetErrors</c> takes. It decides one thing here: whether a root
-	/// <c>;</c> separates commands or is literal text.
+	/// <c>IMUSHCodeParser.ValidateAndGetErrors</c> takes. It decides two things here: whether a root
+	/// <c>;</c> separates commands or is literal text, and whether a leading <c>$pattern:</c> /
+	/// <c>^pattern:</c> is match data rather than code (see <see cref="SoftcodeSource"/>).
 	/// <para>
 	/// <b>The default is the conservative dialect,</b> matching every other <c>ParseType</c> parameter
 	/// in the codebase: <see cref="ParseType.Function"/> emits no semicolon breaks at all.
@@ -182,14 +190,67 @@ public static class SoftcodeLayout
 
 		var effectiveWidth = Math.Max(1, width);
 		var effectiveIndentUnit = Math.Max(0, indentUnit);
-		var root = BuildGroupTree(tokens, classifyFunction ?? (_ => SoftcodeCallKind.CopiesArgumentSource),
-			SeparatesCommands(parseType));
+
+		// A $pattern:/^pattern: prefix is match data, not code, so layout starts after it. Excluding
+		// those tokens from the tree entirely — rather than merely refusing to break among them — is
+		// what stops a '[' or a 'name(' in the pattern from opening a group that the code half never
+		// closes and whose commas would then look like argument separators.
+		var codeStart = FirstCodeTokenIndex(tokens, parseType);
+		var prefixColumn = 0;
+		for (var i = 0; i < codeStart; i++)
+		{
+			prefixColumn = Advance(prefixColumn, tokens[i].Text);
+		}
+
+		var root = BuildGroupTree(tokens, codeStart,
+			classifyFunction ?? (_ => SoftcodeCallKind.CopiesArgumentSource), SeparatesCommands(parseType));
 		MeasureFlat(root, tokens);
 
 		var breaks = new List<SoftcodeBreak>();
-		Layout(root, tokens, depth: 0, column: 0, effectiveWidth, effectiveIndentUnit, breaks);
+		Layout(root, tokens, depth: 0, prefixColumn, effectiveWidth, effectiveIndentUnit, breaks);
 
 		return breaks;
+	}
+
+	/// <summary>
+	/// Index of the first token that is code rather than match data — <c>0</c> for everything without a
+	/// <c>$</c>/<c>^</c> pattern prefix, which is every attribute but a <c>$</c>-command or a listen.
+	/// <para>
+	/// The split lands on a token boundary at or after <see cref="SoftcodeSource.MatchPatternPrefixLength"/>,
+	/// never inside a token. A token straddling the boundary is left on the prefix side, which protects
+	/// slightly more than the offset asks for and never less. No break is lost to that: breaks are only
+	/// ever emitted after a <c>FUNCHAR</c>, <c>OBRACK</c>, <c>COMMAWS</c> or <c>SEMICOLON</c>, and none
+	/// of those four token shapes can contain the <c>:</c> that ends the prefix.
+	/// </para>
+	/// <para>
+	/// The source is rebuilt from the token texts rather than taken as a parameter. The tokens tile
+	/// their source contiguously — the same guarantee <c>SoftcodeFormatter.ApplyBreaks</c> and
+	/// <see cref="SoftcodeRenderer"/> already slice on — so this is exact, and it means every caller
+	/// gets the protection without having to know to ask for it. That matters more than the parameter
+	/// would save: an opt-in would default to the unsafe answer, which is the opposite of how every
+	/// other decision in this engine defaults.
+	/// </para>
+	/// </summary>
+	private static int FirstCodeTokenIndex(IReadOnlyList<TokenInfo> tokens, ParseType parseType)
+	{
+		if (parseType != ParseType.CommandList || tokens[0].Text is not ['$' or '^', ..])
+		{
+			return 0;
+		}
+
+		var prefixLength = SoftcodeSource.MatchPatternPrefixLength(string.Concat(tokens.Select(t => t.Text)), parseType);
+		if (prefixLength == 0)
+		{
+			return 0;
+		}
+
+		var index = 0;
+		while (index < tokens.Count && tokens[index].StartIndex < prefixLength)
+		{
+			index++;
+		}
+
+		return index;
 	}
 
 	/// <summary>
@@ -285,14 +346,14 @@ public static class SoftcodeLayout
 	/// recognition off is text, so it opens no break positions.
 	/// </para>
 	/// </summary>
-	private static Group BuildGroupTree(IReadOnlyList<TokenInfo> tokens,
+	private static Group BuildGroupTree(IReadOnlyList<TokenInfo> tokens, int codeStart,
 		Func<string, SoftcodeCallKind> classifyFunction, bool semicolonsSeparateCommands)
 	{
-		var root = new Group(openIndex: -1, openType: string.Empty);
+		var root = new Group(openIndex: -1, openType: string.Empty) { FirstIndex = codeStart };
 		var stack = new Stack<Group>();
 		stack.Push(root);
 
-		for (var i = 0; i < tokens.Count; i++)
+		for (var i = codeStart; i < tokens.Count; i++)
 		{
 			var type = tokens[i].Type;
 			if (Array.IndexOf(Openers, type) >= 0)
@@ -324,6 +385,7 @@ public static class SoftcodeLayout
 
 				var child = new Group(i, type)
 				{
+					FirstIndex = i,
 					SuppressesFunctions = type switch
 					{
 						// A bracket re-enables function recognition, however deeply it is buried — but only
@@ -393,7 +455,7 @@ public static class SoftcodeLayout
 			MeasureFlat(child, tokens);
 		}
 
-		var start = group.OpenIndex < 0 ? 0 : group.OpenIndex;
+		var start = group.FirstIndex;
 		var column = 0;
 		var hasNewline = false;
 		for (var i = start; i <= group.CloseIndex; i++)
@@ -437,7 +499,7 @@ public static class SoftcodeLayout
 		}
 
 		var indent = Math.Min(depth * indentUnit, width / 2);
-		var start = group.OpenIndex < 0 ? 0 : group.OpenIndex;
+		var start = group.FirstIndex;
 
 		// Breaking immediately before a closer would put a literal newline inside the last argument, so
 		// the last real content token never carries a break. Trailing closers are skipped rather than
@@ -508,6 +570,13 @@ public static class SoftcodeLayout
 	{
 		/// <summary>Index of the opening token, or -1 for the synthetic root.</summary>
 		public int OpenIndex { get; } = openIndex;
+
+		/// <summary>
+		/// First token the group covers. Same as <see cref="OpenIndex"/> for a real group; for the
+		/// synthetic root it is where code begins, which is past a <c>$pattern:</c>/<c>^pattern:</c>
+		/// prefix rather than always 0.
+		/// </summary>
+		public int FirstIndex { get; init; }
 
 		/// <summary>Token type of the opener, or empty for the synthetic root.</summary>
 		public string OpenType { get; } = openType;

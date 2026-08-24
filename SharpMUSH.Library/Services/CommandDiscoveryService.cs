@@ -79,6 +79,26 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 			.FromOption(res);
 	}
 
+	/// <summary>
+	/// The <c>$pattern:</c> prefix of a <c>$</c>-command attribute. Everything the match covers is
+	/// match data compiled to a wildcard/regex by <c>CommandAttributeScanner</c>; only the text after
+	/// it is ever parsed as a command list. The lookbehind is what makes <c>\:</c> an escaped colon
+	/// and <c>\\:</c> a real terminator, so no caller may substitute a plain <c>IndexOf(':')</c>.
+	/// </summary>
 	[GeneratedRegex(@"^\$.+?(?<!\\)(?:\\\\)*\:", RegexOptions.Singleline)]
 	public static partial Regex CommandPatternRegex();
+
+	/// <summary>
+	/// The <c>^pattern:</c> prefix of a listen attribute — the same split as
+	/// <see cref="CommandPatternRegex"/> for the <c>^</c> dialect, and the one
+	/// <c>GetListenAttributesQueryHandler</c> compiles its listen regex from.
+	/// <para>
+	/// Lives here rather than beside that handler so the layout engine (which must know where an
+	/// attribute's match data ends) and the handler share one definition. Note <c>[^:]+</c> excludes
+	/// only <c>:</c>, so — like the <c>Singleline</c> <c>.</c> above — the pattern half may span a
+	/// newline; anything reading this must agree with the handler about that, not narrow it.
+	/// </para>
+	/// </summary>
+	[GeneratedRegex(@"^\^([^:]+):")]
+	public static partial Regex ListenPatternRegex();
 }

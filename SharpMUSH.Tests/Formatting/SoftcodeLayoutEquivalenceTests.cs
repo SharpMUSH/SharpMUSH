@@ -901,4 +901,66 @@ public class SoftcodeLayoutEquivalenceTests
 
 		await Assert.That(await Eval(source)).IsEqualTo(source);
 	}
+
+	/// <summary>
+	/// Values whose leading <c>$pattern:</c> / <c>^pattern:</c> half is match data, not code, and whose
+	/// trailing half is a command list long enough that the formatter really does reflow it. Both halves
+	/// matter: without the second the guard below would pass on an input nothing ever touched.
+	/// <para>
+	/// Every entry puts a bracket group, a comma or both inside the pattern — a regex character class
+	/// like <c>[a-zA-Z0-9,._+-]</c> in a <c>regexp</c> <c>$</c>-command, or a bracketed literal in a
+	/// wildcard one. Those are exactly the shapes the lexer reports as <c>OBRACK</c>/<c>COMMAWS</c> and
+	/// the layout engine would otherwise break at, and a newline landing there changes what the command
+	/// matches.
+	/// </para>
+	/// </summary>
+	public static IEnumerable<Func<string>> MatchPatternCorpus() =>
+	[
+		// The traced case: a wildcard $-command whose pattern contains a bracket group wide enough that
+		// the group does not fit and the engine breaks after its '['.
+		() => "$give [aaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbb] to *:@pemit %#=[strcat(alpha bravo,charlie delta)]",
+
+		// A regexp $-command's character class — the routine form of the same defect.
+		() => "$^summon ([a-zA-Z0-9,._+-]+) to ([a-z]+)$:@pemit %#=[strcat(alpha bravo,charlie delta)]",
+
+		// The listen dialect, matched by CommandDiscoveryService.ListenPatternRegex rather than the
+		// command one.
+		() => "^[aaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbb] says *:@pemit %#=[strcat(alpha bravo,charlie delta)]"
+	];
+
+	/// <summary>
+	/// The <c>$</c>/<c>^</c> pattern half is compiled to a match regex and never parsed
+	/// (<see cref="SoftcodeSource"/>), so no break may land in it — asserted as byte-identity of that
+	/// span, the only claim strong enough to catch a newline inserted inside a character class.
+	/// <para>
+	/// The final assertion is what stops this being idle: it requires the code half to have actually
+	/// broken at some width, so the byte-identity above is being preserved through a reflow rather than
+	/// through nothing having happened.
+	/// </para>
+	/// </summary>
+	[Test]
+	[MethodDataSource(nameof(MatchPatternCorpus))]
+	public async Task MatchPatternHalf_IsNeverBrokenInto(string source)
+	{
+		var prefixLength = SoftcodeSource.MatchPatternPrefixLength(source, ParseType.CommandList);
+
+		await Assert.That(prefixLength).IsGreaterThan(0)
+			.Because($"[{source}] has no $/^ pattern prefix at all, so it proves nothing");
+
+		var reflowedSomewhere = false;
+
+		foreach (var width in Widths)
+		{
+			var formatted = Format(source, width, ParseType.CommandList);
+
+			await Assert.That(formatted[..Math.Min(prefixLength, formatted.Length)])
+				.IsEqualTo(source[..prefixLength])
+				.Because($"width {width} rewrote the match pattern of [{source}]. Formatted:\n{formatted}");
+
+			reflowedSomewhere |= formatted != source;
+		}
+
+		await Assert.That(reflowedSomewhere).IsTrue()
+			.Because($"[{source}] never reflowed at any width, so its pattern surviving proves nothing");
+	}
 }

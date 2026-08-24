@@ -803,7 +803,9 @@ public class AttributeService(
 			// circular singleton resolution. Deferring the lookup to call time (long after both
 			// singletons are fully constructed) breaks the cycle.
 			var mushParser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
-			var errors = mushParser.ValidateAndGetErrors(value, parseType.Value);
+			// Only the code half: a $-command's or listen's pattern is compiled to a match regex, never
+			// parsed, so validating it would warn about an attribute that works (SoftcodeSource.Validate).
+			var errors = SoftcodeSource.Validate(mushParser, value, parseType.Value);
 
 			foreach (var error in errors)
 			{
