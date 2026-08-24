@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -52,10 +51,12 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 
 	/// <summary>
 	/// Backed by <see cref="SoftcodeLayout.Compute"/> — the same engine <c>@examine</c>/<c>@grep</c>
-	/// use — rather than a second, independent formatter. Never throws: a lex failure yields the
-	/// original text unchanged, matching <see cref="Format"/>'s never-throws contract.
+	/// use — rather than a second, independent formatter, and rendered by the same
+	/// <see cref="SoftcodeRenderer"/> the layout equivalence corpus proves safe (not a second,
+	/// hand-copied renderer). Never throws: a lex failure yields the original text unchanged,
+	/// matching <see cref="Format"/>'s never-throws contract.
 	/// </summary>
-	public string FormatIndented(string code, int width = 78)
+	public string FormatIndented(string code, int width = 78, MushAnalysisMode mode = MushAnalysisMode.Function)
 	{
 		try
 		{
@@ -65,52 +66,20 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 				return code;
 			}
 
-			// No ParseType is passed to this method — see IMushCodeAnalyzer.FormatIndented's
-			// contract. A document reaching this method could be a command list or a function
-			// expression alike and there is no attribute flag to consult, so this follows
-			// Validate's own default (MushAnalysisMode.Function) and Compute's own default:
-			// ParseType.Function, the conservative dialect that never treats a root ';' as a
-			// break position. That is strictly fewer breaks than ParseType.CommandList would
-			// allow, never more, so it cannot corrupt a command list's semicolons even though it
-			// leaves some of a command list's legitimate break points unused.
 			var classifyFunction = SoftcodeLayout.ClassifierFor(parser);
 			var breaks = SoftcodeLayout.Compute(tokens, width, classifyFunction: classifyFunction,
-				parseType: ParseType.Function);
+				parseType: mode.ToParseType());
 
-			return ApplyBreaks(tokens, breaks);
+			// Preserve the document's newline style at every inserted break, mirroring Format's own
+			// CRLF handling (above) — otherwise an LSP-formatted CRLF document would come back with
+			// bare '\n' at each break and '\r\n' everywhere else.
+			var newline = code.Contains("\r\n") ? "\r\n" : "\n";
+			return SoftcodeRenderer.Render(tokens, breaks, newline);
 		}
 		catch (Exception)
 		{
 			return code;
 		}
-	}
-
-	/// <summary>
-	/// Renders a token list plus its breaks back to plain text: a break trims the trailing
-	/// whitespace the token absorbed, then emits a newline and the indent. Mirrors
-	/// <c>SoftcodeFormatter.ApplyBreaks</c> (the <c>MString</c>/coloured equivalent used by
-	/// <c>@examine</c>/<c>@grep</c>) but slices plain <see cref="TokenInfo.Text"/> directly, since
-	/// this method has no markup to preserve.
-	/// </summary>
-	private static string ApplyBreaks(IReadOnlyList<TokenInfo> tokens, IReadOnlyList<SoftcodeBreak> breaks)
-	{
-		var indentByTokenIndex = breaks.ToDictionary(b => b.TokenIndex, b => b.Indent);
-		var sb = new StringBuilder();
-
-		for (var i = 0; i < tokens.Count; i++)
-		{
-			if (indentByTokenIndex.TryGetValue(i, out var indent))
-			{
-				sb.Append(tokens[i].Text.TrimEnd());
-				sb.Append('\n').Append(' ', indent);
-			}
-			else
-			{
-				sb.Append(tokens[i].Text);
-			}
-		}
-
-		return sb.ToString();
 	}
 
 	public IReadOnlyList<Diagnostic> Validate(string code, MushAnalysisMode mode = MushAnalysisMode.Function)

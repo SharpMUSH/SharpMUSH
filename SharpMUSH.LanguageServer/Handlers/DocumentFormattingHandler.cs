@@ -14,6 +14,12 @@ namespace SharpMUSH.LanguageServer.Handlers;
 /// not <see cref="IMushCodeAnalyzer.Format"/>, whose line-preserving contract the MCP
 /// <c>format</c> tool depends on and which therefore cannot express indentation (a per-line edit
 /// structurally requires the line count to stay fixed).
+/// <para>
+/// Passes <see cref="MushParseMode.ForFileName"/> for the document's URI — the same per-document
+/// dialect channel <see cref="SemanticTokensHandler"/> already uses — rather than
+/// <c>FormatIndented</c>'s own conservative default, so a <c>.mushcmd</c>/<c>.mush</c> document's
+/// root <c>;</c> actually breaks instead of staying on one long line.
+/// </para>
 /// </summary>
 public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 {
@@ -41,7 +47,8 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 		try
 		{
 			var original = document.Text;
-			var formatted = _analyzer.FormatIndented(original);
+			var mode = MushParseMode.ForFileName(uri);
+			var formatted = _analyzer.FormatIndented(original, mode: mode);
 
 			if (formatted != original)
 			{

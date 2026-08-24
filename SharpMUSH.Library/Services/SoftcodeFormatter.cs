@@ -111,8 +111,9 @@ public static class SoftcodeFormatter
 	/// <summary>
 	/// Applies <paramref name="breaks"/> to <paramref name="colored"/> by offset, walking
 	/// <paramref name="tokens"/> — which tile <paramref name="colored"/> contiguously, the same
-	/// assumption <c>SoftcodeRenderer</c> (the plain-text equivalent used by the layout equivalence
-	/// corpus) relies on. A break trims the trailing whitespace the token absorbed and inserts <c>\n</c>
+	/// assumption <see cref="SoftcodeRenderer"/> (the plain-text renderer shared by production's
+	/// <c>MushCodeAnalyzer.FormatIndented</c> and the layout equivalence corpus) relies on. A break
+	/// trims the trailing whitespace the token absorbed and inserts <c>\n</c>
 	/// plus <see cref="SoftcodeBreak.Indent"/> spaces, exactly as that plain-text renderer does — but
 	/// sliced from the coloured <see cref="MString"/> rather than rebuilt from <see cref="TokenInfo.Text"/>,
 	/// so styling and any author markup already in <paramref name="colored"/> survive the reflow.

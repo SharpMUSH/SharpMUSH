@@ -122,12 +122,66 @@ public class MushCodeAnalyzerIndentTests
 		const string src = "switch(words(%0),0,nothing at all,1,just one,many words here)";
 		var result = analyzer.FormatIndented(src, width: 30);
 
+		// The direct form of SoftcodeLayout's own invariant ("closers cuddle the last item"): a
+		// break immediately before a closer would put a literal newline inside the final argument.
+		// Checked directly rather than only via the line-level scan below, which only catches a
+		// line that is *exactly* a closer and would miss one like ")foo" or one ending in a closer
+		// after other content.
+		await Assert.That(result).DoesNotContain("\n)");
+		await Assert.That(result).DoesNotContain("\n]");
+		await Assert.That(result).DoesNotContain("\n}");
+
 		var closers = new[] { ")", "]", "}" };
 		foreach (var line in result.Split('\n'))
 		{
 			var trimmed = line.Trim();
 			await Assert.That(closers).DoesNotContain(trimmed);
 		}
+	}
+
+	[Test]
+	public async Task FormatIndented_PreservesCrlfLineEndingsAtBreaks()
+	{
+		var analyzer = AnalyzerWithLibraries();
+		// The leading "\r\n" is what makes code.Contains("\r\n") true and so selects CRLF mode. It
+		// sits before a '[' rather than glued onto "switch(" directly: FUNCHAR only matches when
+		// the lexer's token-start position lands exactly on an identifier that runs uninterrupted
+		// to '(', and a bare prose run (the lexer's catch-all "OTHER" token) is itself greedy
+		// across whitespace/newlines — gluing "\r\nswitch(" straight onto prose swallows "switch"
+		// into that same prose token, so it never becomes FUNCHAR at all and nothing breaks. A
+		// single-character delimiter like '[' (OBRACK) forces a fresh token boundary immediately
+		// before "switch", exactly as the equivalence corpus's own
+		// "aaaa...\n[switch(1,1,matched,unmatched)]" entry relies on. What's under test is whether
+		// the breaks inside switch() use "\r\n" (matching the document) or a bare "\n" (a regression).
+		const string src =
+			"aaaaaaaaaaaaaaaaaaaaaaaaaa\r\n[switch(words(%0),0,nothing at all,1,just one,many words here)]";
+		var result = analyzer.FormatIndented(src, width: 30);
+
+		await Assert.That(result).Contains("\n");
+		await Assert.That(result).DoesNotContain("\r\r\n");
+		// Removing every correctly-paired CRLF must leave no bare '\n' behind; one surviving would
+		// mean some break used "\n" instead of "\r\n", mixing line-ending styles in the same document.
+		await Assert.That(result.Replace("\r\n", "")).DoesNotContain("\n");
+	}
+
+	[Test]
+	public async Task FormatIndented_BreaksAtRootSemicolonOnlyUnderCommandListMode()
+	{
+		var analyzer = AnalyzerWithLibraries();
+		const string src = "@pemit #1=aaaaaaaaaaaaaaaaaaaa;@pemit #1=bbbbbbbbbbbbbbbbbbbb";
+
+		// The default mode (Function) is the conservative dialect: a root ';' is literal text, so
+		// this long command-list payload — the common Softcode Editor attribute — must come back
+		// byte-identical rather than silently staying on one long line while claiming to format it.
+		var asFunction = analyzer.FormatIndented(src, width: 30);
+		await Assert.That(asFunction).IsEqualTo(src);
+
+		// Passing MushAnalysisMode.CommandList — what DocumentFormattingHandler now derives via
+		// MushParseMode.ForFileName for a .mushcmd/.mush document — makes the root ';' a genuine
+		// break position.
+		var asCommandList = analyzer.FormatIndented(src, width: 30, mode: MushAnalysisMode.CommandList);
+		await Assert.That(asCommandList).Contains("\n");
+		await Assert.That(asCommandList.Split('\n')).Count().IsEqualTo(2);
 	}
 
 	[Test]
