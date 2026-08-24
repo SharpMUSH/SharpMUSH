@@ -9,8 +9,11 @@ namespace SharpMUSH.LanguageServer.Handlers;
 /// <summary>
 /// Handles document formatting requests for MUSH code.
 /// Delegates the actual formatting to the shared <see cref="IMushCodeAnalyzer"/> so the
-/// LSP and the in-server MCP tools format identically, and emits one text edit per line
-/// the analyzer changed.
+/// LSP and the in-server MCP tools are backed by the same softcode intelligence, and emits a
+/// single whole-document text edit built from <see cref="IMushCodeAnalyzer.FormatIndented"/> —
+/// not <see cref="IMushCodeAnalyzer.Format"/>, whose line-preserving contract the MCP
+/// <c>format</c> tool depends on and which therefore cannot express indentation (a per-line edit
+/// structurally requires the line count to stay fixed).
 /// </summary>
 public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 {
@@ -37,33 +40,26 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 
 		try
 		{
-			var originalLines = document.Text.Split('\n');
-			var formattedLines = _analyzer.Format(document.Text).Split('\n');
-			var edits = new List<TextEdit>();
+			var original = document.Text;
+			var formatted = _analyzer.FormatIndented(original);
 
-			for (int i = 0; i < originalLines.Length && i < formattedLines.Length; i++)
+			if (formatted != original)
 			{
+				var originalLines = original.Split('\n');
+				var lastLine = originalLines.Length - 1;
 				// A trailing CR is part of the line terminator in LSP positions, not the line
-				// content — exclude it from both the compared text and the edit so CRLF documents
-				// aren't off-by-one and no literal '\r' is injected into the replacement.
-				var original = originalLines[i].TrimEnd('\r');
-				var formatted = formattedLines[i].TrimEnd('\r');
+				// content — exclude it from the end position so a CRLF document isn't off-by-one.
+				var endCharacter = originalLines[lastLine].TrimEnd('\r').Length;
 
-				if (formatted != original)
+				var edit = new TextEdit
 				{
-					edits.Add(new TextEdit
-					{
-						Range = new OmniSharp.Extensions.LanguageServer.Protocol.Models.Range(
-							new Position(i, 0),
-							new Position(i, original.Length)),
-						NewText = formatted
-					});
-				}
-			}
+					Range = new OmniSharp.Extensions.LanguageServer.Protocol.Models.Range(
+						new Position(0, 0),
+						new Position(lastLine, endCharacter)),
+					NewText = formatted
+				};
 
-			if (edits.Count > 0)
-			{
-				return Task.FromResult<TextEditContainer?>(new TextEditContainer(edits));
+				return Task.FromResult<TextEditContainer?>(new TextEditContainer(edit));
 			}
 		}
 		catch (Exception ex)
