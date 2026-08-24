@@ -1,8 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Formatting;
 
@@ -54,35 +52,16 @@ public class SoftcodeLayoutEquivalenceTests
 
 	private static readonly int[] Widths = [20, 40, 78];
 
+	private Func<string, SoftcodeCallKind>? _classifier;
+
 	/// <summary>
-	/// The classifier Rulings 9 and 12 require, backed by the real parser and following
-	/// <c>SharpMUSHParserVisitor.CallFunction</c>'s resolution order exactly: the parser's
-	/// <c>FunctionLibrary</c> first (a <c>FunctionLibraryService</c>, so <c>OrdinalIgnoreCase</c>),
-	/// then the <c>@function</c> registry. Deliberately a plain lookup rather than a case-folded one,
-	/// so that if the library ever stopped being case-insensitive this would resolve fewer names and
-	/// the formatter would break less — never more.
-	/// <para>
-	/// The flag test is <see cref="SoftcodeLayout.Classify"/> rather than a local one, so this test and
-	/// every production caller apply the same rule; a hard-coded <c>lit</c>/<c>localize</c> pair would
-	/// rot the moment someone declares a third source-copying function.
-	/// </para>
-	/// <para>
-	/// A resolved <c>@function</c> entry is synthesized with <c>Flags = FunctionFlags.Regular</c>
-	/// (<c>SharpMUSHParserVisitor.ResolveUserDefinedFunction</c>, <c>:965-973</c>), so it always
-	/// evaluates its arguments.
-	/// </para>
+	/// The classifier Rulings 9 and 12 require, built by <see cref="SoftcodeLayout.ClassifierFor"/>
+	/// from the real parser. Deliberately the shared factory rather than a local ladder: a test that
+	/// resolved names its own way would be proving the corpus safe under a classifier no production
+	/// caller uses.
 	/// </summary>
 	private SoftcodeCallKind ClassifyFunction(string name)
-	{
-		if (OracleParser.FunctionLibrary.TryGetValue(name, out var entry))
-		{
-			return SoftcodeLayout.Classify(entry.LibraryInformation.Attribute);
-		}
-
-		return OracleParser.ServiceProvider.GetService<IUserDefinedFunctionService>()?.Resolve(name) is not null
-			? SoftcodeCallKind.EvaluatesArguments
-			: SoftcodeCallKind.Unresolved;
-	}
+		=> (_classifier ??= SoftcodeLayout.ClassifierFor(OracleParser))(name);
 
 	/// <summary>
 	/// Parses, and evaluates to something a stray newline would visibly damage. Guarded below to

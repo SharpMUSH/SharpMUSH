@@ -1,7 +1,9 @@
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
@@ -140,15 +142,22 @@ public static class SoftcodeLayout
 	/// <param name="width">Target line width in columns.</param>
 	/// <param name="indentUnit">Columns of indent added per nesting level.</param>
 	/// <param name="classifyFunction">
-	/// Classifies a function name — see <see cref="SoftcodeCallKind"/>. Resolve names the way
-	/// <c>SharpMUSHParserVisitor.CallFunction</c> does, in the same order (the parser's
-	/// <c>FunctionLibrary</c>, then the <c>@function</c> registry), and pass a resolved entry's
-	/// <see cref="SharpFunctionAttribute"/> to <see cref="Classify"/> rather than testing its flags by
-	/// hand.
+	/// Classifies a function name — see <see cref="SoftcodeCallKind"/>. Use
+	/// <see cref="ClassifierFor"/> rather than assembling one; it is the tested path.
 	/// <para>
 	/// <b>Omitting this is the safe choice, not the convenient one:</b> the default classifies every
 	/// name as <see cref="SoftcodeCallKind.CopiesArgumentSource"/>, the most restrictive answer, so a
 	/// caller with no classifier renders every call flat rather than guessing optimistically.
+	/// </para>
+	/// <para>
+	/// <b>An over-conservative answer is no longer free.</b> Under the two-state predicate this replaced,
+	/// wrongly saying "not a function" only ever cost breaks. It no longer does:
+	/// <see cref="SoftcodeCallKind.Unresolved"/> permits breaking at a <c>[...]</c> inside the call,
+	/// which is correct for a genuinely unresolved name — <c>LiteralFunctionCall</c> visits its
+	/// arguments, so a bracket really is evaluated — but would leak whitespace for a
+	/// <see cref="SoftcodeCallKind.CopiesArgumentSource"/> name misreported as unresolved. A partial
+	/// classifier must therefore fall back to <see cref="SoftcodeCallKind.CopiesArgumentSource"/>, not
+	/// to <see cref="SoftcodeCallKind.Unresolved"/>.
 	/// </para>
 	/// </param>
 	/// <param name="parseType">
@@ -206,6 +215,31 @@ public static class SoftcodeLayout
 		|| (attribute.Flags.HasFlag(FunctionFlags.NoParse) && attribute.MaxArgs == 1)
 			? SoftcodeCallKind.CopiesArgumentSource
 			: SoftcodeCallKind.EvaluatesArguments;
+
+	/// <summary>
+	/// The classifier to pass to <see cref="Compute"/>. Resolves names exactly as
+	/// <c>SharpMUSHParserVisitor.CallFunction</c> does and in the same order — the parser's
+	/// <c>FunctionLibrary</c> first, then the <c>@function</c> registry — and classifies a hit with
+	/// <see cref="Classify"/>.
+	/// <para>
+	/// This exists so that no caller hand-writes that ladder. <see cref="Classify"/> alone is only half
+	/// the rule: the third state comes from resolution failing, and three callers reimplementing "look
+	/// here, then there, else Unresolved" is exactly the divergence a shared classifier prevents.
+	/// </para>
+	/// <para>
+	/// The <c>FunctionLibrary</c> lookup is deliberately a plain one, matching <c>CallFunction</c>:
+	/// <c>FunctionLibraryService</c> is constructed <c>OrdinalIgnoreCase</c>, so case is handled by the
+	/// dictionary rather than by folding here. <c>DiscoverBuiltInFunction</c> reads the very same
+	/// dictionary, so there is no lazily-registered built-in this misses. A user-defined entry is
+	/// synthesized with <c>Flags = FunctionFlags.Regular</c>, so it always evaluates its arguments.
+	/// </para>
+	/// </summary>
+	public static Func<string, SoftcodeCallKind> ClassifierFor(IMUSHCodeParser parser) =>
+		name => parser.FunctionLibrary.TryGetValue(name, out var entry)
+			? Classify(entry.LibraryInformation.Attribute)
+			: parser.ServiceProvider.GetService<IUserDefinedFunctionService>()?.Resolve(name) is not null
+				? SoftcodeCallKind.EvaluatesArguments
+				: SoftcodeCallKind.Unresolved;
 
 	/// <summary>
 	/// Whether a root-level <c>;</c> is a command separator in this dialect, and so a break position.
@@ -267,19 +301,40 @@ public static class SoftcodeLayout
 				var kind = type == "FUNCHAR"
 					? classifyFunction(FunctionName(tokens[i].Text))
 					: SoftcodeCallKind.EvaluatesArguments;
+
+				// Exhaustive over SoftcodeCallKind with no discard arm, deliberately: a member added later
+				// must be CS8509 here — an error under TreatWarningsAsErrors — rather than falling through
+				// to (false, false), which is the non-atomic, unsafe direction. A discard arm, even one
+				// that threw, would defer that to run time.
+				//
+				// CS8524 is the *other* exhaustiveness diagnostic: an int cast to an undeclared enum value.
+				// That cannot arise here — kind comes from our own classifier delegate — and suppressing it
+				// is what leaves CS8509 free to fire on a genuinely new member.
+#pragma warning disable CS8524
+				var (isTextAtItsDelimiters, copiesSource) = kind switch
+				{
+					// Reproduced from its terminals, so its own delimiters are text; but LiteralFunctionCall
+					// still visits each argument, so a [...] inside really is evaluated and stays breakable.
+					SoftcodeCallKind.Unresolved => (true, false),
+					SoftcodeCallKind.EvaluatesArguments => (false, false),
+					// Never visited at all, so the whole span is atomic — brackets included.
+					SoftcodeCallKind.CopiesArgumentSource => (true, true)
+				};
+#pragma warning restore CS8524
+
 				var child = new Group(i, type)
 				{
 					SuppressesFunctions = type switch
 					{
 						// A bracket re-enables function recognition, however deeply it is buried — but only
-						// where a visitor actually runs over it, which CopiesSource below rules out.
+						// where a visitor actually runs over it, which CopiesSource above rules out.
 						"OBRACK" => false,
 						// Anything but a call that evaluates its arguments is text at its own delimiters.
-						"FUNCHAR" => enclosingSuppresses || kind != SoftcodeCallKind.EvaluatesArguments,
+						"FUNCHAR" => enclosingSuppresses || isTextAtItsDelimiters,
 						// Braces are never recursed into, so their own state is never consulted.
 						_ => enclosingSuppresses
 					},
-					CopiesSource = kind == SoftcodeCallKind.CopiesArgumentSource
+					CopiesSource = copiesSource
 				};
 				stack.Peek().Children.Add(child);
 				stack.Push(child);
