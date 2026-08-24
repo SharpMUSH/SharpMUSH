@@ -149,4 +149,28 @@ public class SemanticTokenRendererTests
 		await Assert.That(StyleDetailsAt(result, 4)).IsEqualTo(NumberStyle.Details);
 		await Assert.That(StyleDetailsAt(result, 5)).IsEqualTo(NumberStyle.Details);
 	}
+
+	[Test]
+	public async Task OverrideWithFreshButStructurallyIdenticalStyle_MergesIntoOneRun()
+	{
+		// Exactly the source's length so the single token covers [0, end) with no surrounding gap —
+		// isolates the run count to what EmitStyledRuns produces for this one span.
+		var src = MModule.single("add(");
+		// AnsiCodeParser.ParseCodes allocates a fresh AnsiMarkup (and, for single-letter codes like
+		// "r", a fresh backing byte[] inside AnsiColor.ANSI) on every call — the "obvious way to
+		// write it" for a caller like Task 5's error-span override. If run-merging depended on
+		// ReferenceEquals (round 1) or on AnsiColor.ANSI's pre-fix reference-equal array field, every
+		// character here would re-fragment into its own run despite being visually identical.
+		Func<int, AnsiMarkup?> freshRedEachCall = _ => AnsiCodeParser.ParseCodes("r");
+		var result = SemanticTokenRenderer.Render(src,
+			[Tok(0, "add(", SemanticTokenType.Function)], freshRedEachCall);
+
+		await Assert.That(MModule.plainText(result)).IsEqualTo("add(");
+		// The closest honest proxy for "one run, not one per character": MarkupString.Runs itself.
+		// Four structurally-identical-but-distinct-instance styles across four characters must still
+		// collapse into a single AttributeRun.
+		await Assert.That(result.Runs.Length).IsEqualTo(1);
+		await Assert.That(StyleDetailsAt(result, 0)).IsEqualTo(AnsiCodeParser.ParseCodes("r").Details);
+		await Assert.That(StyleDetailsAt(result, 3)).IsEqualTo(AnsiCodeParser.ParseCodes("r").Details);
+	}
 }

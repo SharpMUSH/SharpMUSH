@@ -20,7 +20,25 @@ public abstract record AnsiColor
 	public sealed record RGB(Color Value) : AnsiColor;
 
 	/// <summary>Raw ANSI SGR byte sequence.</summary>
-	public sealed record ANSI(byte[] Value) : AnsiColor;
+	/// <remarks>
+	/// <c>byte[]</c> has no value equality of its own, so the compiler-generated positional-record
+	/// equality for <see cref="Value"/> falls back to reference equality — two separately parsed but
+	/// byte-identical sequences (e.g. two <c>AnsiCodeParser.ParseCodes("r")</c> calls) would otherwise
+	/// compare unequal. <see cref="Equals(ANSI?)"/> and <see cref="GetHashCode"/> are overridden so
+	/// this type has real structural equality, matching <see cref="RGB"/> and <see cref="NoAnsi"/>.
+	/// </remarks>
+	public sealed record ANSI(byte[] Value) : AnsiColor
+	{
+		public bool Equals(ANSI? other) => other is not null && Value.AsSpan().SequenceEqual(other.Value);
+
+		public override int GetHashCode()
+		{
+			var hash = new HashCode();
+			foreach (var b in Value)
+				hash.Add(b);
+			return hash.ToHashCode();
+		}
+	}
 
 	/// <summary>No color (inherit / default terminal color).</summary>
 	public sealed record NoAnsi : AnsiColor
