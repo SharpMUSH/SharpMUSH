@@ -706,6 +706,14 @@ public class SoftcodeLayoutEquivalenceTests
 	/// syntax error. Both channel-2 entries sit in <see cref="UnparseableCorpus"/>, and the assertion
 	/// below records that each takes the divergent path here while failing to parse there.
 	/// </para>
+	/// <para>
+	/// <b>How firm that last step is.</b> It is a grammar argument shown on worked examples, <b>not</b>
+	/// an exhaustive proof, and it deserves reading as "unreachable so far" rather than "impossible".
+	/// The strongest evidence is external: a brute-force sweep of 531,441 inputs found every observed
+	/// divergence to be channel 1 — conservative — and none in the unsafe direction. Anyone widening
+	/// what the layout engine does with closer-typed tokens, or relying on channel 2 staying
+	/// unreachable, should re-derive it rather than inherit it from here.
+	/// </para>
 	/// </summary>
 	[Test]
 	public async Task OrphanedClosers_LexDifferentlyForTheFormatterThanForTheEvaluator()
@@ -762,7 +770,16 @@ public class SoftcodeLayoutEquivalenceTests
 	/// <see cref="OrphanedClosers_LexDifferentlyForTheFormatterThanForTheEvaluator"/> for channel 2,
 	/// where the two counters desynchronise and the layout engine emits <em>more</em> breaks than the
 	/// evaluator's stream would allow. It is not monotonicity that makes the divergence tolerable
-	/// overall; it is that channel 2 is always a syntax error.
+	/// overall; it is that channel 2 needs a <c>]</c> a stack machine cannot accept, and so is a syntax
+	/// error.
+	/// </para>
+	/// <para>
+	/// <b>How firm that last step is.</b> It is a grammar argument shown on worked examples, <b>not</b>
+	/// an exhaustive proof, and it deserves reading as "unreachable so far" rather than "impossible".
+	/// The strongest evidence is external: a brute-force sweep of 531,441 inputs found every observed
+	/// divergence to be channel 1 — conservative — and none in the unsafe direction. Anyone widening
+	/// what the layout engine does with closer-typed tokens, or relying on channel 2 staying
+	/// unreachable, should re-derive it rather than inherit it from here.
 	/// </para>
 	/// <para>
 	/// The two sources here differ in exactly one character, chosen so the token counts match and only

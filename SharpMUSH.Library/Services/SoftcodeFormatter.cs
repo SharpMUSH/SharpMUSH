@@ -148,11 +148,19 @@ public static class SoftcodeFormatter
 	/// <c>BuildGroupTree</c> ignores a closer whose opener is not on top of its stack. A closer the flat
 	/// count consumes but the stack does not leaves a later one orphaned for the evaluator and live here,
 	/// so this engine pops a group the evaluator leaves open and a following comma becomes an argument
-	/// separator — <b>more</b> breaks, in the unsafe direction. That channel is nonetheless unreachable
-	/// in practice: it needs a <c>]</c> in a position the grammar, itself a stack machine
+	/// separator — <b>more</b> breaks, in the unsafe direction. What keeps that channel out of reach is
+	/// that it needs a <c>]</c> in a position the grammar, itself a stack machine
 	/// (<c>bracketPattern</c> wants a complete <c>evaluationString</c> before its <c>CBRACK</c>), cannot
 	/// accept — which is a syntax error. Verified: <c>strcat([strcat(a],b)],c)</c> takes that path here
 	/// and is a <c>#-1 PARSER FAILURE</c> in the evaluator.
+	/// </para>
+	/// <para>
+	/// <b>How firm that last step is.</b> It is a grammar argument shown on worked examples, <b>not</b>
+	/// an exhaustive proof, and it deserves reading as "unreachable so far" rather than "impossible".
+	/// The strongest evidence is external: a brute-force sweep of 531,441 inputs found every observed
+	/// divergence to be channel 1 — conservative — and none in the unsafe direction. Anyone widening
+	/// what the layout engine does with closer-typed tokens, or relying on channel 2 staying
+	/// unreachable, should re-derive it rather than inherit it from here.
 	/// </para>
 	/// </summary>
 	private static MString ApplyBreaks(MString colored, IReadOnlyList<TokenInfo> tokens, IReadOnlyList<SoftcodeBreak> breaks)
