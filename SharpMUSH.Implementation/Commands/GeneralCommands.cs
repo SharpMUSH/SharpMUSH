@@ -103,6 +103,25 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// Resolves the display width to wrap a formatted attribute block to, for <c>@examine</c> and
+	/// <c>@grep/PRINT</c>'s syntax-flagged attribute rendering. NAWS WIDTH is client-controlled,
+	/// unvalidated metadata. Per RFC 1073, 0 means "unspecified" from the client's end, not "wrap
+	/// every token" -- and it parses fine, so it must be rejected explicitly rather than relying on
+	/// TryParse to catch it. A parsed value &lt;= 0 falls back to 78 exactly like a missing one.
+	/// </summary>
+	private static async ValueTask<int> ExecutorFormatWidthAsync(AnySharpObject executor)
+	{
+		var executorConnection = await ConnectionService!.Get(executor.Object().DBRef).FirstOrDefaultAsync();
+
+		return executorConnection is not null
+			&& executorConnection.Metadata.TryGetValue("WIDTH", out var widthStr)
+			&& int.TryParse(widthStr, out var parsedWidth)
+			&& parsedWidth > 0
+				? parsedWidth
+				: 78;
+	}
+
+	/// <summary>
 	/// Helper method to execute attribute content with recursion tracking.
 	/// This ensures commands like @INCLUDE, @TRIGGER, etc. track recursion the same way u/ufun/ulocal do.
 	/// </summary>
@@ -1091,22 +1110,6 @@ public partial class Commands
 				// Lazily computed: only a flagged attribute needs it, and most @examine calls have none.
 				int? width = null;
 
-				async ValueTask<int> ExecutorWidthAsync()
-				{
-					var executorConnection = await ConnectionService!.Get(executor.Object().DBRef).FirstOrDefaultAsync();
-
-					// NAWS WIDTH is client-controlled, unvalidated metadata. Per RFC 1073, 0 means
-					// "unspecified" from the client's end, not "wrap every token" -- and it parses
-					// fine, so it must be rejected explicitly rather than relying on TryParse to catch
-					// it. A parsed value <= 0 falls back to 78 exactly like a missing one.
-					return executorConnection is not null
-						&& executorConnection.Metadata.TryGetValue("WIDTH", out var widthStr)
-						&& int.TryParse(widthStr, out var parsedWidth)
-						&& parsedWidth > 0
-							? parsedWidth
-							: 78;
-				}
-
 				foreach (var attr in atrs.AsAttributes)
 				{
 					const string VeiledFlagName = "VEILED";
@@ -1139,7 +1142,7 @@ public partial class Commands
 						continue;
 					}
 
-					width ??= await ExecutorWidthAsync();
+					width ??= await ExecutorFormatWidthAsync(executor);
 
 					// Cost per flagged, non-empty attribute: 3 lexes and 2 full parses of `source`.
 					// Tokenize lexes once (no parse). GetSemanticTokens and ValidateAndGetErrors each
@@ -6145,22 +6148,6 @@ public partial class Commands
 			// Lazily computed: only a flagged attribute needs it, and most @grep/PRINT calls have none.
 			int? width = null;
 
-			async ValueTask<int> ExecutorWidthAsync()
-			{
-				var executorConnection = await ConnectionService!.Get(executor.Object().DBRef).FirstOrDefaultAsync();
-
-				// NAWS WIDTH is client-controlled, unvalidated metadata. Per RFC 1073, 0 means
-				// "unspecified" from the client's end, not "wrap every token" -- and it parses
-				// fine, so it must be rejected explicitly rather than relying on TryParse to catch
-				// it. A parsed value <= 0 falls back to 78 exactly like a missing one.
-				return executorConnection is not null
-					&& executorConnection.Metadata.TryGetValue("WIDTH", out var widthStr)
-					&& int.TryParse(widthStr, out var parsedWidth)
-					&& parsedWidth > 0
-						? parsedWidth
-						: 78;
-			}
-
 			foreach (var attr in matchingAttributes)
 			{
 				var parseType = attr.SyntaxParseType();
@@ -6218,7 +6205,7 @@ public partial class Commands
 					}
 					else
 					{
-						width ??= await ExecutorWidthAsync();
+						width ??= await ExecutorFormatWidthAsync(executor);
 
 						var source = attr.Value;
 						var tokens = parser.Tokenize(source);

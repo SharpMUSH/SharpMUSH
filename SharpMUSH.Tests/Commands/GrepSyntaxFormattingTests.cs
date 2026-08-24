@@ -51,6 +51,15 @@ public class GrepSyntaxFormattingTests
 		Arg.Any<AnySharpObject?>(),
 		Arg.Any<INotifyService.NotificationType>());
 
+	// Unlike ExpectPlainText, matches against ToString() (markup intact). A regression that dropped
+	// semantic colouring while reconstructing before+match+after would leave the plain text identical
+	// but would never emit this fragment -- ExpectPlainText alone cannot see that class of bug.
+	private ValueTask ExpectMarkup(string fragment) => NotifyService.Received().Notify(
+		Arg.Any<AnySharpObject>(),
+		Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessageContains(m, fragment)),
+		Arg.Any<AnySharpObject?>(),
+		Arg.Any<INotifyService.NotificationType>());
+
 	[Test]
 	public async ValueTask SettingBrokenCodeIntoFlaggedAttribute_WarnsButStillStores()
 	{
@@ -119,5 +128,67 @@ public class GrepSyntaxFormattingTests
 		// exact single-line fragment (which the formatted, wrapped block would never produce whole)
 		// proves formatting did not run.
 		await ExpectPlainText($"LONGFN: {LongCode}");
+	}
+
+	[Test]
+	public async ValueTask GrepPrintOnFlaggedAttribute_PreservesSyntaxColoring()
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtColor");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/LONGFN=funsyntax"));
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@grep/print {obj}=words"));
+
+		// "38;2;220;220;170" is the literal 24-bit ANSI foreground sequence
+		// (ANSI.SGR(38, 2, 0xDC, 0xDC, 0xAA)) SemanticTokenAnsiPalette assigns SemanticTokenType.Function
+		// -- the classification "switch(" gets. Slicing before/match/after by plain-text IndexOf (as the
+		// grep highlight does) reconstructs identical *plain* text whether or not the underlying markup
+		// carried semantic colouring, so ExpectPlainText alone would not notice this colour vanishing;
+		// only a markup-aware assertion does.
+		await ExpectMarkup("38;2;220;220;170");
+	}
+
+	[Test]
+	public async ValueTask GrepPrintOnFlaggedAttribute_WildcardMatch_IsFormatted()
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtWild");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/LONGFN=funsyntax"));
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@grep/wild/print {obj}=*words*"));
+
+		// The isWild branch assigns displayValue = formatted directly, skipping the highlight-slice
+		// path entirely -- a separate code path from GrepPrintOnFlaggedAttribute_IsFormatted's literal
+		// match, and one with no coverage before this test.
+		await ExpectPlainText("\n  words(%0),");
+	}
+
+	[Test]
+	public async ValueTask GrepPrintOnFlaggedEmptyAttribute_EmitsNoStrayParserFailure()
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtEmpty");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&EMPTYFN {obj}="));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/EMPTYFN=funsyntax"));
+
+		NotifyService.ClearReceivedCalls();
+		// "*" as a WILD pattern matches the empty attribute value too, reaching the print loop
+		// without ever going through the literal-match path (which an empty value can't match).
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@grep/wild/print {obj}=*"));
+
+		// The empty-value guard skips the formatter entirely for an empty attribute -- an empty
+		// funsyntax body is itself a parse error and would otherwise surface a stray parser-failure
+		// summary in place of blank, exactly the bug @examine's equivalent guard was added to prevent.
+		await NotifyService.DidNotReceive().Notify(
+			Arg.Any<AnySharpObject>(),
+			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextContains(m, "PARSER FAILURE")),
+			Arg.Any<AnySharpObject?>(),
+			Arg.Any<INotifyService.NotificationType>());
+
+		await ExpectPlainText("EMPTYFN: ");
 	}
 }

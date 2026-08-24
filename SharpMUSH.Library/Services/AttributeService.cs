@@ -718,12 +718,27 @@ public class AttributeService(
 		}
 
 		var attrPath = attribute.Split('`');
-		var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath));
+
+		// Materialized (not left as a stream) because it is used twice: once below for the
+		// permission check, and again after the set for the target attribute's syntax flags. A
+		// value set never changes an attribute's flags, so this one pre-set snapshot is exactly
+		// what the post-set flag check needs too -- reusing it avoids a second GetAttributeQuery
+		// round trip on every single attribute set in the game, flagged or not.
+		var existing = await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath))
+			.ToListAsync();
 
 		// Check both attribute permissions AND object permissions
 		// Attribute permissions: executor must be able to set each attribute in the path
 		// Object permissions: executor must control the object
-		var permission = await attr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
+		var permission = true;
+		foreach (var x in existing)
+		{
+			if (!await ps.CanSet(executor, obj, x))
+			{
+				permission = false;
+				break;
+			}
+		}
 
 		if (!permission)
 		{
@@ -759,12 +774,10 @@ public class AttributeService(
 
 		// Advisory-only set-time validation: PennMUSH never validates softcode at set time, and
 		// parity governs here, so a syntax error must never block the set -- only warn the setter,
-		// after the value is already stored. Flags don't change on a value set, so this re-fetch
-		// (rather than reusing the stream consumed by the permission check above) exists purely to
-		// read the attribute's flags, not to observe anything the set itself might have altered.
-		var storedAttribute = await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath))
-			.LastOrDefaultAsync();
-		var parseType = storedAttribute?.SyntaxParseType();
+		// after the value is already stored. Reuses the pre-set `existing` snapshot rather than
+		// re-querying: a value set never changes an attribute's flags, so the attribute fetched
+		// above for the permission check already carries the flags this check needs.
+		var parseType = existing.LastOrDefault()?.SyntaxParseType();
 
 		if (parseType is not null)
 		{
