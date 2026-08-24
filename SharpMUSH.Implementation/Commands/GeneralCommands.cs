@@ -6142,40 +6142,117 @@ public partial class Commands
 
 		if (isPrint)
 		{
+			// Lazily computed: only a flagged attribute needs it, and most @grep/PRINT calls have none.
+			int? width = null;
+
+			async ValueTask<int> ExecutorWidthAsync()
+			{
+				var executorConnection = await ConnectionService!.Get(executor.Object().DBRef).FirstOrDefaultAsync();
+
+				// NAWS WIDTH is client-controlled, unvalidated metadata. Per RFC 1073, 0 means
+				// "unspecified" from the client's end, not "wrap every token" -- and it parses
+				// fine, so it must be rejected explicitly rather than relying on TryParse to catch
+				// it. A parsed value <= 0 falls back to 78 exactly like a missing one.
+				return executorConnection is not null
+					&& executorConnection.Metadata.TryGetValue("WIDTH", out var widthStr)
+					&& int.TryParse(widthStr, out var parsedWidth)
+					&& parsedWidth > 0
+						? parsedWidth
+						: 78;
+			}
+
 			foreach (var attr in matchingAttributes)
 			{
-				var attrValue = attr.Value;
+				var parseType = attr.SyntaxParseType();
 
 				MString displayValue;
-				if (isRegexp || isWild)
-				{
-					displayValue = attr.Value;
-				}
-				else
-				{
-					// Highlight the matching parts using Span to avoid allocations
-					var plainValue = MModule.plainText(attr.Value);
-					var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-					var index = plainValue.IndexOf(pattern, comparison);
 
-					if (index >= 0)
+				if (parseType is null)
+				{
+					// Byte-identical to the pre-formatting behavior: nothing below this branch may
+					// change when SyntaxParseType() is null, since that is the regression contract
+					// covering all existing traffic.
+					if (isRegexp || isWild)
 					{
-						var valueSpan = plainValue.AsSpan();
-						var before = valueSpan.Slice(0, index).ToString();
-						var match = valueSpan.Slice(index, pattern.Length).ToString();
-						var after = valueSpan.Slice(index + pattern.Length).ToString();
-
-						displayValue = MModule.concat(
-							MModule.concat(
-								MModule.single(before),
-								MModule.single(match).Hilight()
-							),
-							MModule.single(after)
-						);
+						displayValue = attr.Value;
 					}
 					else
 					{
-						displayValue = attr.Value;
+						// Highlight the matching parts using Span to avoid allocations
+						var plainValue = MModule.plainText(attr.Value);
+						var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+						var index = plainValue.IndexOf(pattern, comparison);
+
+						if (index >= 0)
+						{
+							var valueSpan = plainValue.AsSpan();
+							var before = valueSpan.Slice(0, index).ToString();
+							var match = valueSpan.Slice(index, pattern.Length).ToString();
+							var after = valueSpan.Slice(index + pattern.Length).ToString();
+
+							displayValue = MModule.concat(
+								MModule.concat(
+									MModule.single(before),
+									MModule.single(match).Hilight()
+								),
+								MModule.single(after)
+							);
+						}
+						else
+						{
+							displayValue = attr.Value;
+						}
+					}
+				}
+				else
+				{
+					// The attribute carries a syntax flag: render the formatted, wrapped block instead
+					// of the raw value. Empty values are left alone (mirrors @examine) rather than run
+					// through the formatter, since an empty funsyntax/cmdsyntax body is itself a parse
+					// error and would otherwise surface a stray parser-failure summary in place of blank.
+					MString formatted;
+
+					if (MModule.getLength(attr.Value) == 0)
+					{
+						formatted = attr.Value;
+					}
+					else
+					{
+						width ??= await ExecutorWidthAsync();
+
+						var source = attr.Value;
+						var tokens = parser.Tokenize(source);
+						var semanticTokens = parser.GetSemanticTokens(source, parseType.Value);
+						var errors = parser.ValidateAndGetErrors(source, parseType.Value);
+						formatted = SoftcodeFormatter.Format(source, tokens, semanticTokens, errors, width.Value, parser, parseType.Value);
+					}
+
+					if (isRegexp || isWild)
+					{
+						displayValue = formatted;
+					}
+					else
+					{
+						// Same highlight as the unflagged path, but sliced from the formatted block via
+						// MModule.substring (rather than rebuilt from plain-text spans) so the formatter's
+						// own syntax colouring survives around the highlighted match.
+						var plainFormatted = MModule.plainText(formatted);
+						var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+						var index = plainFormatted.IndexOf(pattern, comparison);
+
+						if (index >= 0)
+						{
+							var before = MModule.substring(0, index, formatted);
+							var match = MModule.substring(index, pattern.Length, formatted).Hilight();
+							var after = MModule.substring(index + pattern.Length,
+								plainFormatted.Length - index - pattern.Length, formatted);
+
+							displayValue = MModule.concat(MModule.concat(before, match), after);
+						}
+						else
+						{
+							displayValue = formatted;
+						}
 					}
 				}
 

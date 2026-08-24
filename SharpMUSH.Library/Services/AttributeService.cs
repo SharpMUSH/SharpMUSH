@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using NaturalSort.Extension;
 using OneOf;
 using OneOf.Types;
@@ -20,7 +21,8 @@ public class AttributeService(
 	ILocateService locateService,
 	IValidateService validateService,
 	INotifyService notifyService,
-	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration,
+	IServiceProvider serviceProvider)
 	: IAttributeService
 {
 	private readonly NaturalSortComparer _attributeSort = new NaturalSortComparer(StringComparison.CurrentCulture);
@@ -754,6 +756,31 @@ public class AttributeService(
 
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
+
+		// Advisory-only set-time validation: PennMUSH never validates softcode at set time, and
+		// parity governs here, so a syntax error must never block the set -- only warn the setter,
+		// after the value is already stored. Flags don't change on a value set, so this re-fetch
+		// (rather than reusing the stream consumed by the permission check above) exists purely to
+		// read the attribute's flags, not to observe anything the set itself might have altered.
+		var storedAttribute = await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath))
+			.LastOrDefaultAsync();
+		var parseType = storedAttribute?.SyntaxParseType();
+
+		if (parseType is not null)
+		{
+			// IMUSHCodeParser is resolved lazily via the container rather than taken as a constructor
+			// parameter: MUSHCodeParser's own constructor eagerly resolves IAttributeService through
+			// this same IServiceProvider, so an eager IMUSHCodeParser dependency here would be a
+			// circular singleton resolution. Deferring the lookup to call time (long after both
+			// singletons are fully constructed) breaks the cycle.
+			var mushParser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
+			var errors = mushParser.ValidateAndGetErrors(value, parseType.Value);
+
+			foreach (var error in errors)
+			{
+				await notifyService.Notify(executor, error.ToMushFailureString(), obj);
+			}
+		}
 
 		return new Success();
 	}
