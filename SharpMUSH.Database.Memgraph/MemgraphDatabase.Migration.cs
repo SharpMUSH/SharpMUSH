@@ -579,6 +579,8 @@ f.typeRestrictions = $typeRestrictions
 ("quiet", "Q", false),
 ("branch", "`", false),
 ("prefixmatch", "", false),
+("cmdsyntax", "x", true),
+("funsyntax", "f", true),
 		};
 
 		foreach (var af in attrFlags)

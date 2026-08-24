@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Extensions;
 
@@ -63,7 +64,7 @@ public static class SharpAttributeExtensions
 		=> attribute.Flags.Any(x => x.Name == "debug");
 
 	public static bool IsNoDebug(this SharpAttribute attribute)
-		=> attribute.Flags.Any(x => x.Name == "nodebug");
+		=> attribute.Flags.Any(x => x.Name == "no_debug");
 
 	public static bool IsNearby(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "nearby");
@@ -82,4 +83,27 @@ public static class SharpAttributeExtensions
 
 	public static bool IsActionHear(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "actionhear");
+
+	/// <summary>
+	/// The attribute holds a command list (<c>cmdsyntax</c>), for display formatting.
+	/// Unrelated to <c>no_command</c>, which governs $-command matching.
+	/// </summary>
+	public static bool IsCmdSyntax(this SharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name == "cmdsyntax");
+
+	/// <summary>
+	/// The attribute holds a function expression (<c>funsyntax</c>), for display formatting.
+	/// </summary>
+	public static bool IsFunSyntax(this SharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name == "funsyntax");
+
+	/// <summary>
+	/// The parse dialect declared by the syntax flags, or <c>null</c> when neither is set.
+	/// <c>cmdsyntax</c> wins when both are present: a command list may contain function
+	/// calls, but not the reverse.
+	/// </summary>
+	public static ParseType? SyntaxParseType(this SharpAttribute attribute)
+		=> attribute.IsCmdSyntax() ? ParseType.CommandList
+			: attribute.IsFunSyntax() ? ParseType.Function
+			: null;
 }
