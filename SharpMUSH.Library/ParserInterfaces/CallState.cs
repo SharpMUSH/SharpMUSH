@@ -89,4 +89,23 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	/// </para>
 	/// </summary>
 	public object?[]? ArgumentContexts { get; init; }
+
+	/// <summary>
+	/// True when the parse that produced this <see cref="CallState"/> ran under ANTLR's lenient
+	/// error-recovery strategy (<c>ParseInternalCore</c>'s <c>lenient</c> parameter) AND actually
+	/// hit a syntax error — i.e. the tree this <see cref="CallState"/> was built from is a
+	/// best-effort recovery, not a clean parse.
+	/// <para>
+	/// The command argument-split entry points (<c>CommandCommaArgsParse</c>,
+	/// <c>CommandEqSplitParse</c>, <c>CommandEqSplitArgsParse</c>, <c>CommandSingleArgParse</c>)
+	/// always run lenient, so their errors are silently swallowed at that layer by design — the
+	/// original design relied on each argument's raw text getting an independent, STRICT re-parse
+	/// via <c>FunctionParse</c> afterwards to actually surface a malformed argument as
+	/// <c>#-1 PARSER FAILURE</c>. <c>ArgumentSplit</c>/<c>EvaluateArgumentSubtree</c> uses this flag
+	/// to fall back to that strict re-parse instead of trusting the retained (possibly
+	/// error-recovered) subtree, whenever the split pass that produced <see cref="ArgumentContexts"/>
+	/// had errors anywhere in it.
+	/// </para>
+	/// </summary>
+	public bool HadErrors { get; init; }
 }

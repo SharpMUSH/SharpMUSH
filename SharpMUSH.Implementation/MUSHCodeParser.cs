@@ -358,7 +358,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// call_limit, which is the same guard against the same crash.
 		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
 		{
-			return (new CallState(MModule.single(ErrorMessages.Returns.Call)), false);
+			return (new CallState(MModule.single(ErrorMessages.Returns.Call)) { HadErrors = true }, false);
 		}
 
 		// Two-stage SLL/LL prediction with strict/lenient recovery. The error listener is the one
@@ -373,7 +373,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// error-recovery tree so the best-effort split is returned to the caller.
 		if (errorListener.HasErrors && !lenient)
 		{
-			return (new CallState(MModule.single(errorListener.Errors[0].ToMushFailureString())), false);
+			return (new CallState(MModule.single(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true }, false);
 		}
 
 		SharpMUSHParserVisitor visitor = new(Logger, parser,
@@ -388,6 +388,19 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			text);
 
 		var result = await visitor.Visit(context);
+
+		// A lenient parse can reach here having still hit a syntax error: LenientErrorStrategy
+		// recovers and lets the visitor walk a best-effort tree instead of throwing, so
+		// errorListener.HasErrors can be true even though `result` is non-null. Tag it on the
+		// returned CallState (mirroring ArgumentContexts riding along the same way) so a caller
+		// that walks the retained tree directly instead of re-parsing — see
+		// SharpMUSHParserVisitor.EvaluateArgumentSubtree — knows this tree is only a recovered
+		// best-effort parse and cannot be trusted as a substitute for a strict re-parse.
+		if (errorListener.HasErrors && result is not null)
+		{
+			result = result with { HadErrors = true };
+		}
+
 		return (result, visitor.DidEmitFunctionDebug);
 	}
 
@@ -416,6 +429,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			return this;
 		}
 
+		// Pre-existing gap (byte-identical in FunctionParse before this method was extracted from
+		// it, not introduced here): CurrentState => State.Peek() throws on an empty stack, so
+		// unconditionally reading CurrentState.Executor/Enactor/Caller below would crash whenever
+		// State.IsEmpty is the reason needsTracking fired. Closing it here while it's in view —
+		// only copy actors from CurrentState when there IS a CurrentState to read.
+		var preserveCallerActors = preserveActors && !State.IsEmpty;
+
 		return Push(new ParserState(
 			Registers: new([[]]),
 			IterationRegisters: [],
@@ -430,9 +450,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 			Switches: [],
 			Arguments: [],
-			Executor: preserveActors ? CurrentState.Executor : null,
-			Enactor: preserveActors ? CurrentState.Enactor : null,
-			Caller: preserveActors ? CurrentState.Caller : null,
+			Executor: preserveCallerActors ? CurrentState.Executor : null,
+			Enactor: preserveCallerActors ? CurrentState.Enactor : null,
+			Caller: preserveCallerActors ? CurrentState.Caller : null,
 			Handle: null,
 			ParseMode: ParseMode.Default,
 			HttpResponse: null,

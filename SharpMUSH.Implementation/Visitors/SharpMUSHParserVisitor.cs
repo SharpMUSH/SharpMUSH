@@ -2315,6 +2315,19 @@ public class SharpMUSHParserVisitor(
 		var argContexts = argCallState.ArgumentContexts ?? [];
 		object? ContextAt(int i) => i >= 0 && i < argContexts.Length ? argContexts[i] : null;
 
+		// The split pass above always runs lenient (CommandCommaArgsParse etc. pass
+		// lenient: !StrictParse, and StrictParse is only ever set by the single-token command
+		// handler) — so a syntax error in the argument text does NOT surface as the
+		// Arguments:null branch above; ANTLR's LenientErrorStrategy recovers and the split still
+		// returns a best-effort Arguments/ArgumentContexts array with CallState.HadErrors set.
+		// Before this optimization, that didn't matter: every argument's raw text got an
+		// independent STRICT re-parse via FunctionParse afterwards, which would surface the
+		// error as #-1 PARSER FAILURE. EvaluateArgumentSubtree must not trust a retained subtree
+		// built from an error-recovered parse, so when the split had errors ANYWHERE, every
+		// argument from it falls back to that original strict re-parse — matching pre-optimization
+		// behavior exactly rather than risking a wrong best-effort value for a malformed argument.
+		var splitHadErrors = argCallState.HadErrors;
+
 		if (eqSplit)
 		{
 			// The LHS of an EqSplit command is evaluated unless the command declares full NoParse.
@@ -2328,7 +2341,7 @@ public class SharpMUSHParserVisitor(
 			arguments.Add(noParse
 				? new CallState(noParseLhs, argCallState.Depth, null,
 					async () => (await prs.FunctionParse(noParseLhs))!.Message!)
-				: (await EvaluateArgumentSubtree(prs, parsedArgumentText, ContextAt(0), noParseLhs, emitSubstDebug: false))!);
+				: (await EvaluateArgumentSubtree(prs, parsedArgumentText, ContextAt(0), noParseLhs, emitSubstDebug: false, splitHadErrors))!);
 
 			if (nArgs < 2) return arguments;
 
@@ -2351,7 +2364,7 @@ public class SharpMUSHParserVisitor(
 						.Select((x, idx) => (Argument: x, Context: ContextAt(idx + 1)))
 						.ToAsyncEnumerable()
 						.Select(((MString Argument, object? Context) pair, CancellationToken _) =>
-							EvaluateArgumentSubtree(prs, parsedArgumentText, pair.Context, pair.Argument, emitSubstDebug: true))
+							EvaluateArgumentSubtree(prs, parsedArgumentText, pair.Context, pair.Argument, emitSubstDebug: true, splitHadErrors))
 						.Select(cs => cs!)
 						.ToListAsync());
 			}
@@ -2372,7 +2385,7 @@ public class SharpMUSHParserVisitor(
 					.Select((x, idx) => (Argument: x, Context: ContextAt(idx)))
 					.ToAsyncEnumerable()
 					.Select(((MString Argument, object? Context) pair, CancellationToken _) =>
-						EvaluateArgumentSubtree(prs, parsedArgumentText, pair.Context, pair.Argument, emitSubstDebug: true))
+						EvaluateArgumentSubtree(prs, parsedArgumentText, pair.Context, pair.Argument, emitSubstDebug: true, splitHadErrors))
 					.Select(cs => cs!)
 					.ToListAsync());
 			}
@@ -2404,12 +2417,21 @@ public class SharpMUSHParserVisitor(
 	/// would receive on the fallback path.</param>
 	/// <param name="emitSubstDebug">Mirrors <see cref="IMUSHCodeParser.FunctionParse(MString, bool)"/>'s
 	/// substitution-only QUEUE_DEBUG trace flag.</param>
+	/// <param name="splitHadErrors">
+	/// <see cref="CallState.HadErrors"/> from the NoParse split pass that produced
+	/// <paramref name="retainedContext"/>. That pass always runs lenient, so a syntax error
+	/// anywhere in the split doesn't fail it outright — ANTLR's error recovery just produces a
+	/// best-effort tree. When true, this argument (and every sibling from the same split) falls
+	/// back to the strict re-parse, matching pre-optimization behavior instead of trusting a
+	/// recovered tree.
+	/// </param>
 	private async ValueTask<CallState?> EvaluateArgumentSubtree(
 		IMUSHCodeParser prs,
 		MString argumentSourceText,
 		object? retainedContext,
 		MString argument,
-		bool emitSubstDebug)
+		bool emitSubstDebug,
+		bool splitHadErrors)
 	{
 		// Escaped text (`\x`, grammar rule `escapedText: ESCAPE ANY;`, the ONLY entry point being a
 		// literal backslash — SharpMUSHLexer.g4) is a hard correctness trap for subtree reuse:
@@ -2425,9 +2447,11 @@ public class SharpMUSHParserVisitor(
 		// stores `\%#` via @set (EqSplit, no NoParse/RSNoParse -> eager RHS evaluation) and asserts
 		// it comes out as "#1", not "%#". Fall back to the original re-lex pipeline whenever the
 		// retained subtree contains an escape anywhere, so this argument gets byte-identical
-		// treatment to pre-optimization behavior.
+		// treatment to pre-optimization behavior. Same fallback for a syntax error anywhere in the
+		// split (splitHadErrors) — see the parameter doc above and CallState.HadErrors.
 		if (retainedContext is not EvaluationStringContext ctx
 				|| prs is not MUSHCodeParser mushParser
+				|| splitHadErrors
 				|| ContainsEscapedText(ctx))
 		{
 			return await prs.FunctionParse(argument, emitSubstDebug);
