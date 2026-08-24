@@ -26,22 +26,28 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// </para>
 /// <list type="bullet">
 /// <item><description>
-/// After a <c>FUNCHAR</c>, which is the only way <c>SharpMUSHParser.g4</c> opens a
-/// <c>function</c> (see its <c>function:</c> rule). A bare <c>OPAREN</c> reaches the parser through
-/// <c>beginGenericText</c> and is plain text, so it is neither a group nor a break position.
+/// After a <c>FUNCHAR</c> that opens a call the parser will actually dispatch. <c>FUNCHAR</c> is the
+/// only way <c>SharpMUSHParser.g4</c> opens a <c>function</c> (see its <c>function:</c> rule), but
+/// that is not sufficient: a name resolving to no function is copied through as text by
+/// <c>SharpMUSHParserVisitor.LiteralFunctionCall</c>, which slices its <c>FUNCHAR</c>,
+/// <c>COMMAWS</c> and <c>CPAREN</c> terminals verbatim from the source — absorbed whitespace
+/// included. So resolution decides it, and the caller supplies the oracle. A bare <c>OPAREN</c>
+/// reaches the parser through <c>beginGenericText</c> and is plain text, so it is neither a group nor
+/// a break position.
 /// </description></item>
 /// <item><description>
-/// After a <c>COMMAWS</c> whose immediately-enclosing group is opened by a <c>FUNCHAR</c> — that is,
-/// a genuine argument separator. A comma anywhere else is prose.
+/// After a <c>COMMAWS</c> whose immediately-enclosing group is opened by such a <c>FUNCHAR</c> — that
+/// is, a genuine argument separator. A comma anywhere else is prose.
 /// </description></item>
 /// <item><description>
 /// After a <c>SEMICOLON</c> at root, where it separates commands. A <c>;</c> inside a function's
 /// arguments is literal.
 /// </description></item>
 /// <item><description>
-/// After an <c>OBRACK</c>. <b>Provisional</b>: bracket groups are treated as structural for now, but
-/// this is gated on Task 3's equivalence corpus proving it by evaluating formatted output. If that
-/// disproves it, drop <c>OBRACK</c> from <see cref="Openers"/> exactly as <c>OPAREN</c> was dropped.
+/// After an <c>OBRACK</c>. Confirmed by the equivalence corpus (Ruling 7 settled): unlike
+/// <c>OPAREN</c>, <c>CPAREN</c>, <c>SEMICOLON</c>, <c>COMMAWS</c> and <c>EQUALS</c>, a <c>[</c> has no
+/// text-position reading at all — it appears nowhere in <c>beginGenericText</c>, only in
+/// <c>bracketPattern</c>, whose visitor discards the token's text.
 /// </description></item>
 /// </list>
 /// <para>
@@ -92,8 +98,20 @@ public static class SoftcodeLayout
 	/// <param name="tokens">The lexed softcode, in source order.</param>
 	/// <param name="width">Target line width in columns.</param>
 	/// <param name="indentUnit">Columns of indent added per nesting level.</param>
+	/// <param name="isKnownFunction">
+	/// Answers whether a name resolves to something the parser will call — consult the same sources
+	/// <c>SharpMUSHParserVisitor.CallFunction</c> does, in the same order: the parser's
+	/// <c>FunctionLibrary</c>, then the <c>@function</c> registry. A name that does not resolve is
+	/// reproduced as text with its delimiters' whitespace intact, so its call is laid out flat.
+	/// <para>
+	/// <b>Omitting this is the safe choice, not the convenient one:</b> the default treats every name
+	/// as unresolved, so a caller with no oracle gets no <c>FUNCHAR</c> or <c>COMMAWS</c> breaks at all
+	/// rather than optimistic ones that might insert a newline into literal text.
+	/// </para>
+	/// </param>
 	/// <returns>The breaks, in ascending token order. Empty when everything fits flat.</returns>
-	public static IReadOnlyList<SoftcodeBreak> Compute(IReadOnlyList<TokenInfo> tokens, int width, int indentUnit = 2)
+	public static IReadOnlyList<SoftcodeBreak> Compute(IReadOnlyList<TokenInfo> tokens, int width,
+		int indentUnit = 2, Func<string, bool>? isKnownFunction = null)
 	{
 		if (tokens.Count == 0)
 		{
@@ -102,7 +120,7 @@ public static class SoftcodeLayout
 
 		var effectiveWidth = Math.Max(1, width);
 		var effectiveIndentUnit = Math.Max(0, indentUnit);
-		var root = BuildGroupTree(tokens);
+		var root = BuildGroupTree(tokens, isKnownFunction ?? (_ => false));
 		MeasureFlat(root, tokens);
 
 		var breaks = new List<SoftcodeBreak>();
@@ -112,11 +130,30 @@ public static class SoftcodeLayout
 	}
 
 	/// <summary>
+	/// The name in a <c>FUNCHAR</c> token, which the lexer builds as <c>name '(' WS</c>. Matches what
+	/// <c>VisitFunction</c> looks up (<c>FUNCHAR().GetText().TrimEnd()[..^1]</c>) while tolerating a
+	/// token that is not shaped that way at all.
+	/// </summary>
+	private static string FunctionName(string funCharText)
+	{
+		var openParen = funCharText.IndexOf('(');
+
+		return openParen <= 0 ? string.Empty : funCharText[..openParen];
+	}
+
+	/// <summary>
 	/// Walks the tokens with a stack, from a synthetic root group, recording each group's structural
 	/// break points as it goes. Unbalanced input never throws: a closer with nothing but the root on
 	/// the stack is ignored, and groups still open at end of input close implicitly at the last token.
+	/// <para>
+	/// Also tracks whether function recognition is live at each point, mirroring
+	/// <c>_suppressFunctionEval</c> in <c>SharpMUSHParserVisitor</c>: an unresolved call switches it
+	/// off for everything inside it (:505-511 routes nested calls to <c>LiteralFunctionCall</c> too),
+	/// and a <c>[...]</c> switches it back on (<c>VisitBracketPattern</c>, :2457-2461). A call with
+	/// recognition off is text, so it opens no break positions.
+	/// </para>
 	/// </summary>
-	private static Group BuildGroupTree(IReadOnlyList<TokenInfo> tokens)
+	private static Group BuildGroupTree(IReadOnlyList<TokenInfo> tokens, Func<string, bool> isKnownFunction)
 	{
 		var root = new Group(openIndex: -1, openType: string.Empty);
 		var stack = new Stack<Group>();
@@ -127,7 +164,19 @@ public static class SoftcodeLayout
 			var type = tokens[i].Type;
 			if (Array.IndexOf(Openers, type) >= 0)
 			{
-				var child = new Group(i, type);
+				var enclosingSuppresses = stack.Peek().SuppressesFunctions;
+				var child = new Group(i, type)
+				{
+					SuppressesFunctions = type switch
+					{
+						// A bracket re-enables function recognition, however deeply it is buried.
+						"OBRACK" => false,
+						// A call the parser will not dispatch is text, and so is everything inside it.
+						"FUNCHAR" => enclosingSuppresses || !isKnownFunction(FunctionName(tokens[i].Text)),
+						// Braces are never recursed into, so their own state is never consulted.
+						_ => enclosingSuppresses
+					}
+				};
 				stack.Peek().Children.Add(child);
 				stack.Push(child);
 			}
@@ -145,9 +194,10 @@ public static class SoftcodeLayout
 			}
 			else if (type == "COMMAWS")
 			{
-				// Only an argument separator inside name(...). Elsewhere — at root, or inside a bracket
-				// or brace group — the comma is prose and its absorbed whitespace is literal.
-				if (stack.Peek().OpenType == "FUNCHAR")
+				// Only an argument separator inside a name(...) the parser will dispatch. Elsewhere — at
+				// root, inside a bracket or brace group, or inside a call that is being reproduced as
+				// text — the comma is prose and its absorbed whitespace is literal.
+				if (stack.Peek().OpenType == "FUNCHAR" && !stack.Peek().SuppressesFunctions)
 				{
 					stack.Peek().BreakPoints.Add(i);
 				}
@@ -241,8 +291,9 @@ public static class SoftcodeLayout
 		{
 			// The synthetic root has no opening delimiter and so emits no opener break; it breaks only
 			// at its own structural separators. An empty group emits none either — there is nothing to
-			// put on the next line but the closer.
-			if (group.OpenIndex + 1 < lastContent)
+			// put on the next line but the closer. Nor does a call the parser will reproduce as text,
+			// whose FUNCHAR is sliced from the source with its absorbed whitespace intact.
+			if (group.OpenIndex + 1 < lastContent && !group.SuppressesFunctions)
 			{
 				breaks.Add(new SoftcodeBreak(group.OpenIndex, indent));
 				column = indent;
@@ -316,5 +367,12 @@ public static class SoftcodeLayout
 
 		/// <summary>Whether the group's text already contains a literal newline.</summary>
 		public bool HasNewline { get; set; }
+
+		/// <summary>
+		/// Whether function recognition is off inside this group — and, for a <c>FUNCHAR</c> group,
+		/// whether the group is itself being reproduced as text rather than dispatched. A group in that
+		/// state opens no break positions: its delimiters' absorbed whitespace reaches the output.
+		/// </summary>
+		public bool SuppressesFunctions { get; init; }
 	}
 }

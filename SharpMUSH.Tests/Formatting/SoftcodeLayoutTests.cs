@@ -11,11 +11,19 @@ public class SoftcodeLayoutTests
 
 	private static IReadOnlyList<TokenInfo> Lex(string source) => TestLexer.Lex(source);
 
+	/// <summary>
+	/// Every <c>name(</c> in this file stands for a call the parser would dispatch, so these tests pin
+	/// layout shape rather than name resolution. <c>Compute</c>'s default is the opposite — an absent
+	/// oracle means nothing resolves and no call is broken into — and the consequences of an
+	/// unresolved name are pinned by <c>SoftcodeLayoutEquivalenceTests</c> against the real parser.
+	/// </summary>
+	private static readonly Func<string, bool> AllNamesResolve = _ => true;
+
 	[Test]
 	public async Task ShortInput_FitsFlat_NoBreaks()
 	{
 		var tokens = Lex("add(1,2)");
-		var breaks = SoftcodeLayout.Compute(tokens, width: 78);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 78, isKnownFunction: AllNamesResolve);
 		await Assert.That(breaks).IsEmpty();
 	}
 
@@ -24,7 +32,7 @@ public class SoftcodeLayoutTests
 	{
 		const string src = "switch(words(%0),0,nothing at all,1,just one,many words here)";
 		var tokens = Lex(src);
-		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 30));
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 30, isKnownFunction: AllNamesResolve));
 
 		await Assert.That(rendered).IsEqualTo(
 			"""
@@ -43,7 +51,7 @@ public class SoftcodeLayoutTests
 	{
 		const string src = "switch(words(%0),0,nothing at all,1,just one,many words here)";
 		var tokens = Lex(src);
-		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 30));
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 30, isKnownFunction: AllNamesResolve));
 
 		await Assert.That(rendered).DoesNotContain("\n)");
 		await Assert.That(rendered.TrimEnd()).EndsWith(")");
@@ -54,7 +62,7 @@ public class SoftcodeLayoutTests
 	{
 		const string src = "switch(%0,1,{say a very long thing indeed, honestly},2,{other})";
 		var tokens = Lex(src);
-		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20));
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: AllNamesResolve));
 
 		await Assert.That(rendered).Contains("{say a very long thing indeed, honestly}");
 	}
@@ -64,7 +72,7 @@ public class SoftcodeLayoutTests
 	{
 		const string src = "switch(add(one thing,another thing),1,yes,no)";
 		var tokens = Lex(src);
-		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20));
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: AllNamesResolve));
 
 		await Assert.That(rendered).Contains("\n  ");
 		await Assert.That(rendered).Contains("\n    ");
@@ -75,7 +83,7 @@ public class SoftcodeLayoutTests
 	{
 		const string src = "@pemit %#=first message here;@emit second message here;@wait 0=third";
 		var tokens = Lex(src);
-		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 30));
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 30, isKnownFunction: AllNamesResolve));
 
 		await Assert.That(rendered.Split('\n')).Count().IsEqualTo(3);
 	}
@@ -84,7 +92,7 @@ public class SoftcodeLayoutTests
 	public async Task UnbalancedOpenParen_DoesNotThrow()
 	{
 		var tokens = Lex("switch(a,b,c");
-		var breaks = SoftcodeLayout.Compute(tokens, width: 10);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 10, isKnownFunction: AllNamesResolve);
 		await Assert.That(breaks).IsNotNull();
 	}
 
@@ -92,7 +100,7 @@ public class SoftcodeLayoutTests
 	public async Task UnbalancedCloseParen_DoesNotThrow()
 	{
 		var tokens = Lex("a,b,c)))");
-		var breaks = SoftcodeLayout.Compute(tokens, width: 10);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 10, isKnownFunction: AllNamesResolve);
 		await Assert.That(breaks).IsNotNull();
 	}
 
@@ -101,7 +109,7 @@ public class SoftcodeLayoutTests
 	{
 		var src = string.Concat(Enumerable.Repeat("f(", 40)) + "x" + string.Concat(Enumerable.Repeat(")", 40));
 		var tokens = Lex(src);
-		var breaks = SoftcodeLayout.Compute(tokens, width: 40);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 40, isKnownFunction: AllNamesResolve);
 
 		await Assert.That(breaks.All(b => b.Indent <= 20)).IsTrue();
 	}
@@ -152,7 +160,7 @@ public class SoftcodeLayoutTests
 		foreach (var src in sources)
 		{
 			var tokens = Lex(src);
-			var breaks = SoftcodeLayout.Compute(tokens, width: 20);
+			var breaks = SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: AllNamesResolve);
 
 			// Without this the test would pass vacuously against a Compute that returned nothing at all.
 			await Assert.That(breaks).IsNotEmpty().Because($"no breaks to check in [{src}]");
@@ -186,7 +194,7 @@ public class SoftcodeLayoutTests
 	{
 		const string src = "@emit A long line of prose, and more prose here, and yet more besides";
 		var tokens = Lex(src);
-		var breaks = SoftcodeLayout.Compute(tokens, width: 20);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: AllNamesResolve);
 
 		await Assert.That(breaks).IsEmpty();
 	}
@@ -200,7 +208,7 @@ public class SoftcodeLayoutTests
 		// rather than being masked by the empty-group guard.
 		const string src = "@emit a long parenthetical (with several words, inside it) and then some more";
 		var tokens = Lex(src);
-		var breaks = SoftcodeLayout.Compute(tokens, width: 20);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: AllNamesResolve);
 
 		await Assert.That(breaks).IsEmpty();
 		await Assert.That(tokens.Select(t => t.Type)).Contains("OPAREN");
@@ -211,7 +219,7 @@ public class SoftcodeLayoutTests
 	{
 		const string src = "aaaaaaaaaaaaaaaaaaaa;)";
 		var tokens = Lex(src);
-		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 10));
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 10, isKnownFunction: AllNamesResolve));
 
 		await Assert.That(rendered).DoesNotContain("\n)");
 	}
@@ -220,7 +228,7 @@ public class SoftcodeLayoutTests
 	public async Task EmptyCall_KeepsItsDelimitersTogether()
 	{
 		var tokens = Lex("rand()");
-		var breaks = SoftcodeLayout.Compute(tokens, width: 1);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 1, isKnownFunction: AllNamesResolve);
 
 		await Assert.That(breaks).IsEmpty();
 	}
@@ -233,7 +241,7 @@ public class SoftcodeLayoutTests
 		// that follows to f's argument list, making it a break point inside literal text.
 		const string src = "f(aaaa,{prose ) here, comma},b)";
 		var tokens = Lex(src);
-		var breaks = SoftcodeLayout.Compute(tokens, width: 12);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 12, isKnownFunction: AllNamesResolve);
 
 		var open = tokens.Index().First(x => x.Item.Text.TrimEnd() == "{").Index;
 		var close = tokens.Index().First(x => x.Item.Text.TrimEnd() == "}").Index;
@@ -249,7 +257,7 @@ public class SoftcodeLayoutTests
 		// so it is measured from column 0 and fits — accumulating the first line's width would break it.
 		const string src = "aaaaaaaaaaaaaaaaaaaaaaaaaa\n[switch(1,a,b)]";
 		var tokens = Lex(src);
-		var breaks = SoftcodeLayout.Compute(tokens, width: 30);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 30, isKnownFunction: AllNamesResolve);
 
 		await Assert.That(breaks).IsEmpty();
 	}

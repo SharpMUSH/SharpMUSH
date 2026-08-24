@@ -1,5 +1,8 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Formatting;
 
@@ -11,8 +14,26 @@ namespace SharpMUSH.Tests.Formatting;
 /// data almost everywhere — <c>VisitBeginGenericText</c> emits the raw token text with the whitespace
 /// its lexer rule absorbed still in it — so a comparison that normalised trailing whitespace away
 /// would normalise away exactly the defect this test exists to catch. Each corpus entry is run through
-/// the real parser twice: as written, and after being laid out at each of several widths. The two
-/// results must be identical strings.
+/// the real parser twice: as written, and after being laid out at each of several widths.
+/// </para>
+/// <para>
+/// There are three corpora and they carry <b>different strengths of claim</b>. Read the summary on
+/// each before adding an entry to it:
+/// <list type="number">
+/// <item><description>
+/// <see cref="ParseableEchoingCorpus"/> — the real proof. Parses, and evaluates to something a stray
+/// newline would visibly damage. Guarded, and compared as exact strings.
+/// </description></item>
+/// <item><description>
+/// <see cref="ParseableWeakOutputCorpus"/> — parses, but evaluates to nothing much. Still compared as
+/// exact strings; just cannot prove as much on its own.
+/// </description></item>
+/// <item><description>
+/// <see cref="UnparseableCorpus"/> — does not parse. Only the <em>parse outcome</em> is compared, not
+/// the message, because a parser failure quotes a source offset and excerpt that any reformatting
+/// necessarily moves. Both entry and exit from this group are policed by assertions.
+/// </description></item>
+/// </list>
 /// </para>
 /// </summary>
 public class SoftcodeLayoutEquivalenceTests
@@ -20,16 +41,37 @@ public class SoftcodeLayoutEquivalenceTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
+	private IMUSHCodeParser? _oracleParser;
+
+	/// <summary>
+	/// One parser instance, reused for name resolution. <see cref="ServerWebAppFactory.FunctionParser"/>
+	/// builds a fresh parser on every access, which is what keeps <see cref="Eval"/> deterministic, but
+	/// the oracle only reads the function library and does not want the cost.
+	/// </summary>
+	private IMUSHCodeParser OracleParser => _oracleParser ??= WebAppFactoryArg.FunctionParser;
+
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private static readonly int[] Widths = [20, 40, 78];
 
 	/// <summary>
-	/// Entries whose evaluation echoes their structure, so a stray newline shows up in the output.
-	/// Guarded below to produce non-empty, non-error output: an entry evaluating to <c>""</c> or to
-	/// <c>#-1 ...</c> would compare equal no matter what the formatter did to its innards.
+	/// The oracle Ruling 9 requires, backed by the real parser and following
+	/// <c>SharpMUSHParserVisitor.CallFunction</c>'s resolution order exactly: the parser's
+	/// <c>FunctionLibrary</c> first (a <c>FunctionLibraryService</c>, so <c>OrdinalIgnoreCase</c>),
+	/// then the <c>@function</c> registry. Deliberately a plain lookup rather than a case-folded one,
+	/// so that if the library ever stopped being case-insensitive this would resolve fewer names and
+	/// the formatter would break less — never more.
 	/// </summary>
-	public static IEnumerable<Func<string>> Corpus() =>
+	private bool IsKnownFunction(string name)
+		=> OracleParser.FunctionLibrary.ContainsKey(name)
+			 || OracleParser.ServiceProvider.GetService<IUserDefinedFunctionService>()?.Resolve(name) is not null;
+
+	/// <summary>
+	/// Parses, and evaluates to something a stray newline would visibly damage. Guarded below to
+	/// produce non-empty, non-error output: an entry evaluating to <c>""</c> or to an argument-
+	/// swallowing <c>#-1</c> would compare equal no matter what the formatter did to its innards.
+	/// </summary>
+	public static IEnumerable<Func<string>> ParseableEchoingCorpus() =>
 	[
 		// Fits flat at every width — the null case.
 		() => "add(1,2)",
@@ -66,9 +108,21 @@ public class SoftcodeLayoutEquivalenceTests
 		// `switch(a,[f(x),y],...)` (the Task 2 table's entry) is not valid softcode at all.
 		() => "[strcat(a long stretch of text here,and more of it)],literal comma here,[add(1,2)]",
 
-		// A name that resolves to no function is reproduced as text (PennMUSH: `think foo(bar)` prints
-		// `foo(bar)`), and SharpMUSH copies its FUNCHAR/COMMAWS terminals verbatim from the source.
+		// Ruling 9. A name that resolves to no function is reproduced as text — PennMUSH prints
+		// `foo(bar)` for `think foo(bar)` — and SharpMUSH's LiteralFunctionCall slices its
+		// FUNCHAR/COMMAWS/CPAREN terminals verbatim, absorbed whitespace included. No break is safe.
 		() => "notafunction(aaaaaaaaaa,bbbbbbbbbb,cccccccccc)",
+
+		// Ruling 9, propagation inward: _suppressFunctionEval makes every call inside an unresolved
+		// one literal too, so `strcat` here is text and must not be broken either.
+		() => "notafunction(aaaa,strcat(bbbbbbbbbb,cccccccccc),dddd)",
+
+		// Ruling 9, and the one exception to it: VisitBracketPattern clears the suppression, so the
+		// bracketed call really is dispatched and really is safe to break.
+		() => "notafunction(aaaa,[strcat(bbbbbbbbbb,cccccccccc)],dddd)",
+
+		// Ruling 9, outward: a resolved call is not tainted by an unresolved one among its arguments.
+		() => "strcat(aaaa,notafunction(bbbbbbbbbb,cccccccccc),dddd)",
 
 		// Literal commas in text position: prose commas are not separators (Task 2, Critical 1).
 		() => "@emit A long line of prose, and more prose here, and yet more besides",
@@ -78,46 +132,70 @@ public class SoftcodeLayoutEquivalenceTests
 
 		// A mismatched closer inside braces must not pop the brace group (Task 2, round 2).
 		() => "strcat(aaaa,{prose ) here, comma},b)",
+		() => "f(aaaa,{prose ) here, comma},b)",
 
 		// The first ')' genuinely closes the call; the tail is root-level text.
 		() => "strcat(aaaa, (bbbb) cccc, dddd)",
+		() => "f(aaaa, (bbbb) cccc, dddd)",
 
 		// iter over a real list, with a bare parenthetical inside an argument.
 		() => "iter(a b,a long chunk (with a parenthetical) of prose here ##,%b,%b)",
 
-		// A stray closer at root, after a root-level semicolon that is literal here.
+		// A stray closer at root, after a root-level semicolon that is literal under FunctionParse.
 		() => "aaaaaaaaaaaaaaaaaaaa;)",
 
-		// A literal newline already in the source resets the column (attributes have held them since PR #775).
+		// Stray closers at root, and root-level commas that are prose.
+		() => "a,b,c)))",
+
+		// A literal newline already in the source resets the column (attributes have held them
+		// since PR #775).
 		() => "aaaaaaaaaaaaaaaaaaaaaaaaaa\n[switch(1,1,matched,unmatched)]"
 	];
 
 	/// <summary>
-	/// The Task 2 corpus table verbatim, including entries whose output is empty, an error, or a parser
-	/// failure. Those cannot prove much on their own — the echoing variants above are what carry the
-	/// proof — but they must still evaluate identically before and after formatting, and must not throw.
+	/// Parses, but evaluates to nothing or to an error that swallows its arguments — a formatter could
+	/// mangle the innards without the output moving. Held to the same exact-string comparison anyway,
+	/// because they are cheap and they must not throw; they simply cannot carry the proof themselves.
+	/// From the Task 2 corpus table, which wrote them against an executor that has no <c>%0</c>.
 	/// </summary>
-	public static IEnumerable<Func<string>> EdgeCorpus() =>
+	public static IEnumerable<Func<string>> ParseableWeakOutputCorpus() =>
 	[
-		() => "f(aaaa,{prose ) here, comma},b)",
-		() => "f(aaaa, (bbbb) cccc, dddd)",
-		() => "switch(a,[ansi(hr,a long stretch of text),y],{b,c},trailing prose, and more)",
 		() => "switch(%0,1,{say a very long thing indeed, honestly},2,{other})",
 		() => "iter(%0,a long chunk (with a parenthetical) of prose here,%b,%b)",
-		() => "aaaaaaaaaaaaaaaaaaaaaaaaaa\n[switch(1,a,b)]",
+		() => "aaaaaaaaaaaaaaaaaaaaaaaaaa\n[switch(1,a,b)]"
+	];
+
+	/// <summary>
+	/// Does <b>not</b> parse. Ruling 10: assert only that the parse outcome is unchanged, never that
+	/// the message matches. <c>ErrorMessages.Returns.ParserFailure</c> carries a source offset and a
+	/// source excerpt, so inserting a single space anywhere changes the text — that is inherent to
+	/// reporting errors against source, not something break placement could preserve.
+	/// <para>
+	/// The weaker claim cannot leak: <see cref="Formatting_PreservesTheParseFailure"/> requires the
+	/// original to actually fail, and the two parseable corpora require theirs to actually parse, so
+	/// an entry cannot be quietly demoted into this group to silence it.
+	/// </para>
+	/// </summary>
+	public static IEnumerable<Func<string>> UnparseableCorpus() =>
+	[
+		// The `,y` sits inside [...] inside an argument list, where inFunction > 0 and
+		// beginGenericText's COMMAWS predicate (SharpMUSHParser.g4:159) is false. Position 41.
+		() => "switch(a,[ansi(hr,a long stretch of text),y],{b,c},trailing prose, and more)",
 		() => "switch(a,b,c",
-		() => "a,b,c)))",
 		() => "add(1,add(1,add(1,add(1,5)))"
 	];
 
 	private async Task<string?> Eval(string code)
 		=> (await Parser.FunctionParse(MModule.single(code)))?.Message?.ToString();
 
+	private static bool IsParseFailure(string? result) =>
+		result?.StartsWith(ErrorMessages.Returns.ParserFailure[..^3], StringComparison.Ordinal) == true;
+
 	private async Task AssertFormattingPreservesEvaluation(string source, string? expected)
 	{
 		foreach (var width in Widths)
 		{
-			var formatted = SoftcodeRenderer.Format(source, width);
+			var formatted = SoftcodeRenderer.Format(source, width, IsKnownFunction);
 			var actual = await Eval(formatted);
 
 			await Assert.That(actual).IsEqualTo(expected)
@@ -126,26 +204,57 @@ public class SoftcodeLayoutEquivalenceTests
 	}
 
 	[Test]
-	[MethodDataSource(nameof(Corpus))]
+	[MethodDataSource(nameof(ParseableEchoingCorpus))]
 	public async Task Formatting_PreservesEvaluatedOutput(string source)
 	{
 		var expected = await Eval(source);
 
+		await Assert.That(IsParseFailure(expected)).IsFalse()
+			.Because($"[{source}] does not parse — it belongs in UnparseableCorpus, not here: {expected}");
+
 		// An entry evaluating to nothing, or to an error that swallows its arguments, would compare
 		// equal however badly the formatter mangled it. Fail loudly rather than pass vacuously.
 		await Assert.That(string.IsNullOrEmpty(expected)).IsFalse()
-			.Because($"corpus entry [{source}] evaluates to nothing, so it proves nothing");
-		await Assert.That(expected!.StartsWith("#-1")).IsFalse()
-			.Because($"corpus entry [{source}] evaluates to an error, so it proves nothing: {expected}");
+			.Because($"[{source}] evaluates to nothing — it belongs in ParseableWeakOutputCorpus");
+		await Assert.That(expected!.StartsWith("#-1", StringComparison.Ordinal)).IsFalse()
+			.Because($"[{source}] evaluates to an error — it belongs in ParseableWeakOutputCorpus: {expected}");
 
 		await AssertFormattingPreservesEvaluation(source, expected);
 	}
 
 	[Test]
-	[MethodDataSource(nameof(EdgeCorpus))]
-	public async Task Formatting_PreservesEvaluatedOutput_ForEdgeCases(string source)
+	[MethodDataSource(nameof(ParseableWeakOutputCorpus))]
+	public async Task Formatting_PreservesEvaluatedOutput_WhereThereIsLittleOutputToPreserve(string source)
 	{
-		await AssertFormattingPreservesEvaluation(source, await Eval(source));
+		var expected = await Eval(source);
+
+		await Assert.That(IsParseFailure(expected)).IsFalse()
+			.Because($"[{source}] does not parse — it belongs in UnparseableCorpus, not here: {expected}");
+
+		await AssertFormattingPreservesEvaluation(source, expected);
+	}
+
+	/// <summary>
+	/// Ruling 10. The claim here is only that formatting does not turn a parse failure into something
+	/// else, or move where it fails to a different <em>kind</em> of outcome — not that the message is
+	/// byte-identical, which nothing could deliver.
+	/// </summary>
+	[Test]
+	[MethodDataSource(nameof(UnparseableCorpus))]
+	public async Task Formatting_PreservesTheParseFailure(string source)
+	{
+		await Assert.That(IsParseFailure(await Eval(source))).IsTrue()
+			.Because($"[{source}] parses cleanly — it belongs in a parseable corpus, where the "
+							 + "assertion is exact-string equality rather than this weaker one");
+
+		foreach (var width in Widths)
+		{
+			var formatted = SoftcodeRenderer.Format(source, width, IsKnownFunction);
+
+			await Assert.That(IsParseFailure(await Eval(formatted))).IsTrue()
+				.Because($"width {width} turned a parse failure into something else for [{source}]. "
+								 + $"Formatted:\n{formatted}");
+		}
 	}
 
 	/// <summary>
@@ -153,7 +262,7 @@ public class SoftcodeLayoutEquivalenceTests
 	/// pins that no corpus entry is time-, random- or state-dependent.
 	/// </summary>
 	[Test]
-	[MethodDataSource(nameof(Corpus))]
+	[MethodDataSource(nameof(ParseableEchoingCorpus))]
 	public async Task CorpusEntry_EvaluatesDeterministically(string source)
 	{
 		var first = await Eval(source);
@@ -163,34 +272,67 @@ public class SoftcodeLayoutEquivalenceTests
 	}
 
 	/// <summary>
-	/// Ruling 7: <c>OBRACK</c> is a break position on probation, settled by whether the corpus survives
-	/// it. That verdict is worthless if no corpus entry ever breaks at a <c>[</c>, so this asserts the
-	/// corpus actually exercises the position it is meant to be judging.
+	/// The oracle is what decides whether a call is broken into at all, so a broken oracle would make
+	/// the whole suite pass by emitting almost no breaks. This pins both of its answers.
 	/// </summary>
 	[Test]
-	public async Task Corpus_ActuallyBreaksAfterAnOpenBracket()
+	public async Task Oracle_AnswersForResolvedAndUnresolvedNames()
 	{
-		var exercised = new List<string>();
-		foreach (var source in Corpus().Concat(EdgeCorpus()).Select(entry => entry()))
+		string[] corpusFunctions = ["add", "strcat", "switch", "iter", "ansi", "ucstr"];
+
+		foreach (var name in corpusFunctions)
+		{
+			await Assert.That(IsKnownFunction(name)).IsTrue().Because($"the corpus calls {name}()");
+		}
+
+		await Assert.That(IsKnownFunction("notafunction")).IsFalse();
+	}
+
+	/// <summary>
+	/// A verdict about a break position is worthless if the corpus never reaches it. Prints the
+	/// <c>OBRACK</c> sites, which are Ruling 7's evidence.
+	/// </summary>
+	[Test]
+	public async Task Corpus_ExercisesEachBreakPosition()
+	{
+		var exercised = new Dictionary<string, List<string>>
+		{
+			["OBRACK"] = [],
+			["FUNCHAR"] = [],
+			["COMMAWS"] = []
+		};
+
+		var corpus = ParseableEchoingCorpus()
+			.Concat(ParseableWeakOutputCorpus())
+			.Concat(UnparseableCorpus())
+			.Select(entry => entry());
+
+		foreach (var source in corpus)
 		{
 			var tokens = TestLexer.Lex(source);
 			foreach (var width in Widths)
 			{
-				if (SoftcodeLayout.Compute(tokens, width).Any(b => tokens[b.TokenIndex].Type == "OBRACK"))
+				foreach (var b in SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction))
 				{
-					exercised.Add($"{source} @ {width}");
+					if (exercised.TryGetValue(tokens[b.TokenIndex].Type, out var sites))
+					{
+						sites.Add($"{source} @ {width}");
+					}
 				}
 			}
 		}
 
-		Console.WriteLine("OBRACK break positions exercised by the corpus:");
-		foreach (var entry in exercised)
+		Console.WriteLine("OBRACK break sites exercised by the corpus:");
+		foreach (var site in exercised["OBRACK"].Distinct())
 		{
-			Console.WriteLine($"  {entry}");
+			Console.WriteLine($"  {site}");
 		}
 
-		await Assert.That(exercised).IsNotEmpty()
-			.Because("no corpus entry breaks after '[', so the equivalence run says nothing about OBRACK");
+		foreach (var (type, sites) in exercised)
+		{
+			await Assert.That(sites).IsNotEmpty()
+				.Because($"no corpus entry breaks at a {type}, so the equivalence run says nothing about it");
+		}
 	}
 
 	/// <summary>
@@ -204,15 +346,73 @@ public class SoftcodeLayoutEquivalenceTests
 	{
 		const string source = "[aaaaaaaaaaaa,bbbbbbbbbbbb]";
 		var tokens = TestLexer.Lex(source);
-		var breaks = SoftcodeLayout.Compute(tokens, width: 20);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: IsKnownFunction);
 
 		await Assert.That(breaks).Count().IsEqualTo(1);
 		await Assert.That(tokens[breaks[0].TokenIndex].Type).IsEqualTo("OBRACK");
 
-		var formatted = SoftcodeRenderer.Format(source, width: 20);
+		var formatted = SoftcodeRenderer.Format(source, width: 20, IsKnownFunction);
 		await Assert.That(formatted).IsNotEqualTo(source);
 		await Assert.That(await Eval(formatted)).IsEqualTo(await Eval(source))
 			.Because($"breaking after '[' changed evaluation. Formatted:\n{formatted}");
+	}
+
+	/// <summary>
+	/// Ruling 9, directly. An unresolved name is copied through as text with its delimiters' absorbed
+	/// whitespace, so the layout must leave the call entirely alone at every width.
+	/// </summary>
+	[Test]
+	public async Task UnresolvedFunctionName_ProducesNoBreakAndNoTextChange()
+	{
+		const string source = "notafunction(aaaaaaaaaa,bbbbbbbbbb,cccccccccc)";
+		await Assert.That(IsKnownFunction("notafunction")).IsFalse();
+
+		var tokens = TestLexer.Lex(source);
+		foreach (var width in Widths)
+		{
+			await Assert.That(SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction)).IsEmpty()
+				.Because($"width {width} broke into a call the parser reproduces as text");
+			await Assert.That(SoftcodeRenderer.Format(source, width, IsKnownFunction)).IsEqualTo(source);
+		}
+
+		await Assert.That(await Eval(source)).IsEqualTo(source);
+	}
+
+	/// <summary>
+	/// Ruling 9's default. A caller that supplies no oracle gets the conservative reading — nothing
+	/// resolves — rather than the optimistic one, so it cannot silently inherit the defect.
+	/// </summary>
+	[Test]
+	public async Task WithoutAnOracle_NoCallIsBrokenInto()
+	{
+		var tokens = TestLexer.Lex("strcat(alpha,bravo,charlie,delta,echo,foxtrot,golf,hotel,india,juliet)");
+
+		await Assert.That(SoftcodeLayout.Compute(tokens, width: 20)).IsEmpty();
+		await Assert.That(SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: IsKnownFunction)).IsNotEmpty();
+	}
+
+	/// <summary>
+	/// Ruling 9's propagation rule, asserted structurally so that a failure says which half is wrong.
+	/// <c>LiteralFunctionCall</c> raises <c>_suppressFunctionEval</c> around its arguments, so a call
+	/// nested in an unresolved one is text too; <c>VisitBracketPattern</c> clears it, so a bracketed
+	/// call is dispatched normally however deeply it is buried.
+	/// </summary>
+	[Test]
+	public async Task SuppressionPropagatesInwardButABracketClearsIt()
+	{
+		var suppressed = TestLexer.Lex("notafunction(aaaa,strcat(bbbbbbbbbb,cccccccccc),dddd)");
+		await Assert.That(SoftcodeLayout.Compute(suppressed, width: 20, isKnownFunction: IsKnownFunction))
+			.IsEmpty().Because("a call inside an unresolved call is reproduced as text as well");
+
+		var bracketed = TestLexer.Lex("notafunction(aaaa,[strcat(bbbbbbbbbb,cccccccccc)],dddd)");
+		var breaks = SoftcodeLayout.Compute(bracketed, width: 20, isKnownFunction: IsKnownFunction);
+
+		var open = bracketed.Index().First(x => x.Item.Type == "OBRACK").Index;
+		var close = bracketed.Index().First(x => x.Item.Type == "CBRACK").Index;
+
+		await Assert.That(breaks).IsNotEmpty().Because("a bracket re-enables function recognition");
+		await Assert.That(breaks.All(b => b.TokenIndex >= open && b.TokenIndex < close)).IsTrue()
+			.Because("only the bracketed call may be broken into; the enclosing call is text");
 	}
 
 	/// <summary>
@@ -227,9 +427,9 @@ public class SoftcodeLayoutEquivalenceTests
 
 		foreach (var width in Widths)
 		{
-			await Assert.That(SoftcodeLayout.Compute(tokens, width)).IsEmpty()
+			await Assert.That(SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction)).IsEmpty()
 				.Because($"width {width} broke at a prose comma");
-			await Assert.That(SoftcodeRenderer.Format(source, width)).IsEqualTo(source);
+			await Assert.That(SoftcodeRenderer.Format(source, width, IsKnownFunction)).IsEqualTo(source);
 		}
 
 		await Assert.That(await Eval(source)).IsEqualTo(source);
@@ -251,9 +451,9 @@ public class SoftcodeLayoutEquivalenceTests
 
 		foreach (var width in Widths)
 		{
-			await Assert.That(SoftcodeLayout.Compute(tokens, width)).IsEmpty()
+			await Assert.That(SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction)).IsEmpty()
 				.Because($"width {width} broke at a bare parenthesis");
-			await Assert.That(SoftcodeRenderer.Format(source, width)).IsEqualTo(source);
+			await Assert.That(SoftcodeRenderer.Format(source, width, IsKnownFunction)).IsEqualTo(source);
 		}
 
 		await Assert.That(await Eval(source)).IsEqualTo(source);

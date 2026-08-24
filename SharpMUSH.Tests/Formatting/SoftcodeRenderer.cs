@@ -38,10 +38,10 @@ internal static class SoftcodeRenderer
 	}
 
 	/// <summary>Lexes, lays out and renders <paramref name="source"/> at <paramref name="width"/>.</summary>
-	public static string Format(string source, int width)
+	public static string Format(string source, int width, Func<string, bool>? isKnownFunction = null)
 	{
 		var tokens = TestLexer.Lex(source);
 
-		return Render(tokens, SoftcodeLayout.Compute(tokens, width));
+		return Render(tokens, SoftcodeLayout.Compute(tokens, width, isKnownFunction: isKnownFunction));
 	}
 }
