@@ -12,9 +12,21 @@ display it render the value as formatted code: indented, broken across lines,
 syntax-highlighted, with syntax errors marked inline and summarised beneath.
 
 The formatting is **semantics-preserving**. Every line break lands where the
-lexer already absorbs whitespace, so the rendered form is a valid program
-identical in behaviour to the stored one. A player can select it, paste it back,
-and get the same code. The stored value is never modified.
+delimiter is genuinely acting as a structural separator, so the rendered form is
+a valid program identical in behaviour to the stored one. A player can select it,
+paste it back, and get the same code. The stored value is never modified.
+
+**The precise scope of that guarantee** (see §3 for how it narrowed during
+implementation): the rendered form evaluates identically to the stored one *when
+it is evaluated*, under the dialect the attribute's flag declares. Text that a
+caller invokes with `/noeval` — or through any `ParseMode.NoParse`/`NoEval` path —
+is reproduced **verbatim**, including whitespace, because `VisitFunction` returns
+the whole call's raw source in that mode. Under such a caller no reformatting of
+any kind is safe, so this is not a hazard the formatter can detect and avoid: the
+stored text cannot know its future callers, and the only safe behaviour would be
+to never format at all. It is a boundary of the guarantee, not a defect. It stays
+harmless as long as formatting remains display-only; it would need revisiting only
+if some future change rewrote stored attribute text rather than rendering it.
 
 ## Motivation
 
