@@ -1159,7 +1159,7 @@ public partial class Commands
 					var source = attr.Value;
 					var tokens = parser.Tokenize(source);
 					var semanticTokens = parser.GetSemanticTokens(source, parseType.Value);
-					var errors = parser.ValidateAndGetErrors(source, parseType.Value);
+					var errors = SoftcodeSource.Validate(parser, source, parseType.Value);
 					var formatted = SoftcodeFormatter.Format(source, tokens, semanticTokens, errors, width.Value, parser, parseType.Value);
 
 					await NotifyService!.Notify(enactor, formatted, enactor);
@@ -6199,9 +6199,14 @@ public partial class Commands
 					// error and would otherwise surface a stray parser-failure summary in place of blank.
 					MString formatted;
 
+					// Plain-text length of the code portion of `formatted` — everything but the error
+					// summary the formatter appends beneath it.
+					int codeLength;
+
 					if (MModule.getLength(attr.Value) == 0)
 					{
 						formatted = attr.Value;
+						codeLength = 0;
 					}
 					else
 					{
@@ -6210,8 +6215,9 @@ public partial class Commands
 						var source = attr.Value;
 						var tokens = parser.Tokenize(source);
 						var semanticTokens = parser.GetSemanticTokens(source, parseType.Value);
-						var errors = parser.ValidateAndGetErrors(source, parseType.Value);
-						formatted = SoftcodeFormatter.Format(source, tokens, semanticTokens, errors, width.Value, parser, parseType.Value);
+						var errors = SoftcodeSource.Validate(parser, source, parseType.Value);
+						formatted = SoftcodeFormatter.Format(source, tokens, semanticTokens, errors, width.Value, parser,
+							parseType.Value, out codeLength);
 					}
 
 					if (isRegexp || isWild)
@@ -6223,9 +6229,14 @@ public partial class Commands
 						// Same highlight as the unflagged path, but sliced from the formatted block via
 						// MModule.substring (rather than rebuilt from plain-text spans) so the formatter's
 						// own syntax colouring survives around the highlighted match.
+						//
+						// Bounded by codeLength: the attribute matched on its *value*, so the match is in the
+						// code. Searching the whole block would let a pattern that occurs only in the appended
+						// "#-1 PARSER FAILURE ..." summary highlight as though it were the match that put this
+						// attribute in the result set.
 						var plainFormatted = MModule.plainText(formatted);
 						var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-						var index = plainFormatted.IndexOf(pattern, comparison);
+						var index = plainFormatted.IndexOf(pattern, 0, codeLength, comparison);
 
 						if (index >= 0)
 						{

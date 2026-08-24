@@ -213,4 +213,58 @@ public class GrepSyntaxFormattingTests
 
 		await ExpectPlainText("EMPTYFN: ");
 	}
+
+	// Its first parse error sits mid-string rather than at the end, so ToMushFailureString() includes a
+	// (near "...") excerpt -- and that excerpt is of the RAW value, which the formatted code no longer
+	// reproduces contiguously because a break lands after the "0,". Hence a substring that exists in the
+	// stored value, does not exist in the laid-out code, and does exist in the appended summary.
+	private const string ErrorWithExcerptCode =
+		"switch([add(1),y],0,aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff)";
+
+	private const string StraddlesABreak = "0,aaaaaaaaaa";
+
+	/// <summary>
+	/// The appended error summary is prose about the code, not the code. Highlighting a match found
+	/// there would claim the attribute matched on text the attribute does not contain -- and the
+	/// attribute was selected on its stored value, so the real match is always in the code half.
+	/// </summary>
+	[Test]
+	public async ValueTask GrepPrintOnFlaggedAttribute_NeverHighlightsInsideTheErrorSummary()
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtSummary");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BADFN {obj}={ErrorWithExcerptCode}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/BADFN=funsyntax"));
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@grep/print {obj}={StraddlesABreak}"));
+
+		var messages = NotifyService.ReceivedCalls()
+			.Select(c => c.GetArguments())
+			.Where(args => args.Length >= 2 && args[1] is OneOf<MString, string>)
+			.Select(args => (OneOf<MString, string>)args[1]!)
+			.Select(m => (Plain: m.Match(ms => ms.ToPlainText(), s => s), Markup: m.Match(ms => ms.ToString(), s => s)))
+			.ToList();
+
+		var message = messages.FirstOrDefault(m => m.Plain.StartsWith("BADFN: ", StringComparison.Ordinal));
+		await Assert.That(message.Plain).IsNotNull().Because("@grep/print emitted nothing for BADFN");
+
+		var summaryStart = message.Plain.IndexOf("#-1 PARSER FAILURE", StringComparison.Ordinal);
+		await Assert.That(summaryStart).IsNotEqualTo(-1).Because("this input must produce an error summary to search");
+
+		var summary = message.Plain[summaryStart..];
+
+		// The three conditions that make the defect reachable at all. If any stops holding -- the
+		// excerpt narrows, the break moves -- this test would go quietly idle instead of failing.
+		await Assert.That(summary).Contains(StraddlesABreak)
+			.Because("the summary must contain the pattern, or there is nothing to mis-highlight");
+		await Assert.That(message.Plain[..summaryStart]).DoesNotContain(StraddlesABreak)
+			.Because("a break must have split the pattern in the code, or the code's own match wins anyway");
+
+		// Plain text is identical either way -- highlighting only adds markup -- so the observable is
+		// whether the summary survives into the rendered output uninterrupted. A Hilight run opened
+		// inside it would split this substring with ANSI escapes.
+		await Assert.That(message.Markup).Contains(summary)
+			.Because("the error summary was rewritten by the match highlight");
+	}
 }

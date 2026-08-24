@@ -66,6 +66,24 @@ public static class SoftcodeFormatter
 		int width,
 		IMUSHCodeParser parser,
 		ParseType parseType = ParseType.Function)
+		=> Format(source, tokens, semanticTokens, errors, width, parser, parseType, out _);
+
+	/// <inheritdoc cref="Format(MString,IReadOnlyList{TokenInfo},IReadOnlyList{SemanticToken},IReadOnlyList{ParseError},int,IMUSHCodeParser,ParseType)"/>
+	/// <param name="plainCodeLength">
+	/// Plain-text length of the laid-out code, i.e. the result minus any appended error summary. A
+	/// caller that searches the formatted block for something — <c>@grep/PRINT</c> highlighting its
+	/// match — must bound the search by this: the summary is prose about the code, not the code, and a
+	/// pattern occurring only in an error message is not a match.
+	/// </param>
+	public static MString Format(
+		MString source,
+		IReadOnlyList<TokenInfo> tokens,
+		IReadOnlyList<SemanticToken> semanticTokens,
+		IReadOnlyList<ParseError> errors,
+		int width,
+		IMUSHCodeParser parser,
+		ParseType parseType,
+		out int plainCodeLength)
 	{
 		var overrideAt = BuildErrorOverride(source, errors);
 		var colored = SemanticTokenRenderer.Render(source, semanticTokens, overrideAt);
@@ -74,6 +92,7 @@ public static class SoftcodeFormatter
 		var breaks = SoftcodeLayout.Compute(tokens, width, classifyFunction: classifyFunction, parseType: parseType);
 
 		var laidOut = ApplyBreaks(colored, tokens, breaks);
+		plainCodeLength = MModule.getLength(laidOut);
 
 		return errors.Count == 0 ? laidOut : AppendErrorSummary(laidOut, errors);
 	}
