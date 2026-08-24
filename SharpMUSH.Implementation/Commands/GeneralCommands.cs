@@ -1088,12 +1088,18 @@ public partial class Commands
 			{
 				var showAll = switches.Contains("ALL");
 
-				var executorConnection = await ConnectionService!.Get(executor.Object().DBRef).FirstOrDefaultAsync();
-				var width = executorConnection is not null
-					&& executorConnection.Metadata.TryGetValue("WIDTH", out var widthStr)
-					&& int.TryParse(widthStr, out var parsedWidth)
-						? parsedWidth
-						: 78;
+				// Lazily computed: only a flagged attribute needs it, and most @examine calls have none.
+				int? width = null;
+
+				async ValueTask<int> ExecutorWidthAsync()
+				{
+					var executorConnection = await ConnectionService!.Get(executor.Object().DBRef).FirstOrDefaultAsync();
+					return executorConnection is not null
+						&& executorConnection.Metadata.TryGetValue("WIDTH", out var widthStr)
+						&& int.TryParse(widthStr, out var parsedWidth)
+							? parsedWidth
+							: 78;
+				}
 
 				foreach (var attr in atrs.AsAttributes)
 				{
@@ -1122,11 +1128,18 @@ public partial class Commands
 
 					await NotifyService!.Notify(enactor, header, enactor);
 
+					if (MModule.getLength(attr.Value) == 0)
+					{
+						continue;
+					}
+
+					width ??= await ExecutorWidthAsync();
+
 					var source = attr.Value;
 					var tokens = parser.Tokenize(source);
 					var semanticTokens = parser.GetSemanticTokens(source, parseType.Value);
 					var errors = parser.ValidateAndGetErrors(source, parseType.Value);
-					var formatted = SoftcodeFormatter.Format(source, tokens, semanticTokens, errors, width, parser, parseType.Value);
+					var formatted = SoftcodeFormatter.Format(source, tokens, semanticTokens, errors, width.Value, parser, parseType.Value);
 
 					await NotifyService!.Notify(enactor, formatted, enactor);
 				}
