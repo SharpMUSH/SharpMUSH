@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services;
 
@@ -40,8 +41,11 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// is, a genuine argument separator. A comma anywhere else is prose.
 /// </description></item>
 /// <item><description>
-/// After a <c>SEMICOLON</c> at root, where it separates commands. A <c>;</c> inside a function's
-/// arguments is literal.
+/// After a <c>SEMICOLON</c> at root <em>of text that will be parsed as a command list</em>. Only
+/// <c>startCommandString</c> sets <c>inCommandList</c> (<c>SharpMUSHParser.g4:29</c>), and only under
+/// that flag does <c>commandList</c> (<c>:55</c>) treat <c>;</c> as a separator; in every other
+/// dialect <c>beginGenericText</c> (<c>:158</c>) claims it as text. A <c>;</c> inside a function's
+/// arguments is literal in all dialects.
 /// </description></item>
 /// <item><description>
 /// After an <c>OBRACK</c>. Confirmed by the equivalence corpus (Ruling 7 settled): unlike
@@ -109,9 +113,20 @@ public static class SoftcodeLayout
 	/// rather than optimistic ones that might insert a newline into literal text.
 	/// </para>
 	/// </param>
+	/// <param name="parseType">
+	/// The dialect the text will be evaluated as — the same value <c>SharpAttribute.SyntaxParseType()</c>
+	/// returns for a <c>CMDSYNTAX</c>/<c>FUNSYNTAX</c>-flagged attribute, and the same one
+	/// <c>IMUSHCodeParser.ValidateAndGetErrors</c> takes. It decides one thing here: whether a root
+	/// <c>;</c> separates commands or is literal text.
+	/// <para>
+	/// <b>The default is the conservative dialect,</b> matching every other <c>ParseType</c> parameter
+	/// in the codebase: <see cref="ParseType.Function"/> emits no semicolon breaks at all.
+	/// </para>
+	/// </param>
 	/// <returns>The breaks, in ascending token order. Empty when everything fits flat.</returns>
 	public static IReadOnlyList<SoftcodeBreak> Compute(IReadOnlyList<TokenInfo> tokens, int width,
-		int indentUnit = 2, Func<string, bool>? isKnownFunction = null)
+		int indentUnit = 2, Func<string, bool>? isKnownFunction = null,
+		ParseType parseType = ParseType.Function)
 	{
 		if (tokens.Count == 0)
 		{
@@ -120,7 +135,7 @@ public static class SoftcodeLayout
 
 		var effectiveWidth = Math.Max(1, width);
 		var effectiveIndentUnit = Math.Max(0, indentUnit);
-		var root = BuildGroupTree(tokens, isKnownFunction ?? (_ => false));
+		var root = BuildGroupTree(tokens, isKnownFunction ?? (_ => false), SeparatesCommands(parseType));
 		MeasureFlat(root, tokens);
 
 		var breaks = new List<SoftcodeBreak>();
@@ -128,6 +143,26 @@ public static class SoftcodeLayout
 
 		return breaks;
 	}
+
+	/// <summary>
+	/// Whether a root-level <c>;</c> is a command separator in this dialect, and so a break position.
+	/// <para>
+	/// Only <see cref="ParseType.CommandList"/>. The grammar's <c>inCommandList</c> flag is set by
+	/// exactly one start rule — <c>startCommandString</c> (<c>SharpMUSHParser.g4:29</c>), which
+	/// <c>MUSHCodeParser</c> selects for <see cref="ParseType.CommandList"/> alone — and it is the only
+	/// thing that stops <c>beginGenericText</c> (<c>:158</c>,
+	/// <c>{ !inCommandList || inBraceDepth &gt; 0 }?</c>) from claiming the <c>;</c> as text.
+	/// </para>
+	/// <para>
+	/// <see cref="ParseType.Command"/> does <b>not</b> qualify despite the name:
+	/// <c>startSingleCommandString</c> is <c>command EOF</c> and never enters <c>commandList</c>, so a
+	/// <c>;</c> in a single command is literal. Nor do the argument-splitting dialects
+	/// (<c>startPlainSingleCommandArg</c>, <c>startPlainCommaCommandArgs</c>,
+	/// <c>startEqSplitCommandArgs</c>, <c>startEqSplitCommand</c>), which split on <c>,</c> and
+	/// <c>=</c> and leave <c>;</c> alone.
+	/// </para>
+	/// </summary>
+	private static bool SeparatesCommands(ParseType parseType) => parseType == ParseType.CommandList;
 
 	/// <summary>
 	/// The name in a <c>FUNCHAR</c> token, which the lexer builds as <c>name '(' WS</c>. Matches what
@@ -153,7 +188,8 @@ public static class SoftcodeLayout
 	/// recognition off is text, so it opens no break positions.
 	/// </para>
 	/// </summary>
-	private static Group BuildGroupTree(IReadOnlyList<TokenInfo> tokens, Func<string, bool> isKnownFunction)
+	private static Group BuildGroupTree(IReadOnlyList<TokenInfo> tokens, Func<string, bool> isKnownFunction,
+		bool semicolonsSeparateCommands)
 	{
 		var root = new Group(openIndex: -1, openType: string.Empty);
 		var stack = new Stack<Group>();
@@ -204,8 +240,10 @@ public static class SoftcodeLayout
 			}
 			else if (type == "SEMICOLON")
 			{
-				// Only a command separator at root. Inside a function's arguments a ';' is literal.
-				if (stack.Peek().OpenIndex < 0)
+				// Only a command separator at root, and only in the command-list dialect. Inside a
+				// function's arguments, or in any other dialect, a ';' is literal text whose absorbed
+				// whitespace VisitBeginGenericText emits.
+				if (semicolonsSeparateCommands && stack.Peek().OpenIndex < 0)
 				{
 					stack.Peek().BreakPoints.Add(i);
 				}

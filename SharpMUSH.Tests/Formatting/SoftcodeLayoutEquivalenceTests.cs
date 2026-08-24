@@ -185,8 +185,39 @@ public class SoftcodeLayoutEquivalenceTests
 		() => "add(1,add(1,add(1,add(1,5)))"
 	];
 
+	/// <summary>
+	/// Ruling 11. The command-list dialect, where a root <c>;</c> genuinely separates commands and so is
+	/// a break position. Evaluated through <see cref="IMUSHCodeParser.CommandListParse"/> — the entry
+	/// point that selects <c>startCommandString</c>, the one rule that sets <c>inCommandList</c>.
+	/// <para>
+	/// Every entry uses <c>think</c>, which returns its evaluated argument in the resulting
+	/// <c>CallState</c>, so a newline inserted anywhere in a command shows up in the output rather than
+	/// being swallowed by an unknown-command error.
+	/// </para>
+	/// </summary>
+	public static IEnumerable<Func<string>> CommandListCorpus() =>
+	[
+		// The plain case: a root ';' between two commands, each long enough to force the break.
+		() => "think aaaaaaaaaaaaaaaaaaaa;think bbbbbbbbbbbbbbbbbbbb",
+
+		// Prose commas inside commands are still text, even where the ';' is structural.
+		() => "think a long line of prose, with commas in it;think and a second command here",
+
+		// A bracketed call inside a command: breaks at three positions in one line.
+		() => "think [strcat(alpha bravo,charlie delta,echo foxtrot,golf hotel)];think a tail command",
+
+		// An unresolved call inside a command list — Rulings 9 and 11 interacting.
+		() => "think notafunction(aaaaaaaaaa,bbbbbbbbbb);think a second command goes here",
+
+		// Three commands, so a middle semicolon is neither first nor last.
+		() => "think aaaaaaaaaaaaaaaa;think bbbbbbbbbbbbbbbb;think cccccccccccccccc"
+	];
+
 	private async Task<string?> Eval(string code)
 		=> (await Parser.FunctionParse(MModule.single(code)))?.Message?.ToString();
+
+	private async Task<string?> EvalCommandList(string code)
+		=> (await Parser.CommandListParse(MModule.single(code)))?.Message?.ToString();
 
 	private static bool IsParseFailure(string? result) =>
 		result?.StartsWith(ErrorMessages.Returns.ParserFailure[..^3], StringComparison.Ordinal) == true;
@@ -258,6 +289,100 @@ public class SoftcodeLayoutEquivalenceTests
 	}
 
 	/// <summary>
+	/// Ruling 11. The command-list half of the semicolon axis: laid out as a command list, evaluated as
+	/// a command list, output unchanged. The other half — that no semicolon break is emitted for the
+	/// function dialect at all — is <see cref="RootSemicolon_IsABreakPositionOnlyInTheCommandListDialect"/>.
+	/// </summary>
+	[Test]
+	[MethodDataSource(nameof(CommandListCorpus))]
+	public async Task CommandListFormatting_PreservesEvaluatedOutput(string source)
+	{
+		var expected = await EvalCommandList(source);
+
+		await Assert.That(string.IsNullOrEmpty(expected)).IsFalse()
+			.Because($"[{source}] produces no command output, so it proves nothing");
+		await Assert.That(expected!.Contains("#-1", StringComparison.Ordinal)).IsFalse()
+			.Because($"[{source}] failed to run, so it proves nothing: {expected}");
+
+		foreach (var width in Widths)
+		{
+			var formatted = SoftcodeRenderer.Format(source, width, IsKnownFunction, ParseType.CommandList);
+			var actual = await EvalCommandList(formatted);
+
+			await Assert.That(actual).IsEqualTo(expected)
+				.Because($"width {width} changed what [{source}] does. Formatted:\n{formatted}");
+		}
+	}
+
+	[Test]
+	[MethodDataSource(nameof(CommandListCorpus))]
+	public async Task CommandListCorpusEntry_EvaluatesDeterministically(string source)
+	{
+		var first = await EvalCommandList(source);
+		var second = await EvalCommandList(source);
+
+		await Assert.That(second).IsEqualTo(first).Because($"[{source}] is not deterministic");
+	}
+
+	/// <summary>
+	/// Ruling 11, and the regression guard for finding 3. A root <c>;</c> is a command separator only
+	/// under <c>startCommandString</c>; in the function dialect <c>beginGenericText</c>
+	/// (<c>SharpMUSHParser.g4:158</c>) claims it as text and its absorbed whitespace is emitted.
+	/// <para>
+	/// The last assertion is what makes this bite: it shows the command-list layout of the very same
+	/// text really does change the result when evaluated as a function expression, so the first half is
+	/// preventing something real rather than asserting the absence of a break nobody wanted.
+	/// </para>
+	/// </summary>
+	[Test]
+	public async Task RootSemicolon_IsABreakPositionOnlyInTheCommandListDialect()
+	{
+		const string source = "aaaaaaaaaaaaaaaaaaaa;bbbbbbbbbbbbbbbbbbbb";
+		var tokens = TestLexer.Lex(source);
+
+		foreach (var width in Widths)
+		{
+			await Assert.That(SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction)).IsEmpty()
+				.Because($"width {width} broke at a semicolon that is literal text in this dialect");
+			await Assert.That(SoftcodeRenderer.Format(source, width, IsKnownFunction)).IsEqualTo(source);
+		}
+
+		await Assert.That(await Eval(source)).IsEqualTo(source);
+
+		var commandBreaks = SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: IsKnownFunction,
+			parseType: ParseType.CommandList);
+
+		await Assert.That(commandBreaks).Count().IsEqualTo(1);
+		await Assert.That(tokens[commandBreaks[0].TokenIndex].Type).IsEqualTo("SEMICOLON");
+
+		var asCommandList = SoftcodeRenderer.Format(source, 20, IsKnownFunction, ParseType.CommandList);
+		await Assert.That(await Eval(asCommandList)).IsNotEqualTo(await Eval(source))
+			.Because("if the command-list layout round-tripped as a function too, this guard would be idle");
+	}
+
+	/// <summary>
+	/// Ruling 11 across every member of <see cref="ParseType"/>, so a new dialect cannot be added
+	/// without someone deciding which side of this line it falls on. Only <c>startCommandString</c>
+	/// (<c>SharpMUSHParser.g4:29</c>) sets <c>inCommandList</c>, and <c>MUSHCodeParser</c> selects it
+	/// for <see cref="ParseType.CommandList"/> alone — <see cref="ParseType.Command"/> is
+	/// <c>startSingleCommandString</c>, which is <c>command EOF</c> and never enters <c>commandList</c>.
+	/// </summary>
+	[Test]
+	public async Task OnlyTheCommandListDialectBreaksAtASemicolon()
+	{
+		var tokens = TestLexer.Lex("aaaaaaaaaaaaaaaaaaaa;bbbbbbbbbbbbbbbbbbbb");
+
+		foreach (var parseType in Enum.GetValues<ParseType>())
+		{
+			var breaks = SoftcodeLayout.Compute(tokens, width: 20, isKnownFunction: IsKnownFunction,
+				parseType: parseType);
+
+			await Assert.That(breaks.Count > 0).IsEqualTo(parseType == ParseType.CommandList)
+				.Because($"{parseType} is on the wrong side of the semicolon rule");
+		}
+	}
+
+	/// <summary>
 	/// The comparison is only sound if evaluating the same source twice gives the same answer, so this
 	/// pins that no corpus entry is time-, random- or state-dependent.
 	/// </summary>
@@ -299,24 +424,36 @@ public class SoftcodeLayoutEquivalenceTests
 		{
 			["OBRACK"] = [],
 			["FUNCHAR"] = [],
-			["COMMAWS"] = []
+			["COMMAWS"] = [],
+			["SEMICOLON"] = []
 		};
 
-		var corpus = ParseableEchoingCorpus()
-			.Concat(ParseableWeakOutputCorpus())
-			.Concat(UnparseableCorpus())
-			.Select(entry => entry());
+		// Each corpus is measured in the dialect it is evaluated in, since that is the layout whose
+		// safety the corresponding test proves.
+		(IEnumerable<Func<string>> Entries, ParseType Dialect)[] corpora =
+		[
+			(ParseableEchoingCorpus(), ParseType.Function),
+			(ParseableWeakOutputCorpus(), ParseType.Function),
+			(UnparseableCorpus(), ParseType.Function),
+			(CommandListCorpus(), ParseType.CommandList)
+		];
 
-		foreach (var source in corpus)
+		foreach (var (entries, dialect) in corpora)
 		{
-			var tokens = TestLexer.Lex(source);
-			foreach (var width in Widths)
+			foreach (var source in entries.Select(entry => entry()))
 			{
-				foreach (var b in SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction))
+				var tokens = TestLexer.Lex(source);
+				foreach (var width in Widths)
 				{
-					if (exercised.TryGetValue(tokens[b.TokenIndex].Type, out var sites))
+					var breaks = SoftcodeLayout.Compute(tokens, width, isKnownFunction: IsKnownFunction,
+						parseType: dialect);
+
+					foreach (var b in breaks)
 					{
-						sites.Add($"{source} @ {width}");
+						if (exercised.TryGetValue(tokens[b.TokenIndex].Type, out var sites))
+						{
+							sites.Add($"{source} @ {width}");
+						}
 					}
 				}
 			}

@@ -1,5 +1,6 @@
 using System.Text;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Formatting;
@@ -38,10 +39,12 @@ internal static class SoftcodeRenderer
 	}
 
 	/// <summary>Lexes, lays out and renders <paramref name="source"/> at <paramref name="width"/>.</summary>
-	public static string Format(string source, int width, Func<string, bool>? isKnownFunction = null)
+	public static string Format(string source, int width, Func<string, bool>? isKnownFunction = null,
+		ParseType parseType = ParseType.Function)
 	{
 		var tokens = TestLexer.Lex(source);
 
-		return Render(tokens, SoftcodeLayout.Compute(tokens, width, isKnownFunction: isKnownFunction));
+		return Render(tokens,
+			SoftcodeLayout.Compute(tokens, width, isKnownFunction: isKnownFunction, parseType: parseType));
 	}
 }
