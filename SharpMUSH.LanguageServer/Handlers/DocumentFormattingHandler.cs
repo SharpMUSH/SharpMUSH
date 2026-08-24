@@ -17,8 +17,20 @@ namespace SharpMUSH.LanguageServer.Handlers;
 /// <para>
 /// Passes <see cref="MushParseMode.ForFileName"/> for the document's URI — the same per-document
 /// dialect channel <see cref="SemanticTokensHandler"/> already uses — rather than
-/// <c>FormatIndented</c>'s own conservative default, so a <c>.mushcmd</c>/<c>.mush</c> document's
-/// root <c>;</c> actually breaks instead of staying on one long line.
+/// <c>FormatIndented</c>'s own conservative default, so a <c>.mushcmd</c> document's root <c>;</c>
+/// actually breaks instead of staying on one long line.
+/// </para>
+/// <para>
+/// <b>Not <c>.mush</c>/<c>.mu</c>.</b> <c>ForFileName</c> maps those to
+/// <see cref="MushAnalysisMode.CommandsPerLine"/>, whose <c>ToParseType()</c> returns
+/// <see cref="ParseType.Command"/> — and <c>SoftcodeLayout</c> only treats a root <c>;</c> as a
+/// break position under <see cref="ParseType.CommandList"/>. So a <c>.mush</c> file's semicolons
+/// still never break here. The gap is that <c>FormatIndented</c>, unlike <c>Validate</c>, has no
+/// per-line handling for <c>CommandsPerLine</c> (<c>Validate</c> special-cases it via
+/// <c>ValidatePerLine</c> — parsing and offsetting each line independently); nothing analogous
+/// exists for layout. The result is conservative, not incorrect — a <c>.mush</c> document simply
+/// gets no semicolon-driven breaking yet, same as under the default mode — but it is a real
+/// shortfall, left deliberately unclosed rather than folding line-by-line layout into this task.
 /// </para>
 /// </summary>
 public class DocumentFormattingHandler : DocumentFormattingHandlerBase
