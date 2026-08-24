@@ -1,12 +1,101 @@
 using DotNext.Threading;
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Database;
 
+/// <summary>
+/// <c>SetAttributeFlagAsync</c> falls back to PennMUSH-style shortest-prefix matching (e.g. <c>wiz</c>
+/// resolves to <c>wizard</c>), so <c>@set obj/attr=wiz</c> works. <c>UnsetAttributeFlagAsync</c> used to
+/// be exact-match only, so the symmetric <c>@set obj/attr=!wiz</c> failed. The tests below cover the fix.
+/// <para>
+/// <see cref="WebAppFactoryArg"/> is <c>SharedType.PerTestSession</c>, so <see cref="NotifyService"/> is
+/// one substitute shared across the whole process. Every test calls <c>ClearReceivedCalls()</c>
+/// immediately before the command under test, and the class is marked <c>[NotInParallel]</c> so no
+/// concurrently-running test can record a <c>Notify</c> call in between.
+/// </para>
+/// </summary>
+[NotInParallel]
 public class AttributeSyntaxFlagTests
 {
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
+
+	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+
+	private static bool HasFlag(SharpAttribute attribute, string name)
+		=> attribute.Flags.Any(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+	[Test]
+	public async ValueTask UnsetAttributeFlag_BangWizPrefix_UnsetsWizard()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UnsetFlagWiz");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&UNSETWIZ_ATTR {objDbRef}=hello"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {objDbRef}/UNSETWIZ_ATTR=wizard"));
+
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var beforeAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETWIZ_ATTR",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(HasFlag(beforeAttr.AsAttribute.Last(), "wizard")).IsTrue()
+			.Because("precondition: wizard must be set before we can test unsetting it via prefix");
+
+		NotifyService.ClearReceivedCalls();
+		// "wiz" is a prefix of "wizard", not an exact name or symbol match -- this is exactly the
+		// asymmetric case that used to fail on the unset path while `@set .../attr=wiz` succeeded.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {objDbRef}/UNSETWIZ_ATTR=!wiz"));
+
+		await NotifyService.Received().Notify(
+			TestHelpers.MatchingObject(executor),
+			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageContains(msg, "Flag wizard unset from attribute")),
+			Arg.Is<AnySharpObject?>(sender => sender != null && sender.Object().DBRef == objDbRef),
+			Arg.Any<INotifyService.NotificationType>());
+
+		var afterAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETWIZ_ATTR",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(HasFlag(afterAttr.AsAttribute.Last(), "wizard")).IsFalse();
+	}
+
+	[Test]
+	public async ValueTask UnsetAttributeFlag_BangXSymbol_UnsetsCmdSyntax()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UnsetFlagCmdX");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&UNSETX_ATTR {objDbRef}=$hi:@pemit %#=hi"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {objDbRef}/UNSETX_ATTR=cmdsyntax"));
+
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var beforeAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETX_ATTR",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(HasFlag(beforeAttr.AsAttribute.Last(), "cmdsyntax")).IsTrue()
+			.Because("precondition: cmdsyntax must be set before we can test unsetting it via its symbol");
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {objDbRef}/UNSETX_ATTR=!x"));
+
+		await NotifyService.Received().Notify(
+			TestHelpers.MatchingObject(executor),
+			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageContains(msg, "Flag cmdsyntax unset from attribute")),
+			Arg.Is<AnySharpObject?>(sender => sender != null && sender.Object().DBRef == objDbRef),
+			Arg.Any<INotifyService.NotificationType>());
+
+		var afterAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETX_ATTR",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(HasFlag(afterAttr.AsAttribute.Last(), "cmdsyntax")).IsFalse();
+	}
+
 	private static SharpAttribute WithFlags(params string[] names) => new(
 		Id: "attribute/1",
 		Key: "TEST",

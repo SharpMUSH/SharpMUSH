@@ -681,9 +681,16 @@ public class AttributeService(
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
-		var returnedFlag = await allFlags.FirstOrDefaultAsync(x =>
-			x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
-			|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
+		var flagList = await allFlags.ToArrayAsync();
+		var returnedFlag = flagList
+			.FirstOrDefault(x => x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
+				|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
+
+		// PennMUSH-compatible prefix matching: "wiz" matches "wizard"
+		returnedFlag ??= flagList
+			.Where(x => x.Name.StartsWith(flag, StringComparison.OrdinalIgnoreCase))
+			.OrderBy(x => x.Name.Length)
+			.FirstOrDefault();
 
 		if (returnedFlag is null)
 		{

@@ -44,10 +44,29 @@ See [attribute flags3]
 These attribute flags are only used internally. They cannot be set, but seen on 'examine' and flags()/lflags(), tested for with hasflag(), etc:
 - `branch (\`)`        This attribute is a branch. See: [ATTRIBUTE TREES]
 
+See [attribute flags4]
+
+# ATTRIBUTE FLAGS4
+
+These attribute flags affect **display only**. They do not change what the attribute contains, how it is set, or how it executes -- they only tell `examine` and `@grep/PRINT` which softcode dialect to assume when formatting the attribute's value as indented, syntax-highlighted code:
+
+- `cmdsyntax (x)`      Value is a command list (as invoked by `@trigger`, `@switch`, `$`-commands, etc). Formatted output is broken across lines at commas, semicolons, and parentheses/brackets.
+- `funsyntax (f)`      Value is a function expression (as invoked by `u()`, `ufun()`, etc). Formatted the same way as `cmdsyntax`.
+
+If both are set, `cmdsyntax` takes priority, since a command list may itself contain function calls.
+
+`cmdsyntax` is **not** related to `no_command` despite the similar name. `no_command` controls whether an attribute is checked for `$`-command and `^`-listen pattern matching -- a behavioral restriction. `cmdsyntax`/`funsyntax` only control how the stored text is laid out when displayed; they never change whether or how the attribute runs. An attribute can be `no_command` and `cmdsyntax` at once, or either alone, with no interaction between them.
+
+Formatting never rewrites the stored attribute; `@decompile` and the raw value returned by `get()`/`v()` are unaffected regardless of these flags.
+
+Text inside `{ ... }` braces (for example, each branch of a braced `@switch`) is never broken across lines -- it is rendered as a single, unbroken line per brace group. A `@switch` whose branches are wrapped in `{}`, the most common style, will therefore show one line per branch rather than having its contents indented further.
+
 **See Also:**
 - [@set]
 - [@attribute]
 - [ATTRIBUTE TREES]
+- [examine]
+- [@grep]
 
 # ATTRIBUTE TREES
 # ATTR TREES
