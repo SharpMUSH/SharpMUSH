@@ -23,7 +23,7 @@ task below either consumes one of these or replaces it; none forks it.
 | `SemanticTokenAnsiPalette` + `RecursiveMarkdownRenderer.BuildSharpLineContent` | semantic tokens → styled `MString` | help-file code blocks | **extract and share** (Task 4) |
 | `MushCodeAnalyzer.Format` | line-preserving text formatter (trim, `,`→`, `) | LSP `textDocument/formatting`, MCP `format` tool, Softcode Editor | **back it with the shared layout engine** (Task 8) |
 | `MushcodeHighlighter` | regex tokenizer → HTML spans, plus the dangerous-pattern scanner | package review UI (`PackagesController`) | **left alone** — see Deferred |
-| `SharpMUSH.Client/wwwroot/js/mush-monaco.js` | Monarch regex tokenizer, browser-side | Softcode Editor | **left alone** — browser-side, cannot call C#; the editor already receives accurate tokens from the LSP `SemanticTokensHandler`, and Monarch is its offline fast path |
+| `SharpMUSH.Client/wwwroot/js/mush-monaco.js` | Monarch regex tokenizer, browser-side | Softcode Editor | **left alone** — browser-side, cannot call C# synchronously, and Monaco needs a tokenizer at keystroke latency while typing. Note it is the browser's *only* highlighter: the LSP is stdio-only (`SharpMUSH.LanguageServer/Program.cs:36-37`), there is no semantic-tokens REST route, and `SoftcodeEditor.razor` never reaches `SemanticTokensHandler`. The right consolidation here is shared *colours*, not a shared tokenizer |
 
 The only genuinely new component in this plan is the **layout engine** (Task 2).
 Everything else is wiring, sharing, or seeding.
@@ -476,7 +476,49 @@ git commit -m "Add the softcode layout engine"
 
 This is the load-bearing test of the whole feature. It is worth its own task because it is the gate for ever relaxing the atomic-brace rule.
 
-- [ ] **Step 1: Write the equivalence test**
+> **SUPERSEDED — read this before writing any code in this task.**
+>
+> The Step 1 code block below is **retained only as a record of what not to do**.
+> Do not implement it. Its `Normalised` helper trims trailing whitespace from
+> exactly the seven WS-bearing token types — that is, it normalises away the one
+> difference the test exists to detect. The Task 2 review found a real defect of
+> exactly that class (a `COMMAWS` outside a function argument list is literal
+> text, and breaking there inserts a real newline into program data), and this
+> test as written would have compared it away and reported success.
+>
+> **Implement this instead:** compare **evaluated output**, running both the
+> original and the formatted form through the real parser.
+>
+> ```csharp
+> [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+> public required ServerWebAppFactory WebAppFactoryArg { get; init; }
+>
+> private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+>
+> private async Task<string?> Eval(string code)
+> 	=> (await Parser.FunctionParse(MModule.single(code)))?.Message?.ToString();
+> ```
+>
+> Corpus entries must be **function expressions with deterministic output** so the
+> comparison means something — model them on `SharpMUSH.Tests/Parser/FunctionUnitTests.cs`,
+> which uses exactly this call shape. Include at minimum: nested `add`/`strcat`
+> calls long enough to force breaking at several widths; a brace group containing a
+> comma (`strcat(a,b,{c,def})`); a bracket sub-expression; and an entry whose
+> arguments contain literal commas in text position.
+>
+> For each entry and each width in `[20, 40, 78]`, assert
+> `await Eval(original) == await Eval(formatted)`.
+>
+> Add one direct regression test for each Task 2 Critical finding, asserting the
+> formatter emits **no** break: a comma in text position (`@emit A long line of
+> prose, and more prose here`) and a bare parenthesis group.
+>
+> **Ruling 7 is settled here.** `OBRACK` is currently a break position on
+> probation. If any corpus entry containing `[...]` shows a difference in evaluated
+> output, report it — the fix is to drop `OBRACK` as a break position, not to
+> weaken the test. Say explicitly in your report whether `OBRACK` survived.
+
+- [ ] **Step 1 (superseded — see the block above): Write the equivalence test**
 
 ```csharp
 using SharpMUSH.Library.Models;
@@ -1189,4 +1231,13 @@ Recorded so they are not silently dropped:
 - **Parse tree caching.** Every display of a flagged attribute is a full LL parse; `GetPredictionMode` forces LL for tooling paths. Acceptable for an interactive command. Revisit if `@examine` on an object with many flagged attributes drags.
 - **Dead flag extensions.** `SharpAttributeExtensions` declares `IsInternal`, `IsNoprog`, `IsPrivate`, `IsListen`, `IsNoDump`, `IsMortalHear`, and `IsActionHear` against flag names present in no provider seed. Either the flags are missing or the extensions are dead; resolving it needs a PennMUSH parity audit of the attribute flag table.
 - **`MushcodeHighlighter` is a second classifier.** It re-derives token categories with its own regexes and emits HTML spans for the package review UI (`PackagesController.cs:304-307`). The ANTLR classifier is strictly more accurate, so this is real duplication — but retargeting it means a `SemanticTokenType` → CSS class map to sit beside `SemanticTokenAnsiPalette`, new class names in the package-review markup, and matching client CSS. Its dangerous-pattern scanner (`FindDangerousPatterns`) is orthogonal and must survive any such change. Out of scope here; worth its own PR.
-- **`mush-monaco.js` is a third.** Browser-side Monarch tokenizer, so it cannot call the C# classifier. The Softcode Editor already receives accurate tokens from the LSP `SemanticTokensHandler`; Monarch is the offline fast path. Leave both.
+- **`mush-monaco.js` is a third.** Browser-side Monarch tokenizer; it cannot call the C# classifier synchronously and Monaco needs tokens at keystroke latency. It is the browser's only highlighter — the LSP is stdio-only and the editor never reaches `SemanticTokensHandler`. Leave the tokenizer; share the colours instead (below).
+
+### From the highlighting-path audit (2026-08-23)
+
+A separate read-only audit of every MUSH-classifying path found four more consolidations, none of which belong in this PR but all of which are real:
+
+1. **The fallback classifier duplicates the real one.** `MUSHCodeParser.ConvertSyntacticToSemanticTokens:1085` (used at `:802`/`:851` when parsing throws) has a 6-arm switch that is a strict subset of `ClassifyByTokenType:1010-1027`, losing `Register`, `Number`, `ObjectReference`, `UserFunction`, and `AnsiCode`. Extracting one `ClassifyBySymbolicName` and calling it from both is a one-file change, and it means malformed input degrades to the same vocabulary instead of a coarser second one. Highest value-to-risk of the four.
+2. **Three disagreeing palettes for the same categories.** `SemanticTokenAnsiPalette` (VS Code dark+), `mush-monaco.js:90-102` (Dracula), `mush-syntax.css:14-20` (Material). Keep one C# map and emit the Monaco theme and the CSS as generated assets, the way `mush-defs.json` already is. Needs a test asserting every `SemanticTokenType` has a colour in each output, or the generated assets rot.
+3. **`MushcodeHighlighter` → ANTLR classifier + a CSS palette.** `PackagesController` runs server-side with `IMUSHCodeParser` already a singleton, so it can call the real classifier. The `BaseHtml`/`LiveHtml`/`NewHtml` API fields are contract; the `mush-*` class names are pinned only by tests and are renameable. Two things must survive separately: `{{package refs}}` (a manifest construct with no `SemanticTokenType`) and `FindDangerousPatterns` (an orthogonal scanner). Biggest risk: this input is untrusted third-party package content, so the ANTLR path must stay HTML-encoded and must not throw or stall on adversarial input — the regex tokenizer is trivially bounded and the parser is not.
+4. **The ANSI code-letter parser exists twice.** `AnsiCodeParser.cs:141-181` and the inline switch in `UtilityFunctions.cs:75-248` implement the same `h/x/r/g/…//X` grammar; there is already a TODO at `UtilityFunctions.cs:64` saying so. Diff both against netmush before collapsing — PennMUSH parity governs, and they may already differ on `/`-prefixed backgrounds, `#hex`, and sticky `h`.

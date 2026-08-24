@@ -150,10 +150,32 @@ FUNCHAR:   [0-9a-zA-Z_~@`]+ '(' WS
 
 Everywhere else whitespace falls into `OTHER` (`:28`) and is literal data.
 
+> **Correction (2026-08-23, during implementation).** The claim below that a
+> newline after any of these tokens is "free" was **wrong as originally stated**,
+> and the Task 2 review caught it. Whitespace absorption is a *lexer-level*
+> property: the token's text includes the whitespace either way. Whether that
+> whitespace survives depends on whether the token acts as a **structural
+> delimiter** in its parse context. `VisitBeginGenericText`
+> (`SharpMUSHParserVisitor.cs:2503`) emits `GetContextText` — the raw token text,
+> absorbed whitespace included — so wherever one of these tokens is ordinary text
+> rather than a delimiter, a break there is literal data and changes the program.
+>
+> Concretely: a `,` separates only inside a function argument list (`@emit a, b`
+> is text); a `;` separates only at command-list top level (`switch(a,b;c)` is
+> text); and `(` **never** groups at all — the grammar opens `function` on
+> `FUNCHAR`, so a bare paren reaches the parser as generic text.
+>
+> The implemented rule is therefore narrower than what follows: break after
+> `FUNCHAR`; after `COMMAWS` only when the enclosing group was opened by
+> `FUNCHAR`; after `SEMICOLON` only at root. `OBRACK` is provisional, gated on
+> the §7 corpus proving it by evaluation. `OPAREN`, `EQUALS`, and `OBRACE` are
+> never break positions.
+
 Two consequences define the algorithm:
 
-1. **A newline immediately after any of those tokens is free.** It is absorbed by
-   the lexer and the token stream is unchanged.
+1. **A newline immediately after any of those tokens is lexically free** — but
+   see the correction above: lexical freedom is necessary, not sufficient. The
+   token must also be acting as a structural delimiter.
 2. **There is no whitespace absorption before a closing delimiter.** A newline
    placed before `)`, `]`, or `}` becomes an `OTHER` token and joins the final
    argument as literal text. **Closers must therefore cuddle the last item and
@@ -277,6 +299,13 @@ assert that evaluating the original and evaluating the formatted output produce
 identical results. This is what actually demonstrates semantics preservation rather
 than asserting it, and it is the gate for relaxing the atomic-brace rule later.
 Corpus drawn from existing parser tests and help-file examples.
+
+**It must compare evaluated output, not normalised token streams.** An earlier
+draft compared lexer output with trailing whitespace trimmed from the seven
+WS-bearing token types — which would have compared away exactly the defect
+described in the §3 correction, and reported success. A comparison that normalises
+the thing under test proves nothing. Run both forms through the real parser and
+compare results.
 
 Also:
 
