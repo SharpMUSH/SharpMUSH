@@ -81,6 +81,28 @@ public class GrepSyntaxFormattingTests
 	}
 
 	[Test]
+	public async ValueTask FirstWriteToAttributeWithDefaultSyntaxFlag_WarnsOnBrokenCode()
+	{
+		// @attribute/access is the only way to reach the gap AttributeService.SetAttributeAsync's
+		// pre-set `existing` snapshot can't see: a syntax flag configured as a DEFAULT for a fresh
+		// attribute *name* (wizard-only, applied to every object's first-ever instance of that name),
+		// rather than via @set on an instance that already exists. GetAttributeQuery is all-or-nothing,
+		// so on the very first write `existing` comes back empty -- but SetAttributeCommand applies
+		// this DefaultFlags entry (funsyntax) to the brand-new node during that same call, so only a
+		// post-set re-fetch can see it in time to validate.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access DEFAULTFN=funsyntax"));
+
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetWarnDefault");
+
+		NotifyService.ClearReceivedCalls();
+		// First-ever write to DEFAULTFN on this object -- the attribute node does not exist before
+		// this call.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&DEFAULTFN {obj}={BrokenCode}"));
+
+		await ExpectPlainText("PARSER FAILURE");
+	}
+
+	[Test]
 	public async ValueTask SettingBrokenCodeIntoUnflaggedAttribute_IsSilent()
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetWarnOff");
