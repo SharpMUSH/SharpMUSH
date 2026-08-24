@@ -116,6 +116,16 @@ public static class SoftcodeFormatter
 	/// plus <see cref="SoftcodeBreak.Indent"/> spaces, exactly as that plain-text renderer does — but
 	/// sliced from the coloured <see cref="MString"/> rather than rebuilt from <see cref="TokenInfo.Text"/>,
 	/// so styling and any author markup already in <paramref name="colored"/> survive the reflow.
+	/// <para>
+	/// Unlike <see cref="SemanticTokenRenderer.Render"/>, this emits only token spans — no gap-filling
+	/// for text no token covers. That asymmetry is deliberate, not an oversight: <c>Render</c> must
+	/// tolerate a token list that fails to tile its input because a caller could hand it any
+	/// <c>IReadOnlyList&lt;SemanticToken&gt;</c>, but <paramref name="tokens"/> here always comes from a
+	/// full lex of <paramref name="colored"/>'s own source — <c>MUSHCodeParser.Tokenize</c> in production,
+	/// <c>TestLexer.Lex</c> in tests — both of which drop only the synthetic EOF token, so the tiling
+	/// guarantee already holds. A future token source that doesn't tile would need this brought in line
+	/// with <c>Render</c>'s gap handling; it isn't needed today.
+	/// </para>
 	/// </summary>
 	private static MString ApplyBreaks(MString colored, IReadOnlyList<TokenInfo> tokens, IReadOnlyList<SoftcodeBreak> breaks)
 	{
@@ -152,9 +162,10 @@ public static class SoftcodeFormatter
 	}
 
 	/// <summary>
-	/// Appends a blank line plus one line per error beneath the laid-out code, each rendered by
+	/// Appends a single newline followed by one line per error beneath the laid-out code — not a blank
+	/// line: the summary starts on the very next line, each error rendered by
 	/// <see cref="ParseError.ToMushFailureString"/> — the existing MUSH-facing formatter, reused rather
-	/// than reinvented.
+	/// than reinvented — and joined to the next by a further <c>\n</c>.
 	/// </summary>
 	private static MString AppendErrorSummary(MString laidOut, IReadOnlyList<ParseError> errors)
 	{
