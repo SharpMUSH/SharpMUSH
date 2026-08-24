@@ -202,6 +202,46 @@ public class AttributeTreePermissionTests
 	}
 
 	/// <summary>
+	/// Same fixture as <see cref="MortalDark_HidesFromLattrForMortal"/>, but the pattern
+	/// names the leaf alone so the dark branch never enters the result set. That case used
+	/// to leak: the filter was built from the matches, so a pattern that matched no ancestor
+	/// had nothing to filter against.
+	/// </summary>
+	[Test]
+	public async ValueTask MortalDark_HidesFromLattrForMortal_LeafOnlyPattern()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PermDarkLeaf");
+		var mortalDbRef = mortal.DbRef.ToString();
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&PDLL{uid} {mortalDbRef}=parent"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&PDLL{uid}`BAR {mortalDbRef}=branch"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&PDLL{uid}`BAR`DEEP {mortalDbRef}=hidden"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@set {mortalDbRef}/PDLL{uid}`BAR=mortal_dark"));
+
+		var visible = await Parser.CommandParse(mortal.Handle, ConnectionService,
+			MModule.single($"think lattr(me/PDLL{uid})"));
+		await Assert.That(visible.Message!.ToPlainText()).Contains($"PDLL{uid}")
+			.Because("the unflagged root is still listed by a leaf-only pattern");
+
+		var branch = await Parser.CommandParse(mortal.Handle, ConnectionService,
+			MModule.single($"think lattr(me/PDLL{uid}`BAR)"));
+		await Assert.That(branch.Message!.ToPlainText()).DoesNotContain($"PDLL{uid}`BAR")
+			.Because("a pattern naming the dark branch itself must not list it");
+
+		var deep = await Parser.CommandParse(mortal.Handle, ConnectionService,
+			MModule.single($"think lattr(me/PDLL{uid}`BAR`DEEP)"));
+		await Assert.That(deep.Message!.ToPlainText()).DoesNotContain($"PDLL{uid}`BAR`DEEP")
+			.Because("a pattern naming only the leaf must still consult the dark branch above it");
+	}
+
+	/// <summary>
 	/// Removing wiz flag allows mortal to write again, even if mortal_dark remains.
 	/// </summary>
 	[Test]

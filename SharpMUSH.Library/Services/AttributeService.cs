@@ -536,7 +536,6 @@ public class AttributeService(
 		var attributes = mediator.CreateStream(
 			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
-		// For non-privileged viewers, collect mortal_dark attribute names to filter their children
 		var isPrivileged = executor.IsGod() || await executor.IsWizard();
 
 		if (isPrivileged)
@@ -546,27 +545,55 @@ public class AttributeService(
 				.ToArrayAsync();
 		}
 
-		// Filter based on permissions and exclude children of mortal_dark attributes
+		// A pattern can name a leaf without matching any of its ancestors, so the result
+		// set alone never proves a branch is safe to reveal. Walk the real root..leaf path
+		// for each match - PennMUSH re-checks every level, so a mortal_dark (or non-visual)
+		// branch hides its leaves however narrow the pattern was.
 		var results = await attributes.ToArrayAsync();
-		var darkPrefixes = results
-			.Where(x => x.IsMortalDark())
-			.Select(x => x.LongName + "`")
-			.ToArray();
-
-		var filtered = results
-			.Where(x => !x.IsMortalDark()
-									 && !darkPrefixes.Any(dp => x.LongName.StartsWith(dp, StringComparison.OrdinalIgnoreCase)));
+		var known = IndexByLongName(results, static x => x.LongName);
 
 		var permitted = new List<SharpAttribute>();
-		foreach (var attr in filtered)
+		foreach (var attr in results)
 		{
-			if (await ps.CanViewAttribute(executor, obj, attr))
+			var path = await AttributeAncestry.PathAsync(attr, known, parts => FetchAncestorAsync(obj, parts));
+			if (await ps.CanViewAttribute(executor, obj, path))
 				permitted.Add(attr);
 		}
 
 		return permitted
 			.OrderBy(x => x.LongName, _attributeSort)
 			.ToArray();
+	}
+
+	/// <summary>
+	/// Loads a single ancestor attribute for the ancestor walk. Returns null when the
+	/// ancestor does not exist - an orphaned leaf contributes no ancestor, not a denial.
+	/// </summary>
+	private async ValueTask<SharpAttribute?> FetchAncestorAsync(AnySharpObject obj, string[] path)
+		=> await mediator
+			.CreateStream(new GetAttributeQuery(obj.Object().DBRef, path))
+			.LastOrDefaultAsync();
+
+	/// <inheritdoc cref="FetchAncestorAsync"/>
+	private async ValueTask<LazySharpAttribute?> FetchLazyAncestorAsync(AnySharpObject obj, string[] path)
+		=> await mediator
+			.CreateStream(new GetLazyAttributeQuery(obj.Object().DBRef, path))
+			.LastOrDefaultAsync();
+
+	/// <summary>
+	/// Indexes already-materialised attributes by long name for the ancestor walk.
+	/// Case-insensitive, as attribute names are; last write wins on a duplicate rather
+	/// than throwing the way <c>ToDictionary</c> would.
+	/// </summary>
+	private static Dictionary<string, T> IndexByLongName<T>(IEnumerable<T> attributes, Func<T, string> longNameOf)
+	{
+		var index = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+		foreach (var attribute in attributes)
+		{
+			index[longNameOf(attribute)] = attribute;
+		}
+
+		return index;
 	}
 
 	/// <summary>
@@ -593,27 +620,24 @@ public class AttributeService(
 				.FromAsync(attributes.OrderBy(x => x.LongName, _attributeSort));
 		}
 
-		// For non-privileged, materialize to filter mortal_dark descendants
+		// For non-privileged viewers, materialize so each match's ancestor path can be walked.
 		return LazySharpAttributesOrError.FromAsync(FilterLazyAttributes(executor, obj, attributes));
 	}
 
 	private async IAsyncEnumerable<LazySharpAttribute> FilterLazyAttributes(
 		AnySharpObject executor, AnySharpObject obj, IAsyncEnumerable<LazySharpAttribute> attributes)
 	{
+		// See GetAttributePatternAsync: permission follows the real root..leaf path, not
+		// whatever subset of the tree the pattern happened to match.
 		var results = await attributes.ToArrayAsync();
-		var darkPrefixes = results
-			.Where(x => x.IsMortalDark())
-			.Select(x => x.LongName + "`")
-			.ToArray();
+		var known = IndexByLongName(results, static x => x.LongName);
 
-		var filtered = results
-			.Where(x => !x.IsMortalDark()
-									 && !darkPrefixes.Any(dp => x.LongName.StartsWith(dp, StringComparison.OrdinalIgnoreCase)))
-			.OrderBy(x => x.LongName, _attributeSort);
+		var ordered = results.OrderBy(x => x.LongName, _attributeSort);
 
-		foreach (var attr in filtered)
+		foreach (var attr in ordered)
 		{
-			if (await ps.CanViewAttribute(executor, obj, attr))
+			var path = await AttributeAncestry.PathAsync(attr, known, parts => FetchLazyAncestorAsync(obj, parts));
+			if (await ps.CanViewAttribute(executor, obj, path))
 				yield return attr;
 		}
 	}

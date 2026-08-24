@@ -16,20 +16,41 @@ internal static class AttributeAncestry
 	/// absent ones are fetched via <paramref name="fetch"/>, which receives the
 	/// split path and returns null when no such attribute exists.
 	/// </summary>
-	public static async ValueTask<SharpAttribute[]> PathAsync(
+	/// <param name="leaf">The attribute whose path is being assembled.</param>
+	/// <param name="known">
+	/// Already-materialised ancestors, keyed by <c>LongName</c>. Must be built with
+	/// <see cref="StringComparer.OrdinalIgnoreCase"/> - attribute names are case-insensitive.
+	/// </param>
+	/// <param name="fetch">Loads an ancestor absent from <paramref name="known"/>.</param>
+	public static ValueTask<SharpAttribute[]> PathAsync(
 		SharpAttribute leaf,
 		IReadOnlyDictionary<string, SharpAttribute> known,
 		Func<string[], ValueTask<SharpAttribute?>> fetch)
+		=> PathAsync(leaf, known, fetch, static x => x.LongName);
+
+	/// <inheritdoc cref="PathAsync(SharpAttribute,IReadOnlyDictionary{string,SharpAttribute},Func{string[],ValueTask{SharpAttribute}})"/>
+	public static ValueTask<LazySharpAttribute[]> PathAsync(
+		LazySharpAttribute leaf,
+		IReadOnlyDictionary<string, LazySharpAttribute> known,
+		Func<string[], ValueTask<LazySharpAttribute?>> fetch)
+		=> PathAsync(leaf, known, fetch, static x => x.LongName);
+
+	private static async ValueTask<T[]> PathAsync<T>(
+		T leaf,
+		IReadOnlyDictionary<string, T> known,
+		Func<string[], ValueTask<T?>> fetch,
+		Func<T, string> longNameOf)
+		where T : class
 	{
-		var segments = leaf.LongName.Split('`');
-		var result = new List<SharpAttribute>(segments.Length);
+		var segments = longNameOf(leaf).Split('`');
+		var result = new List<T>(segments.Length);
 
 		for (var i = 1; i <= segments.Length; i++)
 		{
 			var prefixParts = segments[..i];
 			var prefixName = string.Join('`', prefixParts);
 
-			SharpAttribute? attribute = i == segments.Length
+			var attribute = i == segments.Length
 				? leaf
 				: known.TryGetValue(prefixName, out var knownAttribute)
 					? knownAttribute
