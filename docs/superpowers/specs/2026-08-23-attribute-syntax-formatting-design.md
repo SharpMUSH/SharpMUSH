@@ -166,10 +166,32 @@ Everywhere else whitespace falls into `OTHER` (`:28`) and is literal data.
 > `FUNCHAR`, so a bare paren reaches the parser as generic text.
 >
 > The implemented rule is therefore narrower than what follows: break after
-> `FUNCHAR`; after `COMMAWS` only when the enclosing group was opened by
-> `FUNCHAR`; after `SEMICOLON` only at root. `OBRACK` is provisional, gated on
-> the §7 corpus proving it by evaluation. `OPAREN`, `EQUALS`, and `OBRACE` are
-> never break positions.
+> `FUNCHAR`, but only when the function name **resolves**; after `COMMAWS` only
+> when the enclosing group was opened by a resolving `FUNCHAR`; after `SEMICOLON`
+> only at root **and only under a command-list parse type**. `OBRACK` survived
+> the §7 corpus and stays. `OPAREN`, `EQUALS`, and `OBRACE` are never break
+> positions.
+>
+> **The generalisation, which is the real lesson.** The equivalence corpus found
+> three defects, and all three are the same shape: *a token is structural only in
+> a context the token stream alone cannot see.* A comma separates only inside a
+> function argument list. A function call is a call only when its name resolves —
+> otherwise `LiteralFunctionCall` copies the whole thing through as text, absorbed
+> whitespace included. A semicolon separates commands only in a command-list
+> dialect. None of these is visible to a lexical scan.
+>
+> So a purely lexical layout engine cannot be made safe. It needs the parser's
+> context supplied explicitly, which is why `Compute` takes a function-resolution
+> oracle and a `ParseType` rather than deriving everything from tokens. Both
+> default to the conservative answer when absent. **Any future break position must
+> be justified against this test — "the lexer absorbs whitespace here" is
+> necessary and not sufficient** — and must be proven by the corpus in §7, not by
+> reading the grammar. Reading the grammar is what produced the wrong answer
+> three times.
+>
+> Note the pleasing circularity: the two flags this feature adds exist to declare
+> which dialect an attribute holds, and the layout engine turned out to need
+> exactly that same fact. `SyntaxParseType()` supplies it.
 
 Two consequences define the algorithm:
 
