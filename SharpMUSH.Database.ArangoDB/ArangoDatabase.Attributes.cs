@@ -521,8 +521,8 @@ public partial class ArangoDatabase
 		}
 	}
 
-	public IAsyncEnumerable<LazySharpAttribute> GetLazyAttributeAsync(DBRef dbref,
-		string[] attribute, CancellationToken ct = default)
+	public async IAsyncEnumerable<LazySharpAttribute> GetLazyAttributeAsync(DBRef dbref,
+		string[] attribute, [EnumeratorCancellation] CancellationToken ct = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
@@ -539,8 +539,26 @@ public partial class ArangoDatabase
 				{ "max", attribute.Length }
 			}, cancellationToken: ct);
 
-		return result?.Select(SharpAttributeQueryToLazySharpAttribute)
-			?? AsyncEnumerable.Empty<LazySharpAttribute>();
+		if (result == null)
+		{
+			yield break;
+		}
+
+		// All-or-nothing, as in GetAttributeAsync above and in the Surreal/Memgraph
+		// providers: a walk that stops short is a miss, not a shallower ancestor.
+		var resulted = await result
+			.Select(SharpAttributeQueryToLazySharpAttribute)
+			.ToArrayAsync(cancellationToken: ct);
+
+		if (resulted.Length != attribute.Length)
+		{
+			yield break;
+		}
+
+		foreach (var item in resulted)
+		{
+			yield return item;
+		}
 	}
 
 	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value,
