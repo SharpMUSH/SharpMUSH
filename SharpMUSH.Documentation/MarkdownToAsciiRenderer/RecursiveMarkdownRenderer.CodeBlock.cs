@@ -4,6 +4,7 @@ using ColorCode.Common;
 using ColorCode.Parsing;
 using Markdig.Syntax;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.MarkupString;
 using SharpMUSH.MarkupString.TextAlignerModule;
 using System.Drawing;
@@ -245,7 +246,8 @@ public partial class RecursiveMarkdownRenderer
 		var parseType = trimmed.Length > 0 && (trimmed[0] == '&' || trimmed[0] == '@' || trimmed[0] == '$')
 			? ParseType.CommandList
 			: ParseType.Function;
-		var tokens = _mushParser!.GetSemanticTokens(MModule.single(line), parseType);
+		var source = MModule.single(line);
+		var tokens = _mushParser!.GetSemanticTokens(source, parseType);
 		var sortedTokens = tokens
 			.OrderBy(t => t.Range.Start.Line)
 			.ThenBy(t => t.Range.Start.Character)
@@ -253,19 +255,12 @@ public partial class RecursiveMarkdownRenderer
 
 		if (sortedTokens.Count == 0)
 			return promptPrefix.Length > 0
-				? MModule.concat(MModule.single(promptPrefix), MModule.single(line))
-				: MModule.single(line);
+				? MModule.concat(MModule.single(promptPrefix), source)
+				: source;
 
-		var parts = new List<MString>();
-		if (promptPrefix.Length > 0)
-			parts.Add(MModule.single(promptPrefix));
-		foreach (var token in sortedTokens)
-		{
-			var style = SemanticTokenAnsiPalette.GetStyle(token.TokenType, token.Modifiers);
-			parts.Add(style is null
-				? MModule.single(token.Text)
-				: MModule.MarkupSingle(style, token.Text));
-		}
-		return MModule.multiple(parts);
+		var styled = SemanticTokenRenderer.Render(source, sortedTokens);
+		return promptPrefix.Length > 0
+			? MModule.concat(MModule.single(promptPrefix), styled)
+			: styled;
 	}
 }
