@@ -74,6 +74,56 @@ public class CommunicationCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
+	/// <summary>
+	/// Regression test for the command-argument subtree-reuse optimization (ArgumentSplit /
+	/// SharpMUSHParserVisitor.EvaluateArgumentSubtree): a function call with nested brackets inside
+	/// an EqSplit command's RHS argument must still evaluate correctly when the argument's parse
+	/// subtree is re-visited directly instead of being re-lexed from scratch a third time.
+	/// </summary>
+	[Test]
+	[Arguments("@pemit #1=[add(1,2)]", "3")]
+	[Arguments("@pemit #1=[add(1,[mul(2,3)])]", "7")]
+	public async ValueTask PemitWithFunctionCallInArgument(string command, string expected)
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// Regression test for the command-argument subtree-reuse optimization (ArgumentSplit /
+	/// SharpMUSHParserVisitor.EvaluateArgumentSubtree, CallState.HadErrors). @PEMIT is EqSplit
+	/// without NoParse/RSNoParse, so its RHS is eagerly evaluated. The NoParse split pass that
+	/// locates the '=' boundary always runs lenient (CommandEqSplitParse's
+	/// lenient: !StrictParse, and StrictParse is only set by the single-token command handler),
+	/// so a malformed argument like an unclosed function call doesn't fail that pass outright —
+	/// ANTLR recovers and produces a best-effort tree. Before this optimization, each argument's
+	/// extracted text still got an independent STRICT re-parse via FunctionParse afterwards,
+	/// which is what actually turns this into "#-1 PARSER FAILURE ...". EvaluateArgumentSubtree
+	/// must fall back to that strict re-parse whenever the split had errors, instead of trusting
+	/// the retained (error-recovered) subtree and silently returning a best-effort value.
+	/// </summary>
+	[Test]
+	public async ValueTask PemitWithUnclosedParenInArgument_ReportsParseFailure()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+
+		// Missing the closing ')' on add(1,2 — matches the exact malformed input already proven
+		// to produce "#-1 PARSER FAILURE: Expected ) or , at end of expression" via FunctionParse
+		// (see SharpMUSH.Tests/Parser/ParserFailureTests.cs and FunctionUnitTests.cs).
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@pemit me=add(1,2"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(ms => ms.ToPlainText(), s => s).StartsWith("#-1 PARSER FAILURE")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
 	[Test]
 	[Arguments("@emit Test broadcast", "Test broadcast")]
 	[Arguments("@emit Another broadcast message", "Another broadcast message")]

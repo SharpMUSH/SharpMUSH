@@ -2167,7 +2167,7 @@ public class SharpMUSHParserVisitor(
 		);
 	}
 
-	private static async ValueTask<OneOf<List<CallState>, Error<string>>> ArgumentSplit(IMUSHCodeParser prs, MString src,
+	private async ValueTask<OneOf<List<CallState>, Error<string>>> ArgumentSplit(IMUSHCodeParser prs, MString src,
 		CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			libraryCommandDefinition,
@@ -2198,13 +2198,20 @@ public class SharpMUSHParserVisitor(
 			src);
 		var spaceInContext = MModule.indexOf(realSubtext, " ");
 
+		// The exact text the NoParse pass below parses to produce argCallState. Retained
+		// EvaluationStringContext nodes on argCallState.ArgumentContexts have token offsets
+		// relative to THIS text (not the command's full source line), so re-visiting them later
+		// in EvaluateArgumentSubtree requires a visitor whose `source` field is this same MString.
+		var parsedArgumentText = MModule.empty();
+
 		// command (space) argument(s)
 		if (spaceInContext != -1)
 		{
 			var remainder =
 				MModule.substring(spaceInContext + 1, MModule.getLength(realSubtext) - spaceInContext, realSubtext);
+			parsedArgumentText = remainder;
 
-			// command arg0 = arg1,still arg 1 
+			// command arg0 = arg1,still arg 1
 			if (behavior.HasFlag(CommandBehavior.EqSplit) && behavior.HasFlag(CommandBehavior.RSArgs))
 			{
 				argCallState = await newNoParseParser.CommandEqSplitArgsParse(remainder);
@@ -2258,6 +2265,7 @@ public class SharpMUSHParserVisitor(
 			if (argsStr.Length > 0)
 			{
 				var argsSubtext = MModule.single(argsStr);
+				parsedArgumentText = argsSubtext;
 				if (behavior.HasFlag(CommandBehavior.EqSplit) && behavior.HasFlag(CommandBehavior.RSArgs))
 				{
 					argCallState = await newNoParseParser.CommandEqSplitArgsParse(argsSubtext);
@@ -2299,6 +2307,27 @@ public class SharpMUSHParserVisitor(
 			return new Error<string>(errorText);
 		}
 
+		// Retained parse-tree nodes from the NoParse pass above, index-parallel to
+		// argCallState.Arguments — see CallState.ArgumentContexts. Reused below so evaluated
+		// arguments can be produced by re-visiting the already-lexed/parsed subtree (via
+		// EvaluateArgumentSubtree) instead of running FunctionParse's full lex+parse pipeline
+		// a third time on text the NoParse pass already tokenized and structured.
+		var argContexts = argCallState.ArgumentContexts ?? [];
+		object? ContextAt(int i) => i >= 0 && i < argContexts.Length ? argContexts[i] : null;
+
+		// The split pass above always runs lenient (CommandCommaArgsParse etc. pass
+		// lenient: !StrictParse, and StrictParse is only ever set by the single-token command
+		// handler) — so a syntax error in the argument text does NOT surface as the
+		// Arguments:null branch above; ANTLR's LenientErrorStrategy recovers and the split still
+		// returns a best-effort Arguments/ArgumentContexts array with CallState.HadErrors set.
+		// Before this optimization, that didn't matter: every argument's raw text got an
+		// independent STRICT re-parse via FunctionParse afterwards, which would surface the
+		// error as #-1 PARSER FAILURE. EvaluateArgumentSubtree must not trust a retained subtree
+		// built from an error-recovered parse, so when the split had errors ANYWHERE, every
+		// argument from it falls back to that original strict re-parse — matching pre-optimization
+		// behavior exactly rather than risking a wrong best-effort value for a malformed argument.
+		var splitHadErrors = argCallState.HadErrors;
+
 		if (eqSplit)
 		{
 			// The LHS of an EqSplit command is evaluated unless the command declares full NoParse.
@@ -2312,7 +2341,7 @@ public class SharpMUSHParserVisitor(
 			arguments.Add(noParse
 				? new CallState(noParseLhs, argCallState.Depth, null,
 					async () => (await prs.FunctionParse(noParseLhs))!.Message!)
-				: (await prs.FunctionParse(argCallState.Arguments.FirstOrDefault() ?? MModule.empty()))!);
+				: (await EvaluateArgumentSubtree(prs, parsedArgumentText, ContextAt(0), noParseLhs, emitSubstDebug: false, splitHadErrors))!);
 
 			if (nArgs < 2) return arguments;
 
@@ -2332,8 +2361,10 @@ public class SharpMUSHParserVisitor(
 			else
 			{
 				arguments.AddRange(await argCallState.Arguments.Skip(1)
+						.Select((x, idx) => (Argument: x, Context: ContextAt(idx + 1)))
 						.ToAsyncEnumerable()
-						.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument, true))
+						.Select(((MString Argument, object? Context) pair, CancellationToken _) =>
+							EvaluateArgumentSubtree(prs, parsedArgumentText, pair.Context, pair.Argument, emitSubstDebug: true, splitHadErrors))
 						.Select(cs => cs!)
 						.ToListAsync());
 			}
@@ -2351,8 +2382,10 @@ public class SharpMUSHParserVisitor(
 			else
 			{
 				arguments.AddRange(await (argCallState.Arguments ?? [])
+					.Select((x, idx) => (Argument: x, Context: ContextAt(idx)))
 					.ToAsyncEnumerable()
-					.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument, true))
+					.Select(((MString Argument, object? Context) pair, CancellationToken _) =>
+						EvaluateArgumentSubtree(prs, parsedArgumentText, pair.Context, pair.Argument, emitSubstDebug: true, splitHadErrors))
 					.Select(cs => cs!)
 					.ToListAsync());
 			}
@@ -2361,6 +2394,114 @@ public class SharpMUSHParserVisitor(
 		return arguments;
 	}
 
+	/// <summary>
+	/// Evaluates a single command argument by re-visiting the parse subtree retained from the
+	/// NoParse argument-splitting pass (<see cref="CallState.ArgumentContexts"/>) instead of
+	/// re-lexing and re-parsing the argument's raw text a third time via
+	/// <see cref="IMUSHCodeParser.FunctionParse(MString, bool)"/>. Falls back to the original
+	/// FunctionParse pipeline when no retained context is available for this slot (e.g. an empty
+	/// comma-separated argument), or when <paramref name="prs"/> is not a <see cref="MUSHCodeParser"/>
+	/// (the only production implementation of <see cref="IMUSHCodeParser"/>).
+	/// </summary>
+	/// <param name="prs">The command's own parser — equal to this visitor's own <c>parser</c> field
+	/// at every current call site (all three ArgumentSplit callers pass it through unchanged).</param>
+	/// <param name="argumentSourceText">
+	/// The exact text the NoParse pass parsed to produce <paramref name="retainedContext"/>
+	/// (ArgumentSplit's local <c>remainder</c>/<c>argsSubtext</c>) — the retained context's token
+	/// offsets are relative to this text, NOT the command's full source line, so a sub-visitor
+	/// evaluating it must be constructed with this exact text as its own `source`.
+	/// </param>
+	/// <param name="retainedContext">The <see cref="CallState.ArgumentContexts"/> slot for this
+	/// argument (an <c>EvaluationStringContext</c> boxed as <see cref="object"/>), or null.</param>
+	/// <param name="argument">The raw argument text — same value FunctionParse's `text` parameter
+	/// would receive on the fallback path.</param>
+	/// <param name="emitSubstDebug">Mirrors <see cref="IMUSHCodeParser.FunctionParse(MString, bool)"/>'s
+	/// substitution-only QUEUE_DEBUG trace flag.</param>
+	/// <param name="splitHadErrors">
+	/// <see cref="CallState.HadErrors"/> from the NoParse split pass that produced
+	/// <paramref name="retainedContext"/>. That pass always runs lenient, so a syntax error
+	/// anywhere in the split doesn't fail it outright — ANTLR's error recovery just produces a
+	/// best-effort tree. When true, this argument (and every sibling from the same split) falls
+	/// back to the strict re-parse, matching pre-optimization behavior instead of trusting a
+	/// recovered tree.
+	/// </param>
+	private async ValueTask<CallState?> EvaluateArgumentSubtree(
+		IMUSHCodeParser prs,
+		MString argumentSourceText,
+		object? retainedContext,
+		MString argument,
+		bool emitSubstDebug,
+		bool splitHadErrors)
+	{
+		// Escaped text (`\x`, grammar rule `escapedText: ESCAPE ANY;`, the ONLY entry point being a
+		// literal backslash — SharpMUSHLexer.g4) is a hard correctness trap for subtree reuse:
+		// VisitEscapedText (below) strips the backslash and returns the escaped character as plain
+		// text UNCONDITIONALLY — it does not check ParseMode. Under the original re-lex pipeline,
+		// this meant an escaped substitution like `\%#` decoded to bare `%#` during the NoParse
+		// boundary-finding pass, and THEN got a second, fresh lex — where the now-bare `%#` is
+		// tokenized as a live substitution and evaluates (e.g. to "#1"). Re-visiting the SAME
+		// retained EscapedTextContext node instead can never reach that second tokenization: the
+		// node's grammar rule was fixed as "escaped text" at the original lex time, so it always
+		// re-decodes to literal text no matter what ParseMode the revisit runs under — confirmed by
+		// IncludeFromDollarCommandTests.MultiLineBody_SemicolonAtLineEnd_RunsEveryCommand, which
+		// stores `\%#` via @set (EqSplit, no NoParse/RSNoParse -> eager RHS evaluation) and asserts
+		// it comes out as "#1", not "%#". Fall back to the original re-lex pipeline whenever the
+		// retained subtree contains an escape anywhere, so this argument gets byte-identical
+		// treatment to pre-optimization behavior. Same fallback for a syntax error anywhere in the
+		// split (splitHadErrors) — see the parameter doc above and CallState.HadErrors.
+		if (retainedContext is not EvaluationStringContext ctx
+				|| prs is not MUSHCodeParser mushParser
+				|| splitHadErrors
+				|| ContainsEscapedText(ctx))
+		{
+			return await prs.FunctionParse(argument, emitSubstDebug);
+		}
+
+		var evalParser = mushParser.ResolveTrackingParser(preserveActors: emitSubstDebug);
+
+		// A fresh visitor per call mirrors ParseInternalCore's "new SharpMUSHParserVisitor(...)
+		// per parse": its DidEmitFunctionDebug flag must start false for THIS argument alone, not
+		// be shared/polluted by the outer command's own visitor (`this`), which is handling the
+		// whole command line and whose flag may already be set from a sibling argument or an
+		// enclosing function call.
+		var subVisitor = new SharpMUSHParserVisitor(logger, evalParser, Configuration, Mediator, NotifyService,
+			ConnectionService, LocateService, CommandDiscoveryService, AttributeService, HookService, argumentSourceText);
+
+		var result = await subVisitor.Visit(ctx);
+
+		if (emitSubstDebug)
+		{
+			var rawText = MModule.plainText(argument).ToString();
+			await MUSHCodeParser.EmitSubstitutionOnlyDebugTraceAsync(
+				Mediator, NotifyService, prs.CurrentState, rawText, result?.Message, subVisitor.DidEmitFunctionDebug);
+		}
+
+		return result;
+	}
+
+	/// <summary>
+	/// Depth-first search for any <see cref="EscapedTextContext"/> node in <paramref name="node"/>'s
+	/// subtree (inclusive). See the comment in <see cref="EvaluateArgumentSubtree"/> for why this
+	/// gates the subtree-reuse fast path.
+	/// </summary>
+	private static bool ContainsEscapedText(IParseTree node)
+	{
+		if (node is EscapedTextContext)
+		{
+			return true;
+		}
+
+		for (var i = 0; i < node.ChildCount; i++)
+		{
+			var child = node.GetChild(i);
+			if (child is not null && ContainsEscapedText(child))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 
 	public override async ValueTask<CallState?> VisitEvaluationString(
 		[NotNull] EvaluationStringContext context) => await VisitChildren(context) ?? new CallState(
@@ -2677,7 +2818,10 @@ public class SharpMUSHParserVisitor(
 			[
 				visited?.Message ?? GetContextText(evalString)
 			],
-			ParsedMessage: () => ValueTask.FromResult<MString?>(null));
+			ParsedMessage: () => ValueTask.FromResult<MString?>(null))
+		{
+			ArgumentContexts = [evalString]
+		};
 	}
 
 	/// <summary>
@@ -2697,7 +2841,10 @@ public class SharpMUSHParserVisitor(
 		return new CallState(null,
 			context.Depth(),
 			[baseArg?.Message ?? MModule.empty(), .. commaArgs?.Arguments ?? []],
-			() => ValueTask.FromResult<MString?>(null));
+			() => ValueTask.FromResult<MString?>(null))
+		{
+			ArgumentContexts = [evalString, .. commaArgs?.ArgumentContexts ?? []]
+		};
 	}
 
 	/// <summary>
@@ -2718,7 +2865,10 @@ public class SharpMUSHParserVisitor(
 						? (await Visit(evalStrings[0]))?.Message ?? MModule.empty()
 						: MModule.empty()
 				],
-				() => ValueTask.FromResult<MString?>(null));
+				() => ValueTask.FromResult<MString?>(null))
+			{
+				ArgumentContexts = [evalStrings.Length > 0 ? evalStrings[0] : null]
+			};
 		}
 
 		var lhsExists = evalStrings.Length > 0 && evalStrings[0].Start.StartIndex < equalsToken.Symbol.StartIndex;
@@ -2727,7 +2877,14 @@ public class SharpMUSHParserVisitor(
 		var rhsArg = rsIdx < evalStrings.Length ? await Visit(evalStrings[rsIdx]) : null;
 		return new CallState(null, context.Depth(),
 			[lhsArg?.Message ?? MModule.empty(), rhsArg?.Message ?? MModule.empty()],
-			() => ValueTask.FromResult<MString?>(null));
+			() => ValueTask.FromResult<MString?>(null))
+		{
+			ArgumentContexts =
+			[
+				lhsExists ? evalStrings[0] : null,
+				rsIdx < evalStrings.Length ? evalStrings[rsIdx] : null
+			]
+		};
 	}
 
 	/// <summary>
@@ -2744,6 +2901,7 @@ public class SharpMUSHParserVisitor(
 		var commas = context.COMMAWS();
 		var argCount = commas.Length + 1;
 		var arguments = new MString[argCount];
+		var contexts = new object?[argCount];
 		var evalIdx = 0;
 		for (var i = 0; i < argCount; i++)
 		{
@@ -2752,14 +2910,19 @@ public class SharpMUSHParserVisitor(
 			{
 				var result = await Visit(evalStrings[evalIdx++]);
 				arguments[i] = result?.Message ?? GetContextText(evalStrings[evalIdx - 1]);
+				contexts[i] = evalStrings[evalIdx - 1];
 			}
 			else
 			{
 				arguments[i] = MModule.empty();
+				contexts[i] = null;
 			}
 		}
 
-		return new CallState(null, context.Depth(), arguments, () => ValueTask.FromResult<MString?>(null));
+		return new CallState(null, context.Depth(), arguments, () => ValueTask.FromResult<MString?>(null))
+		{
+			ArgumentContexts = contexts
+		};
 	}
 
 	public override async ValueTask<CallState?> VisitComplexSubstitutionSymbol(

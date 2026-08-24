@@ -72,4 +72,40 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 
 	public static readonly CallState EmptyArgument = new(_emptyMString, 0, [], _emptyParsedMessage);
 	public static readonly CallState Empty = new(_emptyMString, 0, null, _emptyParsedMessage);
+
+	/// <summary>
+	/// Parallel to <see cref="Arguments"/>: the retained NoParse-pass parse-tree node for each
+	/// command-argument slot (a <c>SharpMUSHParser.EvaluationStringContext</c>, boxed as
+	/// <see cref="object"/> so this shared/plugin-packaged contract type does not have to reference
+	/// the ANTLR-generated parser assembly — see the <c>PrivateAssets="all"</c> note on the
+	/// <c>SharpMUSH.Parser.Generated</c> reference in SharpMUSH.Library.csproj), or <see langword="null"/>
+	/// where a slot has no evaluationString (e.g. an empty comma-separated argument).
+	/// <para>
+	/// Populated only by the command argument-split visitor methods (<c>VisitCommaCommandArgs</c>,
+	/// <c>VisitStartEqSplitCommandArgs</c>, <c>VisitStartEqSplitCommand</c>,
+	/// <c>VisitStartPlainSingleCommandArg</c> in <c>SharpMUSHParserVisitor</c>), so that
+	/// <c>ArgumentSplit</c> can re-visit the already-lexed/parsed subtree directly instead of
+	/// re-parsing each argument's raw text a third time (avoiding a redundant lex+parse pass).
+	/// </para>
+	/// </summary>
+	public object?[]? ArgumentContexts { get; init; }
+
+	/// <summary>
+	/// True when the parse that produced this <see cref="CallState"/> ran under ANTLR's lenient
+	/// error-recovery strategy (<c>ParseInternalCore</c>'s <c>lenient</c> parameter) AND actually
+	/// hit a syntax error — i.e. the tree this <see cref="CallState"/> was built from is a
+	/// best-effort recovery, not a clean parse.
+	/// <para>
+	/// The command argument-split entry points (<c>CommandCommaArgsParse</c>,
+	/// <c>CommandEqSplitParse</c>, <c>CommandEqSplitArgsParse</c>, <c>CommandSingleArgParse</c>)
+	/// always run lenient, so their errors are silently swallowed at that layer by design — the
+	/// original design relied on each argument's raw text getting an independent, STRICT re-parse
+	/// via <c>FunctionParse</c> afterwards to actually surface a malformed argument as
+	/// <c>#-1 PARSER FAILURE</c>. <c>ArgumentSplit</c>/<c>EvaluateArgumentSubtree</c> uses this flag
+	/// to fall back to that strict re-parse instead of trusting the retained (possibly
+	/// error-recovered) subtree, whenever the split pass that produced <see cref="ArgumentContexts"/>
+	/// had errors anywhere in it.
+	/// </para>
+	/// </summary>
+	public bool HadErrors { get; init; }
 }

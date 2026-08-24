@@ -358,7 +358,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// call_limit, which is the same guard against the same crash.
 		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
 		{
-			return (new CallState(MModule.single(ErrorMessages.Returns.Call)), false);
+			return (new CallState(MModule.single(ErrorMessages.Returns.Call)) { HadErrors = true }, false);
 		}
 
 		// Two-stage SLL/LL prediction with strict/lenient recovery. The error listener is the one
@@ -373,7 +373,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// error-recovery tree so the best-effort split is returned to the caller.
 		if (errorListener.HasErrors && !lenient)
 		{
-			return (new CallState(MModule.single(errorListener.Errors[0].ToMushFailureString())), false);
+			return (new CallState(MModule.single(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true }, false);
 		}
 
 		SharpMUSHParserVisitor visitor = new(Logger, parser,
@@ -388,7 +388,139 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			text);
 
 		var result = await visitor.Visit(context);
+
+		// A lenient parse can reach here having still hit a syntax error: LenientErrorStrategy
+		// recovers and lets the visitor walk a best-effort tree instead of throwing, so
+		// errorListener.HasErrors can be true even though `result` is non-null. Tag it on the
+		// returned CallState (mirroring ArgumentContexts riding along the same way) so a caller
+		// that walks the retained tree directly instead of re-parsing — see
+		// SharpMUSHParserVisitor.EvaluateArgumentSubtree — knows this tree is only a recovered
+		// best-effort parse and cannot be trusted as a substitute for a strict re-parse.
+		if (errorListener.HasErrors && result is not null)
+		{
+			result = result with { HadErrors = true };
+		}
+
 		return (result, visitor.DidEmitFunctionDebug);
+	}
+
+	/// <summary>
+	/// Returns a parser bound to a state guaranteed to carry invocation/recursion tracking
+	/// (<see cref="ParserState.TotalInvocations"/>, <see cref="ParserState.CallDepth"/>, etc.),
+	/// pushing a fresh <see cref="ParserState"/> only when the current state stack has none yet
+	/// (i.e. a genuinely top-level entry point — <see cref="State"/> is empty, or the top frame
+	/// predates any tracking counters). Extracted from <see cref="FunctionParse(MString)"/> /
+	/// <see cref="FunctionParse(MString, bool)"/> so other callers that want to evaluate a
+	/// function-position subtree without re-lexing/re-parsing (see
+	/// <c>SharpMUSHParserVisitor.EvaluateArgumentSubtree</c>) can reuse the exact same
+	/// "needsTracking" decision.
+	/// </summary>
+	/// <param name="preserveActors">
+	/// When true, Executor/Enactor/Caller are copied from <see cref="CurrentState"/> into the
+	/// fresh <see cref="ParserState"/> (matches <c>FunctionParse(text, emitSubstDebug: true)</c>).
+	/// When false, they are left null (matches the no-debug <see cref="FunctionParse(MString)"/>
+	/// overload) — this asymmetry already existed between the two overloads before extraction.
+	/// </param>
+	internal IMUSHCodeParser ResolveTrackingParser(bool preserveActors)
+	{
+		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
+		if (!needsTracking)
+		{
+			return this;
+		}
+
+		// Pre-existing gap (byte-identical in FunctionParse before this method was extracted from
+		// it, not introduced here): CurrentState => State.Peek() throws on an empty stack, so
+		// unconditionally reading CurrentState.Executor/Enactor/Caller below would crash whenever
+		// State.IsEmpty is the reason needsTracking fired. Closing it here while it's in view —
+		// only copy actors from CurrentState when there IS a CurrentState to read.
+		var preserveCallerActors = preserveActors && !State.IsEmpty;
+
+		return Push(new ParserState(
+			Registers: new([[]]),
+			IterationRegisters: [],
+			RegexRegisters: [],
+			SwitchStack: [],
+			EnvironmentRegisters: [],
+			CurrentEvaluation: null,
+			ExecutionStack: [],
+			ParserFunctionDepth: 0,
+			Function: null,
+			Command: null,
+			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
+			Switches: [],
+			Arguments: [],
+			Executor: preserveCallerActors ? CurrentState.Executor : null,
+			Enactor: preserveCallerActors ? CurrentState.Enactor : null,
+			Caller: preserveCallerActors ? CurrentState.Caller : null,
+			Handle: null,
+			ParseMode: ParseMode.Default,
+			HttpResponse: null,
+			CallDepth: new InvocationCounter(),
+			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+			TotalInvocations: new InvocationCounter(),
+			LimitExceeded: new LimitExceededFlag()));
+	}
+
+	/// <summary>
+	/// PennMUSH substitution-only debug: when a function-position argument contains only
+	/// substitutions (no function calls), emit a single-line debug trace: "#dbref! raw => evaluated".
+	/// Only fires when function-level debug did NOT already emit for this same parse (<paramref
+	/// name="didEmitFunctionDebug"/>), and when the raw and evaluated text actually differ.
+	/// <para>
+	/// Extracted from <see cref="FunctionParse(MString, bool)"/> so
+	/// <c>SharpMUSHParserVisitor.EvaluateArgumentSubtree</c> can reuse the identical trace logic
+	/// when it evaluates a retained argument subtree directly instead of going through
+	/// <see cref="FunctionParse(MString, bool)"/>'s own lex+parse pass.
+	/// </para>
+	/// </summary>
+	/// <param name="callerState">
+	/// The state to check DEBUG/NODEBUG flags and resolve the executor against — always the
+	/// state of the parser that WOULD have called <see cref="FunctionParse(MString, bool)"/>
+	/// (i.e. <see cref="CurrentState"/> at the call site), not any fresh tracking state pushed by
+	/// <see cref="ResolveTrackingParser"/> for the evaluation itself.
+	/// </param>
+	internal static async ValueTask EmitSubstitutionOnlyDebugTraceAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		ParserState callerState,
+		string rawText,
+		MString? resultMessage,
+		bool didEmitFunctionDebug)
+	{
+		if (didEmitFunctionDebug || resultMessage is null)
+		{
+			return;
+		}
+
+		var evaluatedText = resultMessage.ToPlainText();
+		if (rawText == evaluatedText)
+		{
+			return;
+		}
+
+		var shouldDebug = false;
+		AnySharpObject? executorObj = null;
+
+		var executor = await callerState.ExecutorObject(mediator);
+		if (!executor.IsNone)
+		{
+			executorObj = executor.Known;
+			var stateFlags = callerState.Flags;
+			if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
+				shouldDebug = false;
+			else if (stateFlags.HasFlag(ParserStateFlags.Debug))
+				shouldDebug = true;
+			else
+				shouldDebug = await executorObj.HasFlag("DEBUG");
+		}
+
+		if (shouldDebug && executorObj is not null)
+		{
+			var dbrefNumber = executorObj.Object().DBRef.Number;
+			var owner = await executorObj.Object().Owner.WithCancellation(CancellationToken.None);
+			await notifyService.Notify(owner, MModule.single($"#{dbrefNumber}! {rawText} => {evaluatedText}"));
+		}
 	}
 
 	public async ValueTask<CallState?> FunctionParse(MString text)
@@ -398,34 +530,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (string.IsNullOrEmpty(MModule.plainText(text)))
 			return CallState.Empty;
 
-		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
-
-		var parser = needsTracking
-			? Push(new ParserState(
-				Registers: new([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				EnvironmentRegisters: [],
-				CurrentEvaluation: null,
-				ExecutionStack: [],
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: null,
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-				Switches: [],
-				Arguments: [],
-				Executor: null,
-				Enactor: null,
-				Caller: null,
-				Handle: null,
-				ParseMode: ParseMode.Default,
-				HttpResponse: null,
-				CallDepth: new InvocationCounter(),
-				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag()))
-			: this;
+		var parser = ResolveTrackingParser(preserveActors: false);
 
 		var (result, _) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 
@@ -440,70 +545,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (string.IsNullOrEmpty(MModule.plainText(text).ToString()))
 			return CallState.Empty;
 
-		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
-		var parser = needsTracking
-			? Push(new ParserState(
-				Registers: new([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				EnvironmentRegisters: [],
-				CurrentEvaluation: null,
-				ExecutionStack: [],
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: null,
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-				Switches: [],
-				Arguments: [],
-				Executor: CurrentState.Executor,
-				Enactor: CurrentState.Enactor,
-				Caller: CurrentState.Caller,
-				Handle: null,
-				ParseMode: ParseMode.Default,
-				HttpResponse: null,
-				CallDepth: new InvocationCounter(),
-				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag()))
-			: this;
+		var parser = ResolveTrackingParser(preserveActors: true);
 
 		// Capture raw text BEFORE evaluation for substitution-only debug
 		var rawText = MModule.plainText(text).ToString();
 		var (result, didEmitFunctionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 
-		// PennMUSH substitution-only debug: when the argument contains only substitutions
-		// (no function calls), emit a single-line debug trace: "#dbref! raw => evaluated"
-		// Only fires when function-level debug did NOT already emit for this parse.
-		if (!didEmitFunctionDebug && result?.Message is not null)
-		{
-			var evaluatedText = result.Message.ToPlainText();
-			if (rawText != evaluatedText)
-			{
-				var shouldDebug = false;
-				AnySharpObject? executorObj = null;
-
-				var executor = await CurrentState.ExecutorObject(_mediator);
-				if (!executor.IsNone)
-				{
-					executorObj = executor.Known;
-					var stateFlags = CurrentState.Flags;
-					if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
-						shouldDebug = false;
-					else if (stateFlags.HasFlag(ParserStateFlags.Debug))
-						shouldDebug = true;
-					else
-						shouldDebug = await executorObj.HasFlag("DEBUG");
-				}
-
-				if (shouldDebug && executorObj is not null)
-				{
-					var dbrefNumber = executorObj.Object().DBRef.Number;
-					var owner = await executorObj.Object().Owner.WithCancellation(CancellationToken.None);
-					await _notifyService.Notify(owner, MModule.single($"#{dbrefNumber}! {rawText} => {evaluatedText}"));
-				}
-			}
-		}
+		await EmitSubstitutionOnlyDebugTraceAsync(_mediator, _notifyService, CurrentState, rawText, result?.Message,
+			didEmitFunctionDebug);
 
 		return result;
 	}
