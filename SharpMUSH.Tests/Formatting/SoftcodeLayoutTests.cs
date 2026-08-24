@@ -169,7 +169,12 @@ public class SoftcodeLayoutTests
 		foreach (var src in sources)
 		{
 			var tokens = Lex(src);
-			foreach (var b in SoftcodeLayout.Compute(tokens, width: 20))
+			var breaks = SoftcodeLayout.Compute(tokens, width: 20);
+
+			// Without this the test would pass vacuously against a Compute that returned nothing at all.
+			await Assert.That(breaks).IsNotEmpty().Because($"no breaks to check in [{src}]");
+
+			foreach (var b in breaks)
 			{
 				var opener = EnclosingOpener(tokens, b.TokenIndex);
 				switch (tokens[b.TokenIndex].Type)
@@ -235,6 +240,23 @@ public class SoftcodeLayoutTests
 		var breaks = SoftcodeLayout.Compute(tokens, width: 1);
 
 		await Assert.That(breaks).IsEmpty();
+	}
+
+	[Test]
+	public async Task MismatchedCloserInsideBraces_DoesNotPopTheBraceGroup()
+	{
+		// bracePattern (SharpMUSHParser.g4:96) resets inFunction, so the ')' between the braces is plain
+		// text to the grammar and closes nothing. Popping the brace group on it would hand the comma
+		// that follows to f's argument list, making it a break point inside literal text.
+		const string src = "f(aaaa,{prose ) here, comma},b)";
+		var tokens = Lex(src);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 12);
+
+		var open = tokens.Index().First(x => x.Item.Text.TrimEnd() == "{").Index;
+		var close = tokens.Index().First(x => x.Item.Text.TrimEnd() == "}").Index;
+
+		await Assert.That(breaks).IsNotEmpty();
+		await Assert.That(breaks.Any(b => b.TokenIndex >= open && b.TokenIndex < close)).IsFalse();
 	}
 
 	[Test]

@@ -74,6 +74,19 @@ public static class SoftcodeLayout
 	private static readonly string[] Closers = ["CPAREN", "CBRACK", "CBRACE"];
 
 	/// <summary>
+	/// The opener type a closing token may close, or <c>null</c> if the type is not a closer. A closer
+	/// only ever matches its own kind: <c>)</c> closes a call, <c>]</c> a bracket group, <c>}</c> a
+	/// brace group. Anything else is literal text.
+	/// </summary>
+	private static string? OpenerClosedBy(string closerType) => closerType switch
+	{
+		"CPAREN" => "FUNCHAR",
+		"CBRACK" => "OBRACK",
+		"CBRACE" => "OBRACE",
+		_ => null
+	};
+
+	/// <summary>
 	/// Computes the breaks needed to fit <paramref name="tokens"/> within <paramref name="width"/> columns.
 	/// </summary>
 	/// <param name="tokens">The lexed softcode, in source order.</param>
@@ -118,10 +131,14 @@ public static class SoftcodeLayout
 				stack.Peek().Children.Add(child);
 				stack.Push(child);
 			}
-			else if (Array.IndexOf(Closers, type) >= 0)
+			else if (OpenerClosedBy(type) is { } closedOpener)
 			{
-				// A closer with only the root left is stray text; drop it rather than unwinding the root.
-				if (stack.Count > 1)
+				// A closer that does not match the innermost group is text, not structure. bracePattern
+				// (SharpMUSHParser.g4:96) resets inFunction, so a stray ')' inside {...} is plain text to
+				// the grammar — popping the brace group on it would hand the brace's own commas to the
+				// enclosing call and make them break points inside literal text. Ignore such a closer,
+				// exactly as a closer that would unwind the root is ignored.
+				if (stack.Count > 1 && stack.Peek().OpenType == closedOpener)
 				{
 					stack.Pop().CloseIndex = i;
 				}
