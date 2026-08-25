@@ -577,6 +577,7 @@ public partial class SurrealDatabase
 			("cmdsyntax", "x", true),
 			("funsyntax", "f", true),
 			("internal", "I", true),
+			("nodump", "D", true),
 		};
 
 		foreach (var af in attrFlags)

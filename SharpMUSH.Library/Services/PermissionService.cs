@@ -21,28 +21,63 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 		if (attribute.Length == 0) return true;
 
-		var compressedAttribute = attribute[^1] with
-		{
-			Flags = attribute.SelectMany(a => a.Flags)
-				.Where(x => x.Inheritable == true)
-				.DistinctBy(x => x.Name)
-		};
+		// God bypasses every per-flag gate below: PennMUSH's Cannot_Write_This_Attr wraps its
+		// whole body in `!God(p) && (...)` (src/attrib.c:364), and can_create_attr's AF_NODUMP
+		// guard reads `player != GOD` directly (src/attrib.c:479-483).
+		if (executor.IsGod())
+			return true;
 
-		// AF_INTERNAL denies writes to everyone except God: PennMUSH's Cannot_Write_This_Attr
-		// (src/attrib.c:364) reads `!God(p) && (AF_Internal(a) || ...)` - Wizard does not
-		// exempt a write to an internal attribute the way it does the wizard-attribute-lock
-		// check below. Inheritable = true on the seed means an ancestor's internal flag is
-		// already folded into compressedAttribute.Flags above.
-		if (compressedAttribute.IsInternal() && !executor.IsGod())
+		// Each test below walks every level named in `attribute` - PennMUSH's own
+		// can_write_attr_internal (src/attrib.c:383-408) calls Cannot_Write_This_Attr once per
+		// ancestor node while walking the tree to the target, denying the whole write the
+		// moment any single level fails. `Inheritable` (the object-@parent axis - whether a
+		// flag survives onto a child object) has nothing to do with that walk and is
+		// deliberately not consulted here.
+
+		// AF_INTERNAL: Cannot_Write_This_Attr - denies writes to everyone but God. Unlike the
+		// wizard-attribute-lock gate below, Wizard(p) does not exempt a write to an internal
+		// attribute.
+		if (attribute.Any(a => a.IsInternal()))
 			return false;
 
-		// TODO: SAFE attribute flag check not yet implemented.
-		return !(!executor.IsGod()
-						 && !(await executor.IsWizard()
-									|| (!compressedAttribute.IsWizard()
-											&& (!compressedAttribute.IsLocked()
-													|| await compressedAttribute.Owner.WithCancellation(CancellationToken.None) ==
-													await target.Object().Owner.WithCancellation(CancellationToken.None)))));
+		// AF_SAFE: Cannot_Write_This_Attr's `(s) && AF_Safe(a)` term. Penn only ever passes
+		// s=0 (Can_Write_Attr_Ignore_Safe) from one call site - af_helper's special-case reset
+		// of the SAFE flag itself on the attribute being un-flagged (src/set.c:509-511).
+		// SharpMUSH's CanSet callers are all value writes and clears (SetAttributeAsync,
+		// ClearAttributeAsync), which Penn always routes through the s=1 form, and its
+		// attribute-flag command doesn't call CanSet at all yet - so no caller here needs
+		// s=0; safe is always obeyed.
+		if (attribute.Any(a => a.IsSafe()))
+			return false;
+
+		// AF_NODUMP: can_create_attr (src/attrib.c:479-483) - "Only GOD can create an
+		// AF_NODUMP attribute (used for semaphores) or add a leaf to a tree with such an
+		// attribute." The God exemption already happened above, so reaching here means deny.
+		if (attribute.Any(a => a.IsNoDump()))
+			return false;
+
+		// Wizard(p) bypasses BOTH the AF_Wizard(a) check and the locked-attribute check below
+		// entirely (Cannot_Write_This_Attr's `Wizard(p) || (!AF_Wizard(a) && ...)`).
+		if (await executor.IsWizard())
+			return true;
+
+		// AF_WIZARD: a non-wizard, non-God executor may never write a wizard-flagged
+		// attribute, regardless of ownership.
+		if (attribute.Any(a => a.IsWizard()))
+			return false;
+
+		// AF_LOCKED: `!AF_Locked(a) || AL_CREATOR(a) == Owner(p)` - a non-wizard executor may
+		// only write a locked attribute it created itself; owning the TARGET object is not
+		// enough.
+		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		foreach (var a in attribute.Where(a => a.IsLocked()))
+		{
+			var attrOwner = await a.Owner.WithCancellation(CancellationToken.None);
+			if (attrOwner?.Id != executorOwner?.Id)
+				return false;
+		}
+
+		return true;
 	}
 
 	public async ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
