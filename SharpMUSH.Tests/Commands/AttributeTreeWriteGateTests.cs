@@ -243,4 +243,56 @@ public class AttributeTreeWriteGateTests
 		await Assert.That(leafAfter.IsAttribute).IsTrue()
 			.Because("a wizard-flagged branch must block @wipe of its leaf from a mortal owner, even under their own object");
 	}
+
+	/// <summary>
+	/// Task 6 fix round 1, H1: <c>@wipe me/BRANCH</c> matches only BRANCH in <c>attrArr</c>
+	/// (its descendants aren't separate pattern matches), and the outer ancestor-path gate on
+	/// BRANCH alone passes it through when BRANCH itself carries no flag. The provider-level
+	/// <c>WipeAttributeCommand</c>/<c>WipeAttributeAsync</c> then deletes BRANCH's whole
+	/// descendant subtree unconditionally - so a <c>wizard</c>-flagged descendant several
+	/// levels down, never itself named by the pattern, was destroyed ungated. PennMUSH's
+	/// <c>atr_clear_children</c> walks descendants one at a time and skips any it can't write.
+	/// </summary>
+	[Test]
+	public async ValueTask WipeOfUnflaggedBranch_PreservesProtectedDescendant()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeDesc");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(owner.DbRef));
+
+		// WPROT{uid} itself carries no flag - only its WIZLEAF child does. The outer
+		// ancestor-path gate on WPROT{uid} alone would pass; only per-descendant gating
+		// inside the wipe itself can catch this.
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WPROT{uid} me=branchvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WPROT{uid}`WIZLEAF me=protectedvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WPROT{uid}`OKLEAF me=removablevalue"));
+		// God flags only the descendant leaf WIZARD - not the branch.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}/WPROT{uid}`WIZLEAF=WIZARD"));
+
+		// Control: a wholly-unflagged branch is fully removed by @wipe, so a survivor below is
+		// the protection actually working, not @wipe silently no-op'ing on the whole subtree.
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WPROTOK{uid} me=okbranch"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WPROTOK{uid}`LEAF me=okleaf"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WPROTOK{uid}"));
+		var controlBranch = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROTOK{uid}",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(controlBranch.IsAttribute).IsFalse()
+			.Because("a wholly-unflagged branch is fully removed by @wipe, proving the command still works end-to-end");
+
+		// The mortal owner wipes the branch that has one protected descendant among its children.
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WPROT{uid}"));
+
+		var protectedLeaf = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROT{uid}`WIZLEAF",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(protectedLeaf.IsAttribute).IsTrue()
+			.Because("a wizard-flagged descendant must survive @wipe of its unflagged parent branch, even for the branch's own mortal owner");
+		await Assert.That(protectedLeaf.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("protectedvalue")
+			.Because("the surviving descendant's value must be untouched, not merely left present under a different value");
+
+		var removableLeaf = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROT{uid}`OKLEAF",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(removableLeaf.IsAttribute).IsFalse()
+			.Because("an unprotected sibling under the same branch must still be removed by the wipe");
+	}
 }

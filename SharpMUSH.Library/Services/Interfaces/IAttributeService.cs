@@ -49,6 +49,13 @@ public interface IAttributeService
 
 	ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag);
 
+	/// <summary>
+	/// Applies a whole list of <c>!</c>-prefixable flag tokens to one attribute as a single
+	/// operation - one permission check against the pre-batch state, covering every token.
+	/// See the implementation's remarks for why this must not be a loop of single-flag calls.
+	/// </summary>
+	ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagsAsync(AnySharpObject executor, AnySharpObject obj, string attribute, IReadOnlyList<string> flagTokens);
+
 	ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false);
 

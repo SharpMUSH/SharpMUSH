@@ -189,22 +189,22 @@ public partial class Commands
 
 		if (!string.IsNullOrEmpty(maybeAttribute))
 		{
-			string? lastErrorMessage = null;
-			foreach (var flag in MModule.splitList(MModule.single(" "), args["1"].Message!))
-			{
-				var plainFlag = MModule.plainText(flag);
-				var flagResult = plainFlag.StartsWith('!')
-					? await AttributeService!.UnsetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag[1..])
-					: await AttributeService!.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
+			// Every token is applied as ONE batch (Task 6 fix round 1, M2): Penn's
+			// do_attrib_flags/af_helper checks permission once for the whole flag argument,
+			// not once per flag, so `@set obj/attr=!safe wizard` isn't order-dependent on
+			// whether "!safe" or "wizard" is processed first.
+			var flagTokens = MModule.splitList(MModule.single(" "), args["1"].Message!)
+				.Select(MModule.plainText)
+				.ToList();
 
-				if (flagResult.IsT1)
-				{
-					await NotifyService!.Notify(executor, flagResult.AsT1.Value, executor);
-					lastErrorMessage = flagResult.AsT1.Value;
-				}
+			var flagResult = await AttributeService!.SetAttributeFlagsAsync(executor, realLocated, maybeAttribute, flagTokens);
+
+			if (flagResult.IsT1)
+			{
+				await NotifyService!.Notify(executor, flagResult.AsT1.Value, executor);
 			}
 
-			return new CallState(lastErrorMessage ?? string.Empty);
+			return new CallState(flagResult.Match(_ => string.Empty, failure => failure.Value));
 		}
 
 		var maybeColonLocation = MModule.indexOf(args["1"].Message!, ":");

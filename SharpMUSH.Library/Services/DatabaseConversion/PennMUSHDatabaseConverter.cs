@@ -626,9 +626,15 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							count++;
 							_logger.LogTrace("Set attribute {AttrName} on object #{DBRef}", pennAttr.Name, pennObj.DBRef);
 
-							foreach (var flag in pennAttr.Flags)
+							if (pennAttr.Flags.Count > 0)
 							{
-								await _attributeService.SetAttributeFlagAsync(sharpObj, sharpObj, pennAttr.Name, flag);
+								// One batch, not one call per flag (Task 6 fix round 1, M3):
+								// applying imported flags one at a time re-checks permission
+								// after each mutation, so e.g. a converted attribute carrying
+								// both safe and wizard would silently lose wizard once safe
+								// landed first (the importing executor is the object itself,
+								// never God). Penn's own converter has no such per-flag gate.
+								await _attributeService.SetAttributeFlagsAsync(sharpObj, sharpObj, pennAttr.Name, pennAttr.Flags);
 							}
 						}
 						else

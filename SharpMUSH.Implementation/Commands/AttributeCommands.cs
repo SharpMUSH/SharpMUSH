@@ -208,12 +208,15 @@ public partial class Commands
 				continue;
 			}
 
-			if (copyFlags)
+			if (copyFlags && attrFlags.Count > 0)
 			{
-				foreach (var flag in attrFlags)
-				{
-					await AttributeService!.SetAttributeFlagAsync(executor, destObject, targetAttrName, flag.Name);
-				}
+				// One batch, not one call per flag (Task 6 fix round 1, M3): applying flags
+				// one at a time re-checks permission after each mutation, so a source
+				// attribute carrying both SAFE and (say) WIZARD would have WIZARD silently
+				// fail to copy once SAFE landed first - Penn's copy_attrib_flags checks once
+				// and applies the whole mask.
+				await AttributeService!.SetAttributeFlagsAsync(executor, destObject, targetAttrName,
+					attrFlags.Select(flag => flag.Name).ToList());
 			}
 
 			copiedCount++;
@@ -330,12 +333,15 @@ public partial class Commands
 				continue;
 			}
 
-			if (copyFlags)
+			if (copyFlags && attrFlags.Count > 0)
 			{
-				foreach (var flag in attrFlags)
-				{
-					await AttributeService!.SetAttributeFlagAsync(executor, destObject, targetAttrName, flag.Name);
-				}
+				// One batch, not one call per flag (Task 6 fix round 1, M3): applying flags
+				// one at a time re-checks permission after each mutation, so a source
+				// attribute carrying both SAFE and (say) WIZARD would have WIZARD silently
+				// fail to copy once SAFE landed first - Penn's copy_attrib_flags checks once
+				// and applies the whole mask.
+				await AttributeService!.SetAttributeFlagsAsync(executor, destObject, targetAttrName,
+					attrFlags.Select(flag => flag.Name).ToList());
 			}
 
 			copiedCount++;

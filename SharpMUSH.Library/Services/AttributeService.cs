@@ -642,73 +642,47 @@ public class AttributeService(
 		}
 	}
 
-	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
+	public ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, string flag)
+		=> SetAttributeFlagsAsync(executor, obj, attribute, [flag]);
+
+	public ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor,
+		AnySharpObject obj, string attribute, string flag)
+		=> SetAttributeFlagsAsync(executor, obj, attribute, [$"!{flag}"]);
+
+	/// <summary>
+	/// Applies a whole list of attribute-flag tokens (each optionally <c>!</c>-prefixed to
+	/// unset) as ONE operation: one fetch, one permission check, then every mutation applied
+	/// together. Mirrors PennMUSH's <c>do_attrib_flags</c>/<c>af_helper</c>
+	/// (<c>src/set.c:483-533</c>), which parses the WHOLE flag argument into two bitmasks
+	/// first and checks <c>Can_Write_Attr</c> exactly once against the attribute's pre-batch
+	/// state, then applies both masks together - so <c>@set obj/attr=!safe wizard</c> and
+	/// <c>@set obj/attr=wizard !safe</c> behave identically, and clearing <c>safe</c> doesn't
+	/// block an unrelated flag change in the same command.
+	/// <para>
+	/// Before this (Task 6 fix round 1, M2/M3), every caller applied flags one at a time via
+	/// <see cref="SetAttributeFlagAsync"/>/<see cref="UnsetAttributeFlagAsync"/> in a loop,
+	/// re-checking permission after each mutation - order-dependent, and one flag's side
+	/// effect (e.g. <c>safe</c> having just been set) could silently block a sibling flag in
+	/// the same logical operation.
+	/// </para>
+	/// </summary>
+	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagsAsync(AnySharpObject executor,
+		AnySharpObject obj, string attribute, IReadOnlyList<string> flagTokens)
 	{
-		// SystemSet: fetch without a baked-in permission gate. The mode-based predicates
-		// (CanViewAttribute/CanExecuteAttribute) test read/eval permission, not writer
-		// permission - CanSet below is the actual write gate for this path (Task 6).
-		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.SystemSet);
-		if (returnedAttribute.IsError)
+		if (flagTokens.Count == 0)
 		{
-			return returnedAttribute.AsError;
-		}
-
-		if (returnedAttribute.IsNone)
-		{
-			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
-		}
-
-		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
-		var flagList = await allFlags.ToArrayAsync();
-		var returnedFlag = flagList
-			.FirstOrDefault(x => x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
-				|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
-
-		// PennMUSH-compatible prefix matching: "wiz" matches "wizard"
-		returnedFlag ??= flagList
-			.Where(x => x.Name.StartsWith(flag, StringComparison.OrdinalIgnoreCase))
-			.OrderBy(x => x.Name.Length)
-			.FirstOrDefault();
-
-		if (returnedFlag is null)
-		{
-			return new Error<string>("Flag Found");
-		}
-
-		// returnedAttribute.AsAttribute is the whole root..leaf ancestor path (see
-		// GetAttributeWithInheritanceQuery), so this walks every level exactly like Penn's
-		// can_write_attr_internal (src/attrib.c:383-408). Penn's af_helper never bypasses safe
-		// for setting a flag ON (only for clearing SAFE itself, in UnsetAttributeFlagAsync
-		// below), so this always obeys it.
-		if (!await ps.CanSet(executor, obj, returnedAttribute.AsAttribute))
-		{
-			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
-		}
-
-		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
-		if (currentFlags.Any(f => f.Name.Equals(returnedFlag.Name, StringComparison.OrdinalIgnoreCase)))
-		{
-			await notifyService.Notify(executor,
-				$"Flag {returnedFlag.Name} is already set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
 			return new Success();
 		}
 
-		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
-			returnedFlag));
-
-		await notifyService.Notify(executor,
-			$"Flag {returnedFlag.Name} set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
-
-		return new Success();
-	}
-
-	public async ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor,
-		AnySharpObject obj, string attribute, string flag)
-	{
-		// SystemSet: see the comment in SetAttributeFlagAsync - CanSet/CanSetIgnoringSafe below
-		// is the real write gate here, not the mode-based predicate.
-		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.SystemSet);
+		// SystemSet: fetch without a baked-in permission gate. The mode-based predicates
+		// (CanViewAttribute/CanExecuteAttribute) test read/eval permission, not writer
+		// permission - CanSet/CanSetIgnoringSafe below is the actual write gate for this path
+		// (Task 6). checkParent: false - Penn's af_helper only ever iterates the target
+		// object's own attributes (atr_iter_get), never a parent's, so this must not resolve
+		// (and then gate/flag) an inherited attribute that doesn't actually live on `obj`
+		// (Task 6 fix round 1, M4).
+		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.SystemSet, false);
 		if (returnedAttribute.IsError)
 		{
 			return returnedAttribute.AsError;
@@ -719,29 +693,43 @@ public class AttributeService(
 			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
-		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
-		var flagList = await allFlags.ToArrayAsync();
-		var returnedFlag = flagList
-			.FirstOrDefault(x => x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
-				|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
+		var flagList = await mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
 
-		// PennMUSH-compatible prefix matching: "wiz" matches "wizard"
-		returnedFlag ??= flagList
-			.Where(x => x.Name.StartsWith(flag, StringComparison.OrdinalIgnoreCase))
-			.OrderBy(x => x.Name.Length)
-			.FirstOrDefault();
-
-		if (returnedFlag is null)
+		var resolved = new List<(SharpAttributeFlag Flag, bool Unset)>(flagTokens.Count);
+		foreach (var token in flagTokens)
 		{
-			return new Error<string>("Flag Found");
+			var unset = token.StartsWith('!');
+			var name = unset ? token[1..] : token;
+
+			var flag = flagList
+				.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+					|| (x.Symbol != null && x.Symbol.Equals(name, StringComparison.OrdinalIgnoreCase)));
+
+			// PennMUSH-compatible prefix matching: "wiz" matches "wizard"
+			flag ??= flagList
+				.Where(x => x.Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+				.OrderBy(x => x.Name.Length)
+				.FirstOrDefault();
+
+			if (flag is null)
+			{
+				// Mirrors Penn: string_to_atrflagsets fails the WHOLE argument on one bad flag
+				// name, before any flag in the batch is ever applied.
+				return new Error<string>("Flag Found");
+			}
+
+			resolved.Add((flag, unset));
 		}
 
+		var target = returnedAttribute.AsAttribute.Last();
+
 		// Penn's af_helper (src/set.c:509-511) requires the normal, safe-obeying Can_Write_Attr
-		// UNLESS the flag being cleared is SAFE itself, in which case it falls back to
-		// Can_Write_Attr_Ignore_Safe - the one safe=0 call site in the codebase. Every other
-		// unset (including on an attribute that happens to carry safe) still obeys it.
-		var isUnsettingSafe = returnedFlag.Name.Equals("SAFE", StringComparison.OrdinalIgnoreCase);
-		var permitted = isUnsettingSafe
+		// UNLESS the batch clears SAFE itself, in which case it falls back to
+		// Can_Write_Attr_Ignore_Safe for the WHOLE batch - the one safe=0 call site in the
+		// codebase. Every other batch (including one that sets/clears other flags on an
+		// attribute that happens to carry safe) still obeys it.
+		var clearingSafe = resolved.Any(r => r.Unset && r.Flag.Name.Equals("SAFE", StringComparison.OrdinalIgnoreCase));
+		var permitted = clearingSafe
 			? await ps.CanSetIgnoringSafe(executor, obj, returnedAttribute.AsAttribute)
 			: await ps.CanSet(executor, obj, returnedAttribute.AsAttribute);
 
@@ -750,19 +738,34 @@ public class AttributeService(
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
-		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
-		if (!currentFlags.Any(f => f.Name.Equals(returnedFlag.Name, StringComparison.OrdinalIgnoreCase)))
+		var currentFlags = target.Flags;
+
+		// Clear first, then set - matching af_helper's own `AL_FLAGS(atr) &= ~clrf;` before
+		// `AL_FLAGS(atr) |= setf;`, so the same flag appearing in both directions in one batch
+		// ends up set, and the outcome never depends on the order flags were typed in.
+		foreach (var (flag, _) in resolved.Where(r => r.Unset))
 		{
-			await notifyService.Notify(executor,
-				$"Flag {returnedFlag.Name} is not set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
-			return new Success();
+			if (!currentFlags.Any(f => f.Name.Equals(flag.Name, StringComparison.OrdinalIgnoreCase)))
+			{
+				await notifyService.Notify(executor, $"Flag {flag.Name} is not set on attribute {target.LongName}", obj);
+				continue;
+			}
+
+			await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, target, flag));
+			await notifyService.Notify(executor, $"Flag {flag.Name} unset from attribute {target.LongName}", obj);
 		}
 
-		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
-			returnedFlag));
+		foreach (var (flag, _) in resolved.Where(r => !r.Unset))
+		{
+			if (currentFlags.Any(f => f.Name.Equals(flag.Name, StringComparison.OrdinalIgnoreCase)))
+			{
+				await notifyService.Notify(executor, $"Flag {flag.Name} is already set on attribute {target.LongName}", obj);
+				continue;
+			}
 
-		await notifyService.Notify(executor,
-			$"Flag {returnedFlag.Name} unset from attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+			await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, target, flag));
+			await notifyService.Notify(executor, $"Flag {flag.Name} set on attribute {target.LongName}", obj);
+		}
 
 		return new Success();
 	}
@@ -902,34 +905,164 @@ public class AttributeService(
 			return new Success();
 		}
 
+		var dbref = obj.Object().DBRef;
+
 		// Gate on each match's FULL ancestor path, not the matched attribute alone: a pattern
 		// like "**" (@wipe) can match a leaf several levels under a wizard/safe/locked branch
 		// without that branch node itself appearing in attrArr, so checking the leaf in
-		// isolation would miss the ancestor's flag entirely. GetAttributeQuery returns the
-		// whole root..leaf chain for a given path, exactly what CanSet needs to walk (Task 6).
+		// isolation would miss the ancestor's flag entirely (Task 6). Siblings that the
+		// pattern also matched are reused as free ancestor data (Task 6 fix round 1, L1)
+		// before falling back to a query.
+		var matchKnown = IndexByLongName(attrArr, static x => x.LongName!);
 		foreach (var attrItem in attrArr)
 		{
-			var path = await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrItem.LongName!.Split('`')))
-				.ToArrayAsync();
-			if (!await ps.CanSet(executor, obj, path))
+			var path = await ResolveWriteGatePathAsync(dbref, attrItem.LongName!, matchKnown);
+
+			// A path shorter than the split name is a broken/orphaned chain. PennMUSH's
+			// can_write_attr_internal (src/attrib.c:392-393) returns 0 the instant a prefix
+			// segment can't be found - denying, not silently permitting on incomplete data
+			// (Task 6 fix round 1, M1: CanSet(...) with an empty array returns true, so this
+			// must be checked explicitly before ever calling CanSet).
+			if (path is null || !await ps.CanSet(executor, obj, path))
 			{
 				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 			}
 		}
 
-		// For wildcard patterns (used by @wipe), use WipeAttributeCommand to fully delete the
-		// attribute and all its descendants. For exact patterns (used by @set obj/attr=), use
-		// ClearAttributeCommand which preserves parent nodes that have children.
+		// For wildcard patterns (used by @wipe), delete the attribute and its descendants -
+		// gated per descendant (WipeSubtreeGatedAsync). For exact patterns (used by
+		// @set obj/attr=), use ClearAttributeCommand, which preserves parent nodes that still
+		// have children.
 		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
 		foreach (var attrItem in attrArr)
 		{
-			var pathParts = attrItem.LongName!.Split('`');
 			if (isWipe)
-				await mediator.Send(new WipeAttributeCommand(obj.Object().DBRef, pathParts));
+				await WipeSubtreeGatedAsync(executor, obj, attrItem);
 			else
-				await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, pathParts));
+				await mediator.Send(new ClearAttributeCommand(dbref, attrItem.LongName!.Split('`')));
 		}
 
 		return new Success();
+	}
+
+	/// <summary>
+	/// Resolves the full root..leaf path for a WRITE gate. Unlike <see cref="AttributeAncestry"/>
+	/// (built for the read path, where a missing ancestor is simply omitted so a caller can
+	/// still evaluate what IS present - see <c>FetchAncestorAsync</c>), a missing ancestor here
+	/// must deny the whole write: PennMUSH's <c>can_write_attr_internal</c>
+	/// (<c>src/attrib.c:392-393</c>) returns 0 the instant a prefix segment isn't found, rather
+	/// than treating a broken/orphaned chain as if the missing levels simply carried no flags.
+	/// Ancestors present in <paramref name="known"/> are used without a query - the caller
+	/// supplies whatever it already has in memory (sibling pattern matches, or an already-
+	/// fetched subtree), so a query only ever happens for a genuinely absent prefix
+	/// (Task 6 fix round 1, L1).
+	/// </summary>
+	/// <returns>The full path, or null if any prefix segment could not be resolved at all.</returns>
+	private async ValueTask<SharpAttribute[]?> ResolveWriteGatePathAsync(
+		DBRef dbref, string longName, IReadOnlyDictionary<string, SharpAttribute> known)
+	{
+		var segments = longName.Split('`');
+		var result = new SharpAttribute[segments.Length];
+
+		for (var i = 0; i < segments.Length; i++)
+		{
+			var prefixName = string.Join('`', segments[..(i + 1)]);
+
+			if (known.TryGetValue(prefixName, out var attribute))
+			{
+				result[i] = attribute;
+				continue;
+			}
+
+			var fetched = await mediator.CreateStream(new GetAttributeQuery(dbref, segments[..(i + 1)]))
+				.LastOrDefaultAsync();
+
+			if (fetched is null)
+			{
+				return null;
+			}
+
+			result[i] = fetched;
+		}
+
+		return result;
+	}
+
+	/// <summary>
+	/// Deletes <paramref name="root"/> and its full descendant subtree, but never a descendant
+	/// that fails <c>CanSet</c> against its own full ancestor path. <paramref name="root"/>
+	/// itself has already passed the caller's gate.
+	/// <para>
+	/// PennMUSH's <c>atr_clear_children</c> walks descendants one at a time, applying
+	/// <c>Can_Write_Attr</c> to each, skips any it can't write, and returns <c>AE_TREE</c>
+	/// rather than deleting the whole subtree unconditionally (Task 6 fix round 1, H1) - the
+	/// raw <c>WipeAttributeCommand</c>/<c>WipeAttributeAsync</c> provider call does exactly
+	/// that unconditional delete, so it is only safe to use when nothing underneath is
+	/// protected. When something is, this falls back to one <c>ClearAttributeCommand</c> per
+	/// permitted node, deepest-first, so a permitted branch is only fully removed once every
+	/// one of its own children is already gone; a branch that still has a skipped (protected)
+	/// child left under it instead has its own value cleared but the node kept -
+	/// <c>ClearAttributeCommand</c>'s existing "still has children" behaviour - which is
+	/// exactly the partial, non-destructive outcome Penn's <c>AE_TREE</c> describes.
+	/// </para>
+	/// </summary>
+	private async ValueTask WipeSubtreeGatedAsync(AnySharpObject executor, AnySharpObject obj, SharpAttribute root)
+	{
+		var dbref = obj.Object().DBRef;
+
+		// "root`**" matches every descendant at any depth (double-star crosses backticks) and
+		// nothing else - root itself is never matched by this pattern.
+		var descendants = await mediator
+			.CreateStream(new GetAttributesQuery(dbref, $"{root.LongName}`**".ToUpper(), false,
+				IAttributeService.AttributePatternMode.Wildcard))
+			.ToArrayAsync();
+
+		if (descendants.Length == 0)
+		{
+			await mediator.Send(new WipeAttributeCommand(dbref, root.LongName!.Split('`')));
+			return;
+		}
+
+		// Every ancestor of every descendant here is either root or another member of this
+		// same subtree listing (the "**" match reaches all of them at once), so this dict
+		// makes ResolveWriteGatePathAsync's per-descendant walk free - no query should ever
+		// be needed below (Task 6 fix round 1, L1).
+		var known = IndexByLongName(descendants, static x => x.LongName!);
+		known[root.LongName!] = root;
+
+		var deniedAny = false;
+		var permitted = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { root.LongName! };
+
+		foreach (var descendant in descendants)
+		{
+			var path = await ResolveWriteGatePathAsync(dbref, descendant.LongName!, known);
+			if (path is null || !await ps.CanSet(executor, obj, path))
+			{
+				deniedAny = true;
+				continue;
+			}
+
+			permitted.Add(descendant.LongName!);
+		}
+
+		if (!deniedAny)
+		{
+			// Common case: nothing in the subtree is protected - one recursive delete, same
+			// as before this fix.
+			await mediator.Send(new WipeAttributeCommand(dbref, root.LongName!.Split('`')));
+			return;
+		}
+
+		// At least one descendant is protected: fall back to per-node deletes, deepest first.
+		var deepestFirst = descendants
+			.Where(d => permitted.Contains(d.LongName!))
+			.OrderByDescending(d => d.LongName!.Count(c => c == '`'));
+
+		foreach (var descendant in deepestFirst)
+		{
+			await mediator.Send(new ClearAttributeCommand(dbref, descendant.LongName!.Split('`')));
+		}
+
+		await mediator.Send(new ClearAttributeCommand(dbref, root.LongName!.Split('`')));
 	}
 }
