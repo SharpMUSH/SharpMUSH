@@ -531,17 +531,36 @@ public partial class Commands
 
 		if (string.IsNullOrEmpty(maybeAttribute))
 		{
-			await AttributeService!.ClearAttributeAsync(executor, targetObject, "**",
+			var wipeResult = await AttributeService!.ClearAttributeAsync(executor, targetObject, "**",
 			IAttributeService.AttributePatternMode.Wildcard,
 			IAttributeService.AttributeClearMode.Safe);
+
+			// Task 6 fix round 2: a wipe can be genuinely denied outright, or partially
+			// blocked (a protected descendant kept some branch from being fully cleared,
+			// PennMUSH's AE_TREE/"cannot be wiped because a child attribute cannot be
+			// wiped") - either way, that must reach the player instead of the unconditional
+			// success line that used to print regardless of the result.
+			if (wipeResult.IsT1)
+			{
+				await NotifyService!.Notify(executor, wipeResult.AsT1.Value, executor);
+				return new CallState(wipeResult.AsT1.Value);
+			}
+
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributesWiped), executor);
 			return new CallState(string.Empty);
 		}
 		else
 		{
-			await AttributeService!.ClearAttributeAsync(executor, targetObject, maybeAttribute,
+			var wipeResult = await AttributeService!.ClearAttributeAsync(executor, targetObject, maybeAttribute,
 			IAttributeService.AttributePatternMode.Wildcard,
 			IAttributeService.AttributeClearMode.Safe);
+
+			if (wipeResult.IsT1)
+			{
+				await NotifyService!.Notify(executor, wipeResult.AsT1.Value, executor);
+				return new CallState(wipeResult.AsT1.Value);
+			}
+
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WipedAttributes), executor, maybeAttribute);
 			return new CallState(string.Empty);
 		}

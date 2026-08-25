@@ -281,7 +281,7 @@ public class AttributeTreeWriteGateTests
 			.Because("a wholly-unflagged branch is fully removed by @wipe, proving the command still works end-to-end");
 
 		// The mortal owner wipes the branch that has one protected descendant among its children.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WPROT{uid}"));
+		var wipeAttempt = await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WPROT{uid}"));
 
 		var protectedLeaf = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROT{uid}`WIZLEAF",
 			IAttributeService.AttributeMode.Read, false);
@@ -290,9 +290,27 @@ public class AttributeTreeWriteGateTests
 		await Assert.That(protectedLeaf.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("protectedvalue")
 			.Because("the surviving descendant's value must be untouched, not merely left present under a different value");
 
+		// The branch itself must also survive completely untouched - PennMUSH's real_atr_clr
+		// leaves a blocked branch alone entirely (value included) rather than clearing its
+		// value while keeping the node the way an ordinary "still has children" clear does.
+		// Fix round 1 got this wrong: it called ClearAttributeCommand on the branch whenever
+		// anything below it was denied, which blanks the value even though the wipe of that
+		// branch was supposed to have been refused.
+		var branchAfter = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROT{uid}",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(branchAfter.IsAttribute).IsTrue()
+			.Because("the branch itself must survive a wipe that couldn't fully clear its subtree");
+		await Assert.That(branchAfter.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("branchvalue")
+			.Because("a denied wipe must not silently blank the branch's own value - that is data loss on an operation that was refused");
+
 		var removableLeaf = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROT{uid}`OKLEAF",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(removableLeaf.IsAttribute).IsFalse()
 			.Because("an unprotected sibling under the same branch must still be removed by the wipe");
+
+		// The outcome must reach the player, not just the database - @wipe used to discard
+		// ClearAttributeAsync's result entirely and always print a generic success line.
+		await Assert.That(wipeAttempt.Message?.ToPlainText() ?? string.Empty).Contains("cannot be wiped")
+			.Because("a partially-blocked wipe must tell the player, matching PennMUSH's own AE_TREE message");
 	}
 }

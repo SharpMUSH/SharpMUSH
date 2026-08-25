@@ -914,6 +914,16 @@ public class AttributeService(
 		// pattern also matched are reused as free ancestor data (Task 6 fix round 1, L1)
 		// before falling back to a query.
 		var matchKnown = IndexByLongName(attrArr, static x => x.LongName!);
+		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
+
+		// PennMUSH's wipe_helper (src/set.c:1493-1523) is invoked once per matched attribute
+		// via atr_iter_get and reports each denial/tree-block with its own notify_format,
+		// then keeps going - a denied or partially-blocked match never stops the others from
+		// being processed (Task 6 fix round 2). deniedNames and treeBlockedNames accumulate
+		// what to report once the whole pattern has been walked.
+		var deniedNames = new List<string>();
+		var treeBlockedNames = new List<string>();
+
 		foreach (var attrItem in attrArr)
 		{
 			var path = await ResolveWriteGatePathAsync(dbref, attrItem.LongName!, matchKnown);
@@ -925,21 +935,41 @@ public class AttributeService(
 			// must be checked explicitly before ever calling CanSet).
 			if (path is null || !await ps.CanSet(executor, obj, path))
 			{
-				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+				deniedNames.Add(attrItem.LongName!);
+				continue;
+			}
+
+			// For wildcard patterns (used by @wipe), delete the attribute and its
+			// descendants - gated per descendant (WipeSubtreeGatedAsync). For exact patterns
+			// (used by @set obj/attr=), use ClearAttributeCommand, which preserves parent
+			// nodes that still have children.
+			if (isWipe)
+			{
+				var fullyWiped = await WipeSubtreeGatedAsync(executor, obj, attrItem);
+				if (!fullyWiped)
+				{
+					treeBlockedNames.Add(attrItem.LongName!);
+				}
+			}
+			else
+			{
+				await mediator.Send(new ClearAttributeCommand(dbref, attrItem.LongName!.Split('`')));
 			}
 		}
 
-		// For wildcard patterns (used by @wipe), delete the attribute and its descendants -
-		// gated per descendant (WipeSubtreeGatedAsync). For exact patterns (used by
-		// @set obj/attr=), use ClearAttributeCommand, which preserves parent nodes that still
-		// have children.
-		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
-		foreach (var attrItem in attrArr)
+		// A subtree partially blocked by a protected descendant is reported with PennMUSH's
+		// own wording (src/set.c:1514-1518) ahead of a flat permission denial - both can be
+		// true at once for different matches under one wildcard pattern, and the tree-block
+		// case is the more specific, more actionable of the two.
+		if (treeBlockedNames.Count > 0)
 		{
-			if (isWipe)
-				await WipeSubtreeGatedAsync(executor, obj, attrItem);
-			else
-				await mediator.Send(new ClearAttributeCommand(dbref, attrItem.LongName!.Split('`')));
+			return new Error<string>(
+				$"Attribute {string.Join(", ", treeBlockedNames)} cannot be wiped because a child attribute cannot be wiped.");
+		}
+
+		if (deniedNames.Count > 0)
+		{
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		return new Success();
@@ -989,38 +1019,56 @@ public class AttributeService(
 	}
 
 	/// <summary>
-	/// Deletes <paramref name="root"/> and its full descendant subtree, but never a descendant
-	/// that fails <c>CanSet</c> against its own full ancestor path. <paramref name="root"/>
-	/// itself has already passed the caller's gate.
+	/// Deletes <paramref name="root"/> and its full descendant subtree if every one of them is
+	/// individually writable. <paramref name="root"/>'s own permission has already passed the
+	/// caller's gate.
 	/// <para>
-	/// PennMUSH's <c>atr_clear_children</c> walks descendants one at a time, applying
-	/// <c>Can_Write_Attr</c> to each, skips any it can't write, and returns <c>AE_TREE</c>
-	/// rather than deleting the whole subtree unconditionally (Task 6 fix round 1, H1) - the
-	/// raw <c>WipeAttributeCommand</c>/<c>WipeAttributeAsync</c> provider call does exactly
-	/// that unconditional delete, so it is only safe to use when nothing underneath is
-	/// protected. When something is, this falls back to one <c>ClearAttributeCommand</c> per
-	/// permitted node, deepest-first, so a permitted branch is only fully removed once every
-	/// one of its own children is already gone; a branch that still has a skipped (protected)
-	/// child left under it instead has its own value cleared but the node kept -
-	/// <c>ClearAttributeCommand</c>'s existing "still has children" behaviour - which is
-	/// exactly the partial, non-destructive outcome Penn's <c>AE_TREE</c> describes.
+	/// PennMUSH's <c>real_atr_clr</c>/<c>atr_clear_children</c> (<c>attrib.c:1027-1145</c>)
+	/// computes this bottom-up per node: a node's whole subtree is only removed if the node
+	/// itself is writable AND every one of its children's subtrees also qualifies. A node that
+	/// fails that test - because it isn't itself writable, or because ANY descendant beneath it
+	/// isn't - is left <b>completely untouched: value included, not merely "kept but cleared."</b>
+	/// There is no "clear the value but keep the node" middle ground in Penn for a branch that
+	/// can't be fully cleared (<c>real_atr_clr</c> either <c>atr_free_one</c>s a node outright or
+	/// does nothing to it at all) - a protected node's SIBLINGS are unaffected, though: each one
+	/// is still deleted or preserved purely by its own subtree's outcome (Task 6 fix round 2:
+	/// round 1's fallback wrongly called <c>ClearAttributeCommand</c>, which blanks the VALUE of
+	/// any node that still has a remaining child, on every ancestor above a protected
+	/// descendant - silently destroying data on an operation that was supposed to have been
+	/// denied for that branch).
 	/// </para>
 	/// </summary>
-	private async ValueTask WipeSubtreeGatedAsync(AnySharpObject executor, AnySharpObject obj, SharpAttribute root)
+	/// <returns>
+	/// <c>true</c> if the whole subtree (root included) was fully deleted; <c>false</c> if any
+	/// part of it had to be left untouched because of a protected descendant.
+	/// </returns>
+	private async ValueTask<bool> WipeSubtreeGatedAsync(AnySharpObject executor, AnySharpObject obj, SharpAttribute root)
 	{
 		var dbref = obj.Object().DBRef;
+		var rootName = root.LongName!;
 
 		// "root`**" matches every descendant at any depth (double-star crosses backticks) and
 		// nothing else - root itself is never matched by this pattern.
-		var descendants = await mediator
-			.CreateStream(new GetAttributesQuery(dbref, $"{root.LongName}`**".ToUpper(), false,
+		var rawDescendants = await mediator
+			.CreateStream(new GetAttributesQuery(dbref, $"{rootName}`**".ToUpper(), false,
 				IAttributeService.AttributePatternMode.Wildcard))
 			.ToArrayAsync();
 
+		// "?" is a legal attribute-name character (ValidateService.cs), and the wildcard
+		// translation maps a literal "?" in the pattern to a single-char regex wildcard - so
+		// an attribute literally named e.g. "WHAT?" turns "WHAT?`**" into a pattern that can
+		// also match unrelated siblings sharing the "WHAT" prefix. Every extra match would
+		// already be sitting in attrArr under its own gate, so this was never an actual
+		// over-delete - but a delete path has no business trusting an unescaped
+		// string-interpolated wildcard. Guard in memory instead.
+		var descendants = rawDescendants
+			.Where(d => d.LongName!.StartsWith(rootName + "`", StringComparison.OrdinalIgnoreCase))
+			.ToArray();
+
 		if (descendants.Length == 0)
 		{
-			await mediator.Send(new WipeAttributeCommand(dbref, root.LongName!.Split('`')));
-			return;
+			await mediator.Send(new WipeAttributeCommand(dbref, rootName.Split('`')));
+			return true;
 		}
 
 		// Every ancestor of every descendant here is either root or another member of this
@@ -1028,41 +1076,83 @@ public class AttributeService(
 		// makes ResolveWriteGatePathAsync's per-descendant walk free - no query should ever
 		// be needed below (Task 6 fix round 1, L1).
 		var known = IndexByLongName(descendants, static x => x.LongName!);
-		known[root.LongName!] = root;
+		known[rootName] = root;
 
+		var permitted = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase) { [rootName] = true };
 		var deniedAny = false;
-		var permitted = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { root.LongName! };
 
 		foreach (var descendant in descendants)
 		{
 			var path = await ResolveWriteGatePathAsync(dbref, descendant.LongName!, known);
-			if (path is null || !await ps.CanSet(executor, obj, path))
-			{
-				deniedAny = true;
-				continue;
-			}
-
-			permitted.Add(descendant.LongName!);
+			var ok = path is not null && await ps.CanSet(executor, obj, path);
+			permitted[descendant.LongName!] = ok;
+			deniedAny |= !ok;
 		}
 
 		if (!deniedAny)
 		{
 			// Common case: nothing in the subtree is protected - one recursive delete, same
 			// as before this fix.
-			await mediator.Send(new WipeAttributeCommand(dbref, root.LongName!.Split('`')));
-			return;
+			await mediator.Send(new WipeAttributeCommand(dbref, rootName.Split('`')));
+			return true;
 		}
 
-		// At least one descendant is protected: fall back to per-node deletes, deepest first.
+		// Bottom-up: a node's subtree is fully clearable only if the node itself is permitted
+		// AND every one of its direct children's subtrees is also fully clearable - exactly
+		// PennMUSH's recursive atr_clear_children definition. Processing deepest-first means a
+		// node's children are already resolved (and, if clearable, already deleted) by the time
+		// the node itself is evaluated.
 		var deepestFirst = descendants
-			.Where(d => permitted.Contains(d.LongName!))
-			.OrderByDescending(d => d.LongName!.Count(c => c == '`'));
+			.OrderByDescending(d => d.LongName!.Count(c => c == '`'))
+			.ToArray();
+
+		var fullyClearable = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+		bool IsFullyClearable(string name)
+		{
+			var childrenClearable = descendants
+				.Where(d => IsDirectChildOf(d.LongName!, name))
+				.All(d => fullyClearable[d.LongName!]);
+			return permitted[name] && childrenClearable;
+		}
 
 		foreach (var descendant in deepestFirst)
 		{
-			await mediator.Send(new ClearAttributeCommand(dbref, descendant.LongName!.Split('`')));
+			fullyClearable[descendant.LongName!] = IsFullyClearable(descendant.LongName!);
 		}
 
-		await mediator.Send(new ClearAttributeCommand(dbref, root.LongName!.Split('`')));
+		var rootFullyClearable = IsFullyClearable(rootName);
+
+		// Delete every node whose own subtree is fully clearable, deepest-first, so that by
+		// the time a node is reached, any of its children that qualified have already been
+		// removed - ClearAttributeCommand's own "no remaining children -> fully remove" path
+		// then applies cleanly. A node that ISN'T fully clearable is never touched at all -
+		// no ClearAttributeCommand call, no value change, matching real_atr_clr leaving a
+		// blocked branch completely alone.
+		foreach (var descendant in deepestFirst)
+		{
+			if (fullyClearable[descendant.LongName!])
+			{
+				await mediator.Send(new ClearAttributeCommand(dbref, descendant.LongName!.Split('`')));
+			}
+		}
+
+		if (rootFullyClearable)
+		{
+			await mediator.Send(new ClearAttributeCommand(dbref, rootName.Split('`')));
+		}
+
+		return rootFullyClearable;
+	}
+
+	/// <summary>
+	/// True if <paramref name="childLongName"/> names a direct (one level deeper) child of
+	/// <paramref name="parentLongName"/> in the attribute tree - not a grandchild or deeper.
+	/// </summary>
+	private static bool IsDirectChildOf(string childLongName, string parentLongName)
+	{
+		var prefix = parentLongName + "`";
+		return childLongName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+			&& childLongName.LastIndexOf('`') == parentLongName.Length;
 	}
 }
