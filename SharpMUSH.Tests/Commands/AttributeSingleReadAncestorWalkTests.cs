@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -110,8 +111,9 @@ public class AttributeSingleReadAncestorWalkTests
 			.Because("the @parent chain must still deliver the leaf across a VISUAL shadowing branch");
 
 		var result = await Eval(viewer.Handle, $"get({child.DbRef}/BD{uid}`PUB)");
-		await Assert.That(result).IsNotEqualTo($"darkleaf{uid}")
-			.Because("a prefix present on the child that fails the flag test is attrib.c:331's inline return 0");
+		await Assert.That(result).IsEqualTo(ErrorMessages.Returns.AttrPermissions)
+			.Because("a prefix present on the child that fails the flag test is attrib.c:331's inline return 0 - "
+				+ "and the read must DENY, not merely come back empty for some unrelated reason");
 	}
 
 	/// <summary>
@@ -157,8 +159,9 @@ public class AttributeSingleReadAncestorWalkTests
 			.Because("a two-hop @parent chain past a visual partial branch must still deliver the grandparent's leaf");
 
 		var result = await Eval(viewer.Handle, $"get({child.DbRef}/ED{uid}`PUB)");
-		await Assert.That(result).IsNotEqualTo($"darkleaf{uid}")
-			.Because("Penn flag-tests the partial prefix on the intermediate target and denies there - only no_inherit skips a target");
+		await Assert.That(result).IsEqualTo(ErrorMessages.Returns.AttrPermissions)
+			.Because("Penn flag-tests the partial prefix on the intermediate target and denies there - only no_inherit "
+				+ "skips a target - and the read must DENY, not merely come back empty");
 	}
 
 	/// <summary>
@@ -201,8 +204,9 @@ public class AttributeSingleReadAncestorWalkTests
 			.Because("a visual branch on both objects must still deliver the parent's leaf");
 
 		var result = await Eval(viewer.Handle, $"get({child.DbRef}/CD{uid}`PUB)");
-		await Assert.That(result).IsNotEqualTo($"darkleaf{uid}")
-			.Because("the parent's mortal_dark branch governs the parent's own leaf");
+		await Assert.That(result).IsEqualTo(ErrorMessages.Returns.AttrPermissions)
+			.Because("the parent's mortal_dark branch governs the parent's own leaf - and the read must DENY, "
+				+ "not merely come back empty");
 	}
 
 	/// <summary>
@@ -279,8 +283,10 @@ public class AttributeSingleReadAncestorWalkTests
 	}
 
 	/// <summary>
-	/// The other fail-CLOSED guard: the type-ancestor fall-through (ANCESTOR_THING, #6) reaches its
-	/// result through a lookup rooted AT the ancestor, not through <c>obj</c>'s <c>@parent</c> chain.
+	/// The type-ancestor fall-through (ANCESTOR_THING, #6) with the leaf ON the ancestor itself: the
+	/// ordinary shape, and the one that must keep working. It pins the FALL-THROUGH, not any skip -
+	/// the walk now runs over ancestor-sourced results too, so this is the fail-CLOSED control for
+	/// <see cref="MortalDarkBranchOnTheObject_DeniesLeafFromTheTypeAncestor"/>.
 	/// </summary>
 	[Test]
 	public async ValueTask AncestorSourcedTreeAttribute_StillResolvesForAMortal()
@@ -297,7 +303,7 @@ public class AttributeSingleReadAncestorWalkTests
 
 		var result = await Eval(viewer.Handle, $"get({obj}/AT{uid}`PUB)");
 		await Assert.That(result).IsEqualTo($"ancestorleaf{uid}")
-			.Because("the ancestor fall-through is a separate rooted lookup, so the target walk must be skipped for it");
+			.Because("the type ancestor holds a fully visual tree, so a mortal must read the leaf through the fall-through");
 	}
 
 	/// <summary>
@@ -322,5 +328,130 @@ public class AttributeSingleReadAncestorWalkTests
 		var result = await Eval(viewer.Handle, $"get({child.DbRef}/FT{uid})");
 		await Assert.That(result).IsEqualTo($"flatleaf{uid}")
 			.Because("a flat name has no ancestors to walk and must read exactly as before");
+	}
+
+	/// <summary>
+	/// Scenario b transposed one path over: the object holds a <c>mortal_dark</c> branch and no leaf,
+	/// and the leaf comes from the TYPE ANCESTOR rather than from an <c>@parent</c>. Penn does not
+	/// distinguish the two - <c>target = obj</c> is the first target either way, and its failing
+	/// prefix is <c>attrib.c:331</c>'s inline <c>return 0</c> before the ancestor is ever consulted
+	/// (Penn only reaches <c>target = ancestor</c> via <c>continue_target</c>, <c>attrib.c:344-353</c>).
+	/// The fall-through used to flag-test the ANCESTOR's nodes only, so the object's own branch flag
+	/// was never seen.
+	/// </summary>
+	[Test]
+	public async ValueTask MortalDarkBranchOnTheObject_DeniesLeafFromTheTypeAncestor()
+	{
+		var uid = Uid();
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WalkMO");
+		var viewer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WalkMV");
+
+		// Two identical fully-visual trees on the type ancestor.
+		await Cmd(1, $"&MO{uid} {AncestorThing}=openbranch");
+		await Cmd(1, $"&MO{uid}`PUB {AncestorThing}=openleaf{uid}");
+		await Cmd(1, $"@set {AncestorThing}/MO{uid}=visual");
+		await Cmd(1, $"@set {AncestorThing}/MO{uid}`PUB=visual");
+
+		await Cmd(1, $"&MD{uid} {AncestorThing}=quietbranch");
+		await Cmd(1, $"&MD{uid}`PUB {AncestorThing}=darkleaf{uid}");
+		await Cmd(1, $"@set {AncestorThing}/MD{uid}=visual");
+		await Cmd(1, $"@set {AncestorThing}/MD{uid}`PUB=visual");
+
+		// The object shadows BOTH branch names and holds NEITHER leaf. Control's copy is visual, the
+		// subject's is mortal_dark; nothing else differs.
+		await Cmd(1, $"&MO{uid} {obj}=objopen");
+		await Cmd(1, $"@set {obj}/MO{uid}=visual");
+		await Cmd(1, $"&MD{uid} {obj}=objquiet");
+		await Cmd(1, $"@set {obj}/MD{uid}=mortal_dark");
+
+		var control = await Eval(viewer.Handle, $"get({obj}/MO{uid}`PUB)");
+		await Assert.That(control).IsEqualTo($"openleaf{uid}")
+			.Because("the fall-through must still deliver the ancestor's leaf across a VISUAL shadowing branch");
+
+		var result = await Eval(viewer.Handle, $"get({obj}/MD{uid}`PUB)");
+		await Assert.That(result).IsEqualTo(ErrorMessages.Returns.AttrPermissions)
+			.Because("Penn denies at target = obj before ever reaching the ancestor - the ancestor path is not exempt");
+	}
+
+	/// <inheritdoc cref="MortalDarkBranchOnTheObject_DeniesLeafFromTheTypeAncestor"/>
+	/// <summary>The lazy overload of the same read must gate identically.</summary>
+	[Test]
+	public async ValueTask LazilyGetAttribute_MortalDarkBranchOnTheObject_DeniesLeafFromTheTypeAncestor()
+	{
+		var uid = Uid();
+		var objRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WalkNO");
+		var viewerRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "WalkNV");
+
+		await Cmd(1, $"&NO{uid} {AncestorThing}=openbranch");
+		await Cmd(1, $"&NO{uid}`PUB {AncestorThing}=openleaf{uid}");
+		await Cmd(1, $"@set {AncestorThing}/NO{uid}=visual");
+		await Cmd(1, $"@set {AncestorThing}/NO{uid}`PUB=visual");
+
+		await Cmd(1, $"&ND{uid} {AncestorThing}=quietbranch");
+		await Cmd(1, $"&ND{uid}`PUB {AncestorThing}=darkleaf{uid}");
+		await Cmd(1, $"@set {AncestorThing}/ND{uid}=visual");
+		await Cmd(1, $"@set {AncestorThing}/ND{uid}`PUB=visual");
+
+		await Cmd(1, $"&NO{uid} {objRef}=objopen");
+		await Cmd(1, $"@set {objRef}/NO{uid}=visual");
+		await Cmd(1, $"&ND{uid} {objRef}=objquiet");
+		await Cmd(1, $"@set {objRef}/ND{uid}=mortal_dark");
+
+		var obj = await Known(objRef);
+		var viewer = await Known(viewerRef);
+
+		var control = await AttributeService.LazilyGetAttributeAsync(viewer, obj, $"NO{uid}`PUB",
+			IAttributeService.AttributeMode.Read);
+		await Assert.That(control.IsAttribute).IsTrue()
+			.Because("the lazy fall-through must still resolve the ancestor's leaf across a visual shadowing branch");
+
+		var result = await AttributeService.LazilyGetAttributeAsync(viewer, obj, $"ND{uid}`PUB",
+			IAttributeService.AttributeMode.Read);
+		await Assert.That(result.IsError).IsTrue()
+			.Because("the lazy ancestor fall-through must apply the same target walk as the eager one");
+	}
+
+	/// <summary>
+	/// The fail-CLOSED counterpart of the two tests above. Penn does not stop at the ancestor: after
+	/// <c>target = ancestor</c> it keeps running <c>target = Parent(target)</c>
+	/// (<c>attrib.c:344-353</c>), so a leaf on an ANCESTOR-OF-ANCESTOR is still readable. The walk's
+	/// target chain therefore has to be <c>obj</c>'s <c>@parent</c> chain followed by the
+	/// <b>ancestor's own</b> chain - appending the bare ancestor dbref would leave this result's
+	/// source off the end of the chain and deny it (<c>attrib.c:356</c>).
+	/// <para>
+	/// Mutates <c>@parent</c> on the shared ANCESTOR_THING (#6), so it runs alone and restores the
+	/// previous state in a finally.
+	/// </para>
+	/// </summary>
+	[Test]
+	[NotInParallel]
+	public async ValueTask AncestorOfAncestorSourcedTreeAttribute_StillResolvesForAMortal()
+	{
+		var uid = Uid();
+		var ancestorParent = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WalkPA");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WalkPO");
+		var viewer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WalkPV");
+
+		// The whole tree lives two inheritance hops out: obj -> (type ancestor #6) -> its @parent.
+		await Cmd(1, $"&PT{uid} {ancestorParent}=deepbranch");
+		await Cmd(1, $"&PT{uid}`PUB {ancestorParent}=deepleaf{uid}");
+		await Cmd(1, $"@set {ancestorParent}/PT{uid}=visual");
+		await Cmd(1, $"@set {ancestorParent}/PT{uid}`PUB=visual");
+
+		try
+		{
+			await Cmd(1, $"@parent {AncestorThing}={ancestorParent}");
+
+			var result = await Eval(viewer.Handle, $"get({obj}/PT{uid}`PUB)");
+			await Assert.That(result).IsEqualTo($"deepleaf{uid}")
+				.Because("the walk's chain must continue through the ancestor's OWN parents, as Penn's does");
+		}
+		finally
+		{
+			await Cmd(1, $"@parent {AncestorThing}=none");
+		}
 	}
 }

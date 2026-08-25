@@ -66,19 +66,32 @@ public class AttributeService(
 		// PennMUSH ancestor fall-through: after the object's own @parent chain is exhausted,
 		// consult the type ancestor (ANCESTOR_ROOM/PLAYER/EXIT/THING). Only when parent-checking
 		// is enabled and nothing was found on the object or its parents.
-		//
-		// This deliberately keeps the flat predicate rather than the target walk below - see
-		// ReadWalkApplies for why.
 		if (result == null && checkParent)
 		{
-			var ancestorAttributes = await GetAncestorAttributeAsync(obj, attributePath);
-			if (ancestorAttributes == null)
+			var ancestor = await GetAncestorAttributeAsync(obj, attributePath);
+			if (ancestor == null)
 			{
 				return new None();
 			}
 
-			return await permissionPredicate(executor, obj, ancestorAttributes)
-				? ancestorAttributes
+			// Penn draws no line between an @parent-sourced and an ancestor-sourced leaf: `target =
+			// obj` is the first target either way, and the ancestor is only ever reached through
+			// continue_target (attrib.c:344-353). So a failing prefix on obj itself denies here
+			// exactly as it does above - flag-testing only the ancestor's own nodes was the same
+			// fail-open, one path over.
+			if (ReadWalkApplies(mode, attributePath, ancestor.Source))
+			{
+				return await AttributeAncestry.CanReadAsync(ancestor.Attributes[^1], ancestor.SourceObject,
+						await AncestorTargetChainAsync(obj, ancestor.AncestorRef), obj.Object().DBRef,
+						(target, parts) =>
+							FetchReadWalkAncestorAsync(target, parts, ancestor.SourceObject, ancestor.Attributes),
+						path => ps.CanViewAttribute(executor, obj, path))
+					? ancestor.Attributes
+					: new Error<string>(permissionFailureType);
+			}
+
+			return await permissionPredicate(executor, obj, ancestor.Attributes)
+				? ancestor.Attributes
 				: new Error<string>(permissionFailureType);
 		}
 
@@ -128,15 +141,22 @@ public class AttributeService(
 	/// <c>ParentChainAsync</c> on the hottest read path in the server for no decision at all.
 	/// </item>
 	/// <item>
-	/// <b>Zone and Ancestor sources skip the walk.</b> <see cref="ParentChainAsync"/> follows
-	/// <c>@parent</c> only, so a zone- or ancestor-sourced result's source object is NOT in the
-	/// chain - the walk would run off the end and DENY (<c>attrib.c:356</c>), a fail-CLOSED
-	/// regression on reads that work today. Penn does walk the ancestor
-	/// (<c>attrib.c:352-353</c>), but its chain continues through the ancestor's own parents; the
-	/// ancestor fall-through here is a separate lookup rooted AT the ancestor
-	/// (<see cref="GetAncestorAttributeAsync"/>) and does not surface which object in that second
-	/// chain the leaf came from, so appending <c>ancestorRef</c> alone would still deny an
-	/// ancestor-of-ancestor result. Both keep the flat predicate.
+	/// <b>Zone sources skip the walk.</b> The chains this is called with -
+	/// <see cref="ParentChainAsync"/>, and <see cref="AncestorTargetChainAsync"/> for the ancestor
+	/// fall-through - follow <c>@parent</c> only, so a zone-sourced result's source object is NOT in
+	/// the chain: the walk would run off the end and DENY (<c>attrib.c:356</c>), a fail-CLOSED
+	/// regression on zone reads that work today. All three providers really do emit
+	/// <see cref="AttributeSource.Zone"/>, so this arm is live.
+	/// <para>
+	/// <see cref="AttributeSource.Ancestor"/> is excluded alongside it purely defensively: no
+	/// provider ever emits it. The type-ancestor fall-through is a SEPARATE lookup rooted at the
+	/// ancestor (<see cref="GetAncestorAttributeAsync"/>), so its results come back tagged
+	/// <c>Self</c> or <c>Parent</c> relative to that root, and the caller pairs them with
+	/// <see cref="AncestorTargetChainAsync"/> - which continues through the ancestor's own parents,
+	/// as Penn's <c>target = Parent(target)</c> does after <c>target = ancestor</c>
+	/// (<c>attrib.c:344-353</c>). The early return at that call site, not this clause, is what makes
+	/// the ancestor path work.
+	/// </para>
 	/// </item>
 	/// <item>
 	/// <b>Read only.</b> <c>Set</c>/<c>SystemSet</c> are <c>can_write_attr_internal</c>'s business
@@ -153,12 +173,23 @@ public class AttributeService(
 			&& source is AttributeSource.Self or AttributeSource.Parent;
 
 	/// <summary>
+	/// A type-ancestor fall-through hit, carrying everything the read walk needs that a bare
+	/// <c>T[]</c> threw away: the object the leaf was actually resolved on
+	/// (<paramref name="SourceObject"/>, which may be the ancestor OR one of the ancestor's own
+	/// parents), how it got there (<paramref name="Source"/>), and the type ancestor the lookup was
+	/// rooted at (<paramref name="AncestorRef"/>, where the walk's target chain has to resume).
+	/// Same shape as <see cref="AttributeWithSource"/>, which PR #808 added for the pattern paths.
+	/// </summary>
+	private sealed record AncestorHit<T>(T[] Attributes, DBRef SourceObject, AttributeSource Source, DBRef AncestorRef);
+
+	/// <summary>
 	/// Resolves an attribute from the object's type ancestor (PennMUSH ANCESTOR_*), honoring the
 	/// ancestor's own <c>@parent</c> chain but no further (no ancestor-of-ancestor). Returns null when:
 	/// the ancestor is disabled, the object IS its own type ancestor (no self-loop), the ancestor
 	/// object does not exist, or the attribute is flagged <c>no_inherit</c> on the ancestor.
 	/// </summary>
-	private async ValueTask<SharpAttribute[]?> GetAncestorAttributeAsync(AnySharpObject obj, string[] attributePath)
+	private async ValueTask<AncestorHit<SharpAttribute>?> GetAncestorAttributeAsync(AnySharpObject obj,
+		string[] attributePath)
 	{
 		var ancestorRef = await obj.Ancestor(configuration);
 		if (ancestorRef is null)
@@ -192,7 +223,44 @@ public class AttributeService(
 			return null;
 		}
 
-		return ancestorResult.Attributes;
+		return new AncestorHit<SharpAttribute>(ancestorResult.Attributes, ancestorResult.SourceObject,
+			ancestorResult.Source, ancestorRef.Value);
+	}
+
+	/// <summary>
+	/// The read walk's target chain for a type-ancestor fall-through: <paramref name="obj"/>'s own
+	/// <c>@parent</c> chain, then the ancestor's. Penn does not stop at the ancestor - it sets
+	/// <c>target = ancestor</c> and keeps running <c>target = Parent(target)</c>
+	/// (<c>attrib.c:344-353</c>) - so a leaf resolved on an ancestor-of-ancestor is legitimately
+	/// readable, and a chain ending at the bare <c>ancestorRef</c> would leave that source off the
+	/// end and deny it (<c>attrib.c:356</c>).
+	/// </summary>
+	/// <remarks>
+	/// Targets already visited via <paramref name="obj"/>'s own chain are not walked a second time,
+	/// which subsumes Penn's <c>if (target == ancestor) ancestor = NOTHING</c> (<c>attrib.c:322</c>)
+	/// and keeps a shared object from being flag-tested twice.
+	/// </remarks>
+	private async ValueTask<DBRef[]> AncestorTargetChainAsync(AnySharpObject obj, DBRef ancestorRef)
+	{
+		var chain = new List<DBRef>(await ParentChainAsync(obj));
+
+		var ancestorNode = await mediator.Send(new GetObjectNodeQuery(ancestorRef));
+		if (ancestorNode.IsNone)
+		{
+			return chain.ToArray();
+		}
+
+		foreach (var target in await ParentChainAsync(ancestorNode.Known))
+		{
+			if (chain.Any(seen => seen.SameObjectAs(target)))
+			{
+				continue;
+			}
+
+			chain.Add(target);
+		}
+
+		return chain.ToArray();
 	}
 
 	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor,
@@ -227,14 +295,25 @@ public class AttributeService(
 		// PennMUSH ancestor fall-through (lazy): see GetAttributeAsync for full semantics.
 		if (result == null && checkParent)
 		{
-			var ancestorAttributes = await GetLazyAncestorAttributeAsync(obj, attributePath);
-			if (ancestorAttributes == null)
+			var ancestor = await GetLazyAncestorAttributeAsync(obj, attributePath);
+			if (ancestor == null)
 			{
 				return new None();
 			}
 
-			return await permissionPredicate(executor, obj, ancestorAttributes)
-				? ancestorAttributes
+			if (ReadWalkApplies(mode, attributePath, ancestor.Source))
+			{
+				return await AttributeAncestry.CanReadAsync(ancestor.Attributes[^1], ancestor.SourceObject,
+						await AncestorTargetChainAsync(obj, ancestor.AncestorRef), obj.Object().DBRef,
+						(target, parts) =>
+							FetchLazyReadWalkAncestorAsync(target, parts, ancestor.SourceObject, ancestor.Attributes),
+						path => ps.CanViewAttribute(executor, obj, path))
+					? ancestor.Attributes
+					: new Error<string>(permissionFailureType);
+			}
+
+			return await permissionPredicate(executor, obj, ancestor.Attributes)
+				? ancestor.Attributes
 				: new Error<string>(permissionFailureType);
 		}
 
@@ -267,7 +346,8 @@ public class AttributeService(
 	/// <summary>
 	/// Lazy variant of <see cref="GetAncestorAttributeAsync"/>.
 	/// </summary>
-	private async ValueTask<LazySharpAttribute[]?> GetLazyAncestorAttributeAsync(AnySharpObject obj, string[] attributePath)
+	private async ValueTask<AncestorHit<LazySharpAttribute>?> GetLazyAncestorAttributeAsync(AnySharpObject obj,
+		string[] attributePath)
 	{
 		var ancestorRef = await obj.Ancestor(configuration);
 		if (ancestorRef is null)
@@ -295,7 +375,8 @@ public class AttributeService(
 			return null;
 		}
 
-		return ancestorResult.Attributes;
+		return new AncestorHit<LazySharpAttribute>(ancestorResult.Attributes, ancestorResult.SourceObject,
+			ancestorResult.Source, ancestorRef.Value);
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -682,6 +763,17 @@ public class AttributeService(
 	/// <c>Limit.MaxParents</c> - PennMUSH's <c>MAX_PARENTS</c> (<c>hdrs/conf.h:458</c>), the same
 	/// bound its own <c>can_read_attr_internal</c> loop uses.
 	/// </summary>
+	/// <remarks>
+	/// KNOWN, PRE-EXISTING, near-unreachable: the providers' own inheritance traversals run
+	/// <c>1..100</c> (e.g. <c>ArangoDatabase.Attributes.cs:911</c>) rather than to
+	/// <c>MaxParents</c>, so a leaf resolved BEYOND this cap has a source that is not in this chain.
+	/// On the read walk that now means the caller reports a permission error where Penn - whose
+	/// <c>atr_get_with_parent</c> is bounded by the same <c>MAX_PARENTS</c> - would simply not find
+	/// the attribute and return nothing. Wrong failure mode, right refusal. Reaching it requires a
+	/// chain deeper than <c>MaxParents</c>, which <see cref="ExceedsMaxParentDepthAsync"/> refuses to
+	/// build; only legacy or hand-edited data could. The fix belongs in the three providers (bound
+	/// their traversals to <c>MaxParents</c>), not here.
+	/// </remarks>
 	private async ValueTask<DBRef[]> ParentChainAsync(AnySharpObject obj)
 	{
 		var chain = new List<DBRef> { obj.Object().DBRef };
