@@ -151,10 +151,5 @@
     <Copy SourceFiles="@(HelloUiPluginFiles)" DestinationFolder="$(HelloUiPluginTargetDir)" SkipUnchangedFiles="false" />
   </Target>
 
-  <ItemGroup>
-    <!-- 12 of this file's 70 tests fail; excluded pending investigation, not deleted. -->
-    <Compile Remove="Functions\UtilityFunctionUnitTests.cs" />
-  </ItemGroup>
-
 </Project>
 

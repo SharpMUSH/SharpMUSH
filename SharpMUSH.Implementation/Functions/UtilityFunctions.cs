@@ -71,7 +71,15 @@ public partial class Functions
 		var invert = false;
 		var underline = false;
 
-		var ansiCodes = args["0"].Message!.ToString().Split(' ');
+		// NOT a plain Split(' '): PennMUSH's angle-bracket RGB form is "a list of red, green and
+		// blue values from 0-255, in angle brackets" (help ANSI()), so <255 0 0> contains the very
+		// separator the code list is split on. Splitting naively tore it into "<255", "0", "0>" -
+		// the <...> branch below could never fire, and the stray "0" was then read as xterm 0, so
+		// ansi(<255 0 0>,test) silently produced some other colour entirely.
+		var ansiCodes = AnsiCodeTokenRegex()
+			.Matches(args["0"].Message!.ToString())
+			.Select(m => m.Value)
+			.ToArray();
 		Func<bool, byte, byte[]> highlightFunc = (highlight, b) => highlight ? [1, b] : [b];
 		var colorsConfig = ColorConfiguration?.CurrentValue;
 
@@ -2059,9 +2067,19 @@ public partial class Functions
 					await Mediator!.Send(new ClearAttributeCommand(obj.Object().DBRef, [attrName]));
 				}
 
-				return $"Wiped {attributesToClear.Count}";
+				// PennMUSH's wipe() "returns nothing" (help WIPE()); it is @wipe's side effect
+				// exposed as a function, not a reporting call.
+				return string.Empty;
 			});
 	}
+
+	/// <summary>
+	/// One <c>ansi()</c> code token: either a run ending in an angle-bracketed group (so
+	/// <c>&lt;255 0 0&gt;</c> and <c>/&lt;255 0 0&gt;</c> survive intact, spaces and all), or an
+	/// ordinary run of non-space characters.
+	/// </summary>
+	[GeneratedRegex(@"[^\s<]*<[^>]*>|\S+")]
+	private static partial Regex AnsiCodeTokenRegex();
 
 	[GeneratedRegex(@"^#\d+:\d+$")]
 	private static partial Regex ObjIdRegex();
