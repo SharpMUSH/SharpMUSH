@@ -297,6 +297,39 @@ public class AttributeAncestryTests
 	}
 
 	/// <summary>
+	/// The exact counterpart of
+	/// <see cref="NoInheritBranchOnAnIntermediateTarget_AbandonsThatTargetInsteadOfDenying"/>, and
+	/// the only thing that separates the two outcomes: a prefix present on an INTERMEDIATE target -
+	/// one that is neither the origin nor the holder of the leaf - is flag-tested there and denies
+	/// on failure (<c>attrib.c:331-335</c>). Only a MISSING prefix, or a <c>no_inherit</c> one, is
+	/// allowed to advance the walk.
+	/// <para>
+	/// This is the shape the single-attribute read path fails open on: the provider treats a parent
+	/// holding only part of the path as "incomplete" and walks past it to the grandparent, so its
+	/// flag is never consulted. The grandparent's whole tree is deliberately visual - if the
+	/// intermediate target were skipped, the walk would reach the grandparent and GRANT, so the
+	/// assertion can only pass for the reason it names.
+	/// </para>
+	/// </summary>
+	[Test]
+	public async Task RestrictiveBranchOnAnIntermediateTarget_DeniesRatherThanAdvancing()
+	{
+		var leaf = Attr("FOO`BAR", "visual");
+		var store = new Store()
+			.With(Child)
+			.With(Parent, Attr("FOO", "visual", "mortal_dark"))
+			.With(Grandparent, Attr("FOO", "visual"), leaf);
+
+		var can = await AttributeAncestry.CanReadAsync(leaf, Grandparent, [Child, Parent, Grandparent], Child,
+			store.Fetch, MortalPermits);
+
+		await Assert.That(can).IsFalse()
+			.Because("a failing prefix on a target that holds neither the origin nor the leaf still returns 0 inline");
+		await Assert.That(store.Fetched).DoesNotContain("#12/FOO")
+			.Because("the denial is immediate at the parent - the walk must never reach the grandparent's visual branch");
+	}
+
+	/// <summary>
 	/// The same flag on the ORIGINAL object is not an escape - Penn's condition is guarded by
 	/// <c>target != obj</c>, so a no_inherit branch on <c>obj</c> itself is flag-tested normally
 	/// rather than abandoning the only target there is.

@@ -66,6 +66,9 @@ public class AttributeService(
 		// PennMUSH ancestor fall-through: after the object's own @parent chain is exhausted,
 		// consult the type ancestor (ANCESTOR_ROOM/PLAYER/EXIT/THING). Only when parent-checking
 		// is enabled and nothing was found on the object or its parents.
+		//
+		// This deliberately keeps the flat predicate rather than the target walk below - see
+		// ReadWalkApplies for why.
 		if (result == null && checkParent)
 		{
 			var ancestorAttributes = await GetAncestorAttributeAsync(obj, attributePath);
@@ -84,10 +87,70 @@ public class AttributeService(
 			return new None();
 		}
 
+		if (ReadWalkApplies(mode, attributePath, result.Source))
+		{
+			var origin = obj.Object().DBRef;
+			var source = result.SourceObject;
+			var resolved = result.Attributes;
+
+			return await AttributeAncestry.CanReadAsync(resolved[^1], source,
+					source.SameObjectAs(origin) ? [origin] : await ParentChainAsync(obj), origin,
+					(target, parts) => FetchReadWalkAncestorAsync(target, parts, source, resolved),
+					path => ps.CanViewAttribute(executor, obj, path))
+				? resolved
+				: new Error<string>(permissionFailureType);
+		}
+
 		return await permissionPredicate(executor, obj, result.Attributes)
 			? result.Attributes
 			: new Error<string>(permissionFailureType);
 	}
+
+	/// <summary>
+	/// Whether a single-attribute lookup must re-walk its ancestor path over the target chain
+	/// (PennMUSH's <c>can_read_attr_internal</c>, <c>src/attrib.c:318-356</c>) rather than simply
+	/// flag-testing the path as it resolved on the source object.
+	/// <para>
+	/// Penn re-walks on EVERY read, from <c>obj</c> outward along the <c>@parent</c> chain - not
+	/// over the single object the leaf happened to resolve on. Testing only the source-resolved
+	/// path fails OPEN two ways: a restrictively-flagged branch of the same name on a NEARER object
+	/// is never tested at all (Penn's <c>return 0</c> is inline at <c>attrib.c:331</c> - it does not
+	/// <c>continue_target</c>), and a nearer target that holds a failing prefix but not the leaf is
+	/// skipped as merely "incomplete" instead of denying.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// Three guards, each of which breaks working reads if dropped:
+	/// <list type="bullet">
+	/// <item>
+	/// <b>Flat names short-circuit.</b> An attribute with no <c>`</c> IS its whole path, and Penn
+	/// returns 1 before the walk even starts (<c>attrib.c:311-312</c>). Walking would cost a
+	/// <c>ParentChainAsync</c> on the hottest read path in the server for no decision at all.
+	/// </item>
+	/// <item>
+	/// <b>Zone and Ancestor sources skip the walk.</b> <see cref="ParentChainAsync"/> follows
+	/// <c>@parent</c> only, so a zone- or ancestor-sourced result's source object is NOT in the
+	/// chain - the walk would run off the end and DENY (<c>attrib.c:356</c>), a fail-CLOSED
+	/// regression on reads that work today. Penn does walk the ancestor
+	/// (<c>attrib.c:352-353</c>), but its chain continues through the ancestor's own parents; the
+	/// ancestor fall-through here is a separate lookup rooted AT the ancestor
+	/// (<see cref="GetAncestorAttributeAsync"/>) and does not surface which object in that second
+	/// chain the leaf came from, so appending <c>ancestorRef</c> alone would still deny an
+	/// ancestor-of-ancestor result. Both keep the flat predicate.
+	/// </item>
+	/// <item>
+	/// <b>Read only.</b> <c>Set</c>/<c>SystemSet</c> are <c>can_write_attr_internal</c>'s business
+	/// (a different function with different rules - see <see cref="SetAttributeFlagsAsync"/>).
+	/// Gating <c>Execute</c> on <c>Can_Read_Attr</c> is what Penn's <c>fun_ufun</c> actually does,
+	/// but that is a behaviour change beyond this fix and is deliberately left alone.
+	/// </item>
+	/// </list>
+	/// </remarks>
+	private static bool ReadWalkApplies(IAttributeService.AttributeMode mode, string[] attributePath,
+		AttributeSource source)
+		=> mode == IAttributeService.AttributeMode.Read
+			&& attributePath.Length > 1
+			&& source is AttributeSource.Self or AttributeSource.Parent;
 
 	/// <summary>
 	/// Resolves an attribute from the object's type ancestor (PennMUSH ANCESTOR_*), honoring the
@@ -178,6 +241,22 @@ public class AttributeService(
 		if (result == null)
 		{
 			return new None();
+		}
+
+		// The lazy path is the same read as GetAttributeAsync's and must gate identically -
+		// see ReadWalkApplies.
+		if (ReadWalkApplies(mode, attributePath, result.Source))
+		{
+			var origin = obj.Object().DBRef;
+			var source = result.SourceObject;
+			var resolved = result.Attributes;
+
+			return await AttributeAncestry.CanReadAsync(resolved[^1], source,
+					source.SameObjectAs(origin) ? [origin] : await ParentChainAsync(obj), origin,
+					(target, parts) => FetchLazyReadWalkAncestorAsync(target, parts, source, resolved),
+					path => ps.CanViewAttribute(executor, obj, path))
+				? resolved
+				: new Error<string>(permissionFailureType);
 		}
 
 		return await permissionPredicate(executor, obj, result.Attributes)
@@ -672,6 +751,58 @@ public class AttributeService(
 			.CreateStream(new GetAttributeQuery(target, path))
 			.LastOrDefaultAsync();
 	}
+
+	/// <summary>
+	/// The single-attribute read walk's ancestor resolver. The source object's own prefixes are
+	/// already in hand - <paramref name="resolved"/> IS that object's root..leaf path, root-first -
+	/// so they are served from it at zero cost, which keeps the overwhelmingly common self-sourced
+	/// tree read at exactly the query count it had before the walk existed. Only the genuinely new
+	/// work, resolving the same prefix names against targets NEARER than the source, reaches the
+	/// database.
+	/// </summary>
+	private ValueTask<SharpAttribute?> FetchReadWalkAncestorAsync(DBRef target, string[] path,
+		DBRef source, SharpAttribute[] resolved)
+		=> target.SameObjectAs(source) && ResolvedPrefix(path, resolved, static x => x.LongName) is { } known
+			? ValueTask.FromResult<SharpAttribute?>(known)
+			: FetchAncestorAsync(target, path, NoKnownAttributes);
+
+	/// <inheritdoc cref="FetchReadWalkAncestorAsync"/>
+	private ValueTask<LazySharpAttribute?> FetchLazyReadWalkAncestorAsync(DBRef target, string[] path,
+		DBRef source, LazySharpAttribute[] resolved)
+		=> target.SameObjectAs(source) && ResolvedPrefix(path, resolved, static x => x.LongName) is { } known
+			? ValueTask.FromResult<LazySharpAttribute?>(known)
+			: FetchLazyAncestorAsync(target, path, NoKnownLazyAttributes);
+
+	/// <summary>
+	/// The already-materialised node for <paramref name="path"/> within a root..leaf
+	/// <paramref name="resolved"/> path, or null to fall back to a query. Positional, because the
+	/// providers return the path root-first, but the name is verified rather than assumed - a
+	/// provider that ever returned a different order (or a short path) must cost an extra query,
+	/// never hand the flag test the WRONG node under the right name.
+	/// </summary>
+	private static T? ResolvedPrefix<T>(string[] path, T[] resolved, Func<T, string> longNameOf)
+		where T : class
+	{
+		if (path.Length > resolved.Length)
+		{
+			return null;
+		}
+
+		var candidate = resolved[path.Length - 1];
+		return longNameOf(candidate).Equals(string.Join('`', path), StringComparison.OrdinalIgnoreCase)
+			? candidate
+			: null;
+	}
+
+	/// <summary>
+	/// The single-attribute read walk holds only ONE object's materialised path (served by
+	/// <see cref="ResolvedPrefix{T}"/>), so every other target it visits starts from nothing -
+	/// unlike the pattern paths, which can reuse sibling matches.
+	/// </summary>
+	private static readonly Dictionary<DBRef, Dictionary<string, SharpAttribute>> NoKnownAttributes = [];
+
+	/// <inheritdoc cref="NoKnownAttributes"/>
+	private static readonly Dictionary<DBRef, Dictionary<string, LazySharpAttribute>> NoKnownLazyAttributes = [];
 
 	/// <inheritdoc cref="FetchAncestorAsync"/>
 	private async ValueTask<LazySharpAttribute?> FetchLazyAncestorAsync(DBRef target, string[] path,
