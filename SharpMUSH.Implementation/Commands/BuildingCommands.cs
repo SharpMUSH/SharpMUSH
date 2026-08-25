@@ -1530,6 +1530,18 @@ public partial class Commands
 							await Mediator!.Send(new SetAttributeFlagCommand(clonedObj.Object().DBRef, destAttribute, flag));
 						}
 					}
+					else
+					{
+						// SetAttributeAsync above reported success, so the destination attribute
+						// should exist - this re-fetch failing is not the "copy failed" case
+						// handled above (that one still owns skippedAttributes so children don't
+						// auto-vivify a stripped parent). Here the value genuinely landed; only
+						// the flag sync had nothing to attach to. Surface it instead of silently
+						// leaving the clone's flags at SetAttributeAsync's defaults.
+						Logger?.LogWarning(
+							"Clone flag sync skipped for {LongName} on {CloneDbRef}: destination attribute was not found immediately after a successful set",
+							longName, clonedObj.Object().DBRef);
+					}
 				}
 
 				await foreach (var flag in obj.Object().Flags.Value)

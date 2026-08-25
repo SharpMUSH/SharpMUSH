@@ -274,11 +274,61 @@ public class CloneAttributeTreeTests
 	}
 
 	/// <summary>
+	/// The UNSET half of flag sync: <c>SetAttributeAsync</c> applies
+	/// <c>SharpAttributeEntry.DefaultFlags</c> to a brand-new destination attribute
+	/// (<c>AttributeService.cs</c>, applied inside <c>SetAttributeCommand</c>'s handler), so
+	/// cloning an attribute whose defaults include a flag the SOURCE no longer carries must
+	/// still end up flag-for-flag identical to the source - the clone loop's first foreach
+	/// (<c>destAttribute.Flags.Where(f => !sourceFlagNames.Contains(f.Name))</c>,
+	/// <c>BuildingCommands.cs</c>) has to actively unset it, not just leave the default in place.
+	/// <c>DOING</c>'s seeded defaults are <c>no_command, no_inherit, visual, public</c>
+	/// (<c>Migration_CreateDatabase.cs</c>): stripping <c>visual</c> from the source before
+	/// cloning exercises exactly that path.
+	/// </summary>
+	[Test]
+	public async ValueTask ClonedAttribute_UnsetFlagSync_RemovesDefaultFlagNotOnSource()
+	{
+		var uid = TestIsolationHelpers.GenerateUniqueName("UF");
+		var src = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CloneSrcUF");
+		var cloneName = TestIsolationHelpers.GenerateUniqueName("CloneDstUF");
+
+		await Cmd(1, $"&DOING {src}=doingval_{uid}");
+
+		// Positive control: DOING's seeded defaults actually include visual on a first-ever set.
+		await Assert.That(await Eval(1, $"hasflag({src}/DOING,visual)")).IsEqualTo("1")
+			.Because("DOING's DefaultFlags must include visual for this test to exercise anything");
+
+		await Cmd(1, $"@set {src}/DOING=!visual");
+
+		// Positive control: the unset actually landed on the source.
+		await Assert.That(await Eval(1, $"hasflag({src}/DOING,visual)")).IsEqualTo("0")
+			.Because("!visual must actually clear the flag on the source for this test to exercise anything");
+
+		var clone = await Cmd(1, $"@clone {src}={cloneName}");
+
+		await Assert.That(await Eval(1, $"hasattr({clone},DOING)")).IsEqualTo("1")
+			.Because("the attribute must actually be cloned for the flag check below to mean anything");
+		await Assert.That(await Eval(1, $"get({clone}/DOING)")).IsEqualTo($"doingval_{uid}");
+
+		await Assert.That(await Eval(1, $"hasflag({clone}/DOING,visual)")).IsEqualTo("0")
+			.Because("SetAttributeAsync applies DefaultFlags (including visual) to the brand-new destination node, so without the unset direction of flag sync the clone would keep visual even though the source no longer has it");
+	}
+
+	/// <summary>
 	/// The pre-existing "_"-prefix skip (orthogonal to Penn's no_clone) must propagate to a
 	/// non-"_" child the same way no_clone's skip does: otherwise SetAttributeAsync's
 	/// auto-vivification (<c>ArangoDatabase.Attributes.cs:608-675</c>) would silently recreate a
 	/// stripped, empty "_"-branch on the clone just to hang the child off of.
 	/// </summary>
+	/// <remarks>
+	/// The depth-1 sibling (<c>{uid}SIB</c>) is a positive control, but it is itself a depth-1
+	/// attribute: a regression back to depth-1-only enumeration would still clone it, so it
+	/// cannot catch that regression. <c>{uid}BRANCH</c>/<c>{uid}BRANCH`CHILD</c> is a SECOND,
+	/// depth-2 control - an unflagged branch/child pair unrelated to the "_"-prefixed one under
+	/// test - so that a depth-1 truncation regression drops its CHILD for the wrong reason (tree
+	/// walk truncation, not the "_"-prefix skip) and this test would then catch it, instead of
+	/// passing regardless because the "_"-prefixed child happens to disappear either way.
+	/// </remarks>
 	[Test]
 	public async ValueTask UnderscoreBranch_DropsNonUnderscoreChildToo()
 	{
@@ -290,15 +340,26 @@ public class CloneAttributeTreeTests
 		await Cmd(1, $"&_{uid}`CHILD {src}=childval_{uid}");
 		// Unrelated sibling attribute: the positive control.
 		await Cmd(1, $"&{uid}SIB {src}=sibval_{uid}");
+		// Unrelated, unflagged depth-2 branch/child: the discriminating control - see remarks.
+		await Cmd(1, $"&{uid}BRANCH {src}=branch2val_{uid}");
+		await Cmd(1, $"&{uid}BRANCH`CHILD {src}=branch2childval_{uid}");
 
 		await Assert.That(await Eval(1, $"hasattr({src},_{uid})")).IsEqualTo("1");
 		await Assert.That(await Eval(1, $"hasattr({src},_{uid}`CHILD)")).IsEqualTo("1");
+		await Assert.That(await Eval(1, $"hasattr({src},{uid}BRANCH`CHILD)")).IsEqualTo("1")
+			.Because("the depth-2 control's child must actually exist on the source for this test to exercise anything");
 
 		var clone = await Cmd(1, $"@clone {src}={cloneName}");
 
 		await Assert.That(await Eval(1, $"hasattr({clone},{uid}SIB)")).IsEqualTo("1")
 			.Because("positive control: an unrelated, unflagged attribute must still be cloned - red before the tree fix (depth-1 truncation), proving the clone as a whole worked");
 		await Assert.That(await Eval(1, $"get({clone}/{uid}SIB)")).IsEqualTo($"sibval_{uid}");
+
+		await Assert.That(await Eval(1, $"hasattr({clone},{uid}BRANCH)")).IsEqualTo("1")
+			.Because("discriminating control: an unrelated, unflagged depth-2 branch must be cloned");
+		await Assert.That(await Eval(1, $"hasattr({clone},{uid}BRANCH`CHILD)")).IsEqualTo("1")
+			.Because("discriminating control: its child must be cloned too - this is the assertion that would go red under a depth-1-truncation regression, unlike the depth-1 SIB control above");
+		await Assert.That(await Eval(1, $"get({clone}/{uid}BRANCH`CHILD)")).IsEqualTo($"branch2childval_{uid}");
 
 		await Assert.That(await Eval(1, $"hasattr({clone},_{uid})")).IsEqualTo("0")
 			.Because("the pre-existing '_'-prefix filter must still skip a '_'-prefixed branch");

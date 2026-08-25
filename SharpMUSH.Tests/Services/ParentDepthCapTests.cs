@@ -37,7 +37,15 @@ public class ParentDepthCapTests
 	private async ValueTask<AnySharpObject> CreateAsync(string name)
 	{
 		var result = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {name}"));
-		var dbref = DBRef.Parse(result.Message!.ToPlainText()!);
+		var message = result.Message!.ToPlainText()!;
+
+		// This test builds ancestor chains of up to ~23 objects and has been implicated in
+		// parallel-load flakiness; a bare DBRef.Parse on unexpected output (an error message,
+		// not a dbref) throws an opaque exception instead of a readable assertion failure.
+		await Assert.That(DBRef.TryParse(message, out _)).IsTrue()
+			.Because($"@create {name} must return a dbref, got: \"{message}\"");
+
+		var dbref = DBRef.Parse(message);
 		var node = await Mediator.Send(new GetObjectNodeQuery(dbref));
 		return node.Known;
 	}
