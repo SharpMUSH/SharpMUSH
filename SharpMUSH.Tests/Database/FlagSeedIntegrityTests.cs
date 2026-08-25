@@ -171,6 +171,51 @@ public class FlagSeedIntegrityTests
 		}
 	}
 
+	/// <summary>
+	/// The general form of the ArangoDB <c>prefixmatch</c> gap: an attribute entry may only name
+	/// flags that actually exist. <c>SetAttributeAsync</c> resolves each <c>DefaultFlags</c> name to
+	/// a flag row and silently skips the ones it cannot find, so a name with no row is not an error
+	/// anywhere - the attribute is simply created without the flag its own entry asked for, on that
+	/// provider only.
+	/// </summary>
+	[Test]
+	public async Task EveryDefaultFlagNamedByAnAttributeEntryExists()
+	{
+		var flagNames = await Mediator.CreateStream(new GetAttributeFlagsQuery())
+			.Select(f => f.Name)
+			.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
+
+		var entries = await Mediator.CreateStream(new GetAllAttributeEntriesQuery()).ToArrayAsync();
+
+		await Assert.That(entries).IsNotEmpty()
+			.Because("an empty entry table would make the assertion below vacuous");
+
+		var dangling = entries
+			.SelectMany(e => (e.DefaultFlags ?? []).Select(f => $"{e.Name} -> {f}"))
+			.Where(pair => !flagNames.Contains(pair.Split(" -> ")[1]))
+			.Order(StringComparer.Ordinal)
+			.ToArray();
+
+		await Assert.That(dangling).IsEmpty()
+			.Because("every flag named in an attribute entry's DefaultFlags must exist in the attribute-flag table");
+	}
+
+	/// <summary>
+	/// The specific instance the test above generalises. Both other providers seed this flag in their
+	/// always-run flag list; ArangoDB needed <c>Migration_AddPrefixMatchAttributeFlag</c>.
+	/// </summary>
+	[Test]
+	public async Task PrefixMatchAttributeFlagIsSeeded()
+	{
+		var flag = await Mediator.CreateStream(new GetAttributeFlagsQuery())
+			.FirstOrDefaultAsync(f => f.Name.Equals("prefixmatch", StringComparison.OrdinalIgnoreCase));
+
+		await Assert.That(flag).IsNotNull()
+			.Because("127 standard attribute entries name prefixmatch in their DefaultFlags");
+		await Assert.That(flag!.Symbol ?? string.Empty).IsEqualTo(string.Empty)
+			.Because("PennMUSH has no character for this flag, and the other two providers seed it with none");
+	}
+
 	private sealed record FlagRow(
 		[property: System.Text.Json.Serialization.JsonPropertyName("_id")]
 		string Id,
