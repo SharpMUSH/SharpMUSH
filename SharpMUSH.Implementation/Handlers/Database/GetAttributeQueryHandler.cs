@@ -108,10 +108,10 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 						.ToArrayAsync(cancellationToken);
 					// Fail closed: if re-resolution doesn't return the full path (a race, or a
 					// name-normalisation mismatch), deny rather than yield the attribute.
-					if (path.Length != segments.Length || path.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+					if (path.Length != segments.Length || path.Any(a => a.IsNoInherit()))
 						continue;
 				}
-				else if (attr.Flags.Any(f => f.Name == "no_inherit"))
+				else if (attr.IsNoInherit())
 				{
 					continue;
 				}

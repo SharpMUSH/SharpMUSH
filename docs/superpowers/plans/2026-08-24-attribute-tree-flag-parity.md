@@ -289,19 +289,35 @@ Expected: FAIL — the leaf is currently visible.
 
 - [ ] **Step 3: Implement**
 
-In both `GetAttributePatternAsync` and `FilterLazyAttributes`, replace the `darkPrefixes` filter and the single-attribute `CanViewAttribute` call with:
-
-1. Build `var known = results.ToDictionary(x => x.LongName!, StringComparer.OrdinalIgnoreCase);`
-2. For each result, `var path = await AttributeAncestry.PathAsync(attr, known, parts => FetchAncestor(obj, parts));`
-3. `if (await ps.CanViewAttribute(executor, obj, path)) permitted.Add(attr);`
-
-`FetchAncestor` issues `mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, parts))` and returns the last element, or null when the stream is empty. `GetAttributeQuery` is `ICacheable` keyed on the path, so repeated ancestor lookups across a wide result set are cache hits.
-
-**Delete `darkPrefixes` entirely** — it is now redundant and keeping both would leave two mechanisms disagreeing.
-
-**Keep the `isPrivileged` early-out.** God and wizards bypass the walk, as today.
-
-With `checkParents: true` the handler merges attributes from ancestor *objects*; ancestor lookups must target the object the attribute actually came from, not `obj`. If `SharpAttribute` does not carry its source object, note that in your report and use `obj` — but say so explicitly rather than silently.
+> **Superseded during the final review pass.** The recipe originally written here had `FetchAncestor`
+> issue `mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, parts))` for every ancestor
+> segment — always querying `obj`, the object the pattern search started from. That is wrong for a
+> parent-*merged* attribute: with `checkParents: true` the handler's results are pooled from `obj`
+> and every object along its `@parent` chain, so the branch nodes of an inherited tree attribute
+> live on the ancestor the leaf actually came from, not on `obj`. Querying `obj` for those segments
+> either misses the real branch (denying a legitimate read) or silently substitutes `obj`'s own
+> unrelated copy of the same name (granting or denying for the wrong reason). The final review
+> caught exactly this and the fix landed before merge. What was actually built:
+>
+> 1. `GetAttributesQuery`/`GetLazyAttributesQuery` stream `AttributeWithSource`/`LazyAttributeWithSource`
+>    pairs (`SharpMUSH.Implementation/Handlers/Database/GetAttributeQueryHandler.cs`) — each match
+>    carries the DBRef of the object it was actually found on, not just `obj`.
+> 2. `AttributeService.GetAttributePatternAsync`/`LazilyGetAttributePatternAsync` group results by
+>    that source object (`knownBySource`), build the real `obj..root` `@parent` chain once
+>    (`ParentChainAsync`), and call `AttributeAncestry.CanReadAsync` per match using the match's own
+>    source as the walk's starting target — the target walk PennMUSH's `can_read_attr_internal`
+>    performs over the whole chain, not a re-check rooted at a single object.
+> 3. `FetchAncestorAsync`/`FetchLazyAncestorAsync` resolve one ancestor segment **on whichever
+>    target `CanReadAsync` is currently examining** (serving it from `knownBySource` when that
+>    target already produced it as a pattern match, and issuing `GetAttributeQuery(target, path)` —
+>    parameterised on `target`, not `obj` — otherwise), rather than always resolving against a
+>    single fixed object.
+>
+> `darkPrefixes` was deleted, as originally planned; the `isPrivileged` early-out was kept. See
+> `SharpMUSH.Library/Services/AttributeService.cs:533-660` and
+> `SharpMUSH.Library/Services/AttributeAncestry.cs` for the current implementation, and
+> `SharpMUSH.Tests/Services/AttributeAncestryTests.cs` for the unit tests pinning the walk's three
+> outcomes (abandon this target / deny outright / grant).
 
 - [ ] **Step 4: Run tests**
 

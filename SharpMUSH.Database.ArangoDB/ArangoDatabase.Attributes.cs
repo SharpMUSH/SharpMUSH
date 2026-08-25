@@ -983,18 +983,15 @@ public partial class ArangoDatabase
 		// checked for no_inherit before deciding whether to keep walking.
 		foreach (var candidate in result.parents ?? [])
 		{
-			var attrs = new SharpAttribute[candidate.attributes.Count];
-			for (int i = 0; i < candidate.attributes.Count; i++)
-			{
-				attrs[i] = await SharpAttributeQueryToSharpAttribute(candidate.attributes[i], ct);
-			}
+			var (attrs, noInherit, complete) = await EvaluateInheritanceCandidateAsync(
+				candidate, attribute.Length, SharpAttributeQueryToSharpAttribute, static a => a.IsNoInherit(), ct);
 
-			if (attrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+			if (noInherit)
 			{
 				yield break;
 			}
 
-			if (attrs.Length == attribute.Length)
+			if (complete)
 			{
 				var flags = attrs.Last().Flags.Where(f => f.Inheritable);
 				yield return new AttributeWithInheritance(attrs, ParseDbRefFromId(candidate.sourceId),
@@ -1005,18 +1002,15 @@ public partial class ArangoDatabase
 
 		foreach (var candidate in result.zones ?? [])
 		{
-			var attrs = new SharpAttribute[candidate.attributes.Count];
-			for (int i = 0; i < candidate.attributes.Count; i++)
-			{
-				attrs[i] = await SharpAttributeQueryToSharpAttribute(candidate.attributes[i], ct);
-			}
+			var (attrs, noInherit, complete) = await EvaluateInheritanceCandidateAsync(
+				candidate, attribute.Length, SharpAttributeQueryToSharpAttribute, static a => a.IsNoInherit(), ct);
 
-			if (attrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+			if (noInherit)
 			{
 				yield break;
 			}
 
-			if (attrs.Length == attribute.Length)
+			if (complete)
 			{
 				var flags = attrs.Last().Flags.Where(f => f.Inheritable);
 				yield return new AttributeWithInheritance(attrs, ParseDbRefFromId(candidate.sourceId),
@@ -1064,6 +1058,32 @@ public partial class ArangoDatabase
 			return new DBRef(number);
 		}
 		throw new InvalidOperationException($"Cannot parse DBRef from key: {key}");
+	}
+
+	/// <summary>
+	/// Converts one inheritance candidate's raw query rows into typed attributes and evaluates the
+	/// two gates every parent/zone candidate must pass in both the eager and lazy inheritance
+	/// walks: no_inherit anywhere on the (possibly partial) prefix blocks the walk outright
+	/// (<c>NoInherit</c>), and only a prefix that reaches the requested attribute's full length is
+	/// a match (<c>Complete</c>). Shared so the four call sites (eager/lazy x parent/zone) test
+	/// both conditions identically - letting them drift is exactly the bug class
+	/// <see cref="SharpAttributeExtensions.IsNoInherit(SharpAttribute)"/> already had to fix once
+	/// on this branch.
+	/// </summary>
+	private static async ValueTask<(T[] Attributes, bool NoInherit, bool Complete)> EvaluateInheritanceCandidateAsync<T>(
+		InheritanceCandidate candidate,
+		int expectedLength,
+		Func<SharpAttributeQueryResult, CancellationToken, ValueTask<T>> convert,
+		Func<T, bool> isNoInherit,
+		CancellationToken ct)
+	{
+		var attrs = new T[candidate.attributes.Count];
+		for (var i = 0; i < candidate.attributes.Count; i++)
+		{
+			attrs[i] = await convert(candidate.attributes[i], ct);
+		}
+
+		return (attrs, attrs.Any(isNoInherit), attrs.Length == expectedLength);
 	}
 
 	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
@@ -1171,18 +1191,15 @@ public partial class ArangoDatabase
 		// itself carry the full leaf.
 		foreach (var candidate in result.parents ?? [])
 		{
-			var attrs = new LazySharpAttribute[candidate.attributes.Count];
-			for (int i = 0; i < candidate.attributes.Count; i++)
-			{
-				attrs[i] = await SharpAttributeQueryToLazySharpAttribute(candidate.attributes[i], ct);
-			}
+			var (attrs, noInherit, complete) = await EvaluateInheritanceCandidateAsync(
+				candidate, attribute.Length, SharpAttributeQueryToLazySharpAttribute, static a => a.IsNoInherit(), ct);
 
-			if (attrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+			if (noInherit)
 			{
 				yield break;
 			}
 
-			if (attrs.Length == attribute.Length)
+			if (complete)
 			{
 				var flags = attrs.Last().Flags.Where(f => f.Inheritable);
 				yield return new LazyAttributeWithInheritance(attrs, ParseDbRefFromId(candidate.sourceId),
@@ -1193,18 +1210,15 @@ public partial class ArangoDatabase
 
 		foreach (var candidate in result.zones ?? [])
 		{
-			var attrs = new LazySharpAttribute[candidate.attributes.Count];
-			for (int i = 0; i < candidate.attributes.Count; i++)
-			{
-				attrs[i] = await SharpAttributeQueryToLazySharpAttribute(candidate.attributes[i], ct);
-			}
+			var (attrs, noInherit, complete) = await EvaluateInheritanceCandidateAsync(
+				candidate, attribute.Length, SharpAttributeQueryToLazySharpAttribute, static a => a.IsNoInherit(), ct);
 
-			if (attrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+			if (noInherit)
 			{
 				yield break;
 			}
 
-			if (attrs.Length == attribute.Length)
+			if (complete)
 			{
 				var flags = attrs.Last().Flags.Where(f => f.Inheritable);
 				yield return new LazyAttributeWithInheritance(attrs, ParseDbRefFromId(candidate.sourceId),

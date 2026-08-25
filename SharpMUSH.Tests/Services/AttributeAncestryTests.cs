@@ -1,4 +1,5 @@
 using DotNext.Threading;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 
@@ -258,6 +259,41 @@ public class AttributeAncestryTests
 
 		await Assert.That(can).IsTrue()
 			.Because("the no_inherit branch abandons the parent rather than flag-testing it, so the walk reaches the grandparent");
+	}
+
+	/// <summary>
+	/// <see cref="NoInheritBranchOnAnIntermediateTarget_AbandonsThatTargetInsteadOfDenying"/>, but
+	/// the parent's <c>FOO</c> carries the flag stored as <c>NO_INHERIT</c> rather than the
+	/// canonical lowercase <c>no_inherit</c>. Every provider's flag catalog is seeded lowercase and
+	/// <c>@set</c> always resolves through it, so this casing is unreachable via that path - but
+	/// <see cref="AttributeAncestry"/> tests <see cref="SharpAttribute"/> flags handed to it from
+	/// wherever a caller sourced them, not just catalog-resolved ones, and CodeRabbit's review of
+	/// this branch found three of the four provider-level no_inherit gates doing a case-sensitive
+	/// <c>==</c> instead of the case-insensitive test the fourth (SurrealDB) already used - a
+	/// production/dev divergence given SurrealDB is what actually runs in production. This test
+	/// pins the shared <see cref="SharpAttributeExtensions.IsNoInherit(SharpAttribute)"/> extension
+	/// all four gates were pointed at, so a regression in any one of them (or in the extension
+	/// itself) shows up here.
+	/// <para>
+	/// The parent's <c>FOO</c> is deliberately NOT visual, exactly as in the sibling test - were it
+	/// visual, a comparison that fails to recognise <c>NO_INHERIT</c> would still pass the flag
+	/// test, still reach the grandparent, and still return true, unable to fail.
+	/// </para>
+	/// </summary>
+	[Test]
+	public async Task NoInheritBranchOnAnIntermediateTarget_UnexpectedCasingStillAbandons()
+	{
+		var leaf = Attr("FOO`BAR", "visual");
+		var store = new Store()
+			.With(Child)
+			.With(Parent, Attr("FOO", "NO_INHERIT"))
+			.With(Grandparent, Attr("FOO", "visual"), leaf);
+
+		var can = await AttributeAncestry.CanReadAsync(leaf, Grandparent, [Child, Parent, Grandparent], Child,
+			store.Fetch, MortalPermits);
+
+		await Assert.That(can).IsTrue()
+			.Because("no_inherit stored as NO_INHERIT must still abandon the parent branch, not just the canonical lowercase spelling");
 	}
 
 	/// <summary>

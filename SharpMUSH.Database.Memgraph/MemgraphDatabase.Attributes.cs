@@ -514,7 +514,7 @@ SET e.defaultFlags = $defaultFlags, e.lim = $lim, e.enumValues = $enumValues
 			var parentAttrs = await GetLongestExistingAttributePrefixAsync(parentDbRef, attribute, cancellationToken);
 			if (parentAttrs == null) continue;
 
-			if (parentAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+			if (parentAttrs.Any(a => a.IsNoInherit()))
 				yield break;
 
 			if (parentAttrs.Length == attribute.Length)
@@ -540,7 +540,7 @@ RETURN zone
 			var zoneAttrs = await GetLongestExistingAttributePrefixAsync(zoneDbRef, attribute, cancellationToken);
 			if (zoneAttrs == null) continue;
 
-			if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+			if (zoneAttrs.Any(a => a.IsNoInherit()))
 				yield break;
 
 			if (zoneAttrs.Length == attribute.Length)
@@ -553,33 +553,70 @@ RETURN zone
 	}
 
 	/// <summary>
+	/// Walks <paramref name="attribute"/>'s segments against <paramref name="target"/> exactly
+	/// once, root to leaf, stopping at the first segment that doesn't exist. Returns every node
+	/// resolved up to that point - which may be shorter than <paramref name="attribute"/>, or
+	/// empty if not even the first segment exists.
+	///
+	/// This is the same walk <see cref="GetAttributeAsync(DBRef,string[],CancellationToken)"/>
+	/// performs internally, except a partial result is a normal outcome here rather than
+	/// discarded: calling that method once per candidate length (as the longest-prefix helpers
+	/// below used to) re-resolves the object's typed key and re-walks every already-resolved
+	/// segment on each call, costing O(L^2) queries per candidate object. This walks each
+	/// segment at most once, costing O(L).
+	/// </summary>
+	private async ValueTask<List<INode>> WalkAttributeNodesAsync(DBRef target, string[] attribute,
+		CancellationToken cancellationToken)
+	{
+		var objKey = target.Number;
+		var typedResult = await ExecuteWithRetryAsync(
+			"MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey",
+			new { key = objKey }, cancellationToken);
+
+		if (typedResult.Result.Count == 0) return [];
+
+		var attrs = new List<INode>();
+		var currentKey = (object)typedResult.Result[0]["tkey"].As<int>();
+		var isFirst = true;
+
+		foreach (var attrName in attribute)
+		{
+			var cypher = isFirst
+				? "MATCH (parent {key: toInteger($parentKey)})-[:HAS_ATTRIBUTE]->(child:Attribute {name: $attrName}) RETURN child"
+				: "MATCH (parent:Attribute {key: $parentKey})-[:HAS_ATTRIBUTE]->(child:Attribute {name: $attrName}) RETURN child";
+			isFirst = false;
+
+			var stepResult = await ExecuteWithRetryAsync(cypher, new { parentKey = currentKey.ToString(), attrName },
+				cancellationToken);
+			if (stepResult.Result.Count == 0) break;
+
+			var childNode = stepResult.Result[0]["child"].As<INode>();
+			attrs.Add(childNode);
+			currentKey = childNode["key"].As<string>();
+		}
+
+		return attrs;
+	}
+
+	/// <summary>
 	/// Returns the longest leading prefix of <paramref name="attribute"/> that exists on
 	/// <paramref name="target"/> (with each segment's own flags), or null if not even the
 	/// first segment exists there. A full-length-or-nothing lookup hides a private branch
 	/// that exists without its leaf -- see GetAttributeWithInheritanceAsync for why that matters.
-	///
-	/// Ascends rather than descends: most ancestors in a walk don't carry the attribute at
-	/// all, so probing length 1 first fails in a single query for that (the common) case,
-	/// instead of paying up to <c>attribute.Length</c> queries before giving up. The one
-	/// length that does fully resolve still costs <c>attribute.Length</c> queries either way.
 	/// </summary>
 	private async ValueTask<SharpAttribute[]?> GetLongestExistingAttributePrefixAsync(DBRef target,
 		string[] attribute, CancellationToken cancellationToken)
 	{
-		SharpAttribute[]? longest = null;
-		for (var length = 1; length <= attribute.Length; length++)
-		{
-			var candidate = await GetAttributeAsync(target, attribute[..length], cancellationToken)
-				.ToArrayAsync(cancellationToken);
-			if (candidate.Length != length)
-			{
-				break;
-			}
+		var nodes = await WalkAttributeNodesAsync(target, attribute, cancellationToken);
+		if (nodes.Count == 0) return null;
 
-			longest = candidate;
+		var result = new SharpAttribute[nodes.Count];
+		for (var i = 0; i < nodes.Count; i++)
+		{
+			result[i] = await MapToSharpAttribute(nodes[i], cancellationToken);
 		}
 
-		return longest;
+		return result;
 	}
 
 	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
@@ -611,7 +648,7 @@ RETURN zone
 			var parentAttrs = await GetLongestExistingLazyAttributePrefixAsync(parentDbRef, attribute, cancellationToken);
 			if (parentAttrs == null) continue;
 
-			if (parentAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+			if (parentAttrs.Any(a => a.IsNoInherit()))
 				yield break;
 
 			if (parentAttrs.Length == attribute.Length)
@@ -637,7 +674,7 @@ RETURN zone
 			var zoneAttrs = await GetLongestExistingLazyAttributePrefixAsync(zoneDbRef, attribute, cancellationToken);
 			if (zoneAttrs == null) continue;
 
-			if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+			if (zoneAttrs.Any(a => a.IsNoInherit()))
 				yield break;
 
 			if (zoneAttrs.Length == attribute.Length)
@@ -651,26 +688,22 @@ RETURN zone
 
 	/// <summary>
 	/// Lazy-attribute counterpart of <see cref="GetLongestExistingAttributePrefixAsync"/> --
-	/// see that method for why a full-length-or-nothing lookup is insufficient here, and why
-	/// it ascends rather than descends.
+	/// see that method for why a full-length-or-nothing lookup is insufficient here, and
+	/// <see cref="WalkAttributeNodesAsync"/> for why this only walks the path once.
 	/// </summary>
 	private async ValueTask<LazySharpAttribute[]?> GetLongestExistingLazyAttributePrefixAsync(DBRef target,
 		string[] attribute, CancellationToken cancellationToken)
 	{
-		LazySharpAttribute[]? longest = null;
-		for (var length = 1; length <= attribute.Length; length++)
-		{
-			var candidate = await GetLazyAttributeAsync(target, attribute[..length], cancellationToken)
-				.ToArrayAsync(cancellationToken);
-			if (candidate.Length != length)
-			{
-				break;
-			}
+		var nodes = await WalkAttributeNodesAsync(target, attribute, cancellationToken);
+		if (nodes.Count == 0) return null;
 
-			longest = candidate;
+		var result = new LazySharpAttribute[nodes.Count];
+		for (var i = 0; i < nodes.Count; i++)
+		{
+			result[i] = await MapToLazySharpAttribute(nodes[i], cancellationToken);
 		}
 
-		return longest;
+		return result;
 	}
 
 	/// <summary>

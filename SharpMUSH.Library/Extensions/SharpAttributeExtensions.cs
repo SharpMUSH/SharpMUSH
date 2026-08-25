@@ -31,13 +31,21 @@ public static class SharpAttributeExtensions
 	/// cross an inheritance boundary. Tested on EVERY level of a tree attribute's path, not just
 	/// the leaf - a no_inherit branch blocks its whole subtree (<c>atr_get_with_parent</c>,
 	/// <c>src/attrib.c:1232-1252</c>).
+	/// <para>
+	/// Compares case-insensitively: flag names are resolved from a canonical, case-normalised
+	/// catalog under the ordinary <c>@set</c> path, but this is the one place every provider's
+	/// inheritance gate (ArangoDB, Memgraph, SurrealDB, and the parent-boundary re-resolution in
+	/// <c>GetAttributeQueryHandler</c>) tests for it - a hand-rolled ordinal comparison at any of
+	/// those sites would silently diverge from the others the moment stored casing wasn't
+	/// canonical (imported data, a hand-edited record). Route every gate through here instead.
+	/// </para>
 	/// </summary>
 	public static bool IsNoInherit(this SharpAttribute attribute)
-		=> attribute.Flags.Any(x => x.Name == "no_inherit");
+		=> attribute.Flags.Any(x => x.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase));
 
 	/// <inheritdoc cref="IsNoInherit(SharpAttribute)"/>
 	public static bool IsNoInherit(this LazySharpAttribute attribute)
-		=> attribute.Flags.Any(x => x.Name == "no_inherit");
+		=> attribute.Flags.Any(x => x.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase));
 
 	public static bool IsNoCopy(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "no_clone");

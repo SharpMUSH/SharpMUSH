@@ -609,7 +609,7 @@ public partial class SurrealDatabase
 			var parentAttrs = await GetLongestExistingAttributePrefixAsync(parentDbRef, attribute, cancellationToken);
 			if (parentAttrs == null) continue;
 
-			if (parentAttrs.Any(a => a.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase))))
+			if (parentAttrs.Any(a => a.IsNoInherit()))
 				yield break;
 
 			if (parentAttrs.Length == attribute.Length)
@@ -638,7 +638,7 @@ public partial class SurrealDatabase
 				var zoneAttrs = await GetLongestExistingAttributePrefixAsync(zoneDbRef, attribute, cancellationToken);
 				if (zoneAttrs == null) continue;
 
-				if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase))))
+				if (zoneAttrs.Any(a => a.IsNoInherit()))
 					yield break;
 
 				if (zoneAttrs.Length == attribute.Length)
@@ -652,34 +652,83 @@ public partial class SurrealDatabase
 	}
 
 	/// <summary>
+	/// Walks <paramref name="attribute"/>'s segments against <paramref name="target"/> exactly
+	/// once, root to leaf, stopping at the first segment that doesn't exist. Returns every record
+	/// resolved up to that point - which may be shorter than <paramref name="attribute"/>, or
+	/// empty if not even the first segment exists.
+	///
+	/// This is the same walk <see cref="GetAttributeAsync(DBRef,string[],CancellationToken)"/>
+	/// performs internally, except a partial result is a normal outcome here rather than
+	/// discarded: calling that method once per candidate length (as the longest-prefix helpers
+	/// below used to) re-checks the object's existence and re-walks every already-resolved
+	/// segment on each call, costing O(L^2) queries per candidate object. This walks each
+	/// segment at most once, costing O(L).
+	/// </summary>
+	private async ValueTask<List<AttributeRecord>> WalkAttributeRecordsAsync(DBRef target, string[] attribute,
+		CancellationToken cancellationToken)
+	{
+		var objKey = target.Number;
+		var existResult = await ExecuteAsync(
+			"SELECT key FROM object:$key",
+			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
+
+		var existRecords = existResult.GetValue<List<ObjectRecord>>(0)!;
+		if (existRecords.Count == 0) return [];
+
+		var attrs = new List<AttributeRecord>();
+		string? currentParentKey = null;
+		var isFirst = true;
+
+		foreach (var attrName in attribute)
+		{
+			SurrealDbResponse stepResult;
+			if (isFirst)
+			{
+				var parameters = new Dictionary<string, object?> { ["key"] = objKey, ["attrName"] = attrName };
+				stepResult = await ExecuteAsync(
+					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in IN [player:$key, room:$key, thing:$key, exit:$key])",
+					parameters, cancellationToken);
+				isFirst = false;
+			}
+			else
+			{
+				var parameters = new Dictionary<string, object?> { ["key"] = currentParentKey!, ["attrName"] = attrName };
+				stepResult = await ExecuteAsync(
+					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in = attribute:⟨$key⟩)",
+					parameters, cancellationToken);
+			}
+
+			var records = stepResult.GetValue<List<AttributeRecord>>(0)!;
+			if (records.Count == 0) break;
+
+			var childNode = records[0];
+			attrs.Add(childNode);
+			currentParentKey = childNode.key;
+		}
+
+		return attrs;
+	}
+
+	/// <summary>
 	/// Returns the longest leading prefix of <paramref name="attribute"/> that exists on
 	/// <paramref name="target"/> (with each segment's own flags), or null if not even the
 	/// first segment exists there. <see cref="GetAttributeAsync(DBRef, string[], CancellationToken)"/>
 	/// only ever resolves a full-length match or nothing, which hides a private branch that
 	/// exists without its leaf -- see GetAttributeWithInheritanceAsync for why that matters.
-	///
-	/// Ascends rather than descends: most ancestors in a walk don't carry the attribute at
-	/// all, so probing length 1 first fails in a single query for that (the common) case,
-	/// instead of paying up to <c>attribute.Length</c> queries before giving up. The one
-	/// length that does fully resolve still costs <c>attribute.Length</c> queries either way.
 	/// </summary>
 	private async ValueTask<SharpAttribute[]?> GetLongestExistingAttributePrefixAsync(DBRef target,
 		string[] attribute, CancellationToken cancellationToken)
 	{
-		SharpAttribute[]? longest = null;
-		for (var length = 1; length <= attribute.Length; length++)
-		{
-			var candidate = await GetAttributeAsync(target, attribute[..length], cancellationToken)
-				.ToArrayAsync(cancellationToken);
-			if (candidate.Length != length)
-			{
-				break;
-			}
+		var records = await WalkAttributeRecordsAsync(target, attribute, cancellationToken);
+		if (records.Count == 0) return null;
 
-			longest = candidate;
+		var result = new SharpAttribute[records.Count];
+		for (var i = 0; i < records.Count; i++)
+		{
+			result[i] = await MapToSharpAttribute(records[i], cancellationToken);
 		}
 
-		return longest;
+		return result;
 	}
 
 	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
@@ -710,7 +759,7 @@ public partial class SurrealDatabase
 			var parentAttrs = await GetLongestExistingLazyAttributePrefixAsync(parentDbRef, attribute, cancellationToken);
 			if (parentAttrs == null) continue;
 
-			if (parentAttrs.Any(a => a.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase))))
+			if (parentAttrs.Any(a => a.IsNoInherit()))
 				yield break;
 
 			if (parentAttrs.Length == attribute.Length)
@@ -739,7 +788,7 @@ public partial class SurrealDatabase
 				var zoneAttrs = await GetLongestExistingLazyAttributePrefixAsync(zoneDbRef, attribute, cancellationToken);
 				if (zoneAttrs == null) continue;
 
-				if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase))))
+				if (zoneAttrs.Any(a => a.IsNoInherit()))
 					yield break;
 
 				if (zoneAttrs.Length == attribute.Length)
@@ -754,26 +803,22 @@ public partial class SurrealDatabase
 
 	/// <summary>
 	/// Lazy-attribute counterpart of <see cref="GetLongestExistingAttributePrefixAsync"/> --
-	/// see that method for why a full-length-or-nothing lookup is insufficient here, and why
-	/// it ascends rather than descends.
+	/// see that method for why a full-length-or-nothing lookup is insufficient here, and
+	/// <see cref="WalkAttributeRecordsAsync"/> for why this only walks the path once.
 	/// </summary>
 	private async ValueTask<LazySharpAttribute[]?> GetLongestExistingLazyAttributePrefixAsync(DBRef target,
 		string[] attribute, CancellationToken cancellationToken)
 	{
-		LazySharpAttribute[]? longest = null;
-		for (var length = 1; length <= attribute.Length; length++)
-		{
-			var candidate = await GetLazyAttributeAsync(target, attribute[..length], cancellationToken)
-				.ToArrayAsync(cancellationToken);
-			if (candidate.Length != length)
-			{
-				break;
-			}
+		var records = await WalkAttributeRecordsAsync(target, attribute, cancellationToken);
+		if (records.Count == 0) return null;
 
-			longest = candidate;
+		var result = new LazySharpAttribute[records.Count];
+		for (var i = 0; i < records.Count; i++)
+		{
+			result[i] = await MapToLazySharpAttribute(records[i], cancellationToken);
 		}
 
-		return longest;
+		return result;
 	}
 
 	/// <summary>
