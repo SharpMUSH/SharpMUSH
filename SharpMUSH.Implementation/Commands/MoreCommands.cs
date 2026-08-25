@@ -879,7 +879,7 @@ public partial class Commands
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
 			await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
-				IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+				IAttributeService.AttributePatternMode.Exact);
 
 			var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
 			var clearedCount = 0;
@@ -898,7 +898,7 @@ public partial class Commands
 						{
 							var objAny = locateResult.AsAnyObject;
 							await AttributeService!.ClearAttributeAsync(executor, objAny, "FOLLOWING",
-								IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+								IAttributeService.AttributePatternMode.Exact);
 							clearedCount++;
 						}
 						break;
@@ -932,7 +932,7 @@ public partial class Commands
 			if (followingDbref == target.Object().DBRef.ToString())
 			{
 				await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
-					IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+					IAttributeService.AttributePatternMode.Exact);
 				await NotifyService!.Notify(executor, $"You stop following {target.Object().Name}.", executor);
 			}
 		}
@@ -946,7 +946,7 @@ public partial class Commands
 			if (targetFollowingDbref == executor.Object().DBRef.ToString())
 			{
 				await AttributeService!.ClearAttributeAsync(executor, target, "FOLLOWING",
-					IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+					IAttributeService.AttributePatternMode.Exact);
 				await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
 				await NotifyService!.Notify(target, $"{executor.Object().Name} deserts you. You stop following.");
 			}
@@ -980,7 +980,7 @@ public partial class Commands
 						{
 							var objAny = locateResult.AsAnyObject;
 							await AttributeService!.ClearAttributeAsync(executor, objAny, "FOLLOWING",
-								IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+								IAttributeService.AttributePatternMode.Exact);
 							await NotifyService!.Notify(objAny, $"{executor.Object().Name} dismisses you. You stop following.");
 							dismissedCount++;
 						}
@@ -1023,7 +1023,7 @@ public partial class Commands
 		}
 
 		await AttributeService!.ClearAttributeAsync(executor, target, "FOLLOWING",
-			IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+			IAttributeService.AttributePatternMode.Exact);
 
 		await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
 		await NotifyService!.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.");
@@ -2501,7 +2501,7 @@ public partial class Commands
 		}
 
 		await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
-			IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+			IAttributeService.AttributePatternMode.Exact);
 
 		await NotifyService!.Notify(executor, "You stop following.", executor);
 		return CallState.Empty;
@@ -3049,8 +3049,7 @@ public partial class Commands
 		if (string.IsNullOrEmpty(locale))
 		{
 			await AttributeService!.ClearAttributeAsync(executor, executor, "LOCALE",
-				IAttributeService.AttributePatternMode.Exact,
-				IAttributeService.AttributeClearMode.Safe);
+				IAttributeService.AttributePatternMode.Exact);
 
 			await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
 			{

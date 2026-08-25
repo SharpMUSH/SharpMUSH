@@ -426,6 +426,15 @@ public static class ErrorMessages
 		public const string CreatedObject = "Created: Object {0}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string UnableToWipeAttribute = "Unable to wipe attribute {0}.";
+		/// <summary>
+		/// PennMUSH's <c>AE_SAFE</c> wording (<c>src/set.c:1507-1509</c>), distinct from
+		/// <c>AE_ERROR</c>'s <see cref="UnableToWipeAttribute"/>: <c>real_atr_clr</c>
+		/// (<c>src/attrib.c:1100-1101</c>) tests <c>AF_Safe</c> before <c>Can_Write_Attr</c> and
+		/// returns its own code, so the player is told which flag to clear rather than just that
+		/// the wipe failed.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeIsSafeSetNotSafe = "Attribute {0} is SAFE. Set it !SAFE to modify it.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCannotBeWipedChildBlocked = "Attribute {0} cannot be wiped because a child attribute cannot be wiped.";
 		public const string NoAttributesWiped = "No attributes wiped.";

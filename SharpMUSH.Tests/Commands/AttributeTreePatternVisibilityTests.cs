@@ -279,4 +279,40 @@ public class AttributeTreePatternVisibilityTests
 		await Assert.That(attempt.Message?.ToPlainText() ?? string.Empty).Contains("NO PERMISSION")
 			.Because("AF_INTERNAL blocks writes for everyone but God - a wizard owner must not be able to overwrite it");
 	}
+
+	/// <summary>
+	/// <c>GetAttributePatternAsync</c>'s privileged early-out returned every match unfiltered.
+	/// <c>Can_Read_Attr</c> (<c>hdrs/mushdb.h:100-101</c>) tests <c>!AF_Internal(a)</c> BEFORE the
+	/// <c>See_All(p) ||</c> easy-out, so the one denial a wizard cannot skip is exactly the one
+	/// that early-out skipped: <c>lattr</c>/<c>@decompile</c> as a wizard listed internal
+	/// attributes. (<c>See_All</c> does short-circuit the rest of <c>can_read_attr_internal</c>,
+	/// so <c>mortal_dark</c> and the ancestor walk stay bypassed for a wizard - only the leaf's
+	/// own <c>internal</c> flag survives the easy-out.)
+	/// </summary>
+	[Test]
+	public async ValueTask InternalAttribute_IsNotListedByLattr_EvenForAWizard()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatLIntOwner");
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatLIntWiz");
+		var ownerDbRef = owner.DbRef.ToString();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PLIA{uid} me=secretvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PLIA{uid}=internal"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PLIB{uid} me=okvalue"));
+
+		var result = await Eval(wizard.Handle, $"lattr({ownerDbRef}/PLI*{uid})");
+
+		// Control: the unflagged sibling matched the same wildcard and IS listed, so the miss
+		// below is the internal flag and not a locate failure or a pattern that matched nothing.
+		await Assert.That(result).Contains($"PLIB{uid}")
+			.Because("a wizard lists an unflagged attribute on an object it doesn't own");
+
+		await Assert.That(result).DoesNotContain($"PLIA{uid}")
+			.Because("AF_INTERNAL is tested before See_All, so even a wizard must not see an internal attribute listed");
+	}
 }

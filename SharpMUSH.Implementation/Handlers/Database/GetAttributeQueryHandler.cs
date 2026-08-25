@@ -24,14 +24,15 @@ public class GetLazyAttributeQueryHandler(ISharpDatabase database)
 }
 
 public class GetAttributesQueryHandler(ISharpDatabase database)
-	: IStreamQueryHandler<GetAttributesQuery, SharpAttribute>
+	: IStreamQueryHandler<GetAttributesQuery, AttributeWithSource>
 {
-	public IAsyncEnumerable<SharpAttribute> Handle(GetAttributesQuery request,
+	public IAsyncEnumerable<AttributeWithSource> Handle(GetAttributesQuery request,
 		CancellationToken cancellationToken)
 	{
 		if (!request.CheckParents)
 		{
-			return GetAttributesForDbRef(request.DBRef, request, cancellationToken);
+			return GetAttributesForDbRef(request.DBRef, request, cancellationToken)
+				.Select(attr => new AttributeWithSource(attr, request.DBRef));
 		}
 
 		return GetAttributesWithParentsAsync(request, cancellationToken);
@@ -49,7 +50,7 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 			_ => database.GetAttributesAsync(dbref, request.Pattern.ToUpper(), cancellationToken)
 		};
 
-	private async IAsyncEnumerable<SharpAttribute> GetAttributesWithParentsAsync(
+	private async IAsyncEnumerable<AttributeWithSource> GetAttributesWithParentsAsync(
 		GetAttributesQuery request,
 		[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
 	{
@@ -58,7 +59,7 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 		await foreach (var attr in GetAttributesForDbRef(request.DBRef, request, cancellationToken))
 		{
 			if (seen.Add(attr.LongName!))
-				yield return attr;
+				yield return new AttributeWithSource(attr, request.DBRef);
 		}
 
 		var obj = await database.GetObjectNodeAsync(request.DBRef, cancellationToken);
@@ -115,7 +116,9 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 					continue;
 				}
 
-				yield return attr;
+				// The source object rides along with the match: it is what a downstream read
+				// gate has to re-walk the ancestor path against (AttributeWithSource).
+				yield return new AttributeWithSource(attr, parentObj.DBRef);
 			}
 
 			current = parentObj;
@@ -124,11 +127,15 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 }
 
 public class GetLazyAttributesQueryHandler(ISharpDatabase database)
-	: IStreamQueryHandler<GetLazyAttributesQuery, LazySharpAttribute>
+	: IStreamQueryHandler<GetLazyAttributesQuery, LazyAttributeWithSource>
 {
-	public IAsyncEnumerable<LazySharpAttribute> Handle(GetLazyAttributesQuery request,
+	// This handler does not walk the parent chain at all (it ignores request.CheckParents), so
+	// every match is by construction sourced from request.DBRef itself. It still reports the
+	// source, so the read gate downstream is written once against provenance rather than
+	// assuming it - the assumption is exactly what leaked in the eager path.
+	public IAsyncEnumerable<LazyAttributeWithSource> Handle(GetLazyAttributesQuery request,
 		CancellationToken cancellationToken)
-		=> request.Mode switch
+		=> (request.Mode switch
 		{
 			IAttributeService.AttributePatternMode.Exact =>
 				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken),
@@ -140,5 +147,5 @@ public class GetLazyAttributesQueryHandler(ISharpDatabase database)
 					request.Pattern.ToUpper(), cancellationToken),
 			_ =>
 				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
-		};
+		}).Select(attr => new LazyAttributeWithSource(attr, request.DBRef));
 }

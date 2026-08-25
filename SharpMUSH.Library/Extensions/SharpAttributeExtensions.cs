@@ -26,6 +26,19 @@ public static class SharpAttributeExtensions
 	public static bool IsPrivate(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "private");
 
+	/// <summary>
+	/// PennMUSH's <c>AF_PRIVATE</c> (spelled <c>no_inherit</c> here): the attribute does not
+	/// cross an inheritance boundary. Tested on EVERY level of a tree attribute's path, not just
+	/// the leaf - a no_inherit branch blocks its whole subtree (<c>atr_get_with_parent</c>,
+	/// <c>src/attrib.c:1232-1252</c>).
+	/// </summary>
+	public static bool IsNoInherit(this SharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name == "no_inherit");
+
+	/// <inheritdoc cref="IsNoInherit(SharpAttribute)"/>
+	public static bool IsNoInherit(this LazySharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name == "no_inherit");
+
 	public static bool IsNoCopy(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "no_clone");
 

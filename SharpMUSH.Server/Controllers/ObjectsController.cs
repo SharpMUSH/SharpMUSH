@@ -221,8 +221,7 @@ public class ObjectsController(
 	{
 		var result = await attributeService.ClearAttributeAsync(
 			executor, target, name,
-			IAttributeService.AttributePatternMode.Exact,
-			IAttributeService.AttributeClearMode.Safe);
+			IAttributeService.AttributePatternMode.Exact);
 
 		return result.Match<IActionResult>(
 			_ => NoContent(),

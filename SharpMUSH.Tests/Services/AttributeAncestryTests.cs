@@ -38,7 +38,8 @@ public class AttributeAncestryTests
 		var leaf = Attr("FOO");
 		var path = await AttributeAncestry.PathAsync(leaf, new Dictionary<string, SharpAttribute>(), NeverFetches());
 
-		await Assert.That(path.Select(a => a.LongName)).IsEquivalentTo(new[] { "FOO" });
+		await Assert.That(path).IsNotNull();
+		await Assert.That(path!.Select(a => a.LongName)).IsEquivalentTo(new[] { "FOO" });
 	}
 
 	[Test]
@@ -53,7 +54,8 @@ public class AttributeAncestryTests
 
 		var path = await AttributeAncestry.PathAsync(leaf, known, NeverFetches());
 
-		await Assert.That(path.Select(a => a.LongName)).IsEquivalentTo(new[] { "FOO", "FOO`BAR" });
+		await Assert.That(path).IsNotNull();
+		await Assert.That(path!.Select(a => a.LongName)).IsEquivalentTo(new[] { "FOO", "FOO`BAR" });
 	}
 
 	[Test]
@@ -70,7 +72,8 @@ public class AttributeAncestryTests
 		});
 
 		await Assert.That(fetched).IsEquivalentTo(new[] { "FOO" });
-		await Assert.That(path.Select(a => a.LongName)).IsEquivalentTo(new[] { "FOO", "FOO`BAR" });
+		await Assert.That(path).IsNotNull();
+		await Assert.That(path!.Select(a => a.LongName)).IsEquivalentTo(new[] { "FOO", "FOO`BAR" });
 	}
 
 	[Test]
@@ -80,21 +83,35 @@ public class AttributeAncestryTests
 		var path = await AttributeAncestry.PathAsync(leaf, new Dictionary<string, SharpAttribute>(),
 			parts => ValueTask.FromResult<SharpAttribute?>(Attr(string.Join('`', parts))));
 
-		await Assert.That(path.Select(a => a.LongName).ToArray())
+		await Assert.That(path).IsNotNull();
+		await Assert.That(path!.Select(a => a.LongName).ToArray())
 			.IsEquivalentTo(new[] { "A", "A`B", "A`B`C", "A`B`C`D" });
 	}
 
+	/// <summary>
+	/// This test previously asserted the opposite - that a missing branch node was simply omitted
+	/// from the path, on the reasoning that "no ancestor" is not "a denial". That is wrong against
+	/// PennMUSH. <c>can_read_attr_internal</c> (<c>src/attrib.c:324-327</c>) reads
+	/// <c>if (!atr || (target != obj &amp;&amp; AF_Private(atr))) goto continue_target;</c>: an
+	/// unresolvable prefix abandons the current target and moves the walk to the next object in
+	/// the parent chain, and when that chain is exhausted the function returns 0
+	/// (<c>attrib.c:356</c>). It never grants.
+	/// <para>
+	/// Omitting the segment was a fail-open, because every caller's grant condition is
+	/// "ALL levels pass": a path collapsed to <c>[leaf]</c> made <c>All(IsVisual)</c> true on the
+	/// leaf's own flag alone. The write gate (<c>ResolveWriteGatePathAsync</c>) has always denied
+	/// here; the read gate now matches it.
+	/// </para>
+	/// </summary>
 	[Test]
-	public async Task OrphanedLeaf_OmitsMissingAncestorRatherThanFailing()
+	public async Task OrphanedLeaf_DeniesRatherThanOmittingTheMissingAncestor()
 	{
-		// A leaf whose branch node genuinely does not exist means "no ancestor",
-		// NOT a denial. Penn treats a missing branch as absent, not as forbidding.
 		var leaf = Attr("GONE`LEAF");
 		var known = new Dictionary<string, SharpAttribute>(StringComparer.OrdinalIgnoreCase) { ["GONE`LEAF"] = leaf };
 
 		var path = await AttributeAncestry.PathAsync(leaf, known, FetchesNothing());
 
-		await Assert.That(path.Select(a => a.LongName)).IsEquivalentTo(new[] { "GONE`LEAF" });
+		await Assert.That(path).IsNull();
 	}
 
 	[Test]
@@ -108,6 +125,7 @@ public class AttributeAncestryTests
 
 		var path = await AttributeAncestry.PathAsync(leaf, known, NeverFetches());
 
-		await Assert.That(path).Count().IsEqualTo(2);
+		await Assert.That(path).IsNotNull();
+		await Assert.That(path!).Count().IsEqualTo(2);
 	}
 }

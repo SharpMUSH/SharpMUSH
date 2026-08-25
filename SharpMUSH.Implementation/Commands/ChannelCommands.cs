@@ -317,7 +317,7 @@ public partial class Commands
 
 		var channelName = maybeAttribute.AsAttribute.Last().Value;
 
-		var clearResult = await AttributeService!.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+		var clearResult = await AttributeService!.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact);
 
 		if (clearResult.IsT1)
 		{

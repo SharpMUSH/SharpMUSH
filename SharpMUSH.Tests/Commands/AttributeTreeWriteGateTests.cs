@@ -362,4 +362,118 @@ public class AttributeTreeWriteGateTests
 			nameof(ErrorMessages.Notifications.NoAttributesWiped), owner.DbRef)).IsTrue()
 			.Because("a zero-match @wipe must still report the tally, not go completely silent");
 	}
+
+	/// <summary>
+	/// PennMUSH's <c>wipe_helper</c> (<c>src/set.c:1503-1504</c>) opens with
+	/// <c>if (wildcard(pattern) &amp;&amp; AF_Wizard(atr) &amp;&amp; !God(player)) return 0;</c> -
+	/// "for added security, only God can modify wiz-only-modifiable attributes using this command
+	/// and wildcards." <c>PermissionService.CanSet</c> returns true for ANY wizard
+	/// (<c>PermissionService.cs:88</c>) before the <c>AF_WIZARD</c> test ever runs, so a non-God
+	/// wizard's <c>@wipe someplayer/**</c> destroyed every wizard-flagged attribute Penn protects.
+	/// </summary>
+	[Test]
+	public async ValueTask WipeWithWildcard_SparesWizardAttribute_ForNonGodWizard()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var wiz = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeWizGuard");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(wiz.DbRef));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wiz.DbRef}=WIZARD"));
+
+		await Parser.CommandParse(wiz.Handle, ConnectionService, MModule.single($"&WZ{uid}G me=wizvalue"));
+		await Parser.CommandParse(wiz.Handle, ConnectionService, MModule.single($"&WZ{uid}OK me=okvalue"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wiz.DbRef}/WZ{uid}G=WIZARD"));
+
+		await Parser.CommandParse(wiz.Handle, ConnectionService, MModule.single($"@wipe me/WZ{uid}*"));
+
+		// Control: the unflagged sibling matched the same wildcard and IS gone, so the survivor
+		// below is the AF_WIZARD guard and not a @wipe that silently no-op'd on the whole pattern.
+		var control = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WZ{uid}OK",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(control.IsAttribute).IsFalse()
+			.Because("an unflagged attribute matched by the same wildcard must still be wiped");
+
+		var survivor = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WZ{uid}G",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(survivor.IsAttribute).IsTrue()
+			.Because("only God may wipe a wizard-flagged attribute through a wildcard pattern");
+		await Assert.That(survivor.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("wizvalue")
+			.Because("the spared attribute must be untouched, not merely present with a blanked value");
+	}
+
+	/// <summary>
+	/// The other half of the same Penn guard: <c>wildcard(pattern)</c>
+	/// (<c>hdrs/externs.h:529</c> -> <c>wildcard_count(s, 0) == -1</c>) is true only when the
+	/// pattern contains an unescaped <c>*</c> or <c>?</c>. "Wiping a specific attr still works,
+	/// though" (<c>set.c:1499-1502</c>), so a literal name must not be caught by the guard.
+	/// Without this the fix for the wildcard case would over-deny.
+	/// </summary>
+	[Test]
+	public async ValueTask WipeByLiteralName_StillWipesWizardAttribute_ForNonGodWizard()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var wiz = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeWizLiteral");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(wiz.DbRef));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wiz.DbRef}=WIZARD"));
+
+		await Parser.CommandParse(wiz.Handle, ConnectionService, MModule.single($"&WL{uid}G me=wizvalue"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wiz.DbRef}/WL{uid}G=WIZARD"));
+
+		var before = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WL{uid}G",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(before.IsAttribute).IsTrue()
+			.Because("the wizard-flagged attribute exists before the wipe");
+
+		await Parser.CommandParse(wiz.Handle, ConnectionService, MModule.single($"@wipe me/WL{uid}G"));
+
+		var after = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WL{uid}G",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(after.IsAttribute).IsFalse()
+			.Because("a literal (non-wildcard) @wipe of a wizard attribute is still allowed to a wizard");
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>real_atr_clr</c> (<c>src/attrib.c:1100-1104</c>) tests <c>AF_Safe</c> BEFORE
+	/// <c>Can_Write_Attr</c> and returns the distinct <c>AE_SAFE</c> code, which
+	/// <c>wipe_helper</c> reports as "Attribute %s is SAFE. Set it !SAFE to modify it."
+	/// (<c>set.c:1507-1509</c>) rather than <c>AE_ERROR</c>'s "Unable to wipe attribute %s". The
+	/// two wordings tell the player different things: one names the fix, the other does not.
+	/// </summary>
+	[Test]
+	public async ValueTask WipeOfSafeAttribute_ReportsTheSafeWording()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeSafeMsg");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(owner.DbRef));
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&SF{uid}S me=safevalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&SF{uid}OK me=okvalue"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}/SF{uid}S=safe"));
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/SF{uid}*"));
+
+		// Control: the unflagged sibling matched the same wildcard and was wiped, so the report
+		// below belongs to a wipe that actually ran rather than one that matched nothing.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.OneAttributeWiped), owner.DbRef)).IsTrue()
+			.Because("exactly one of the two matched attributes was removable and removed");
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.AttributeIsSafeSetNotSafe), owner.DbRef)).IsTrue()
+			.Because("a safe attribute must be reported with Penn's AE_SAFE wording, which names the remedy");
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.UnableToWipeAttribute), owner.DbRef)).IsFalse()
+			.Because("AE_SAFE and AE_ERROR are distinct outcomes - the safe case must not also report the generic one");
+
+		var survivor = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"SF{uid}S",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(survivor.IsAttribute).IsTrue()
+			.Because("a safe attribute must survive the wipe that reported it");
+	}
 }

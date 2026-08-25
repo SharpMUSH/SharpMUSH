@@ -350,8 +350,7 @@ public partial class Commands
 		if (copiedCount > 0)
 		{
 			var clearResult = await AttributeService!.ClearAttributeAsync(executor, sourceObject, sourceAttr,
-			IAttributeService.AttributePatternMode.Exact,
-			IAttributeService.AttributeClearMode.Safe);
+			IAttributeService.AttributePatternMode.Exact);
 
 			var destWord = copiedCount == 1 ? "destination" : "destinations";
 			if (clearResult.IsT1)
@@ -538,8 +537,7 @@ public partial class Commands
 		// outcome with a generic "success" line that used to print unconditionally.
 		var attributePattern = string.IsNullOrEmpty(maybeAttribute) ? "**" : maybeAttribute;
 		await AttributeService!.ClearAttributeAsync(executor, targetObject, attributePattern,
-			IAttributeService.AttributePatternMode.Wildcard,
-			IAttributeService.AttributeClearMode.Safe);
+			IAttributeService.AttributePatternMode.Wildcard);
 
 		return new CallState(string.Empty);
 	}

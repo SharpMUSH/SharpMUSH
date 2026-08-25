@@ -118,10 +118,13 @@ public class AttributeService(
 			return null;
 		}
 
-		// The attribute is being inherited by the child: a no_inherit flag on the resolved
-		// (leaf) attribute blocks inheritance, matching the parent-chain semantics.
-		var leaf = ancestorResult.Attributes.Last();
-		if (leaf.Flags.Any(f => f.Name == "no_inherit"))
+		// The attribute is being inherited by the child, so no_inherit on ANY level of the branch
+		// blocks the whole path - not just on the resolved leaf. Penn's atr_get_with_parent
+		// (attrib.c:1232-1252) tests AF_PRIVATE on every backtick-delimited segment while
+		// crossing an inheritance boundary, and the ancestor is such a boundary exactly like an
+		// @parent is. Task 7 fixed this shape for @parent chains in all three providers; this
+		// fall-through kept the old leaf-only test.
+		if (ancestorResult.Attributes.Any(a => a.IsNoInherit()))
 		{
 			return null;
 		}
@@ -207,8 +210,8 @@ public class AttributeService(
 			return null;
 		}
 
-		var leaf = ancestorResult.Attributes.Last();
-		if (leaf.Flags.Any(f => f.Name == "no_inherit"))
+		// See GetAncestorAttributeAsync: no_inherit anywhere on the branch blocks the whole path.
+		if (ancestorResult.Attributes.Any(a => a.IsNoInherit()))
 		{
 			return null;
 		}
@@ -536,26 +539,49 @@ public class AttributeService(
 		var attributes = mediator.CreateStream(
 			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
-		var isPrivileged = executor.IsGod() || await executor.IsWizard();
+		var results = await attributes.ToArrayAsync();
 
-		if (isPrivileged)
+		if (executor.IsGod() || await executor.IsWizard())
 		{
-			return await attributes
+			// PennMUSH's Can_Read_Attr macro (hdrs/mushdb.h:100-101) is
+			// `!AF_Internal(a) && (See_All(p) || can_read_attr_internal(...))`: See_All skips the
+			// whole ancestor walk (and with it mortal_dark, visual and nearby), but it does NOT
+			// skip the leaf's own internal flag, which is tested first and denies everyone
+			// including God. Without this the privileged early-out listed internal attributes.
+			return results
+				.Where(x => !x.Attribute.IsInternal())
+				.Select(x => x.Attribute)
 				.OrderBy(x => x.LongName, _attributeSort)
-				.ToArrayAsync();
+				.ToArray();
 		}
 
 		// A pattern can name a leaf without matching any of its ancestors, so the result
 		// set alone never proves a branch is safe to reveal. Walk the real root..leaf path
 		// for each match - PennMUSH re-checks every level, so a mortal_dark (or non-visual)
 		// branch hides its leaves however narrow the pattern was.
-		var results = await attributes.ToArrayAsync();
-		var known = IndexByLongName(results, static x => x.LongName);
+		//
+		// The walk runs against the object each match was READ FROM, not against `obj`: with
+		// checkParents the match set mixes the object's own attributes with ones inherited from
+		// somewhere up the @parent chain, and an inherited tree attribute's branch nodes live on
+		// that parent, not on the child (Penn walks the prefix against `target`, the object
+		// currently being examined - attrib.c:318-341). Siblings sourced from the SAME object are
+		// reused as free ancestor data; a match from a different object is not, or one object's
+		// FOO would be allowed to vouch for another object's FOO`BAR.
+		var knownBySource = results
+			.GroupBy(x => x.SourceObject)
+			.ToDictionary(g => g.Key, g => IndexByLongName(g.Select(x => x.Attribute), static x => x.LongName));
 
 		var permitted = new List<SharpAttribute>();
-		foreach (var attr in results)
+		foreach (var (attr, source) in results)
 		{
-			var path = await AttributeAncestry.PathAsync(attr, known, parts => FetchAncestorAsync(obj, parts));
+			var path = await AttributeAncestry.PathAsync(attr, knownBySource[source],
+				parts => FetchAncestorAsync(source, parts));
+
+			// A null path is an unresolvable prefix - Penn never grants on one (attrib.c:324-327,
+			// 356). The write gate (ResolveWriteGatePathAsync) has always denied here; the read
+			// gate used to drop the segment and grant.
+			if (path is null) continue;
+
 			if (await ps.CanViewAttribute(executor, obj, path))
 				permitted.Add(attr);
 		}
@@ -566,19 +592,46 @@ public class AttributeService(
 	}
 
 	/// <summary>
-	/// Loads a single ancestor attribute for the ancestor walk. Returns null when the
-	/// ancestor does not exist - an orphaned leaf contributes no ancestor, not a denial.
+	/// Loads a single ancestor attribute for the ancestor walk from <paramref name="source"/> -
+	/// the object the leaf was read from, which under parent-checking need not be the object the
+	/// lookup started at. Returns null when the ancestor does not exist there, which
+	/// <see cref="AttributeAncestry.PathAsync(SharpAttribute,IReadOnlyDictionary{string,SharpAttribute},Func{string[],ValueTask{SharpAttribute}})"/>
+	/// turns into a denial.
 	/// </summary>
-	private async ValueTask<SharpAttribute?> FetchAncestorAsync(AnySharpObject obj, string[] path)
+	private async ValueTask<SharpAttribute?> FetchAncestorAsync(DBRef source, string[] path)
 		=> await mediator
-			.CreateStream(new GetAttributeQuery(obj.Object().DBRef, path))
+			.CreateStream(new GetAttributeQuery(source, path))
 			.LastOrDefaultAsync();
 
 	/// <inheritdoc cref="FetchAncestorAsync"/>
-	private async ValueTask<LazySharpAttribute?> FetchLazyAncestorAsync(AnySharpObject obj, string[] path)
+	private async ValueTask<LazySharpAttribute?> FetchLazyAncestorAsync(DBRef source, string[] path)
 		=> await mediator
-			.CreateStream(new GetLazyAttributeQuery(obj.Object().DBRef, path))
+			.CreateStream(new GetLazyAttributeQuery(source, path))
 			.LastOrDefaultAsync();
+
+	/// <summary>
+	/// PennMUSH's <c>wildcard(s)</c> (<c>hdrs/externs.h:529</c>), which is
+	/// <c>wildcard_count(s, 0) == -1</c> (<c>src/wild.c:713-729</c>): true when the string
+	/// contains an unescaped <c>*</c> or <c>?</c>. A backslash escapes the character after it,
+	/// and a trailing backslash escapes nothing.
+	/// </summary>
+	private static bool HasUnescapedWildcard(string pattern)
+	{
+		for (var i = 0; i < pattern.Length; i++)
+		{
+			switch (pattern[i])
+			{
+				case '?':
+				case '*':
+					return true;
+				case '\\':
+					i++;
+					break;
+			}
+		}
+
+		return false;
+	}
 
 	/// <summary>
 	/// Indexes already-materialised attributes by long name for the ancestor walk.
@@ -616,8 +669,13 @@ public class AttributeService(
 
 		if (isPrivileged)
 		{
+			// See GetAttributePatternAsync: See_All skips the ancestor walk but never the
+			// leaf's own internal flag (hdrs/mushdb.h:100-101).
 			return LazySharpAttributesOrError
-				.FromAsync(attributes.OrderBy(x => x.LongName, _attributeSort));
+				.FromAsync(attributes
+					.Where(x => !x.Attribute.IsInternal())
+					.Select(x => x.Attribute)
+					.OrderBy(x => x.LongName, _attributeSort));
 		}
 
 		// For non-privileged viewers, materialize so each match's ancestor path can be walked.
@@ -625,18 +683,24 @@ public class AttributeService(
 	}
 
 	private async IAsyncEnumerable<LazySharpAttribute> FilterLazyAttributes(
-		AnySharpObject executor, AnySharpObject obj, IAsyncEnumerable<LazySharpAttribute> attributes)
+		AnySharpObject executor, AnySharpObject obj, IAsyncEnumerable<LazyAttributeWithSource> attributes)
 	{
-		// See GetAttributePatternAsync: permission follows the real root..leaf path, not
-		// whatever subset of the tree the pattern happened to match.
+		// See GetAttributePatternAsync: permission follows the real root..leaf path, walked
+		// against the object each match was read from - not whatever subset of the tree the
+		// pattern happened to match, and not always `obj`.
 		var results = await attributes.ToArrayAsync();
-		var known = IndexByLongName(results, static x => x.LongName);
+		var knownBySource = results
+			.GroupBy(x => x.SourceObject)
+			.ToDictionary(g => g.Key, g => IndexByLongName(g.Select(x => x.Attribute), static x => x.LongName));
 
-		var ordered = results.OrderBy(x => x.LongName, _attributeSort);
+		var ordered = results.OrderBy(x => x.Attribute.LongName, _attributeSort);
 
-		foreach (var attr in ordered)
+		foreach (var (attr, source) in ordered)
 		{
-			var path = await AttributeAncestry.PathAsync(attr, known, parts => FetchLazyAncestorAsync(obj, parts));
+			var path = await AttributeAncestry.PathAsync(attr, knownBySource[source],
+				parts => FetchLazyAncestorAsync(source, parts));
+			if (path is null) continue;
+
 			if (await ps.CanViewAttribute(executor, obj, path))
 				yield return attr;
 		}
@@ -873,22 +937,21 @@ public class AttributeService(
 	}
 
 	/// <summary>
-	/// Sets the value of an attribute to string.Empty
+	/// Clears attributes matching <paramref name="attributePattern"/>. In
+	/// <see cref="IAttributeService.AttributePatternMode.Wildcard"/> mode this is <c>@wipe</c>
+	/// (whole subtrees, per-match reporting, a final tally); in
+	/// <see cref="IAttributeService.AttributePatternMode.Exact"/> mode it is <c>@set obj/attr=</c>
+	/// (one node, a single aggregated Success/Error).
 	/// </summary>
-	/// <param name="executor"></param>
-	/// <param name="obj"></param>
-	/// <param name="attributePattern"></param>
-	/// <param name="patternMode"></param>
-	/// <param name="clearMode"></param>
-	/// <returns></returns>
+	/// <param name="executor">The object performing the clear.</param>
+	/// <param name="obj">The object whose attributes are being cleared.</param>
+	/// <param name="attributePattern">Attribute name or pattern to match.</param>
+	/// <param name="patternMode">Selects the @wipe or the @set semantics described above.</param>
 	public async ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attributePattern,
-		IAttributeService.AttributePatternMode patternMode,
-		IAttributeService.AttributeClearMode clearMode)
+		IAttributeService.AttributePatternMode patternMode)
 	{
-		await ValueTask.CompletedTask;
-
 		if (!await ps.Controls(executor, obj))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
@@ -896,8 +959,21 @@ public class AttributeService(
 
 		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
 
-		var attrArr = await attr.ToArrayAsync();
+		// checkParents is false above, so every match is sourced from obj itself - the whole
+		// write path only ever touches the object's own attributes (Penn's atr_iter_get).
+		var attrArr = (await attr.ToArrayAsync()).Select(x => x.Attribute).ToArray();
 		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
+
+		// PennMUSH's wipe_helper (src/set.c:1503-1504):
+		//   if (wildcard(pattern) && AF_Wizard(atr) && !God(player)) return 0;
+		// "for added security, only God can modify wiz-only-modifiable attributes using this
+		// command and wildcards. Wiping a specific attr still works, though." The guard is keyed
+		// on whether the PATTERN TEXT actually contains a wildcard (wildcard(s) is
+		// `wildcard_count(s, 0) == -1`, hdrs/externs.h:529 - an unescaped '*' or '?'), not on
+		// which pattern mode the caller asked for: @wipe always requests Wildcard mode even for a
+		// literal name, and that literal case must stay allowed.
+		var patternIsWildcard = isWipe && HasUnescapedWildcard(attributePattern);
+		var executorIsGod = executor.IsGod();
 
 		// If no matching attributes exist, there is nothing to clear. Exact mode
 		// (@set obj/attr=, every caller other than @WIPE) succeeds silently, as before -
@@ -941,6 +1017,31 @@ public class AttributeService(
 
 		foreach (var attrItem in attrArr)
 		{
+			// wipe_helper's own guard, ahead of everything wipe_atr does: a wildcarded @wipe
+			// never touches a wizard-flagged attribute unless the player is God. It returns 0
+			// silently - no notify, and the match contributes nothing to the tally - so a mass
+			// wipe simply steps over the protected attributes rather than reporting each.
+			// PermissionService.CanSet grants any wizard outright before its own AF_WIZARD test,
+			// so without this a non-God wizard's `@wipe someplayer/**` destroyed every
+			// wizard-flagged attribute Penn protects.
+			if (patternIsWildcard && !executorIsGod && attrItem.IsWizard())
+			{
+				continue;
+			}
+
+			// AE_SAFE, not AE_ERROR: real_atr_clr (src/attrib.c:1100-1104) tests AF_Safe on the
+			// matched attribute BEFORE Can_Write_Attr and returns a distinct code, which
+			// wipe_helper reports with wording that names the remedy (set.c:1507-1509). Ancestor
+			// safe flags still surface through CanSet below as the generic AE_ERROR, exactly as
+			// they do in Penn (there the ancestor walk lives inside can_write_attr_internal).
+			if (isWipe && attrItem.IsSafe())
+			{
+				deniedNames.Add(attrItem.LongName!);
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.AttributeIsSafeSetNotSafe), executor, attrItem.LongName!);
+				continue;
+			}
+
 			var path = await ResolveWriteGatePathAsync(dbref, attrItem.LongName!, matchKnown);
 
 			// A path shorter than the split name is a broken/orphaned chain. PennMUSH's
@@ -1082,10 +1183,14 @@ public class AttributeService(
 
 		// "root`**" matches every descendant at any depth (double-star crosses backticks) and
 		// nothing else - root itself is never matched by this pattern.
-		var rawDescendants = await mediator
-			.CreateStream(new GetAttributesQuery(dbref, $"{rootName}`**".ToUpper(), false,
-				IAttributeService.AttributePatternMode.Wildcard))
-			.ToArrayAsync();
+		// checkParents: false - a wipe only ever touches the object's own subtree, so every
+		// match here is sourced from dbref and the source can be dropped.
+		var rawDescendants = (await mediator
+				.CreateStream(new GetAttributesQuery(dbref, $"{rootName}`**".ToUpper(), false,
+					IAttributeService.AttributePatternMode.Wildcard))
+				.ToArrayAsync())
+			.Select(x => x.Attribute)
+			.ToArray();
 
 		// "?" is a legal attribute-name character (ValidateService.cs), and the wildcard
 		// translation maps a literal "?" in the pattern to a single-char regex wildcard - so

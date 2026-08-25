@@ -217,6 +217,9 @@
   <data name="UnableToWipeAttribute" xml:space="preserve">
     <value>Unable to wipe attribute {0}.</value>
   </data>
+  <data name="AttributeIsSafeSetNotSafe" xml:space="preserve">
+    <value>Attribute {0} is SAFE. Set it !SAFE to modify it.</value>
+  </data>
   <data name="AttributeCannotBeWipedChildBlocked" xml:space="preserve">
     <value>Attribute {0} cannot be wiped because a child attribute cannot be wiped.</value>
   </data>
