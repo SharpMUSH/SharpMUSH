@@ -8,6 +8,9 @@ public static class SharpAttributeExtensions
 	public static bool IsInternal(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "internal");
 
+	public static bool IsInternal(this LazySharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name == "internal");
+
 	public static bool IsWizard(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "wizard");
 

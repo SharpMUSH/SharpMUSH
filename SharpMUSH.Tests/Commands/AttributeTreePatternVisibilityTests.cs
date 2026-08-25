@@ -206,4 +206,77 @@ public class AttributeTreePatternVisibilityTests
 		await Assert.That(result).DoesNotContain("nearbyvalue")
 			.Because("nearby overrides visual once the viewer is no longer nearby the owner");
 	}
+
+	/// <summary>
+	/// PennMUSH's <c>Can_Read_Attr</c> macro (<c>hdrs/mushdb.h:100-101</c>) reads
+	/// <c>!AF_Internal(a) &amp;&amp; (See_All(p) || can_read_attr_internal(...))</c>: the
+	/// <c>AF_Internal</c> check happens BEFORE the <c>See_All(p) ||</c> easy-out that lets a
+	/// wizard skip the rest of the gate. Unlike <c>mortal_dark</c> (which lives entirely inside
+	/// the See_All-bypassed <c>can_read_attr_internal</c>), there is no privileged escape from
+	/// <c>internal</c> - a wizard viewing an object it neither owns nor controls must still be
+	/// denied.
+	/// </summary>
+	[Test]
+	public async ValueTask InternalBranch_HidesLeafFromEveryone()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatIntOwner");
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatIntWiz");
+		var ownerDbRef = owner.DbRef.ToString();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PI{uid} me=leafvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PI{uid}=internal"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PIOK{uid} me=okvalue"));
+
+		// Control: a wizard's CanExamine short-circuit (IsSee_All) grants read of ANY
+		// non-internal attribute regardless of ownership, so the miss below is the internal
+		// flag itself and not a locate failure or a wizard who somehow lacks the usual escape.
+		var control = await Eval(wizard.Handle, $"get({ownerDbRef}/PIOK{uid})");
+		await Assert.That(control).IsEqualTo("okvalue")
+			.Because("a wizard can read any non-internal attribute on an object it doesn't own");
+
+		var result = await Eval(wizard.Handle, $"get({ownerDbRef}/PI{uid})");
+		await Assert.That(result).DoesNotContain("leafvalue")
+			.Because("AF_INTERNAL denies reads to everyone, even wizards - there is no See_All easy-out for it");
+	}
+
+	/// <summary>
+	/// Guards Task 5's planned rewrite of <c>CanSet</c> (explicit per-flag ancestor tests): if
+	/// that rewrite drops the internal write-denial, this test catches it. PennMUSH's
+	/// <c>Cannot_Write_This_Attr</c> (<c>src/attrib.c:364</c>) reads
+	/// <c>!God(p) &amp;&amp; (AF_Internal(a) || ...)</c> - only God bypasses; a wizard does not.
+	/// </summary>
+	[Test]
+	public async ValueTask InternalBranch_BlocksWritingALeaf()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatIntWOwner");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}=WIZARD"));
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PIW{uid} me=original"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PIW{uid}=internal"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PIWOK{uid} me=original"));
+
+		// Control: the wizard owner can overwrite its own unflagged sibling attribute, so a
+		// no-op on the internal one below is the flag denial, not a Controls/locate failure.
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me=PIWOK{uid}:changed"));
+		var control = await Eval(owner.Handle, $"get(me/PIWOK{uid})");
+		await Assert.That(control).IsEqualTo("changed")
+			.Because("a wizard owner can overwrite its own unflagged attribute");
+
+		// The internal attribute's own read is ALSO denied (even to this wizard owner - see
+		// InternalBranch_HidesLeafFromEveryone), so a post-write get() can't distinguish "write
+		// was blocked" from "write succeeded but read is blocked too". Assert directly on the
+		// @set command's own result instead.
+		var attempt = await Parser.CommandParse(owner.Handle, ConnectionService,
+			MModule.single($"@set me=PIW{uid}:changed"));
+		await Assert.That(attempt.Message?.ToPlainText() ?? string.Empty).Contains("NO PERMISSION")
+			.Because("AF_INTERNAL blocks writes for everyone but God - a wizard owner must not be able to overwrite it");
+	}
 }

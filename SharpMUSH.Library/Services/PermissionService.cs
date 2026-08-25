@@ -28,7 +28,15 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 				.DistinctBy(x => x.Name)
 		};
 
-		// TODO: Internal and SAFE attribute flag checks not yet implemented.
+		// AF_INTERNAL denies writes to everyone except God: PennMUSH's Cannot_Write_This_Attr
+		// (src/attrib.c:364) reads `!God(p) && (AF_Internal(a) || ...)` - Wizard does not
+		// exempt a write to an internal attribute the way it does the wizard-attribute-lock
+		// check below. Inheritable = true on the seed means an ancestor's internal flag is
+		// already folded into compressedAttribute.Flags above.
+		if (compressedAttribute.IsInternal() && !executor.IsGod())
+			return false;
+
+		// TODO: SAFE attribute flag check not yet implemented.
 		return !(!executor.IsGod()
 						 && !(await executor.IsWizard()
 									|| (!compressedAttribute.IsWizard()
@@ -67,6 +75,13 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params SharpAttribute[] attribute)
 	{
+		// AF_INTERNAL denies reads to everyone, including wizards and God: PennMUSH's
+		// Can_Read_Attr macro (hdrs/mushdb.h:100-101) checks `!AF_Internal(a)` before the
+		// `See_All(p) ||` easy-out ever runs, so - unlike mortal_dark below - there is no
+		// privileged escape from it.
+		if (attribute.Any(attr => attr.IsInternal()))
+			return false;
+
 		// mortal_dark hides from non-privileged viewers regardless of ownership
 		if (attribute.Length > 0 && attribute.Any(attr => attr.IsMortalDark())
 				&& !viewer.IsGod() && !await viewer.IsWizard())
@@ -89,6 +104,10 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params LazySharpAttribute[] attribute)
 	{
+		// See the SharpAttribute overload above for the AF_INTERNAL rationale.
+		if (attribute.Any(attr => attr.IsInternal()))
+			return false;
+
 		// mortal_dark hides from non-privileged viewers regardless of ownership
 		if (attribute.Length > 0 && attribute.Any(attr => attr.IsMortalDark())
 				&& !viewer.IsGod() && !await viewer.IsWizard())
