@@ -189,20 +189,22 @@ public partial class Commands
 
 		if (!string.IsNullOrEmpty(maybeAttribute))
 		{
+			string? lastErrorMessage = null;
 			foreach (var flag in MModule.splitList(MModule.single(" "), args["1"].Message!))
 			{
 				var plainFlag = MModule.plainText(flag);
-				if (plainFlag.StartsWith('!'))
+				var flagResult = plainFlag.StartsWith('!')
+					? await AttributeService!.UnsetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag[1..])
+					: await AttributeService!.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
+
+				if (flagResult.IsT1)
 				{
-					await AttributeService!.UnsetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag[1..]);
-				}
-				else
-				{
-					await AttributeService!.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
+					await NotifyService!.Notify(executor, flagResult.AsT1.Value, executor);
+					lastErrorMessage = flagResult.AsT1.Value;
 				}
 			}
 
-			return new CallState(string.Empty);
+			return new CallState(lastErrorMessage ?? string.Empty);
 		}
 
 		var maybeColonLocation = MModule.indexOf(args["1"].Message!, ":");

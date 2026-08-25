@@ -645,7 +645,10 @@ public class AttributeService(
 	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, string flag)
 	{
-		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Execute);
+		// SystemSet: fetch without a baked-in permission gate. The mode-based predicates
+		// (CanViewAttribute/CanExecuteAttribute) test read/eval permission, not writer
+		// permission - CanSet below is the actual write gate for this path (Task 6).
+		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.SystemSet);
 		if (returnedAttribute.IsError)
 		{
 			return returnedAttribute.AsError;
@@ -671,6 +674,16 @@ public class AttributeService(
 		if (returnedFlag is null)
 		{
 			return new Error<string>("Flag Found");
+		}
+
+		// returnedAttribute.AsAttribute is the whole root..leaf ancestor path (see
+		// GetAttributeWithInheritanceQuery), so this walks every level exactly like Penn's
+		// can_write_attr_internal (src/attrib.c:383-408). Penn's af_helper never bypasses safe
+		// for setting a flag ON (only for clearing SAFE itself, in UnsetAttributeFlagAsync
+		// below), so this always obeys it.
+		if (!await ps.CanSet(executor, obj, returnedAttribute.AsAttribute))
+		{
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
@@ -693,7 +706,9 @@ public class AttributeService(
 	public async ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, string flag)
 	{
-		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Execute);
+		// SystemSet: see the comment in SetAttributeFlagAsync - CanSet/CanSetIgnoringSafe below
+		// is the real write gate here, not the mode-based predicate.
+		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.SystemSet);
 		if (returnedAttribute.IsError)
 		{
 			return returnedAttribute.AsError;
@@ -719,6 +734,20 @@ public class AttributeService(
 		if (returnedFlag is null)
 		{
 			return new Error<string>("Flag Found");
+		}
+
+		// Penn's af_helper (src/set.c:509-511) requires the normal, safe-obeying Can_Write_Attr
+		// UNLESS the flag being cleared is SAFE itself, in which case it falls back to
+		// Can_Write_Attr_Ignore_Safe - the one safe=0 call site in the codebase. Every other
+		// unset (including on an attribute that happens to carry safe) still obeys it.
+		var isUnsettingSafe = returnedFlag.Name.Equals("SAFE", StringComparison.OrdinalIgnoreCase);
+		var permitted = isUnsettingSafe
+			? await ps.CanSetIgnoringSafe(executor, obj, returnedAttribute.AsAttribute)
+			: await ps.CanSet(executor, obj, returnedAttribute.AsAttribute);
+
+		if (!permitted)
+		{
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
@@ -873,9 +902,19 @@ public class AttributeService(
 			return new Success();
 		}
 
-		if (!await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
+		// Gate on each match's FULL ancestor path, not the matched attribute alone: a pattern
+		// like "**" (@wipe) can match a leaf several levels under a wizard/safe/locked branch
+		// without that branch node itself appearing in attrArr, so checking the leaf in
+		// isolation would miss the ancestor's flag entirely. GetAttributeQuery returns the
+		// whole root..leaf chain for a given path, exactly what CanSet needs to walk (Task 6).
+		foreach (var attrItem in attrArr)
 		{
-			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+			var path = await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrItem.LongName!.Split('`')))
+				.ToArrayAsync();
+			if (!await ps.CanSet(executor, obj, path))
+			{
+				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+			}
 		}
 
 		// For wildcard patterns (used by @wipe), use WipeAttributeCommand to fully delete the

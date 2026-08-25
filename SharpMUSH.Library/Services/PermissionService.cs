@@ -16,6 +16,20 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		=> lockService.Evaluate(lockType, target, who);
 
 	public async ValueTask<bool> CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
+		=> await CanSetInternal(executor, target, attribute, obeySafe: true);
+
+	// AF_SAFE ignore-safe variant: PennMUSH's af_helper (src/set.c:509-511) is the one call
+	// site in the whole codebase that passes safe=0 (Can_Write_Attr_Ignore_Safe,
+	// hdrs/mushdb.h:120-121) instead of safe=1 (Can_Write_Attr) - and only when the flag
+	// operation being performed is clearing AF_SAFE itself off the attribute
+	// (`(af->clrf & AF_SAFE) && Can_Write_Attr_Ignore_Safe(...)`). Every other write, including
+	// setting or unsetting any OTHER attribute flag, still goes through the normal safe-obeying
+	// check. AttributeService.UnsetAttributeFlagAsync is the one caller: it uses this overload
+	// only when the flag being unset is SAFE, and CanSet (obeying safe) for everything else.
+	public async ValueTask<bool> CanSetIgnoringSafe(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
+		=> await CanSetInternal(executor, target, attribute, obeySafe: false);
+
+	private async ValueTask<bool> CanSetInternal(AnySharpObject executor, AnySharpObject target, SharpAttribute[] attribute, bool obeySafe)
 	{
 		if (!await Controls(executor, target)) return false;
 
@@ -40,14 +54,9 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (attribute.Any(a => a.IsInternal()))
 			return false;
 
-		// AF_SAFE: Cannot_Write_This_Attr's `(s) && AF_Safe(a)` term. Penn only ever passes
-		// s=0 (Can_Write_Attr_Ignore_Safe) from one call site - af_helper's special-case reset
-		// of the SAFE flag itself on the attribute being un-flagged (src/set.c:509-511).
-		// SharpMUSH's CanSet callers are all value writes and clears (SetAttributeAsync,
-		// ClearAttributeAsync), which Penn always routes through the s=1 form, and its
-		// attribute-flag command doesn't call CanSet at all yet - so no caller here needs
-		// s=0; safe is always obeyed.
-		if (attribute.Any(a => a.IsSafe()))
+		// AF_SAFE: Cannot_Write_This_Attr's `(s) && AF_Safe(a)` term - see CanSetIgnoringSafe
+		// above for the one case (clearing SAFE itself) where `obeySafe` is false.
+		if (obeySafe && attribute.Any(a => a.IsSafe()))
 			return false;
 
 		// AF_NODUMP: can_create_attr (src/attrib.c:479-483) - "Only GOD can create an
