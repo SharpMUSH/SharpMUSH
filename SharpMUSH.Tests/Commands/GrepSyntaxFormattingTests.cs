@@ -75,7 +75,16 @@ public class GrepSyntaxFormattingTests
 		// formats through it, so this fragment is the exact wording the advisory notify emits.
 		await ExpectPlainText("PARSER FAILURE");
 
-		// Advisory only -- the value must still be stored despite the warning above.
+		// Advisory only -- the value must still be stored despite the warning above. Clear again
+		// first: ExpectPlainText matches on Received(), which would otherwise still see the
+		// "PARSER FAILURE" notify above in its match window. ParseError.ToMushFailureString() embeds
+		// a source excerpt for errors that land mid-expression (see ErrorWithExcerptCode below), so
+		// for some broken-code values that stale notify could itself contain the asserted fragment.
+		// Without this second clear, the assertion below would pass on that stale notify even if
+		// get() returned nothing at all -- confirmed by temporarily redirecting the read to a
+		// never-written attribute and using a mid-expression BrokenCode value: the assertion passed
+		// with only one ClearReceivedCalls() and correctly failed once this second one was restored.
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"think [get({obj}/BAD)]"));
 		await ExpectPlainText(BrokenCode);
 	}
