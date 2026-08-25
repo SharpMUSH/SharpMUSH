@@ -1585,7 +1585,12 @@ public partial class Functions
 									return ErrorMessages.Returns.PermissionDenied;
 								}
 
-								if (!await HelperFunctions.SafeToAddParent(Mediator!, Database!, target, newParent))
+								// PennMUSH's fun_parent (src/fundb.c:1617-1640) calls do_parent directly and
+								// otherwise always returns the (possibly-unchanged) current parent - it has
+								// no distinguishing #-1-style sentinel for self-reference vs. a cycle, so
+								// neither does this: both collapse to the same machine return here, unlike
+								// the @PARENT command path's notification text.
+								if (await HelperFunctions.SafeToAddParent(Mediator!, Database!, target, newParent) != RelationshipSafety.Safe)
 								{
 									return ErrorMessages.Returns.CycleDetected;
 								}

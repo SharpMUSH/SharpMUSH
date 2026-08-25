@@ -285,7 +285,9 @@ public class BuildingCommandTests
 		var parentOfB = await objB.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfB.IsNone).IsTrue();
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
+		// Cycle through the chain (A -> B, then B -> A attempted) - Penn's "You are not allowed to
+		// be your own ancestor!" (src/set.c:1477), not the self-reference message.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CyclicAncestor), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -323,7 +325,8 @@ public class BuildingCommandTests
 		var parentOfC = await objC.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfC.IsNone).IsTrue();
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
+		// Indirect cycle (A -> B -> C, then C -> A attempted) - same Penn message as a direct cycle.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CyclicAncestor), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -341,7 +344,9 @@ public class BuildingCommandTests
 		var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parent.IsNone).IsTrue();
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
+		// Self-reference (@parent obj=obj) - Penn's "A thing cannot be its own ancestor!"
+		// (src/set.c:1432), distinct from the cycle-through-chain message above.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SelfAncestor), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -377,7 +382,8 @@ public class BuildingCommandTests
 		var parentOf4 = await obj4.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOf4.IsNone).IsTrue();
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
+		// 5-object cycle wrapping back on itself - still a cycle-through-chain, not self-reference.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CyclicAncestor), executor, executor)).IsTrue();
 	}
 
 	[Test]

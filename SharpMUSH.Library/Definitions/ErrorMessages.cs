@@ -660,9 +660,10 @@ public static class ErrorMessages
 		public const string InvalidPasswordForCommand = "Invalid password.";
 		public const string OnlyPlayersHavePasswords = "Only players have passwords.";
 
-		public const string ParentLoopCannotAdd = "Cannot add parent to loop.";
-		// PennMUSH src/set.c:1445-1446 do_parent - MAX_PARENTS guard, distinct from the
-		// self-reference/cycle checks above.
+		// PennMUSH do_parent (src/set.c:1432-1446) notifies distinct text for each of its three
+		// guards - verbatim, including punctuation:
+		public const string SelfAncestor = "A thing cannot be its own ancestor!";
+		public const string CyclicAncestor = "You are not allowed to be your own ancestor!";
 		public const string TooManyAncestors = "Too many ancestors.";
 		public const string ParentSet = "Parent set.";
 		public const string ZoneCycleCannotAdd = "Cannot add zone: would create a cycle.";
