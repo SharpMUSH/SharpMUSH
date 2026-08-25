@@ -44,12 +44,17 @@ public class AttributeTreeWriteGateTests
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGSafeBOwner");
+		var ownerDbRef = owner.DbRef.ToString();
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WSB{uid} me=branchvalue"));
 		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WSB{uid}`LEAF me=original"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/WSB{uid}=safe"));
+		// Applied by God, not the wizard owner: SetAttributeFlagAsync doesn't call CanSet yet
+		// (Task 6), so a wizard could self-apply "safe" today only because of that gap - not
+		// because CanSet actually grants it. Routing the flag-set through God keeps this test
+		// isolated to the CanSet write gate, so it stays green once Task 6 closes that gap.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {ownerDbRef}/WSB{uid}=safe"));
 
 		// Control: an unflagged sibling branch's leaf can be overwritten by its wizard owner,
 		// so a no-op on the safe branch's leaf below is the safe flag, not a Controls failure
@@ -79,11 +84,13 @@ public class AttributeTreeWriteGateTests
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGSafeAOwner");
+		var ownerDbRef = owner.DbRef.ToString();
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WSA{uid} me=original"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/WSA{uid}=safe"));
+		// Applied by God, not the wizard owner - see the comment in SafeBranch_BlocksWritingALeaf.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {ownerDbRef}/WSA{uid}=safe"));
 		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WSAOK{uid} me=original"));
 
 		// Control: the wizard owner can overwrite its own unflagged sibling attribute, so a
@@ -116,7 +123,8 @@ public class AttributeTreeWriteGateTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WND{uid} me=branchvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/WND{uid}=nodump"));
+		// Applied by God, not the wizard owner - see the comment in SafeBranch_BlocksWritingALeaf.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {ownerDbRef}/WND{uid}=nodump"));
 
 		// Control: the wizard owner CAN create a new leaf under an unflagged sibling branch,
 		// so a miss on the nodump branch below is the flag denial, not a broken backtick-path

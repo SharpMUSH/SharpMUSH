@@ -53,6 +53,24 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		// AF_NODUMP: can_create_attr (src/attrib.c:479-483) - "Only GOD can create an
 		// AF_NODUMP attribute (used for semaphores) or add a leaf to a tree with such an
 		// attribute." The God exemption already happened above, so reaching here means deny.
+		//
+		// DELIBERATE PARITY DEVIATION: Penn's can_write_attr_internal (the plain-write path
+		// used by every ordinary @set on an attribute that already exists) never tests
+		// AF_NODUMP at all - only can_create_attr's ancestor walk does, so Penn lets a wizard
+		// overwrite the VALUE of an attribute that already carries AF_NODUMP; only creating a
+		// new nodump-flagged attribute, or a new leaf underneath one, is God-only. CanSet
+		// cannot make that same distinction: it is handed a single already-persisted
+		// SharpAttribute with no marker for "this call is checking whether the attribute
+		// itself may be overwritten" vs "this call is gating a not-yet-created descendant" -
+		// both AttributeService.SetAttributeAsync call sites (the `existing` loop for
+		// overwrites, and the prefix walk for new leaves) invoke this same CanSet with the
+		// same shape of argument. So this denies both cases: overwriting a nodump attribute's
+		// own value is God-only here too, a strict superset of Penn (more restrictive, never
+		// less). Inert today - no seeded attribute defaults to nodump - but it will bite if a
+		// standard attribute (e.g. SEMAPHORE, GeneralCommands.cs:174) is ever given nodump for
+		// parity: a wizard who could freely re-arm it in Penn would be denied here. Resolving
+		// this precisely means threading a create-vs-overwrite flag through CanSet's signature
+		// and both AttributeService call sites - out of scope for this fix.
 		if (attribute.Any(a => a.IsNoDump()))
 			return false;
 
