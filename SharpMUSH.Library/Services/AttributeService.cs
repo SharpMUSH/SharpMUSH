@@ -560,30 +560,37 @@ public class AttributeService(
 		// for each match - PennMUSH re-checks every level, so a mortal_dark (or non-visual)
 		// branch hides its leaves however narrow the pattern was.
 		//
-		// The walk runs against the object each match was READ FROM, not against `obj`: with
-		// checkParents the match set mixes the object's own attributes with ones inherited from
-		// somewhere up the @parent chain, and an inherited tree attribute's branch nodes live on
-		// that parent, not on the child (Penn walks the prefix against `target`, the object
-		// currently being examined - attrib.c:318-341). Siblings sourced from the SAME object are
-		// reused as free ancestor data; a match from a different object is not, or one object's
-		// FOO would be allowed to vouch for another object's FOO`BAR.
+		// Penn re-walks the ancestor path over TARGETS, from `obj` outward along the @parent
+		// chain, not over a single object (AttributeAncestry.CanReadAsync). Both ends matter: the
+		// branch nodes of an INHERITED tree attribute live on the parent the leaf came from, and a
+		// restrictively-flagged branch of the same name on a NEARER object denies before the walk
+		// ever reaches that parent. Attributes matched on a given object are reused as free
+		// ancestor data for that object only - one object's FOO must never vouch for another
+		// object's FOO`BAR.
 		var knownBySource = results
 			.GroupBy(x => x.SourceObject)
 			.ToDictionary(g => g.Key, g => IndexByLongName(g.Select(x => x.Attribute), static x => x.LongName));
 
+		var origin = obj.Object().DBRef;
+		DBRef[]? parentChain = null;
+
 		var permitted = new List<SharpAttribute>();
 		foreach (var (attr, source) in results)
 		{
-			var path = await AttributeAncestry.PathAsync(attr, knownBySource[source],
-				parts => FetchAncestorAsync(source, parts));
+			// A self-sourced match returns at the very first target, so it never needs the chain -
+			// which keeps every checkParents:false caller, and the common case of lattrp on an
+			// object that inherits nothing, at zero extra queries. The chain is built at most once
+			// per call, on the first genuinely inherited match.
+			var chain = source.SameObjectAs(origin)
+				? [origin]
+				: parentChain ??= await ParentChainAsync(obj);
 
-			// A null path is an unresolvable prefix - Penn never grants on one (attrib.c:324-327,
-			// 356). The write gate (ResolveWriteGatePathAsync) has always denied here; the read
-			// gate used to drop the segment and grant.
-			if (path is null) continue;
-
-			if (await ps.CanViewAttribute(executor, obj, path))
+			if (await AttributeAncestry.CanReadAsync(attr, source, chain, origin,
+					(target, parts) => FetchAncestorAsync(target, parts, knownBySource),
+					path => ps.CanViewAttribute(executor, obj, path)))
+			{
 				permitted.Add(attr);
+			}
 		}
 
 		return permitted
@@ -592,22 +599,67 @@ public class AttributeService(
 	}
 
 	/// <summary>
-	/// Loads a single ancestor attribute for the ancestor walk from <paramref name="source"/> -
-	/// the object the leaf was read from, which under parent-checking need not be the object the
-	/// lookup started at. Returns null when the ancestor does not exist there, which
-	/// <see cref="AttributeAncestry.PathAsync(SharpAttribute,IReadOnlyDictionary{string,SharpAttribute},Func{string[],ValueTask{SharpAttribute}})"/>
-	/// turns into a denial.
+	/// <paramref name="obj"/> followed by its <c>@parent</c> chain, capped at
+	/// <c>Limit.MaxParents</c> - PennMUSH's <c>MAX_PARENTS</c> (<c>hdrs/conf.h:458</c>), the same
+	/// bound its own <c>can_read_attr_internal</c> loop uses.
 	/// </summary>
-	private async ValueTask<SharpAttribute?> FetchAncestorAsync(DBRef source, string[] path)
-		=> await mediator
-			.CreateStream(new GetAttributeQuery(source, path))
+	private async ValueTask<DBRef[]> ParentChainAsync(AnySharpObject obj)
+	{
+		var chain = new List<DBRef> { obj.Object().DBRef };
+		var current = obj.Object();
+		var maxDepth = (int)configuration.CurrentValue.Limit.MaxParents;
+
+		for (var depth = 0; depth < maxDepth; depth++)
+		{
+			var parent = await current.Parent.WithCancellation(CancellationToken.None);
+			if (parent.IsNone) break;
+
+			var parentObj = parent.Known.Object();
+
+			// A @parent cycle would otherwise re-walk to the depth cap for every single match.
+			if (chain.Any(d => d.Number == parentObj.DBRef.Number)) break;
+
+			chain.Add(parentObj.DBRef);
+			current = parentObj;
+		}
+
+		return chain.ToArray();
+	}
+
+	/// <summary>
+	/// Resolves one ancestor node on <paramref name="target"/> for the read walk, serving it from
+	/// <paramref name="knownBySource"/> when that target already produced it as a pattern match and
+	/// querying only otherwise. Returns null when no such attribute exists on that target, which
+	/// <see cref="AttributeAncestry"/> turns into "abandon this target", not into a grant.
+	/// </summary>
+	private async ValueTask<SharpAttribute?> FetchAncestorAsync(DBRef target, string[] path,
+		IReadOnlyDictionary<DBRef, Dictionary<string, SharpAttribute>> knownBySource)
+	{
+		if (knownBySource.TryGetValue(target, out var known)
+				&& known.TryGetValue(string.Join('`', path), out var attribute))
+		{
+			return attribute;
+		}
+
+		return await mediator
+			.CreateStream(new GetAttributeQuery(target, path))
 			.LastOrDefaultAsync();
+	}
 
 	/// <inheritdoc cref="FetchAncestorAsync"/>
-	private async ValueTask<LazySharpAttribute?> FetchLazyAncestorAsync(DBRef source, string[] path)
-		=> await mediator
-			.CreateStream(new GetLazyAttributeQuery(source, path))
+	private async ValueTask<LazySharpAttribute?> FetchLazyAncestorAsync(DBRef target, string[] path,
+		IReadOnlyDictionary<DBRef, Dictionary<string, LazySharpAttribute>> knownBySource)
+	{
+		if (knownBySource.TryGetValue(target, out var known)
+				&& known.TryGetValue(string.Join('`', path), out var attribute))
+		{
+			return attribute;
+		}
+
+		return await mediator
+			.CreateStream(new GetLazyAttributeQuery(target, path))
 			.LastOrDefaultAsync();
+	}
 
 	/// <summary>
 	/// PennMUSH's <c>wildcard(s)</c> (<c>hdrs/externs.h:529</c>), which is
@@ -685,24 +737,30 @@ public class AttributeService(
 	private async IAsyncEnumerable<LazySharpAttribute> FilterLazyAttributes(
 		AnySharpObject executor, AnySharpObject obj, IAsyncEnumerable<LazyAttributeWithSource> attributes)
 	{
-		// See GetAttributePatternAsync: permission follows the real root..leaf path, walked
-		// against the object each match was read from - not whatever subset of the tree the
-		// pattern happened to match, and not always `obj`.
+		// See GetAttributePatternAsync: permission follows the real root..leaf path, re-walked
+		// over the target chain from `obj` outward - not whatever subset of the tree the pattern
+		// happened to match, and not a single object.
 		var results = await attributes.ToArrayAsync();
 		var knownBySource = results
 			.GroupBy(x => x.SourceObject)
 			.ToDictionary(g => g.Key, g => IndexByLongName(g.Select(x => x.Attribute), static x => x.LongName));
 
 		var ordered = results.OrderBy(x => x.Attribute.LongName, _attributeSort);
+		var origin = obj.Object().DBRef;
+		DBRef[]? parentChain = null;
 
 		foreach (var (attr, source) in ordered)
 		{
-			var path = await AttributeAncestry.PathAsync(attr, knownBySource[source],
-				parts => FetchLazyAncestorAsync(source, parts));
-			if (path is null) continue;
+			var chain = source.SameObjectAs(origin)
+				? [origin]
+				: parentChain ??= await ParentChainAsync(obj);
 
-			if (await ps.CanViewAttribute(executor, obj, path))
+			if (await AttributeAncestry.CanReadAsync(attr, source, chain, origin,
+					(target, parts) => FetchLazyAncestorAsync(target, parts, knownBySource),
+					path => ps.CanViewAttribute(executor, obj, path)))
+			{
 				yield return attr;
+			}
 		}
 	}
 

@@ -120,6 +120,63 @@ public class AttributeTreeParentSourcedReadTests
 	}
 
 	/// <summary>
+	/// The child SHADOWS the parent's branch name with a restrictively-flagged copy of its own,
+	/// while the leaf still comes from the parent. Penn walks outward from <c>target = obj</c>
+	/// (<c>attrib.c:318-341</c>) and, when a prefix EXISTS on the current target but fails the
+	/// flag test, returns 0 right there (<c>attrib.c:331-335</c>) - it does NOT
+	/// <c>goto continue_target</c>. Only a MISSING prefix (or, on a non-origin target, an
+	/// <c>AF_Private</c> one) advances the walk. So the child's own <c>mortal_dark SECRETS</c>
+	/// denies even though the leaf and its visual branch both live on the parent.
+	/// <para>
+	/// Walking only the SOURCE object would grant here. This is narrower than the leak it
+	/// replaced - it needs the child to duplicate the branch name, flag it restrictively, and not
+	/// hold the leaf - but it is the same class of disclosure.
+	/// </para>
+	/// </summary>
+	[Test]
+	public async ValueTask MortalDarkBranchOnChild_HidesLeafInheritedFromParent()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var parent = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ShadowP");
+		var child = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ShadowC");
+		var viewer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ShadowV");
+
+		// Both branches are fully visual ON THE PARENT, and the parent owns both leaves.
+		await Cmd(1, $"&SHO{uid} {parent}=openbranch");
+		await Cmd(1, $"&SHO{uid}`PUB {parent}=openleaf");
+		await Cmd(1, $"@set {parent}/SHO{uid}=visual");
+		await Cmd(1, $"@set {parent}/SHO{uid}`PUB=visual");
+
+		await Cmd(1, $"&SHD{uid} {parent}=quietbranch");
+		await Cmd(1, $"&SHD{uid}`PUB {parent}=quietleaf");
+		await Cmd(1, $"@set {parent}/SHD{uid}=visual");
+		await Cmd(1, $"@set {parent}/SHD{uid}`PUB=visual");
+
+		await Cmd(1, $"@parent {child.DbRef}={parent}");
+
+		// The child shadows BOTH branch names with copies of its own, and holds NEITHER leaf.
+		// The control's copy is visual; the target's is mortal_dark. Nothing else differs, so the
+		// two results isolate the child-side flag exactly.
+		await Cmd(1, $"&SHO{uid} {child.DbRef}=childopen");
+		await Cmd(1, $"@set {child.DbRef}/SHO{uid}=visual");
+		await Cmd(1, $"&SHD{uid} {child.DbRef}=childquiet");
+		await Cmd(1, $"@set {child.DbRef}/SHD{uid}=mortal_dark");
+
+		// Control: proves the walk still crosses the child's own shadowing branch and reaches the
+		// parent's leaf, so the miss below is the mortal_dark flag rather than a chain that
+		// simply stopped resolving once the child held a branch of the same name.
+		var control = await Eval(viewer.Handle, $"lattrp({child.DbRef}/SHO{uid}`PUB)");
+		await Assert.That(control).Contains($"SHO{uid}`PUB")
+			.Because("a visual shadowing branch on the child must not stop the parent's leaf from resolving");
+
+		var result = await Eval(viewer.Handle, $"lattrp({child.DbRef}/SHD{uid}`PUB)");
+		await Assert.That(result).DoesNotContain($"SHD{uid}`PUB")
+			.Because("Penn denies on the first target where a prefix exists and fails - the child's own mortal_dark branch, not the parent's visual one");
+	}
+
+	/// <summary>
 	/// Characterisation: <c>get()</c> resolves the whole path through
 	/// <c>GetAttributeWithInheritanceQuery</c>, which has always run on the source object, so it
 	/// already denied this. Pinned so the pattern path and the direct path cannot drift apart
