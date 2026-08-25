@@ -73,6 +73,14 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 			var parentObj = parent.Known.Object();
 			await foreach (var attr in GetAttributesForDbRef(parentObj.DBRef, request, cancellationToken))
 			{
+				// Penn's atr_iter_get_parent (attrib.c:1580-1622) calls st_insert (its "seen"
+				// set) BEFORE testing AF_Private, so a private attribute on a nearer ancestor
+				// shadows a farther ancestor's same-named copy even though the nearer one is
+				// never yielded itself. Recording membership first, and bailing on a repeat
+				// before any flag check, reproduces that shadowing.
+				if (!seen.Add(attr.LongName!))
+					continue;
+
 				// no_inherit on ANY level of the branch blocks the whole path when crossing
 				// this parent boundary (Penn: AF_Private test in atr_get_with_parent,
 				// attrib.c:1232-1252 -- checking attr.Flags alone only covers the leaf). Only
@@ -94,8 +102,7 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 					continue;
 				}
 
-				if (seen.Add(attr.LongName!))
-					yield return attr;
+				yield return attr;
 			}
 
 			current = parentObj;

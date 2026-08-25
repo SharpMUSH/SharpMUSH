@@ -657,21 +657,29 @@ public partial class SurrealDatabase
 	/// first segment exists there. <see cref="GetAttributeAsync(DBRef, string[], CancellationToken)"/>
 	/// only ever resolves a full-length match or nothing, which hides a private branch that
 	/// exists without its leaf -- see GetAttributeWithInheritanceAsync for why that matters.
+	///
+	/// Ascends rather than descends: most ancestors in a walk don't carry the attribute at
+	/// all, so probing length 1 first fails in a single query for that (the common) case,
+	/// instead of paying up to <c>attribute.Length</c> queries before giving up. The one
+	/// length that does fully resolve still costs <c>attribute.Length</c> queries either way.
 	/// </summary>
 	private async ValueTask<SharpAttribute[]?> GetLongestExistingAttributePrefixAsync(DBRef target,
 		string[] attribute, CancellationToken cancellationToken)
 	{
-		for (var length = attribute.Length; length >= 1; length--)
+		SharpAttribute[]? longest = null;
+		for (var length = 1; length <= attribute.Length; length++)
 		{
 			var candidate = await GetAttributeAsync(target, attribute[..length], cancellationToken)
 				.ToArrayAsync(cancellationToken);
-			if (candidate.Length == length)
+			if (candidate.Length != length)
 			{
-				return candidate;
+				break;
 			}
+
+			longest = candidate;
 		}
 
-		return null;
+		return longest;
 	}
 
 	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
@@ -746,22 +754,26 @@ public partial class SurrealDatabase
 
 	/// <summary>
 	/// Lazy-attribute counterpart of <see cref="GetLongestExistingAttributePrefixAsync"/> --
-	/// see that method for why a full-length-or-nothing lookup is insufficient here.
+	/// see that method for why a full-length-or-nothing lookup is insufficient here, and why
+	/// it ascends rather than descends.
 	/// </summary>
 	private async ValueTask<LazySharpAttribute[]?> GetLongestExistingLazyAttributePrefixAsync(DBRef target,
 		string[] attribute, CancellationToken cancellationToken)
 	{
-		for (var length = attribute.Length; length >= 1; length--)
+		LazySharpAttribute[]? longest = null;
+		for (var length = 1; length <= attribute.Length; length++)
 		{
 			var candidate = await GetLazyAttributeAsync(target, attribute[..length], cancellationToken)
 				.ToArrayAsync(cancellationToken);
-			if (candidate.Length == length)
+			if (candidate.Length != length)
 			{
-				return candidate;
+				break;
 			}
+
+			longest = candidate;
 		}
 
-		return null;
+		return longest;
 	}
 
 	/// <summary>
