@@ -160,16 +160,20 @@ public class AttributeTreeInheritTests
 	}
 
 	/// <summary>
-	/// Penn's atr_iter_get_parent (attrib.c:1580-1622) -- the wildcard/pattern ancestor walk
-	/// that backs lattrp() -- inserts an attribute's name into its "seen" set BEFORE testing
-	/// AF_Private:
-	/// <code>if (!st_insert(AL_NAME(ptr), &amp;seen) &amp;&amp; ...) continue; // dup
-	/// if (parent != thing) { if (AF_Private(ptr)) continue; }</code>
-	/// So a private copy on a nearer ancestor still claims the name, shadowing a farther
-	/// ancestor's unflagged copy of the same attribute -- even though the nearer, private copy
-	/// is itself never returned. GetAttributeQueryHandler's GetAttributesWithParentsAsync must
-	/// mark a name as seen before the no_inherit filter runs, not after, or the farther
-	/// ancestor's copy leaks through once the nearer one is skipped.
+	/// The pattern here (<c>BRANCH`LEAF</c>, no wildcard) is literal, and Penn's
+	/// atr_iter_get_parent (attrib.c:1500-1622) fast-paths every literal pattern
+	/// (attrib.c:1522-1529) straight through atr_get_with_parent -- the same function backing
+	/// get() -- without ever reaching its own seen/st_insert iteration loop. So the operative
+	/// reference for this test is atr_get_with_parent (attrib.c:1232-1252), identical to
+	/// <see cref="NoInheritBranch_OnIntermediateParent_BlocksGrandparentsLeaf"/>: a private hit
+	/// on a nearer ancestor blocks resolution outright, so the farther grandparent's unflagged
+	/// copy never surfaces either -- there is only ever at most one match for a literal name,
+	/// so "shadowing" here is just the same single-resolution block, not a distinct mechanism.
+	///
+	/// (The iteration loop's own st_insert-before-AF_Private ordering, which produces true
+	/// multi-name shadowing, only runs for a genuine wildcard or regex pattern -- see the task
+	/// report for a known, narrow, untested case where that loop's looser per-branch handling
+	/// leaves SharpMUSH stricter than live Penn.)
 	/// </summary>
 	[Test]
 	public async ValueTask NoInheritLeaf_OnNearerParent_ShadowsFartherAncestorsUnflaggedCopy()
@@ -202,6 +206,6 @@ public class AttributeTreeInheritTests
 
 		var result = await Eval(1, $"lattrp({child}/BRANCH{uid}`LEAF)");
 		await Assert.That(result).DoesNotContain($"BRANCH{uid}`LEAF")
-			.Because("no_inherit on the nearer parent's leaf must shadow the farther grandparent's unflagged copy of the same name, per Penn's seen-before-private-test ordering in atr_iter_get_parent");
+			.Because("no_inherit on the nearer parent's leaf must block resolution of this literal name outright, per Penn's atr_get_with_parent (the fast path a literal lattrp() pattern actually takes) -- the farther grandparent's unflagged copy must not surface as a fallback");
 	}
 }

@@ -73,11 +73,24 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 			var parentObj = parent.Known.Object();
 			await foreach (var attr in GetAttributesForDbRef(parentObj.DBRef, request, cancellationToken))
 			{
-				// Penn's atr_iter_get_parent (attrib.c:1580-1622) calls st_insert (its "seen"
-				// set) BEFORE testing AF_Private, so a private attribute on a nearer ancestor
-				// shadows a farther ancestor's same-named copy even though the nearer one is
-				// never yielded itself. Recording membership first, and bailing on a repeat
-				// before any flag check, reproduces that shadowing.
+				// Penn's atr_iter_get_parent (attrib.c:1500-1622) has an early fast-path
+				// (attrib.c:1522-1529): any literal, non-wildcarded pattern is routed straight
+				// through atr_get_with_parent -- the same function backing get() -- and never
+				// reaches the seen/st_insert iteration loop at all. Every pattern this handler
+				// sees under AttributePatternMode.Exact is literal, so the operative reference
+				// for those is atr_get_with_parent (attrib.c:1232-1252), identical to the fix
+				// in GetAttributeWithInheritanceAsync: a private hit on a nearer ancestor
+				// blocks resolution outright and never falls through to a farther ancestor's
+				// unflagged copy. Recording membership before the flag check reproduces that
+				// outcome for exact-mode lookups.
+				//
+				// The iteration loop (attrib.c:1580-1622, entered only for a genuine wildcard
+				// or regex pattern) has its own st_insert-before-AF_Private ordering, which
+				// gives the same shadowing property there too -- but that loop's private test
+				// only continues the walk rather than aborting it, so a farther ancestor CAN
+				// still surface under a different branch than the one that shadowed it. See
+				// the task report for a known, narrow case where that leaves SharpMUSH
+				// stricter than live Penn for a genuine wildcard pattern.
 				if (!seen.Add(attr.LongName!))
 					continue;
 
