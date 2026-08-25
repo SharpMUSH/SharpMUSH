@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -205,6 +206,66 @@ public class AttributeFunctionUnitTests
 						 "[regxattr(%!/^Test_Regxattr_RangeWithRegex3_,1,2)]",
 		"TEST_REGXATTR_RANGEWITHREGEX3_1 TEST_REGXATTR_RANGEWITHREGEX3_2")]
 	public async Task Test_Regxattr_RangeWithRegex(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/Test_Xattr_FirstMatch1_A,v1)]" +
+						 "[attrib_set(%!/Test_Xattr_FirstMatch1_B,v2)]" +
+						 "[attrib_set(%!/Test_Xattr_FirstMatch1_C,v3)]" +
+						 "[xattr(%!/Test_Xattr_FirstMatch1_*,1,2)]",
+		"TEST_XATTR_FIRSTMATCH1_A TEST_XATTR_FIRSTMATCH1_B")]
+	[Arguments("[attrib_set(%!/Test_Xattr_StartExceeds1_A,v1)]" +
+						 "[attrib_set(%!/Test_Xattr_StartExceeds1_B,v2)]" +
+						 "[attrib_set(%!/Test_Xattr_StartExceeds1_C,v3)]" +
+						 "[xattr(%!/Test_Xattr_StartExceeds1_*,5,2)]",
+		"")]
+	[Arguments("[xattr(%!/Test_Xattr_ArgRangeStart1_*,0,2)]", ErrorMessages.Returns.ArgRange)]
+	[Arguments("[xattr(%!/Test_Xattr_ArgRangeCount1_*,1,0)]", ErrorMessages.Returns.ArgRange)]
+	[Arguments("[xattr(%!/Test_Xattr_NonInteger1_*,x,2)]", ErrorMessages.Returns.Integer)]
+	public async Task Test_Xattr_RangeAndErrors(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/Test_Xattrp_FirstMatch1_A,v1)]" +
+						 "[attrib_set(%!/Test_Xattrp_FirstMatch1_B,v2)]" +
+						 "[attrib_set(%!/Test_Xattrp_FirstMatch1_C,v3)]" +
+						 "[xattrp(%!/Test_Xattrp_FirstMatch1_*,1,2)]",
+		"TEST_XATTRP_FIRSTMATCH1_A TEST_XATTRP_FIRSTMATCH1_B")]
+	[Arguments("[attrib_set(%!/Test_Xattrp_StartExceeds1_A,v1)]" +
+						 "[attrib_set(%!/Test_Xattrp_StartExceeds1_B,v2)]" +
+						 "[attrib_set(%!/Test_Xattrp_StartExceeds1_C,v3)]" +
+						 "[xattrp(%!/Test_Xattrp_StartExceeds1_*,5,2)]",
+		"")]
+	[Arguments("[xattrp(%!/Test_Xattrp_ArgRangeStart1_*,0,2)]", ErrorMessages.Returns.ArgRange)]
+	[Arguments("[xattrp(%!/Test_Xattrp_ArgRangeCount1_*,1,0)]", ErrorMessages.Returns.ArgRange)]
+	[Arguments("[xattrp(%!/Test_Xattrp_NonInteger1_*,x,2)]", ErrorMessages.Returns.Integer)]
+	public async Task Test_Xattrp_RangeAndErrors(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[regxattr(%!/Test_Regxattr_CountZero1_\\[0-9\\]+,1,0)]", ErrorMessages.Returns.ArgRange)]
+	public async Task Test_Regxattr_CountZero(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[regxattrp(%!/Test_Regxattrp_CountZero1_\\[0-9\\]+,1,0)]", ErrorMessages.Returns.ArgRange)]
+	public async Task Test_Regxattrp_CountZero(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
