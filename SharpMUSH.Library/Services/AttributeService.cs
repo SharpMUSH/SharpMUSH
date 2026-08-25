@@ -896,40 +896,98 @@ public class AttributeService(
 			.Select(f => f.Name)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-		// Clear first, then set - matching af_helper's own `AL_FLAGS(atr) &= ~clrf;` before
+		// Clear first, then set - af_helper's own `AL_FLAGS(atr) &= ~clrf;` before
 		// `AL_FLAGS(atr) |= setf;`, so the same flag appearing in both directions in one batch
 		// ends up set, and the outcome never depends on the order flags were typed in.
-		foreach (var (flag, _) in resolved.Where(r => r.Unset))
+		//
+		// The HashSet's return value is the "did this actually change anything" test, so a flag
+		// already in the requested state costs no command round-trip. It deliberately does NOT
+		// gate the report: Penn notifies from the REQUESTED bitmask (`if (af->clrf)`), not from
+		// what changed, so `@set obj/attr=!wizard` on an attribute without wizard still says
+		// "wizard reset." - there is no "is not set" case in Penn to report.
+		foreach (var (flag, _) in resolved.Where(r => r.Unset).DistinctBy(r => r.Flag.Name, StringComparer.OrdinalIgnoreCase))
 		{
-			if (!currentFlags.Contains(flag.Name))
+			if (currentFlags.Remove(flag.Name))
 			{
-				await notifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.AttributeFlagNotSet), obj, flag.Name, target.LongName!);
-				continue;
+				await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, target, flag));
 			}
-
-			await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, target, flag));
-			currentFlags.Remove(flag.Name);
-			await notifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.AttributeFlagUnset), obj, flag.Name, target.LongName!);
 		}
 
-		foreach (var (flag, _) in resolved.Where(r => !r.Unset))
+		foreach (var (flag, _) in resolved.Where(r => !r.Unset).DistinctBy(r => r.Flag.Name, StringComparer.OrdinalIgnoreCase))
 		{
-			if (currentFlags.Contains(flag.Name))
+			if (currentFlags.Add(flag.Name))
+			{
+				await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, target, flag));
+			}
+		}
+
+		// af_helper reports each half of the batch as ONE line naming the whole flag list -
+		// `notify_format(player, T("%s/%s - %s reset."), AName(thing), AL_NAME(atr), af->clrflags)`
+		// and the `set.` counterpart (src/set.c:522-535). It has no per-flag "already set" or
+		// "is not set" line at all: those were a SharpMUSH invention that turned one @set into up
+		// to N messages and leaked whether a flag the player may not even see was present.
+		//
+		// The flag names are ordered by the flag table rather than by how they were typed, because
+		// Penn builds this string with atrflag_to_string -> privs_to_string, which walks
+		// attr_privs_view in table order.
+		var tableOrder = flagList
+			.Select((f, i) => (f.Name, i))
+			.ToDictionary(x => x.Name, x => x.i, StringComparer.OrdinalIgnoreCase);
+
+		string Render(IEnumerable<(SharpAttributeFlag Flag, bool Unset)> half) => string.Join(' ', half
+			.Select(r => r.Flag.Name)
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.OrderBy(name => tableOrder.TryGetValue(name, out var i) ? i : int.MaxValue, Comparer<int>.Default));
+
+		if (!await IsQuietForAsync(executor, obj, target))
+		{
+			var objectName = obj.Object().Name;
+
+			if (resolved.Any(r => r.Unset))
 			{
 				await notifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.AttributeFlagAlreadySet), obj, flag.Name, target.LongName!);
-				continue;
+					nameof(ErrorMessages.Notifications.AttributeFlagsResetFormat), obj,
+					objectName, target.LongName!, Render(resolved.Where(r => r.Unset)));
 			}
 
-			await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, target, flag));
-			currentFlags.Add(flag.Name);
-			await notifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.AttributeFlagSet), obj, flag.Name, target.LongName!);
+			if (resolved.Any(r => !r.Unset))
+			{
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.AttributeFlagsSetFormat), obj,
+					objectName, target.LongName!, Render(resolved.Where(r => !r.Unset)));
+			}
 		}
 
 		return new Success();
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>af_helper</c> suppression test: <c>AreQuiet(player, thing) || AF_Quiet(atr)</c>.
+	/// <c>AreQuiet(x, y)</c> is <c>Quiet(x) || (Quiet(y) &amp;&amp; Owner(y) == x)</c>
+	/// (<c>hdrs/dbdefs.h:198</c>) - note the second term needs the player to BE the object's owner,
+	/// not merely to share one with it.
+	/// </summary>
+	private static async ValueTask<bool> IsQuietForAsync(AnySharpObject executor, AnySharpObject obj,
+		SharpAttribute attribute)
+	{
+		if (attribute.Flags.Any(f => f.Name.Equals("QUIET", StringComparison.OrdinalIgnoreCase)))
+		{
+			return true;
+		}
+
+		if (await executor.HasFlag("QUIET"))
+		{
+			return true;
+		}
+
+		if (!await obj.HasFlag("QUIET"))
+		{
+			return false;
+		}
+
+		var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+
+		return objOwner?.Object.Id == executor.Object().Id;
 	}
 
 	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor,

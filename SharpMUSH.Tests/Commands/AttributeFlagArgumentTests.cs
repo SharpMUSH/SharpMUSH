@@ -143,6 +143,74 @@ public class AttributeFlagArgumentTests
 	}
 
 	/// <summary>
+	/// <c>af_helper</c> reports each half of a batch as ONE line naming the whole list
+	/// (<c>src/set.c:522-535</c>), built from the REQUESTED bitmask rather than from what actually
+	/// changed - so a flag that was not set still appears in the "reset." line, and there is no
+	/// per-flag "already set" / "is not set" wording anywhere in Penn.
+	/// </summary>
+	[Test]
+	public async ValueTask FlagBatch_IsReportedAsOneLinePerHalf()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgReport");
+		var ownerName = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Known.Object().Name;
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&FR{uid} me=value"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/FR{uid}=case"));
+
+		// `nospace` is not set, `case` is: Penn reports both in one "reset." line regardless.
+		var messages = await MessagesWhile(owner.DbRef, () =>
+			Parser.CommandParse(owner.Handle, ConnectionService,
+				MModule.single($"@set me/FR{uid}=!case !nospace regexp")).AsTask());
+
+		await Assert.That(messages).Contains($"{ownerName}/FR{uid} - case nospace reset.")
+			.Because("one line per half, naming the whole requested list in flag-table order");
+		await Assert.That(messages).Contains($"{ownerName}/FR{uid} - regexp set.")
+			.Because("the set half is reported the same way, as its own single line");
+		await Assert.That(messages.Count).IsEqualTo(2)
+			.Because("three flag tokens must produce exactly two lines, not one per flag");
+
+		await Assert.That(await HasFlag(owner.DbRef, $"FR{uid}", "case")).IsFalse();
+		await Assert.That(await HasFlag(owner.DbRef, $"FR{uid}", "regexp")).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>AreQuiet(x, y)</c> is <c>Quiet(x) || (Quiet(y) &amp;&amp; Owner(y) == x)</c>
+	/// (<c>hdrs/dbdefs.h:198</c>); <c>af_helper</c> suppresses both report lines when it holds, or
+	/// when the attribute itself carries <c>AF_Quiet</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask QuietPlayer_GetsNoFlagReport()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgQuiet");
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&FQ{uid} me=value"));
+
+		// Control: without QUIET the same command does report, so the silence below is the flag's
+		// doing and not the command failing.
+		var loud = await MessagesWhile(owner.DbRef, () =>
+			Parser.CommandParse(owner.Handle, ConnectionService,
+				MModule.single($"@set me/FQ{uid}=regexp")).AsTask());
+
+		await Assert.That(loud).IsNotEmpty()
+			.Because("precondition: a non-quiet player is told what the batch did");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}=QUIET"));
+
+		var quiet = await MessagesWhile(owner.DbRef, () =>
+			Parser.CommandParse(owner.Handle, ConnectionService,
+				MModule.single($"@set me/FQ{uid}=!regexp")).AsTask());
+
+		await Assert.That(quiet).IsEmpty()
+			.Because("AreQuiet(player, thing) suppresses both halves of the report");
+		await Assert.That(await HasFlag(owner.DbRef, $"FQ{uid}", "regexp")).IsFalse()
+			.Because("the batch must still be APPLIED - only the report is suppressed");
+	}
+
+	/// <summary>
 	/// <c>af_helper</c> applies <c>AL_FLAGS(atr) &amp;= ~clrf</c> and then
 	/// <c>AL_FLAGS(atr) |= setf</c> to the same live bitmask, so a flag named in both directions
 	/// ends SET regardless of the order it was typed.
