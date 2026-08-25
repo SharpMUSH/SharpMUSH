@@ -75,12 +75,25 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 			{
 				// no_inherit on ANY level of the branch blocks the whole path when crossing
 				// this parent boundary (Penn: AF_Private test in atr_get_with_parent,
-				// attrib.c:1232-1252 -- checking attr.Flags alone only covers the leaf).
-				var segments = attr.LongName!.Split('`');
-				var path = await database.GetAttributeAsync(parentObj.DBRef, segments, cancellationToken)
-					.ToArrayAsync(cancellationToken);
-				if (path.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+				// attrib.c:1232-1252 -- checking attr.Flags alone only covers the leaf). Only
+				// pay for the full-path re-resolution when there's a branch to check at all --
+				// a flat (no backtick) attribute IS the whole path, so its own flags suffice
+				// and the common case costs nothing extra.
+				if (attr.LongName!.Contains('`'))
+				{
+					var segments = attr.LongName.Split('`');
+					var path = await database.GetAttributeAsync(parentObj.DBRef, segments, cancellationToken)
+						.ToArrayAsync(cancellationToken);
+					// Fail closed: if re-resolution doesn't return the full path (a race, or a
+					// name-normalisation mismatch), deny rather than yield the attribute.
+					if (path.Length != segments.Length || path.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+						continue;
+				}
+				else if (attr.Flags.Any(f => f.Name == "no_inherit"))
+				{
 					continue;
+				}
+
 				if (seen.Add(attr.LongName!))
 					yield return attr;
 			}

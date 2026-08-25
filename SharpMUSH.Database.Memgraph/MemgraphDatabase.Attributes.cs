@@ -501,19 +501,25 @@ SET e.defaultFlags = $defaultFlags, e.lim = $lim, e.enumValues = $enumValues
 		var objKey = dbref.Number;
 		var parentResult = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..100]->(parent:Object) RETURN parent", new { key = objKey }, cancellationToken);
 
+		// Penn's atr_get_with_parent (attrib.c:1232-1252) tests every branch-prefix segment for
+		// AF_Private on the ancestor currently being examined BEFORE checking whether the full
+		// leaf resolves there, and returns NULL outright on a hit -- it never falls through to a
+		// more distant ancestor (or a zone) for the same path, even when that ancestor doesn't
+		// carry the leaf itself. So each candidate must be checked using whatever prefix of the
+		// path actually exists on it, not just a full-length match.
 		foreach (var parentNode in parentResult.Result.Select(r => r["parent"].As<INode>()))
 		{
 			var parentKey = parentNode["key"].As<int>();
 			var parentDbRef = new DBRef(parentKey);
-			var parentAttrs = await GetAttributeAsync(parentDbRef, attribute, cancellationToken).ToArrayAsync(cancellationToken);
+			var parentAttrs = await GetLongestExistingAttributePrefixAsync(parentDbRef, attribute, cancellationToken);
+			if (parentAttrs == null) continue;
+
+			if (parentAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+				yield break;
+
 			if (parentAttrs.Length == attribute.Length)
 			{
-				var lastAttr = parentAttrs.Last();
-				// no_inherit on ANY level of the branch blocks the whole path (Penn:
-				// atr_get_with_parent returns NULL outright on such a hit, attrib.c:1232-1252).
-				if (parentAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
-					yield break;
-				var flags = lastAttr.Flags.Where(f => f.Inheritable);
+				var flags = parentAttrs.Last().Flags.Where(f => f.Inheritable);
 				yield return new AttributeWithInheritance(parentAttrs, parentDbRef, AttributeSource.Parent, flags);
 				yield break;
 			}
@@ -531,19 +537,41 @@ RETURN zone
 		{
 			var zoneKey = zoneNode["key"].As<int>();
 			var zoneDbRef = new DBRef(zoneKey);
-			var zoneAttrs = await GetAttributeAsync(zoneDbRef, attribute, cancellationToken).ToArrayAsync(cancellationToken);
+			var zoneAttrs = await GetLongestExistingAttributePrefixAsync(zoneDbRef, attribute, cancellationToken);
+			if (zoneAttrs == null) continue;
+
+			if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+				yield break;
+
 			if (zoneAttrs.Length == attribute.Length)
 			{
-				var lastAttr = zoneAttrs.Last();
-				// no_inherit on ANY level of the branch blocks the whole path (Penn:
-				// atr_get_with_parent returns NULL outright on such a hit, attrib.c:1232-1252).
-				if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
-					yield break;
-				var flags = lastAttr.Flags.Where(f => f.Inheritable);
+				var flags = zoneAttrs.Last().Flags.Where(f => f.Inheritable);
 				yield return new AttributeWithInheritance(zoneAttrs, zoneDbRef, AttributeSource.Zone, flags);
 				yield break;
 			}
 		}
+	}
+
+	/// <summary>
+	/// Returns the longest leading prefix of <paramref name="attribute"/> that exists on
+	/// <paramref name="target"/> (with each segment's own flags), or null if not even the
+	/// first segment exists there. A full-length-or-nothing lookup hides a private branch
+	/// that exists without its leaf -- see GetAttributeWithInheritanceAsync for why that matters.
+	/// </summary>
+	private async ValueTask<SharpAttribute[]?> GetLongestExistingAttributePrefixAsync(DBRef target,
+		string[] attribute, CancellationToken cancellationToken)
+	{
+		for (var length = attribute.Length; length >= 1; length--)
+		{
+			var candidate = await GetAttributeAsync(target, attribute[..length], cancellationToken)
+				.ToArrayAsync(cancellationToken);
+			if (candidate.Length == length)
+			{
+				return candidate;
+			}
+		}
+
+		return null;
 	}
 
 	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
@@ -565,19 +593,22 @@ RETURN zone
 		var objKey = dbref.Number;
 		var parentResult = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..100]->(parent:Object) RETURN parent", new { key = objKey }, cancellationToken);
 
+		// See GetAttributeWithInheritanceAsync above: no_inherit on any existing branch-prefix
+		// segment of an ancestor blocks resolution outright, even when that ancestor doesn't
+		// itself carry the full leaf.
 		foreach (var parentNode in parentResult.Result.Select(r => r["parent"].As<INode>()))
 		{
 			var parentKey = parentNode["key"].As<int>();
 			var parentDbRef = new DBRef(parentKey);
-			var parentAttrs = await GetLazyAttributeAsync(parentDbRef, attribute, cancellationToken).ToArrayAsync(cancellationToken);
+			var parentAttrs = await GetLongestExistingLazyAttributePrefixAsync(parentDbRef, attribute, cancellationToken);
+			if (parentAttrs == null) continue;
+
+			if (parentAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+				yield break;
+
 			if (parentAttrs.Length == attribute.Length)
 			{
-				var lastAttr = parentAttrs.Last();
-				// no_inherit on ANY level of the branch blocks the whole path (Penn:
-				// atr_get_with_parent returns NULL outright on such a hit, attrib.c:1232-1252).
-				if (parentAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
-					yield break;
-				var flags = lastAttr.Flags.Where(f => f.Inheritable);
+				var flags = parentAttrs.Last().Flags.Where(f => f.Inheritable);
 				yield return new LazyAttributeWithInheritance(parentAttrs, parentDbRef, AttributeSource.Parent, flags);
 				yield break;
 			}
@@ -595,19 +626,39 @@ RETURN zone
 		{
 			var zoneKey = zoneNode["key"].As<int>();
 			var zoneDbRef = new DBRef(zoneKey);
-			var zoneAttrs = await GetLazyAttributeAsync(zoneDbRef, attribute, cancellationToken).ToArrayAsync(cancellationToken);
+			var zoneAttrs = await GetLongestExistingLazyAttributePrefixAsync(zoneDbRef, attribute, cancellationToken);
+			if (zoneAttrs == null) continue;
+
+			if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+				yield break;
+
 			if (zoneAttrs.Length == attribute.Length)
 			{
-				var lastAttr = zoneAttrs.Last();
-				// no_inherit on ANY level of the branch blocks the whole path (Penn:
-				// atr_get_with_parent returns NULL outright on such a hit, attrib.c:1232-1252).
-				if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
-					yield break;
-				var flags = lastAttr.Flags.Where(f => f.Inheritable);
+				var flags = zoneAttrs.Last().Flags.Where(f => f.Inheritable);
 				yield return new LazyAttributeWithInheritance(zoneAttrs, zoneDbRef, AttributeSource.Zone, flags);
 				yield break;
 			}
 		}
+	}
+
+	/// <summary>
+	/// Lazy-attribute counterpart of <see cref="GetLongestExistingAttributePrefixAsync"/> --
+	/// see that method for why a full-length-or-nothing lookup is insufficient here.
+	/// </summary>
+	private async ValueTask<LazySharpAttribute[]?> GetLongestExistingLazyAttributePrefixAsync(DBRef target,
+		string[] attribute, CancellationToken cancellationToken)
+	{
+		for (var length = attribute.Length; length >= 1; length--)
+		{
+			var candidate = await GetLazyAttributeAsync(target, attribute[..length], cancellationToken)
+				.ToArrayAsync(cancellationToken);
+			if (candidate.Length == length)
+			{
+				return candidate;
+			}
+		}
+
+		return null;
 	}
 
 	/// <summary>

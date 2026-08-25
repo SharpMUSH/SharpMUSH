@@ -63,7 +63,7 @@ public class AttributeTreeInheritTests
 			.Because("an unflagged branch's leaf must still be inherited through @parent");
 
 		var result = await Eval(1, $"get({child}/BRANCH{uid}`LEAF)");
-		await Assert.That(result).IsNotEqualTo("leafvalue")
+		await Assert.That(result).IsEqualTo(string.Empty)
 			.Because("no_inherit on an ancestor branch must block every leaf beneath it, per Penn's AF_Private test in atr_get_with_parent");
 	}
 
@@ -114,5 +114,48 @@ public class AttributeTreeInheritTests
 		var result = await Eval(1, $"get({obj}/BRANCH{uid}`LEAF)");
 		await Assert.That(result).IsEqualTo("leafvalue")
 			.Because("no_inherit only blocks propagation to children — an object must still read its own attribute tree");
+	}
+
+	/// <summary>
+	/// Penn's atr_get_with_parent (attrib.c:1232-1252) tests each branch-prefix segment for
+	/// AF_Private on the ancestor currently being examined BEFORE checking whether the full
+	/// leaf resolves there, and returns NULL outright on a hit — it never falls through to a
+	/// more distant ancestor for the same attribute path, even if that ancestor's own copy of
+	/// the leaf is unflagged.
+	///
+	/// Grandparent has BRANCH and BRANCH`LEAF, both unflagged. The intermediate parent has only
+	/// BRANCH (no LEAF of its own), set no_inherit. A naive "does the full path resolve here"
+	/// gate (checking only whole-length matches per ancestor) skips the parent as a non-match
+	/// and lets the grandparent's leaf leak straight through — this is the exact leak the task
+	/// closes, displaced by one ancestor level.
+	/// </summary>
+	[Test]
+	public async ValueTask NoInheritBranch_OnIntermediateParent_BlocksGrandparentsLeaf()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var grandparent = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "NIGGrand");
+		var parent = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "NIGMid");
+		var child = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "NIGLeafChild");
+
+		await Cmd($"&BRANCH{uid} {grandparent}=grandbranchvalue");
+		await Cmd($"&BRANCH{uid}`LEAF {grandparent}=leafvalue");
+		// Parent has ONLY the branch attribute (no LEAF of its own), flagged no_inherit.
+		await Cmd($"&BRANCH{uid} {parent}=parentbranchvalue");
+		await Cmd($"@set {parent}/BRANCH{uid}=no_inherit");
+		await Cmd($"@parent {parent}={grandparent}");
+		await Cmd($"@parent {child}={parent}");
+
+		// Control: an unflagged branch two levels up, with the intermediate parent having no
+		// attribute of that name at all, is still inherited straight through — so a miss below
+		// is the no_inherit branch specifically, not a broken multi-level @parent chain.
+		await Cmd($"&OK{uid} {grandparent}=okbranch");
+		await Cmd($"&OK{uid}`LEAF {grandparent}=okleaf");
+		var control = await Eval(1, $"get({child}/OK{uid}`LEAF)");
+		await Assert.That(control).IsEqualTo("okleaf")
+			.Because("an unflagged branch two levels up must still be inherited through an intermediate parent with no attribute of that name");
+
+		var result = await Eval(1, $"get({child}/BRANCH{uid}`LEAF)");
+		await Assert.That(result).IsEqualTo(string.Empty)
+			.Because("no_inherit on the intermediate parent's branch must block resolution outright, even though that parent has no LEAF of its own and the grandparent's copy is unflagged");
 	}
 }
