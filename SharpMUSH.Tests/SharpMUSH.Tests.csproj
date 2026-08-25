@@ -148,21 +148,8 @@
   </Target>
 
   <ItemGroup>
+    <!-- 12 of this file's 70 tests fail; excluded pending investigation, not deleted. -->
     <Compile Remove="Functions\UtilityFunctionUnitTests.cs" />
-    <!-- Infrastructure files are now in SharpMUSH.Tests.Infrastructure -->
-    <Compile Remove="DockerNetwork.cs" />
-    <Compile Remove="ArangoDBTestServer.cs" />
-    <Compile Remove="MemgraphTestServer.cs" />
-    <Compile Remove="NatsTestServer.cs" />
-    <Compile Remove="MySqlTestServer.cs" />
-    <Compile Remove="PostgreSqlTestServer.cs" />
-    <Compile Remove="SqliteTestServer.cs" />
-    <Compile Remove="ServerWebAppFactory.cs" />
-    <Compile Remove="ServerTestWebApplicationBuilderFactory.cs" />
-    <Compile Remove="ConnectionServerWebAppFactory.cs" />
-    <Compile Remove="ConnectionServerTestWebApplicationBuilderFactory.cs" />
-    <Compile Remove="TestHelpers.cs" />
-    <Compile Remove="TestIsolationHelpers.cs" />
   </ItemGroup>
 
 </Project>
