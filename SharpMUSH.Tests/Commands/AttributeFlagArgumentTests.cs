@@ -117,21 +117,28 @@ public class AttributeFlagArgumentTests
 	public async ValueTask BareBangToken_IsRefusedAsAnUnrecognizedFlag()
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "FlagArgBang");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FB{uid} {obj}=value"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/FB{uid}=case"));
+		// Run as a freshly-created player rather than God: this is the one test here that asserts
+		// on a "#-1 ..." notification, and several unrelated suites assert that #1 never receives
+		// one anywhere in the session. `case` carries no privilege requirement, so a mortal can
+		// name it.
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgBang");
 
-		await Assert.That(await HasFlag(obj, $"FB{uid}", "case")).IsTrue()
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&FB{uid} me=value"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/FB{uid}=case"));
+
+		await Assert.That(await HasFlag(owner.DbRef, $"FB{uid}", "case")).IsTrue()
 			.Because("precondition: `case` is the shortest flag name, so it is what StartsWith(\"\") selects");
 
-		var messages = await MessagesWhile(new DBRef(1), () =>
-			Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/FB{uid}=!")).AsTask());
+		var messages = await MessagesWhile(owner.DbRef, () =>
+			Parser.CommandParse(owner.Handle, ConnectionService,
+				MModule.single($"@set me/FB{uid}=!")).AsTask());
 
 		await Assert.That(messages).Contains(ErrorMessages.Returns.UnrecognizedAttributeFlag)
 			.Because("a bare ! names no flag, so the whole argument is refused before anything is applied");
 
-		await Assert.That(await HasFlag(obj, $"FB{uid}", "case")).IsTrue()
+		await Assert.That(await HasFlag(owner.DbRef, $"FB{uid}", "case")).IsTrue()
 			.Because("the refusal must leave every flag on the attribute untouched");
 	}
 
