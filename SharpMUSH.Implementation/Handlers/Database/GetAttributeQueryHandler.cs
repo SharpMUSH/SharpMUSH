@@ -73,8 +73,13 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 			var parentObj = parent.Known.Object();
 			await foreach (var attr in GetAttributesForDbRef(parentObj.DBRef, request, cancellationToken))
 			{
-				// no_inherit flag prevents attribute from being visible to children
-				if (attr.Flags.Any(f => f.Name == "no_inherit"))
+				// no_inherit on ANY level of the branch blocks the whole path when crossing
+				// this parent boundary (Penn: AF_Private test in atr_get_with_parent,
+				// attrib.c:1232-1252 -- checking attr.Flags alone only covers the leaf).
+				var segments = attr.LongName!.Split('`');
+				var path = await database.GetAttributeAsync(parentObj.DBRef, segments, cancellationToken)
+					.ToArrayAsync(cancellationToken);
+				if (path.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
 					continue;
 				if (seen.Add(attr.LongName!))
 					yield return attr;

@@ -604,9 +604,11 @@ public partial class SurrealDatabase
 			if (parentAttrs.Length == attribute.Length)
 			{
 				var lastAttr = parentAttrs.Last();
-				// no_inherit flag prevents attribute from being visible to children
-				if (lastAttr.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase)))
-					continue;
+				// no_inherit on ANY level of the branch blocks the whole path (Penn:
+				// atr_get_with_parent returns NULL outright on such a hit -- it does not fall
+				// through to a more distant ancestor for the same path, see attrib.c:1232-1252).
+				if (parentAttrs.Any(a => a.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase))))
+					yield break;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new AttributeWithInheritance(parentAttrs, parentDbRef, AttributeSource.Parent, flags);
 				yield break;
@@ -632,9 +634,9 @@ public partial class SurrealDatabase
 				if (zoneAttrs.Length == attribute.Length)
 				{
 					var lastAttr = zoneAttrs.Last();
-					// no_inherit flag prevents attribute from being visible to children
-					if (lastAttr.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase)))
-						continue;
+					// no_inherit on ANY level of the branch blocks the whole path.
+					if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase))))
+						yield break;
 					var flags = lastAttr.Flags.Where(f => f.Inheritable);
 					yield return new AttributeWithInheritance(zoneAttrs, zoneDbRef, AttributeSource.Zone, flags);
 					yield break;
@@ -669,9 +671,11 @@ public partial class SurrealDatabase
 			if (parentAttrs.Length == attribute.Length)
 			{
 				var lastAttr = parentAttrs.Last();
-				// no_inherit flag prevents attribute from being visible to children
-				if (lastAttr.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase)))
-					continue;
+				// no_inherit on ANY level of the branch blocks the whole path (Penn:
+				// atr_get_with_parent returns NULL outright on such a hit -- it does not fall
+				// through to a more distant ancestor for the same path, see attrib.c:1232-1252).
+				if (parentAttrs.Any(a => a.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase))))
+					yield break;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new LazyAttributeWithInheritance(parentAttrs, parentDbRef, AttributeSource.Parent, flags);
 				yield break;
@@ -697,9 +701,9 @@ public partial class SurrealDatabase
 				if (zoneAttrs.Length == attribute.Length)
 				{
 					var lastAttr = zoneAttrs.Last();
-					// no_inherit flag prevents attribute from being visible to children
-					if (lastAttr.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase)))
-						continue;
+					// no_inherit on ANY level of the branch blocks the whole path.
+					if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase))))
+						yield break;
 					var flags = lastAttr.Flags.Where(f => f.Inheritable);
 					yield return new LazyAttributeWithInheritance(zoneAttrs, zoneDbRef, AttributeSource.Zone, flags);
 					yield break;

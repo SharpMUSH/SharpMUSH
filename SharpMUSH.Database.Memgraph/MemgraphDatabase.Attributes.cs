@@ -509,8 +509,9 @@ SET e.defaultFlags = $defaultFlags, e.lim = $lim, e.enumValues = $enumValues
 			if (parentAttrs.Length == attribute.Length)
 			{
 				var lastAttr = parentAttrs.Last();
-				// no_inherit flag prevents attribute from being visible to children
-				if (lastAttr.Flags.Any(f => f.Name == "no_inherit"))
+				// no_inherit on ANY level of the branch blocks the whole path (Penn:
+				// atr_get_with_parent returns NULL outright on such a hit, attrib.c:1232-1252).
+				if (parentAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
 					yield break;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new AttributeWithInheritance(parentAttrs, parentDbRef, AttributeSource.Parent, flags);
@@ -534,8 +535,9 @@ RETURN zone
 			if (zoneAttrs.Length == attribute.Length)
 			{
 				var lastAttr = zoneAttrs.Last();
-				// no_inherit flag prevents attribute from being visible to children
-				if (lastAttr.Flags.Any(f => f.Name == "no_inherit"))
+				// no_inherit on ANY level of the branch blocks the whole path (Penn:
+				// atr_get_with_parent returns NULL outright on such a hit, attrib.c:1232-1252).
+				if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
 					yield break;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new AttributeWithInheritance(zoneAttrs, zoneDbRef, AttributeSource.Zone, flags);
@@ -571,8 +573,9 @@ RETURN zone
 			if (parentAttrs.Length == attribute.Length)
 			{
 				var lastAttr = parentAttrs.Last();
-				// no_inherit flag prevents attribute from being visible to children
-				if (lastAttr.Flags.Any(f => f.Name == "no_inherit"))
+				// no_inherit on ANY level of the branch blocks the whole path (Penn:
+				// atr_get_with_parent returns NULL outright on such a hit, attrib.c:1232-1252).
+				if (parentAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
 					yield break;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new LazyAttributeWithInheritance(parentAttrs, parentDbRef, AttributeSource.Parent, flags);
@@ -596,8 +599,9 @@ RETURN zone
 			if (zoneAttrs.Length == attribute.Length)
 			{
 				var lastAttr = zoneAttrs.Last();
-				// no_inherit flag prevents attribute from being visible to children
-				if (lastAttr.Flags.Any(f => f.Name == "no_inherit"))
+				// no_inherit on ANY level of the branch blocks the whole path (Penn:
+				// atr_get_with_parent returns NULL outright on such a hit, attrib.c:1232-1252).
+				if (zoneAttrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
 					yield break;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new LazyAttributeWithInheritance(zoneAttrs, zoneDbRef, AttributeSource.Zone, flags);

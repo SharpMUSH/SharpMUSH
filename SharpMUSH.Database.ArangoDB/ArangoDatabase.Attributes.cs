@@ -989,8 +989,11 @@ public partial class ArangoDatabase
 
 		var lastAttr = attrs.Last();
 
-		// no_inherit flag prevents attribute from being visible to children
-		if (result.filterFlags && lastAttr.Flags.Any(f => f.Name == "no_inherit"))
+		// no_inherit on ANY level of the branch blocks the whole path when crossing a
+		// parent/zone boundary (Penn: AF_Private test in atr_get_with_parent /
+		// can_read_attr_internal, attrib.c:325,1232-1252 — guarded by target != obj, so it
+		// never applies to an object's own attributes, only while resolving through a parent).
+		if (result.filterFlags && attrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
 		{
 			yield break;
 		}
@@ -1152,6 +1155,14 @@ public partial class ArangoDatabase
 		}
 
 		var lastAttr = attrs.Last();
+
+		// no_inherit on ANY level of the branch blocks the whole path when crossing a
+		// parent/zone boundary — see GetAttributeWithInheritanceAsync above.
+		if (result.filterFlags && attrs.Any(a => a.Flags.Any(f => f.Name == "no_inherit")))
+		{
+			yield break;
+		}
+
 		var flags = result.filterFlags
 			? lastAttr.Flags.Where(f => f.Inheritable)
 			: lastAttr.Flags;
