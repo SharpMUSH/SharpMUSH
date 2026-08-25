@@ -826,7 +826,7 @@ public partial class Functions
 
 				var attribute = dbrefAndMaybeArg.AsT0.Attribute!;
 
-				var attributeObject = await AttributeService!.GetAttributeAsync(executor, executor, attribute,
+				var attributeObject = await AttributeService!.GetAttributeAsync(executor, actualObject, attribute,
 					IAttributeService.AttributeMode.Read, false);
 
 				return attributeObject switch

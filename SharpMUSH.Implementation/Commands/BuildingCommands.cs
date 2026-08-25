@@ -1442,13 +1442,46 @@ public partial class Commands
 				var clonedObjOptional = await Mediator!.Send(new GetObjectNodeQuery(cloneDbRef));
 				var clonedObj = clonedObjOptional.WithoutNone();
 
-				await foreach (var attr in obj.Object().Attributes.Value)
+				// Penn's atr_cpy (attrib.c:1692-1710) walks the source's flat, sorted attribute
+				// list - branch vs. leaf is purely a naming convention over one namespace - and
+				// for each attribute checks AF_Nocopy, then calls atr_new_add(..., makeroots:
+				// false). With makeroots false, atr_new_add (attrib.c:756-820) silently aborts
+				// without adding when the immediate parent isn't already on the destination
+				// (:804-806). Because the list is sorted with parent before child, a no_clone
+				// BRANCH is itself skipped by atr_cpy, and its leaves then find no parent on the
+				// clone either and are dropped too - incidentally, via the missing-root abort,
+				// not via any permission walk of their own. GetAttributesByRegexAsync (via
+				// GetAttributesQuery in Regex mode) is used here rather than the depth-1
+				// enumeration above (or the unsorted GetAttributesAsync) because it walks the
+				// whole tree and sorts LongName ascending - parent before child - which this
+				// skip-propagation depends on.
+				var skippedAttributes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+				await foreach (var sourceAttribute in Mediator!.CreateStream(
+					new GetAttributesQuery(obj.Object().DBRef, ".*", false,
+						IAttributeService.AttributePatternMode.Regex)))
 				{
-					if (!attr.Name.StartsWith("_"))
+					var attr = sourceAttribute.Attribute;
+					var longName = attr.LongName!;
+					var lastSeparator = longName.LastIndexOf('`');
+					var parentLongName = lastSeparator < 0 ? null : longName[..lastSeparator];
+					var parentSkipped = parentLongName is not null && skippedAttributes.Contains(parentLongName);
+
+					// The "_"-prefix skip is a pre-existing SharpMUSH-only filter, orthogonal to
+					// Penn's no_clone. It folds into the same skip set so that a "_"-prefixed
+					// branch's children don't get silently auto-vivified a stripped-down parent
+					// by SetAttributeAsync (ArangoDatabase.Attributes.cs:608-675) - the same
+					// missing-root hazard the no_clone propagation above exists to avoid.
+					if (attr.IsNoCopy() || attr.Name.StartsWith("_") || parentSkipped)
 					{
-						await AttributeService!.SetAttributeAsync(executor, clonedObj,
-							attr.Name, attr.Value);
+						skippedAttributes.Add(longName);
+						continue;
 					}
+
+					// AL_CREATOR(ptr) is passed through unchanged in atr_cpy (attrib.c:1706) - a
+					// cloned attribute keeps its original creator, not the cloner.
+					var creator = await attr.Owner.WithCancellation(CancellationToken.None) ?? owner;
+					await AttributeService!.SetAttributeAsync(executor, clonedObj, longName, attr.Value, creator);
 				}
 
 				await foreach (var flag in obj.Object().Flags.Value)

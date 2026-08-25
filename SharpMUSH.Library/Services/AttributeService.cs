@@ -923,6 +923,21 @@ public class AttributeService(
 		AnySharpObject obj,
 		string attribute,
 		MString value)
+		=> await SetAttributeAsync(executor, obj, attribute, value,
+			await executor.Object().Owner.WithCancellation(CancellationToken.None));
+
+	/// <summary>
+	/// As the four-argument overload, but stamps <paramref name="creator"/> as the attribute's
+	/// owner instead of deriving it from <paramref name="executor"/>. Mirrors PennMUSH's
+	/// <c>atr_cpy</c> (<c>src/attrib.c:1706</c>), which passes <c>AL_CREATOR(ptr)</c> through
+	/// unchanged - a cloned attribute keeps its original creator, not the cloner. <c>@CLONE</c>
+	/// is the only caller today.
+	/// </summary>
+	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor,
+		AnySharpObject obj,
+		string attribute,
+		MString value,
+		SharpPlayer creator)
 	{
 		if (!await ps.Controls(executor, obj))
 		{
@@ -985,8 +1000,7 @@ public class AttributeService(
 			}
 		}
 
-		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
+		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value, creator));
 
 		// Advisory-only set-time validation: PennMUSH never validates softcode at set time, and
 		// parity governs here, so a syntax error must never block the set -- only warn the setter,

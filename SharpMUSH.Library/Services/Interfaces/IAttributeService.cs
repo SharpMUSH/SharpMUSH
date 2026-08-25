@@ -1,6 +1,7 @@
 ﻿using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -27,6 +28,15 @@ public interface IAttributeService
 	ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributeMode mode, bool parent = true);
 
 	ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value);
+
+	/// <summary>
+	/// As the four-argument overload, but stamps <paramref name="creator"/> as the attribute's
+	/// owner instead of deriving it from <paramref name="executor"/>. Mirrors PennMUSH's
+	/// <c>atr_cpy</c> (<c>src/attrib.c:1706</c>), which passes <c>AL_CREATOR(ptr)</c> through
+	/// unchanged - a cloned attribute keeps its original creator, not the cloner. <c>@CLONE</c>
+	/// is the only caller today.
+	/// </summary>
+	ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value, SharpPlayer creator);
 
 	ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributePatternMode patternMode);
 
