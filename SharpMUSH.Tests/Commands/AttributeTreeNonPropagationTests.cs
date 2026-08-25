@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -48,6 +49,19 @@ public class AttributeTreeNonPropagationTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+
+	/// <summary>
+	/// Everything <paramref name="who"/> was notified of while <paramref name="action"/> ran, in
+	/// order, read from the recipient-keyed recorder rather than the session-shared NSubstitute
+	/// call list.
+	/// </summary>
+	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
+	{
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(who);
+		await action();
+		return [.. recorder.For(who).Skip(before)];
+	}
 
 	/// <summary>
 	/// AF_WIZARD is absent from Penn's <c>can_read_attr_internal</c> (<c>src/attrib.c:282-338</c>,
@@ -110,27 +124,24 @@ public class AttributeTreeNonPropagationTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&VB{uid}`LEAF {obj}=leafvalue_{uid}"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/VB{uid}=veiled"));
 
-		NotifyService.ClearReceivedCalls();
 		// VB{uid}** (no backtick) matches the branch itself plus every descendant, so both rows
-		// are candidates for this single examine call.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"examine {obj}/VB{uid}**"));
+		// are candidates for this single examine call. Read through the recipient-keyed recorder
+		// rather than the session-shared NSubstitute call list: enumerating ReceivedCalls() while
+		// other tests are still recording violates NSubstitute's threading contract, and clearing
+		// it would delete a parallelizable test's calls out from under it.
+		var messages = await MessagesWhile(new DBRef(1), () =>
+			Parser.CommandParse(1, ConnectionService, MModule.single($"examine {obj}/VB{uid}**")).AsTask());
 
 		// Positive control: the veiled branch's own value must be suppressed. Proves the flag
 		// was actually set and this examine call genuinely exercises the veiled gate, rather than
 		// the pattern silently matching nothing or the flag failing to apply.
-		await NotifyService.DidNotReceive().Notify(
-			Arg.Any<AnySharpObject>(),
-			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextContains(m, $"branchvalue_{uid}")),
-			Arg.Any<AnySharpObject?>(),
-			Arg.Any<INotifyService.NotificationType>());
+		await Assert.That(messages.Any(m => m.Contains($"branchvalue_{uid}"))).IsFalse()
+			.Because("a veiled branch must not disclose its own value to @examine");
 
 		// The actual claim: the unflagged leaf beneath the veiled branch must still show its
 		// value. If a future change added tree-propagation for veiled (matching Penn's help
 		// text instead of Penn's code), this would start failing.
-		await NotifyService.Received().Notify(
-			Arg.Any<AnySharpObject>(),
-			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextContains(m, $"leafvalue_{uid}")),
-			Arg.Any<AnySharpObject?>(),
-			Arg.Any<INotifyService.NotificationType>());
+		await Assert.That(messages.Any(m => m.Contains($"leafvalue_{uid}"))).IsTrue()
+			.Because("veiled does not propagate down the tree in Penn's code, whatever its help text says");
 	}
 }

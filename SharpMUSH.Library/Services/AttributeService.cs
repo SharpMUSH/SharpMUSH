@@ -823,6 +823,15 @@ public class AttributeService(
 			var unset = token.StartsWith('!');
 			var name = unset ? token[1..] : token;
 
+			// A bare "!" survives MModule.splitList (which only drops empty items), leaving an
+			// empty name. Without this guard the symbol comparison below matches `prefixmatch`
+			// (whose symbol is the empty string) and, failing that, StartsWith("") matches the
+			// shortest flag in the list - so `@set obj/attr=!` silently unset an arbitrary flag.
+			if (string.IsNullOrEmpty(name))
+			{
+				return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
+			}
+
 			var flag = flagList
 				.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
 					|| (x.Symbol != null && x.Symbol.Equals(name, StringComparison.OrdinalIgnoreCase)));
@@ -837,10 +846,29 @@ public class AttributeService(
 			{
 				// Mirrors Penn: string_to_atrflagsets fails the WHOLE argument on one bad flag
 				// name, before any flag in the batch is ever applied.
-				return new Error<string>("Flag Found");
+				return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
 			}
 
 			resolved.Add((flag, unset));
+		}
+
+		// PennMUSH's string_to_atrflagsets (src/attrib.c:248-252) rejects the WHOLE argument -
+		// before a single flag is applied, and with the same "unrecognized flag" wording, so the
+		// player learns nothing about the flag's existence - when an unprivileged player so much
+		// as NAMES a privileged flag, in either direction: Hasprivs (wizard or royalty) for
+		// mortal_dark, See_All for wizard. CanSet below is a different gate entirely: it tests
+		// the flags the attribute ALREADY carries, so on its own it lets a mortal set `wizard`
+		// on an unflagged attribute of their own (and then locks them out of it).
+		if (resolved.Any(r => r.Flag.Name.Equals("MORTAL_DARK", StringComparison.OrdinalIgnoreCase))
+				&& !await executor.IsPriv())
+		{
+			return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
+		}
+
+		if (resolved.Any(r => r.Flag.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase))
+				&& !await executor.IsSee_All())
+		{
+			return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
 		}
 
 		var target = returnedAttribute.AsAttribute.Last();
@@ -860,33 +888,45 @@ public class AttributeService(
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
-		var currentFlags = target.Flags;
+		// Tracked as the loops run, not snapshotted: af_helper applies `AL_FLAGS(atr) &= ~clrf`
+		// and then `AL_FLAGS(atr) |= setf` to the SAME live bitmask, so the set pass sees the
+		// clear pass's result. Against a frozen snapshot, `!wizard wizard` would clear the flag
+		// and then skip the re-set as "already set", ending unset - the exact opposite of Penn.
+		var currentFlags = target.Flags
+			.Select(f => f.Name)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
 		// Clear first, then set - matching af_helper's own `AL_FLAGS(atr) &= ~clrf;` before
 		// `AL_FLAGS(atr) |= setf;`, so the same flag appearing in both directions in one batch
 		// ends up set, and the outcome never depends on the order flags were typed in.
 		foreach (var (flag, _) in resolved.Where(r => r.Unset))
 		{
-			if (!currentFlags.Any(f => f.Name.Equals(flag.Name, StringComparison.OrdinalIgnoreCase)))
+			if (!currentFlags.Contains(flag.Name))
 			{
-				await notifyService.Notify(executor, $"Flag {flag.Name} is not set on attribute {target.LongName}", obj);
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.AttributeFlagNotSet), obj, flag.Name, target.LongName!);
 				continue;
 			}
 
 			await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, target, flag));
-			await notifyService.Notify(executor, $"Flag {flag.Name} unset from attribute {target.LongName}", obj);
+			currentFlags.Remove(flag.Name);
+			await notifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.AttributeFlagUnset), obj, flag.Name, target.LongName!);
 		}
 
 		foreach (var (flag, _) in resolved.Where(r => !r.Unset))
 		{
-			if (currentFlags.Any(f => f.Name.Equals(flag.Name, StringComparison.OrdinalIgnoreCase)))
+			if (currentFlags.Contains(flag.Name))
 			{
-				await notifyService.Notify(executor, $"Flag {flag.Name} is already set on attribute {target.LongName}", obj);
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.AttributeFlagAlreadySet), obj, flag.Name, target.LongName!);
 				continue;
 			}
 
 			await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, target, flag));
-			await notifyService.Notify(executor, $"Flag {flag.Name} set on attribute {target.LongName}", obj);
+			currentFlags.Add(flag.Name);
+			await notifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.AttributeFlagSet), obj, flag.Name, target.LongName!);
 		}
 
 		return new Success();

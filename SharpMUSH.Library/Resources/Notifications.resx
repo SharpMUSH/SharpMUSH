@@ -223,6 +223,18 @@
   <data name="AttributeCannotBeWipedChildBlocked" xml:space="preserve">
     <value>Attribute {0} cannot be wiped because a child attribute cannot be wiped.</value>
   </data>
+  <data name="AttributeFlagSet" xml:space="preserve">
+    <value>Flag {0} set on attribute {1}</value>
+  </data>
+  <data name="AttributeFlagUnset" xml:space="preserve">
+    <value>Flag {0} unset from attribute {1}</value>
+  </data>
+  <data name="AttributeFlagAlreadySet" xml:space="preserve">
+    <value>Flag {0} is already set on attribute {1}</value>
+  </data>
+  <data name="AttributeFlagNotSet" xml:space="preserve">
+    <value>Flag {0} is not set on attribute {1}</value>
+  </data>
   <data name="NoAttributesWiped" xml:space="preserve">
     <value>No attributes wiped.</value>
   </data>

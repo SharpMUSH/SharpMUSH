@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using OneOf;
 using OneOf.Types;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Common;
@@ -48,6 +49,29 @@ public partial class Commands
 	private const string AttrLinkType = "_LINKTYPE";
 	private const string LinkTypeVariable = "variable";
 	private const string LinkTypeHome = "home";
+	private const string AttrFollowing = "FOLLOWING";
+
+	/// <summary>
+	/// Clears a follower's FOLLOWING attribute on the engine's own authority.
+	/// </summary>
+	/// <remarks>
+	/// FOLLOWING is seeded with the <c>wizard</c> attribute flag, so no mortal can write it
+	/// under their own authority - which is why PennMUSH performs every FOLLOWING write as
+	/// GOD: <c>atr_clr(follower, "FOLLOWING", GOD)</c> (src/move.c:1451) and
+	/// <c>atr_add(follower, "FOLLOWING", ..., GOD, 0)</c> (src/move.c:1236, 1243, 1292).
+	/// This is engine bookkeeping, not a player write; routing it through the executor would
+	/// deny every mortal FOLLOW, DESERT, DISMISS and UNFOLLOW.
+	/// </remarks>
+	private static async ValueTask<OneOf<Success, Error<string>>> ClearFollowingAsync(
+		AnySharpObject follower)
+		=> await AttributeService!.ClearAttributeAsync(await HelperFunctions.GetGod(Mediator!), follower,
+			AttrFollowing, IAttributeService.AttributePatternMode.Exact);
+
+	/// <inheritdoc cref="ClearFollowingAsync"/>
+	private static async ValueTask<OneOf<Success, Error<string>>> SetFollowingAsync(
+		AnySharpObject follower, AnySharpObject leader)
+		=> await AttributeService!.SetAttributeAsync(await HelperFunctions.GetGod(Mediator!), follower,
+			AttrFollowing, MModule.single(leader.Object().DBRef.ToString()));
 
 
 	[SharpCommand(Name = "@CLOCK", Switches = ["JOIN", "SPEAK", "MOD", "SEE", "HIDE"], Behavior = CB.Default | CB.EqSplit,
@@ -878,11 +902,14 @@ public partial class Commands
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
-				IAttributeService.AttributePatternMode.Exact);
+			var selfCleared = await ClearFollowingAsync(executor);
+			if (selfCleared.IsT1)
+			{
+				await NotifyService!.Notify(executor, selfCleared.AsT1.Value, executor);
+				return CallState.Empty;
+			}
 
 			var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
-			var clearedCount = 0;
 			var executorDbref = executor.Object().DBRef.ToString();
 
 			await foreach (var obj in allObjects)
@@ -890,16 +917,14 @@ public partial class Commands
 				var objAttributes = obj.Attributes.Value;
 				await foreach (var attr in objAttributes)
 				{
-					if (attr.LongName == "FOLLOWING" && attr.Value.ToPlainText() == executorDbref)
+					if (attr.LongName == AttrFollowing && attr.Value.ToPlainText() == executorDbref)
 					{
 						var locateResult = await LocateService!.Locate(parser, executor, executor,
 							obj.DBRef.ToString(), LocateFlags.All);
 						if (locateResult.IsValid())
 						{
 							var objAny = locateResult.AsAnyObject;
-							await AttributeService!.ClearAttributeAsync(executor, objAny, "FOLLOWING",
-								IAttributeService.AttributePatternMode.Exact);
-							clearedCount++;
+							await ClearFollowingAsync(objAny);
 						}
 						break;
 					}
@@ -923,7 +948,7 @@ public partial class Commands
 
 		var target = targetResult.WithoutError().WithoutNone();
 
-		var followingAttr = await AttributeService!.GetAttributeAsync(executor, executor, "FOLLOWING",
+		var followingAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrFollowing,
 			IAttributeService.AttributeMode.Read, false);
 
 		if (followingAttr.IsAttribute)
@@ -931,13 +956,18 @@ public partial class Commands
 			var followingDbref = followingAttr.AsAttribute.Last().Value.ToPlainText();
 			if (followingDbref == target.Object().DBRef.ToString())
 			{
-				await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
-					IAttributeService.AttributePatternMode.Exact);
+				var cleared = await ClearFollowingAsync(executor);
+				if (cleared.IsT1)
+				{
+					await NotifyService!.Notify(executor, cleared.AsT1.Value, executor);
+					return CallState.Empty;
+				}
+
 				await NotifyService!.Notify(executor, $"You stop following {target.Object().Name}.", executor);
 			}
 		}
 
-		var targetFollowingAttr = await AttributeService!.GetAttributeAsync(executor, target, "FOLLOWING",
+		var targetFollowingAttr = await AttributeService!.GetAttributeAsync(executor, target, AttrFollowing,
 			IAttributeService.AttributeMode.Read, false);
 
 		if (targetFollowingAttr.IsAttribute)
@@ -945,8 +975,13 @@ public partial class Commands
 			var targetFollowingDbref = targetFollowingAttr.AsAttribute.Last().Value.ToPlainText();
 			if (targetFollowingDbref == executor.Object().DBRef.ToString())
 			{
-				await AttributeService!.ClearAttributeAsync(executor, target, "FOLLOWING",
-					IAttributeService.AttributePatternMode.Exact);
+				var dismissed = await ClearFollowingAsync(target);
+				if (dismissed.IsT1)
+				{
+					await NotifyService!.Notify(executor, dismissed.AsT1.Value, executor);
+					return CallState.Empty;
+				}
+
 				await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
 				await NotifyService!.Notify(target, $"{executor.Object().Name} deserts you. You stop following.");
 			}
@@ -972,15 +1007,18 @@ public partial class Commands
 				var objAttributes = obj.Attributes.Value;
 				await foreach (var attr in objAttributes)
 				{
-					if (attr.LongName == "FOLLOWING" && attr.Value.ToPlainText() == executorDbref)
+					if (attr.LongName == AttrFollowing && attr.Value.ToPlainText() == executorDbref)
 					{
 						var locateResult = await LocateService!.Locate(parser, executor, executor,
 							obj.DBRef.ToString(), LocateFlags.All);
 						if (locateResult.IsValid())
 						{
 							var objAny = locateResult.AsAnyObject;
-							await AttributeService!.ClearAttributeAsync(executor, objAny, "FOLLOWING",
-								IAttributeService.AttributePatternMode.Exact);
+							if ((await ClearFollowingAsync(objAny)).IsT1)
+							{
+								continue;
+							}
+
 							await NotifyService!.Notify(objAny, $"{executor.Object().Name} dismisses you. You stop following.");
 							dismissedCount++;
 						}
@@ -1006,7 +1044,7 @@ public partial class Commands
 
 		var target = targetResult.WithoutError().WithoutNone();
 
-		var followingAttr = await AttributeService!.GetAttributeAsync(executor, target, "FOLLOWING",
+		var followingAttr = await AttributeService!.GetAttributeAsync(executor, target, AttrFollowing,
 			IAttributeService.AttributeMode.Read, false);
 
 		if (followingAttr.IsNone || followingAttr.IsError)
@@ -1022,8 +1060,12 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		await AttributeService!.ClearAttributeAsync(executor, target, "FOLLOWING",
-			IAttributeService.AttributePatternMode.Exact);
+		var targetDismissed = await ClearFollowingAsync(target);
+		if (targetDismissed.IsT1)
+		{
+			await NotifyService!.Notify(executor, targetDismissed.AsT1.Value, executor);
+			return CallState.Empty;
+		}
 
 		await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
 		await NotifyService!.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.");
@@ -1589,8 +1631,12 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		await AttributeService!.SetAttributeAsync(executor, executor, "FOLLOWING",
-			MModule.single(target.Object().DBRef.ToString()));
+		var followSet = await SetFollowingAsync(executor, target);
+		if (followSet.IsT1)
+		{
+			await NotifyService!.Notify(executor, followSet.AsT1.Value, executor);
+			return CallState.Empty;
+		}
 
 		await NotifyService!.Notify(executor, $"You are now following {target.Object().Name}.", executor);
 		await NotifyService!.Notify(target, $"{executor.Object().Name} is now following you.");
@@ -2491,7 +2537,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var followingAttr = await AttributeService!.GetAttributeAsync(executor, executor, "FOLLOWING",
+		var followingAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrFollowing,
 			IAttributeService.AttributeMode.Read, false);
 
 		if (followingAttr.IsNone || followingAttr.IsError)
@@ -2500,8 +2546,12 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
-			IAttributeService.AttributePatternMode.Exact);
+		var unfollowed = await ClearFollowingAsync(executor);
+		if (unfollowed.IsT1)
+		{
+			await NotifyService!.Notify(executor, unfollowed.AsT1.Value, executor);
+			return CallState.Empty;
+		}
 
 		await NotifyService!.Notify(executor, "You stop following.", executor);
 		return CallState.Empty;

@@ -55,6 +55,13 @@ public static class ErrorMessages
 		public const string InvalidPassword = "#-1 INVALID PASSWORD";
 		public const string InvalidFlag = "#-1 INVALID FLAG";
 		public const string ObjectAttributeString = "#-1 INVALID OBJECT/ATTRIBUTE VALUE";
+		/// <summary>
+		/// PennMUSH's single failure for every bad flag argument (<c>src/set.c:583-585</c>,
+		/// "Unrecognized attribute flag."): an unknown name, an empty name, and a privileged
+		/// name the player may not use all fail the whole argument identically, so the wording
+		/// never reveals that a flag the player cannot use exists.
+		/// </summary>
+		public const string UnrecognizedAttributeFlag = "#-1 UNRECOGNIZED ATTRIBUTE FLAG";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BadArgumentFormat = "#-1 BAD ARGUMENT FORMAT TO {0}";
 		public const string ArgRange = "#-1 ARGUMENT OUT OF RANGE";
@@ -437,6 +444,14 @@ public static class ErrorMessages
 		public const string AttributeIsSafeSetNotSafe = "Attribute {0} is SAFE. Set it !SAFE to modify it.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCannotBeWipedChildBlocked = "Attribute {0} cannot be wiped because a child attribute cannot be wiped.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeFlagSet = "Flag {0} set on attribute {1}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeFlagUnset = "Flag {0} unset from attribute {1}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeFlagAlreadySet = "Flag {0} is already set on attribute {1}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeFlagNotSet = "Flag {0} is not set on attribute {1}";
 		public const string NoAttributesWiped = "No attributes wiped.";
 		public const string OneAttributeWiped = "One attribute wiped.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

@@ -202,6 +202,14 @@ public class AttributeTreePatternVisibilityTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@teleport {viewer.DbRef}={roomDbRef}"));
 
+		// The room dbref is scraped out of @dig's message text: if that wording ever changes,
+		// the @teleport above silently does nothing and the negative assertion below passes
+		// because the viewer never moved, not because the nearby gate fired. This is the only
+		// test covering that gate, so prove the move happened first.
+		var viewerLocation = await Eval(viewer.Handle, "loc(me)");
+		await Assert.That(viewerLocation).IsEqualTo(roomDbRef)
+			.Because("the nearby assertion is vacuous unless the viewer actually left the owner's room");
+
 		var result = await Eval(viewer.Handle, $"get({ownerDbRef}/PN{uid})");
 		await Assert.That(result).DoesNotContain("nearbyvalue")
 			.Because("nearby overrides visual once the viewer is no longer nearby the owner");

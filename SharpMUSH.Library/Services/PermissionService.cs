@@ -100,7 +100,11 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		foreach (var a in attribute.Where(a => a.IsLocked()))
 		{
 			var attrOwner = await a.Owner.WithCancellation(CancellationToken.None);
-			if (attrOwner?.Id != executorOwner?.Id)
+
+			// Fail closed on an unresolvable owner: `AL_CREATOR(a) == Owner(p)` cannot hold for
+			// a creator that could not be looked up, but `attrOwner?.Id != executorOwner?.Id`
+			// would read null == null as a match and permit the write.
+			if (attrOwner is null || executorOwner is null || attrOwner.Id != executorOwner.Id)
 				return false;
 		}
 
@@ -127,8 +131,14 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		{
 			var attrOwner = await finalAttr.Owner.WithCancellation(CancellationToken.None);
 			var targetOwner = await target.Object().Owner.WithCancellation(CancellationToken.None);
-			return (attrOwner?.Id == executor.Id())
-						 || (attrOwner?.Id == targetOwner?.Id && await executor.Owns(target));
+
+			// Same fail-closed rule as CanSetInternal: an attribute whose creator cannot be
+			// resolved matches nobody, rather than matching every other unresolvable owner.
+			if (attrOwner is null)
+				return false;
+
+			return (attrOwner.Id == executor.Id())
+						 || (targetOwner is not null && attrOwner.Id == targetOwner.Id && await executor.Owns(target));
 		}
 
 		return true;

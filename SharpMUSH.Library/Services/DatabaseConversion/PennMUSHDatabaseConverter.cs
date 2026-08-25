@@ -634,7 +634,19 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								// both safe and wizard would silently lose wizard once safe
 								// landed first (the importing executor is the object itself,
 								// never God). Penn's own converter has no such per-flag gate.
-								await _attributeService.SetAttributeFlagsAsync(sharpObj, sharpObj, pennAttr.Name, pennAttr.Flags);
+								// The batch is all-or-nothing (Penn's string_to_atrflagsets fails the
+								// whole argument on one unrecognized name), so a single unsupported
+								// imported flag silently leaves the attribute with NO flags at all.
+								// Surface it rather than reporting a clean conversion.
+								var flagResult = await _attributeService.SetAttributeFlagsAsync(sharpObj, sharpObj,
+									pennAttr.Name, pennAttr.Flags);
+
+								if (flagResult.IsT1)
+								{
+									warnings.Add(
+										$"Failed to set flags [{string.Join(", ", pennAttr.Flags)}] on attribute " +
+										$"{pennAttr.Name} of #{pennObj.DBRef}: {flagResult.AsT1.Value}");
+								}
 							}
 						}
 						else

@@ -371,7 +371,10 @@ public class AttributeAncestryTests
 
 		await Assert.That(can).IsFalse()
 			.Because("A`B`C is not visual, and it sits between the root and the leaf");
-		await Assert.That(store.Fetched).IsEquivalentTo(new[] { "#10/A", "#10/A`B", "#10/A`B`C" })
+		// Joined rather than IsEquivalentTo: that assertion ignores order, so it would pass on a
+		// leaf-first walk even though root-first is the whole claim being made here.
+		await Assert.That(string.Join(" -> ", store.Fetched))
+			.IsEqualTo("#10/A -> #10/A`B -> #10/A`B`C")
 			.Because("every strict prefix is resolved root-first, and the leaf is never re-fetched");
 	}
 
