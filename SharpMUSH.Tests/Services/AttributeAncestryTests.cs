@@ -238,6 +238,11 @@ public class AttributeAncestryTests
 	/// <c>attrib.c:325</c>'s <c>(target != obj &amp;&amp; AF_Private(atr))</c>: a no_inherit prefix
 	/// on a target OTHER than the original object abandons that target instead of denying, since
 	/// no_inherit means "this does not cross an inheritance boundary", not "this is secret".
+	/// <para>
+	/// The parent's <c>FOO</c> is deliberately NOT visual. Were it visual, ignoring
+	/// <c>no_inherit</c> entirely would still pass the flag test, still reach the grandparent and
+	/// still return true - the test would be unable to fail.
+	/// </para>
 	/// </summary>
 	[Test]
 	public async Task NoInheritBranchOnAnIntermediateTarget_AbandonsThatTargetInsteadOfDenying()
@@ -245,41 +250,78 @@ public class AttributeAncestryTests
 		var leaf = Attr("FOO`BAR", "visual");
 		var store = new Store()
 			.With(Child)
-			.With(Parent, Attr("FOO", "visual", "no_inherit"))
+			.With(Parent, Attr("FOO", "no_inherit"))
 			.With(Grandparent, Attr("FOO", "visual"), leaf);
 
 		var can = await AttributeAncestry.CanReadAsync(leaf, Grandparent, [Child, Parent, Grandparent], Child,
 			store.Fetch, MortalPermits);
 
-		await Assert.That(can).IsTrue();
+		await Assert.That(can).IsTrue()
+			.Because("the no_inherit branch abandons the parent rather than flag-testing it, so the walk reaches the grandparent");
 	}
 
 	/// <summary>
 	/// The same flag on the ORIGINAL object is not an escape - Penn's condition is guarded by
-	/// <c>target != obj</c>, so a no_inherit branch on <c>obj</c> itself is flag-tested normally.
+	/// <c>target != obj</c>, so a no_inherit branch on <c>obj</c> itself is flag-tested normally
+	/// rather than abandoning the only target there is.
+	/// <para>
+	/// The branch is visual, so honouring the guard GRANTS. Were it non-visual, the test would
+	/// return false whether the guard was honoured (flag test fails) or wrongly ignored (origin
+	/// abandoned, chain exhausted) - unable to fail either way.
+	/// </para>
 	/// </summary>
 	[Test]
 	public async Task NoInheritBranchOnTheOriginalObject_IsFlagTestedNormally()
 	{
 		var leaf = Attr("FOO`BAR", "visual");
-		var store = new Store().With(Child, Attr("FOO", "no_inherit"), leaf);
+		var store = new Store().With(Child, Attr("FOO", "no_inherit", "visual"), leaf);
 
 		var can = await AttributeAncestry.CanReadAsync(leaf, Child, [Child], Child, store.Fetch, MortalPermits);
 
-		await Assert.That(can).IsFalse()
-			.Because("no_inherit does not exempt the origin's own branch from the visual requirement");
+		await Assert.That(can).IsTrue()
+			.Because("no_inherit must not abandon the origin - its branch is visual, so the read is granted");
 	}
 
+	/// <summary>
+	/// The child holds a perfectly readable <c>FOO</c>, so every prefix on the only target in the
+	/// chain resolves and passes; the sole reason to deny is that the target holding the LEAF was
+	/// never reached. Without that visual <c>FOO</c> the walk would abandon the child on a missing
+	/// prefix and the test would pass for a reason unrelated to what it claims to pin.
+	/// </summary>
 	[Test]
 	public async Task SourceNotPresentInTheChain_Denies()
 	{
 		var leaf = Attr("FOO`BAR", "visual");
-		var store = new Store().With(Parent, Attr("FOO", "visual"), leaf);
+		var store = new Store()
+			.With(Child, Attr("FOO", "visual"))
+			.With(Parent, Attr("FOO", "visual"), leaf);
 
 		var can = await AttributeAncestry.CanReadAsync(leaf, Parent, [Child], Child, store.Fetch, MortalPermits);
 
 		await Assert.That(can).IsFalse()
 			.Because("running off the end of the chain without reaching the leaf is attrib.c:356's return 0");
+	}
+
+	/// <summary>
+	/// One object's <c>FOO</c> must never vouch for another object's <c>FOO`BAR</c>. Every prefix
+	/// is resolved against the target currently being walked, so the child's readable <c>FOO</c>
+	/// cannot stand in for the parent's restrictive one of the same name. Structural in production
+	/// (the ancestor cache is keyed by target), and this pins the behaviour it produces.
+	/// </summary>
+	[Test]
+	public async Task APrefixOnOneTarget_DoesNotVouchForTheSameNameOnAnother()
+	{
+		var leaf = Attr("FOO`BAR", "visual");
+		var store = new Store()
+			.With(Child, Attr("FOO", "visual"))
+			.With(Parent, Attr("FOO", "visual", "mortal_dark"), leaf);
+
+		var can = await AttributeAncestry.CanReadAsync(leaf, Parent, [Child, Parent], Child, store.Fetch, MortalPermits);
+
+		await Assert.That(can).IsFalse()
+			.Because("the parent's own mortal_dark FOO governs the parent's leaf - the child's visual FOO of the same name is a different attribute");
+		await Assert.That(store.Fetched).IsEquivalentTo(new[] { "#10/FOO", "#11/FOO" })
+			.Because("the same prefix name is resolved separately against each target, never reused across them");
 	}
 
 	[Test]
