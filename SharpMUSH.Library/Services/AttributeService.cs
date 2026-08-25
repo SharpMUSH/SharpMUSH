@@ -897,11 +897,23 @@ public class AttributeService(
 		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
 
 		var attrArr = await attr.ToArrayAsync();
+		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
 
-		// If no matching attributes exist, there is nothing to clear — succeed silently.
-		// PennMUSH does not error when clearing a non-existent attribute.
+		// If no matching attributes exist, there is nothing to clear. Exact mode
+		// (@set obj/attr=, every caller other than @WIPE) succeeds silently, as before -
+		// PennMUSH does not error when clearing a non-existent attribute. But @wipe's own
+		// do_wipe (set.c:1567-1577) ALWAYS prints its tally, even when atr_iter_get matched
+		// nothing at all: a typo'd pattern still gets "No attributes wiped.", not silence.
+		// Round 3 moved the tally below this early return, which made a zero-match @wipe go
+		// completely silent - a real regression from round 2's (wrong, but at least present)
+		// generic success line (Task 6 fix round 4).
 		if (attrArr.Length == 0)
 		{
+			if (isWipe)
+			{
+				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoAttributesWiped), executor, 0);
+			}
+
 			return new Success();
 		}
 
@@ -914,7 +926,6 @@ public class AttributeService(
 		// pattern also matched are reused as free ancestor data (Task 6 fix round 1, L1)
 		// before falling back to a query.
 		var matchKnown = IndexByLongName(attrArr, static x => x.LongName!);
-		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
 
 		// PennMUSH's wipe_helper (src/set.c:1493-1523) is invoked once per matched attribute
 		// via atr_iter_get and notifies each denial/tree-block AS IT'S DISCOVERED, then keeps

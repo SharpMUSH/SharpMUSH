@@ -214,9 +214,6 @@
   <data name="CreatedObject" xml:space="preserve">
     <value>Created: Object {0}.</value>
   </data>
-  <data name="WipedAttributes" xml:space="preserve">
-    <value>Wiped attributes matching {0}.</value>
-  </data>
   <data name="UnableToWipeAttribute" xml:space="preserve">
     <value>Unable to wipe attribute {0}.</value>
   </data>
@@ -664,9 +661,6 @@
   </data>
   <data name="ObjectIsProtectedSafe" xml:space="preserve">
     <value>That object is protected (SAFE).</value>
-  </data>
-  <data name="AttributesWiped" xml:space="preserve">
-    <value>Attributes wiped.</value>
   </data>
 
   <!-- Building / Creating -->

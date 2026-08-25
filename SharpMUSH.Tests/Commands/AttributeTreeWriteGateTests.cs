@@ -337,4 +337,29 @@ public class AttributeTreeWriteGateTests
 			nameof(ErrorMessages.Notifications.OneAttributeWiped), owner.DbRef)).IsTrue()
 			.Because("the tally must still be reported even when part of the wipe was blocked");
 	}
+
+	/// <summary>
+	/// Task 6 fix round 4: the pre-existing <c>attrArr.Length == 0</c> early return in
+	/// <c>ClearAttributeAsync</c> fires before the whole tally/notify machinery round 3 added,
+	/// so a pattern that matches nothing at all - e.g. a typo'd <c>@wipe obj/NOSUCHPATTERN</c> -
+	/// used to print absolutely nothing. PennMUSH's <c>do_wipe</c> (<c>set.c:1567-1577</c>)
+	/// always prints its tally, even when <c>atr_iter_get</c> matched zero attributes: "No
+	/// attributes wiped.", not silence. This is the state a user hits most often (a typo), so
+	/// silence here is worse than round 2's wrong-but-present generic success line.
+	/// </summary>
+	[Test]
+	public async ValueTask WipeWithNoMatches_StillReportsZero()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeNoMatch");
+
+		// No attribute named anything like this exists on owner - the pattern matches nothing.
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/NOSUCHPATTERN{uid}*"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.NoAttributesWiped), owner.DbRef)).IsTrue()
+			.Because("a zero-match @wipe must still report the tally, not go completely silent");
+	}
 }

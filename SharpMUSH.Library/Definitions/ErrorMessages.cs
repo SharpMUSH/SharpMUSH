@@ -425,8 +425,6 @@ public static class ErrorMessages
 		public const string Created = "Created {0} ({1}).";
 		public const string CreatedObject = "Created: Object {0}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string WipedAttributes = "Wiped attributes matching {0}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string UnableToWipeAttribute = "Unable to wipe attribute {0}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCannotBeWipedChildBlocked = "Attribute {0} cannot be wiped because a child attribute cannot be wiped.";
@@ -689,7 +687,6 @@ public static class ErrorMessages
 		public const string AttributeOwnerChanged = "Attribute owner changed.";
 		public const string WipeWhat = "Wipe what?";
 		public const string ObjectIsProtectedSafe = "That object is protected (SAFE).";
-		public const string AttributesWiped = "Attributes wiped.";
 
 		public const string Destroyed = "Destroyed.";
 		public const string LinkedToHome = "Linked to home.";
