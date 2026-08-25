@@ -75,7 +75,15 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (await CanExamine(viewer, target))
 			return true;
 
-		return attribute.Length > 0 && attribute.All(attr => attr.IsVisual());
+		if (attribute.Length == 0)
+			return false;
+
+		// PennMUSH attrib.c:305-310 - AF_Nearby overrides AF_Visual's grant when the viewer
+		// could not look at the target (can_look_at, hdrs/mushdb.h:104). Only pay for the
+		// nearby/location lookups when some level of the path actually carries the flag.
+		var canLook = attribute.Any(attr => attr.IsNearby()) && await CanLookAt(viewer, target);
+
+		return attribute.All(attr => attr.IsVisual() && (!attr.IsNearby() || canLook));
 	}
 
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
@@ -89,7 +97,38 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (await CanExamine(viewer, target))
 			return true;
 
-		return attribute.Length > 0 && attribute.All(attr => attr.IsVisual());
+		if (attribute.Length == 0)
+			return false;
+
+		// See the SharpAttribute overload above for the nearby/canlook rationale.
+		var canLook = attribute.Any(attr => attr.IsNearby()) && await CanLookAt(viewer, target);
+
+		return attribute.All(attr => attr.IsVisual() && (!attr.IsNearby() || canLook));
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>can_look_at</c> (<c>hdrs/mushdb.h:104</c>): whether <paramref name="viewer"/>
+	/// could look at <paramref name="target"/> - same location, one location away through a
+	/// non-opaque room (or one the viewer controls), or the Long_Fingers power/privilege.
+	/// Gates the <c>nearby</c> attribute flag's override of <c>visual</c> in
+	/// <see cref="CanViewAttribute(AnySharpObject,AnySharpObject,SharpAttribute[])"/>.
+	/// </summary>
+	private async ValueTask<bool> CanLookAt(AnySharpObject viewer, AnySharpObject target)
+	{
+		if (await viewer.HasLongFingers())
+			return true;
+
+		if (await LocateService.Nearby(viewer, target))
+			return true;
+
+		var targetLocation = (await target.Where()).WithExitOption();
+		if (await LocateService.Nearby(viewer, targetLocation)
+				&& (!await targetLocation.IsOpaque() || await Controls(viewer, targetLocation)))
+			return true;
+
+		var viewerLocation = (await viewer.Where()).WithExitOption();
+		return await LocateService.Nearby(viewerLocation, target)
+					 && (!await viewerLocation.IsOpaque() || await Controls(viewer, viewerLocation));
 	}
 
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target)

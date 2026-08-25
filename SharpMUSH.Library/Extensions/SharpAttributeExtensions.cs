@@ -26,11 +26,16 @@ public static class SharpAttributeExtensions
 	public static bool IsNoCopy(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "no_clone");
 
+	/// <summary>
+	/// PennMUSH's <c>AF_VISUAL</c> alone (<c>attrib.c:306</c>). Do not fold in <c>public</c>:
+	/// that flag overrides <c>SAFER_UFUN</c> for evaluation (see <see cref="IsPublic(SharpAttribute)"/>
+	/// and <c>PermissionService.CanEvalAttr</c>) and has nothing to do with reading.
+	/// </summary>
 	public static bool IsVisual(this SharpAttribute attribute)
-		=> attribute.Flags.Any(x => x.Name is "visual" or "public");
+		=> attribute.Flags.Any(x => x.Name == "visual");
 
 	public static bool IsVisual(this LazySharpAttribute attribute)
-		=> attribute.Flags.Any(x => x.Name is "visual" or "public");
+		=> attribute.Flags.Any(x => x.Name == "visual");
 
 	public static bool IsRegexp(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "regexp");
@@ -67,6 +72,9 @@ public static class SharpAttributeExtensions
 		=> attribute.Flags.Any(x => x.Name == "no_debug");
 
 	public static bool IsNearby(this SharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name == "nearby");
+
+	public static bool IsNearby(this LazySharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "nearby");
 
 	public static bool IsPublic(this SharpAttribute attribute)

@@ -138,4 +138,72 @@ public class AttributeTreePatternVisibilityTests
 		await Assert.That(result).DoesNotContain("leafvalue")
 			.Because("visual on the leaf alone does not grant access - every level must be visual");
 	}
+
+	/// <summary>
+	/// Penn's read gate (attrib.c can_read_attr_internal) tests AF_VISUAL alone. AF_PUBLIC is
+	/// a distinct flag that overrides SAFER_UFUN for evaluation, unrelated to reading. Before
+	/// the fix, IsVisual() conflated "visual" and "public", so a public-only attribute was
+	/// wrongly readable by a viewer who cannot examine the object.
+	/// </summary>
+	[Test]
+	public async ValueTask PublicAlone_DoesNotGrantRead()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatPubOwner");
+		var viewer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatPubViewer");
+		var ownerDbRef = owner.DbRef.ToString();
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PBOK{uid} me=okvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PBOK{uid}=visual"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PB{uid} me=pubvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PB{uid}=public"));
+
+		// Control: a visual (not public) attribute is readable by a non-owner, so the miss
+		// below is the public/visual distinction and not a locate or CanExamine failure.
+		var control = await Eval(viewer.Handle, $"get({ownerDbRef}/PBOK{uid})");
+		await Assert.That(control).IsEqualTo("okvalue")
+			.Because("a visual attribute is readable by a non-owner");
+
+		var result = await Eval(viewer.Handle, $"get({ownerDbRef}/PB{uid})");
+		await Assert.That(result).DoesNotContain("pubvalue")
+			.Because("public alone must not grant read - Penn's read gate tests AF_VISUAL only");
+	}
+
+	/// <summary>
+	/// Penn's can_read_attr_internal (attrib.c:305-310) ANDs the AF_VISUAL grant with
+	/// <c>!AF_Nearby(atr) || canlook</c>: a nearby-flagged attribute's visual grant only
+	/// applies when the viewer could look at the object (same room, or one location away
+	/// through a non-opaque room, or Long_Fingers). IsNearby had zero callers before this.
+	/// </summary>
+	[Test]
+	public async ValueTask NearbyVisualAttribute_IsHiddenFromRemoteViewer()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatNearOwner");
+		var viewer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatNearViewer");
+		var ownerDbRef = owner.DbRef.ToString();
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PN{uid} me=nearbyvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PN{uid}=visual nearby"));
+
+		// Control: both players start in the same room, so the attribute is readable while
+		// nearby - a miss here would mean the test never reached the nearby gate at all.
+		var control = await Eval(viewer.Handle, $"get({ownerDbRef}/PN{uid})");
+		await Assert.That(control).IsEqualTo("nearbyvalue")
+			.Because("visual+nearby is readable while the viewer is nearby the owner");
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName("PatNearRoom");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@teleport {viewer.DbRef}={roomDbRef}"));
+
+		var result = await Eval(viewer.Handle, $"get({ownerDbRef}/PN{uid})");
+		await Assert.That(result).DoesNotContain("nearbyvalue")
+			.Because("nearby overrides visual once the viewer is no longer nearby the owner");
+	}
 }
