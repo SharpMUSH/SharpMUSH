@@ -96,13 +96,20 @@ public class AttributeSyntaxFlagTests
 		await Assert.That(HasFlag(afterAttr.AsAttribute.Last(), "cmdsyntax")).IsFalse();
 	}
 
+	private static string SymbolFor(string name) => name switch
+	{
+		"cmdsyntax" => "x",
+		"funsyntax" => "f",
+		_ => string.Empty
+	};
+
 	private static SharpAttribute WithFlags(params string[] names) => new(
 		Id: "attribute/1",
 		Key: "TEST",
 		Name: "TEST",
 		Flags: names.Select(n => new SharpAttributeFlag
 		{
-			Name = n, Symbol = n == "cmdsyntax" ? "x" : "f", System = true, Inheritable = true
+			Name = n, Symbol = SymbolFor(n), System = true, Inheritable = true
 		}).ToArray(),
 		CommandListIndex: null,
 		LongName: "TEST",
