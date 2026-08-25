@@ -237,4 +237,105 @@ public class CloneAttributeTreeTests
 		await Assert.That(await Eval(1, $"owner({clone}/{uid})")).IsEqualTo($"#{setter.DbRef.Number}")
 			.Because("the clone's attribute must keep the ORIGINAL creator (the setter), not the cloner (#1) - red before the fix, since SetAttributeAsync stamps the executor as owner");
 	}
+
+	/// <summary>
+	/// A cloned attribute keeps its ORIGINAL flags, not just its value/creator - PennMUSH's
+	/// <c>atr_cpy</c> assigns <c>AL_FLAGS(ptr)</c> alongside <c>AL_CREATOR(ptr)</c> on the very
+	/// same <c>atr_new_add</c> call (<c>attrib.c:1706-1707</c>). Preserving only the creator and
+	/// dropping the flags would silently strip <c>visual</c>, <c>no_inherit</c>, <c>wizard</c>,
+	/// and <c>safe</c> off every cloned attribute.
+	/// </summary>
+	[Test]
+	public async ValueTask ClonedAttribute_PreservesFlags()
+	{
+		var uid = TestIsolationHelpers.GenerateUniqueName("FL");
+		var src = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CloneSrcFL");
+		var cloneName = TestIsolationHelpers.GenerateUniqueName("CloneDstFL");
+
+		await Cmd(1, $"&{uid} {src}=val_{uid}");
+		await Cmd(1, $"@set {src}/{uid}=visual no_inherit");
+
+		// Positive controls: the flags actually landed on the source.
+		await Assert.That(await Eval(1, $"hasflag({src}/{uid},visual)")).IsEqualTo("1")
+			.Because("the visual flag must actually be set on the source for this test to exercise anything");
+		await Assert.That(await Eval(1, $"hasflag({src}/{uid},no_inherit)")).IsEqualTo("1")
+			.Because("the no_inherit flag must actually be set on the source for this test to exercise anything");
+
+		var clone = await Cmd(1, $"@clone {src}={cloneName}");
+
+		await Assert.That(await Eval(1, $"hasattr({clone},{uid})")).IsEqualTo("1")
+			.Because("the attribute must actually be cloned for the flag checks below to mean anything");
+		await Assert.That(await Eval(1, $"get({clone}/{uid})")).IsEqualTo($"val_{uid}");
+
+		await Assert.That(await Eval(1, $"hasflag({clone}/{uid},visual)")).IsEqualTo("1")
+			.Because("atr_cpy assigns AL_FLAGS alongside AL_CREATOR on the same call (attrib.c:1706-1707) - red before this fix round, since only the creator was preserved and the flags were silently dropped");
+		await Assert.That(await Eval(1, $"hasflag({clone}/{uid},no_inherit)")).IsEqualTo("1")
+			.Because("same as above, for the second flag - proves the whole source flag set survives, not just one flag by coincidence");
+	}
+
+	/// <summary>
+	/// The pre-existing "_"-prefix skip (orthogonal to Penn's no_clone) must propagate to a
+	/// non-"_" child the same way no_clone's skip does: otherwise SetAttributeAsync's
+	/// auto-vivification (<c>ArangoDatabase.Attributes.cs:608-675</c>) would silently recreate a
+	/// stripped, empty "_"-branch on the clone just to hang the child off of.
+	/// </summary>
+	[Test]
+	public async ValueTask UnderscoreBranch_DropsNonUnderscoreChildToo()
+	{
+		var uid = TestIsolationHelpers.GenerateUniqueName("UB");
+		var src = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CloneSrcUB");
+		var cloneName = TestIsolationHelpers.GenerateUniqueName("CloneDstUB");
+
+		await Cmd(1, $"&_{uid} {src}=branchval_{uid}");
+		await Cmd(1, $"&_{uid}`CHILD {src}=childval_{uid}");
+		// Unrelated sibling attribute: the positive control.
+		await Cmd(1, $"&{uid}SIB {src}=sibval_{uid}");
+
+		await Assert.That(await Eval(1, $"hasattr({src},_{uid})")).IsEqualTo("1");
+		await Assert.That(await Eval(1, $"hasattr({src},_{uid}`CHILD)")).IsEqualTo("1");
+
+		var clone = await Cmd(1, $"@clone {src}={cloneName}");
+
+		await Assert.That(await Eval(1, $"hasattr({clone},{uid}SIB)")).IsEqualTo("1")
+			.Because("positive control: an unrelated, unflagged attribute must still be cloned - red before the tree fix (depth-1 truncation), proving the clone as a whole worked");
+		await Assert.That(await Eval(1, $"get({clone}/{uid}SIB)")).IsEqualTo($"sibval_{uid}");
+
+		await Assert.That(await Eval(1, $"hasattr({clone},_{uid})")).IsEqualTo("0")
+			.Because("the pre-existing '_'-prefix filter must still skip a '_'-prefixed branch");
+		await Assert.That(await Eval(1, $"hasattr({clone},_{uid}`CHILD)")).IsEqualTo("0")
+			.Because("the '_'-prefix skip must propagate to a non-'_' child - otherwise the child would auto-vivify a stripped, empty '_'-branch on the clone just to hang off of, the exact hazard the no_clone propagation exists to prevent");
+	}
+
+	/// <summary>
+	/// The unstated second half of the "_" handling: because @CLONE now walks the whole tree
+	/// (previously only depth-1 attributes were even reachable), a "_"-prefixed LEAF segment
+	/// under an otherwise-unflagged branch is newly reachable and newly skipped too - a semantic
+	/// choice nobody had pinned before this test. Cannot regress anything that worked before
+	/// (this case was unreachable at depth 1), but the choice itself deserves a test.
+	/// </summary>
+	[Test]
+	public async ValueTask UnderscoreLeaf_UnderUnflaggedBranch_IsAlsoDropped()
+	{
+		var uid = TestIsolationHelpers.GenerateUniqueName("UL");
+		var src = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CloneSrcUL");
+		var cloneName = TestIsolationHelpers.GenerateUniqueName("CloneDstUL");
+
+		await Cmd(1, $"&{uid} {src}=branchval_{uid}");
+		await Cmd(1, $"&{uid}`_BAR {src}=underscoreleafval_{uid}");
+		await Cmd(1, $"&{uid}`SIB {src}=sibval_{uid}");
+
+		await Assert.That(await Eval(1, $"hasattr({src},{uid}`_BAR)")).IsEqualTo("1");
+		await Assert.That(await Eval(1, $"hasattr({src},{uid}`SIB)")).IsEqualTo("1");
+
+		var clone = await Cmd(1, $"@clone {src}={cloneName}");
+
+		await Assert.That(await Eval(1, $"hasattr({clone},{uid})")).IsEqualTo("1")
+			.Because("the unflagged branch itself must still be cloned");
+		await Assert.That(await Eval(1, $"hasattr({clone},{uid}`SIB)")).IsEqualTo("1")
+			.Because("positive control: an unflagged sibling leaf under the same branch must be cloned - red before the tree fix (depth-1 truncation)");
+		await Assert.That(await Eval(1, $"get({clone}/{uid}`SIB)")).IsEqualTo($"sibval_{uid}");
+
+		await Assert.That(await Eval(1, $"hasattr({clone},{uid}`_BAR)")).IsEqualTo("0")
+			.Because("a '_'-prefixed LEAF segment must be skipped just like a '_'-prefixed top-level attribute - previously unreachable at depth 1, so this is a newly-pinned semantic choice rather than a regression risk");
+	}
 }

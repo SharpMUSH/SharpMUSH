@@ -1463,6 +1463,7 @@ public partial class Commands
 				{
 					var attr = sourceAttribute.Attribute;
 					var longName = attr.LongName!;
+					var attrPath = longName.Split('`');
 					var lastSeparator = longName.LastIndexOf('`');
 					var parentLongName = lastSeparator < 0 ? null : longName[..lastSeparator];
 					var parentSkipped = parentLongName is not null && skippedAttributes.Contains(parentLongName);
@@ -1481,7 +1482,54 @@ public partial class Commands
 					// AL_CREATOR(ptr) is passed through unchanged in atr_cpy (attrib.c:1706) - a
 					// cloned attribute keeps its original creator, not the cloner.
 					var creator = await attr.Owner.WithCancellation(CancellationToken.None) ?? owner;
-					await AttributeService!.SetAttributeAsync(executor, clonedObj, longName, attr.Value, creator);
+					var setResult = await AttributeService!.SetAttributeAsync(executor, clonedObj, longName, attr.Value, creator);
+
+					// A failed set means the branch was NOT actually copied. Treating it as
+					// skipped keeps the invariant this whole loop depends on: a LongName only
+					// avoids the skip set if it genuinely landed on the clone. Without this, a
+					// child under a branch that failed to set would still see its parent as
+					// "not skipped" and auto-vivify a stripped-down stand-in via
+					// SetAttributeAsync's own auto-vivification (ArangoDatabase.Attributes.cs:
+					// 608-675) - the exact hazard this propagation exists to prevent. Unreachable
+					// today (the clone's owner always controls the freshly-created destination),
+					// but one permission change away from live.
+					if (setResult.IsT1)
+					{
+						skippedAttributes.Add(longName);
+						continue;
+					}
+
+					// AL_FLAGS(ptr) is assigned directly alongside AL_CREATOR on the very same
+					// atr_new_add call (attrib.c:1706-1707) - Penn copies the flags too, with no
+					// permission gate at all: atr_new_add is a deliberately "dangerous", bypass-
+					// everything helper reserved for database load and atr_cpy (its own doc
+					// comment, attrib.c:750-754). SetAttributeAsync only just created the
+					// destination attribute with whatever SharpAttributeEntry.DefaultFlags
+					// applies (AttributeService.cs, applied inside SetAttributeCommand's handler)
+					// - a SharpMUSH-only mechanism Penn has no equivalent of - so the destination
+					// flag set is forced to match the source's exactly, mirroring Penn's
+					// unconditional overwrite rather than a union. Goes straight through
+					// SetAttributeFlagCommand/UnsetAttributeFlagCommand (no permission checks in
+					// either handler) rather than AttributeService.SetAttributeFlagsAsync, for the
+					// same bypass reason atr_new_add itself bypasses can_write_attr.
+					var destAttribute = await Mediator!.CreateStream(new GetAttributeQuery(clonedObj.Object().DBRef, attrPath))
+						.LastOrDefaultAsync();
+
+					if (destAttribute is not null)
+					{
+						var sourceFlagNames = attr.Flags.Select(f => f.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+						var destFlagNames = destAttribute.Flags.Select(f => f.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+						foreach (var flag in destAttribute.Flags.Where(f => !sourceFlagNames.Contains(f.Name)))
+						{
+							await Mediator!.Send(new UnsetAttributeFlagCommand(clonedObj.Object().DBRef, destAttribute, flag));
+						}
+
+						foreach (var flag in attr.Flags.Where(f => !destFlagNames.Contains(f.Name)))
+						{
+							await Mediator!.Send(new SetAttributeFlagCommand(clonedObj.Object().DBRef, destAttribute, flag));
+						}
+					}
 				}
 
 				await foreach (var flag in obj.Object().Flags.Value)

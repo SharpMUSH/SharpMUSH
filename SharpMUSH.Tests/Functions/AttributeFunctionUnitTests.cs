@@ -646,4 +646,40 @@ public class AttributeFunctionUnitTests
 		var result = await Parser.FunctionParse(MModule.single(str));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
+
+	/// <summary>
+	/// Direct regression test for a bug found while implementing @CLONE's creator preservation
+	/// (Task 2, fix round 1, M2): <c>owner(obj/attr)</c> (<see cref="AttributeFunctions.Owner"/>,
+	/// <c>AttributeFunctions.cs:829</c>) called
+	/// <c>GetAttributeAsync(executor, executor, attribute, ...)</c> - passing <c>executor</c> for
+	/// BOTH the executor and the object argument, discarding the object <c>LocateService</c> had
+	/// just resolved from the <c>obj</c> half of <c>obj/attr</c>. <c>owner(otherObj/attr)</c>
+	/// therefore always read <c>attr</c> off the calling player, never off <c>otherObj</c>. No
+	/// prior test exercised <c>owner()</c> with an attribute argument at all.
+	/// </summary>
+	[Test]
+	public async Task Owner_AttributeArg_ReadsFromLocatedObject_NotExecutor()
+	{
+		var uid = TestIsolationHelpers.GenerateUniqueName("OWN");
+
+		var createResult = await Parser.FunctionParse(MModule.single($"create(OwnerTarget_{uid})"));
+		var otherObj = createResult!.Message!.ToPlainText();
+
+		await Parser.FunctionParse(MModule.single($"[attrib_set({otherObj}/OW{uid},val_{uid})]"));
+
+		// Positive controls: the attribute genuinely exists on the OTHER object, and NOT on the
+		// executor (self) - otherwise a buggy owner() that reads off the executor instead of the
+		// located object could coincidentally still appear to pass.
+		var hasAttrOther = await Parser.FunctionParse(MModule.single($"hasattr({otherObj},OW{uid})"));
+		await Assert.That(hasAttrOther!.Message!.ToPlainText()).IsEqualTo("1")
+			.Because("the attribute must actually exist on the OTHER object for this test to mean anything");
+		var hasAttrSelf = await Parser.FunctionParse(MModule.single($"hasattr(%!,OW{uid})"));
+		await Assert.That(hasAttrSelf!.Message!.ToPlainText()).IsEqualTo("0")
+			.Because("the executor must NOT carry this attribute name, so a buggy owner() reading off the executor would report NO SUCH ATTRIBUTE rather than coincidentally succeeding");
+
+		var ownerResult = await Parser.FunctionParse(MModule.single($"owner({otherObj}/OW{uid})"));
+		await Assert.That(ownerResult!.Message!.ToPlainText())
+			.IsEqualTo($"#{WebAppFactoryArg.ExecutorDBRef.Number}")
+			.Because("owner(obj/attr) must resolve the attribute on the LOCATED object (obj), not the calling executor - red before the fix, since the located object argument was discarded in favour of executor");
+	}
 }
