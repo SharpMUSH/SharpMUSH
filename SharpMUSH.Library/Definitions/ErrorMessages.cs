@@ -121,6 +121,7 @@ public static class ErrorMessages
 		public const string ExitsCannotContainThings = "#-1 EXITS CANNOT CONTAIN THINGS";
 		public const string CantSeeThroughThat = "#-1 CANNOT SEE THROUGH THAT";
 		public const string ParentLoop = "#-1 PARENT LOOP DETECTED";
+		public const string TooManyAncestors = "#-1 TOO MANY ANCESTORS";
 		public const string NotSupported = "#-1 BEHAVIOR NOT SUPPORTED BY SHARPMUSH";
 		public const string SafeObject = "#-1 OBJECT IS SAFE";
 
@@ -660,6 +661,9 @@ public static class ErrorMessages
 		public const string OnlyPlayersHavePasswords = "Only players have passwords.";
 
 		public const string ParentLoopCannotAdd = "Cannot add parent to loop.";
+		// PennMUSH src/set.c:1445-1446 do_parent - MAX_PARENTS guard, distinct from the
+		// self-reference/cycle checks above.
+		public const string TooManyAncestors = "Too many ancestors.";
 		public const string ParentSet = "Parent set.";
 		public const string ZoneCycleCannotAdd = "Cannot add zone: would create a cycle.";
 		public const string ZoneSet = "Zone set.";

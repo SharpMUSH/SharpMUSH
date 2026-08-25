@@ -579,6 +579,16 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.ParentLoop;
 		}
 
+		if (await attributeService.ExceedsMaxParentDepthAsync(newParent))
+		{
+			if (notify)
+			{
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.TooManyAncestors), executor);
+			}
+
+			return ErrorMessages.Returns.TooManyAncestors;
+		}
+
 		await mediator.Send(new SetObjectParentCommand(obj, newParent));
 
 		if (notify)

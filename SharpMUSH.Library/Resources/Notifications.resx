@@ -585,6 +585,9 @@
   <data name="ParentLoopCannotAdd" xml:space="preserve">
     <value>Cannot add parent to loop.</value>
   </data>
+  <data name="TooManyAncestors" xml:space="preserve">
+    <value>Too many ancestors.</value>
+  </data>
   <data name="ParentSet" xml:space="preserve">
     <value>Parent set.</value>
   </data>

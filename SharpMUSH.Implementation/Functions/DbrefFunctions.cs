@@ -1590,6 +1590,11 @@ public partial class Functions
 									return ErrorMessages.Returns.CycleDetected;
 								}
 
+								if (await AttributeService!.ExceedsMaxParentDepthAsync(newParent))
+								{
+									return ErrorMessages.Returns.TooManyAncestors;
+								}
+
 								await Mediator!.Send(new SetObjectParentCommand(target, newParent));
 								return newParent;
 							}

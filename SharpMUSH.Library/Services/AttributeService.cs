@@ -626,6 +626,33 @@ public class AttributeService(
 		return chain.ToArray();
 	}
 
+	/// <inheritdoc/>
+	public async ValueTask<bool> ExceedsMaxParentDepthAsync(AnySharpObject prospectiveParent, CancellationToken cancellationToken = default)
+	{
+		var maxParents = (int)configuration.CurrentValue.Limit.MaxParents;
+		var seen = new HashSet<int> { prospectiveParent.Object().DBRef.Number };
+		var current = prospectiveParent.Object();
+
+		for (var count = 0; count < maxParents; count++)
+		{
+			var parent = await current.Parent.WithCancellation(cancellationToken);
+			if (parent.IsNone) return false;
+
+			var parentObj = parent.Known.Object();
+
+			// A pre-existing cycle isn't this method's concern (SafeToAddParent's reachability
+			// check owns that); stop rather than spin so this can't itself hang on legacy/bad data.
+			if (!seen.Add(parentObj.DBRef.Number)) return false;
+
+			current = parentObj;
+		}
+
+		// Walked maxParents hops above prospectiveParent without reaching the end of the chain:
+		// PennMUSH's do_parent refuses here even though the loop can't tell whether the chain
+		// was about to terminate on the very next hop (src/set.c:1432-1446).
+		return true;
+	}
+
 	/// <summary>
 	/// Resolves one ancestor node on <paramref name="target"/> for the read walk, serving it from
 	/// <paramref name="knownBySource"/> when that target already produced it as a pattern match and
