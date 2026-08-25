@@ -917,12 +917,16 @@ public class AttributeService(
 		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
 
 		// PennMUSH's wipe_helper (src/set.c:1493-1523) is invoked once per matched attribute
-		// via atr_iter_get and reports each denial/tree-block with its own notify_format,
-		// then keeps going - a denied or partially-blocked match never stops the others from
-		// being processed (Task 6 fix round 2). deniedNames and treeBlockedNames accumulate
-		// what to report once the whole pattern has been walked.
+		// via atr_iter_get and notifies each denial/tree-block AS IT'S DISCOVERED, then keeps
+		// going - a denied or partially-blocked match never stops the others from being
+		// processed, and neither failure class ever displaces the other's report (Task 6 fix
+		// round 3). do_wipe (src/set.c:1568-1577) then ALWAYS prints a final tally - "No"/
+		// "One"/"N attributes wiped." - regardless of whether anything was blocked, so the
+		// player learns both what was refused and what actually happened. Exact-mode
+		// (@set obj/attr=, used by callers other than @WIPE) keeps the original single
+		// aggregated Success/Error contract those callers already depend on.
 		var deniedNames = new List<string>();
-		var treeBlockedNames = new List<string>();
+		var wipedCount = 0;
 
 		foreach (var attrItem in attrArr)
 		{
@@ -936,6 +940,13 @@ public class AttributeService(
 			if (path is null || !await ps.CanSet(executor, obj, path))
 			{
 				deniedNames.Add(attrItem.LongName!);
+				if (isWipe)
+				{
+					// PennMUSH's AE_ERROR wording (set.c:1511-1513), one line per match -
+					// never the raw "#-1 NO PERMISSION..." return code.
+					await notifyService.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.UnableToWipeAttribute), executor, attrItem.LongName!);
+				}
 				continue;
 			}
 
@@ -945,10 +956,13 @@ public class AttributeService(
 			// nodes that still have children.
 			if (isWipe)
 			{
-				var fullyWiped = await WipeSubtreeGatedAsync(executor, obj, attrItem);
+				var (fullyWiped, deletedCount) = await WipeSubtreeGatedAsync(executor, obj, attrItem);
+				wipedCount += deletedCount;
 				if (!fullyWiped)
 				{
-					treeBlockedNames.Add(attrItem.LongName!);
+					// PennMUSH's AE_TREE wording (set.c:1514-1518), one line per match.
+					await notifyService.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.AttributeCannotBeWipedChildBlocked), executor, attrItem.LongName!);
 				}
 			}
 			else
@@ -957,20 +971,23 @@ public class AttributeService(
 			}
 		}
 
-		// A subtree partially blocked by a protected descendant is reported with PennMUSH's
-		// own wording (src/set.c:1514-1518) ahead of a flat permission denial - both can be
-		// true at once for different matches under one wildcard pattern, and the tree-block
-		// case is the more specific, more actionable of the two.
-		if (treeBlockedNames.Count > 0)
+		if (!isWipe)
 		{
-			return new Error<string>(
-				$"Attribute {string.Join(", ", treeBlockedNames)} cannot be wiped because a child attribute cannot be wiped.");
+			return deniedNames.Count > 0
+				? new Error<string>(ErrorMessages.Returns.AttrSetPermissions)
+				: new Success();
 		}
 
-		if (deniedNames.Count > 0)
+		// The unconditional final tally (do_wipe, set.c:1568-1577) - every one of the three
+		// states ("wiped everything", "wiped some", "wiped nothing") lands here, since
+		// wipedCount already reflects exactly how many attribute nodes were actually removed
+		// regardless of how many matches were denied or tree-blocked above.
+		await notifyService.NotifyLocalized(executor, wipedCount switch
 		{
-			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
-		}
+			0 => nameof(ErrorMessages.Notifications.NoAttributesWiped),
+			1 => nameof(ErrorMessages.Notifications.OneAttributeWiped),
+			_ => nameof(ErrorMessages.Notifications.AttributesWipedCount)
+		}, executor, wipedCount);
 
 		return new Success();
 	}
@@ -1039,10 +1056,15 @@ public class AttributeService(
 	/// </para>
 	/// </summary>
 	/// <returns>
-	/// <c>true</c> if the whole subtree (root included) was fully deleted; <c>false</c> if any
-	/// part of it had to be left untouched because of a protected descendant.
+	/// <c>FullyCleared</c>: <c>true</c> if the whole subtree (root included) was fully
+	/// deleted; <c>false</c> if any part of it had to be left untouched because of a
+	/// protected descendant. <c>DeletedCount</c>: how many attribute nodes were actually
+	/// removed (root plus however many descendants qualified) - PennMUSH's <c>do_wipe</c>
+	/// (<c>set.c:1568-1577</c>) always reports this count regardless of <c>FullyCleared</c>,
+	/// so the caller needs it even on a partial result.
 	/// </returns>
-	private async ValueTask<bool> WipeSubtreeGatedAsync(AnySharpObject executor, AnySharpObject obj, SharpAttribute root)
+	private async ValueTask<(bool FullyCleared, int DeletedCount)> WipeSubtreeGatedAsync(
+		AnySharpObject executor, AnySharpObject obj, SharpAttribute root)
 	{
 		var dbref = obj.Object().DBRef;
 		var rootName = root.LongName!;
@@ -1068,7 +1090,7 @@ public class AttributeService(
 		if (descendants.Length == 0)
 		{
 			await mediator.Send(new WipeAttributeCommand(dbref, rootName.Split('`')));
-			return true;
+			return (true, 1);
 		}
 
 		// Every ancestor of every descendant here is either root or another member of this
@@ -1094,7 +1116,7 @@ public class AttributeService(
 			// Common case: nothing in the subtree is protected - one recursive delete, same
 			// as before this fix.
 			await mediator.Send(new WipeAttributeCommand(dbref, rootName.Split('`')));
-			return true;
+			return (true, 1 + descendants.Length);
 		}
 
 		// Bottom-up: a node's subtree is fully clearable only if the node itself is permitted
@@ -1108,6 +1130,20 @@ public class AttributeService(
 
 		var fullyClearable = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
+		// IsDirectChildOf trusts that a node's immediate parent is either `root` or another
+		// entry in `descendants` whenever that node itself is one. That invariant comes from
+		// HOW descendants is populated, not from string-parsing LongName: the underlying
+		// provider query (e.g. ArangoDB's `FOR v IN 1..99999 OUTBOUND start GRAPH
+		// GraphAttributes FILTER v.LongName =~ @pattern`) is a graph traversal along real
+		// parent->child edges, so a node can only appear in the results if every ancestor
+		// between the object root and that node has its own vertex and edge - an "FOO`BAR`BAZ
+		// exists but FOO`BAR doesn't" gap is not representable by the traversal that produced
+		// this list in the first place (all three providers share this edge-per-level model).
+		// If that ever stopped holding, a node whose immediate parent is missing from this set
+		// would be "nobody's child" to IsDirectChildOf and so could never block an ancestor's
+		// fullyClearable computation - the mitigation, if it were ever needed, would be to
+		// treat any node whose direct parent isn't in `known` as denied up front, the same way
+		// ResolveWriteGatePathAsync already fails closed on a missing prefix (M1).
 		bool IsFullyClearable(string name)
 		{
 			var childrenClearable = descendants
@@ -1129,25 +1165,30 @@ public class AttributeService(
 		// then applies cleanly. A node that ISN'T fully clearable is never touched at all -
 		// no ClearAttributeCommand call, no value change, matching real_atr_clr leaving a
 		// blocked branch completely alone.
+		var deletedCount = 0;
 		foreach (var descendant in deepestFirst)
 		{
 			if (fullyClearable[descendant.LongName!])
 			{
 				await mediator.Send(new ClearAttributeCommand(dbref, descendant.LongName!.Split('`')));
+				deletedCount++;
 			}
 		}
 
 		if (rootFullyClearable)
 		{
 			await mediator.Send(new ClearAttributeCommand(dbref, rootName.Split('`')));
+			deletedCount++;
 		}
 
-		return rootFullyClearable;
+		return (rootFullyClearable, deletedCount);
 	}
 
 	/// <summary>
 	/// True if <paramref name="childLongName"/> names a direct (one level deeper) child of
 	/// <paramref name="parentLongName"/> in the attribute tree - not a grandchild or deeper.
+	/// See the invariant this relies on, documented at its call site in
+	/// <see cref="WipeSubtreeGatedAsync"/>.
 	/// </summary>
 	private static bool IsDirectChildOf(string childLongName, string parentLongName)
 	{

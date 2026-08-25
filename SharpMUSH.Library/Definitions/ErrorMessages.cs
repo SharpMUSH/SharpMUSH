@@ -426,6 +426,14 @@ public static class ErrorMessages
 		public const string CreatedObject = "Created: Object {0}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WipedAttributes = "Wiped attributes matching {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string UnableToWipeAttribute = "Unable to wipe attribute {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCannotBeWipedChildBlocked = "Attribute {0} cannot be wiped because a child attribute cannot be wiped.";
+		public const string NoAttributesWiped = "No attributes wiped.";
+		public const string OneAttributeWiped = "One attribute wiped.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributesWipedCount = "{0} attributes wiped.";
 		public const string CouldNotFindNewOwner = "Could not find new owner.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CouldNotFindDestination = "Could not find destination: {0}";

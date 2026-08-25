@@ -217,6 +217,21 @@
   <data name="WipedAttributes" xml:space="preserve">
     <value>Wiped attributes matching {0}.</value>
   </data>
+  <data name="UnableToWipeAttribute" xml:space="preserve">
+    <value>Unable to wipe attribute {0}.</value>
+  </data>
+  <data name="AttributeCannotBeWipedChildBlocked" xml:space="preserve">
+    <value>Attribute {0} cannot be wiped because a child attribute cannot be wiped.</value>
+  </data>
+  <data name="NoAttributesWiped" xml:space="preserve">
+    <value>No attributes wiped.</value>
+  </data>
+  <data name="OneAttributeWiped" xml:space="preserve">
+    <value>One attribute wiped.</value>
+  </data>
+  <data name="AttributesWipedCount" xml:space="preserve">
+    <value>{0} attributes wiped.</value>
+  </data>
   <data name="CouldNotFindNewOwner" xml:space="preserve">
     <value>Could not find new owner.</value>
   </data>

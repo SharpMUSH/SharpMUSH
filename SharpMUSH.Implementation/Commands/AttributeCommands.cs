@@ -529,41 +529,19 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.Safe);
 		}
 
-		if (string.IsNullOrEmpty(maybeAttribute))
-		{
-			var wipeResult = await AttributeService!.ClearAttributeAsync(executor, targetObject, "**",
+		// Task 6 fix round 3: PennMUSH's do_wipe/wipe_helper (set.c:1493-1577) owns its own
+		// reporting entirely - a notify per denied/tree-blocked match as they're discovered
+		// during iteration, THEN an unconditional final tally ("No/One/N attributes wiped.")
+		// regardless of whether anything was blocked. ClearAttributeAsync's wipe branch now
+		// does exactly that internally, so this command has nothing left to report itself -
+		// doing so here too would either duplicate or (worse) silently override one class of
+		// outcome with a generic "success" line that used to print unconditionally.
+		var attributePattern = string.IsNullOrEmpty(maybeAttribute) ? "**" : maybeAttribute;
+		await AttributeService!.ClearAttributeAsync(executor, targetObject, attributePattern,
 			IAttributeService.AttributePatternMode.Wildcard,
 			IAttributeService.AttributeClearMode.Safe);
 
-			// Task 6 fix round 2: a wipe can be genuinely denied outright, or partially
-			// blocked (a protected descendant kept some branch from being fully cleared,
-			// PennMUSH's AE_TREE/"cannot be wiped because a child attribute cannot be
-			// wiped") - either way, that must reach the player instead of the unconditional
-			// success line that used to print regardless of the result.
-			if (wipeResult.IsT1)
-			{
-				await NotifyService!.Notify(executor, wipeResult.AsT1.Value, executor);
-				return new CallState(wipeResult.AsT1.Value);
-			}
-
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributesWiped), executor);
-			return new CallState(string.Empty);
-		}
-		else
-		{
-			var wipeResult = await AttributeService!.ClearAttributeAsync(executor, targetObject, maybeAttribute,
-			IAttributeService.AttributePatternMode.Wildcard,
-			IAttributeService.AttributeClearMode.Safe);
-
-			if (wipeResult.IsT1)
-			{
-				await NotifyService!.Notify(executor, wipeResult.AsT1.Value, executor);
-				return new CallState(wipeResult.AsT1.Value);
-			}
-
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WipedAttributes), executor, maybeAttribute);
-			return new CallState(string.Empty);
-		}
+		return new CallState(string.Empty);
 	}
 
 }

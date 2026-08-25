@@ -228,8 +228,11 @@ public class AttributeCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@wipe {objDbRef}/WIPE*_UNIQUE"));
 
-		// Pattern-based wipe sends WipedAttributes (with the pattern), not AttributesWiped
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.WipedAttributes), executor, executor)).IsTrue();
+		// Task 6 fix round 3: @wipe's reporting now always ends with PennMUSH's own tally
+		// (do_wipe, set.c:1568-1577) instead of the old unconditional WipedAttributes/
+		// AttributesWiped success line - both attributes here are wiped by God (no protected
+		// descendants), so the count is 2.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributesWipedCount), executor, executor)).IsTrue();
 
 		var attr1After = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "WIPE1_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);

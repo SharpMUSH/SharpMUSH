@@ -1,5 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -11,7 +13,15 @@ namespace SharpMUSH.Tests.Commands;
 /// (PennMUSH's <c>Cannot_Write_This_Attr</c>, <c>src/attrib.c:364-368</c>) and create-time
 /// <c>nodump</c> (<c>can_create_attr</c>, <c>src/attrib.c:479-483</c>). Both flags previously had
 /// zero effect on <c>CanSet</c> - the TODO comment this file replaces said as much.
+/// <para>
+/// <see cref="NotifyService"/> is a substitute shared across the whole test session (see
+/// <see cref="AttributeSyntaxFlagTests"/>) - <see cref="WipeOfUnflaggedBranch_PreservesProtectedDescendant"/>
+/// is the one test here that inspects it (to confirm a partially-blocked <c>@wipe</c> reaches
+/// the player via <c>NotifyLocalized</c>, not just the database), so the class is
+/// <c>[NotInParallel]</c> and that test clears received calls immediately beforehand.
+/// </para>
 /// </summary>
+[NotInParallel]
 public class AttributeTreeWriteGateTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -21,6 +31,7 @@ public class AttributeTreeWriteGateTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 
 	/// <summary>
 	/// Runs <paramref name="expression"/> as the player behind <paramref name="handle"/>.
@@ -280,8 +291,11 @@ public class AttributeTreeWriteGateTests
 		await Assert.That(controlBranch.IsAttribute).IsFalse()
 			.Because("a wholly-unflagged branch is fully removed by @wipe, proving the command still works end-to-end");
 
-		// The mortal owner wipes the branch that has one protected descendant among its children.
-		var wipeAttempt = await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WPROT{uid}"));
+		// The mortal owner wipes the branch that has one protected descendant among its
+		// children. Cleared first: NotifyService is a session-shared substitute (see the
+		// class doc comment), so only calls made by THIS command are attributable below.
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WPROT{uid}"));
 
 		var protectedLeaf = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROT{uid}`WIZLEAF",
 			IAttributeService.AttributeMode.Read, false);
@@ -310,7 +324,17 @@ public class AttributeTreeWriteGateTests
 
 		// The outcome must reach the player, not just the database - @wipe used to discard
 		// ClearAttributeAsync's result entirely and always print a generic success line.
-		await Assert.That(wipeAttempt.Message?.ToPlainText() ?? string.Empty).Contains("cannot be wiped")
+		// Reporting now happens via NotifyLocalized (Task 6 fix round 3), not the command's
+		// own CallState, so it's asserted against the shared NotifyService substitute rather
+		// than wipeAttempt.Message.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.AttributeCannotBeWipedChildBlocked), owner.DbRef)).IsTrue()
 			.Because("a partially-blocked wipe must tell the player, matching PennMUSH's own AE_TREE message");
+
+		// And PennMUSH's do_wipe always ALSO prints the final tally regardless: exactly one
+		// attribute (OKLEAF) was actually removable and removed here.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.OneAttributeWiped), owner.DbRef)).IsTrue()
+			.Because("the tally must still be reported even when part of the wipe was blocked");
 	}
 }
