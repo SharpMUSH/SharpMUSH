@@ -97,7 +97,7 @@ public partial class SurrealDatabase(
 	}
 
 	private const string AttributeChildrenByParentQuery =
-		"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))";
+		"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM type::thing('attribute', $key)->has_attribute->attribute";
 
 	/// <summary>
 	/// Converts a partial-match regex to a full-match regex for SurrealDB.
@@ -686,21 +686,6 @@ public partial class SurrealDatabase(
 		};
 	}
 
-	private async IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsForAttrAsync(string attrId, [EnumeratorCancellation] CancellationToken ct = default)
-	{
-		var attrKey = ExtractKeyString(attrId);
-		var parameters = new Dictionary<string, object?> { ["key"] = attrKey };
-		var result = await ExecuteAsync(
-			"SELECT * FROM attribute:⟨$key⟩->has_attribute_flag->attribute_flag",
-			parameters, ct);
-
-		var records = result.GetValue<List<AttributeFlagRecord>>(0)!;
-		foreach (var record in records)
-		{
-			yield return MapRecordToAttributeFlag(record);
-		}
-	}
-
 	private async ValueTask<SharpPlayer?> GetAttributeOwnerAsync(string attrId, CancellationToken ct)
 	{
 		var attrKey = ExtractKeyString(attrId);
@@ -738,12 +723,16 @@ public partial class SurrealDatabase(
 		return MapRecordToAttributeEntry(records[0]);
 	}
 
-	private async ValueTask<SharpAttribute> MapToSharpAttribute(AttributeRecord record, CancellationToken ct)
+	// NOT async: the producing query already projects flags (->has_attribute_flag->attribute_flag.*
+	// AS flags), so mapping a record needs no round trip of its own. Was `async ValueTask<...>`
+	// with an internal `await GetAttributeFlagsForAttrAsync(...)` - every call site still awaits
+	// these (ValueTask.FromResult is a valid await target), so nothing downstream had to change.
+	private ValueTask<SharpAttribute> MapToSharpAttribute(AttributeRecord record, CancellationToken ct)
 	{
 		var key = record.key;
 		var id = AttributeId(key);
-		var flags = await GetAttributeFlagsForAttrAsync(id, ct).ToArrayAsync(ct);
-		return new SharpAttribute(
+		var flags = record.flags.Select(MapRecordToAttributeFlag).ToArray();
+		return ValueTask.FromResult(new SharpAttribute(
 			id,
 			key,
 			record.name,
@@ -755,15 +744,16 @@ public partial class SurrealDatabase(
 			new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)))
 		{
 			Value = MModule.deserialize(record.value)
-		};
+		});
 	}
 
-	private async ValueTask<LazySharpAttribute> MapToLazySharpAttribute(AttributeRecord record, CancellationToken ct)
+	/// <inheritdoc cref="MapToSharpAttribute"/>
+	private ValueTask<LazySharpAttribute> MapToLazySharpAttribute(AttributeRecord record, CancellationToken ct)
 	{
 		var key = record.key;
 		var id = AttributeId(key);
-		var flags = await GetAttributeFlagsForAttrAsync(id, ct).ToArrayAsync(ct);
-		return new LazySharpAttribute(
+		var flags = record.flags.Select(MapRecordToAttributeFlag).ToArray();
+		return ValueTask.FromResult(new LazySharpAttribute(
 			id,
 			key,
 			record.name,
@@ -774,7 +764,7 @@ public partial class SurrealDatabase(
 			new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 			new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)),
 			Value: new AsyncLazy<MString>(innerCt =>
-				Task.FromResult(MModule.deserialize(record.value))));
+				Task.FromResult(MModule.deserialize(record.value)))));
 	}
 
 	private async IAsyncEnumerable<SharpAttribute> GetTopLevelAttributesAsync(string parentId, [EnumeratorCancellation] CancellationToken ct = default)
@@ -793,7 +783,7 @@ public partial class SurrealDatabase(
 			var objKey = ExtractKey(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 			result = await ExecuteAsync(
-				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in IN [player:$key, room:$key, thing:$key, exit:$key])",
+				"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM array::flatten([player:$key, room:$key, thing:$key, exit:$key]->has_attribute->attribute)",
 				parameters, ct);
 		}
 
@@ -820,7 +810,7 @@ public partial class SurrealDatabase(
 			var objKey = ExtractKey(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 			result = await ExecuteAsync(
-				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in IN [player:$key, room:$key, thing:$key, exit:$key])",
+				"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM array::flatten([player:$key, room:$key, thing:$key, exit:$key]->has_attribute->attribute)",
 				parameters, ct);
 		}
 
@@ -854,22 +844,31 @@ public partial class SurrealDatabase(
 	/// upgraded in place.
 	/// </para>
 	/// <para>
-	/// The inner <c>SELECT ... FETCH descendants</c> dereferences the collected ids into full
-	/// attribute records in the same round trip; the outer <c>SELECT VALUE descendants FROM (...)</c>
-	/// unwraps the single-row wrapper so the statement's own result is the array of records
-	/// (still nested one level - SurrealDB returns one row per queried FROM target - which
-	/// <see cref="GetAllAttributesForIdAsync"/>/<see cref="GetAllLazyAttributesForIdAsync"/> unwrap).
-	/// A <paramref name="parentId"/> that doesn't exist in the database, or an attribute with no
-	/// descendants, both come back as an empty result rather than an error.
+	/// The innermost <c>SELECT @.{..+collect}(...) AS ids</c> computes the descendant id array once;
+	/// the middle <c>SELECT (SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM
+	/// $parent.ids) AS descendants</c> re-queries full records - each with its own flags projected
+	/// in the same round trip, not a separate one per attribute - for exactly those ids
+	/// (<c>$parent</c> reaches the enclosing row's <c>ids</c>, not a re-walk of the tree); the outer
+	/// <c>SELECT VALUE descendants FROM (...)</c> unwraps the single-row wrapper so the statement's
+	/// own result is the array of records (still nested one level - SurrealDB returns one row per
+	/// queried FROM target - which <see cref="GetAllAttributesForIdAsync"/>/
+	/// <see cref="GetAllLazyAttributesForIdAsync"/> unwrap). A <paramref name="parentId"/> that
+	/// doesn't exist in the database, or an attribute with no descendants, both come back as an
+	/// empty result rather than an error.
 	/// </para>
 	/// </summary>
 	private static (string Query, Dictionary<string, object?> Parameters) BuildDescendantAttributesQuery(
 		string parentId)
 	{
+		// Two nested SELECTs, not one FETCH: FETCH only dereferences the collected ids to their raw
+		// stored fields, with no way to also project each one's flags in the same round trip. The
+		// inner SELECT computes the id array once (@.{..+collect}); the middle SELECT re-queries
+		// full records (with flags) for exactly those ids via $parent, referencing the enclosing
+		// row rather than re-walking the tree.
 		static string QueryFor(string fromTarget) =>
-			"SELECT VALUE descendants FROM (SELECT @.{..+collect}(->has_attribute->attribute) AS descendants FROM "
+			"SELECT VALUE descendants FROM (SELECT (SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM $parent.ids) AS descendants FROM (SELECT @.{..+collect}(->has_attribute->attribute) AS ids FROM "
 			+ fromTarget
-			+ " FETCH descendants)";
+			+ "))";
 
 		if (parentId.StartsWith("Attribute"))
 		{
@@ -988,6 +987,12 @@ public partial class SurrealDatabase(
 		public string name { get; set; } = "";
 		public string value { get; set; } = "";
 		public string longName { get; set; } = "";
+
+		// Populated when the producing query projects it (every query that feeds
+		// MapToSharpAttribute/MapToLazySharpAttribute does, via
+		// `->has_attribute_flag->attribute_flag.* AS flags`) so mapping an attribute costs zero
+		// extra round trips instead of one GetAttributeFlagsForAttrAsync call per record.
+		public AttributeFlagRecord[] flags { get; set; } = [];
 	}
 
 	internal record FlagRecord

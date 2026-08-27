@@ -46,7 +46,7 @@ public partial class SurrealDatabase
 			{
 				var parameters = new Dictionary<string, object?> { ["key"] = objKey, ["attrName"] = attrName };
 				stepResult = await ExecuteAsync(
-					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in IN [player:$key, room:$key, thing:$key, exit:$key])",
+					"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM array::flatten([player:$key, room:$key, thing:$key, exit:$key]->has_attribute->attribute) WHERE name = $attrName",
 					parameters, cancellationToken);
 				isFirst = false;
 			}
@@ -54,7 +54,7 @@ public partial class SurrealDatabase
 			{
 				var parameters = new Dictionary<string, object?> { ["key"] = currentParentKey!, ["attrName"] = attrName };
 				stepResult = await ExecuteAsync(
-					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in = attribute:⟨$key⟩)",
+					"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM attribute:⟨$key⟩->has_attribute->attribute WHERE name = $attrName",
 					parameters, cancellationToken);
 			}
 
@@ -154,7 +154,7 @@ public partial class SurrealDatabase
 			{
 				var parameters = new Dictionary<string, object?> { ["key"] = objKey, ["attrName"] = attrName };
 				stepResult = await ExecuteAsync(
-					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in IN [player:$key, room:$key, thing:$key, exit:$key])",
+					"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM array::flatten([player:$key, room:$key, thing:$key, exit:$key]->has_attribute->attribute) WHERE name = $attrName",
 					parameters, cancellationToken);
 				isFirst = false;
 			}
@@ -162,7 +162,7 @@ public partial class SurrealDatabase
 			{
 				var parameters = new Dictionary<string, object?> { ["key"] = currentParentKey!, ["attrName"] = attrName };
 				stepResult = await ExecuteAsync(
-					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in = attribute:⟨$key⟩)",
+					"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM attribute:⟨$key⟩->has_attribute->attribute WHERE name = $attrName",
 					parameters, cancellationToken);
 			}
 
@@ -693,7 +693,7 @@ public partial class SurrealDatabase
 			{
 				var parameters = new Dictionary<string, object?> { ["key"] = objKey, ["attrName"] = attrName };
 				stepResult = await ExecuteAsync(
-					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in IN [player:$key, room:$key, thing:$key, exit:$key])",
+					"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM array::flatten([player:$key, room:$key, thing:$key, exit:$key]->has_attribute->attribute) WHERE name = $attrName",
 					parameters, cancellationToken);
 				isFirst = false;
 			}
@@ -701,7 +701,7 @@ public partial class SurrealDatabase
 			{
 				var parameters = new Dictionary<string, object?> { ["key"] = currentParentKey!, ["attrName"] = attrName };
 				stepResult = await ExecuteAsync(
-					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in = attribute:⟨$key⟩)",
+					"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM attribute:⟨$key⟩->has_attribute->attribute WHERE name = $attrName",
 					parameters, cancellationToken);
 			}
 
