@@ -897,7 +897,13 @@ public partial class SurrealDatabase(
 		var (query, parameters) = BuildDescendantAttributesQuery(parentId);
 		var result = await ExecuteAsync(query, parameters, ct);
 		var rows = result.GetValue<List<List<AttributeRecord>>>(0);
-		var records = rows is { Count: > 0 } ? rows[0] : [];
+		// Flatten every row, not just rows[0]: the object-id branch's FROM target is an array
+		// ([player:$key, room:$key, thing:$key, exit:$key]), and SurrealDB 3.x returns one row per
+		// array element instead of one combined row - taking only rows[0] silently discarded every
+		// attribute whose owner wasn't the first table in that list (verified: a THING's attributes
+		// landed at rows[2], and rows[0]/rows[1] - player/room - were always empty). The attribute-id
+		// branch's single FROM target still comes back as one row, so flattening is a no-op there.
+		var records = rows?.SelectMany(r => r) ?? [];
 		foreach (var record in records)
 		{
 			yield return await MapToSharpAttribute(record, ct);
@@ -909,7 +915,8 @@ public partial class SurrealDatabase(
 		var (query, parameters) = BuildDescendantAttributesQuery(parentId);
 		var result = await ExecuteAsync(query, parameters, ct);
 		var rows = result.GetValue<List<List<AttributeRecord>>>(0);
-		var records = rows is { Count: > 0 } ? rows[0] : [];
+		// See GetAllAttributesForIdAsync for why every row is flattened, not just rows[0].
+		var records = rows?.SelectMany(r => r) ?? [];
 		foreach (var record in records)
 		{
 			yield return await MapToLazySharpAttribute(record, ct);
