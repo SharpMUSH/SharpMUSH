@@ -22,6 +22,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
+		<ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Implementation\SharpMUSH.Implementation.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Server\SharpMUSH.Server.csproj" />
 	</ItemGroup>
