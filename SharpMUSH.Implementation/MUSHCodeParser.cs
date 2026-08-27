@@ -846,6 +846,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		// Too deep to parse safely: fall back to the flat lexer-token classification, the same
 		// degraded result the catch below produces for a syntax error.
+		// NOTE: this re-lexes via Tokenize, which is the one lexing site here that does NOT apply the
+		// orphaned-closer rewrite above — so an orphaned ']' or '}' is classified as a closer on this
+		// path and as literal text on the normal one. Inconsistent, but left alone deliberately:
+		// changing Tokenize affects every caller and needs its own task.
 		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
 		{
 			return ConvertSyntacticToSemanticTokens(Tokenize(text));
@@ -897,6 +901,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		}
 		catch (RecognitionException)
 		{
+			// Same Tokenize inconsistency as the nesting-limit fallback above.
 			return ConvertSyntacticToSemanticTokens(Tokenize(text));
 		}
 	}

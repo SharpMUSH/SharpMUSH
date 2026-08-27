@@ -1,8 +1,9 @@
 using ANSILibrary;
 using SharpMUSH.Library.Models;
 using System.Drawing;
+using Ansi = MarkupString.MarkupImplementation.AnsiMarkup;
 
-namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
+namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// Maps <see cref="SemanticTokenType"/> values to ANSI colours for terminal

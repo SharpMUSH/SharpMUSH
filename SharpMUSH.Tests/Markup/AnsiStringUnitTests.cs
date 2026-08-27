@@ -353,4 +353,22 @@ public class AnsiStringUnitTests
 
 		Log.Logger.Information("Mixed RGB/ANSI interpolation result: {Result}", result);
 	}
+
+	/// <summary>
+	/// <c>AnsiColor.ANSI.Value</c> is declared non-nullable, but the type is
+	/// <c>[JsonDerivedType]</c>-polymorphic and a payload with no <c>Value</c> deserialises to null —
+	/// at which point the hand-written structural equality dereferences it. Both members must survive
+	/// that rather than throwing a <see cref="NullReferenceException"/> from inside an equality check.
+	/// </summary>
+	[Test]
+	public async Task AnsiColor_WithNullValue_ComparesAndHashesWithoutThrowing()
+	{
+		var nullValued = new AnsiColor.ANSI(null!);
+		var real = new AnsiColor.ANSI([1, 37]);
+
+		await Assert.That(nullValued.Equals(new AnsiColor.ANSI(null!))).IsTrue();
+		await Assert.That(nullValued.Equals(real)).IsFalse();
+		await Assert.That(real.Equals(nullValued)).IsFalse();
+		await Assert.That(nullValued.GetHashCode()).IsEqualTo(new AnsiColor.ANSI(null!).GetHashCode());
+	}
 }

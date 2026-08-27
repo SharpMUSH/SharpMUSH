@@ -92,6 +92,10 @@ public record CosmeticOptions(
 		Order = 4)]
 	bool FlagsOnExamine,
 
+	// NOTE: accepted and configurable, but not yet honoured. @examine's attribute loop
+	// (SharpMUSH.Implementation/Commands/GeneralCommands.cs, Commands.Examine) does not read this
+	// option -- every attribute the permission check already allows is shown regardless of this
+	// flag. PennMUSH gates non-public attributes here; wiring up the real semantics is its own task.
 	[property: SharpConfig(
 		Name = "ex_public_attribs",
 		Category = "Cosmetic",

@@ -9,8 +9,32 @@ namespace SharpMUSH.LanguageServer.Handlers;
 /// <summary>
 /// Handles document formatting requests for MUSH code.
 /// Delegates the actual formatting to the shared <see cref="IMushCodeAnalyzer"/> so the
-/// LSP and the in-server MCP tools format identically, and emits one text edit per line
-/// the analyzer changed.
+/// LSP and the in-server MCP tools are backed by the same softcode intelligence, and emits a
+/// single whole-document text edit built from <see cref="IMushCodeAnalyzer.FormatIndented"/> —
+/// not <see cref="IMushCodeAnalyzer.Format"/>, whose line-preserving contract the MCP
+/// <c>format</c> tool depends on and which therefore cannot express indentation (a per-line edit
+/// structurally requires the line count to stay fixed).
+/// <para>
+/// Passes <see cref="MushParseMode.ForFileName"/> for the document's URI — the same per-document
+/// dialect channel <see cref="SemanticTokensHandler"/> already uses — rather than
+/// <c>FormatIndented</c>'s own conservative default, so a <c>.mushcmd</c> document's root <c>;</c>
+/// actually breaks instead of staying on one long line.
+/// </para>
+/// <para>
+/// <b>A <c>.mush</c>/<c>.mu</c> document is not formatted at all.</b> <c>ForFileName</c> maps those to
+/// <see cref="MushAnalysisMode.CommandsPerLine"/>: each non-blank line is its own command, which is
+/// how a quote file is actually executed. <c>FormatIndented</c>, unlike <c>Validate</c>, has no
+/// per-line handling for that mode (<c>Validate</c> special-cases it via <c>ValidatePerLine</c>,
+/// parsing and offsetting each line independently); nothing analogous exists for layout, so it would
+/// lay the whole file out as one expression — and, because everything here is a whole-document
+/// <see cref="TextEdit"/>, write the result to disk. On a line such as
+/// <c>&amp;CMD #1=$give [a,b] to *:@pemit %#=ok</c> that is a destructive edit, not a cosmetic one.
+/// </para>
+/// <para>
+/// So this returns <b>no edit</b> for those documents. Formatting one is a no-op until per-line
+/// layout exists; a <c>.mushcmd</c>/<c>.mushfn</c>/<c>.fun</c> document, whose whole buffer really is
+/// one unit, formats normally.
+/// </para>
 /// </summary>
 public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 {
@@ -35,35 +59,37 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 			return Task.FromResult<TextEditContainer?>(null);
 		}
 
+		var mode = MushParseMode.ForFileName(uri);
+
+		// See the type doc: whole-buffer layout of a one-command-per-line file would rewrite the file
+		// on disk, so there is nothing safe to return for this mode yet.
+		if (mode == MushAnalysisMode.CommandsPerLine)
+		{
+			return Task.FromResult<TextEditContainer?>(null);
+		}
+
 		try
 		{
-			var originalLines = document.Text.Split('\n');
-			var formattedLines = _analyzer.Format(document.Text).Split('\n');
-			var edits = new List<TextEdit>();
+			var original = document.Text;
+			var formatted = _analyzer.FormatIndented(original, mode: mode);
 
-			for (int i = 0; i < originalLines.Length && i < formattedLines.Length; i++)
+			if (formatted != original)
 			{
+				var originalLines = original.Split('\n');
+				var lastLine = originalLines.Length - 1;
 				// A trailing CR is part of the line terminator in LSP positions, not the line
-				// content — exclude it from both the compared text and the edit so CRLF documents
-				// aren't off-by-one and no literal '\r' is injected into the replacement.
-				var original = originalLines[i].TrimEnd('\r');
-				var formatted = formattedLines[i].TrimEnd('\r');
+				// content — exclude it from the end position so a CRLF document isn't off-by-one.
+				var endCharacter = originalLines[lastLine].TrimEnd('\r').Length;
 
-				if (formatted != original)
+				var edit = new TextEdit
 				{
-					edits.Add(new TextEdit
-					{
-						Range = new OmniSharp.Extensions.LanguageServer.Protocol.Models.Range(
-							new Position(i, 0),
-							new Position(i, original.Length)),
-						NewText = formatted
-					});
-				}
-			}
+					Range = new OmniSharp.Extensions.LanguageServer.Protocol.Models.Range(
+						new Position(0, 0),
+						new Position(lastLine, endCharacter)),
+					NewText = formatted
+				};
 
-			if (edits.Count > 0)
-			{
-				return Task.FromResult<TextEditContainer?>(new TextEditContainer(edits));
+				return Task.FromResult<TextEditContainer?>(new TextEditContainer(edit));
 			}
 		}
 		catch (Exception ex)

@@ -11,6 +11,11 @@
 
   <ItemGroup>
     <PackageReference Include="OmniSharp.Extensions.LanguageServer" Version="0.19.9" />
+    <!-- Reached transitively (OmniSharp -> Nerdbank.Streams -> Microsoft.VisualStudio.Threading).
+         Pinned here only to carry PrivateAssets="all": the analyzers still apply to this project, but
+         they no longer flow to anything referencing it — SharpMUSH.Tests, whose TUnit test methods
+         intentionally do not carry the "Async" suffix VSTHRD200 demands. -->
+    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.6.40" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.8" />
     <PackageReference Include="Serilog" Version="4.3.1" />

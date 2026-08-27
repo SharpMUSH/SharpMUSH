@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
 
@@ -12,11 +13,6 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 /// </summary>
 public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributesQuery, ListenAttributeCache[]>
 {
-	/// <summary>
-	/// Regex to match ^-listen patterns at start of attribute value
-	/// </summary>
-	private static readonly Regex ListenPatternRegex = new(@"^\^([^:]+):", RegexOptions.Compiled);
-
 	public async ValueTask<ListenAttributeCache[]> Handle(GetListenAttributesQuery request, CancellationToken cancellationToken)
 	{
 		var sharpObj = request.SharpObject;
@@ -30,7 +26,7 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 				continue;
 
 			var plainValue = attr.Value.ToPlainText();
-			var match = ListenPatternRegex.Match(plainValue);
+			var match = CommandDiscoveryService.ListenPatternRegex().Match(plainValue);
 
 			if (!match.Success)
 				continue;

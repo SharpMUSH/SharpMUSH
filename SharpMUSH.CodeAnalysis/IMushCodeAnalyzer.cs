@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.CodeAnalysis;
 
@@ -31,6 +32,36 @@ public interface IMushCodeAnalyzer
 	/// first argument. Line count is preserved. Never throws.
 	/// </summary>
 	string Format(string code);
+
+	/// <summary>
+	/// Reflows MUSH softcode to fit within <paramref name="width"/> columns, indenting nested
+	/// calls by depth. Unlike <see cref="Format"/>, this does <b>not</b> preserve line count —
+	/// it is a distinct, additive rendering built on <see cref="SoftcodeLayout.Compute"/>, the
+	/// same layout engine <c>@examine</c>/<c>@grep</c> use, so a break is only ever inserted where
+	/// that engine has proven it is safe (never inside a call whose contents are copied verbatim
+	/// from source, such as <c>lit(...)</c>, and never before a closing delimiter). CRLF line
+	/// endings are preserved at every inserted break, mirroring <see cref="Format"/>. Never throws.
+	/// <para>
+	/// Deliberately does <b>not</b> run <see cref="Format"/>'s cosmetic pass first: that pass edits
+	/// whitespace by a blind per-line regex with no notion of "this comma is inside a <c>lit(...)</c>
+	/// call," so composing it here would let a formatting request silently rewrite a source-copying
+	/// call's literal contents (not just insert a break, an actual whitespace-inserting text edit).
+	/// This method only ever touches whitespace at a break position — never elsewhere in token
+	/// text — which is why the "non-whitespace characters are identical before and after" property
+	/// holds byte-for-byte, including inside <c>lit(...)</c>/<c>localize(...)</c>.
+	/// </para>
+	/// </summary>
+	/// <param name="code">The MUSH softcode to reflow.</param>
+	/// <param name="width">Target line width in columns.</param>
+	/// <param name="mode">
+	/// The dialect to lay out as — same parameter and same default as <see cref="Validate"/>.
+	/// <see cref="MushAnalysisMode.CommandList"/> treats a root <c>;</c> as a break position;
+	/// every other mode does not (see <see cref="SoftcodeLayout.Compute"/>'s <c>parseType</c> doc).
+	/// The Language Server passes <c>MushParseMode.ForFileName(uri)</c> so a <c>.mushcmd</c>
+	/// document's semicolons actually break; a caller with no such signal keeps the conservative
+	/// default.
+	/// </param>
+	string FormatIndented(string code, int width = 78, MushAnalysisMode mode = MushAnalysisMode.Function);
 
 	/// <summary>
 	/// Returns hover information (function/command signature docs, or a built-in pattern

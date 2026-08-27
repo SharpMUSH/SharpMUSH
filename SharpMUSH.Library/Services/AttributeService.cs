@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using NaturalSort.Extension;
 using OneOf;
 using OneOf.Types;
@@ -20,7 +21,8 @@ public class AttributeService(
 	ILocateService locateService,
 	IValidateService validateService,
 	INotifyService notifyService,
-	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration,
+	IServiceProvider serviceProvider)
 	: IAttributeService
 {
 	private readonly NaturalSortComparer _attributeSort = new NaturalSortComparer(StringComparison.CurrentCulture);
@@ -679,9 +681,16 @@ public class AttributeService(
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
-		var returnedFlag = await allFlags.FirstOrDefaultAsync(x =>
-			x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
-			|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
+		var flagList = await allFlags.ToArrayAsync();
+		var returnedFlag = flagList
+			.FirstOrDefault(x => x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
+				|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
+
+		// PennMUSH-compatible prefix matching: "wiz" matches "wizard"
+		returnedFlag ??= flagList
+			.Where(x => x.Name.StartsWith(flag, StringComparison.OrdinalIgnoreCase))
+			.OrderBy(x => x.Name.Length)
+			.FirstOrDefault();
 
 		if (returnedFlag is null)
 		{
@@ -716,12 +725,31 @@ public class AttributeService(
 		}
 
 		var attrPath = attribute.Split('`');
-		var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath));
+
+		// Materialized (not left as a stream) because it is used twice: once below for the
+		// permission check, and again after the set for the target attribute's syntax flags. An
+		// *existing* attribute's flags never change on a value set, so this pre-set snapshot is
+		// exactly what the post-set flag check needs too -- reusing it avoids a second
+		// GetAttributeQuery round trip on every overwrite of an already-existing attribute (the
+		// overwhelmingly common case). It is NOT reusable for a brand-new attribute: GetAttributeQuery
+		// is all-or-nothing, so `existing` comes back empty here, but SetAttributeCommand applies
+		// SharpAttributeEntry.DefaultFlags (admin-configurable via @attribute, including cmdsyntax/
+		// funsyntax) to the newly-created node during that same call -- see the post-set re-fetch below.
+		var existing = await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath))
+			.ToListAsync();
 
 		// Check both attribute permissions AND object permissions
 		// Attribute permissions: executor must be able to set each attribute in the path
 		// Object permissions: executor must control the object
-		var permission = await attr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
+		var permission = true;
+		foreach (var x in existing)
+		{
+			if (!await ps.CanSet(executor, obj, x))
+			{
+				permission = false;
+				break;
+			}
+		}
 
 		if (!permission)
 		{
@@ -754,6 +782,36 @@ public class AttributeService(
 
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
+
+		// Advisory-only set-time validation: PennMUSH never validates softcode at set time, and
+		// parity governs here, so a syntax error must never block the set -- only warn the setter,
+		// after the value is already stored. `existing` (fetched pre-set, above) is reused when the
+		// attribute already existed -- its flags cannot have changed underneath this call. But when
+		// `existing` is empty, this was a first-ever write: DefaultFlags was just applied to the
+		// brand-new node by the SetAttributeCommand handler, so only a fresh fetch can see it. Paying
+		// one extra query here is a one-time cost per attribute, not a per-set cost.
+		var storedAttribute = existing.Count != 0
+			? existing.LastOrDefault()
+			: await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath)).LastOrDefaultAsync();
+		var parseType = storedAttribute?.SyntaxParseType();
+
+		if (parseType is not null)
+		{
+			// IMUSHCodeParser is resolved lazily via the container rather than taken as a constructor
+			// parameter: MUSHCodeParser's own constructor eagerly resolves IAttributeService through
+			// this same IServiceProvider, so an eager IMUSHCodeParser dependency here would be a
+			// circular singleton resolution. Deferring the lookup to call time (long after both
+			// singletons are fully constructed) breaks the cycle.
+			var mushParser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
+			// Only the code half: a $-command's or listen's pattern is compiled to a match regex, never
+			// parsed, so validating it would warn about an attribute that works (SoftcodeSource.Validate).
+			var errors = SoftcodeSource.Validate(mushParser, value, parseType.Value);
+
+			foreach (var error in errors)
+			{
+				await notifyService.Notify(executor, error.ToMushFailureString(), obj);
+			}
+		}
 
 		return new Success();
 	}

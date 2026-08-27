@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using MModule = MarkupString.MarkupStringModule;
 using Range = SharpMUSH.Library.Models.Range;
 
@@ -47,6 +48,39 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 
 	[GeneratedRegex(@"^(@[a-zA-Z]+)([^\s/])")]
 	private static partial Regex CommandWithoutSpaceRegex();
+
+	/// <summary>
+	/// Backed by <see cref="SoftcodeLayout.Compute"/> — the same engine <c>@examine</c>/<c>@grep</c>
+	/// use — rather than a second, independent formatter, and rendered by the same
+	/// <see cref="SoftcodeRenderer"/> the layout equivalence corpus proves safe (not a second,
+	/// hand-copied renderer). Never throws: a lex failure yields the original text unchanged,
+	/// matching <see cref="Format"/>'s never-throws contract.
+	/// </summary>
+	public string FormatIndented(string code, int width = 78, MushAnalysisMode mode = MushAnalysisMode.Function)
+	{
+		try
+		{
+			var tokens = parser.Tokenize(MModule.single(code));
+			if (tokens.Count == 0)
+			{
+				return code;
+			}
+
+			var classifyFunction = SoftcodeLayout.ClassifierFor(parser);
+			var breaks = SoftcodeLayout.Compute(tokens, width, classifyFunction: classifyFunction,
+				parseType: mode.ToParseType());
+
+			// Preserve the document's newline style at every inserted break, mirroring Format's own
+			// CRLF handling (above) — otherwise an LSP-formatted CRLF document would come back with
+			// bare '\n' at each break and '\r\n' everywhere else.
+			var newline = code.Contains("\r\n") ? "\r\n" : "\n";
+			return SoftcodeRenderer.Render(tokens, breaks, newline);
+		}
+		catch (Exception)
+		{
+			return code;
+		}
+	}
 
 	public IReadOnlyList<Diagnostic> Validate(string code, MushAnalysisMode mode = MushAnalysisMode.Function)
 		=> mode == MushAnalysisMode.CommandsPerLine
