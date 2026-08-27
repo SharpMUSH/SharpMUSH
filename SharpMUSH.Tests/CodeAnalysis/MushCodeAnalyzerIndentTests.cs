@@ -204,8 +204,18 @@ public class MushCodeAnalyzerIndentTests
 		// </para>
 		const string src =
 			"lit(short first part, and a very long second part that would definitely need wrapping if evaluated)";
-		var result = analyzer.FormatIndented(src, width: 20);
 
+		// Guard the guard: the identical text wrapped in a call name that DOES evaluate its arguments
+		// (switch, used the same way by the LongCode fixture elsewhere in this suite) must actually
+		// break at this width. Without this, the flat result asserted below would be equally consistent
+		// with FormatIndented's catch (Exception) swallowing a real failure from Tokenize or
+		// SoftcodeLayout.Compute and returning the input untouched, rather than with lit's
+		// CopiesArgumentSource special case doing its job.
+		const string evaluatingEquivalent =
+			"switch(short first part, and a very long second part that would definitely need wrapping if evaluated)";
+		await Assert.That(analyzer.FormatIndented(evaluatingEquivalent, width: 20).Split('\n')).Count().IsGreaterThan(1);
+
+		var result = analyzer.FormatIndented(src, width: 20);
 		await Assert.That(result).IsEqualTo(src);
 	}
 

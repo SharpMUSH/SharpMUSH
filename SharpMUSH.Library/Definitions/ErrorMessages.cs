@@ -55,6 +55,13 @@ public static class ErrorMessages
 		public const string InvalidPassword = "#-1 INVALID PASSWORD";
 		public const string InvalidFlag = "#-1 INVALID FLAG";
 		public const string ObjectAttributeString = "#-1 INVALID OBJECT/ATTRIBUTE VALUE";
+		/// <summary>
+		/// PennMUSH's single failure for every bad flag argument (<c>src/set.c:583-585</c>,
+		/// "Unrecognized attribute flag."): an unknown name, an empty name, and a privileged
+		/// name the player may not use all fail the whole argument identically, so the wording
+		/// never reveals that a flag the player cannot use exists.
+		/// </summary>
+		public const string UnrecognizedAttributeFlag = "#-1 UNRECOGNIZED ATTRIBUTE FLAG";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BadArgumentFormat = "#-1 BAD ARGUMENT FORMAT TO {0}";
 		public const string ArgRange = "#-1 ARGUMENT OUT OF RANGE";
@@ -438,6 +445,19 @@ public static class ErrorMessages
 		public const string AttributeIsSafeSetNotSafe = "Attribute {0} is SAFE. Set it !SAFE to modify it.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCannotBeWipedChildBlocked = "Attribute {0} cannot be wiped because a child attribute cannot be wiped.";
+		/// <summary>
+		/// PennMUSH's <c>af_helper</c> reports each half of a flag batch as ONE line naming the
+		/// whole list - <c>"%s/%s - %s reset."</c> / <c>"%s/%s - %s set."</c>
+		/// (<c>src/set.c:522-535</c>) - built from the REQUESTED bitmask, not from what actually
+		/// changed, and suppressed entirely when <c>AreQuiet(player, thing)</c> or
+		/// <c>AF_Quiet(atr)</c>. There is deliberately no "already set" or "is not set" wording:
+		/// Penn has no such case.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeFlagsResetFormat = "{0}/{1} - {2} reset.";
+		/// <inheritdoc cref="AttributeFlagsResetFormat"/>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeFlagsSetFormat = "{0}/{1} - {2} set.";
 		public const string NoAttributesWiped = "No attributes wiped.";
 		public const string OneAttributeWiped = "One attribute wiped.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

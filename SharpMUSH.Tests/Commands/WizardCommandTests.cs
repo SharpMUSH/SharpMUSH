@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -20,6 +21,21 @@ public class WizardCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+
+	/// <summary>
+	/// Everything <paramref name="who"/> was notified of while <paramref name="action"/> ran, in
+	/// order. The <see cref="INotifyService"/> substitute is shared across the whole test session,
+	/// so a bare <c>DidNotReceive()</c> asserts that the recipient was never sent that message by
+	/// ANY test - which makes the assertion pass or fail on what else happened to run. Windowing
+	/// through the recipient-keyed recorder scopes it to this command.
+	/// </summary>
+	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
+	{
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(who);
+		await action();
+		return [.. recorder.For(who).Skip(before)];
+	}
 
 	[Test]
 	[Category("NotImplemented")]
@@ -49,11 +65,12 @@ public class WizardCommandTests
 	public async ValueTask DrainCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@drain #1"));
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "#-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		var messages = await MessagesWhile(executor, () =>
+			Parser.CommandParse(1, ConnectionService, MModule.single("@drain #1")).AsTask());
+
+		await Assert.That(messages.Any(m => m.StartsWith("#-1"))).IsFalse()
+			.Because("@drain must not report an error return code");
 	}
 
 	[Test]
@@ -169,12 +186,13 @@ public class WizardCommandTests
 	public async ValueTask WaitCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@wait 1=think Waited"));
 
 		// Note: This test doesn't verify the wait actually happened, just that the command executed
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "#-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		var messages = await MessagesWhile(executor, () =>
+			Parser.CommandParse(1, ConnectionService, MModule.single("@wait 1=think Waited")).AsTask());
+
+		await Assert.That(messages.Any(m => m.StartsWith("#-1"))).IsFalse()
+			.Because("@wait must not report an error return code");
 	}
 
 	/// <summary>

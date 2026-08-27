@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -14,11 +15,13 @@ namespace SharpMUSH.Tests.Commands;
 /// <c>nodump</c> (<c>can_create_attr</c>, <c>src/attrib.c:479-483</c>). Both flags previously had
 /// zero effect on <c>CanSet</c> - the TODO comment this file replaces said as much.
 /// <para>
-/// <see cref="NotifyService"/> is a substitute shared across the whole test session (see
-/// <see cref="AttributeSyntaxFlagTests"/>) - <see cref="WipeOfUnflaggedBranch_PreservesProtectedDescendant"/>
-/// is the one test here that inspects it (to confirm a partially-blocked <c>@wipe</c> reaches
-/// the player via <c>NotifyLocalized</c>, not just the database), so the class is
-/// <c>[NotInParallel]</c> and that test clears received calls immediately beforehand.
+/// The <see cref="INotifyService"/> substitute is shared across the whole test session, so no
+/// assertion here reads <c>ReceivedCalls()</c> and none calls <c>ClearReceivedCalls()</c> -
+/// <c>[NotInParallel]</c> only serialises this class against other <c>[NotInParallel]</c> tests,
+/// so clearing would delete the recorded calls of whatever parallelizable test is running
+/// alongside. Notification assertions go through <see cref="MessagesWhile"/>, which reads the
+/// recipient-keyed <see cref="TestHelpers.NotificationRecorder"/> and windows it to the messages
+/// produced by one command.
 /// </para>
 /// </summary>
 [NotInParallel]
@@ -31,7 +34,20 @@ public class AttributeTreeWriteGateTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+
+	/// <summary>
+	/// Everything <paramref name="who"/> was notified of while <paramref name="action"/> ran, in
+	/// order. Reads the recipient-keyed recorder rather than the session-shared NSubstitute call
+	/// list, so a concurrent test's notifications are invisible here and this test's assertions
+	/// never need to clear anyone else's.
+	/// </summary>
+	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
+	{
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(who);
+		await action();
+		return [.. recorder.For(who).Skip(before)];
+	}
 
 	/// <summary>
 	/// Runs <paramref name="expression"/> as the player behind <paramref name="handle"/>.
@@ -291,11 +307,9 @@ public class AttributeTreeWriteGateTests
 		await Assert.That(controlBranch.IsAttribute).IsFalse()
 			.Because("a wholly-unflagged branch is fully removed by @wipe, proving the command still works end-to-end");
 
-		// The mortal owner wipes the branch that has one protected descendant among its
-		// children. Cleared first: NotifyService is a session-shared substitute (see the
-		// class doc comment), so only calls made by THIS command are attributable below.
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WPROT{uid}"));
+		// The mortal owner wipes the branch that has one protected descendant among its children.
+		var wipeMessages = await MessagesWhile(owner.DbRef, () =>
+			Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WPROT{uid}")).AsTask());
 
 		var protectedLeaf = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROT{uid}`WIZLEAF",
 			IAttributeService.AttributeMode.Read, false);
@@ -324,17 +338,15 @@ public class AttributeTreeWriteGateTests
 
 		// The outcome must reach the player, not just the database - @wipe used to discard
 		// ClearAttributeAsync's result entirely and always print a generic success line.
-		// Reporting now happens via NotifyLocalized (Task 6 fix round 3), not the command's
-		// own CallState, so it's asserted against the shared NotifyService substitute rather
-		// than wipeAttempt.Message.
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
-			nameof(ErrorMessages.Notifications.AttributeCannotBeWipedChildBlocked), owner.DbRef)).IsTrue()
+		// Reporting now happens via NotifyLocalized (Task 6 fix round 3), not the command's own
+		// CallState, so it's asserted against what the owner was actually told.
+		await Assert.That(wipeMessages).Contains(string.Format(
+				ErrorMessages.Notifications.AttributeCannotBeWipedChildBlocked, $"WPROT{uid}"))
 			.Because("a partially-blocked wipe must tell the player, matching PennMUSH's own AE_TREE message");
 
 		// And PennMUSH's do_wipe always ALSO prints the final tally regardless: exactly one
 		// attribute (OKLEAF) was actually removable and removed here.
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
-			nameof(ErrorMessages.Notifications.OneAttributeWiped), owner.DbRef)).IsTrue()
+		await Assert.That(wipeMessages).Contains(ErrorMessages.Notifications.OneAttributeWiped)
 			.Because("the tally must still be reported even when part of the wipe was blocked");
 	}
 
@@ -355,11 +367,11 @@ public class AttributeTreeWriteGateTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeNoMatch");
 
 		// No attribute named anything like this exists on owner - the pattern matches nothing.
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/NOSUCHPATTERN{uid}*"));
+		var messages = await MessagesWhile(owner.DbRef, () =>
+			Parser.CommandParse(owner.Handle, ConnectionService,
+				MModule.single($"@wipe me/NOSUCHPATTERN{uid}*")).AsTask());
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
-			nameof(ErrorMessages.Notifications.NoAttributesWiped), owner.DbRef)).IsTrue()
+		await Assert.That(messages).Contains(ErrorMessages.Notifications.NoAttributesWiped)
 			.Because("a zero-match @wipe must still report the tally, not go completely silent");
 	}
 
@@ -454,21 +466,20 @@ public class AttributeTreeWriteGateTests
 		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&SF{uid}OK me=okvalue"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}/SF{uid}S=safe"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/SF{uid}*"));
+		var messages = await MessagesWhile(owner.DbRef, () =>
+			Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/SF{uid}*")).AsTask());
 
 		// Control: the unflagged sibling matched the same wildcard and was wiped, so the report
 		// below belongs to a wipe that actually ran rather than one that matched nothing.
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
-			nameof(ErrorMessages.Notifications.OneAttributeWiped), owner.DbRef)).IsTrue()
+		await Assert.That(messages).Contains(ErrorMessages.Notifications.OneAttributeWiped)
 			.Because("exactly one of the two matched attributes was removable and removed");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
-			nameof(ErrorMessages.Notifications.AttributeIsSafeSetNotSafe), owner.DbRef)).IsTrue()
+		await Assert.That(messages).Contains(string.Format(
+				ErrorMessages.Notifications.AttributeIsSafeSetNotSafe, $"SF{uid}S"))
 			.Because("a safe attribute must be reported with Penn's AE_SAFE wording, which names the remedy");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
-			nameof(ErrorMessages.Notifications.UnableToWipeAttribute), owner.DbRef)).IsFalse()
+		await Assert.That(messages).DoesNotContain(string.Format(
+				ErrorMessages.Notifications.UnableToWipeAttribute, $"SF{uid}S"))
 			.Because("AE_SAFE and AE_ERROR are distinct outcomes - the safe case must not also report the generic one");
 
 		var survivor = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"SF{uid}S",

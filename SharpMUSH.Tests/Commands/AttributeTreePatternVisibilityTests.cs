@@ -199,8 +199,21 @@ public class AttributeTreePatternVisibilityTests
 		var roomName = TestIsolationHelpers.GenerateUniqueName("PatNearRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		// /QUIET: a plain @teleport queues a "look" command for the target (GeneralCommands.cs's
+		// Teleport, QueueCommandListRequest) rather than running it inline, so its arrival autolook
+		// can land at an unpredictable later tick - inside some OTHER, unrelated test's notification
+		// capture window, since the shared NotifyService substitute is session-wide. /QUIET skips
+		// that queued look entirely.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@teleport {viewer.DbRef}={roomDbRef}"));
+			MModule.single($"@teleport/quiet {viewer.DbRef}={roomDbRef}"));
+
+		// The room dbref is scraped out of @dig's message text: if that wording ever changes,
+		// the @teleport above silently does nothing and the negative assertion below passes
+		// because the viewer never moved, not because the nearby gate fired. This is the only
+		// test covering that gate, so prove the move happened first.
+		var viewerLocation = await Eval(viewer.Handle, "loc(me)");
+		await Assert.That(viewerLocation).IsEqualTo(roomDbRef)
+			.Because("the nearby assertion is vacuous unless the viewer actually left the owner's room");
 
 		var result = await Eval(viewer.Handle, $"get({ownerDbRef}/PN{uid})");
 		await Assert.That(result).DoesNotContain("nearbyvalue")

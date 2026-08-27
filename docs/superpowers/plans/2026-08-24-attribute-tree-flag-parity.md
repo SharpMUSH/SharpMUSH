@@ -115,8 +115,11 @@ public class AttributeAncestryTests
 		var path = await AttributeAncestry.PathAsync(leaf, new Dictionary<string, SharpAttribute>(),
 			parts => ValueTask.FromResult<SharpAttribute?>(Attr(string.Join('`', parts))));
 
-		await Assert.That(path.Select(a => a.LongName).ToArray())
-			.IsEquivalentTo(new[] { "A", "A`B", "A`B`C", "A`B`C`D" });
+		// IsEquivalentTo ignores order, so it would pass on a reversed path - which is the entire
+		// claim of this test. Assert the joined sequence instead (TUnit 1.65 has no
+		// CollectionOrdering option on IsEquivalentTo).
+		await Assert.That(string.Join(" -> ", path.Select(a => a.LongName)))
+			.IsEqualTo("A -> A`B -> A`B`C -> A`B`C`D");
 	}
 
 	[Test]
@@ -281,6 +284,14 @@ public class AttributeTreePatternVisibilityTests
 Two things to verify while writing these rather than assuming:
 - `FunctionParse` runs as whichever executor the parser is bound to. The visual test needs the **viewer**, not the owner, to be the executor — check how `AttributeTreeParentPermissionTests` switches executor and mirror it. If `FunctionParse` cannot take an executor, drive it through `CommandParse` with `think` on the viewer's handle instead.
 - Confirm `xattr`'s argument order against `AttributeFunctions.cs` before relying on it; substitute `lattr` if simpler.
+
+> **Both resolved while writing the tests — the recipe above is stale, do not copy it verbatim.**
+> `FunctionParse` does evaluate as the parser's bound executor (God), which takes the
+> `isPrivileged` early-out and makes every viewer-sensitive assertion vacuous, so the shipped
+> tests go through a private `Eval(handle, expression)` helper that issues
+> `CommandParse(handle, ..., "think <expression>")` on the *viewer's* handle. And `xattr` is
+> `xattr(object/attr, start, count)` with a 1-based `start` that rejects `0`, so the shipped
+> tests use `lattr` where a plain listing is all that is needed.
 
 - [ ] **Step 2: Run to verify failure**
 
