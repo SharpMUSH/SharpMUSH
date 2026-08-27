@@ -74,8 +74,15 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
+	/// <summary>
+	/// Digits are valid attribute-name characters in PennMUSH - <c>attribute_names</c> lists
+	/// '0'-'9' explicitly (<c>utils/gentables.c:80-81</c>) and <c>good_atr_name</c> imposes no
+	/// leading-character rule beyond rejecting a leading or trailing backtick. So "123" is a valid
+	/// attribute name, and the previous expectation of 0 was wrong.
+	/// </summary>
 	[Arguments("valid(attrname,TEST)", "1")]
-	[Arguments("valid(attrname,123)", "0")]
+	[Arguments("valid(attrname,123)", "1")]
+	[Arguments("valid(attrname,`LEADING)", "0")]
 	public async Task Valid(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -346,22 +353,37 @@ public class UtilityFunctionUnitTests
 		await Assert.That(depth).IsGreaterThanOrEqualTo(0);
 	}
 
+	/// <summary>
+	/// <c>allof(&lt;expr&gt;[, ...], &lt;osep&gt;)</c> - "Evaluates every &lt;expr&gt; argument
+	/// (including side-effects) and returns the results of those which are true, in a list
+	/// separated by &lt;osep&gt;. The output separator argument is required"
+	/// (<c>help ALLOF()</c>). It is NOT a boolean AND, which is what these cases previously
+	/// asserted: with the last argument consumed as the separator, <c>allof(1,1,1)</c> is two
+	/// true values joined by "1".
+	/// </summary>
 	[Test]
-	[Arguments("allof(1,1,1)", "1")]
-	[Arguments("allof(1,0,1)", "0")]
-	[Arguments("allof(0,0,0)", "0")]
-	[Arguments("allof(add(1,1),sub(5,3))", "1")]
+	[Arguments("allof(1,1,1)", "111")]
+	[Arguments("allof(1,0,1)", "1")]
+	[Arguments("allof(0,0,0)", "")]
+	[Arguments("allof(add(1,1),sub(5,3))", "2")]
+	[Arguments("allof(#-1,#101,#2970,,#-3,0,#319,null(x),|)", "#101|#2970|#319")]
 	public async Task AllOf_Evaluation(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// <c>itext(&lt;n&gt;)</c> returns the <c>##</c> of the &lt;n&gt;th enclosing
+	/// <c>iter()</c>/<c>@dolist</c>, where &lt;n&gt; is a number or "L" (<c>help ITEXT()</c>). It
+	/// does not validate a string and return 1/0, which is what these cases previously asserted -
+	/// they compared the function's OUTPUT against a boolean.
+	/// </summary>
 	[Test]
-	[Arguments("itext(test_string_ITEXT_case1)", "1")]
-	[Arguments("itext(123)", "0")]
-	[Arguments("itext(45.67)", "0")]
-	[Arguments("itext(abc123)", "1")]
+	[Arguments("itext(test_string_ITEXT_case1)", "#-1 ARGUMENT MUST BE INTEGER")]
+	[Arguments("itext(abc123)", "#-1 ARGUMENT MUST BE INTEGER")]
+	[Arguments("itext(45.67)", "#-1 ARGUMENT MUST BE INTEGER")]
+	[Arguments("itext(123)", "#-1 REGISTER OUT OF RANGE")]
 	public async Task IText_Validation(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -402,7 +424,9 @@ public class UtilityFunctionUnitTests
 		var createResult = (await Parser.FunctionParse(MModule.single("create(test_thing_CLONE_original)")))?.Message!;
 		var originalDbRef = HelperFunctions.ParseDbRef(createResult.ToPlainText()).AsValue();
 
-		await Parser.FunctionParse(MModule.single($"attrib_set({createResult},TEST_ATTR,test_value_CLONE)"));
+		// attrib_set(<object>/<attrib>, <value>) - see Wipe_ClearAttributes. In the old form this
+		// line set nothing at all, so the attribute it was meant to give the clone never existed.
+		await Parser.FunctionParse(MModule.single($"attrib_set({createResult}/TEST_ATTR,test_value_CLONE)"));
 
 		var cloneResult = (await Parser.FunctionParse(MModule.single($"clone({createResult},test_thing_CLONE_copy)")))?.Message!;
 		var cloneDbRef = HelperFunctions.ParseDbRef(cloneResult.ToPlainText()).AsValue();
@@ -412,15 +436,55 @@ public class UtilityFunctionUnitTests
 		var clone = await Mediator.Send(new GetObjectNodeQuery(cloneDbRef));
 		await Assert.That(clone.IsThing).IsTrue();
 		await Assert.That(clone.AsThing.Object.Name).IsEqualTo("test_thing_CLONE_copy");
+
+		var clonedAttr = (await Parser.FunctionParse(MModule.single($"get({cloneResult}/TEST_ATTR)")))?.Message!;
+		await Assert.That(clonedAttr.ToPlainText()).IsEqualTo("test_value_CLONE")
+			.Because("clone() copies the original's attributes - otherwise setting one here proves nothing");
 	}
 
+	/// <summary>
+	/// <c>testlock(&lt;key&gt;, &lt;victim&gt;)</c> - the LOCK comes first (<c>help TESTLOCK()</c>).
+	/// This previously passed the object as the key and <c>%#/%#</c> as the victim, which is not a
+	/// victim at all; <c>#-1 NO MATCH</c> was the correct answer to the question it actually asked.
+	/// </summary>
 	[Test]
 	public async Task TestLock_EvaluateLock()
 	{
 		var createResult = (await Parser.FunctionParse(MModule.single("create(test_obj_TESTLOCK)")))?.Message!;
+		var dbref = createResult.ToPlainText();
 
-		var result = (await Parser.FunctionParse(MModule.single($"testlock({createResult},%#/%#)")))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo("1");
+		var passes = (await Parser.FunctionParse(MModule.single("testlock(FLAG^WIZARD,#1)")))?.Message!;
+		await Assert.That(passes.ToPlainText()).IsEqualTo("1")
+			.Because("#1 is a wizard, so it passes FLAG^WIZARD");
+
+		var fails = (await Parser.FunctionParse(MModule.single($"testlock(FLAG^WIZARD,{dbref})")))?.Message!;
+		await Assert.That(fails.ToPlainText()).IsEqualTo("0")
+			.Because("a freshly created thing is not a wizard - without this the assertion above proves nothing");
+	}
+
+	/// <summary>
+	/// A bare dbref is an object lock: only that object passes it. SharpMUSH returns 1 for every
+	/// victim, so a lock written as <c>@lock &lt;obj&gt;=#123</c> admits everyone.
+	///
+	/// <para>Measured alongside <see cref="TestLock_EvaluateLock"/>, which shows the evaluator
+	/// itself works - <c>testlock(FLAG^WIZARD, ...)</c> correctly returns 1 for #1 and 0 for a new
+	/// thing. Only the bare-dbref key form is broken, so this is boolexp parsing rather than lock
+	/// evaluation. Skipped rather than deleted so the gap stays visible and named; fixing it means
+	/// touching the lock parser and belongs in its own change.</para>
+	/// </summary>
+	[Test]
+	[Skip("Bare-dbref lock keys always pass - see the doc comment. Tracked separately.")]
+	public async Task TestLock_BareDbrefKey_OnlyThatObjectPasses()
+	{
+		var subject = (await Parser.FunctionParse(MModule.single("create(test_obj_TESTLOCK_subject)")))?.Message!.ToPlainText()!;
+		var other = (await Parser.FunctionParse(MModule.single("create(test_obj_TESTLOCK_other)")))?.Message!.ToPlainText()!;
+
+		var passes = (await Parser.FunctionParse(MModule.single($"testlock({subject},{subject})")))?.Message!;
+		await Assert.That(passes.ToPlainText()).IsEqualTo("1");
+
+		var fails = (await Parser.FunctionParse(MModule.single($"testlock({subject},{other})")))?.Message!;
+		await Assert.That(fails.ToPlainText()).IsEqualTo("0")
+			.Because("an object lock names exactly one object");
 	}
 
 	[Test]
@@ -428,12 +492,26 @@ public class UtilityFunctionUnitTests
 	{
 		var createResult = (await Parser.FunctionParse(MModule.single("create(test_obj_WIPE)")))?.Message!;
 
-		await Parser.FunctionParse(MModule.single($"attrib_set({createResult},ATTR1,value1)"));
-		await Parser.FunctionParse(MModule.single($"attrib_set({createResult},ATTR2,value2)"));
+		// attrib_set(<object>/<attrib>[, <value>]) - the object and attribute are ONE argument
+		// (help ATTRIB_SET()). The previous form, attrib_set(<obj>,ATTR1,value1), returned
+		// "#-1 BAD ARGUMENT FORMAT TO ATTRIB_SET" and set nothing, which is why the original
+		// assertion saw a wipe count of zero: there was never anything on the object to wipe.
+		await Parser.FunctionParse(MModule.single($"attrib_set({createResult}/ATTR1,value1)"));
+		await Parser.FunctionParse(MModule.single($"attrib_set({createResult}/ATTR2,value2)"));
+
+		// Control: the attributes are readable before the wipe, so a passing assertion below
+		// cannot be the attrib_set calls having silently done nothing.
+		var before = (await Parser.FunctionParse(MModule.single($"get({createResult}/ATTR1)")))?.Message!;
+		await Assert.That(before.ToPlainText()).IsEqualTo("value1");
 
 		var wipeResult = (await Parser.FunctionParse(MModule.single($"wipe({createResult})")))?.Message!;
+		await Assert.That(wipeResult.ToPlainText()).IsEqualTo(string.Empty)
+			.Because("PennMUSH's wipe() returns nothing at all");
 
-		await Assert.That(wipeResult.ToPlainText()).Contains("2");
+		var after1 = (await Parser.FunctionParse(MModule.single($"get({createResult}/ATTR1)")))?.Message!;
+		var after2 = (await Parser.FunctionParse(MModule.single($"get({createResult}/ATTR2)")))?.Message!;
+		await Assert.That(after1.ToPlainText()).IsEmpty();
+		await Assert.That(after2.ToPlainText()).IsEmpty();
 	}
 
 	[Test]
