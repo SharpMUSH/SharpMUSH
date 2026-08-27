@@ -295,16 +295,23 @@ public partial class SurrealDatabase
 			var valueAssignment = isLast ? $"value = {P(serializedValue)}" : "value = value ?? ''";
 			sb.Append($"UPSERT attribute:⟨{P(attrKey)}⟩ SET key = {P(attrKey)}, name = {P(attrName)}, longName = {P(longName)}, {valueAssignment};");
 
+			// RELATE, not UPSERT ... SET in=, out=: a plain table row with matching in/out fields
+			// looks identical to a real graph edge in a SELECT, but SurrealDB's graph-traversal
+			// operator (->has_attribute->attribute, used by GetAllAttributesForIdAsync's recursive
+			// read) only ever finds edges actually created through RELATE. The explicit, still
+			// deterministic edge id keeps this UPSERT-equivalent: RELATE with an id that already
+			// exists is a no-op against the existing edge, not a duplicate - re-setting an existing
+			// attribute must not grow the tree an extra edge every time.
 			if (i == 0)
 			{
 				var edgeId = $"{typedRecordId.Replace(":", "_")}__attr_{EscapeString(attrKey)}";
-				sb.Append($"UPSERT has_attribute:⟨{P(edgeId)}⟩ SET in = {typedRecordId}, out = attribute:⟨{P(attrKey)}⟩;");
+				sb.Append($"RELATE {typedRecordId}->has_attribute:⟨{P(edgeId)}⟩->attribute:⟨{P(attrKey)}⟩;");
 			}
 			else
 			{
 				var prevAttrKey = $"{objKey}_{string.Join('`', attribute.Take(i))}";
 				var edgeId = $"attr_{EscapeString(prevAttrKey)}__attr_{EscapeString(attrKey)}";
-				sb.Append($"UPSERT has_attribute:⟨{P(edgeId)}⟩ SET in = attribute:⟨{P(prevAttrKey)}⟩, out = attribute:⟨{P(attrKey)}⟩;");
+				sb.Append($"RELATE attribute:⟨{P(prevAttrKey)}⟩->has_attribute:⟨{P(edgeId)}⟩->attribute:⟨{P(attrKey)}⟩;");
 			}
 		}
 

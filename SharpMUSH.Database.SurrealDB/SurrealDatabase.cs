@@ -831,29 +831,89 @@ public partial class SurrealDatabase(
 		}
 	}
 
+	/// <summary>
+	/// Builds the query and bind parameters for <see cref="GetAllAttributesForIdAsync"/> /
+	/// <see cref="GetAllLazyAttributesForIdAsync"/>: every descendant attribute of
+	/// <paramref name="parentId"/>, in one round trip, via SurrealDB's recursive graph-path
+	/// syntax (<c>.{..+collect}</c>, walking <c>-&gt;has_attribute-&gt;attribute</c>) rather than
+	/// one <c>has_attribute</c> hop per application-level recursion. <c>+collect</c> walks
+	/// depth-first and returns every node visited, not just leaves - matching the old code's
+	/// flatten-the-whole-subtree behaviour - and the engine caps recursion at a fixed depth
+	/// (SurrealDB 2.6: 256) and errors rather than looping forever, so a corrupted graph with a
+	/// cycle fails the query instead of hanging the connection or stack-overflowing, unlike the
+	/// C# recursion this replaces.
+	/// <para>
+	/// This only works because <c>has_attribute</c> edges are created via <c>RELATE</c>
+	/// (<see cref="SetAttributeAsync"/>), not a plain <c>UPSERT ... SET in = ..., out = ...</c> -
+	/// SurrealDB's graph-traversal operator only finds records actually created through
+	/// <c>RELATE</c> (or an <c>INSERT RELATION</c>), never a plain table row that merely happens
+	/// to have matching <c>in</c>/<c>out</c> fields, even on an untyped/schemaless table, confirmed
+	/// directly against both the embedded engine and a real SurrealDB 2.6.5 server. No migration
+	/// converts attributes written before this change - SharpMUSH is pre-1.0, so an existing
+	/// database with attributes from before this fix is expected to be wiped and reseeded, not
+	/// upgraded in place.
+	/// </para>
+	/// <para>
+	/// The inner <c>SELECT ... FETCH descendants</c> dereferences the collected ids into full
+	/// attribute records in the same round trip; the outer <c>SELECT VALUE descendants FROM (...)</c>
+	/// unwraps the single-row wrapper so the statement's own result is the array of records
+	/// (still nested one level - SurrealDB returns one row per queried FROM target - which
+	/// <see cref="GetAllAttributesForIdAsync"/>/<see cref="GetAllLazyAttributesForIdAsync"/> unwrap).
+	/// A <paramref name="parentId"/> that doesn't exist in the database, or an attribute with no
+	/// descendants, both come back as an empty result rather than an error.
+	/// </para>
+	/// </summary>
+	private static (string Query, Dictionary<string, object?> Parameters) BuildDescendantAttributesQuery(
+		string parentId)
+	{
+		static string QueryFor(string fromTarget) =>
+			"SELECT VALUE descendants FROM (SELECT @.{..+collect}(->has_attribute->attribute) AS descendants FROM "
+			+ fromTarget
+			+ " FETCH descendants)";
+
+		if (parentId.StartsWith("Attribute"))
+		{
+			var key = ExtractKeyString(parentId);
+			return (
+				QueryFor("type::thing('attribute', $key)"),
+				new Dictionary<string, object?> { ["key"] = key });
+		}
+
+		// A bare object id doesn't carry its own type: some callers (GetAttributesAsync/
+		// GetAttributesByRegexAsync) resolve it via GetTypedId first, but MapRecordToSharpObject's
+		// AllAttributes property (this method's third caller) passes the generic ObjectId(key)
+		// ("Object/N") - and has_attribute edges are never stored against an "object" table at
+		// all, only against the typed player/room/thing/exit one. Naming all four as an array
+		// FROM target matches GetTopLevelAttributesAsync's own object branch (an OR across all
+		// four); whichever one doesn't exist as a real record is silently skipped rather than
+		// erroring, so this costs nothing over naming the one real type.
+		var objKey = ExtractKey(parentId);
+		return (
+			QueryFor("[player:$key, room:$key, thing:$key, exit:$key]"),
+			new Dictionary<string, object?> { ["key"] = objKey });
+	}
+
 	private async IAsyncEnumerable<SharpAttribute> GetAllAttributesForIdAsync(string parentId, [EnumeratorCancellation] CancellationToken ct = default)
 	{
-		// SurrealDB doesn't have variable-depth traversal like Cypher's *1..999,
-		// so we recursively gather all attributes
-		await foreach (var attr in GetTopLevelAttributesAsync(parentId, ct))
+		var (query, parameters) = BuildDescendantAttributesQuery(parentId);
+		var result = await ExecuteAsync(query, parameters, ct);
+		var rows = result.GetValue<List<List<AttributeRecord>>>(0);
+		var records = rows is { Count: > 0 } ? rows[0] : [];
+		foreach (var record in records)
 		{
-			yield return attr;
-			await foreach (var child in GetAllAttributesForIdAsync(attr.Id, ct))
-			{
-				yield return child;
-			}
+			yield return await MapToSharpAttribute(record, ct);
 		}
 	}
 
 	private async IAsyncEnumerable<LazySharpAttribute> GetAllLazyAttributesForIdAsync(string parentId, [EnumeratorCancellation] CancellationToken ct = default)
 	{
-		await foreach (var attr in GetTopLevelLazyAttributesAsync(parentId, ct))
+		var (query, parameters) = BuildDescendantAttributesQuery(parentId);
+		var result = await ExecuteAsync(query, parameters, ct);
+		var rows = result.GetValue<List<List<AttributeRecord>>>(0);
+		var records = rows is { Count: > 0 } ? rows[0] : [];
+		foreach (var record in records)
 		{
-			yield return attr;
-			await foreach (var child in GetAllLazyAttributesForIdAsync(attr.Id, ct))
-			{
-				yield return child;
-			}
+			yield return await MapToLazySharpAttribute(record, ct);
 		}
 	}
 
