@@ -214,8 +214,29 @@
   <data name="CreatedObject" xml:space="preserve">
     <value>Created: Object {0}.</value>
   </data>
-  <data name="WipedAttributes" xml:space="preserve">
-    <value>Wiped attributes matching {0}.</value>
+  <data name="UnableToWipeAttribute" xml:space="preserve">
+    <value>Unable to wipe attribute {0}.</value>
+  </data>
+  <data name="AttributeIsSafeSetNotSafe" xml:space="preserve">
+    <value>Attribute {0} is SAFE. Set it !SAFE to modify it.</value>
+  </data>
+  <data name="AttributeCannotBeWipedChildBlocked" xml:space="preserve">
+    <value>Attribute {0} cannot be wiped because a child attribute cannot be wiped.</value>
+  </data>
+  <data name="AttributeFlagsResetFormat" xml:space="preserve">
+    <value>{0}/{1} - {2} reset.</value>
+  </data>
+  <data name="AttributeFlagsSetFormat" xml:space="preserve">
+    <value>{0}/{1} - {2} set.</value>
+  </data>
+  <data name="NoAttributesWiped" xml:space="preserve">
+    <value>No attributes wiped.</value>
+  </data>
+  <data name="OneAttributeWiped" xml:space="preserve">
+    <value>One attribute wiped.</value>
+  </data>
+  <data name="AttributesWipedCount" xml:space="preserve">
+    <value>{0} attributes wiped.</value>
   </data>
   <data name="CouldNotFindNewOwner" xml:space="preserve">
     <value>Could not find new owner.</value>
@@ -649,9 +670,6 @@
   </data>
   <data name="ObjectIsProtectedSafe" xml:space="preserve">
     <value>That object is protected (SAFE).</value>
-  </data>
-  <data name="AttributesWiped" xml:space="preserve">
-    <value>Attributes wiped.</value>
   </data>
 
   <!-- Building / Creating -->

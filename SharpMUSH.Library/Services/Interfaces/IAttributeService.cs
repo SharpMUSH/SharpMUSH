@@ -22,19 +22,13 @@ public interface IAttributeService
 		Regex = 2
 	}
 
-	enum AttributeClearMode
-	{
-		Safe = 0,
-		Unsafe = 1
-	}
-
 	ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributeMode mode, bool parent = true);
 
 	ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributeMode mode, bool parent = true);
 
 	ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value);
 
-	ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributePatternMode patternMode, AttributeClearMode clearMode);
+	ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributePatternMode patternMode);
 
 	ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj, int depth = 1);
 
@@ -48,6 +42,13 @@ public interface IAttributeService
 	ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag);
 
 	ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag);
+
+	/// <summary>
+	/// Applies a whole list of <c>!</c>-prefixable flag tokens to one attribute as a single
+	/// operation - one permission check against the pre-batch state, covering every token.
+	/// See the implementation's remarks for why this must not be a loop of single-flag calls.
+	/// </summary>
+	ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagsAsync(AnySharpObject executor, AnySharpObject obj, string attribute, IReadOnlyList<string> flagTokens);
 
 	ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false);

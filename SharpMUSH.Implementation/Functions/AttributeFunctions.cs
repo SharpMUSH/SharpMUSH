@@ -1313,8 +1313,17 @@ public partial class Functions
 				split.AsT0.db, LocateFlags.All,
 				async found =>
 				{
+					// set(obj/attr, flaglist) accepts a space-separated list of !-prefixable
+					// flag tokens, same as @set's own flag argument (PennMUSH's fun_set routes
+					// through do_set -> do_attrib_flags, which parses the whole list) - so this
+					// must batch through SetAttributeFlagsAsync, not treat the whole string as
+					// one flag name (Task 6 fix round 2, M3).
+					var flagTokens = MModule.splitList(MModule.single(" "), arg1)
+						.Select(MModule.plainText)
+						.ToList();
+
 					var result =
-						await AttributeService!.SetAttributeFlagAsync(executor, found, split.AsT0.Attribute, arg1.ToPlainText());
+						await AttributeService!.SetAttributeFlagsAsync(executor, found, split.AsT0.Attribute, flagTokens);
 					return result switch
 					{
 						{ IsT1: true } => result.AsT1,

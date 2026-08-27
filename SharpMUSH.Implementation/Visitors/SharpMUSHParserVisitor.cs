@@ -1620,7 +1620,7 @@ public class SharpMUSHParserVisitor(
 
 			var clearResult = await AttributeService.ClearAttributeAsync(
 				clearExecutor, clearTargetObject, matchedEntry.Name,
-				IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+				IAttributeService.AttributePatternMode.Exact);
 
 			var clearHandle = prs.CurrentState.Handle;
 

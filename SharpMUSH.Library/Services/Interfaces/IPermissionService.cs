@@ -17,6 +17,14 @@ public interface IPermissionService
 
 	ValueTask<bool> CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
 
+	/// <summary>
+	/// Same walk as <see cref="CanSet"/>, but never denies on the <c>safe</c> flag. Mirrors
+	/// PennMUSH's Can_Write_Attr_Ignore_Safe (hdrs/mushdb.h:120-121), used by af_helper
+	/// (src/set.c:509-511) only when the flag operation being performed is clearing <c>safe</c>
+	/// itself off the attribute.
+	/// </summary>
+	ValueTask<bool> CanSetIgnoringSafe(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
+
 	ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
 
 	ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target);

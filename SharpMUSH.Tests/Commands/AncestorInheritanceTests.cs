@@ -91,6 +91,50 @@ public class AncestorInheritanceTests
 		await Assert.That(attr.IsNone).IsTrue();
 	}
 
+	/// <summary>
+	/// Task 7 fixed exactly this shape for <c>@parent</c> chains in all three providers: a
+	/// <c>no_inherit</c> flag on ANY level of the branch blocks the whole path across an
+	/// inheritance boundary (Penn's <c>atr_get_with_parent</c>, <c>attrib.c:1232-1252</c>, tests
+	/// AF_PRIVATE on every backtick-delimited segment). The type-ancestor fall-through kept the
+	/// old leaf-only test, so a <c>no_inherit</c> branch on the ancestor still handed out its
+	/// leaves.
+	/// </summary>
+	[Test]
+	[NotInParallel]
+	public async Task NoInheritOnAncestorBranch_BlocksTheLeaf()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&ANCNI{uid} {AncestorThing}=branchval"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&ANCNI{uid}`LEAF {AncestorThing}=leafval"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@set {AncestorThing}/ANCNI{uid}=no_inherit"));
+
+		// Control: an identically-shaped, unflagged branch on the same ancestor.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&ANCOK{uid} {AncestorThing}=okbranch"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&ANCOK{uid}`LEAF {AncestorThing}=okleaf"));
+
+		var thingRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AncNoInheritBranch");
+		var thing = await Known(thingRef);
+
+		// Proves the type-ancestor fall-through reaches a nested leaf at all, so the miss below
+		// is the no_inherit flag rather than tree attributes never inheriting through ANCESTOR_*.
+		var control = await AttributeService.GetAttributeAsync(thing, thing, $"ANCOK{uid}`LEAF",
+			IAttributeService.AttributeMode.Read, true);
+		await Assert.That(control.IsAttribute).IsTrue()
+			.Because("a nested leaf on the type ancestor is inherited by a plain thing");
+		await Assert.That(control.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("okleaf");
+
+		var attr = await AttributeService.GetAttributeAsync(thing, thing, $"ANCNI{uid}`LEAF",
+			IAttributeService.AttributeMode.Read, true);
+		await Assert.That(attr.IsNone).IsTrue()
+			.Because("no_inherit on the ancestor's branch blocks the whole subtree, not just the flagged node");
+	}
+
 	[Test]
 	[NotInParallel]
 	public async Task AncestorObject_DoesNotSelfLoop()
