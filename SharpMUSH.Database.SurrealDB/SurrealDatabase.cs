@@ -97,7 +97,7 @@ public partial class SurrealDatabase(
 	}
 
 	private const string AttributeChildrenByParentQuery =
-		"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM type::thing('attribute', $key)->has_attribute->attribute";
+		"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM type::record('attribute', $key)->has_attribute->attribute";
 
 	/// <summary>
 	/// Converts a partial-match regex to a full-match regex for SurrealDB.
@@ -874,7 +874,7 @@ public partial class SurrealDatabase(
 		{
 			var key = ExtractKeyString(parentId);
 			return (
-				QueryFor("type::thing('attribute', $key)"),
+				QueryFor("type::record('attribute', $key)"),
 				new Dictionary<string, object?> { ["key"] = key });
 		}
 

@@ -27,7 +27,6 @@
 		     Microsoft.AspNetCore.Mvc.Testing and TUnit.AspNetCore, so no direct pin needed). -->
 		<PackageReference Include="Serilog" Version="4.3.1" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-		<PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -29,7 +29,9 @@ public class SurrealSessionStoreTests
 		// The embedded in-memory engine resolves through DI (same as Startup's AddSurreal +
 		// AddInMemoryProvider); a bare `new SurrealDbClient(...)` cannot create mem:// engines.
 		var services = new ServiceCollection();
-		services.AddSurreal($"Endpoint=mem://;Namespace=sharpmush_sessionstore;Database={dbName}")
+		// ServiceLifetime.Singleton: AddSurreal defaults to Scoped, which registers ISurrealDbSession
+		// instead of ISurrealDbClient (SurrealDb.Net 1.0+) - this test resolves ISurrealDbClient directly.
+		services.AddSurreal($"Endpoint=mem://;Namespace=sharpmush_sessionstore;Database={dbName}", ServiceLifetime.Singleton)
 			.AddInMemoryProvider();
 		var client = services.BuildServiceProvider().GetRequiredService<ISurrealDbClient>();
 		await client.Connect();

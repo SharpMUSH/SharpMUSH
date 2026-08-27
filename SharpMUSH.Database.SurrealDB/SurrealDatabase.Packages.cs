@@ -117,7 +117,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 			["deployedFiles"] = (package.DeployedFiles ?? []).ToList()
 		};
 		await ExecuteAsync("""
-			UPSERT type::thing('sys_package', $pkg) SET packageId = $pkg, version = $version,
+			UPSERT type::record('sys_package', $pkg) SET packageId = $pkg, version = $version,
 				sourceRepo = $sourceRepo, sourcePath = $sourcePath, installedCommit = $installedCommit,
 				pinnedBranch = $pinnedBranch, installedAt = $installedAt, currentRevision = $currentRevision,
 				deployedFiles = $deployedFiles
@@ -155,7 +155,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 		await ExecuteAsync("DELETE sys_managed_structure WHERE packageId = $pkg", parameters);
 		await ExecuteAsync("DELETE sys_package_revision WHERE packageId = $pkg", parameters);
 		await ExecuteAsync("DELETE sys_package_dependency WHERE packageId = $pkg OR dependsOnId = $pkg", parameters);
-		await ExecuteAsync("DELETE type::thing('sys_package', $pkg)", parameters);
+		await ExecuteAsync("DELETE type::record('sys_package', $pkg)", parameters);
 	}
 
 	public async Task UpsertPackageObjectAsync(PackageObjectRecord record)
@@ -169,7 +169,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 			["objectType"] = record.Type
 		};
 		await ExecuteAsync("""
-			UPSERT type::thing('sys_package_object', $key) SET packageId = $pkg, refName = $refName,
+			UPSERT type::record('sys_package_object', $key) SET packageId = $pkg, refName = $refName,
 				objid = $objid, objectType = $objectType
 			""", parameters);
 	}
@@ -188,7 +188,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 
 	public async Task RemovePackageObjectAsync(string packageId, string @ref)
 	{
-		await ExecuteAsync("DELETE type::thing('sys_package_object', $key)",
+		await ExecuteAsync("DELETE type::record('sys_package_object', $key)",
 			new Dictionary<string, object?> { ["key"] = $"{packageId}/{@ref}" });
 	}
 
@@ -205,7 +205,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 			["baselineVersion"] = record.BaselineVersion
 		};
 		await ExecuteAsync("""
-			UPSERT type::thing('sys_managed_attribute', $key) SET packageId = $pkg, objid = $objid,
+			UPSERT type::record('sys_managed_attribute', $key) SET packageId = $pkg, objid = $objid,
 				attribute = $attribute, baselineValue = $baselineValue, baselineHash = $baselineHash,
 				baselineVersion = $baselineVersion
 			""", parameters);
@@ -234,7 +234,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 
 	public async Task RemoveManagedAttributeAsync(string packageId, string objid, string attribute)
 	{
-		await ExecuteAsync("DELETE type::thing('sys_managed_attribute', $key)",
+		await ExecuteAsync("DELETE type::record('sys_managed_attribute', $key)",
 			new Dictionary<string, object?> { ["key"] = $"{packageId}/{objid}/{attribute}" });
 	}
 
@@ -249,7 +249,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 			["baselineVersion"] = record.BaselineVersion
 		};
 		await ExecuteAsync("""
-			UPSERT type::thing('sys_managed_structure', $key) SET packageId = $pkg, objid = $objid,
+			UPSERT type::record('sys_managed_structure', $key) SET packageId = $pkg, objid = $objid,
 				structureJson = $structureJson, baselineVersion = $baselineVersion
 			""", parameters);
 	}
@@ -267,7 +267,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 
 	public async Task RemoveManagedStructureAsync(string packageId, string objid)
 	{
-		await ExecuteAsync("DELETE type::thing('sys_managed_structure', $key)",
+		await ExecuteAsync("DELETE type::record('sys_managed_structure', $key)",
 			new Dictionary<string, object?> { ["key"] = $"{packageId}/{objid}" });
 	}
 
@@ -286,7 +286,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 				["constraint"] = dependency.Constraint
 			};
 			await ExecuteAsync("""
-				UPSERT type::thing('sys_package_dependency', $key) SET packageId = $pkg,
+				UPSERT type::record('sys_package_dependency', $key) SET packageId = $pkg,
 					dependsOnId = $dependsOnId, constraint = $constraint
 				""", parameters);
 		}
@@ -323,7 +323,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 			["branch"] = remote.Branch
 		};
 		await ExecuteAsync("""
-			UPSERT type::thing('sys_remote', $name) SET name = $name, url = $url, trust = $trust, branch = $branch
+			UPSERT type::record('sys_remote', $name) SET name = $name, url = $url, trust = $trust, branch = $branch
 			""", parameters);
 	}
 
@@ -349,7 +349,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 
 	public async Task RemovePackageRemoteAsync(string name)
 	{
-		await ExecuteAsync("DELETE type::thing('sys_remote', $name)",
+		await ExecuteAsync("DELETE type::record('sys_remote', $name)",
 			new Dictionary<string, object?> { ["name"] = name });
 	}
 
@@ -369,7 +369,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 			["appliedAt"] = revision.AppliedAt.ToString("o", CultureInfo.InvariantCulture)
 		};
 		await ExecuteAsync("""
-			UPSERT type::thing('sys_package_revision', $key) SET packageId = $pkg, revision = $revision,
+			UPSERT type::record('sys_package_revision', $key) SET packageId = $pkg, revision = $revision,
 				kind = $kind, version = $version, commit = $commit, manifestSnapshotJson = $manifestSnapshotJson,
 				configureAnswersJson = $configureAnswersJson, preApplyValuesJson = $preApplyValuesJson,
 				appliedAt = $appliedAt
@@ -402,11 +402,20 @@ public partial class SurrealDatabase : IPackageRegistryService
 
 	public async Task PrunePackageRevisionsAsync(string packageId, int keep)
 	{
-		await ExecuteAsync("""
-			DELETE sys_package_revision WHERE packageId = $pkg AND revision NOT IN
-				(SELECT VALUE revision FROM sys_package_revision WHERE packageId = $pkg ORDER BY revision DESC LIMIT $keep)
-			""",
+		// Two statements, not one DELETE ... WHERE revision NOT IN (SELECT ... FROM sys_package_revision
+		// ...): SurrealDB 3.0.5 doesn't give a DELETE's WHERE-clause subquery a stable snapshot when the
+		// subquery reads the same table the DELETE is mutating - the subquery re-evaluates against the
+		// table as rows are removed mid-statement, so it silently kept the wrong revisions (verified: with
+		// 5 revisions and keep=2, this deleted 4 and 5, keeping 1 and 2, the opposite of "newest 2"). A
+		// literal id list has no such dependency, so read the keep set first, then delete against it.
+		var keepResult = await ExecuteAsync(
+			"SELECT VALUE revision FROM sys_package_revision WHERE packageId = $pkg ORDER BY revision DESC LIMIT $keep",
 			new Dictionary<string, object?> { ["pkg"] = packageId, ["keep"] = keep });
+		var keepRevisions = keepResult.GetValue<List<int>>(0) ?? [];
+
+		await ExecuteAsync(
+			"DELETE sys_package_revision WHERE packageId = $pkg AND revision NOT IN $keepRevisions",
+			new Dictionary<string, object?> { ["pkg"] = packageId, ["keepRevisions"] = keepRevisions.ToArray() });
 	}
 
 	#endregion

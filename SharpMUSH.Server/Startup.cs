@@ -174,7 +174,11 @@ public class Startup(
 				?? "rocksdb://surrealdb-data";
 			// Register both embedded engines; the endpoint scheme selects which the live client uses, and the
 			// migration staging client (always mem://) needs the in-memory engine present regardless.
-			services.AddSurreal($"Endpoint={surrealEndpoint};Namespace=sharpmush;Database=world")
+			// SurrealDb.Net 1.0 defaults AddSurreal to ServiceLifetime.Scoped, which registers
+			// ISurrealDbSession instead of ISurrealDbClient. This provider is resolved once into a
+			// Singleton ISharpDatabase below, so it needs the Singleton lifetime explicitly to get
+			// ISurrealDbClient registered at all.
+			services.AddSurreal($"Endpoint={surrealEndpoint};Namespace=sharpmush;Database=world", ServiceLifetime.Singleton)
 				.AddInMemoryProvider()
 				.AddRocksDbProvider();
 			services.AddSingleton<ISharpDatabase, SurrealDatabase>(x =>

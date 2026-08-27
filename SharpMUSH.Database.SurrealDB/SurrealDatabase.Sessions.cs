@@ -33,7 +33,7 @@ public partial class SurrealDatabase
 			["characterCreationTime"] = session.CharacterCreationTime
 		};
 		await ExecuteAsync(
-			"UPSERT type::thing('session', $token) SET accountId = $accountId, expiryUnixMs = $expiryUnixMs, ttlMs = $ttlMs, originIp = $originIp, characterKey = $characterKey, characterCreationTime = $characterCreationTime",
+			"UPSERT type::record('session', $token) SET accountId = $accountId, expiryUnixMs = $expiryUnixMs, ttlMs = $ttlMs, originIp = $originIp, characterKey = $characterKey, characterCreationTime = $characterCreationTime",
 			parameters, cancellationToken);
 	}
 
@@ -46,7 +46,7 @@ public partial class SurrealDatabase
 		CancellationToken cancellationToken = default)
 	{
 		var response = await ExecuteAsync(
-			"UPDATE type::thing('session', $token) SET expiryUnixMs = $expiryUnixMs RETURN AFTER",
+			"UPDATE type::record('session', $token) SET expiryUnixMs = $expiryUnixMs RETURN AFTER",
 			new Dictionary<string, object?> { ["token"] = token, ["expiryUnixMs"] = expiryUnixMs },
 			cancellationToken);
 		return response.GetValue<List<SessionDbRecord>>(0) is { Count: > 0 };
@@ -55,7 +55,7 @@ public partial class SurrealDatabase
 	public async ValueTask<SharpSession?> GetSessionAsync(string token, CancellationToken cancellationToken = default)
 	{
 		var response = await ExecuteAsync(
-			"SELECT * FROM type::thing('session', $token)",
+			"SELECT * FROM type::record('session', $token)",
 			new Dictionary<string, object?> { ["token"] = token }, cancellationToken);
 		var results = response.GetValue<List<SessionDbRecord>>(0);
 		if (results is not { Count: > 0 })
@@ -76,7 +76,7 @@ public partial class SurrealDatabase
 
 	public async ValueTask DeleteSessionAsync(string token, CancellationToken cancellationToken = default)
 	{
-		await ExecuteAsync("DELETE type::thing('session', $token)",
+		await ExecuteAsync("DELETE type::record('session', $token)",
 			new Dictionary<string, object?> { ["token"] = token }, cancellationToken);
 	}
 

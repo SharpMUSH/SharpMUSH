@@ -32,7 +32,9 @@ public class SurrealAttributeEnumerationTests
 	private static async Task<(SurrealDatabase Db, ISurrealDbClient Client)> CreateFreshMigratedAsync(string dbName)
 	{
 		var services = new ServiceCollection();
-		services.AddSurreal($"Endpoint=mem://;Namespace=sharpmush_attrenum;Database={dbName}")
+		// ServiceLifetime.Singleton: AddSurreal defaults to Scoped, which registers ISurrealDbSession
+		// instead of ISurrealDbClient (SurrealDb.Net 1.0+) - this test resolves ISurrealDbClient directly.
+		services.AddSurreal($"Endpoint=mem://;Namespace=sharpmush_attrenum;Database={dbName}", ServiceLifetime.Singleton)
 			.AddInMemoryProvider();
 		var client = services.BuildServiceProvider().GetRequiredService<ISurrealDbClient>();
 		await client.Connect();
