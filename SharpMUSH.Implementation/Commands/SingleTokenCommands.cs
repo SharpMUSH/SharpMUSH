@@ -110,8 +110,7 @@ public partial class Commands
 					// Notifications go to executor so softcoded WIZARD objects don't leak confirmations to players.
 					var clearResult = await AttributeService!.ClearAttributeAsync(
 						executor, realLocated, attrName,
-						IAttributeService.AttributePatternMode.Exact,
-						IAttributeService.AttributeClearMode.Safe);
+						IAttributeService.AttributePatternMode.Exact);
 					await NotifyService!.Notify(executor,
 						clearResult.Match(
 							_ => string.Format(ErrorMessages.Notifications.AttributeCleared, realLocated.Object().Name, attrName),

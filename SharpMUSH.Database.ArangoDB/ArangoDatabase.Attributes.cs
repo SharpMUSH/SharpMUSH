@@ -521,8 +521,8 @@ public partial class ArangoDatabase
 		}
 	}
 
-	public IAsyncEnumerable<LazySharpAttribute> GetLazyAttributeAsync(DBRef dbref,
-		string[] attribute, CancellationToken ct = default)
+	public async IAsyncEnumerable<LazySharpAttribute> GetLazyAttributeAsync(DBRef dbref,
+		string[] attribute, [EnumeratorCancellation] CancellationToken ct = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
@@ -539,8 +539,26 @@ public partial class ArangoDatabase
 				{ "max", attribute.Length }
 			}, cancellationToken: ct);
 
-		return result?.Select(SharpAttributeQueryToLazySharpAttribute)
-			?? AsyncEnumerable.Empty<LazySharpAttribute>();
+		if (result == null)
+		{
+			yield break;
+		}
+
+		// All-or-nothing, as in GetAttributeAsync above and in the Surreal/Memgraph
+		// providers: a walk that stops short is a miss, not a shallower ancestor.
+		var resulted = await result
+			.Select(SharpAttributeQueryToLazySharpAttribute)
+			.ToArrayAsync(cancellationToken: ct);
+
+		if (resulted.Length != attribute.Length)
+		{
+			yield break;
+		}
+
+		foreach (var item in resulted)
+		{
+			yield return item;
+		}
 	}
 
 	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value,
@@ -872,7 +890,7 @@ public partial class ArangoDatabase
 			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
 			LET attrPath = @attr
 			LET maxDepth = @max
-			
+
 			LET selfAttrs = (
 				FOR v,e,p IN 1..maxDepth OUTBOUND startThing GRAPH {DatabaseConstants.GraphAttributes}
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
@@ -881,12 +899,10 @@ public partial class ArangoDatabase
 			)
 			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
 				attributes: selfAttrs,
-				sourceId: startObjKey,
-				source: 'Self',
-				filterFlags: false
+				sourceId: startObjKey
 			}} : null
-			
-			LET parentResults = @checkParent && selfResult == null ? (
+
+			LET parentCandidates = @checkParent && selfResult == null ? (
 				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
 					LET parentThing = FIRST(FOR v IN 1..1 INBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 					LET parentObjId = parent._key
@@ -896,22 +912,19 @@ public partial class ArangoDatabase
 							FILTER !condition
 							RETURN v
 					)
-					FILTER LENGTH(parentAttrs) == maxDepth
-					LIMIT 1
+					FILTER LENGTH(parentAttrs) > 0
 					RETURN {{
 						attributes: parentAttrs,
-						sourceId: parentObjId,
-						source: 'Parent',
-						filterFlags: true
+						sourceId: parentObjId
 					}}
 			) : []
-			
-			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
+
+			LET zoneCandidates = @checkParent && selfResult == null ? (
 				LET inheritanceChain = APPEND([startObj], (
 					FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
 						RETURN parent
 				))
-				
+
 				FOR obj IN inheritanceChain
 					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
 						LET zoneThing = FIRST(FOR v IN 1..1 INBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
@@ -922,19 +935,14 @@ public partial class ArangoDatabase
 								FILTER !condition
 								RETURN v
 						)
-						FILTER LENGTH(zoneAttrs) == maxDepth
-						LIMIT 1
+						FILTER LENGTH(zoneAttrs) > 0
 						RETURN {{
 							attributes: zoneAttrs,
-							sourceId: zoneObjId,
-							source: 'Zone',
-							filterFlags: true
+							sourceId: zoneObjId
 						}}
 			) : []
-			
-			LET allResults = APPEND([selfResult], APPEND(parentResults, zoneResults))
-			LET filtered = (FOR r IN allResults FILTER r != null RETURN r)
-			RETURN FIRST(filtered)
+
+			RETURN {{ self: selfResult, parents: parentCandidates, zones: zoneCandidates }}
 		";
 
 		var bindVars = new Dictionary<string, object>
@@ -945,43 +953,71 @@ public partial class ArangoDatabase
 			{ "checkParent", checkParent }
 		};
 
-		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
+		var results = await arangoDb.Query.ExecuteAsync<InheritanceQueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
 
-		if (result == null || result.attributes == null)
+		if (result == null)
 		{
 			yield break;
 		}
 
-		var sourceDbRef = ParseDbRefFromId(result.sourceId);
-
-		var sourceType = result.source switch
+		if (result.self != null)
 		{
-			"Self" => AttributeSource.Self,
-			"Parent" => AttributeSource.Parent,
-			"Zone" => AttributeSource.Zone,
-			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
-		};
+			var selfAttrs = new SharpAttribute[result.self.attributes.Count];
+			for (int i = 0; i < result.self.attributes.Count; i++)
+			{
+				selfAttrs[i] = await SharpAttributeQueryToSharpAttribute(result.self.attributes[i], ct);
+			}
 
-		var attrs = new SharpAttribute[result.attributes.Count];
-		for (int i = 0; i < result.attributes.Count; i++)
-		{
-			attrs[i] = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
-		}
-
-		var lastAttr = attrs.Last();
-
-		// no_inherit flag prevents attribute from being visible to children
-		if (result.filterFlags && lastAttr.Flags.Any(f => f.Name == "no_inherit"))
-		{
+			yield return new AttributeWithInheritance(selfAttrs, ParseDbRefFromId(result.self.sourceId),
+				AttributeSource.Self, selfAttrs.Last().Flags);
 			yield break;
 		}
 
-		var flags = result.filterFlags
-			? lastAttr.Flags.Where(f => f.Inheritable)
-			: lastAttr.Flags;
+		// Penn's atr_get_with_parent (attrib.c:1232-1252) tests every branch-prefix segment for
+		// AF_Private on the ancestor currently being examined BEFORE checking whether the full
+		// leaf resolves there, and returns NULL outright on a hit — it never falls through to a
+		// more distant ancestor (or a zone) for the same attribute path, even when that level
+		// doesn't have the leaf itself. So each candidate here carries whatever prefix of the
+		// path actually exists on that object (possibly shorter than the full path), and must be
+		// checked for no_inherit before deciding whether to keep walking.
+		foreach (var candidate in result.parents ?? [])
+		{
+			var (attrs, noInherit, complete) = await EvaluateInheritanceCandidateAsync(
+				candidate, attribute.Length, SharpAttributeQueryToSharpAttribute, static a => a.IsNoInherit(), ct);
 
-		yield return new AttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
+			if (noInherit)
+			{
+				yield break;
+			}
+
+			if (complete)
+			{
+				var flags = attrs.Last().Flags.Where(f => f.Inheritable);
+				yield return new AttributeWithInheritance(attrs, ParseDbRefFromId(candidate.sourceId),
+					AttributeSource.Parent, flags);
+				yield break;
+			}
+		}
+
+		foreach (var candidate in result.zones ?? [])
+		{
+			var (attrs, noInherit, complete) = await EvaluateInheritanceCandidateAsync(
+				candidate, attribute.Length, SharpAttributeQueryToSharpAttribute, static a => a.IsNoInherit(), ct);
+
+			if (noInherit)
+			{
+				yield break;
+			}
+
+			if (complete)
+			{
+				var flags = attrs.Last().Flags.Where(f => f.Inheritable);
+				yield return new AttributeWithInheritance(attrs, ParseDbRefFromId(candidate.sourceId),
+					AttributeSource.Zone, flags);
+				yield break;
+			}
+		}
 	}
 
 	private async ValueTask<SharpAttribute> SharpAttributeQueryToSharpAttributeSimple(SharpAttributeQueryResult x,
@@ -1004,11 +1040,15 @@ public partial class ArangoDatabase
 		};
 	}
 
-	private record QueryResult(
-		List<SharpAttributeQueryResult>? attributes,
-		string sourceId,
-		string source,
-		bool filterFlags
+	private record InheritanceCandidate(
+		List<SharpAttributeQueryResult> attributes,
+		string sourceId
+	);
+
+	private record InheritanceQueryResult(
+		InheritanceCandidate? self,
+		List<InheritanceCandidate>? parents,
+		List<InheritanceCandidate>? zones
 	);
 
 	private static DBRef ParseDbRefFromId(string key)
@@ -1018,6 +1058,32 @@ public partial class ArangoDatabase
 			return new DBRef(number);
 		}
 		throw new InvalidOperationException($"Cannot parse DBRef from key: {key}");
+	}
+
+	/// <summary>
+	/// Converts one inheritance candidate's raw query rows into typed attributes and evaluates the
+	/// two gates every parent/zone candidate must pass in both the eager and lazy inheritance
+	/// walks: no_inherit anywhere on the (possibly partial) prefix blocks the walk outright
+	/// (<c>NoInherit</c>), and only a prefix that reaches the requested attribute's full length is
+	/// a match (<c>Complete</c>). Shared so the four call sites (eager/lazy x parent/zone) test
+	/// both conditions identically - letting them drift is exactly the bug class
+	/// <see cref="SharpAttributeExtensions.IsNoInherit(SharpAttribute)"/> already had to fix once
+	/// on this branch.
+	/// </summary>
+	private static async ValueTask<(T[] Attributes, bool NoInherit, bool Complete)> EvaluateInheritanceCandidateAsync<T>(
+		InheritanceCandidate candidate,
+		int expectedLength,
+		Func<SharpAttributeQueryResult, CancellationToken, ValueTask<T>> convert,
+		Func<T, bool> isNoInherit,
+		CancellationToken ct)
+	{
+		var attrs = new T[candidate.attributes.Count];
+		for (var i = 0; i < candidate.attributes.Count; i++)
+		{
+			attrs[i] = await convert(candidate.attributes[i], ct);
+		}
+
+		return (attrs, attrs.Any(isNoInherit), attrs.Length == expectedLength);
 	}
 
 	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
@@ -1036,7 +1102,7 @@ public partial class ArangoDatabase
 			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
 			LET attrPath = @attr
 			LET maxDepth = @max
-			
+
 			LET selfAttrs = (
 				FOR v,e,p IN 1..maxDepth OUTBOUND startThing GRAPH {DatabaseConstants.GraphAttributes}
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
@@ -1045,12 +1111,10 @@ public partial class ArangoDatabase
 			)
 			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
 				attributes: selfAttrs,
-				sourceId: startObjKey,
-				source: 'Self',
-				filterFlags: false
+				sourceId: startObjKey
 			}} : null
-			
-			LET parentResults = @checkParent && selfResult == null ? (
+
+			LET parentCandidates = @checkParent && selfResult == null ? (
 				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
 					LET parentThing = FIRST(FOR v IN 1..1 INBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 					LET parentObjId = parent._key
@@ -1060,22 +1124,19 @@ public partial class ArangoDatabase
 							FILTER !condition
 							RETURN v
 					)
-					FILTER LENGTH(parentAttrs) == maxDepth
-					LIMIT 1
+					FILTER LENGTH(parentAttrs) > 0
 					RETURN {{
 						attributes: parentAttrs,
-						sourceId: parentObjId,
-						source: 'Parent',
-						filterFlags: true
+						sourceId: parentObjId
 					}}
 			) : []
-			
-			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
+
+			LET zoneCandidates = @checkParent && selfResult == null ? (
 				LET inheritanceChain = APPEND([startObj], (
 					FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
 						RETURN parent
 				))
-				
+
 				FOR obj IN inheritanceChain
 					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
 						LET zoneThing = FIRST(FOR v IN 1..1 INBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
@@ -1086,19 +1147,14 @@ public partial class ArangoDatabase
 								FILTER !condition
 								RETURN v
 						)
-						FILTER LENGTH(zoneAttrs) == maxDepth
-						LIMIT 1
+						FILTER LENGTH(zoneAttrs) > 0
 						RETURN {{
 							attributes: zoneAttrs,
-							sourceId: zoneObjId,
-							source: 'Zone',
-							filterFlags: true
+							sourceId: zoneObjId
 						}}
 			) : []
-			
-			LET allResults = APPEND([selfResult], APPEND(parentResults, zoneResults))
-			LET filtered = (FOR r IN allResults FILTER r != null RETURN r)
-			RETURN FIRST(filtered)
+
+			RETURN {{ self: selfResult, parents: parentCandidates, zones: zoneCandidates }}
 		";
 
 		var bindVars = new Dictionary<string, object>
@@ -1109,36 +1165,67 @@ public partial class ArangoDatabase
 			{ "checkParent", checkParent }
 		};
 
-		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
+		var results = await arangoDb.Query.ExecuteAsync<InheritanceQueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
 
-		if (result == null || result.attributes == null)
+		if (result == null)
 		{
 			yield break;
 		}
 
-		var sourceDbRef = ParseDbRefFromId(result.sourceId);
-
-		var sourceType = result.source switch
+		if (result.self != null)
 		{
-			"Self" => AttributeSource.Self,
-			"Parent" => AttributeSource.Parent,
-			"Zone" => AttributeSource.Zone,
-			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
-		};
+			var selfAttrs = new LazySharpAttribute[result.self.attributes.Count];
+			for (int i = 0; i < result.self.attributes.Count; i++)
+			{
+				selfAttrs[i] = await SharpAttributeQueryToLazySharpAttribute(result.self.attributes[i], ct);
+			}
 
-		var attrs = new LazySharpAttribute[result.attributes.Count];
-		for (int i = 0; i < result.attributes.Count; i++)
-		{
-			attrs[i] = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
+			yield return new LazyAttributeWithInheritance(selfAttrs, ParseDbRefFromId(result.self.sourceId),
+				AttributeSource.Self, selfAttrs.Last().Flags);
+			yield break;
 		}
 
-		var lastAttr = attrs.Last();
-		var flags = result.filterFlags
-			? lastAttr.Flags.Where(f => f.Inheritable)
-			: lastAttr.Flags;
+		// See GetAttributeWithInheritanceAsync above: no_inherit on any existing branch-prefix
+		// segment of an ancestor blocks resolution outright, even when that ancestor doesn't
+		// itself carry the full leaf.
+		foreach (var candidate in result.parents ?? [])
+		{
+			var (attrs, noInherit, complete) = await EvaluateInheritanceCandidateAsync(
+				candidate, attribute.Length, SharpAttributeQueryToLazySharpAttribute, static a => a.IsNoInherit(), ct);
 
-		yield return new LazyAttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
+			if (noInherit)
+			{
+				yield break;
+			}
+
+			if (complete)
+			{
+				var flags = attrs.Last().Flags.Where(f => f.Inheritable);
+				yield return new LazyAttributeWithInheritance(attrs, ParseDbRefFromId(candidate.sourceId),
+					AttributeSource.Parent, flags);
+				yield break;
+			}
+		}
+
+		foreach (var candidate in result.zones ?? [])
+		{
+			var (attrs, noInherit, complete) = await EvaluateInheritanceCandidateAsync(
+				candidate, attribute.Length, SharpAttributeQueryToLazySharpAttribute, static a => a.IsNoInherit(), ct);
+
+			if (noInherit)
+			{
+				yield break;
+			}
+
+			if (complete)
+			{
+				var flags = attrs.Last().Flags.Where(f => f.Inheritable);
+				yield return new LazyAttributeWithInheritance(attrs, ParseDbRefFromId(candidate.sourceId),
+					AttributeSource.Zone, flags);
+				yield break;
+			}
+		}
 	}
 
 	private async ValueTask<LazySharpAttribute> SharpAttributeQueryToLazySharpAttributeSimple(SharpAttributeQueryResult x,

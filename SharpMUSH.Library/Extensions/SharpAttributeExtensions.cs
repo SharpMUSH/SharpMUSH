@@ -8,6 +8,9 @@ public static class SharpAttributeExtensions
 	public static bool IsInternal(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "internal");
 
+	public static bool IsInternal(this LazySharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name == "internal");
+
 	public static bool IsWizard(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "wizard");
 
@@ -23,14 +26,40 @@ public static class SharpAttributeExtensions
 	public static bool IsPrivate(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "private");
 
+	/// <summary>
+	/// PennMUSH's <c>AF_PRIVATE</c> (spelled <c>no_inherit</c> here): the attribute does not
+	/// cross an inheritance boundary. Tested on EVERY level of a tree attribute's path, not just
+	/// the leaf - a no_inherit branch blocks its whole subtree (<c>atr_get_with_parent</c>,
+	/// <c>src/attrib.c:1232-1252</c>).
+	/// <para>
+	/// Compares case-insensitively: flag names are resolved from a canonical, case-normalised
+	/// catalog under the ordinary <c>@set</c> path, but this is the one place every provider's
+	/// inheritance gate (ArangoDB, Memgraph, SurrealDB, and the parent-boundary re-resolution in
+	/// <c>GetAttributeQueryHandler</c>) tests for it - a hand-rolled ordinal comparison at any of
+	/// those sites would silently diverge from the others the moment stored casing wasn't
+	/// canonical (imported data, a hand-edited record). Route every gate through here instead.
+	/// </para>
+	/// </summary>
+	public static bool IsNoInherit(this SharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase));
+
+	/// <inheritdoc cref="IsNoInherit(SharpAttribute)"/>
+	public static bool IsNoInherit(this LazySharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase));
+
 	public static bool IsNoCopy(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "no_clone");
 
+	/// <summary>
+	/// PennMUSH's <c>AF_VISUAL</c> alone (<c>attrib.c:306</c>). Do not fold in <c>public</c>:
+	/// that flag overrides <c>SAFER_UFUN</c> for evaluation (see <see cref="IsPublic(SharpAttribute)"/>
+	/// and <c>PermissionService.CanEvalAttr</c>) and has nothing to do with reading.
+	/// </summary>
 	public static bool IsVisual(this SharpAttribute attribute)
-		=> attribute.Flags.Any(x => x.Name is "visual" or "public");
+		=> attribute.Flags.Any(x => x.Name == "visual");
 
 	public static bool IsVisual(this LazySharpAttribute attribute)
-		=> attribute.Flags.Any(x => x.Name is "visual" or "public");
+		=> attribute.Flags.Any(x => x.Name == "visual");
 
 	public static bool IsRegexp(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "regexp");
@@ -67,6 +96,9 @@ public static class SharpAttributeExtensions
 		=> attribute.Flags.Any(x => x.Name == "no_debug");
 
 	public static bool IsNearby(this SharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name == "nearby");
+
+	public static bool IsNearby(this LazySharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "nearby");
 
 	public static bool IsPublic(this SharpAttribute attribute)

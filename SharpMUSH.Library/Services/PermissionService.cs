@@ -16,25 +16,99 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		=> lockService.Evaluate(lockType, target, who);
 
 	public async ValueTask<bool> CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
+		=> await CanSetInternal(executor, target, attribute, obeySafe: true);
+
+	// AF_SAFE ignore-safe variant: PennMUSH's af_helper (src/set.c:509-511) is the one call
+	// site in the whole codebase that passes safe=0 (Can_Write_Attr_Ignore_Safe,
+	// hdrs/mushdb.h:120-121) instead of safe=1 (Can_Write_Attr) - and only when the flag
+	// operation being performed is clearing AF_SAFE itself off the attribute
+	// (`(af->clrf & AF_SAFE) && Can_Write_Attr_Ignore_Safe(...)`). Every other write, including
+	// setting or unsetting any OTHER attribute flag, still goes through the normal safe-obeying
+	// check. AttributeService.UnsetAttributeFlagAsync is the one caller: it uses this overload
+	// only when the flag being unset is SAFE, and CanSet (obeying safe) for everything else.
+	public async ValueTask<bool> CanSetIgnoringSafe(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
+		=> await CanSetInternal(executor, target, attribute, obeySafe: false);
+
+	private async ValueTask<bool> CanSetInternal(AnySharpObject executor, AnySharpObject target, SharpAttribute[] attribute, bool obeySafe)
 	{
 		if (!await Controls(executor, target)) return false;
 
 		if (attribute.Length == 0) return true;
 
-		var compressedAttribute = attribute[^1] with
-		{
-			Flags = attribute.SelectMany(a => a.Flags)
-				.Where(x => x.Inheritable == true)
-				.DistinctBy(x => x.Name)
-		};
+		// God bypasses every per-flag gate below: PennMUSH's Cannot_Write_This_Attr wraps its
+		// whole body in `!God(p) && (...)` (src/attrib.c:364), and can_create_attr's AF_NODUMP
+		// guard reads `player != GOD` directly (src/attrib.c:479-483).
+		if (executor.IsGod())
+			return true;
 
-		// TODO: Internal and SAFE attribute flag checks not yet implemented.
-		return !(!executor.IsGod()
-						 && !(await executor.IsWizard()
-									|| (!compressedAttribute.IsWizard()
-											&& (!compressedAttribute.IsLocked()
-													|| await compressedAttribute.Owner.WithCancellation(CancellationToken.None) ==
-													await target.Object().Owner.WithCancellation(CancellationToken.None)))));
+		// Each test below walks every level named in `attribute` - PennMUSH's own
+		// can_write_attr_internal (src/attrib.c:383-408) calls Cannot_Write_This_Attr once per
+		// ancestor node while walking the tree to the target, denying the whole write the
+		// moment any single level fails. `Inheritable` (the object-@parent axis - whether a
+		// flag survives onto a child object) has nothing to do with that walk and is
+		// deliberately not consulted here.
+
+		// AF_INTERNAL: Cannot_Write_This_Attr - denies writes to everyone but God. Unlike the
+		// wizard-attribute-lock gate below, Wizard(p) does not exempt a write to an internal
+		// attribute.
+		if (attribute.Any(a => a.IsInternal()))
+			return false;
+
+		// AF_SAFE: Cannot_Write_This_Attr's `(s) && AF_Safe(a)` term - see CanSetIgnoringSafe
+		// above for the one case (clearing SAFE itself) where `obeySafe` is false.
+		if (obeySafe && attribute.Any(a => a.IsSafe()))
+			return false;
+
+		// AF_NODUMP: can_create_attr (src/attrib.c:479-483) - "Only GOD can create an
+		// AF_NODUMP attribute (used for semaphores) or add a leaf to a tree with such an
+		// attribute." The God exemption already happened above, so reaching here means deny.
+		//
+		// DELIBERATE PARITY DEVIATION: Penn's can_write_attr_internal (the plain-write path
+		// used by every ordinary @set on an attribute that already exists) never tests
+		// AF_NODUMP at all - only can_create_attr's ancestor walk does, so Penn lets a wizard
+		// overwrite the VALUE of an attribute that already carries AF_NODUMP; only creating a
+		// new nodump-flagged attribute, or a new leaf underneath one, is God-only. CanSet
+		// cannot make that same distinction: it is handed a single already-persisted
+		// SharpAttribute with no marker for "this call is checking whether the attribute
+		// itself may be overwritten" vs "this call is gating a not-yet-created descendant" -
+		// both AttributeService.SetAttributeAsync call sites (the `existing` loop for
+		// overwrites, and the prefix walk for new leaves) invoke this same CanSet with the
+		// same shape of argument. So this denies both cases: overwriting a nodump attribute's
+		// own value is God-only here too, a strict superset of Penn (more restrictive, never
+		// less). Inert today - no seeded attribute defaults to nodump - but it will bite if a
+		// standard attribute (e.g. SEMAPHORE, GeneralCommands.cs:174) is ever given nodump for
+		// parity: a wizard who could freely re-arm it in Penn would be denied here. Resolving
+		// this precisely means threading a create-vs-overwrite flag through CanSet's signature
+		// and both AttributeService call sites - out of scope for this fix.
+		if (attribute.Any(a => a.IsNoDump()))
+			return false;
+
+		// Wizard(p) bypasses BOTH the AF_Wizard(a) check and the locked-attribute check below
+		// entirely (Cannot_Write_This_Attr's `Wizard(p) || (!AF_Wizard(a) && ...)`).
+		if (await executor.IsWizard())
+			return true;
+
+		// AF_WIZARD: a non-wizard, non-God executor may never write a wizard-flagged
+		// attribute, regardless of ownership.
+		if (attribute.Any(a => a.IsWizard()))
+			return false;
+
+		// AF_LOCKED: `!AF_Locked(a) || AL_CREATOR(a) == Owner(p)` - a non-wizard executor may
+		// only write a locked attribute it created itself; owning the TARGET object is not
+		// enough.
+		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		foreach (var a in attribute.Where(a => a.IsLocked()))
+		{
+			var attrOwner = await a.Owner.WithCancellation(CancellationToken.None);
+
+			// Fail closed on an unresolvable owner: `AL_CREATOR(a) == Owner(p)` cannot hold for
+			// a creator that could not be looked up, but `attrOwner?.Id != executorOwner?.Id`
+			// would read null == null as a match and permit the write.
+			if (attrOwner is null || executorOwner is null || attrOwner.Id != executorOwner.Id)
+				return false;
+		}
+
+		return true;
 	}
 
 	public async ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
@@ -57,8 +131,14 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		{
 			var attrOwner = await finalAttr.Owner.WithCancellation(CancellationToken.None);
 			var targetOwner = await target.Object().Owner.WithCancellation(CancellationToken.None);
-			return (attrOwner?.Id == executor.Id())
-						 || (attrOwner?.Id == targetOwner?.Id && await executor.Owns(target));
+
+			// Same fail-closed rule as CanSetInternal: an attribute whose creator cannot be
+			// resolved matches nobody, rather than matching every other unresolvable owner.
+			if (attrOwner is null)
+				return false;
+
+			return (attrOwner.Id == executor.Id())
+						 || (targetOwner is not null && attrOwner.Id == targetOwner.Id && await executor.Owns(target));
 		}
 
 		return true;
@@ -67,6 +147,13 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params SharpAttribute[] attribute)
 	{
+		// AF_INTERNAL denies reads to everyone, including wizards and God: PennMUSH's
+		// Can_Read_Attr macro (hdrs/mushdb.h:100-101) checks `!AF_Internal(a)` before the
+		// `See_All(p) ||` easy-out ever runs, so - unlike mortal_dark below - there is no
+		// privileged escape from it.
+		if (attribute.Any(attr => attr.IsInternal()))
+			return false;
+
 		// mortal_dark hides from non-privileged viewers regardless of ownership
 		if (attribute.Length > 0 && attribute.Any(attr => attr.IsMortalDark())
 				&& !viewer.IsGod() && !await viewer.IsWizard())
@@ -75,12 +162,24 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (await CanExamine(viewer, target))
 			return true;
 
-		return attribute.Length > 0 && attribute.All(attr => attr.IsVisual());
+		if (attribute.Length == 0)
+			return false;
+
+		// PennMUSH attrib.c:305-310 - AF_Nearby overrides AF_Visual's grant when the viewer
+		// could not look at the target (can_look_at, hdrs/mushdb.h:104). Only pay for the
+		// nearby/location lookups when some level of the path actually carries the flag.
+		var canLook = attribute.Any(attr => attr.IsNearby()) && await CanLookAt(viewer, target);
+
+		return attribute.All(attr => attr.IsVisual() && (!attr.IsNearby() || canLook));
 	}
 
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params LazySharpAttribute[] attribute)
 	{
+		// See the SharpAttribute overload above for the AF_INTERNAL rationale.
+		if (attribute.Any(attr => attr.IsInternal()))
+			return false;
+
 		// mortal_dark hides from non-privileged viewers regardless of ownership
 		if (attribute.Length > 0 && attribute.Any(attr => attr.IsMortalDark())
 				&& !viewer.IsGod() && !await viewer.IsWizard())
@@ -89,7 +188,38 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (await CanExamine(viewer, target))
 			return true;
 
-		return attribute.Length > 0 && attribute.All(attr => attr.IsVisual());
+		if (attribute.Length == 0)
+			return false;
+
+		// See the SharpAttribute overload above for the nearby/canlook rationale.
+		var canLook = attribute.Any(attr => attr.IsNearby()) && await CanLookAt(viewer, target);
+
+		return attribute.All(attr => attr.IsVisual() && (!attr.IsNearby() || canLook));
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>can_look_at</c> (<c>hdrs/mushdb.h:104</c>): whether <paramref name="viewer"/>
+	/// could look at <paramref name="target"/> - same location, one location away through a
+	/// non-opaque room (or one the viewer controls), or the Long_Fingers power/privilege.
+	/// Gates the <c>nearby</c> attribute flag's override of <c>visual</c> in
+	/// <see cref="CanViewAttribute(AnySharpObject,AnySharpObject,SharpAttribute[])"/>.
+	/// </summary>
+	private async ValueTask<bool> CanLookAt(AnySharpObject viewer, AnySharpObject target)
+	{
+		if (await viewer.HasLongFingers())
+			return true;
+
+		if (await LocateService.Nearby(viewer, target))
+			return true;
+
+		var targetLocation = (await target.Where()).WithExitOption();
+		if (await LocateService.Nearby(viewer, targetLocation)
+				&& (!await targetLocation.IsOpaque() || await Controls(viewer, targetLocation)))
+			return true;
+
+		var viewerLocation = (await viewer.Where()).WithExitOption();
+		return await LocateService.Nearby(viewerLocation, target)
+					 && (!await viewerLocation.IsOpaque() || await Controls(viewer, viewerLocation));
 	}
 
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target)

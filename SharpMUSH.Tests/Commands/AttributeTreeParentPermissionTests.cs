@@ -132,7 +132,14 @@ public class AttributeTreeParentPermissionTests
 	}
 
 	/// <summary>
-	/// no_inherit on branch prevents all children from inheriting too.
+	/// no_inherit on a branch blocks the entire subtree beneath it, not just the flagged
+	/// attribute itself. Penn's atr_get_with_parent (attrib.c:1232-1252) walks every
+	/// backtick-delimited segment of the path while crossing a parent boundary and returns
+	/// NULL the moment any segment carries AF_PRIVATE — see also SharpMUSH's own
+	/// documentation (Documentation/Testfile/sharpattr.md): "If a branch on the parent is
+	/// set no_inherit, it will not be inherited, regardless of any other flags that may be
+	/// present." A prior version of this test asserted the opposite (that the child leaf
+	/// was still readable); that pinned the leak this fix closes.
 	/// </summary>
 	[Test]
 	public async ValueTask Parent_NoInheritOnBranch_BlocksChildren()
@@ -150,8 +157,8 @@ public class AttributeTreeParentPermissionTests
 		await Assert.That(r1).DoesNotContain("root");
 
 		var r2 = await Eval(1, $"get({child}/PNB{uid}`SUB)");
-		await Assert.That(r2).IsEqualTo("childval")
-			.Because("no_inherit on branch does NOT block children — they're independent attributes");
+		await Assert.That(r2).DoesNotContain("childval")
+			.Because("no_inherit on a branch blocks the whole subtree beneath it through @parent, per Penn");
 	}
 
 	/// <summary>
