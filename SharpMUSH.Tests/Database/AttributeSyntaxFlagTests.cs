@@ -19,9 +19,9 @@ namespace SharpMUSH.Tests.Database;
 /// be exact-match only, so the symmetric <c>@set obj/attr=!wiz</c> failed. The tests below cover the fix.
 /// <para>
 /// <see cref="WebAppFactoryArg"/> is <c>SharedType.PerTestSession</c>, so <see cref="NotifyService"/> is
-/// one substitute shared across the whole process. Every test calls <c>ClearReceivedCalls()</c>
-/// immediately before the command under test, and the class is marked <c>[NotInParallel]</c> so no
-/// concurrently-running test can record a <c>Notify</c> call in between.
+/// one substitute shared across the whole process. Tests read notifications via
+/// <see cref="MessagesWhile"/>, which tracks the recipient-keyed recorder rather than clearing or
+/// enumerating the substitute's shared call list, so they stay correct under parallel execution.
 /// </para>
 /// </summary>
 [NotInParallel]
