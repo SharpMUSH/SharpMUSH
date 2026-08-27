@@ -11,8 +11,10 @@ namespace SharpMUSH.Database.ArangoDB.Migrations;
 /// <c>attr_privs_view</c> (<c>src/atr_tab.c:34-90</c>) entirely, since a real PennMUSH player
 /// can never toggle it: it exists purely on hardcoded system attributes (semaphores) and is
 /// enforced only by <c>can_create_attr</c>'s <c>player != GOD</c> guard
-/// (<c>src/attrib.c:479-483</c>). SharpMUSH still needs a <c>Symbol</c> for display/identification,
-/// so this seeds <c>"D"</c>, which is free against the seeded set.</para>
+/// (<c>src/attrib.c:479-483</c>). Seeding a real symbol here (previously <c>"D"</c>) let a bare
+/// <c>@set obj/attr=D</c> collide with it, so this seeds an empty <c>Symbol</c> instead -
+/// unreachable via any single-character token, matching that it has no settable letter in Penn
+/// at all.</para>
 ///
 /// <para>UPSERT keyed on name, so it runs on fresh and existing databases alike. The Memgraph
 /// and SurrealDB providers reach the same end through their always-run idempotent flag seeds;
@@ -33,7 +35,7 @@ public class Migration_AddNoDumpAttributeFlag : IArangoMigration
 			{
 				{ "@c", DatabaseConstants.AttributeFlags },
 				{ "name", "nodump" },
-				{ "doc", new { Name = "nodump", Symbol = "D", System = true, Inheritable = true } }
+				{ "doc", new { Name = "nodump", Symbol = "", System = true, Inheritable = true } }
 			});
 	}
 

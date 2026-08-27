@@ -150,8 +150,11 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		// AF_INTERNAL denies reads to everyone, including wizards and God: PennMUSH's
 		// Can_Read_Attr macro (hdrs/mushdb.h:100-101) checks `!AF_Internal(a)` before the
 		// `See_All(p) ||` easy-out ever runs, so - unlike mortal_dark below - there is no
-		// privileged escape from it.
-		if (attribute.Any(attr => attr.IsInternal()))
+		// privileged escape from it. Leaf-only, like Penn: can_read_attr_internal
+		// (src/attrib.c:282-320) tests AF_Internal once on the passed-in leaf attribute before
+		// any tree walk, and the separate per-branch-segment loop below it only ever tests
+		// AF_Private (no_inherit) - AF_Internal never propagates across `-segments.
+		if (attribute.Length > 0 && attribute[^1].IsInternal())
 			return false;
 
 		// mortal_dark hides from non-privileged viewers regardless of ownership
@@ -177,7 +180,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		params LazySharpAttribute[] attribute)
 	{
 		// See the SharpAttribute overload above for the AF_INTERNAL rationale.
-		if (attribute.Any(attr => attr.IsInternal()))
+		if (attribute.Length > 0 && attribute[^1].IsInternal())
 			return false;
 
 		// mortal_dark hides from non-privileged viewers regardless of ownership

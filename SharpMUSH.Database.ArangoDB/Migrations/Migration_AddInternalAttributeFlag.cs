@@ -9,9 +9,9 @@ namespace SharpMUSH.Database.ArangoDB.Migrations;
 /// <para>Penn's own attribute-privilege table gives this flag no user-settable letter (it is
 /// present in <c>attr_privs_view</c> only, absent from <c>attr_privs_set</c>, with symbol
 /// <c>'\0'</c>) — it exists purely for hardcoded, engine-internal attributes that no command
-/// can ever flag or unflag. SharpMUSH still needs a <c>Symbol</c> for display/identification,
-/// so this seeds <c>"I"</c>, which is free against the seeded set (lowercase <c>i</c> is already
-/// <c>no_inherit</c>).</para>
+/// can ever flag or unflag. Seeding a real symbol here (previously <c>"I"</c>) let a bare
+/// <c>@set obj/attr=I</c> collide with it, so this matches Penn's <c>'\0'</c> with an empty
+/// <c>Symbol</c> instead — unreachable via any single-character token, exactly like Penn.</para>
 ///
 /// <para>UPSERT keyed on name, so it runs on fresh and existing databases alike. The Memgraph
 /// and SurrealDB providers reach the same end through their always-run idempotent flag seeds;
@@ -32,7 +32,7 @@ public class Migration_AddInternalAttributeFlag : IArangoMigration
 			{
 				{ "@c", DatabaseConstants.AttributeFlags },
 				{ "name", "internal" },
-				{ "doc", new { Name = "internal", Symbol = "I", System = true, Inheritable = true } }
+				{ "doc", new { Name = "internal", Symbol = "", System = true, Inheritable = true } }
 			});
 	}
 
