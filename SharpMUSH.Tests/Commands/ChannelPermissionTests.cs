@@ -94,9 +94,46 @@ public class ChannelPermissionTests
 					 && await channel.Members.Value.AnyAsync(x => x.Member.Object().DBRef.Number == who.Number);
 	}
 
+	/// <summary>
+	/// <see cref="TestIsolationHelpers.CreateTestPlayerAsync"/> places every player it creates at the
+	/// SAME configured <c>DefaultHome</c> - project-wide, not just in this file - so a freshly created
+	/// mortal starts out standing in a room shared with every other test's freshly created mortal that
+	/// happens to be running concurrently. A player entering or leaving that room broadcasts "X has
+	/// arrived."/"X has left." to every other occupant, which lands in whichever occupant's
+	/// <see cref="MessagesWhile"/> window happens to be open at that instant - completely unrelated to
+	/// channels. The disclosure-oracle tests in this file (<see cref="MissingAndInvisibleChannelsAreIndistinguishable"/>,
+	/// <see cref="ClockCommandDoesNotDistinguishHiddenFromMissing"/>,
+	/// <see cref="AdminSwitchesDoNotDistinguishHiddenFromMissing"/>) assert EXACT equality between two
+	/// captured windows - that is the whole point, an attacker must not be able to tell "hidden" from
+	/// "missing" apart from ANY difference in what they were told - so weakening them to a substring
+	/// check would hide the very asymmetry they exist to catch. The fix has to be on the noise, not the
+	/// assertion: move every mortal this file creates into its own freshly dug, single-occupant room
+	/// before any window opens, so nothing else in the game session can ever put a stray body in it.
+	/// <para>
+	/// This does not fix the shared-DefaultHome pattern itself - other test files' players still meet
+	/// there - it only makes THIS file's players unreachable by it.
+	/// </para>
+	/// </summary>
 	private async Task<TestIsolationHelpers.TestPlayer> CreateMortal(string prefix)
-		=> await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+
+		var roomName = TestIsolationHelpers.GenerateUniqueName($"{prefix}Room");
+		var digResult = await GodParser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		// /QUIET, not a plain @teleport: without it, @teleport queues a "look" command for the
+		// target (GeneralCommands.cs's Teleport, QueueCommandListRequest) rather than running it
+		// inline - so the arrival autolook (including a "Contents:" line) can land at an
+		// unpredictable later tick, inside whichever MessagesWhile window happens to be open when
+		// the queue drains it. /QUIET skips that queued look entirely, so there is nothing left to
+		// race against.
+		await GodParser.CommandParse(1, ConnectionService,
+			MModule.single($"@teleport/quiet {player.DbRef}={roomDbRef}"));
+
+		return player;
+	}
 
 	private async Task<TestIsolationHelpers.TestPlayer> CreateFlagged(string prefix, string flag)
 	{
