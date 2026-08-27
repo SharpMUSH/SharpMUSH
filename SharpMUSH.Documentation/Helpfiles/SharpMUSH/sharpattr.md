@@ -14,6 +14,8 @@ These attribute flags restrict access, and are inherited down attribute trees (i
 - `locked (+)`        Attribute is locked with `@atrlock`.
 - `safe (S)`          Attribute can't be modified without unsetting this flag.
 
+Not every flag above actually propagates down attribute trees despite the sentence introducing this list -- that sentence mirrors PennMUSH's own help text, which contradicts itself on this point. See [attribute trees3] for exactly which of these flags propagate in this implementation, and why `no_clone`, `veiled`, and `wizard` on reads do not.
+
 See [attribute flags2]
 
 # ATTRIBUTE FLAGS2
@@ -120,6 +122,15 @@ See [attribute trees3] for more information and examples.
 The second benefit of attributes trees is convenient access control. Attribute flags that restrict attribute access or execution (no_inherit, no_command, mortal_dark, wizard) propagate down attribute trees, so if a branch is set mortal_dark, mortals can not read any of its leaves or subbranches either.
 
 Attribute flags that grant access (e.g. visual) do NOT propagate down trees.
+
+**Exactly which flags propagate here, since PennMUSH's own help contradicts itself:** the flag list under [attribute flags] states that `no_clone`, `veiled`, and `wizard` "restrict access, and are inherited down attribute trees" alongside `no_inherit`, `no_command`, and `mortal_dark`. This section's own list of propagating flags omits `no_clone` and `veiled`. Both statements can't be right, and PennMUSH's C source settles it in favor of the narrower list here -- once `wizard` is split into what it actually restricts:
+
+- `no_inherit`, `no_command`, and `mortal_dark` propagate down attribute trees exactly as described above: flag a branch, and every leaf and subbranch beneath it inherits the restriction.
+- `wizard` propagates for **writes** only: a `wizard`-flagged branch blocks a mortal from writing any leaf beneath it, even one with no flags of its own. `wizard` does **not** gate reads at all, at any level. PennMUSH's `can_read_attr_internal` (`src/attrib.c:282-338`) never tests `AF_Wizard` -- only `AF_Internal`, `mortal_dark`, and the visual/ownership escapes. A mortal can read a leaf under a `wizard` branch without trouble.
+- `no_clone` does **not** propagate. PennMUSH's `atr_cpy` (`src/attrib.c:1691-1709`, the routine behind `@clone`) tests `AF_Nocopy` on each attribute individually; no tree walk anywhere extends a branch's `no_clone` to its leaves.
+- `veiled` does **not** propagate. PennMUSH's only use of `AF_VEILED` (`src/look.c:302-316`) is cosmetic: it hides an attribute's own value in `examine`'s default listing, nothing more. No ancestor walk anywhere tests it, for display or otherwise.
+
+This implementation follows PennMUSH's C source on all three points, not PennMUSH's own help text. If a `no_clone`, `veiled`, or `wizard`-flagged branch doesn't behave the way the flag list at the top of this help implies, this is why: it is a deliberate match to Penn's actual behavior, not a bug to fix.
 
 These properties make attribute trees ideal for data attributes:
 ```sharp

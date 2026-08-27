@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -18,9 +19,9 @@ namespace SharpMUSH.Tests.Database;
 /// be exact-match only, so the symmetric <c>@set obj/attr=!wiz</c> failed. The tests below cover the fix.
 /// <para>
 /// <see cref="WebAppFactoryArg"/> is <c>SharedType.PerTestSession</c>, so <see cref="NotifyService"/> is
-/// one substitute shared across the whole process. Every test calls <c>ClearReceivedCalls()</c>
-/// immediately before the command under test, and the class is marked <c>[NotInParallel]</c> so no
-/// concurrently-running test can record a <c>Notify</c> call in between.
+/// one substitute shared across the whole process. Tests read notifications via
+/// <see cref="MessagesWhile"/>, which tracks the recipient-keyed recorder rather than clearing or
+/// enumerating the substitute's shared call list, so they stay correct under parallel execution.
 /// </para>
 /// </summary>
 [NotInParallel]
@@ -34,6 +35,20 @@ public class AttributeSyntaxFlagTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+
+	/// <summary>
+	/// Everything <paramref name="who"/> was notified of while <paramref name="action"/> ran, in
+	/// order. The <see cref="INotifyService"/> substitute is shared across the whole test session,
+	/// so this reads the recipient-keyed recorder rather than enumerating (or clearing)
+	/// <c>ReceivedCalls()</c> while parallelizable tests are still recording into it.
+	/// </summary>
+	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
+	{
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(who);
+		await action();
+		return [.. recorder.For(who).Skip(before)];
+	}
 
 	private static bool HasFlag(SharpAttribute attribute, string name)
 		=> attribute.Flags.Any(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
@@ -52,16 +67,15 @@ public class AttributeSyntaxFlagTests
 		await Assert.That(HasFlag(beforeAttr.AsAttribute.Last(), "wizard")).IsTrue()
 			.Because("precondition: wizard must be set before we can test unsetting it via prefix");
 
-		NotifyService.ClearReceivedCalls();
 		// "wiz" is a prefix of "wizard", not an exact name or symbol match -- this is exactly the
 		// asymmetric case that used to fail on the unset path while `@set .../attr=wiz` succeeded.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {objDbRef}/UNSETWIZ_ATTR=!wiz"));
+		var messages = await MessagesWhile(executor, () =>
+			Parser.CommandParse(1, ConnectionService,
+				MModule.single($"@set {objDbRef}/UNSETWIZ_ATTR=!wiz")).AsTask());
 
-		await NotifyService.Received().Notify(
-			TestHelpers.MatchingObject(executor),
-			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageContains(msg, "Flag wizard unset from attribute")),
-			Arg.Is<AnySharpObject?>(sender => sender != null && sender.Object().DBRef == objDbRef),
-			Arg.Any<INotifyService.NotificationType>());
+		await Assert.That(messages.Any(m => m.EndsWith("/UNSETWIZ_ATTR - wizard reset.")))
+			.IsTrue()
+			.Because("the prefix `!wiz` must resolve to wizard and report the unset by name");
 
 		var afterAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETWIZ_ATTR",
 			IAttributeService.AttributeMode.Read, false);
@@ -82,14 +96,13 @@ public class AttributeSyntaxFlagTests
 		await Assert.That(HasFlag(beforeAttr.AsAttribute.Last(), "cmdsyntax")).IsTrue()
 			.Because("precondition: cmdsyntax must be set before we can test unsetting it via its symbol");
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {objDbRef}/UNSETX_ATTR=!x"));
+		var messages = await MessagesWhile(executor, () =>
+			Parser.CommandParse(1, ConnectionService,
+				MModule.single($"@set {objDbRef}/UNSETX_ATTR=!x")).AsTask());
 
-		await NotifyService.Received().Notify(
-			TestHelpers.MatchingObject(executor),
-			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageContains(msg, "Flag cmdsyntax unset from attribute")),
-			Arg.Is<AnySharpObject?>(sender => sender != null && sender.Object().DBRef == objDbRef),
-			Arg.Any<INotifyService.NotificationType>());
+		await Assert.That(messages.Any(m => m.EndsWith("/UNSETX_ATTR - cmdsyntax reset.")))
+			.IsTrue()
+			.Because("the symbol `!x` must resolve to cmdsyntax and report the unset by name");
 
 		var afterAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETX_ATTR",
 			IAttributeService.AttributeMode.Read, false);
