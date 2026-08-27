@@ -444,14 +444,19 @@ public static class ErrorMessages
 		public const string AttributeIsSafeSetNotSafe = "Attribute {0} is SAFE. Set it !SAFE to modify it.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCannotBeWipedChildBlocked = "Attribute {0} cannot be wiped because a child attribute cannot be wiped.";
+		/// <summary>
+		/// PennMUSH's <c>af_helper</c> reports each half of a flag batch as ONE line naming the
+		/// whole list - <c>"%s/%s - %s reset."</c> / <c>"%s/%s - %s set."</c>
+		/// (<c>src/set.c:522-535</c>) - built from the REQUESTED bitmask, not from what actually
+		/// changed, and suppressed entirely when <c>AreQuiet(player, thing)</c> or
+		/// <c>AF_Quiet(atr)</c>. There is deliberately no "already set" or "is not set" wording:
+		/// Penn has no such case.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeFlagSet = "Flag {0} set on attribute {1}";
+		public const string AttributeFlagsResetFormat = "{0}/{1} - {2} reset.";
+		/// <inheritdoc cref="AttributeFlagsResetFormat"/>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeFlagUnset = "Flag {0} unset from attribute {1}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeFlagAlreadySet = "Flag {0} is already set on attribute {1}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeFlagNotSet = "Flag {0} is not set on attribute {1}";
+		public const string AttributeFlagsSetFormat = "{0}/{1} - {2} set.";
 		public const string NoAttributesWiped = "No attributes wiped.";
 		public const string OneAttributeWiped = "One attribute wiped.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

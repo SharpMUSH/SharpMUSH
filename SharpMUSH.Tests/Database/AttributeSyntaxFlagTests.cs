@@ -73,8 +73,8 @@ public class AttributeSyntaxFlagTests
 			Parser.CommandParse(1, ConnectionService,
 				MModule.single($"@set {objDbRef}/UNSETWIZ_ATTR=!wiz")).AsTask());
 
-		await Assert.That(messages).Contains(string.Format(
-				ErrorMessages.Notifications.AttributeFlagUnset, "wizard", "UNSETWIZ_ATTR"))
+		await Assert.That(messages.Any(m => m.EndsWith("/UNSETWIZ_ATTR - wizard reset.")))
+			.IsTrue()
 			.Because("the prefix `!wiz` must resolve to wizard and report the unset by name");
 
 		var afterAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETWIZ_ATTR",
@@ -100,8 +100,8 @@ public class AttributeSyntaxFlagTests
 			Parser.CommandParse(1, ConnectionService,
 				MModule.single($"@set {objDbRef}/UNSETX_ATTR=!x")).AsTask());
 
-		await Assert.That(messages).Contains(string.Format(
-				ErrorMessages.Notifications.AttributeFlagUnset, "cmdsyntax", "UNSETX_ATTR"))
+		await Assert.That(messages.Any(m => m.EndsWith("/UNSETX_ATTR - cmdsyntax reset.")))
+			.IsTrue()
 			.Because("the symbol `!x` must resolve to cmdsyntax and report the unset by name");
 
 		var afterAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETX_ATTR",

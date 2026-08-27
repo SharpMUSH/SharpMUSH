@@ -49,6 +49,23 @@ public class FollowCommandTests
 
 	private record AttributeReadResult(bool Exists, string? Value, bool IsWizardFlagged);
 
+	/// <summary>
+	/// Runs <c>follow &lt;leader&gt;</c> as <paramref name="follower"/> and returns what the
+	/// follower was told. FOLLOW resolves its target by name through LocateService, which is a
+	/// separate failure mode from the attribute write these tests are about - without this, a
+	/// locate that quietly failed and a write that quietly failed look identical.
+	/// </summary>
+	private async Task<List<string>> FollowAndReport(TestIsolationHelpers.TestPlayer follower, DBRef leader)
+	{
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(follower.DbRef);
+
+		await Parser.CommandParse(follower.Handle, ConnectionService,
+			MModule.single($"follow {await NameOf(leader)}"));
+
+		return [.. recorder.For(follower.DbRef).Skip(before)];
+	}
+
 	[Test]
 	public async ValueTask MortalFollow_OverwritesTheWizardFlaggedAttribute()
 	{
@@ -59,8 +76,10 @@ public class FollowCommandTests
 		var second = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowLeaderB");
 
-		await Parser.CommandParse(follower.Handle, ConnectionService,
-			MModule.single($"follow {await NameOf(first.DbRef)}"));
+		var firstReport = await FollowAndReport(follower, first.DbRef);
+		await Assert.That(firstReport.Any(m => m.Contains("now following")))
+			.IsTrue()
+			.Because($"FOLLOW must resolve the leader by name and report success; it said: {string.Join(" | ", firstReport)}");
 
 		var afterFirst = await FollowingOf(follower.DbRef);
 		await Assert.That(afterFirst.Value).IsEqualTo(first.DbRef.ToString())
@@ -72,8 +91,10 @@ public class FollowCommandTests
 		await Assert.That(afterFirst.IsWizardFlagged).IsTrue()
 			.Because("FOLLOWING is seeded wizard-flagged - that is the gate the second follow must cross");
 
-		await Parser.CommandParse(follower.Handle, ConnectionService,
-			MModule.single($"follow {await NameOf(second.DbRef)}"));
+		var secondReport = await FollowAndReport(follower, second.DbRef);
+		await Assert.That(secondReport.Any(m => m.Contains("now following")))
+			.IsTrue()
+			.Because($"the second FOLLOW must also resolve and report; it said: {string.Join(" | ", secondReport)}");
 
 		var afterSecond = await FollowingOf(follower.DbRef);
 		await Assert.That(afterSecond.Value).IsEqualTo(second.DbRef.ToString())
@@ -88,8 +109,10 @@ public class FollowCommandTests
 		var leader = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "UnfollowLeader");
 
-		await Parser.CommandParse(follower.Handle, ConnectionService,
-			MModule.single($"follow {await NameOf(leader.DbRef)}"));
+		var report = await FollowAndReport(follower, leader.DbRef);
+		await Assert.That(report.Any(m => m.Contains("now following")))
+			.IsTrue()
+			.Because($"FOLLOW must resolve the leader by name and report success; it said: {string.Join(" | ", report)}");
 
 		var before = await FollowingOf(follower.DbRef);
 		await Assert.That(before.Exists).IsTrue()
