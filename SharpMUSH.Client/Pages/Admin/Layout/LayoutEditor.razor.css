@@ -56,16 +56,40 @@
 @container page (max-width: 48rem) {
     .layedit ::deep .le-zone-drop--grid { grid-template-columns: 1fr; }
     .layedit ::deep .le-zone-drop--grid > .mud-drop-item { grid-column: 1 / -1; }
+    .layedit ::deep .mud-dropitem-placeholder { grid-column: 1 / -1; }
+    /* Every widget is full width here, so there is no width left to drag. Keyboard resize still works. */
+    .le-resize { display: none; }
     .layedit-actions { flex-wrap: wrap; }
     .le-btn { flex: 1 1 auto; justify-content: center; }
 }
 
-.le-width { display: inline-flex; align-items: center; gap: 0.375rem; margin-right: 0.375rem; }
-.le-span-slider { width: 84px; accent-color: var(--accent); cursor: pointer; }
 .le-span-num {
     font-family: var(--font-mono); font-size: 0.6875rem; color: var(--text-dim);
-    min-width: 16px; text-align: center;
+    min-width: 16px; text-align: center; padding: 0.0625rem 0.25rem; border-radius: 4px;
+    background: var(--surface); border: 1px solid var(--border);
 }
+.le-item--resizing .le-span-num { color: var(--accent); border-color: rgba(var(--glow), 0.5); }
+
+/* The width grip: a hit strip on the edge it moves. Hidden until the row is hovered or the grip is
+   focused, so a zone full of widgets does not read as a row of handles. */
+.le-resize {
+    position: absolute; top: 0; right: 0; width: 14px; height: 100%;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    cursor: ew-resize; touch-action: none; opacity: 0.4;
+    transition: opacity 0.12s, background-color 0.12s;
+}
+.le-resize::after {
+    content: ''; position: absolute; top: 50%; right: 4px; translate: 0 -50%;
+    width: 2px; height: 14px; border-radius: 1px; background: var(--text-faint);
+}
+.le-item:hover .le-resize,
+.le-item--resizing .le-resize,
+.le-resize:focus-visible { opacity: 1; }
+.le-resize:hover, .le-resize:focus-visible { background: rgba(var(--glow), 0.18); }
+.le-resize:hover::after, .le-resize:focus-visible::after { background: var(--accent); }
+.le-resize:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* Kept faintly visible rather than hover-only: touch has no hover, and the grip is the only pointer
+   affordance for width. Hover and focus bring it to full strength. */
 
 .le-preview { margin-top: 1.125rem; border: 1px solid var(--border-soft); border-radius: var(--radius-lg); overflow: hidden; }
 .le-preview-head {
@@ -87,10 +111,17 @@
 .le-btn--on { border-color: rgba(var(--glow), 0.5); color: var(--accent); }
 
 .le-item {
+    position: relative; container-type: inline-size;
     display: flex; align-items: center; gap: 0.5rem; padding: 0.5625rem 0.6875rem; border-radius: var(--radius);
     background: var(--surface-2); border: 1px solid var(--border); cursor: grab; user-select: none;
 }
 .le-item:hover { border-color: rgba(var(--glow), 0.4); }
+.le-item--resizing { border-color: var(--accent); cursor: ew-resize; }
+
+/* A one-column widget is roughly 60px wide, which cannot hold five controls. Shed the decorative
+   parts first and the name last; every button survives, because they are the non-drag path. */
+@container (max-width: 15rem) { .le-item ::deep .le-item-grip, .le-span-num { display: none; } }
+@container (max-width: 9rem) { .le-item-name { display: none; } }
 .le-item--template { background: rgba(var(--glow), 0.06); border-style: dashed; }
 .le-item-name { font-family: var(--font-ui); font-size: 0.78125rem; color: var(--text); font-weight: 500;
     flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -102,3 +133,16 @@
 .le-item-btn--danger:hover { color: #e57373; border-color: rgba(229, 115, 115, 0.5); }
 
 ::deep .mud-drop-zone-drag-block-target { outline: 2px dashed rgba(var(--glow), 0.5); outline-offset: -4px; }
+
+/* The drop skeleton MudBlazor renders at the insertion index once AllowReorder is on. Its default look
+   is a MudBlazor chip; these rules restate it in the editor's own language. Three compound selectors
+   outrank the single-class utilities MudBlazor puts on the element, so no !important is needed. */
+.layedit ::deep .mud-dropitem-placeholder {
+    border: 1px dashed rgba(var(--glow), 0.75); background: rgba(var(--glow), 0.09);
+    border-radius: var(--radius); min-height: 38px; padding: 0; margin: 0;
+}
+/* Sized to the widget in flight, so the gap previews the real footprint rather than a stub. */
+.layedit ::deep .le-zone-drop--grid .mud-dropitem-placeholder { grid-column: span var(--le-drag-span, 12); }
+
+/* The widget being dragged stays legible in its old position, so its origin is never in doubt. */
+.layedit ::deep .mud-drop-item.le-item-lifted { opacity: 0.4; }
