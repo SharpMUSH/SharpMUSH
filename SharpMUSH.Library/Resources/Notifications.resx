@@ -588,8 +588,14 @@
   </data>
 
   <!-- Parent / Zone -->
-  <data name="ParentLoopCannotAdd" xml:space="preserve">
-    <value>Cannot add parent to loop.</value>
+  <data name="SelfAncestor" xml:space="preserve">
+    <value>A thing cannot be its own ancestor!</value>
+  </data>
+  <data name="CyclicAncestor" xml:space="preserve">
+    <value>You are not allowed to be your own ancestor!</value>
+  </data>
+  <data name="TooManyAncestors" xml:space="preserve">
+    <value>Too many ancestors.</value>
   </data>
   <data name="ParentSet" xml:space="preserve">
     <value>Parent set.</value>

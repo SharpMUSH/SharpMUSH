@@ -162,6 +162,27 @@ public interface ISharpDatabase
 	IAsyncEnumerable<SharpAttribute> GetAttributesAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 
+	/// <remarks>
+	/// <b>Contract:</b> results must be ordered parent-before-child by <c>LongName</c> (a
+	/// branch attribute before any of its own leaves). <c>@CLONE</c>'s attribute-tree copy
+	/// (<c>BuildingCommands.cs</c>) depends on this ordering to replicate PennMUSH's
+	/// <c>no_clone</c> skip-propagation (<c>atr_cpy</c>/<c>atr_new_add(makeroots: false)</c>,
+	/// <c>attrib.c:1692-1710, 756-820</c>): it walks results in order and treats a LongName as
+	/// skipped if its immediate parent was already skipped, which only works if the parent was
+	/// actually visited first.
+	/// <para>
+	/// Every provider satisfies this today, but not the same way: ArangoDB's implementation
+	/// sorts explicitly (<c>SORT v.LongName ASC</c>), Memgraph's Cypher traversal orders by
+	/// path depth, and SurrealDB's does neither - it satisfies the invariant only because its
+	/// traversal happens to be a manual preorder DFS (<c>SurrealDatabase.cs</c>,
+	/// <c>GetAllAttributesForIdAsync</c>: yield an attribute, then recurse into its children,
+	/// before moving to the next sibling). Production runs SurrealDB. A future change to that
+	/// traversal (or a new provider) that preserves "returns every attribute" while dropping
+	/// this ordering would silently break <c>@CLONE</c>'s no_clone handling without breaking
+	/// this method's own contract as documented anywhere else - which is why it's documented
+	/// here, on the interface, rather than left as an accident of one provider's implementation.
+	/// </para>
+	/// </remarks>
 	IAsyncEnumerable<SharpAttribute> GetAttributesByRegexAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 

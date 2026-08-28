@@ -826,7 +826,7 @@ public partial class Functions
 
 				var attribute = dbrefAndMaybeArg.AsT0.Attribute!;
 
-				var attributeObject = await AttributeService!.GetAttributeAsync(executor, executor, attribute,
+				var attributeObject = await AttributeService!.GetAttributeAsync(executor, actualObject, attribute,
 					IAttributeService.AttributeMode.Read, false);
 
 				return attributeObject switch
@@ -1198,7 +1198,7 @@ public partial class Functions
 			return ErrorMessages.Returns.Integer;
 		}
 
-		if (startInt < 1)
+		if (startInt < 1 || countInt < 1)
 		{
 			return ErrorMessages.Returns.ArgRange;
 		}
@@ -1248,7 +1248,7 @@ public partial class Functions
 			return ErrorMessages.Returns.Integer;
 		}
 
-		if (startInt < 1)
+		if (startInt < 1 || countInt < 1)
 		{
 			return ErrorMessages.Returns.ArgRange;
 		}
@@ -1828,7 +1828,7 @@ public partial class Functions
 			return ErrorMessages.Returns.Integer;
 		}
 
-		if (startInt > countInt || startInt < 1)
+		if (startInt < 1 || countInt < 1)
 		{
 			return ErrorMessages.Returns.ArgRange;
 		}
@@ -1848,7 +1848,7 @@ public partial class Functions
 					return attributes.AsError;
 				}
 
-				var attributesStaging = attributes.AsAttributes.Skip(startInt).Take(countInt);
+				var attributesStaging = attributes.AsAttributes.Skip(startInt - 1).Take(countInt);
 
 				var separator = parser.CurrentState.Arguments.TryGetValue("3", out var sepArg)
 					? sepArg.Message!.ToPlainText()
@@ -1877,7 +1877,7 @@ public partial class Functions
 			return ErrorMessages.Returns.Integer;
 		}
 
-		if (startInt > countInt || startInt < 1)
+		if (startInt < 1 || countInt < 1)
 		{
 			return ErrorMessages.Returns.ArgRange;
 		}
@@ -1897,7 +1897,7 @@ public partial class Functions
 					return attributes.AsError;
 				}
 
-				var attributesStaging = attributes.AsAttributes.Skip(startInt).Take(countInt);
+				var attributesStaging = attributes.AsAttributes.Skip(startInt - 1).Take(countInt);
 
 				var separator = parser.CurrentState.Arguments.TryGetValue("3", out var sepArg)
 					? sepArg.Message!.ToPlainText()

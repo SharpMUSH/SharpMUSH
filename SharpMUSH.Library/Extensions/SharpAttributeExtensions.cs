@@ -60,6 +60,17 @@ public static class SharpAttributeExtensions
 	public static bool IsNoInherit(this LazySharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase));
 
+	/// <summary>
+	/// PennMUSH's <c>AF_Nocopy</c> (<c>attrib.c:1703</c>), tested by <c>atr_cpy</c> before
+	/// copying an attribute during <c>@CLONE</c>.
+	/// <para>
+	/// Compares case-insensitively, matching <see cref="IsNoInherit(SharpAttribute)"/> - this
+	/// had zero production callers until @CLONE's attribute-tree fix made it load-bearing, and
+	/// PR #808's case-insensitivity sweep predates that, so a hand-rolled ordinal comparison
+	/// here would have been the exact bug class that sweep fixed at 14 other sites, just never
+	/// exercised.
+	/// </para>
+	/// </summary>
 	public static bool IsNoCopy(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name.Equals("no_clone", StringComparison.OrdinalIgnoreCase));
 

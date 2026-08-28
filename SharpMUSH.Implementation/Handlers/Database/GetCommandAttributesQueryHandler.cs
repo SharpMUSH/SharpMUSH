@@ -27,14 +27,20 @@ public class GetCommandAttributesQueryHandler(
 		await CommandAttributeScanner.ScanAttributes(sharpObj.Object().AllAttributes.Value, commandAttributes, seenNames,
 			noCommandPrefixes, isLocal: true, cancellationToken);
 
-		// Walk parent chain for inherited commands
+		// Walk parent chain for inherited commands, capped at Limit.MaxParents with a cycle guard -
+		// mirrors AttributeService.ParentChainAsync. Defence in depth: the write-side guards
+		// (SafeToAddParent, ExceedsMaxParentDepthAsync) should already keep a cycle from existing.
+		var maxDepth = (int)configuration.CurrentValue.Limit.MaxParents;
+		var visited = new HashSet<int> { sharpObj.Object().DBRef.Number };
 		var current = sharpObj.Object();
-		while (true)
+		for (var depth = 0; depth < maxDepth; depth++)
 		{
 			var parent = await current.Parent.WithCancellation(cancellationToken);
 			if (parent.IsNone) break;
 
 			var parentObj = parent.Known.Object();
+			if (!visited.Add(parentObj.DBRef.Number)) break;
+
 			await CommandAttributeScanner.ScanAttributes(parentObj.AllAttributes.Value, commandAttributes, seenNames,
 				noCommandPrefixes, isLocal: false, cancellationToken);
 

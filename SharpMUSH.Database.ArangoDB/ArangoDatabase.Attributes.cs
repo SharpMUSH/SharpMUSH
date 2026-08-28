@@ -361,13 +361,18 @@ public partial class ArangoDatabase
 			yield break;
 		}
 
-		// Pattern matching supports hierarchical attribute trees with proper backtick handling:
-		// - Single wildcard (*) matches within one tree level: "FOO*" matches "FOOBAR" but not "FOO`BAR"
-		// - Double wildcard (**) matches across tree levels: "FOO**" matches "FOOBAR" and "FOO`BAR`BAZ"
-		// - Question mark (?) matches a single character
-		// The WildcardToRegex() conversion properly escapes backticks in single wildcards.
+		// Unlike GetAttributesAsync/GetLazyAttributesByRegexAsync's wildcard-based siblings,
+		// attributePattern here is NOT run through WildcardToRegex() - it is taken as a raw
+		// regex (only an "(?i)" prefix is added, above). A literal "*"/"**" wildcard is not
+		// valid regex syntax on its own ("nothing to repeat" - there is no preceding atom for
+		// the quantifier); a caller wanting "match every attribute" must pass a real regex like
+		// ".*". Backtick-crossing behaviour is therefore whatever the caller's own regex
+		// expresses, not a wildcard convention.
 		//
-		// Results are sorted hierarchically (parent before children) by LongName.
+		// Results are sorted hierarchically (parent before children) by LongName - @CLONE's
+		// attribute-tree copy (Commands/BuildingCommands.cs) depends on this ordering to
+		// replicate Penn's no_clone skip-propagation. See ISharpDatabase.GetAttributesByRegexAsync
+		// for the cross-provider caveat on this invariant.
 
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =

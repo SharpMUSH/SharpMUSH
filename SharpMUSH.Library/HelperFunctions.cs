@@ -11,6 +11,23 @@ using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library;
 
+/// <summary>
+/// Outcome of <see cref="HelperFunctions.SafeToAddRelationship"/>: whether adding a parent/zone
+/// relationship is safe and, if not, which of PennMUSH's two distinct <c>do_parent</c> guards it
+/// would violate (<c>src/set.c:1432</c> self-reference vs. <c>:1477</c> a cycle reachable through
+/// the existing chain) - the two produce different player-facing text and callers that show that
+/// text need to tell them apart. <see cref="HelperFunctions.SafeToAddZone"/> collapses this back
+/// to a single bool: <c>do_chzone</c> (<c>src/set.c:421-444</c>) has its own, differently-worded
+/// self/cycle messages, so a zone caller reusing parent wording here would be wrong, not just
+/// imprecise - see the zone note on <see cref="HelperFunctions.SafeToAddZone"/>.
+/// </summary>
+public enum RelationshipSafety
+{
+	Safe,
+	SelfReference,
+	Cycle
+}
+
 public static partial class HelperFunctions
 {
 	private static readonly Regex DatabaseReferenceRegex = DatabaseReference();
@@ -398,22 +415,27 @@ public static partial class HelperFunctions
 	}
 
 	/// <summary>
-	/// Detects cycles when combining parent and zone chains.
-	/// Checks if adding a relationship would create a cycle by following
-	/// both parent and zone links from the new relationship target.
+	/// Detects self-reference and cycles when combining parent and zone chains. Checks whether
+	/// adding a relationship would create a cycle by following both parent and zone links from the
+	/// new relationship target.
 	/// </summary>
 	/// <param name="start">The object that will have a new relationship set</param>
 	/// <param name="newRelated">The object being set as parent or zone</param>
 	/// <param name="cancellationToken">Cancellation token</param>
-	/// <returns>True if safe to add (no cycle), false if it would create a cycle</returns>
-	public static async ValueTask<bool> SafeToAddRelationship(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newRelated, CancellationToken cancellationToken = default)
+	/// <returns>
+	/// <see cref="RelationshipSafety.Safe"/> if adding the relationship is safe;
+	/// <see cref="RelationshipSafety.SelfReference"/> if <paramref name="start"/> and
+	/// <paramref name="newRelated"/> are the same object; <see cref="RelationshipSafety.Cycle"/> if
+	/// <paramref name="start"/> is otherwise reachable from <paramref name="newRelated"/>.
+	/// </returns>
+	public static async ValueTask<RelationshipSafety> SafeToAddRelationship(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newRelated, CancellationToken cancellationToken = default)
 	{
 		var startDbRef = start.Object().DBRef;
 		var newRelatedDbRef = newRelated.Object().DBRef;
 
 		if (startDbRef.Number == newRelatedDbRef.Number)
 		{
-			return false;
+			return RelationshipSafety.SelfReference;
 		}
 
 		// Use ArangoDB graph traversal to check if adding the relationship would create a cycle.
@@ -421,20 +443,28 @@ public static partial class HelperFunctions
 		// would complete a cycle: start -> newRelated -> ... -> start
 		var isReachable = await database.IsReachableViaParentOrZoneAsync(newRelated, start, cancellationToken: cancellationToken);
 
-		return !isReachable;
+		return isReachable ? RelationshipSafety.Cycle : RelationshipSafety.Safe;
 	}
 
 	/// <summary>
-	/// Detects cycles in the parent chain.
+	/// Detects self-reference and cycles in the parent chain. Distinguishes the two
+	/// (<see cref="RelationshipSafety"/>) because PennMUSH's <c>do_parent</c> notifies the player
+	/// with different text for each (<c>src/set.c:1432,1477</c>).
 	/// </summary>
-	public static async ValueTask<bool> SafeToAddParent(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newParent, CancellationToken cancellationToken = default)
+	public static async ValueTask<RelationshipSafety> SafeToAddParent(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newParent, CancellationToken cancellationToken = default)
 		=> await SafeToAddRelationship(mediator, database, start, newParent, cancellationToken);
 
 	/// <summary>
-	/// Detects cycles in the zone chain.
+	/// Detects cycles in the zone chain. Collapsed to a bool - unlike <see cref="SafeToAddParent"/>,
+	/// no caller here needs to tell self-reference from a cycle apart: PennMUSH's <c>do_chzone</c>
+	/// (<c>src/set.c:421-444</c>) has its own self ("You shouldn't zone objects to themselves!") and
+	/// cycle ("You can't make circular zones!") messages, both worded differently from
+	/// <c>do_parent</c>'s and neither currently reproduced here, so there is nothing parent-specific
+	/// to route to. If zone messaging is split to match Penn later, wire it from
+	/// <see cref="SafeToAddRelationship"/> directly rather than reusing the parent-flavoured keys.
 	/// </summary>
 	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newZone, CancellationToken cancellationToken = default)
-		=> await SafeToAddRelationship(mediator, database, start, newZone, cancellationToken);
+		=> await SafeToAddRelationship(mediator, database, start, newZone, cancellationToken) == RelationshipSafety.Safe;
 
 	public static OneOf<(string db, string? Attribute), bool> SplitDbRefAndOptionalAttr(string DBRefAttr)
 	{

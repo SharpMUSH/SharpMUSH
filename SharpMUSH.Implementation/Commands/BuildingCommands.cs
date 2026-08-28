@@ -1442,12 +1442,105 @@ public partial class Commands
 				var clonedObjOptional = await Mediator!.Send(new GetObjectNodeQuery(cloneDbRef));
 				var clonedObj = clonedObjOptional.WithoutNone();
 
-				await foreach (var attr in obj.Object().Attributes.Value)
+				// Penn's atr_cpy (attrib.c:1692-1710) walks the source's flat, sorted attribute
+				// list - branch vs. leaf is purely a naming convention over one namespace - and
+				// for each attribute checks AF_Nocopy, then calls atr_new_add(..., makeroots:
+				// false). With makeroots false, atr_new_add (attrib.c:756-820) silently aborts
+				// without adding when the immediate parent isn't already on the destination
+				// (:804-806). Because the list is sorted with parent before child, a no_clone
+				// BRANCH is itself skipped by atr_cpy, and its leaves then find no parent on the
+				// clone either and are dropped too - incidentally, via the missing-root abort,
+				// not via any permission walk of their own. GetAttributesByRegexAsync (via
+				// GetAttributesQuery in Regex mode) is used here rather than the depth-1
+				// enumeration above (or the unsorted GetAttributesAsync) because it walks the
+				// whole tree and sorts LongName ascending - parent before child - which this
+				// skip-propagation depends on.
+				var skippedAttributes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+				await foreach (var sourceAttribute in Mediator!.CreateStream(
+					new GetAttributesQuery(obj.Object().DBRef, ".*", false,
+						IAttributeService.AttributePatternMode.Regex)))
 				{
-					if (!attr.Name.StartsWith("_"))
+					var attr = sourceAttribute.Attribute;
+					var longName = attr.LongName!;
+					var attrPath = longName.Split('`');
+					var lastSeparator = longName.LastIndexOf('`');
+					var parentLongName = lastSeparator < 0 ? null : longName[..lastSeparator];
+					var parentSkipped = parentLongName is not null && skippedAttributes.Contains(parentLongName);
+
+					// The "_"-prefix skip is a pre-existing SharpMUSH-only filter, orthogonal to
+					// Penn's no_clone. It folds into the same skip set so that a "_"-prefixed
+					// branch's children don't get silently auto-vivified a stripped-down parent
+					// by SetAttributeAsync (ArangoDatabase.Attributes.cs:608-675) - the same
+					// missing-root hazard the no_clone propagation above exists to avoid.
+					if (attr.IsNoCopy() || attr.Name.StartsWith("_") || parentSkipped)
 					{
-						await AttributeService!.SetAttributeAsync(executor, clonedObj,
-							attr.Name, attr.Value);
+						skippedAttributes.Add(longName);
+						continue;
+					}
+
+					// AL_CREATOR(ptr) is passed through unchanged in atr_cpy (attrib.c:1706) - a
+					// cloned attribute keeps its original creator, not the cloner.
+					var creator = await attr.Owner.WithCancellation(CancellationToken.None) ?? owner;
+					var setResult = await AttributeService!.SetAttributeAsync(executor, clonedObj, longName, attr.Value, creator);
+
+					// A failed set means the branch was NOT actually copied. Treating it as
+					// skipped keeps the invariant this whole loop depends on: a LongName only
+					// avoids the skip set if it genuinely landed on the clone. Without this, a
+					// child under a branch that failed to set would still see its parent as
+					// "not skipped" and auto-vivify a stripped-down stand-in via
+					// SetAttributeAsync's own auto-vivification (ArangoDatabase.Attributes.cs:
+					// 608-675) - the exact hazard this propagation exists to prevent. Unreachable
+					// today (the clone's owner always controls the freshly-created destination),
+					// but one permission change away from live.
+					if (setResult.IsT1)
+					{
+						skippedAttributes.Add(longName);
+						continue;
+					}
+
+					// AL_FLAGS(ptr) is assigned directly alongside AL_CREATOR on the very same
+					// atr_new_add call (attrib.c:1706-1707) - Penn copies the flags too, with no
+					// permission gate at all: atr_new_add is a deliberately "dangerous", bypass-
+					// everything helper reserved for database load and atr_cpy (its own doc
+					// comment, attrib.c:750-754). SetAttributeAsync only just created the
+					// destination attribute with whatever SharpAttributeEntry.DefaultFlags
+					// applies (AttributeService.cs, applied inside SetAttributeCommand's handler)
+					// - a SharpMUSH-only mechanism Penn has no equivalent of - so the destination
+					// flag set is forced to match the source's exactly, mirroring Penn's
+					// unconditional overwrite rather than a union. Goes straight through
+					// SetAttributeFlagCommand/UnsetAttributeFlagCommand (no permission checks in
+					// either handler) rather than AttributeService.SetAttributeFlagsAsync, for the
+					// same bypass reason atr_new_add itself bypasses can_write_attr.
+					var destAttribute = await Mediator!.CreateStream(new GetAttributeQuery(clonedObj.Object().DBRef, attrPath))
+						.LastOrDefaultAsync();
+
+					if (destAttribute is not null)
+					{
+						var sourceFlagNames = attr.Flags.Select(f => f.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+						var destFlagNames = destAttribute.Flags.Select(f => f.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+						foreach (var flag in destAttribute.Flags.Where(f => !sourceFlagNames.Contains(f.Name)))
+						{
+							await Mediator!.Send(new UnsetAttributeFlagCommand(clonedObj.Object().DBRef, destAttribute, flag));
+						}
+
+						foreach (var flag in attr.Flags.Where(f => !destFlagNames.Contains(f.Name)))
+						{
+							await Mediator!.Send(new SetAttributeFlagCommand(clonedObj.Object().DBRef, destAttribute, flag));
+						}
+					}
+					else
+					{
+						// SetAttributeAsync above reported success, so the destination attribute
+						// should exist - this re-fetch failing is not the "copy failed" case
+						// handled above (that one still owns skippedAttributes so children don't
+						// auto-vivify a stripped parent). Here the value genuinely landed; only
+						// the flag sync had nothing to attach to. Surface it instead of silently
+						// leaving the clone's flags at SetAttributeAsync's defaults.
+						Logger?.LogWarning(
+							"Clone flag sync skipped for {LongName} on {CloneDbRef}: destination attribute was not found immediately after a successful set",
+							longName, clonedObj.Object().DBRef);
 					}
 				}
 

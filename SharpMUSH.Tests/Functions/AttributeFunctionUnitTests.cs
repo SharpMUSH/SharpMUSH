@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -205,6 +206,66 @@ public class AttributeFunctionUnitTests
 						 "[regxattr(%!/^Test_Regxattr_RangeWithRegex3_,1,2)]",
 		"TEST_REGXATTR_RANGEWITHREGEX3_1 TEST_REGXATTR_RANGEWITHREGEX3_2")]
 	public async Task Test_Regxattr_RangeWithRegex(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/Test_Xattr_FirstMatch1_A,v1)]" +
+						 "[attrib_set(%!/Test_Xattr_FirstMatch1_B,v2)]" +
+						 "[attrib_set(%!/Test_Xattr_FirstMatch1_C,v3)]" +
+						 "[xattr(%!/Test_Xattr_FirstMatch1_*,1,2)]",
+		"TEST_XATTR_FIRSTMATCH1_A TEST_XATTR_FIRSTMATCH1_B")]
+	[Arguments("[attrib_set(%!/Test_Xattr_StartExceeds1_A,v1)]" +
+						 "[attrib_set(%!/Test_Xattr_StartExceeds1_B,v2)]" +
+						 "[attrib_set(%!/Test_Xattr_StartExceeds1_C,v3)]" +
+						 "[xattr(%!/Test_Xattr_StartExceeds1_*,5,2)]",
+		"")]
+	[Arguments("[xattr(%!/Test_Xattr_ArgRangeStart1_*,0,2)]", ErrorMessages.Returns.ArgRange)]
+	[Arguments("[xattr(%!/Test_Xattr_ArgRangeCount1_*,1,0)]", ErrorMessages.Returns.ArgRange)]
+	[Arguments("[xattr(%!/Test_Xattr_NonInteger1_*,x,2)]", ErrorMessages.Returns.Integer)]
+	public async Task Test_Xattr_RangeAndErrors(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/Test_Xattrp_FirstMatch1_A,v1)]" +
+						 "[attrib_set(%!/Test_Xattrp_FirstMatch1_B,v2)]" +
+						 "[attrib_set(%!/Test_Xattrp_FirstMatch1_C,v3)]" +
+						 "[xattrp(%!/Test_Xattrp_FirstMatch1_*,1,2)]",
+		"TEST_XATTRP_FIRSTMATCH1_A TEST_XATTRP_FIRSTMATCH1_B")]
+	[Arguments("[attrib_set(%!/Test_Xattrp_StartExceeds1_A,v1)]" +
+						 "[attrib_set(%!/Test_Xattrp_StartExceeds1_B,v2)]" +
+						 "[attrib_set(%!/Test_Xattrp_StartExceeds1_C,v3)]" +
+						 "[xattrp(%!/Test_Xattrp_StartExceeds1_*,5,2)]",
+		"")]
+	[Arguments("[xattrp(%!/Test_Xattrp_ArgRangeStart1_*,0,2)]", ErrorMessages.Returns.ArgRange)]
+	[Arguments("[xattrp(%!/Test_Xattrp_ArgRangeCount1_*,1,0)]", ErrorMessages.Returns.ArgRange)]
+	[Arguments("[xattrp(%!/Test_Xattrp_NonInteger1_*,x,2)]", ErrorMessages.Returns.Integer)]
+	public async Task Test_Xattrp_RangeAndErrors(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[regxattr(%!/Test_Regxattr_CountZero1_\\[0-9\\]+,1,0)]", ErrorMessages.Returns.ArgRange)]
+	public async Task Test_Regxattr_CountZero(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[regxattrp(%!/Test_Regxattrp_CountZero1_\\[0-9\\]+,1,0)]", ErrorMessages.Returns.ArgRange)]
+	public async Task Test_Regxattrp_CountZero(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
@@ -584,5 +645,41 @@ public class AttributeFunctionUnitTests
 	{
 		var result = await Parser.FunctionParse(MModule.single(str));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// Direct regression test for a bug found while implementing @CLONE's creator preservation
+	/// (Task 2, fix round 1, M2): <c>owner(obj/attr)</c> (<see cref="AttributeFunctions.Owner"/>,
+	/// <c>AttributeFunctions.cs:829</c>) called
+	/// <c>GetAttributeAsync(executor, executor, attribute, ...)</c> - passing <c>executor</c> for
+	/// BOTH the executor and the object argument, discarding the object <c>LocateService</c> had
+	/// just resolved from the <c>obj</c> half of <c>obj/attr</c>. <c>owner(otherObj/attr)</c>
+	/// therefore always read <c>attr</c> off the calling player, never off <c>otherObj</c>. No
+	/// prior test exercised <c>owner()</c> with an attribute argument at all.
+	/// </summary>
+	[Test]
+	public async Task Owner_AttributeArg_ReadsFromLocatedObject_NotExecutor()
+	{
+		var uid = TestIsolationHelpers.GenerateUniqueName("OWN");
+
+		var createResult = await Parser.FunctionParse(MModule.single($"create(OwnerTarget_{uid})"));
+		var otherObj = createResult!.Message!.ToPlainText();
+
+		await Parser.FunctionParse(MModule.single($"[attrib_set({otherObj}/OW{uid},val_{uid})]"));
+
+		// Positive controls: the attribute genuinely exists on the OTHER object, and NOT on the
+		// executor (self) - otherwise a buggy owner() that reads off the executor instead of the
+		// located object could coincidentally still appear to pass.
+		var hasAttrOther = await Parser.FunctionParse(MModule.single($"hasattr({otherObj},OW{uid})"));
+		await Assert.That(hasAttrOther!.Message!.ToPlainText()).IsEqualTo("1")
+			.Because("the attribute must actually exist on the OTHER object for this test to mean anything");
+		var hasAttrSelf = await Parser.FunctionParse(MModule.single($"hasattr(%!,OW{uid})"));
+		await Assert.That(hasAttrSelf!.Message!.ToPlainText()).IsEqualTo("0")
+			.Because("the executor must NOT carry this attribute name, so a buggy owner() reading off the executor would report NO SUCH ATTRIBUTE rather than coincidentally succeeding");
+
+		var ownerResult = await Parser.FunctionParse(MModule.single($"owner({otherObj}/OW{uid})"));
+		await Assert.That(ownerResult!.Message!.ToPlainText())
+			.IsEqualTo($"#{WebAppFactoryArg.ExecutorDBRef.Number}")
+			.Because("owner(obj/attr) must resolve the attribute on the LOCATED object (obj), not the calling executor - red before the fix, since the located object argument was discarded in favour of executor");
 	}
 }

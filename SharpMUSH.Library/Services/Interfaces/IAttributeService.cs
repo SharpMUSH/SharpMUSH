@@ -1,6 +1,7 @@
 ﻿using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -28,6 +29,14 @@ public interface IAttributeService
 
 	ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value);
 
+	/// <summary>
+	/// As the four-argument overload, but stamps <paramref name="creator"/> as the attribute's
+	/// owner instead of deriving it from <paramref name="executor"/>. Mirrors PennMUSH's
+	/// <c>atr_cpy</c> (<c>src/attrib.c:1706</c>), which passes <c>AL_CREATOR(ptr)</c> through
+	/// unchanged - a cloned attribute keeps its original creator, not the cloner. <c>@CLONE</c>
+	/// is the only caller today.
+	/// </summary>
+	ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value, SharpPlayer creator);
 	ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributePatternMode patternMode);
 
 	ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj, int depth = 1);
@@ -55,4 +64,12 @@ public interface IAttributeService
 
 	ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, MString objAndAttribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false, bool ignoreLambda = false);
 
+	/// <summary>
+	/// Mirrors PennMUSH's <c>do_parent</c> <c>MAX_PARENTS</c> guard (<c>src/set.c:1442-1446</c>): true
+	/// when <paramref name="prospectiveParent"/> already has at least <c>Limit.MaxParents</c> ancestors
+	/// above it, meaning attaching a child under it would grow the child's own chain past the cap.
+	/// This is independent of cycle detection (<see cref="HelperFunctions.SafeToAddParent"/>) - a
+	/// caller wiring up <c>@parent</c> needs both checks.
+	/// </summary>
+	ValueTask<bool> ExceedsMaxParentDepthAsync(AnySharpObject prospectiveParent, CancellationToken cancellationToken = default);
 }

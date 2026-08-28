@@ -235,8 +235,9 @@ public class AttributeTreeWildcardTests
 		var result = (await Parser.FunctionParse(MModule.single("[xattr(%!/ROOT**,1,2)]")))?.Message!;
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
-		await Assert.That(attrs.Length).IsEqualTo(2);
-		// The exact attributes depend on sort order, but should be from the ROOT** set
+		// start=1 is 1-based and inclusive of the first match (natural-sort order: ROOT, ROOT`CHILD1, ...),
+		// so the first two names returned must be ROOT and ROOT`CHILD1 -- not the second and third.
+		await Assert.That(attrs).IsEquivalentTo(new[] { "ROOT", "ROOT`CHILD1" });
 	}
 
 	/// <summary>

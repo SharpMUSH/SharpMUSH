@@ -567,16 +567,33 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		var safeToAdd = await HelperFunctions.SafeToAddParent(mediator, database, obj, newParent);
+		var parentSafety = await HelperFunctions.SafeToAddParent(mediator, database, obj, newParent);
 
-		if (!safeToAdd)
+		if (parentSafety != RelationshipSafety.Safe)
 		{
 			if (notify)
 			{
-				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ParentLoopCannotAdd), executor);
+				// PennMUSH's do_parent (src/set.c:1432,1477) notifies different text for
+				// self-reference ("@parent me=me") vs. a cycle through the existing chain
+				// ("@parent A=B" where B already descends from A) - the Returns sentinel below
+				// stays shared, since Penn has no equivalent machine-readable distinction.
+				var notificationKey = parentSafety == RelationshipSafety.SelfReference
+					? nameof(Definitions.ErrorMessages.Notifications.SelfAncestor)
+					: nameof(Definitions.ErrorMessages.Notifications.CyclicAncestor);
+				await notifyService.NotifyLocalized(executor, notificationKey, executor);
 			}
 
 			return ErrorMessages.Returns.ParentLoop;
+		}
+
+		if (await attributeService.ExceedsMaxParentDepthAsync(newParent))
+		{
+			if (notify)
+			{
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.TooManyAncestors), executor);
+			}
+
+			return ErrorMessages.Returns.TooManyAncestors;
 		}
 
 		await mediator.Send(new SetObjectParentCommand(obj, newParent));

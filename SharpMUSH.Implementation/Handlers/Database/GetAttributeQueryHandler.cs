@@ -23,7 +23,9 @@ public class GetLazyAttributeQueryHandler(ISharpDatabase database)
 		=> database.GetLazyAttributeAsync(request.DBRef, request.Attribute.Select(x => x.ToUpper()).ToArray(), cancellationToken);
 }
 
-public class GetAttributesQueryHandler(ISharpDatabase database)
+public class GetAttributesQueryHandler(
+	ISharpDatabase database,
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: IStreamQueryHandler<GetAttributesQuery, AttributeWithSource>
 {
 	public IAsyncEnumerable<AttributeWithSource> Handle(GetAttributesQuery request,
@@ -65,13 +67,21 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 		var obj = await database.GetObjectNodeAsync(request.DBRef, cancellationToken);
 		if (obj.IsNone) yield break;
 
+		var maxDepth = (int)configuration.CurrentValue.Limit.MaxParents;
+		var visited = new HashSet<int> { obj.Known.Object().DBRef.Number };
 		var current = obj.Known.Object();
-		while (true)
+		for (var depth = 0; depth < maxDepth; depth++)
 		{
 			var parent = await current.Parent.WithCancellation(cancellationToken);
 			if (parent.IsNone) break;
 
 			var parentObj = parent.Known.Object();
+
+			// A @parent cycle would otherwise spin here forever - defence in depth, since the
+			// write-side guards (SafeToAddParent, ExceedsMaxParentDepthAsync) should already
+			// prevent one from existing at all. See AttributeService.ParentChainAsync, which this
+			// mirrors.
+			if (!visited.Add(parentObj.DBRef.Number)) break;
 			await foreach (var attr in GetAttributesForDbRef(parentObj.DBRef, request, cancellationToken))
 			{
 				// Penn's atr_iter_get_parent (attrib.c:1500-1622) has an early fast-path
