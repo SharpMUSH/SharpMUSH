@@ -32,16 +32,15 @@ public class ConnectionStateEventHandler(
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
 	{
-		// PennMUSH spec: socket`connect (descriptor, ip)
-		if (notification.OldState == IConnectionService.ConnectionState.None &&
-				notification.NewState == IConnectionService.ConnectionState.Connected)
+		// The connect screen goes to any connection arriving at the login prompt — a brand new socket,
+		// and equally one returning there via LOGOUT. PennMUSH logout_sock finishes with
+		// welcome_user(d, 0), the same call a fresh connection gets, because the descriptor is meant to
+		// look untouched afterwards.
+		if (notification.NewState == IConnectionService.ConnectionState.Connected)
 		{
 			var connectionData = connectionService.Get(notification.Handle);
 			if (connectionData != null)
 			{
-				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
-					? ip : "unknown";
-
 				var connectFile = configuration.CurrentValue.Message.ConnectFile;
 				if (!string.IsNullOrEmpty(connectFile) && File.Exists(connectFile))
 				{
@@ -52,19 +51,32 @@ public class ConnectionStateEventHandler(
 					}
 				}
 
-				// EventService handles all exception logging, so no try-catch needed here
-				await eventService.TriggerEventAsync(
-					parser,
-					"SOCKET`CONNECT",
-					null, // System event (no enactor)
-					notification.Handle.ToString(),
-					ipAddress);
+				// SOCKET`CONNECT is about the socket, not the login prompt, so it stays on the arrival of
+				// a genuinely new connection. A LOGOUT does not open one.
+				if (notification.OldState == IConnectionService.ConnectionState.None)
+				{
+					var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
+						? ip : "unknown";
+
+					// EventService handles all exception logging, so no try-catch needed here
+					await eventService.TriggerEventAsync(
+						parser,
+						"SOCKET`CONNECT",
+						null, // System event (no enactor)
+						notification.Handle.ToString(),
+						ipAddress);
+				}
 			}
 		}
 
 		// PennMUSH spec: player`disconnect (objid, number of remaining connections, hidden?, cause of disconnection, ip, descriptor, conn() secs, idle() secs, recv bytes/sent bytes/command count)
+		//
+		// Both endings of a play session raise this: QUIT takes the socket with it, LOGOUT returns it to
+		// the connect screen. PennMUSH runs both through disconnect_player and distinguishes them only
+		// by the reason it reports, so softcode watching for a player leaving sees a logout too.
 		if (notification.OldState == IConnectionService.ConnectionState.LoggedIn &&
-				notification.NewState == IConnectionService.ConnectionState.Disconnected &&
+				notification.NewState is IConnectionService.ConnectionState.Disconnected
+					or IConnectionService.ConnectionState.Connected &&
 				notification.PlayerRef.HasValue)
 		{
 			var connectionData = connectionService.Get(notification.Handle);
@@ -88,7 +100,9 @@ public class ConnectionStateEventHandler(
 					$"#{notification.PlayerRef.Value.Number}",
 					remainingConnections.ToString(),
 					"0", // hidden? (0 = not hidden, 1 = hidden)
-					"quit", // cause of disconnection
+					notification.NewState == IConnectionService.ConnectionState.Connected
+						? "logout"
+						: "quit", // cause of disconnection
 					ipAddress,
 					notification.Handle.ToString(),
 					connectedSecs,

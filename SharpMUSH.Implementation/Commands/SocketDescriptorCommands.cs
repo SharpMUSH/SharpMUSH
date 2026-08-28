@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -261,6 +262,59 @@ public partial class Commands
 			SocketOptions.PromptNewlinesKey, enabled ? "1" : "0");
 
 		return ValueTask.FromResult<Option<CallState>>(new None());
+	}
+
+	/// <summary>
+	/// <c>LOGOUT</c> — PennMUSH <c>logout_sock()</c> (src/bsd.c). Leaves the character but keeps the
+	/// socket: the player is returned to the connect screen and can log in again, or as someone else,
+	/// without reconnecting. That is the whole distinction from QUIT, which takes the socket with it.
+	///
+	/// <para>
+	/// The descriptor is deliberately left looking new — PennMUSH clears <c>output_prefix</c>,
+	/// <c>output_suffix</c>, the command count and the hide flag, then calls the same
+	/// <c>welcome_user</c> a fresh connection gets. A screen-scraping client's OUTPUTPREFIX surviving
+	/// into someone else's session would be a leak between two logins on one socket.
+	/// </para>
+	/// </summary>
+	[SharpCommand(Name = "LOGOUT", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,
+		MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	public static async ValueTask<Option<CallState>> Logout(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var handle = parser.CurrentState.Handle!.Value;
+		var connection = CurrentConnection(parser);
+
+		if (connection is null)
+		{
+			return new None();
+		}
+
+		// PennMUSH logs "Logout, never connected. <Connection not dropped>" and does nothing else: at
+		// the connect screen there is no session to end, and the socket must not be disturbed.
+		if (connection.Ref is null)
+		{
+			Logger?.LogInformation("Logout on handle {Handle}, never connected. <Connection not dropped>", handle);
+			return new None();
+		}
+
+		// disconnect_player dumps the quit file for a logout exactly as it does for a quit.
+		var quitText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.QuitFile);
+		if (!string.IsNullOrWhiteSpace(quitText))
+		{
+			await NotifyService!.Notify(handle, quitText);
+		}
+
+		// Cleared before the unbind so the connect screen, which the state change sends, is not itself
+		// wrapped in the departing player's OUTPUTPREFIX.
+		connection.Metadata.TryRemove("OutputPrefix", out _);
+		connection.Metadata.TryRemove("OutputSuffix", out _);
+		connection.Metadata["CommandCount"] = "0";
+
+		await ConnectionService!.Unbind(handle);
+
+		Logger?.LogInformation("Logout by {Player} on handle {Handle} <Connection not dropped>",
+			connection.Ref, handle);
+
+		return new None();
 	}
 
 	/// <summary>
