@@ -150,9 +150,28 @@ public class WikiSyntaxInGameRenderingTests
 		var helpDir = FindHelpfilesDirectory();
 		if (helpDir is null) return; // running outside the repo
 
-		var text = Render(await File.ReadAllTextAsync(Path.Combine(helpDir, file)));
+		var text = Render(await File.ReadAllTextAsync(CombineRelative(helpDir, file)));
 
 		await Assert.That(text).Contains(expected);
+	}
+
+	/// <summary>
+	/// <see cref="Path.Combine(string[])"/> with its silent-rooting rule made explicit: a rooted
+	/// segment makes Combine discard everything before it, so one bad segment would quietly resolve
+	/// somewhere else entirely rather than fail. Every segment after the root must be relative.
+	/// </summary>
+	private static string CombineRelative(string root, params string[] segments)
+	{
+		foreach (var segment in segments)
+		{
+			if (Path.IsPathRooted(segment))
+			{
+				throw new ArgumentException(
+					$"'{segment}' is rooted and would discard '{root}'.", nameof(segments));
+			}
+		}
+
+		return Path.Combine([root, .. segments]);
 	}
 
 	private static string? FindHelpfilesDirectory()
@@ -160,7 +179,7 @@ public class WikiSyntaxInGameRenderingTests
 		var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
 		while (dir is not null)
 		{
-			var candidate = Path.Combine(dir.FullName, "SharpMUSH.Documentation", "Helpfiles", "SharpMUSH");
+			var candidate = CombineRelative(dir.FullName, "SharpMUSH.Documentation", "Helpfiles", "SharpMUSH");
 			if (Directory.Exists(candidate)) return candidate;
 			dir = dir.Parent;
 		}

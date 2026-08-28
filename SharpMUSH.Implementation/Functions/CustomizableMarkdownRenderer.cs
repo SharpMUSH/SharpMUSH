@@ -74,29 +74,37 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 	{
 		if (_absentTemplates.Contains(templateName)) return false;
 
-		try
-		{
-			var maybeAttr = _attributeService.GetAttributeAsync(
-				_executor,
-				_templateObject,
-				$"RENDERMARKUP`{templateName}",
-				mode: IAttributeService.AttributeMode.Execute,
-				parent: false).GetAwaiter().GetResult();
+		// No catch here, deliberately, and unlike TryEvaluateTemplate below. This only *looks up* an
+		// attribute, and IAttributeService.GetAttributeAsync reports every expected outcome — no such
+		// attribute, unusable attribute name, insufficient permission — in its return type rather than
+		// by throwing. Nothing an exception could mean here is "the object has no template": it would
+		// be a database or DI fault, and swallowing it on a path that runs once per template name is
+		// how such a fault becomes invisible. RenderMarkdownCustom's own handler turns it into
+		// "#-1 ERROR RENDERING MARKDOWN", which is the honest answer.
+		var maybeAttr = _attributeService.GetAttributeAsync(
+			_executor,
+			_templateObject,
+			$"RENDERMARKUP`{templateName}",
+			mode: IAttributeService.AttributeMode.Execute,
+			parent: false).GetAwaiter().GetResult();
 
-			if (maybeAttr.IsAttribute) return true;
-		}
-		catch
-		{
-			// Treat a failed lookup as absent, exactly as TryEvaluateTemplate does.
-		}
+		if (maybeAttr.IsAttribute) return true;
 
 		_absentTemplates.Add(templateName);
 		return false;
 	}
 
 	/// <summary>
-	/// Try to get and evaluate a custom template attribute
+	/// Try to get and evaluate a custom template attribute.
 	/// </summary>
+	/// <remarks>
+	/// The broad catch is the documented contract, not an oversight, and it is why this differs from
+	/// <see cref="HasTemplate"/>: this method also *evaluates* the template, which is arbitrary
+	/// player-written softcode. A template that recurses, divides by zero or otherwise blows up must
+	/// leave the rest of the document rendering rather than take the whole call down with it —
+	/// "falls back gracefully to default rendering if template evaluation fails", as
+	/// <c>help rendermarkdowncustom</c> puts it. A lookup has no such failure mode, so it has no catch.
+	/// </remarks>
 	private async Task<MString?> TryEvaluateTemplate(string templateName, Dictionary<string, CallState> args)
 	{
 		if (_absentTemplates.Contains(templateName)) return null;

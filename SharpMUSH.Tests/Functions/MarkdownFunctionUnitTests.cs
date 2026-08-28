@@ -577,11 +577,10 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_WikiLink_IsNotACommandLink()
 	{
-		var result = (await Parser.FunctionParse(
-			MModule.single("rendermarkdown(See %[%[Getting Started%]%] for details.)")))?.Message;
+		var result = await EvaluateAsync("rendermarkdown(See %[%[Getting Started%]%] for details.)");
 
 		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.ToPlainText()).IsEqualTo("See Getting Started for details.");
+		await Assert.That(result.ToPlainText()).IsEqualTo("See Getting Started for details.");
 		await Assert.That(result.Render("html")).DoesNotContain("xch_cmd");
 		await Assert.That(result.Render("html")).DoesNotContain("@wiki");
 		await Assert.That(result.Render("pueblo")).DoesNotContain("XCH_CMD");
@@ -598,9 +597,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdownCustom_InlineAndLinkTemplates_Override()
 	{
-		var createResult = (await Parser.FunctionParse(MModule.single("create(MarkdownInlineTemplateObj)")))?.Message?.ToString()!;
-		await Assert.That(createResult).IsNotNull();
-		var obj = createResult.Trim();
+		var obj = await CreateTemplateObject("MarkdownInlineTemplateObj");
 
 		// & rather than attrib_set() so the template is stored unevaluated.
 		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`BOLD {obj}=[ansi(hr,BOLD:%0)]"));
@@ -613,11 +610,9 @@ public class MarkdownFunctionUnitTests
 		var markdown = "A **strong** `word`.%r%rSee %[%[Help:Markdown Guide%]%] and "
 			+ "%[Site%]%(https://example.com%) and %[newbie%].";
 
-		var result = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
-		await Assert.That(result).IsNotNull();
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
 
-		var plainText = result!.ToPlainText();
+		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).Contains("BOLD:strong");
 		await Assert.That(plainText).Contains("<word>");
@@ -646,24 +641,37 @@ public class MarkdownFunctionUnitTests
 		var markdown = "A **strong** `word` and %[Site%]%(https://example.com%) "
 			+ "and %[%[Help:Markdown Guide%]%].%r%r- %[x%] done%r- %[ %] todo";
 
-		var result = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
-		await Assert.That(result).IsNotNull();
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown(
 			"A **strong** `word` and [Site](https://example.com) "
 			+ "and [[Help:Markdown Guide]].\n\n- [x] done\n- [ ] todo");
 
-		await AssertMarkupStringEquals(result!, expected);
+		await AssertMarkupStringEquals(result, expected);
+	}
+
+	/// <summary>
+	/// Evaluates <paramref name="expression"/> and returns its message, failing the test if there is
+	/// none. The single convention for these tests.
+	/// </summary>
+	/// <remarks>
+	/// Asserting non-null and then writing <c>result!</c> at each use reads fine but leaves the
+	/// compiler's null-flow analysis — and CodeQL's — unable to see the guard, so every call site
+	/// carried a suppression that proved nothing. Throwing is what actually narrows the type; the
+	/// assertion above it is what produces the readable failure when a function returns no message.
+	/// </remarks>
+	private async Task<MString> EvaluateAsync(string expression)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(expression)))?.Message;
+
+		await Assert.That(result).IsNotNull();
+
+		return result ?? throw new InvalidOperationException($"'{expression}' evaluated to no message.");
 	}
 
 	/// <summary>Creates a fresh object to hang RENDERMARKUP templates on.</summary>
-	private async Task<string> CreateTemplateObject(string name)
-	{
-		var created = (await Parser.FunctionParse(MModule.single($"create({name})")))?.Message?.ToString()!;
-		await Assert.That(created).IsNotNull();
-		return created.Trim();
-	}
+	private async Task<string> CreateTemplateObject(string name) =>
+		(await EvaluateAsync($"create({name})")).ToString().Trim();
 
 	/// <summary>
 	/// TABLE hands over the table described as one JSON object, not the finished block. That is what
@@ -678,11 +686,9 @@ public class MarkdownFunctionUnitTests
 		// The last row writes one cell where the header has three.
 		var markdown = "| A | B | C |%r|:---|:---:|---:|%r| 1 | 2 | 3 |%r| 4 |";
 
-		var result = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
-		await Assert.That(result).IsNotNull();
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
 
-		await Assert.That(result!.ToPlainText().Trim()).IsEqualTo(
+		await Assert.That(result.ToPlainText().Trim()).IsEqualTo(
 			"""{"width":78,"align":["<","-",">"],"widths":[22,22,22],"head":["A","B","C"],"rows":[["1","2","3"],["4","",""]]}""");
 	}
 
@@ -698,13 +704,11 @@ public class MarkdownFunctionUnitTests
 
 		var markdown = "| A |%r|---|%r| 1 |";
 
-		var wide = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom({markdown},{obj},120)")))?.Message;
-		var narrow = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom({markdown},{obj},40)")))?.Message;
+		var wide = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj},120)");
+		var narrow = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj},40)");
 
-		await Assert.That(wide!.ToPlainText()).Contains("W:120");
-		await Assert.That(narrow!.ToPlainText()).Contains("W:40");
+		await Assert.That(wide.ToPlainText()).Contains("W:120");
+		await Assert.That(narrow.ToPlainText()).Contains("W:40");
 	}
 
 	/// <summary>
@@ -721,11 +725,9 @@ public class MarkdownFunctionUnitTests
 
 		var markdown = "| **loud** |%r|---|%r| x |";
 
-		var result = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
-		await Assert.That(result).IsNotNull();
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
 
-		var plainText = result!.ToPlainText();
+		var plainText = result.ToPlainText();
 
 		// Verbatim: the asterisks are still there and nothing has been styled for us.
 		await Assert.That(plainText).Contains("RAW:**loud**");
@@ -751,11 +753,9 @@ public class MarkdownFunctionUnitTests
 		// MUSH collapses "\\" to one backslash, so markdown sees: | say "hi" \| pipe |
 		var markdown = "| say \"hi\" \\\\| pipe |%r|---|%r| x |";
 
-		var result = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
-		await Assert.That(result).IsNotNull();
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
 
-		var plainText = result!.ToPlainText();
+		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText)
 			.Contains("COLS:1")
@@ -808,11 +808,9 @@ public class MarkdownFunctionUnitTests
 			+ "%r| @wiki/search | Find pages | 1 |"
 			+ "%r| @wiki/audit | Staff report |";
 
-		var result = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom({markdown},{obj},40)")))?.Message;
-		await Assert.That(result).IsNotNull();
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj},40)");
 
-		var lines = result!.ToPlainText().Split('\n').Select(line => line.TrimEnd()).ToList();
+		var lines = result.ToPlainText().Split('\n').Select(line => line.TrimEnd()).ToList();
 		// Exactly what the helpfile prints for this template, at the columns the payload's own widths
 		// give — measured from the rendered cells, which is the thing a template cannot do for itself.
 		await Assert.That(lines).IsEquivalentTo(["Command          Effect     Cost", "--------------------------------", "@wiki        Show the index    0", "@wiki/search   Find pages      1", "@wiki/audit   Staff report"]);
@@ -831,13 +829,11 @@ public class MarkdownFunctionUnitTests
 
 		var markdown = "| A | B |%r|---|---|%r| 1 | 2 |";
 
-		var result = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
-		await Assert.That(result).IsNotNull();
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("| A | B |\n|---|---|\n| 1 | 2 |");
 
-		await AssertMarkupStringEquals(result!, expected);
+		await AssertMarkupStringEquals(result, expected);
 	}
 
 	/// <summary>
@@ -854,11 +850,9 @@ public class MarkdownFunctionUnitTests
 		// The alt text carries bold and inline code, both of which the renderer would style.
 		var markdown = "!%[a **bold** `logo`%]%(/assets/Logo.svg%)";
 
-		var result = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
-		await Assert.That(result).IsNotNull();
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
 
-		await Assert.That(result!.ToPlainText()).Contains("ALT:a bold logo/URL:/assets/Logo.svg");
+		await Assert.That(result.ToPlainText()).Contains("ALT:a bold logo/URL:/assets/Logo.svg");
 		await Assert.That(result.ToString())
 			.DoesNotContain(ESC)
 			.Because("the alt text is documented as plain, so no markup from inside it may reach the "
@@ -922,20 +916,17 @@ public class MarkdownFunctionUnitTests
 		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`WIKILINK {obj}=SAW-A-WIKILINK:%0"));
 
 		// A URL-less link: the default emits the bracket text as prose, so the template is not consulted.
-		var empty = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom(%[just text%]%(%),{obj})")))?.Message;
-		await Assert.That(empty!.ToPlainText()).DoesNotContain("SAW-A-LINK");
+		var empty = await EvaluateAsync($"rendermarkdowncustom(%[just text%]%(%),{obj})");
+		await Assert.That(empty.ToPlainText()).DoesNotContain("SAW-A-LINK");
 		await Assert.That(empty.ToPlainText()).Contains("just text");
 
 		// An empty wiki link is not a wiki link at all, so nothing fires and the source stays put.
-		var emptyWiki = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom(%[%[%]%],{obj})")))?.Message;
-		await Assert.That(emptyWiki!.ToPlainText()).DoesNotContain("SAW-A-WIKILINK");
+		var emptyWiki = await EvaluateAsync($"rendermarkdowncustom(%[%[%]%],{obj})");
+		await Assert.That(emptyWiki.ToPlainText()).DoesNotContain("SAW-A-WIKILINK");
 
 		// The control: a real link of each kind does reach its template.
-		var real = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom(%[Site%]%(https://example.com%) %[%[Home%]%],{obj})")))?.Message;
-		await Assert.That(real!.ToPlainText()).Contains("SAW-A-LINK:Site");
+		var real = await EvaluateAsync($"rendermarkdowncustom(%[Site%]%(https://example.com%) %[%[Home%]%],{obj})");
+		await Assert.That(real.ToPlainText()).Contains("SAW-A-LINK:Site");
 		await Assert.That(real.ToPlainText()).Contains("SAW-A-WIKILINK:Home");
 	}
 
@@ -951,11 +942,9 @@ public class MarkdownFunctionUnitTests
 		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`BOLD {obj}=<%0>"));
 
 		// Inline code nested inside the bold run would otherwise arrive coloured.
-		var result = (await Parser.FunctionParse(
-			MModule.single($"rendermarkdowncustom(A **bold `code` run** here.,{obj})")))?.Message;
-		await Assert.That(result).IsNotNull();
+		var result = await EvaluateAsync($"rendermarkdowncustom(A **bold `code` run** here.,{obj})");
 
-		await Assert.That(result!.ToPlainText()).Contains("<bold code run>");
+		await Assert.That(result.ToPlainText()).Contains("<bold code run>");
 		await Assert.That(result.ToString())
 			.DoesNotContain(ESC)
 			.Because("the nested inline code's colour must not survive into the template argument");
