@@ -657,6 +657,104 @@ public class RecursiveMarkdownRendererTests
 		var plainText = result.ToPlainText();
 		await Assert.That(plainText).Contains("[image]");
 	}
+
+	/// <summary>
+	/// A <c>[[Page Name]]</c> wiki link is followable under <c>@wiki</c>, because <c>@wiki</c> is how a
+	/// terminal session navigates the wiki. The target the base renderer discards becomes the command.
+	/// </summary>
+	[Test]
+	public async Task RenderWikiLink_UnderWikiCommand_ShouldCreateCommandLink()
+	{
+		var renderer = new SharpMUSH.Implementation.Commands.WikiCommand.WikiCommandRenderer();
+
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("See [[Getting Started]] for details.", renderer);
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("See Getting Started for details.");
+
+		// Command link, not navigation: xch_cmd rather than href, and no OSC 8 in the ANSI.
+		await Assert.That(result.Render("html")).Contains("xch_cmd=\"@wiki main:general:getting_started\"");
+		await Assert.That(result.Render("html")).DoesNotContain("href=");
+		await Assert.That(result.ToString()).DoesNotContain("]8;;");
+
+		// Pueblo and MXP carry the same command; a plain telnet client still just sees underline.
+		await Assert.That(result.Render("pueblo")).Contains("XCH_CMD=\"@wiki main:general:getting_started\"");
+		await Assert.That(result.Render("mxp")).Contains("HREF=\"@wiki main:general:getting_started\"");
+		await Assert.That(result.ToString()).Contains(Underlined);
+	}
+
+	/// <summary>
+	/// The emitted reference is always fully qualified <c>namespace:category:slug</c> — the same grammar
+	/// every <c>@wiki</c> listing prints — so it round-trips back to the page the link named.
+	/// </summary>
+	[Test]
+	public async Task RenderWikiLink_UnderWikiCommand_QualifiesNamespaceAndCategory()
+	{
+		var renderer = new SharpMUSH.Implementation.Commands.WikiCommand.WikiCommandRenderer();
+
+		var namespaced = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("[[Help:Markdown Guide]]", renderer);
+		await Assert.That(namespaced.ToPlainText()).IsEqualTo("Markdown Guide");
+		await Assert.That(namespaced.Render("html"))
+			.Contains("xch_cmd=\"@wiki help:general:markdown_guide\"");
+
+		var categorised = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("[[Help:Guides:Getting Started]]", renderer);
+		await Assert.That(categorised.Render("html"))
+			.Contains("xch_cmd=\"@wiki help:guides:getting_started\"");
+	}
+
+	/// <summary>
+	/// <c>[[Display Text|Target]]</c> keeps the author's wording on screen while the command still names
+	/// the target page.
+	/// </summary>
+	[Test]
+	public async Task RenderWikiLink_UnderWikiCommand_KeepsDisplayTextAndTargetsTheLink()
+	{
+		var renderer = new SharpMUSH.Implementation.Commands.WikiCommand.WikiCommandRenderer();
+
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("[[Click here|Help:Markdown Guide]]", renderer);
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("Click here");
+		await Assert.That(result.Render("html"))
+			.Contains("xch_cmd=\"@wiki help:general:markdown_guide\"");
+	}
+
+	/// <summary>
+	/// The shared renderer — the one <c>rendermarkdown()</c>, <c>rendermarkdowncustom()</c>, help and
+	/// news all use — must not gain the command link: those surfaces hand their output to softcode that
+	/// may present a wiki link however it likes, and none of them can navigate the wiki.
+	/// </summary>
+	[Test]
+	public async Task RenderWikiLink_ByDefault_IsStyledProseNotACommandLink()
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("See [[Getting Started]] for details.");
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("See Getting Started for details.");
+		await Assert.That(result.Render("html")).DoesNotContain("xch_cmd");
+		await Assert.That(result.Render("html")).DoesNotContain("@wiki");
+		await Assert.That(result.Render("pueblo")).DoesNotContain("XCH_CMD");
+		await Assert.That(result.ToString()).Contains(Underlined);
+	}
+
+	/// <summary>
+	/// A command link only replaces the styling; it never replaces the text. An empty display text is
+	/// still nothing at all, and the ANSI a plain telnet client receives is byte-identical either way,
+	/// because OSC 8 cannot express a command and is therefore not emitted for one.
+	/// </summary>
+	[Test]
+	public async Task RenderWikiLink_UnderWikiCommand_AnsiIsUnchangedFromDefault()
+	{
+		var command = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("See [[Getting Started]] for details.",
+				new SharpMUSH.Implementation.Commands.WikiCommand.WikiCommandRenderer());
+		var standard = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("See [[Getting Started]] for details.");
+
+		await Assert.That(command.ToString()).IsEqualTo(standard.ToString());
+	}
 }
 
 /// <summary>

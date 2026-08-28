@@ -1113,4 +1113,56 @@ public class WikiCommandTests
 		var translations = await WikiService.GetTranslationsAsync(page.Id);
 		await Assert.That(translations.Count).IsEqualTo(0);
 	}
+
+	/// <summary>
+	/// The rendered notification, in a client format that can express a clickable command. Asserting on
+	/// <c>ToString()</c> as <see cref="ExpectNotify"/> does could never see this: the ANSI form of a
+	/// command link is plain underlined text, because OSC 8 can only navigate to a URL.
+	/// </summary>
+	private async Task ExpectNotifyRendered(SharpMUSH.Library.Models.DBRef player, string format, string contains)
+	{
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
+				msg.IsT0 && msg.AsT0.Render(format).Contains(contains)),
+				TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// As <see cref="ExpectNotify"/>, but on the text the player reads rather than the ANSI byte stream —
+	/// the two differ wherever markup lands mid-sentence, which is exactly where a link does.
+	/// </summary>
+	private async Task ExpectNotifyPlainText(SharpMUSH.Library.Models.DBRef player, string contains)
+	{
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToPlainText().Contains(contains)) ||
+				(msg.IsT1 && msg.AsT1.Contains(contains))),
+				TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// A <c>[[Page Name]]</c> link in a page body is clickable when <c>@wiki</c> displays it: the target
+	/// the shared renderer discards becomes <c>@wiki &lt;namespace&gt;:&lt;category&gt;:&lt;slug&gt;</c>,
+	/// which is the fully qualified reference every wiki listing already prints and which resolves back to
+	/// the page the link named.
+	/// </summary>
+	[Test]
+	public async ValueTask WikiView_WikiLinkInBody_IsAClickableCommandLink()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiLinkReader");
+		// Seeded through the service rather than @wiki/create so the [[...]] brackets reach the page body
+		// verbatim, without the command's softcode evaluation having an opinion about them.
+		var page = await SeedSourcePageAsync("Linking Dragons", "See [[Help:Markdown Guide]] for details.");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki {page.Slug}"));
+
+		await ExpectNotifyRendered(player.DbRef, "html", "xch_cmd=\"@wiki help:general:markdown_guide\"");
+		await ExpectNotifyRendered(player.DbRef, "pueblo", "XCH_CMD=\"@wiki help:general:markdown_guide\"");
+		// The display text is the page title, never the raw target, and the brackets never leak.
+		await ExpectNotifyPlainText(player.DbRef, "See Markdown Guide for details.");
+	}
 }

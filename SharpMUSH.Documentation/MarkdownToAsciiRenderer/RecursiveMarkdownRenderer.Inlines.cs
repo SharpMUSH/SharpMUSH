@@ -107,10 +107,15 @@ public partial class RecursiveMarkdownRenderer
 	}
 
 	/// <summary>
-	/// Renders a <c>[[Page Name]]</c> wiki link as underlined display text.
-	/// Wiki pages live on the web portal; a terminal session cannot navigate to
-	/// them, so the link reads as emphasised prose rather than a hyperlink.
+	/// Renders a <c>[[Page Name]]</c> wiki link as underlined display text, discarding the target.
 	/// </summary>
+	/// <remarks>
+	/// The default rendering is neutral because most surfaces that reach it — help files, news
+	/// files, <c>rendermarkdown()</c> — have nowhere to send the reader, and softcode that renders
+	/// its own markdown should stay free to present a wiki link however it likes.
+	/// <c>@wiki</c> overrides this (see <c>WikiCommandRenderer</c>) to emit a command link running
+	/// <c>@wiki &lt;page&gt;</c>, which is how a terminal session does navigate the wiki.
+	/// </remarks>
 	protected virtual MString RenderWikiLink(WikiLinkInline wikiLink)
 	{
 		var text = wikiLink.DisplayText ?? wikiLink.Title;

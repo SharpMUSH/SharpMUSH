@@ -113,6 +113,26 @@ Page content is Markdown; see `help markdown` or the wiki's own
 syntax. Live listing blocks (`::: category ...`) render on the web portal and
 appear in-game as a placeholder.
 
+Linking to other pages:
+Inside a page's Markdown, `[[Page Name]]` links to another wiki page. The
+target takes the same forms `@wiki` does, so `[[Home]]`,
+`[[Help:Markdown Guide]]` and `[[Help:Guides:Getting Started]]` all reach the
+pages you would reach by typing them. `[[Display text|Page Name]]` links with
+wording of your own; without it the page's title is shown. Only the display
+text appears - the brackets and the target never do.
+
+On the web portal that is an ordinary link. In-game, `@wiki` renders it as a
+clickable command link that runs `@wiki <namespace>:<category>:<slug>` for the
+page named, so a Pueblo, MXP or web client follows a wiki link by clicking it.
+A plain telnet client cannot click, and sees the underlined text it always saw.
+
+The link is clickable under `@wiki` and nowhere else. The same page text
+through `wiki()`, or any Markdown you render yourself with `rendermarkdown()`
+or `rendermarkdowncustom()`, gives you the underlined display text and nothing
+attached to it - softcode that renders a page is free to present its links
+however it likes, and `@wiki` is the only surface that already knows how to
+follow one.
+
 **See Also:**
 - [wiki-editing]
 - [wiki-admin]

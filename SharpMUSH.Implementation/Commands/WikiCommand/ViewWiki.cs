@@ -104,8 +104,10 @@ public static class ViewWiki
 
 		// An unpublished body is opt-in even for a wizard: reading a draft is a deliberate act, not the
 		// default a stray @wiki on a half-written page should perform.
+		// WikiCommandRenderer rather than the shared default: a [[wiki link]] in the body is only
+		// followable from a surface that can navigate the wiki, and this is that surface.
 		var rendered = published || (showDraft && maySeeDrafts)
-			? RecursiveMarkdownHelper.RenderMarkdown(markdown, RenderWidth, parser)
+			? RecursiveMarkdownHelper.RenderMarkdown(markdown, new WikiCommandRenderer(RenderWidth, parser))
 			: DraftWithheld("body", maySeeDrafts);
 
 		var output = MModule.multipleWithDelimiter(MModule.single("\n"),

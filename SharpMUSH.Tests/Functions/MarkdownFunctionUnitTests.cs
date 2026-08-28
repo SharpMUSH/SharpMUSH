@@ -560,4 +560,26 @@ public class MarkdownFunctionUnitTests
 		await Assert.That(plainText).DoesNotContain("==="); // Default H1 uses === underline
 		await Assert.That(plainText).DoesNotContain("---"); // Default H2 uses --- underline (also used in tables but we don't have tables in this test)
 	}
+
+	/// <summary>
+	/// <c>rendermarkdown()</c> hands its output to softcode that may present it however it likes, so a
+	/// <c>[[wiki link]]</c> stays neutral styled prose here. The clickable <c>@wiki &lt;page&gt;</c>
+	/// command link belongs to the <c>@wiki</c> command alone, which is the only surface that can act on
+	/// it. (<c>%[</c> / <c>%]</c> escape the brackets past the MUSH parser.)
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdown_WikiLink_IsNotACommandLink()
+	{
+		var result = (await Parser.FunctionParse(
+			MModule.single("rendermarkdown(See %[%[Getting Started%]%] for details.)")))?.Message;
+
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.ToPlainText()).IsEqualTo("See Getting Started for details.");
+		await Assert.That(result.Render("html")).DoesNotContain("xch_cmd");
+		await Assert.That(result.Render("html")).DoesNotContain("@wiki");
+		await Assert.That(result.Render("pueblo")).DoesNotContain("XCH_CMD");
+
+		// Still underlined, so nothing about the terminal rendering changed.
+		await Assert.That(result.ToString()).Contains(Underlined);
+	}
 }
