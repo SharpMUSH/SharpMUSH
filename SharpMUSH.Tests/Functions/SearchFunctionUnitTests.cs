@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -68,8 +69,8 @@ public class SearchFunctionUnitTests
 
 		var result = await SearchAsync($"lsearch(all,flags,MONITOR)");
 
-		await Assert.That(result).Contains($"#{match.Number}");
-		await Assert.That(result).DoesNotContain($"#{control.Number}");
+		await Assert.That(ReturnedDbRefs(result)).Contains(match.Number);
+		await Assert.That(ReturnedDbRefs(result)).DoesNotContain(control.Number);
 	}
 
 	[Test]
@@ -82,8 +83,8 @@ public class SearchFunctionUnitTests
 
 		var result = await SearchAsync("lsearch(all,powers,Builder)");
 
-		await Assert.That(result).Contains($"#{match.Number}");
-		await Assert.That(result).DoesNotContain($"#{control.Number}");
+		await Assert.That(ReturnedDbRefs(result)).Contains(match.Number);
+		await Assert.That(ReturnedDbRefs(result)).DoesNotContain(control.Number);
 	}
 
 	[Test]
@@ -97,8 +98,8 @@ public class SearchFunctionUnitTests
 
 		var result = await SearchAsync($"lsearch(all,zone,#{zone.Number})");
 
-		await Assert.That(result).Contains($"#{match.Number}");
-		await Assert.That(result).DoesNotContain($"#{control.Number}");
+		await Assert.That(ReturnedDbRefs(result)).Contains(match.Number);
+		await Assert.That(ReturnedDbRefs(result)).DoesNotContain(control.Number);
 	}
 
 	[Test]
@@ -112,8 +113,8 @@ public class SearchFunctionUnitTests
 
 		var result = await SearchAsync($"lsearch(all,parent,#{parent.Number})");
 
-		await Assert.That(result).Contains($"#{match.Number}");
-		await Assert.That(result).DoesNotContain($"#{control.Number}");
+		await Assert.That(ReturnedDbRefs(result)).Contains(match.Number);
+		await Assert.That(ReturnedDbRefs(result)).DoesNotContain(control.Number);
 	}
 
 	[Test]
@@ -131,15 +132,15 @@ public class SearchFunctionUnitTests
 
 		var result = await SearchAsync($"lsearch(#{owner.Number})");
 
-		await Assert.That(result).Contains($"#{match.Number}");
-		await Assert.That(result).DoesNotContain($"#{control.Number}");
+		await Assert.That(ReturnedDbRefs(result)).Contains(match.Number);
+		await Assert.That(ReturnedDbRefs(result)).DoesNotContain(control.Number);
 	}
 
-	private async Task<SharpMUSH.Library.Models.DBRef> CreateThingAsync(string name)
+	private async Task<DBRef> CreateThingAsync(string name)
 	{
 		var result = await WebAppFactoryArg.CommandParser.CommandParse(
 			1, ConnectionService, MModule.single($"@create {name}"));
-		return SharpMUSH.Library.Models.DBRef.Parse(result.Message!.ToPlainText().Trim());
+		return DBRef.Parse(result.Message!.ToPlainText().Trim());
 	}
 
 	private ValueTask<CallState> CommandAsync(string command) =>
@@ -147,6 +148,23 @@ public class SearchFunctionUnitTests
 
 	private async Task<string> SearchAsync(string expression) =>
 		(await Parser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText();
+
+	/// <summary>
+	/// The dbref numbers lsearch actually returned, parsed rather than substring-matched.
+	/// </summary>
+	/// <remarks>
+	/// lsearch emits objids — <c>#12:1787882979973</c> — so <c>Contains("#12")</c> also matches
+	/// <c>#120</c>. That cuts both ways: the presence assertion could pass on the wrong object, and
+	/// the absence assertion fails outright once the shared session database reaches a dbref that has
+	/// the control's number as a prefix. These tests exist to stop filters passing by accident; they
+	/// should not themselves pass, or fail, by accident.
+	/// </remarks>
+	private static int[] ReturnedDbRefs(string searchResult) =>
+		[.. searchResult
+			.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+			.Select(entry => DBRef.TryParse(entry, out var parsed) ? parsed!.Value.Number : (int?)null)
+			.Where(number => number.HasValue)
+			.Select(number => number!.Value)];
 
 	[Test]
 	public async Task Lsearchr_ReturnsObjectsInReverseOrder()
