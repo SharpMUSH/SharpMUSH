@@ -26,7 +26,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		ArangoConfiguration? acnf,
 		string configFile,
 		DatabaseProvider databaseProvider = DatabaseProvider.ArangoDB,
-		string? memgraphUri = null) :
+		string? memgraphUri = null,
+		string? surrealEndpoint = null) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -41,6 +42,13 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "memgraph");
 			if (!string.IsNullOrEmpty(memgraphUri))
 				Environment.SetEnvironmentVariable("MEMGRAPH_URI", memgraphUri);
+		}
+		else if (databaseProvider == DatabaseProvider.SurrealDB)
+		{
+			// No Testcontainer: SurrealDB runs embedded in-process. mem:// keeps benchmark runs
+			// isolated and disk-free, matching the test suite's default.
+			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "surrealdb");
+			Environment.SetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT", surrealEndpoint ?? "mem://");
 		}
 		else
 		{
@@ -78,6 +86,7 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 			Environment.SetEnvironmentVariable("ARANGO_CONNECTION_STRING", null);
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", null);
 			Environment.SetEnvironmentVariable("MEMGRAPH_URI", null);
+			Environment.SetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT", null);
 		}
 
 		base.Dispose(disposing);
