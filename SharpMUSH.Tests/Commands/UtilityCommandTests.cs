@@ -458,6 +458,39 @@ public class UtilityCommandTests
 		await Assert.That(scanPlainText).Contains($"#{dbrefNum}/{attrName}");
 	}
 
+	/// <summary>
+	/// @scan reports what the dispatcher would actually match, because it runs the same
+	/// <c>MatchUserDefinedCommand</c> over the same compiled-pattern cache. That makes it a direct
+	/// readout of the <c>\:</c> unescape: before it, a pattern containing an escaped colon reached
+	/// .NET with the backslash intact, and for a wildcard that became a character the typed line had
+	/// to contain - so @scan reported no match for the one string the command exists to catch, while
+	/// <c>IsCommand</c> still counted the attribute as a command.
+	/// </summary>
+	[Test]
+	public async ValueTask ScanCommand_FindsAPatternWithAnEscapedColon()
+	{
+		var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		var attrName = $"CMD_SCANCOLON_{uniqueSuffix}";
+		var commandWord = $"scancolon{uniqueSuffix.ToLowerInvariant()}";
+
+		var createResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@create ScanColonObj_{uniqueSuffix}"));
+		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
+		await Assert.That(createdDbref).StartsWith("#");
+
+		// \\: survives attribute-set evaluation as \:, the form PennMUSH stores.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($@"&{attrName} {createdDbref}=${commandWord}\\:go *:think scan colon triggered"));
+
+		var scanResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@scan {commandWord}:go north"));
+
+		var dbrefNum = DBRef.Parse(createdDbref).Number;
+		await Assert.That(scanResult.Message?.ToPlainText() ?? string.Empty)
+			.Contains($"#{dbrefNum}/{attrName}")
+			.Because(@"the stored \: is a literal colon in the pattern, so ""<word>:go north"" matches");
+	}
+
 	[Test]
 	public async ValueTask DecompileCommand()
 	{
