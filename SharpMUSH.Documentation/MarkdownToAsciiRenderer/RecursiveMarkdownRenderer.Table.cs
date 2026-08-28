@@ -146,39 +146,84 @@ public partial class RecursiveMarkdownRenderer
 		IReadOnlyList<IReadOnlyList<MString>> rows, int columnCount, int availableWidth) =>
 		FitColumnWidths(NaturalColumnWidths(rows, columnCount), availableWidth);
 
+	/// <summary>Narrowest a column may be squeezed to before the table is left to overflow.</summary>
+	private const int MinimumColumnWidth = 3;
+
 	/// <summary>Each column's widest rendered cell, floored at 3 so a column is never unreadable.</summary>
 	private static int[] NaturalColumnWidths(IReadOnlyList<IReadOnlyList<MString>> rows, int columnCount) =>
 		Enumerable.Range(0, columnCount)
-			.Select(col => Math.Max(3, rows.Max(row => col < row.Count ? row[col].ToPlainText().Length : 0)))
+			.Select(col => Math.Max(MinimumColumnWidth, rows.Max(row => col < row.Count ? row[col].ToPlainText().Length : 0)))
 			.ToArray();
 
 	/// <summary>
-	/// Scales natural widths to the space actually available, in proportion, in either direction.
+	/// Scales natural widths to fit <paramref name="availableWidth"/> exactly, in either direction.
 	/// </summary>
 	/// <remarks>
-	/// Shrinking is skipped when the space left would not give every column its 3-character floor —
-	/// at that point the table cannot fit whatever is done to it, and overflowing is more readable
-	/// than clipping every column to nothing.
+	/// Shrinking is skipped when the space left would not give every column its floor — at that point
+	/// the table cannot fit whatever is done to it, and overflowing is more readable than clipping
+	/// every column to nothing.
 	/// </remarks>
 	private static int[] FitColumnWidths(int[] widths, int availableWidth)
 	{
 		var total = widths.Sum();
 		if (total == 0) return widths;
+		if (total > availableWidth && availableWidth <= widths.Length * MinimumColumnWidth) return widths;
 
-		if (total > availableWidth && availableWidth > widths.Length * 3)
+		return Apportion(widths, availableWidth);
+	}
+
+	/// <summary>
+	/// Largest-remainder (Hamilton) apportionment of <paramref name="availableWidth"/> characters
+	/// across the columns, in proportion to their natural widths.
+	/// </summary>
+	/// <remarks>
+	/// Scaling each column independently and truncating leaves the total off the budget, so the
+	/// leftover characters have to go somewhere. Handing them to the largest fractional remainders is
+	/// the standard answer to this — the same apportionment problem as allocating seats to
+	/// populations — and is the only rule that keeps every column within one character of its exact
+	/// share. The floor can push the total back over the budget, in which case the excess comes off
+	/// the smallest remainders first, never below the floor.
+	/// </remarks>
+	private static int[] Apportion(int[] widths, int availableWidth)
+	{
+		var total = widths.Sum();
+		var byRemainder = new (int Column, double Fraction)[widths.Length];
+		var assigned = 0;
+
+		for (var col = 0; col < widths.Length; col++)
 		{
-			for (var col = 0; col < widths.Length; col++)
-				widths[col] = Math.Max(3, (int)(availableWidth * ((double)widths[col] / total)));
+			var exact = availableWidth * ((double)widths[col] / total);
+			widths[col] = Math.Max(MinimumColumnWidth, (int)exact);
+			assigned += widths[col];
+			byRemainder[col] = (col, exact - Math.Truncate(exact));
 		}
-		else if (total < availableWidth)
+
+		var order = byRemainder
+			.OrderByDescending(entry => entry.Fraction)
+			.ThenBy(entry => entry.Column)
+			.Select(entry => entry.Column)
+			.ToArray();
+
+		for (var i = 0; assigned < availableWidth; i++, assigned++) widths[order[i % order.Length]]++;
+
+		while (assigned > availableWidth)
 		{
-			var extraSpace = availableWidth - total;
-			for (var col = 0; col < widths.Length; col++)
-				widths[col] += (int)(extraSpace * ((double)widths[col] / total));
+			var reduced = false;
+			for (var i = order.Length - 1; i >= 0 && assigned > availableWidth; i--)
+			{
+				if (widths[order[i]] <= MinimumColumnWidth) continue;
+
+				widths[order[i]]--;
+				assigned--;
+				reduced = true;
+			}
+
+			if (!reduced) return widths;
 		}
 
 		return widths;
 	}
+
 
 	// Rows are handled by RenderTable for proper alignment
 	private MString RenderTableRow(TableRow _)

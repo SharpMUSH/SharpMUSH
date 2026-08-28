@@ -8,6 +8,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text;
+using TUnit.Assertions.Enums;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -689,7 +690,7 @@ public class MarkdownFunctionUnitTests
 		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
 
 		await Assert.That(result.ToPlainText().Trim()).IsEqualTo(
-			"""{"width":78,"align":["<","-",">"],"widths":[22,22,22],"head":["A","B","C"],"rows":[["1","2","3"],["4","",""]]}""");
+			"""{"width":78,"align":["<","-",">"],"widths":[23,23,22],"head":["A","B","C"],"rows":[["1","2","3"],["4","",""]]}""");
 	}
 
 	/// <summary>
@@ -813,7 +814,7 @@ public class MarkdownFunctionUnitTests
 		var lines = result.ToPlainText().Split('\n').Select(line => line.TrimEnd()).ToList();
 		// Exactly what the helpfile prints for this template, at the columns the payload's own widths
 		// give — measured from the rendered cells, which is the thing a template cannot do for itself.
-		await Assert.That(lines).IsEquivalentTo(["Command          Effect     Cost", "--------------------------------", "@wiki        Show the index    0", "@wiki/search   Find pages      1", "@wiki/audit   Staff report"]);
+		await Assert.That(lines).IsEquivalentTo(["Command          Effect     Cost", "--------------------------------", "@wiki        Show the index    0", "@wiki/search   Find pages      1", "@wiki/audit   Staff report"], CollectionOrdering.Matching);
 		// The cell's markdown was rendered by the template, so "index" really is bold.
 		await Assert.That(result.ToString()).Contains(Bold);
 	}
