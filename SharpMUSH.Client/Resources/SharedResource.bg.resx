@@ -1801,8 +1801,8 @@
     <comment>MT</comment>
   </data>
   <data name="LayWidgetWikiBody" xml:space="preserve">
-    <value>Тяло на wiki страница</value>
-    <comment>MT</comment>
+    <value>Wiki страница</value>
+    <comment>MT — wiki kept Latin</comment>
   </data>
   <data name="LayWidgetWikiIndex" xml:space="preserve">
     <value>Индекс на wiki</value>

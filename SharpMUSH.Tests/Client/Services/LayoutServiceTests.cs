@@ -56,6 +56,40 @@ public class LayoutServiceTests : TrackingTestContext
 		await Assert.That(layout.Zones[WidgetZone.TopBar][0].WidgetName).IsEqualTo("QuickLinks");
 	}
 
+	/// <summary>
+	/// The landing page ships a wiki page: the Wiki Body widget addressed at main/general/home, sitting
+	/// directly under the stat tiles. A game that never touches the layout editor still gets a place to
+	/// write a front page, and the placement carries explicit config because the widget's no-config
+	/// behaviour is the character biography.
+	/// </summary>
+	[Test]
+	public async Task GetDefaultLayout_Home_PutsTheHomeWikiPageDirectlyBelowTheStats()
+	{
+		var svc = Build(new ScriptedHandler(_ => NotFound()));
+		var main = svc.GetDefaultLayout(LayoutScopes.Home).Zones[WidgetZone.MainContent]
+			.OrderBy(p => p.Order).ToList();
+
+		await Assert.That(main[0].WidgetName).IsEqualTo("Stats");
+		await Assert.That(main[1].WidgetName).IsEqualTo("WikiBody");
+		await Assert.That(main[1].Span).IsEqualTo(12);
+
+		var config = main[1].Config
+			?? throw new InvalidOperationException("the home wiki placement must carry an explicit page address");
+		await Assert.That(config.GetProperty("slug").GetString()).IsEqualTo("home");
+		await Assert.That(config.GetProperty("namespace").GetString()).IsEqualTo("main");
+	}
+
+	/// <summary>Order is the sort key within a zone, so inserting a widget must renumber the rest.</summary>
+	[Test]
+	public async Task GetDefaultLayout_Home_NumbersEveryPlacementConsecutively()
+	{
+		var svc = Build(new ScriptedHandler(_ => NotFound()));
+		var main = svc.GetDefaultLayout(LayoutScopes.Home).Zones[WidgetZone.MainContent];
+
+		await Assert.That(main.Select(p => p.Order).Order())
+			.IsEquivalentTo(Enumerable.Range(0, main.Count));
+	}
+
 	[Test]
 	public async Task GetDefaultLayout_WikiIndex_HasWikiIndexWidget()
 	{

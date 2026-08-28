@@ -1801,8 +1801,8 @@
     <comment>MT</comment>
   </data>
   <data name="LayWidgetWikiBody" xml:space="preserve">
-    <value>Conținut wiki</value>
-    <comment>MT — assumed the body of the current wiki page</comment>
+    <value>Pagină wiki</value>
+    <comment>MT</comment>
   </data>
   <data name="LayWidgetWikiIndex" xml:space="preserve">
     <value>Index wiki</value>
