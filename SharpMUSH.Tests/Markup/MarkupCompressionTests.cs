@@ -125,13 +125,18 @@ public class MarkupCompressionTests
 		// Warm the JIT and any statics so their allocations land outside the measurement.
 		for (var i = 0; i < 100; i++) GC.KeepAlive(A.single("hello"));
 
-		var before = GC.GetTotalAllocatedBytes(precise: true);
+		// Per-thread, not GC.GetTotalAllocatedBytes: that counts the whole process, so any test
+		// running in parallel would land its allocations inside this window and inflate the result.
+		// Everything between the two reads is synchronous, so it stays on one thread.
+		var before = GC.GetAllocatedBytesForCurrentThread();
 		for (var i = 0; i < iterations; i++) GC.KeepAlive(A.single("hello"));
-		var perInstance = (GC.GetTotalAllocatedBytes(precise: true) - before) / iterations;
+		var perInstance = (GC.GetAllocatedBytesForCurrentThread() - before) / iterations;
 
-		// Measured at 936 bytes with the eager Lazy fields, ~130 without. The bound leaves room for
+		// Measured at 936 bytes with the eager Lazy fields, 120 without. The bound leaves room for
 		// allocator variation while still failing if the caches come back.
-		await Assert.That(perInstance).IsLessThan(300);
+		// The lower bound is not padding: it fails the test if the measurement ever reads zero, which
+		// would otherwise let a broken probe pass vacuously.
+		await Assert.That(perInstance).IsBetween(32, 300);
 	}
 
 	/// <summary>

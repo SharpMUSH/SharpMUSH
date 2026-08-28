@@ -7,7 +7,7 @@
 
 `MModule.serialize` output is roughly 165x the plain text it carries. This surfaced as
 `NatsPayloadTooLargeException` on `@wiki help:general:markdown_guide` — one wiki page
-serialised to 1,521,690 bytes. PR #831 raised the NATS server ceiling from 1 MB to 6 MB,
+serialized to 1,521,690 bytes. PR #831 raised the NATS server ceiling from 1 MB to 6 MB,
 which unblocks that page but leaves only about 4x headroom and does nothing for the two
 other places markup is expensive: the database and process memory.
 
@@ -28,7 +28,7 @@ at width 78:
 Two smaller cases that matter more in aggregate, because every MUSH attribute is a
 `MarkupString` and most are plain text:
 
-```
+```text
 serialize(single("hello"))      :  80 bytes
   {"Text":"hello","Runs":[{"Start":0,"Length":5,"Markups":[],"End":5}],"Length":5}
 serialize(red "hello")          : 407 bytes
@@ -36,7 +36,7 @@ serialize(red "hello")          : 407 bytes
 
 Memory, measured with `GC.GetTotalAllocatedBytes`:
 
-```
+```text
 MModule.single("hello")  : 936 bytes/instance
 bare .NET string "hello" :  32 bytes/instance
 ```
@@ -164,7 +164,7 @@ pooled buffer, and if the result exceeds a threshold (4 KB initially) write gzip
 
 No header flag is needed. JSON always begins with `{` (0x7B); gzip always begins with
 0x1F 0x8B. The reader sniffs the first two bytes. This matters because the consumer side
-reads `ConsumeAsync<JsonElement>` and cannot inspect per-message headers before deserialising.
+reads `ConsumeAsync<JsonElement>` and cannot inspect per-message headers before deserializing.
 
 Three call sites: both `PublishAsync` calls in `NatsJetStreamMessageBus` and the
 `ConsumeAsync` in `NatsJetStreamConsumerService`. Applied to every message type — anything
@@ -189,7 +189,7 @@ floor for uncompressed JSON, which is why gzip is the lever that buys anything b
 
 Two smaller numbers that matter more in aggregate:
 
-```
+```text
 serialize(single("hello"))  :  80 bytes ->  13
 MModule.single("hello")     : 936 bytes -> 120   (per instance, GC.GetTotalAllocatedBytes)
 ```
