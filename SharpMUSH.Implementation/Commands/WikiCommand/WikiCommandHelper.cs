@@ -46,6 +46,25 @@ public static class WikiCommandHelper
 	}
 
 	/// <summary>
+	/// The <c>@wiki</c> page reference a <c>[[wiki link]]</c> points at, or the empty string when the
+	/// link carries no usable identity.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="WikiLinkInline.Slug"/> is the canonical <c>namespace/category/slug</c> path identity;
+	/// <c>@wiki</c> spells the same identity <c>namespace:category:slug</c>, which is also what
+	/// <see cref="DisplayReference"/> prints. Only the first two separators are rewritten, so a slug that
+	/// itself contains <c>/</c> survives and the result round-trips through <see cref="ResolveTarget"/>
+	/// back to the page the link named.
+	/// </remarks>
+	public static string ReferenceForWikiLink(WikiLinkInline wikiLink)
+	{
+		var parts = (wikiLink.Slug ?? string.Empty).Split('/', 3);
+		return parts.Length == 3 && parts.All(part => part.Length > 0)
+			? string.Join(':', parts)
+			: string.Empty;
+	}
+
+	/// <summary>
 	/// Splits a <em>write</em> target of the form <c>&lt;page&gt;/&lt;lang&gt;</c> into the page reference
 	/// (still to be passed to <see cref="ResolveTarget"/>) and a canonicalised BCP-47 locale tag.
 	/// </summary>

@@ -582,4 +582,71 @@ public class MarkdownFunctionUnitTests
 		// Still underlined, so nothing about the terminal rendering changed.
 		await Assert.That(result.ToString()).Contains(Underlined);
 	}
+
+	/// <summary>
+	/// The inline and link templates. LINK and WIKILINK are the point of the exercise: a game that wants
+	/// a markdown link to become a command its client can run needs the target and the
+	/// already-a-command flag, not just the text.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_InlineAndLinkTemplates_Override()
+	{
+		var createResult = (await Parser.FunctionParse(MModule.single("create(MarkdownInlineTemplateObj)")))?.Message?.ToString()!;
+		await Assert.That(createResult).IsNotNull();
+		var obj = createResult.Trim();
+
+		// & rather than attrib_set() so the template is stored unevaluated.
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`BOLD {obj}=[ansi(hr,BOLD:%0)]"));
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`INLINECODE {obj}=<%0>"));
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`LINK {obj}=%0 %(%1%) cmd=%2"));
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`WIKILINK {obj}=[ansi(hc,%0)] %(@wiki %1%)"));
+
+		// No commas: rendermarkdowncustom()'s second argument is the template object, so a comma in
+		// the markdown would be read as one (and the third as a width).
+		var markdown = "A **strong** `word`.%r%rSee %[%[Help:Markdown Guide%]%] and "
+			+ "%[Site%]%(https://example.com%) and %[newbie%].";
+
+		var result = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
+		await Assert.That(result).IsNotNull();
+
+		var plainText = result!.ToPlainText();
+
+		await Assert.That(plainText).Contains("BOLD:strong");
+		await Assert.That(plainText).Contains("<word>");
+
+		// A URL link and a help-topic shortcut reach the same template and are told apart by %2.
+		await Assert.That(plainText).Contains("Site (https://example.com) cmd=0");
+		await Assert.That(plainText).Contains("newbie (help newbie) cmd=1");
+
+		// WIKILINK's %1 is the fully qualified @wiki reference, whatever short form was written.
+		// This is the example in `help rendermarkdowncustom`, verbatim.
+		await Assert.That(plainText).Contains("Markdown Guide (@wiki help:general:markdown_guide)");
+	}
+
+	/// <summary>
+	/// Every template is optional and absent ones change nothing: an object with no
+	/// <c>RENDERMARKUP`</c> attributes at all must render byte-for-byte like <c>rendermarkdown()</c>,
+	/// including for the elements that only gained a template hook now.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_NoTemplates_MatchesDefaultRenderingForNewHooks()
+	{
+		var createResult = (await Parser.FunctionParse(MModule.single("create(MarkdownNoTemplateObj)")))?.Message?.ToString()!;
+		await Assert.That(createResult).IsNotNull();
+		var obj = createResult.Trim();
+
+		var markdown = "A **strong** `word` and %[Site%]%(https://example.com%) "
+			+ "and %[%[Help:Markdown Guide%]%].%r%r- %[x%] done%r- %[ %] todo";
+
+		var result = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
+		await Assert.That(result).IsNotNull();
+
+		var expected = RecursiveMarkdownHelper.RenderMarkdown(
+			"A **strong** `word` and [Site](https://example.com) "
+			+ "and [[Help:Markdown Guide]].\n\n- [x] done\n- [ ] todo");
+
+		await AssertMarkupStringEquals(result!, expected);
+	}
 }

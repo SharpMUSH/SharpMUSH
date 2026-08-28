@@ -224,6 +224,54 @@ The function looks for attributes on `<object>` with specific names that define 
   
 - ``RENDERMARKUP`QUOTE`` - Block quote rendering
   - `%0` - The quote content (already rendered)
+  
+- ``RENDERMARKUP`TABLE`` - Table rendering
+  - `%0` - The whole table, already laid out in columns
+  
+- ``RENDERMARKUP`CONTAINER`` - Custom container (`::: name args`) rendering
+  - `%0` - The directive name (`category`, `tag`, `pagelist`, `recent`, or your own)
+  - `%1` - The rest of the fence line, empty if there is none
+  - `%2` - The container's rendered contents
+  
+- ``RENDERMARKUP`BOLD`` - Bold (`**text**`) rendering
+  - `%0` - The bold content (already rendered)
+  
+- ``RENDERMARKUP`ITALIC`` - Italic (`*text*`) rendering
+  - `%0` - The italic content (already rendered)
+  
+- ``RENDERMARKUP`UNDERLINE`` - Underline rendering
+  - `%0` - The underlined content (already rendered)
+  
+- ``RENDERMARKUP`INLINECODE`` - Inline code (`` `text` ``) rendering
+  - `%0` - The code text (plain text)
+  
+- ``RENDERMARKUP`LINK`` - Link rendering
+  - `%0` - The link text as it would be shown (the URL, if the link has no text)
+  - `%1` - The URL, or the command for a command link
+  - `%2` - Is it a command link? (1 for a command, 0 for a URL)
+  - `%3` - The link title/hint, empty if there is none
+  
+- ``RENDERMARKUP`WIKILINK`` - Wiki link (`[[Page Name]]`) rendering
+  - `%0` - The display text
+  - `%1` - The `@wiki` page reference, always fully qualified as
+    `<namespace>:<category>:<slug>`
+  - `%2` - The target page's title
+  
+- ``RENDERMARKUP`AUTOLINK`` - Autolink (`<https://example.com>`) rendering
+  - `%0` - The URL, which is also the text shown
+  
+- ``RENDERMARKUP`IMAGE`` - Image (`![alt](url)`) rendering
+  - `%0` - The alt text, empty if there is none
+  - `%1` - The image URL
+  
+- ``RENDERMARKUP`TASKLIST`` - Task list marker (`- [x]`) rendering
+  - `%0` - Is it ticked? (1 for `[x]`, 0 for `[ ]`)
+
+**Note on `%2` for LINK.** SharpMUSH help text writes a bare `[topic]` for a
+help-topic shortcut, and the renderer turns that into a link whose `%1` is the
+command `help <topic>` rather than a URL. `%2` is how a template tells the two
+apart - wrap `%2`-true links so the client runs them, and `%2`-false links so
+the client opens them.
 
 **Example Usage:**
 
@@ -296,6 +344,28 @@ Tasks
   Important note
 ```
 (heading in cyan, arrow bullets in green, quote in yellow)
+
+Spell out where a wiki link goes, instead of only styling it:
+```sharp
+&RENDERMARKUP`WIKILINK #123=[ansi(hc,%0)] %(@wiki %1%)
+think rendermarkdowncustom(See %[%[Help:Markdown Guide%]%] first., #123)
+```
+Output:
+```markdown
+See Markdown Guide (@wiki help:general:markdown_guide) first.
+```
+`%1` arrives fully qualified, so the command it builds resolves whatever
+namespace the link was written in. Under `@wiki` itself a wiki link is already
+a clickable command link and needs no template; this hook is for the games that
+want a different presentation of their own. (`%[`, `%]`, `%(` and `%)` are how
+you get literal brackets and parentheses past the parser.)
+
+**Elements with no template.** Every element the renderer can be asked to style
+is in the list above. What is left renders with fixed behaviour and has no hook:
+plain text, paragraphs, line breaks, horizontal rules, raw HTML, and the
+individual rows and cells of a table - a table's column widths are computed
+across all of its rows at once, so only the finished table is offered, as
+`TABLE`.
 
 **Notes:**
 - If a template attribute is not found on the object, the default rendering is used

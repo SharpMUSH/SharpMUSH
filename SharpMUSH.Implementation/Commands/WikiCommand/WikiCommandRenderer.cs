@@ -33,7 +33,7 @@ public sealed class WikiCommandRenderer(int maxWidth = 78, IMUSHCodeParser? mush
 		var text = wikiLink.DisplayText ?? wikiLink.Title;
 		if (string.IsNullOrWhiteSpace(text)) return MModule.empty();
 
-		var reference = PageReference(wikiLink.Slug);
+		var reference = WikiCommandHelper.ReferenceForWikiLink(wikiLink);
 		// No usable target: fall back to the base renderer's styled prose rather than emitting a
 		// command link that would run "@wiki" with nothing after it.
 		if (reference.Length == 0) return base.RenderWikiLink(wikiLink);
@@ -45,24 +45,5 @@ public sealed class WikiCommandRenderer(int maxWidth = 78, IMUSHCodeParser? mush
 		return MModule.MarkupSingle(
 			Ansi.Create(linkUrl: command, linkKind: LinkKind.Command, linkText: command, underlined: true),
 			text);
-	}
-
-	/// <summary>
-	/// The <c>@wiki</c> page reference for a wiki link's canonical identity, or the empty string when
-	/// the link has none.
-	/// </summary>
-	/// <remarks>
-	/// <see cref="WikiLinkInline.Slug"/> is <c>namespace/category/slug</c>; <c>@wiki</c> spells the same
-	/// identity <c>namespace:category:slug</c>, the fully qualified form every wiki listing already
-	/// prints (see <see cref="WikiCommandHelper.DisplayReference"/>). Only the first two separators are
-	/// rewritten, so a slug that itself contains <c>/</c> survives and the reference round-trips through
-	/// <see cref="WikiCommandHelper.ResolveTarget"/> back to the page the link named.
-	/// </remarks>
-	private static string PageReference(string canonicalSlug)
-	{
-		var parts = canonicalSlug.Split('/', 3);
-		return parts.Length == 3 && parts.All(p => p.Length > 0)
-			? string.Join(':', parts)
-			: string.Empty;
 	}
 }
