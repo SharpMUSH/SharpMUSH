@@ -806,8 +806,12 @@ public partial class ArangoDatabase
 
 		if (filter.Owner.HasValue)
 		{
-			filters.Add($@"LENGTH(FOR owner IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphObjectOwners}' 
-				FILTER owner._key == @ownerKey 
+			// Two hops, not one. The ownership edge lands on the typed node_players vertex, whose _key is
+			// an Arango-generated id — only the node_objects document is keyed by dbref. Comparing the
+			// dbref to the player vertex's key matched nothing, ever; hop on to the owner's own object.
+			filters.Add($@"LENGTH(FOR owner IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphObjectOwners}'
+				FOR ownerObject IN 1..1 OUTBOUND owner GRAPH '{DatabaseConstants.GraphObjects}'
+				FILTER ownerObject._key == @ownerKey
 				LIMIT 1
 				RETURN 1) > 0");
 			bindVars["ownerKey"] = filter.Owner.Value.Number.ToString();
@@ -833,13 +837,27 @@ public partial class ArangoDatabase
 
 		if (!string.IsNullOrEmpty(filter.HasFlag))
 		{
-			filters.Add("@flagName IN v.Flags[*].Name");
+			// Flags are edges to node_object_flags, not an array on the object — `v.Flags[*].Name` read a
+			// field that node_objects documents do not have, so the predicate was false for every row.
+			// The Type disjunct reproduces the type-named flag GetObjectFlagsAsync synthesises, which
+			// HelperFunctions.HasFlag sees and which no edge backs.
+			filters.Add($@"(LOWER(v.Type) == LOWER(@flagName) OR LENGTH(
+				FOR flag IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphFlags}'
+				FILTER LOWER(flag.Name) == LOWER(@flagName)
+				LIMIT 1
+				RETURN 1) > 0)");
 			bindVars["flagName"] = filter.HasFlag;
 		}
 
 		if (!string.IsNullOrEmpty(filter.HasPower))
 		{
-			filters.Add("@powerName IN v.Powers[*].Name");
+			// Same defect as HasFlag above, and matching on Alias too because HelperFunctions.HasPower
+			// does. There is no synthesised type-power, so no Type disjunct here.
+			filters.Add($@"LENGTH(
+				FOR power IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphPowers}'
+				FILTER LOWER(power.Name) == LOWER(@powerName) OR LOWER(power.Alias) == LOWER(@powerName)
+				LIMIT 1
+				RETURN 1) > 0");
 			bindVars["powerName"] = filter.HasPower;
 		}
 

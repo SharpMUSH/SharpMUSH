@@ -527,6 +527,42 @@ public interface ISharpDatabase
 	/// This is more efficient than loading all objects and filtering in application code.
 	/// Lock evaluation must happen in application code, but other filters can be pushed to the database.
 	/// </summary>
+	/// <remarks>
+	/// <b>Every</b> populated field of <paramref name="filter"/> must be honoured, and they compose as
+	/// AND. A provider may not quietly drop a predicate it has not implemented: the call would succeed
+	/// and hand back a set the caller never asked for. All three providers had done exactly that —
+	/// SurrealDB and Memgraph ignored <c>Owner</c>/<c>Zone</c>/<c>Parent</c>/<c>HasFlag</c>/
+	/// <c>HasPower</c> outright (returning the whole database), while ArangoDB's <c>Owner</c> compared
+	/// a dbref against a generated typed-vertex key and its <c>HasFlag</c>/<c>HasPower</c> read array
+	/// fields that objects do not have (returning nothing). Prefer throwing over silently widening.
+	/// <para>
+	/// Predicates whose meaning is not self-evident from the field name, defined so the three providers
+	/// agree with each other <i>and</i> with the application-layer helpers callers compare against:
+	/// </para>
+	/// <list type="bullet">
+	///   <item>
+	///     <c>Owner</c>, <c>Zone</c>, <c>Parent</c> — match on the <b>dbref number</b> of the object the
+	///     relationship resolves to. Note this is not always the key of the vertex the edge lands on:
+	///     ownership points at the typed player vertex, which needs a further hop to its object.
+	///   </item>
+	///   <item>
+	///     <c>HasFlag</c> — case-insensitive match on a flag's <c>Name</c>, <b>or</b> on the object's own
+	///     <c>Type</c>. Type counts because <c>GetObjectFlagsAsync</c> synthesises a type-named flag that
+	///     has no edge behind it, so <c>HasFlag("THING")</c> is true in application code
+	///     (<c>HelperFunctions.HasFlag</c>) and has to be true here too. Aliases do not count — the
+	///     application-layer helper does not consider them either.
+	///   </item>
+	///   <item>
+	///     <c>HasPower</c> — case-insensitive match on a power's <c>Name</c> <b>or</b> its <c>Alias</c>,
+	///     mirroring <c>HelperFunctions.HasPower</c>. There is no synthesised type-power.
+	///   </item>
+	/// </list>
+	/// <para>
+	/// <c>ObjectSearchFilterPushdownTests</c> pins each predicate against ground truth on every
+	/// provider leg, asserting both that a matching object is returned and that a non-matching control
+	/// is not — either half alone passes for one of the two failure modes above.
+	/// </para>
+	/// </remarks>
 	/// <param name="filter">Filter criteria to apply at database level</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>An async enumerable of filtered SharpObjects</returns>

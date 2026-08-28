@@ -49,6 +49,105 @@ public class SearchFunctionUnitTests
 		await Assert.That(resultText).Contains("#0");
 	}
 
+	// --- Predicates that lsearch() pushes down to the database ---------------------------------
+	//
+	// Until these were pinned, lsearch(all, flags, ...) / powers / zone / parent, and lsearch(<owner>,
+	// ...), all reached ObjectSearchFilter fields no provider evaluated correctly, so the function
+	// answered with either the whole database or nothing at all depending on which one you ran on.
+	// See ObjectSearchFilterPushdownTests for the provider-level coverage; these pin the softcode path
+	// end to end, and each asserts a non-matching control is absent as well as the match being present
+	// — "contains the object I made" passes just as well against an unfiltered database.
+
+	[Test]
+	public async Task Lsearch_FlagFilter_ExcludesObjectsWithoutTheFlag()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("LSearchFlag");
+		var match = await CreateThingAsync($"{token}_Match");
+		var control = await CreateThingAsync($"{token}_Control");
+		await CommandAsync($"@set {match}=MONITOR");
+
+		var result = await SearchAsync($"lsearch(all,flags,MONITOR)");
+
+		await Assert.That(result).Contains($"#{match.Number}");
+		await Assert.That(result).DoesNotContain($"#{control.Number}");
+	}
+
+	[Test]
+	public async Task Lsearch_PowerFilter_ExcludesObjectsWithoutThePower()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("LSearchPower");
+		var match = await CreateThingAsync($"{token}_Match");
+		var control = await CreateThingAsync($"{token}_Control");
+		await CommandAsync($"@power {match}=Builder");
+
+		var result = await SearchAsync("lsearch(all,powers,Builder)");
+
+		await Assert.That(result).Contains($"#{match.Number}");
+		await Assert.That(result).DoesNotContain($"#{control.Number}");
+	}
+
+	[Test]
+	public async Task Lsearch_ZoneFilter_ExcludesObjectsOutsideTheZone()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("LSearchZone");
+		var zone = await CreateThingAsync($"{token}_Zone");
+		var match = await CreateThingAsync($"{token}_Match");
+		var control = await CreateThingAsync($"{token}_Control");
+		await CommandAsync($"@chzone {match}={zone}");
+
+		var result = await SearchAsync($"lsearch(all,zone,#{zone.Number})");
+
+		await Assert.That(result).Contains($"#{match.Number}");
+		await Assert.That(result).DoesNotContain($"#{control.Number}");
+	}
+
+	[Test]
+	public async Task Lsearch_ParentFilter_ExcludesObjectsWithADifferentParent()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("LSearchParent");
+		var parent = await CreateThingAsync($"{token}_Parent");
+		var match = await CreateThingAsync($"{token}_Match");
+		var control = await CreateThingAsync($"{token}_Control");
+		await CommandAsync($"@parent {match}={parent}");
+
+		var result = await SearchAsync($"lsearch(all,parent,#{parent.Number})");
+
+		await Assert.That(result).Contains($"#{match.Number}");
+		await Assert.That(result).DoesNotContain($"#{control.Number}");
+	}
+
+	[Test]
+	public async Task Lsearch_OwnerClass_ExcludesObjectsOwnedByOthers()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("LSearchOwner");
+		var owner = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services,
+			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(),
+			token);
+
+		var match = await CreateThingAsync($"{token}_Match");
+		var control = await CreateThingAsync($"{token}_Control");
+		await CommandAsync($"@chown {match}={owner}");
+
+		var result = await SearchAsync($"lsearch(#{owner.Number})");
+
+		await Assert.That(result).Contains($"#{match.Number}");
+		await Assert.That(result).DoesNotContain($"#{control.Number}");
+	}
+
+	private async Task<SharpMUSH.Library.Models.DBRef> CreateThingAsync(string name)
+	{
+		var result = await WebAppFactoryArg.CommandParser.CommandParse(
+			1, ConnectionService, MModule.single($"@create {name}"));
+		return SharpMUSH.Library.Models.DBRef.Parse(result.Message!.ToPlainText().Trim());
+	}
+
+	private ValueTask<CallState> CommandAsync(string command) =>
+		WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single(command));
+
+	private async Task<string> SearchAsync(string expression) =>
+		(await Parser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText();
+
 	[Test]
 	public async Task Lsearchr_ReturnsObjectsInReverseOrder()
 	{

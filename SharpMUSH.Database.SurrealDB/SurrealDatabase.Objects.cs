@@ -477,6 +477,42 @@ public partial class SurrealDatabase
 			parameters["maxKey"] = filter.MaxDbRef.Value;
 		}
 
+		// Relationship and flag/power predicates. These were absent, and their absence was invisible:
+		// with none of them contributing a condition, a caller asking for "objects owned by #7" got
+		// `SELECT * FROM object` — the entire database, reported as a filtered result.
+		// Each is a subquery over the relation table, matching the id of the object row being scanned
+		// against the relation's `in`.
+		if (filter.Owner.HasValue)
+		{
+			conditions.Add("id IN (SELECT VALUE in FROM has_owner WHERE out.key = $ownerKey)");
+			parameters["ownerKey"] = filter.Owner.Value.Number;
+		}
+		if (filter.Zone.HasValue)
+		{
+			conditions.Add("id IN (SELECT VALUE in FROM has_zone WHERE out.key = $zoneKey)");
+			parameters["zoneKey"] = filter.Zone.Value.Number;
+		}
+		if (filter.Parent.HasValue)
+		{
+			conditions.Add("id IN (SELECT VALUE in FROM has_parent WHERE out.key = $parentKey)");
+			parameters["parentKey"] = filter.Parent.Value.Number;
+		}
+		if (!string.IsNullOrEmpty(filter.HasFlag))
+		{
+			// The type disjunct reproduces the type-named flag GetObjectFlagsAsync synthesises, which no
+			// has_flags edge backs but HelperFunctions.HasFlag still reports.
+			conditions.Add("(string::lowercase(type) = $flagName "
+				+ "OR id IN (SELECT VALUE in FROM has_flags WHERE string::lowercase(out.name) = $flagName))");
+			parameters["flagName"] = filter.HasFlag.ToLowerInvariant();
+		}
+		if (!string.IsNullOrEmpty(filter.HasPower))
+		{
+			// Alias as well as name, mirroring HelperFunctions.HasPower.
+			conditions.Add("id IN (SELECT VALUE in FROM has_powers "
+				+ "WHERE string::lowercase(out.name) = $powerName OR string::lowercase(out.alias) = $powerName)");
+			parameters["powerName"] = filter.HasPower.ToLowerInvariant();
+		}
+
 		var whereClause = conditions.Count > 0 ? $"WHERE {string.Join(" AND ", conditions)}" : "";
 
 		var limitClause = "";
