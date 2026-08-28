@@ -205,8 +205,6 @@ The function looks for attributes on `<object>` with specific names that define 
 
 **Supported Template Attributes:**
 
-**Supported Template Attributes:**
-
 - ``RENDERMARKUP`H1`` - Heading level 1 rendering
   - `%0` - The heading content (already formatted with base styles)
   
@@ -221,7 +219,7 @@ The function looks for attributes on `<object>` with specific names that define 
   
 - ``RENDERMARKUP`LISTITEM`` - List item rendering
   - `%0` - Is ordered list? (1 for ordered, 0 for unordered)
-  - `%1` - Item index (0-based)
+  - `%1` - Item number, 1-based (the first item is `1`)
   - `%2` - The list item content
   
 - ``RENDERMARKUP`QUOTE`` - Block quote rendering
@@ -256,7 +254,7 @@ CODE:
 
 Set up custom list items with colored bullets:
 ```sharp
-&RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,[add(%1,1)].) %2,ansi(hb,*) %2)]
+&RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,%1.) %2,ansi(hb,*) %2)]
 think rendermarkdowncustom(- First%r- Second%r- Third, #123)
 ```
 Output:
@@ -269,7 +267,7 @@ Output:
 
 Ordered list with custom template:
 ```sharp
-&RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,[add(%1,1)].) %2,ansi(hb,*) %2)]
+&RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,%1.) %2,ansi(hb,*) %2)]
 think rendermarkdowncustom(1. First%r2. Second%r3. Third, #123)
 ```
 Output:
