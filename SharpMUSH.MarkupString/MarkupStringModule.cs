@@ -199,23 +199,29 @@ public sealed class MarkupString
 	private readonly string _text;
 	private readonly ImmutableArray<AttributeRun> _runs;
 
-	private readonly Lazy<string> _cachedToString;
-	private readonly Lazy<string> _cachedAnsiRender;
-	private readonly Lazy<string> _cachedHtmlRender;
-	private readonly Lazy<string> _cachedPlainTextRender;
-	private readonly Lazy<string> _cachedPuebloRender;
-	private readonly Lazy<string> _cachedMxpRender;
+	/// <remarks>
+	/// Six plain fields rather than six <see cref="Lazy{T}"/>. Lazy allocates an object and a closure
+	/// apiece — about 840 bytes per <see cref="MarkupString"/>, paid in the constructor whether or not
+	/// anything ever renders. The parser builds and discards intermediates by the thousand and renders
+	/// none of them.
+	/// <para>
+	/// The trade is that <c>Lazy</c> guaranteed its factory ran exactly once and these do not: two
+	/// threads racing on the same unrendered instance both compute the render and one wins. Every
+	/// render is a pure function of immutable state, so both compute the same string — the race is
+	/// benign, and only ever costs duplicated work.
+	/// </para>
+	/// </remarks>
+	private string? _cachedToString;
+	private string? _cachedAnsiRender;
+	private string? _cachedHtmlRender;
+	private string? _cachedPlainTextRender;
+	private string? _cachedPuebloRender;
+	private string? _cachedMxpRender;
 
 	public MarkupString(string text, ImmutableArray<AttributeRun> runs)
 	{
 		_text = text;
 		_runs = Coalesce(runs);
-		_cachedToString = new Lazy<string>(() => NativeToString());
-		_cachedAnsiRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.AnsiStrategy));
-		_cachedHtmlRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.HtmlStrategy));
-		_cachedPlainTextRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.PlainTextStrategy));
-		_cachedPuebloRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.PuebloStrategy));
-		_cachedMxpRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.MxpStrategy));
 	}
 
 	public string Text => _text;
@@ -224,22 +230,22 @@ public sealed class MarkupString
 
 	public string ToPlainText() => _text;
 
-	public override string ToString() => _cachedToString.Value;
+	public override string ToString() => _cachedToString ??= NativeToString();
 
 	public string Render(string format) => format.ToLowerInvariant() switch
 	{
-		"html" => _cachedHtmlRender.Value,
-		"plaintext" or "plain" => _cachedPlainTextRender.Value,
-		"pueblo" => _cachedPuebloRender.Value,
-		"mxp" => _cachedMxpRender.Value,
-		_ => _cachedAnsiRender.Value,
+		"html" => _cachedHtmlRender ??= RenderWith(MarkupStringModule.RenderStrategies.HtmlStrategy),
+		"plaintext" or "plain" => _cachedPlainTextRender ??= RenderWith(MarkupStringModule.RenderStrategies.PlainTextStrategy),
+		"pueblo" => _cachedPuebloRender ??= RenderWith(MarkupStringModule.RenderStrategies.PuebloStrategy),
+		"mxp" => _cachedMxpRender ??= RenderWith(MarkupStringModule.RenderStrategies.MxpStrategy),
+		_ => _cachedAnsiRender ??= RenderWith(MarkupStringModule.RenderStrategies.AnsiStrategy),
 	};
 
 	public string Render(RenderFormat format) => format switch
 	{
-		RenderFormat.Ansi => _cachedAnsiRender.Value,
-		RenderFormat.Html => _cachedHtmlRender.Value,
-		RenderFormat.PlainText => _cachedPlainTextRender.Value,
+		RenderFormat.Ansi => _cachedAnsiRender ??= RenderWith(MarkupStringModule.RenderStrategies.AnsiStrategy),
+		RenderFormat.Html => _cachedHtmlRender ??= RenderWith(MarkupStringModule.RenderStrategies.HtmlStrategy),
+		RenderFormat.PlainText => _cachedPlainTextRender ??= RenderWith(MarkupStringModule.RenderStrategies.PlainTextStrategy),
 		RenderFormat.Custom => RenderWith(format.ToStrategy()),
 		_ => throw new NotSupportedException(),
 	};

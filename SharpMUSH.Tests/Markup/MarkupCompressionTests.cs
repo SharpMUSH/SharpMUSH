@@ -108,4 +108,47 @@ public class MarkupCompressionTests
 		await Assert.That(empty.Runs[0].Length).IsEqualTo(0);
 		await Assert.That(empty.Runs[0].Markups.Length).IsEqualTo(1);
 	}
+
+	// ── Per-instance memory ──────────────────────────────────────────────────────
+
+	/// <summary>
+	/// A <see cref="MarkupString.MarkupString"/> used to allocate six <c>Lazy&lt;string&gt;</c> render
+	/// caches and six closures in its constructor — about 840 bytes of the 936 a five-character string
+	/// cost — whether or not anything ever rendered it. The parser builds and discards these by the
+	/// thousand, and an intermediate is rendered zero times.
+	/// </summary>
+	[Test]
+	public async Task ConstructingAMarkupString_DoesNotAllocateRenderCaches()
+	{
+		const int iterations = 10_000;
+
+		// Warm the JIT and any statics so their allocations land outside the measurement.
+		for (var i = 0; i < 100; i++) GC.KeepAlive(A.single("hello"));
+
+		var before = GC.GetTotalAllocatedBytes(precise: true);
+		for (var i = 0; i < iterations; i++) GC.KeepAlive(A.single("hello"));
+		var perInstance = (GC.GetTotalAllocatedBytes(precise: true) - before) / iterations;
+
+		// Measured at 936 bytes with the eager Lazy fields, ~130 without. The bound leaves room for
+		// allocator variation while still failing if the caches come back.
+		await Assert.That(perInstance).IsLessThan(300);
+	}
+
+	/// <summary>
+	/// Dropping <c>Lazy</c> must not drop the caching: a second render has to return the first
+	/// render's instance, not recompute it.
+	/// </summary>
+	[Test]
+	public async Task RenderingTwice_ReturnsTheCachedInstance()
+	{
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = A.MarkupSingle(red, "Hello World");
+
+		foreach (var format in new[] { "ansi", "html", "plaintext", "pueblo", "mxp" })
+		{
+			await Assert.That(ReferenceEquals(ams.Render(format), ams.Render(format))).IsTrue();
+		}
+
+		await Assert.That(ReferenceEquals(ams.ToString(), ams.ToString())).IsTrue();
+	}
 }
