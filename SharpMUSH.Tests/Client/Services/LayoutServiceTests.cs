@@ -73,10 +73,10 @@ public class LayoutServiceTests : TrackingTestContext
 		await Assert.That(main[1].WidgetName).IsEqualTo("WikiBody");
 		await Assert.That(main[1].Span).IsEqualTo(12);
 
-		var config = main[1].Config;
-		await Assert.That(config.HasValue).IsTrue();
-		await Assert.That(config!.Value.GetProperty("slug").GetString()).IsEqualTo("home");
-		await Assert.That(config.Value.GetProperty("namespace").GetString()).IsEqualTo("main");
+		var config = main[1].Config
+			?? throw new InvalidOperationException("the home wiki placement must carry an explicit page address");
+		await Assert.That(config.GetProperty("slug").GetString()).IsEqualTo("home");
+		await Assert.That(config.GetProperty("namespace").GetString()).IsEqualTo("main");
 	}
 
 	/// <summary>Order is the sort key within a zone, so inserting a widget must renumber the rest.</summary>

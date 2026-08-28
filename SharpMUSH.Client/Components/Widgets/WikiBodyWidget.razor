@@ -5,7 +5,6 @@
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Library.Services
 @inject IAuthorizationService Authorization
-@inject AuthenticationStateProvider AuthenticationState
 
 @* Renders one wiki page. Which page, in precedence order: an explicit slug in the widget config; a
    "character" shorthand in the config (the Character-namespace page whose slug is that name); or the
@@ -15,6 +14,11 @@
 @* A page that does not exist takes the frame with it: this widget ships in the default home layout,
    where the page is unwritten until someone writes it, and an empty bordered card under the stat
    tiles is worse than nothing. Someone who could write it still sees the offer. *@
+@{
+    // Captured per render, so the callback a WikiView is created with reports against the address
+    // that WikiView was created for — see HandleLoaded.
+    var address = _address;
+}
 @if (!string.IsNullOrWhiteSpace(_slug) && !NothingToShow)
 {
     @* The wrapper is the container-query context; its scoped CSS clamps the paper's padding. *@
@@ -22,14 +26,18 @@
         <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
             @* Keyed on the address: WikiView fetches once, on init, so a reconfigured widget has to
                remount to go and read the page it now points at. *@
-            <WikiView @key="_address" Slug="@_slug" Namespace="@_namespace" Category="@_category" Locale="@_locale"
-                      Mode="WikiView.WikiMode.View" Embedded="true" OnLoaded="HandleLoaded" />
+            <WikiView @key="address" Slug="@_slug" Namespace="@_namespace" Category="@_category" Locale="@_locale"
+                      Mode="WikiView.WikiMode.View" Embedded="true"
+                      OnLoaded="@(found => HandleLoaded(address, found))" />
         </MudPaper>
     </div>
 }
 
 @code {
     [CascadingParameter] private ProfilePageContext? PageContext { get; set; }
+
+    /// <summary>Supplied by App.razor's CascadingAuthenticationState; re-supplied on sign-in and sign-out.</summary>
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
     [Parameter] public JsonElement? Config { get; set; }
 
@@ -50,9 +58,15 @@
     /// <summary>True when the viewer holds <c>wiki.create</c>, so a missing page is worth showing them.</summary>
     private bool _mayCreate;
 
-    protected override async Task OnInitializedAsync()
+    // Resolved on every parameter set rather than once at init. CascadingAuthenticationState hands
+    // down a fresh task when the viewer signs in or out, so a one-shot answer would go on hiding a
+    // missing page from someone who has since gained the right to write it — and go on offering it
+    // to someone who has since signed out.
+    protected override async Task OnParametersSetAsync()
     {
-        var state = await AuthenticationState.GetAuthenticationStateAsync();
+        if (AuthState is null) return;
+
+        var state = await AuthState;
         _mayCreate = (await Authorization.AuthorizeAsync(state.User, null, "wiki.create")).Succeeded;
     }
 
@@ -95,8 +109,17 @@
         (_slug, _namespace, _category, _locale) = (slug, ns, category, locale);
     }
 
-    /// <summary>Records whether the configured page exists, so the frame can follow it.</summary>
-    private void HandleLoaded(bool found) => _missing = !found;
+    /// <summary>
+    /// Records whether the configured page exists, so the frame can follow it. A WikiView displaced by
+    /// a <c>@key</c> change can still land its fetch afterwards; its answer describes the page it was
+    /// created for, so it must not decide the fate of whichever page is on screen by then.
+    /// </summary>
+    private void HandleLoaded(string? address, bool found)
+    {
+        if (address != _address) return;
+
+        _missing = !found;
+    }
 
     /// <summary>
     /// True when the only thing left to frame is the wiki's "no such page" notice: honest wording on
