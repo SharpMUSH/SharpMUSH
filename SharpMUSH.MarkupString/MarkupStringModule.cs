@@ -156,40 +156,6 @@ file sealed class RunStartComparer : IComparer<AttributeRun>
 	public int Compare(AttributeRun a, AttributeRun b) => a.Start.CompareTo(b.Start);
 }
 
-public sealed class ColorJsonConverter : JsonConverter<Color>
-{
-	/// <summary>
-	/// Parses <c>#rrggbb</c> / <c>#rrggbbaa</c> manually so the converter works on platforms
-	/// where <c>System.Drawing.Common</c> (and thus <see cref="ColorTranslator"/>) is unsupported —
-	/// notably Blazor WebAssembly, where the portal deserializes markup client-side. The
-	/// <see cref="Write"/> method only ever emits these hex forms, so the manual path is exhaustive
-	/// for our own data; a <see cref="ColorTranslator.FromHtml"/> fallback is kept only for any
-	/// foreign named-colour strings (never produced here, never hit on WASM).
-	/// </summary>
-	public override Color Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-	{
-		var s = reader.GetString();
-		if (s is { Length: > 0 } && s[0] == '#' && (s.Length == 7 || s.Length == 9)
-				&& byte.TryParse(s.AsSpan(1, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var r)
-				&& byte.TryParse(s.AsSpan(3, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var g)
-				&& byte.TryParse(s.AsSpan(5, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var b))
-		{
-			byte a = 255;
-			if (s.Length == 9
-					&& !byte.TryParse(s.AsSpan(7, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out a))
-				a = 255;
-			return Color.FromArgb(a, r, g, b);
-		}
-
-		return ColorTranslator.FromHtml(s!);
-	}
-
-	public override void Write(Utf8JsonWriter writer, Color value, JsonSerializerOptions options) =>
-			writer.WriteStringValue(value.A == 255
-					? $"#{value.R:x2}{value.G:x2}{value.B:x2}"
-					: $"#{value.R:x2}{value.G:x2}{value.B:x2}{value.A:x2}");
-}
-
 /// <summary>
 /// A flat, attributed markup string inspired by NSAttributedString.
 /// Fully immutable — text is a .NET string, runs are ImmutableArray&lt;AttributeRun&gt;.
@@ -1037,28 +1003,11 @@ public static partial class MarkupStringModule
 	public static IEnumerable<(Match, IEnumerable<MarkupString>)> getWildcardMatches(MarkupString input, MarkupString pattern) =>
 			GetWildcardMatches(input, pattern);
 
-	private static readonly JsonSerializerOptions _serializationOptions = BuildSerializationOptions();
-	private static JsonSerializerOptions BuildSerializationOptions()
-	{
-		var opts = new JsonSerializerOptions
-		{
-			// Polymorphic serialization for IMarkup subtypes via [JsonDerivedType] on IMarkup
-		};
-		opts.Converters.Add(new ColorJsonConverter());
-		return opts;
-	}
-	public static JsonSerializerOptions SerializationOptions => _serializationOptions;
-	public static JsonSerializerOptions serializationOptions => _serializationOptions;
-
-	public static string Serialize(MarkupString ams) =>
-			JsonSerializer.Serialize(ams, _serializationOptions);
+	/// <inheritdoc cref="MarkupStringSerializer"/>
+	public static string Serialize(MarkupString ams) => MarkupStringSerializer.Serialize(ams);
 	public static string serialize(MarkupString ams) => Serialize(ams);
 
-	public static MarkupString Deserialize(string jsonString)
-	{
-		if (jsonString.Length == 0) return Empty();
-		return JsonSerializer.Deserialize<MarkupString>(jsonString, _serializationOptions)
-					 ?? Empty();
-	}
+	/// <inheritdoc cref="MarkupStringSerializer"/>
+	public static MarkupString Deserialize(string jsonString) => MarkupStringSerializer.Deserialize(jsonString);
 	public static MarkupString deserialize(string jsonString) => Deserialize(jsonString);
 }
