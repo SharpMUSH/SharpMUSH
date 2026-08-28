@@ -1102,6 +1102,28 @@ public class SharpMUSHParserVisitor(
 				}
 			}
 
+			// PennMUSH src/bsd.c do_command(): at the connect screen WHO, DOING and SESSION are the same
+			// command — all three fall into dump_users(). They diverge only once a player is connected,
+			// where DOING and SESSION are ordinary in-game commands with their own output. WHO already
+			// carries CommandBehavior.SOCKET and answers anonymously, so the login-screen forms of the
+			// other two are routed to it rather than duplicated. DOING and SESSION deliberately keep
+			// CB.Default: giving them the SOCKET flag would drop them out of the in-game abbreviation
+			// trie, so "doin" would stop working for a logged-in player.
+			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null
+					&& (command.Equals("DOING", StringComparison.OrdinalIgnoreCase)
+							|| command.Equals("SESSION", StringComparison.OrdinalIgnoreCase)))
+			{
+				var whoLookup = parser.CommandLibrary
+					.Where(x => x.Value.IsSystem && x.Key.Equals("WHO", StringComparison.OrdinalIgnoreCase))
+					.ToList();
+
+				if (whoLookup.Count == 1)
+				{
+					return await HandleSocketCommandPattern(parser, src, context, command, whoLookup,
+						whoLookup[0].Value.LibraryInformation);
+				}
+			}
+
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 			{
 				await NotifyService.NotifyLocalized(parser.CurrentState.Handle.Value,
@@ -2113,7 +2135,13 @@ public class SharpMUSHParserVisitor(
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			librarySocketCommandDefinition)
 	{
-		var splitResult = await ArgumentSplit(prs, src, context, librarySocketCommandDefinition);
+		// The typed token is passed as the root command so ArgumentSplit's no-space branch strips it.
+		// Without it a bare "IDLE" splits to a single argument equal to "IDLE" itself, and every socket
+		// command that reads an optional argument sees its own name as that argument: bare OUTPUTPREFIX
+		// set the prefix to "OUTPUTPREFIX" instead of clearing it, and bare SOCKSET asked for an option
+		// and a value instead of reporting the settings. `command` rather than the library name because
+		// realSubtext holds what the player typed, which may be an unambiguous abbreviation of it.
+		var splitResult = await ArgumentSplit(prs, src, context, librarySocketCommandDefinition, command);
 		if (splitResult.TryPickT1(out var splitError, out var arguments))
 		{
 			if (prs.CurrentState.Handle.HasValue)

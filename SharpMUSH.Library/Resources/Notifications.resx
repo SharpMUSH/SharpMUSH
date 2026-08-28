@@ -2501,4 +2501,52 @@
   <data name="AccountMarkedDeletedFormat" xml:space="preserve">
     <value>Account '{0}' marked deleted; active sessions revoked. The account record is retained.</value>
   </data>
+  <data name="SocksetNotConnected" xml:space="preserve">
+    <value>You are not connected?</value>
+  </data>
+  <data name="SocksetNeedsOptionAndValue" xml:space="preserve">
+    <value>You must give an option and a value.</value>
+  </data>
+  <data name="SocksetSetWhatOption" xml:space="preserve">
+    <value>Set what option?</value>
+  </data>
+  <data name="SocksetWidthSet" xml:space="preserve">
+    <value>Width set.</value>
+  </data>
+  <data name="SocksetHeightSet" xml:space="preserve">
+    <value>Height set.</value>
+  </data>
+  <data name="SocksetWidthNeedsPositiveInteger" xml:space="preserve">
+    <value>Width expects a positive integer.</value>
+  </data>
+  <data name="SocksetHeightNeedsPositiveInteger" xml:space="preserve">
+    <value>Height expects a positive integer.</value>
+  </data>
+  <data name="SocksetTerminalTypeSet" xml:space="preserve">
+    <value>Terminal Type set.</value>
+  </data>
+  <data name="SocksetPromptNewlinesOn" xml:space="preserve">
+    <value>A newline will be sent after a prompt.</value>
+  </data>
+  <data name="SocksetPromptNewlinesOff" xml:space="preserve">
+    <value>No newline will be sent after a prompt.</value>
+  </data>
+  <data name="SocksetStripAccentsOn" xml:space="preserve">
+    <value>Accents will be stripped.</value>
+  </data>
+  <data name="SocksetStripAccentsOff" xml:space="preserve">
+    <value>Accents will not be stripped.</value>
+  </data>
+  <data name="SocksetUnknownColorStyle" xml:space="preserve">
+    <value>Unknown color style. Valid color styles: 'auto', 'plain', 'hilite', '16color', 'xterm256'.</value>
+  </data>
+  <data name="SocksetColorStyleSetFormat" xml:space="preserve">
+    <value>Colorstyle set to '{0}'</value>
+  </data>
+  <data name="SocksetInvalidOptionFormat" xml:space="preserve">
+    <value>@sockset option '{0}' is not a valid option.</value>
+  </data>
+  <data name="SocksetInvalidDescriptor" xml:space="preserve">
+    <value>Invalid descriptor.</value>
+  </data>
 </root>

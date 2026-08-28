@@ -55,18 +55,20 @@ public class TelnetServer : ConnectionHandler
 	{
 		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
-		var awaitingInitialPuebloHandshake = _options.PuebloEnabled;
-
 		TelnetInterpreterBuilder builder = _telnetFactory.CreateBuilder()
 			.OnSubmit(async (byteArray, encoding, _) =>
 			{
 				var input = encoding.GetString(byteArray);
 
-				// Detect Pueblo handshake response only on the first submitted line.
-				if (awaitingInitialPuebloHandshake &&
+				// PUEBLOCLIENT is a socket command, not a one-shot greeting: PennMUSH answers it in
+				// do_command (src/bsd.c) on any line, at any point in the session, and a client whose
+				// handshake was late — or that re-sends it because it thinks it is showing raw HTML —
+				// gets switched into Pueblo mode all the same. Restricting it to the first submitted
+				// line meant a slightly slow Pueblo client sent its handshake straight through to the
+				// parser, which answered "Huh?" and left the connection in plain-text mode forever.
+				if (_options.PuebloEnabled &&
 						input.StartsWith("PUEBLOCLIENT", StringComparison.OrdinalIgnoreCase))
 				{
-					awaitingInitialPuebloHandshake = false;
 					_logger.LogInformation("Pueblo handshake detected on handle {Handle}: {Response}",
 						nextPort, input.TrimEnd());
 
@@ -82,7 +84,6 @@ public class TelnetServer : ConnectionHandler
 					return;
 				}
 
-				awaitingInitialPuebloHandshake = false;
 				await _publishEndpoint.Publish(new TelnetInputMessage(nextPort, input), ct);
 			})
 			.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>

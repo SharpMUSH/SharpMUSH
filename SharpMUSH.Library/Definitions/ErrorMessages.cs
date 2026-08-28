@@ -551,6 +551,27 @@ public static class ErrorMessages
 		public const string OutputPrefixCleared = "OUTPUTPREFIX cleared.";
 		public const string OutputSuffixCleared = "OUTPUTSUFFIX cleared.";
 
+		// --- SOCKSET / @SOCKSET (PennMUSH src/bsd.c sockset()) ---
+		public const string SocksetNotConnected = "You are not connected?";
+		public const string SocksetNeedsOptionAndValue = "You must give an option and a value.";
+		public const string SocksetSetWhatOption = "Set what option?";
+		public const string SocksetWidthSet = "Width set.";
+		public const string SocksetHeightSet = "Height set.";
+		public const string SocksetWidthNeedsPositiveInteger = "Width expects a positive integer.";
+		public const string SocksetHeightNeedsPositiveInteger = "Height expects a positive integer.";
+		public const string SocksetTerminalTypeSet = "Terminal Type set.";
+		public const string SocksetPromptNewlinesOn = "A newline will be sent after a prompt.";
+		public const string SocksetPromptNewlinesOff = "No newline will be sent after a prompt.";
+		public const string SocksetStripAccentsOn = "Accents will be stripped.";
+		public const string SocksetStripAccentsOff = "Accents will not be stripped.";
+		public const string SocksetUnknownColorStyle =
+			"Unknown color style. Valid color styles: 'auto', 'plain', 'hilite', '16color', 'xterm256'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetColorStyleSetFormat = "Colorstyle set to '{0}'";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetInvalidOptionFormat = "@sockset option '{0}' is not a valid option.";
+		public const string SocksetInvalidDescriptor = "Invalid descriptor.";
+
 		public const string LocaleSetFormat = "Locale set to {0}.";
 		public const string LocaleCleared = "Locale cleared (reset to default).";
 		public const string LocaleInvalidFormat = "Invalid locale: {0}.";

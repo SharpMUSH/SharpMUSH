@@ -80,4 +80,52 @@
   <data name="AccountMarkedDeletedFormat" xml:space="preserve">
     <value>Compte « {0} » marqué comme supprimé ; sessions actives révoquées. L'enregistrement du compte est conservé.</value>
   </data>
+  <data name="SocksetNotConnected" xml:space="preserve">
+    <value>Vous n'êtes pas connecté ?</value>
+  </data>
+  <data name="SocksetNeedsOptionAndValue" xml:space="preserve">
+    <value>Vous devez indiquer une option et une valeur.</value>
+  </data>
+  <data name="SocksetSetWhatOption" xml:space="preserve">
+    <value>Définir quelle option ?</value>
+  </data>
+  <data name="SocksetWidthSet" xml:space="preserve">
+    <value>Largeur définie.</value>
+  </data>
+  <data name="SocksetHeightSet" xml:space="preserve">
+    <value>Hauteur définie.</value>
+  </data>
+  <data name="SocksetWidthNeedsPositiveInteger" xml:space="preserve">
+    <value>La largeur attend un entier positif.</value>
+  </data>
+  <data name="SocksetHeightNeedsPositiveInteger" xml:space="preserve">
+    <value>La hauteur attend un entier positif.</value>
+  </data>
+  <data name="SocksetTerminalTypeSet" xml:space="preserve">
+    <value>Type de terminal défini.</value>
+  </data>
+  <data name="SocksetPromptNewlinesOn" xml:space="preserve">
+    <value>Un saut de ligne sera envoyé après une invite.</value>
+  </data>
+  <data name="SocksetPromptNewlinesOff" xml:space="preserve">
+    <value>Aucun saut de ligne ne sera envoyé après une invite.</value>
+  </data>
+  <data name="SocksetStripAccentsOn" xml:space="preserve">
+    <value>Les accents seront supprimés.</value>
+  </data>
+  <data name="SocksetStripAccentsOff" xml:space="preserve">
+    <value>Les accents ne seront pas supprimés.</value>
+  </data>
+  <data name="SocksetUnknownColorStyle" xml:space="preserve">
+    <value>Style de couleur inconnu. Styles valides : 'auto', 'plain', 'hilite', '16color', 'xterm256'.</value>
+  </data>
+  <data name="SocksetColorStyleSetFormat" xml:space="preserve">
+    <value>Style de couleur défini sur « {0} »</value>
+  </data>
+  <data name="SocksetInvalidOptionFormat" xml:space="preserve">
+    <value>L'option @sockset « {0} » n'est pas valide.</value>
+  </data>
+  <data name="SocksetInvalidDescriptor" xml:space="preserve">
+    <value>Descripteur invalide.</value>
+  </data>
 </root>

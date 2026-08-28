@@ -4949,6 +4949,19 @@ These commands can only be entered by a connected player through their client. T
 - SCREENHEIGHT
 - SOCKSET
 - MSSP-REQUEST
+- VERSION
+
+Despite the paragraph above, these commands are answered whether or not you are
+connected — PennMUSH handles them before it decides whether a descriptor has a
+player behind it, and SharpMUSH does the same. They act on the connection that
+typed them, so a player with two clients open sets the screen width of one
+without touching the other.
+
+VERSION is a SharpMUSH addition: PennMUSH has only `@version`. It reports the
+same lines that `@version` does and is accepted at the connect screen, because
+players arriving from MUX-family servers and crawler bots type it unprefixed.
+
+LOGOUT is not implemented yet; it is listed here because the rest of the set is.
 
 In addition, the following commands can only be used at the login screen:
 
@@ -4959,7 +4972,7 @@ In addition, the following commands can only be used at the login screen:
 - create
 - register
 
-The WHO command can also be used at the login screen. Please note that this is different to the in-game WHO command.
+The WHO command can also be used at the login screen. Please note that this is different to the in-game WHO command. DOING and SESSION show that same login-screen listing when you are not connected, and their own in-game output once you are.
 # MSSP-REQUEST
 `MSSP-REQUEST`
 
