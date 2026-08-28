@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -24,6 +25,10 @@ public class ScanCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	/// <summary>Read from config rather than hard-coded: the branch under test reads it from there too.</summary>
+	private int MasterRoom => (int)WebAppFactoryArg.Services
+		.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.MasterRoom;
 
 	/// <summary>A player with a connection handle, standing in a room they own.</summary>
 	private async Task<(TestIsolationHelpers.TestPlayer Player, string Room, string Word)> ScannerAsync(string prefix)
@@ -59,6 +64,10 @@ public class ScanCommandTests
 
 		await Assert.That(await ScanAsync(player, $"@scan {word} test"))
 			.Contains($"#{DBRef.Parse(room).Number}/CMD_HERE");
+
+		await Assert.That(await ScanAsync(player, $"@scan/self {word} test"))
+			.DoesNotContain("CMD_HERE")
+			.Because("the location is the ROOM scope's business, not SELF's");
 	}
 
 	/// <summary>
@@ -76,6 +85,10 @@ public class ScanCommandTests
 
 		await Assert.That(await ScanAsync(player, $"@scan/self {word} test"))
 			.Contains($"#{player.DbRef.Number}/CMD_SELF");
+
+		await Assert.That(await ScanAsync(player, $"@scan {word}"))
+			.DoesNotContain("CMD_SELF")
+			.Because("the pattern is \"<word> *\" and a bare word does not match it");
 	}
 
 	/// <summary>
@@ -93,7 +106,7 @@ public class ScanCommandTests
 		var createResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("ScanGlobalObj")}"));
 		var global = createResult.Message!.ToPlainText().Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {global}=#2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {global}=#{MasterRoom}"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single($"&CMD_GLOBAL {global}=${word} *:think global"));
@@ -102,6 +115,9 @@ public class ScanCommandTests
 		await Assert.That(await ScanAsync(player, $"@scan/globals {word} test")).Contains(expected);
 		await Assert.That(await ScanAsync(player, $"@scan {word} test")).Contains(expected)
 			.Because("the no-switch default includes GLOBALS");
+		await Assert.That(await ScanAsync(player, $"@scan/room {word} test"))
+			.DoesNotContain("CMD_GLOBAL")
+			.Because("the master room is out of scope for /room");
 	}
 
 	/// <summary>
@@ -124,5 +140,9 @@ public class ScanCommandTests
 
 		await Assert.That(await ScanAsync(player, $"@scan/zone {word} test"))
 			.Contains($"#{DBRef.Parse(zone).Number}/CMD_ZONE");
+
+		await Assert.That(await ScanAsync(player, $"@scan/room {word} test"))
+			.DoesNotContain("CMD_ZONE")
+			.Because("a zone object is not in the room, so /room must not reach it");
 	}
 }

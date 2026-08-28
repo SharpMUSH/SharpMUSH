@@ -476,7 +476,8 @@ public class UtilityCommandTests
 		var createResult = await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@create ScanColonObj_{uniqueSuffix}"));
 		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
-		await Assert.That(createdDbref).StartsWith("#");
+		await Assert.That(createdDbref).StartsWith("#")
+			.Because($"@create should return a dbref; got: '{createdDbref}'");
 
 		// \\: survives attribute-set evaluation as \:, the form PennMUSH stores.
 		await Parser.CommandParse(1, ConnectionService,
@@ -489,6 +490,13 @@ public class UtilityCommandTests
 		await Assert.That(scanResult.Message?.ToPlainText() ?? string.Empty)
 			.Contains($"#{dbrefNum}/{attrName}")
 			.Because(@"the stored \: is a literal colon in the pattern, so ""<word>:go north"" matches");
+
+		// The near miss. The colon is the whole point: without it the line is a space away from the
+		// pattern and must not match. (There is no companion "typed backslash" case - a command line is
+		// evaluated before it is matched, so \\: on the way in collapses to the same : as above.)
+		var nearMiss = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@scan {commandWord} go north"));
+		await Assert.That(nearMiss.Message?.ToPlainText() ?? string.Empty).DoesNotContain(attrName);
 	}
 
 	[Test]

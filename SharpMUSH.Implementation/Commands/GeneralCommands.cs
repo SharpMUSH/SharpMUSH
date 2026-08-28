@@ -2298,8 +2298,10 @@ public partial class Commands
 			// ReportMatches guards it now.
 			var masterRoom = new DBRef(Convert.ToInt32(Configuration!.CurrentValue.Database.MasterRoom));
 
-			// Penn skips the master room when a branch above has already covered it: the executor is
-			// standing in it, or it is the location's zone, or the executor's own zone (src/game.c:1984).
+			// Penn's own guard, verbatim: skip when the executor stands in the master room, or the master
+			// room is either zone (src/game.c:1984). Note it tests only those three dbrefs - it does NOT
+			// ask whether the ROOM or ZONE branch actually ran, so `@scan/globals` from inside the master
+			// room reports nothing in PennMUSH too. Kept as-is for parity rather than "improved".
 			var alreadyScanned = here?.Object().DBRef == masterRoom
 				|| hereZone?.Object().DBRef == masterRoom
 				|| personalZone?.Object().DBRef == masterRoom;
@@ -2317,9 +2319,12 @@ public partial class Commands
 		{
 			if (zone.IsRoom)
 			{
-				// Penn will not re-report a Zone Master Room the executor is standing in - CHECK_HERE
-				// and CHECK_NEIGHBORS have covered it already.
-				if (here?.Object().DBRef != zone.Object().DBRef)
+				// Penn guards both zone blocks with the same expression - Location(player) != Zone(player)
+				// (src/game.c:1937, 1971) - which compares the location to the PERSONAL zone even while
+				// scanning the location's zone. Reads like a slip, but it is what Penn does, and it is
+				// materially different from comparing against the zone being scanned: with no personal
+				// zone set, Zone(player) is NOTHING and the location's Zone Master Room is always scanned.
+				if (here?.Object().DBRef != personalZone?.Object().DBRef)
 				{
 					await ReportMatches(Mediator!.CreateStream(new GetContentsQuery(zone.Object().DBRef))
 						?.Select(x => x.WithRoomOption()) ?? AsyncEnumerable.Empty<AnySharpObject>());
