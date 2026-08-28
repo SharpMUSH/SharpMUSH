@@ -31,7 +31,8 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 			if (!match.Success)
 				continue;
 
-			var pattern = match.Groups[1].Value;
+			// Same separator unescaping as CommandAttributeScanner — Penn runs one scan for both sigils.
+			var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);
 			var isRegex = attr.Flags.Any(flag => flag.Name.Equals("REGEXP", StringComparison.OrdinalIgnoreCase));
 			var behavior = ListenBehavior.AHear;
 			if (attr.Flags.Any(flag => flag.Name == "AAHEAR"))
