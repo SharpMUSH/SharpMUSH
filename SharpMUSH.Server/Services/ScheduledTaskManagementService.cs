@@ -1,9 +1,11 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Quartz;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.ExpandedObjectData;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
 
@@ -168,10 +170,19 @@ public partial class ScheduledTaskManagementService(
 	}
 
 	/// <summary>
-	/// Quartz job that updates the NextPurgeTime in UptimeData.
+	/// Quartz job that runs the purge cycle and schedules the next one — PennMUSH's
+	/// <c>purge_interval</c> timer (<c>src/timers.c</c> calling <c>purge()</c>).
 	/// </summary>
+	/// <remarks>
+	/// The trigger fires far more often than <c>purge_interval</c> (see StartAsync's checkInterval),
+	/// so <c>NextPurgeTime</c> is the real gate: the purge runs only when that deadline has passed,
+	/// and the deadline is pushed forward first so a purge that outlives its own interval cannot
+	/// stack up behind itself.
+	/// </remarks>
 	public class UpdatePurgeTimeJob(
 		IExpandedObjectDataService dataService,
+		IObjectDestructionService destructionService,
+		IServiceProvider serviceProvider,
 		ILogger<UpdatePurgeTimeJob> logger) : IJob
 	{
 		public async Task Execute(IJobExecutionContext context)
@@ -183,22 +194,27 @@ public partial class ScheduledTaskManagementService(
 
 				if (data == null)
 				{
-					logger.LogWarning("UptimeData not found - skipping purge time update");
+					logger.LogWarning("UptimeData not found - skipping purge");
 					return;
 				}
 
 				var now = DateTimeOffset.UtcNow;
-				if (data.NextPurgeTime <= now)
+				if (data.NextPurgeTime > now)
 				{
-					var newPurgeTime = now + interval;
-					data = data with { NextPurgeTime = newPurgeTime };
-					await dataService.SetExpandedServerDataAsync(data);
-					logger.LogInformation("Updated NextPurgeTime to {Time}", newPurgeTime);
+					return;
 				}
+
+				var newPurgeTime = now + interval;
+				await dataService.SetExpandedServerDataAsync(data with { NextPurgeTime = newPurgeTime });
+
+				var parser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
+				var freed = await destructionService.PurgeAsync(parser, context.CancellationToken);
+
+				logger.LogInformation("Purge freed {Freed} object(s); next purge at {Time}", freed, newPurgeTime);
 			}
 			catch (Exception ex)
 			{
-				logger.LogError(ex, "Error updating purge time");
+				logger.LogError(ex, "Error running the purge cycle");
 			}
 		}
 	}

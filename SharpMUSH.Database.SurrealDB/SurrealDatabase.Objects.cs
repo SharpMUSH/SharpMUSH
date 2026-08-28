@@ -477,6 +477,63 @@ public partial class SurrealDatabase
 			parameters["maxKey"] = filter.MaxDbRef.Value;
 		}
 
+		// Relationship and flag/power predicates. These were absent, and their absence was invisible:
+		// with none of them contributing a condition, a caller asking for "objects owned by #7" got
+		// `SELECT * FROM object` — the entire database, reported as a filtered result.
+		//
+		// Each relation lookup is LET-bound rather than inlined into the WHERE. SurrealDB re-evaluates
+		// an inline `WHERE id IN (subquery)` once per row of the outer table, which makes the filter
+		// quadratic in database size; LET evaluates it once. Measured on the embedded engine over
+		// databases of 50 / 150 / 300 objects, the inline owner filter cost 23ms / 162ms / 599ms, and
+		// on a CI runner that curve reached the driver's 30s query timeout — which the SurrealDB
+		// embedded driver mishandles by completing an already-completed TaskCompletionSource from a
+		// native callback, aborting the process. Bound, it is 3ms / 3ms / 5ms.
+		//
+		// Comparing `out` to a whole record id rather than reaching through it for `out.key` matters
+		// too, since only the former can use the `out` indexes. See GetEntrancesAsync for the same
+		// pair of fixes on the same shape.
+		var bindings = new List<string>();
+
+		if (filter.Owner.HasValue)
+		{
+			bindings.Add("LET $ownedIds = (SELECT VALUE in FROM has_owner WHERE out = player:$ownerKey)");
+			conditions.Add("id IN $ownedIds");
+			parameters["ownerKey"] = filter.Owner.Value.Number;
+		}
+		if (filter.Zone.HasValue)
+		{
+			bindings.Add("LET $zonedIds = (SELECT VALUE in FROM has_zone WHERE out = object:$zoneKey)");
+			conditions.Add("id IN $zonedIds");
+			parameters["zoneKey"] = filter.Zone.Value.Number;
+		}
+		if (filter.Parent.HasValue)
+		{
+			bindings.Add("LET $childIds = (SELECT VALUE in FROM has_parent WHERE out = object:$parentKey)");
+			conditions.Add("id IN $childIds");
+			parameters["parentKey"] = filter.Parent.Value.Number;
+		}
+		if (!string.IsNullOrEmpty(filter.HasFlag))
+		{
+			// Case-insensitive matching runs against the flag table (a hundred-odd rows, scanned once)
+			// rather than through every has_flags edge. The type disjunct reproduces the type-named flag
+			// GetObjectFlagsAsync synthesises, which no has_flags edge backs but HelperFunctions.HasFlag
+			// still reports.
+			bindings.Add("LET $matchingFlags = (SELECT VALUE id FROM object_flag "
+				+ "WHERE string::lowercase(name) = $flagName)");
+			bindings.Add("LET $flaggedIds = (SELECT VALUE in FROM has_flags WHERE out IN $matchingFlags)");
+			conditions.Add("(string::lowercase(type) = $flagName OR id IN $flaggedIds)");
+			parameters["flagName"] = filter.HasFlag.ToLowerInvariant();
+		}
+		if (!string.IsNullOrEmpty(filter.HasPower))
+		{
+			// Alias as well as name, mirroring HelperFunctions.HasPower.
+			bindings.Add("LET $matchingPowers = (SELECT VALUE id FROM power "
+				+ "WHERE string::lowercase(name) = $powerName OR string::lowercase(alias) = $powerName)");
+			bindings.Add("LET $poweredIds = (SELECT VALUE in FROM has_powers WHERE out IN $matchingPowers)");
+			conditions.Add("id IN $poweredIds");
+			parameters["powerName"] = filter.HasPower.ToLowerInvariant();
+		}
+
 		var whereClause = conditions.Count > 0 ? $"WHERE {string.Join(" AND ", conditions)}" : "";
 
 		var limitClause = "";
@@ -489,10 +546,12 @@ public partial class SurrealDatabase
 				limitClause = $"START {skip}";
 		}
 
-		var query = $"SELECT * FROM object {whereClause} {limitClause}";
+		var prelude = bindings.Count > 0 ? string.Join(";", bindings) + ";" : "";
+		var query = $"{prelude}SELECT * FROM object {whereClause} {limitClause}";
 		var response = await ExecuteAsync(query, parameters, cancellationToken);
 
-		var results = response.GetValue<List<ObjectRecord>>(0)!;
+		// The SELECT is the last statement; each LET above occupies a response slot ahead of it.
+		var results = response.GetValue<List<ObjectRecord>>(bindings.Count)!;
 		foreach (var record in results)
 		{
 			yield return MapRecordToSharpObject(record);
@@ -518,17 +577,57 @@ public partial class SurrealDatabase
 		}
 	}
 
+	public async IAsyncEnumerable<AnySharpContent> GetHomedAtAsync(DBRef home,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		// has_home links content → its home. Rooms come back too (a room's drop-to reuses this edge)
+		// and are dropped below, because a drop-to is not a home.
+		//
+		// Compares `out` to a whole record id rather than reaching through it for `out.key`, which
+		// would dereference the linked record on every row of has_home. This one is a standalone
+		// query, so it is linear either way rather than quadratic like the `WHERE ... IN (subquery)`
+		// forms nearby — but object destruction calls it per object destroyed, and a room takes its
+		// exits with it, so the constant matters.
+		var homeNode = await GetObjectNodeAsync(home, cancellationToken);
+		if (homeNode.IsNone) yield break;
+
+		var homeTable = ExtractTable(homeNode.Known.Id()!);
+		var response = await ExecuteAsync(
+			$"SELECT VALUE in.key FROM has_home WHERE out = {homeTable}:$homeKey",
+			new Dictionary<string, object?> { ["homeKey"] = home.Number }, cancellationToken);
+
+		foreach (var key in response.GetValue<List<int>>(0) ?? [])
+		{
+			var candidate = await GetObjectNodeAsync(new DBRef(key), cancellationToken);
+			if (candidate.IsNone || candidate.IsRoom) continue;
+
+			yield return candidate.Known.AsContent;
+		}
+	}
+
 	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
+		// The destination is resolved first so the subquery can compare `out` to a whole record id, and
+		// the subquery is LET-bound rather than inlined. Both matter, and the second matters more:
+		// SurrealDB re-evaluates an inline `WHERE ... IN (subquery)` once per row of the outer table,
+		// so this walked all of has_home for every exit in the database. Measured on the embedded
+		// engine over databases of 50 / 150 / 300 objects, it cost 10ms / 71ms / 238ms while returning
+		// nothing at all. Index-backed comparison alone only brought that to 179ms; the LET makes it
+		// 2ms / 1ms / 2ms.
+		var destinationNode = await GetObjectNodeAsync(destination, cancellationToken);
+		if (destinationNode.IsNone) yield break;
+
+		var destinationTable = ExtractTable(destinationNode.Known.Id()!);
 		var parameters = new Dictionary<string, object?> { ["destKey"] = destination.Number };
 
 		// Find exits whose destination (has_home) points to the target.
 		// has_home links exit → destination; at_location links exit → source room.
 		var response = await ExecuteAsync(
-			"SELECT VALUE key FROM exit WHERE key IN (SELECT VALUE in.key FROM has_home WHERE out.key = $destKey)",
+			$"LET $candidates = (SELECT VALUE in.key FROM has_home WHERE out = {destinationTable}:$destKey);"
+			+ "SELECT VALUE key FROM exit WHERE key IN $candidates",
 			parameters, cancellationToken);
 
-		var exitKeys = response.GetValue<List<int>>(0) ?? [];
+		var exitKeys = response.GetValue<List<int>>(1) ?? [];
 
 		foreach (var key in exitKeys)
 		{
@@ -687,6 +786,85 @@ public partial class SurrealDatabase
 			["warnings"] = (int)warnings
 		};
 		await ExecuteAsync("UPDATE object:$key SET warnings = $warnings", parameters, cancellationToken);
+	}
+
+	/// <summary>
+	/// Every relation table an object vertex can appear in, as <c>in</c> or as <c>out</c>. Object
+	/// deletion sweeps all of them — the inbound half is what unsets other objects' parent/zone/
+	/// home/location references to the deleted object, standing in for the <c>db_top</c> scan in
+	/// PennMUSH's <c>free_object()</c> (<c>src/destroy.c</c>) that a graph store cannot do.
+	/// </summary>
+	private static readonly string[] ObjectRelationTables =
+	[
+		"account_has_role", "account_owns_character", "at_location", "has_attribute",
+		"has_attribute_entry", "has_attribute_flag", "has_attribute_owner", "has_flags",
+		"has_home", "has_owner", "has_parent", "has_powers", "has_zone", "is_object",
+		"mail_sender", "member_of_channel", "owner_of_channel", "received_mail"
+	];
+
+	public async ValueTask<bool> DeleteObjectAsync(DBRef dbref, CancellationToken cancellationToken = default)
+	{
+		var node = await GetObjectNodeAsync(dbref, cancellationToken);
+		if (node.IsNone)
+		{
+			return false;
+		}
+
+		var known = node.Known;
+		var name = known.Object().Name;
+		var table = ExtractTable(known.Id()!);
+		var key = dbref.Number;
+
+		// Attributes first, one subtree at a time, reusing the same leaf-before-branch walk @WIPE uses.
+		var topLevelAttributes = await ExecuteAsync(
+			"SELECT VALUE key FROM type::thing($table, $key)->has_attribute->attribute",
+			new Dictionary<string, object?> { ["table"] = table, ["key"] = key }, cancellationToken);
+
+		foreach (var attributeKey in topLevelAttributes.GetValue<List<string>>(0) ?? [])
+		{
+			if (string.IsNullOrEmpty(attributeKey)) continue;
+
+			await WipeAttributeDescendantsAsync(attributeKey, cancellationToken);
+			await ExecuteAsync(
+				"BEGIN TRANSACTION;" +
+				"DELETE has_attribute WHERE out = attribute:⟨$attributeKey⟩;" +
+				"DELETE has_attribute WHERE in = attribute:⟨$attributeKey⟩;" +
+				"DELETE has_attribute_flag WHERE in = attribute:⟨$attributeKey⟩;" +
+				"DELETE has_attribute_owner WHERE in = attribute:⟨$attributeKey⟩;" +
+				"DELETE has_attribute_entry WHERE in = attribute:⟨$attributeKey⟩;" +
+				"DELETE attribute:⟨$attributeKey⟩;" +
+				"COMMIT TRANSACTION",
+				new Dictionary<string, object?> { ["attributeKey"] = attributeKey }, cancellationToken);
+		}
+
+		// Mail *received* dies with the object (PennMUSH clear_player -> do_mail_clear + do_mail_purge).
+		// Mail it sent to others survives with a dangling sender; MailFromAsync already yields None there.
+		// LET binds the ids up front because deleting received_mail would otherwise destroy the subquery.
+		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"LET $doomedMail = (SELECT VALUE out FROM received_mail WHERE in = type::thing($table, $key));" +
+			"DELETE mail_sender WHERE in IN $doomedMail;" +
+			"DELETE received_mail WHERE out IN $doomedMail;" +
+			"DELETE mail WHERE id IN $doomedMail;" +
+			"COMMIT TRANSACTION",
+			new Dictionary<string, object?> { ["table"] = table, ["key"] = key }, cancellationToken);
+
+		var sweep = string.Join(string.Empty, ObjectRelationTables.Select(relation =>
+			$"DELETE {relation} WHERE in IN $doomed OR out IN $doomed;"));
+
+		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"LET $doomed = [type::thing($table, $key), object:$key];" +
+			sweep +
+			"DELETE object_data WHERE objectKey = $key;" +
+			"DELETE type::thing($table, $key);" +
+			"DELETE object:$key;" +
+			"COMMIT TRANSACTION",
+			new Dictionary<string, object?> { ["table"] = table, ["key"] = key }, cancellationToken);
+
+		logger.LogInformation("Deleted object #{DbRef} ({Name}) from the database", key, name);
+
+		return true;
 	}
 
 	#endregion

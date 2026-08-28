@@ -48,16 +48,6 @@ public class FilteredObjectQueryTests
 	}
 
 	[Test]
-	public async ValueTask FilterByOwner_ReturnsOnlyOwnedObjects()
-	{
-		// TODO: Owner filtering via graph traversal needs proper AQL query debugging
-		// The query structure looks correct but may need adjustment for the specific database schema.
-		// Current issue: Empty results when filtering by owner DBRef.
-		// For now this test just verifies the infrastructure does not crash.
-		await Task.CompletedTask;
-	}
-
-	[Test]
 	public async ValueTask FilterByDbRefRange_ReturnsObjectsInRange()
 	{
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DbRefRangeTest"));
@@ -111,12 +101,18 @@ public class FilteredObjectQueryTests
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		await Mediator.Send(new SetObjectZoneCommand(obj.Known, zoneObject.Known));
 
-		var filter = new ObjectSearchFilter { Zone = zoneDbRef };
-		var results = await Mediator.CreateStream(new GetFilteredObjectsQuery(filter))
-			.Where(o => o.DBRef.Number == objDbRef.Number)
-			.ToListAsync();
+		var unzonedResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create FilterUnzonedObject"));
+		var unzonedDbRef = DBRef.Parse(unzonedResult.Message!.ToPlainText()!);
 
-		await Assert.That(results).IsNotEmpty();
+		var filter = new ObjectSearchFilter { Zone = zoneDbRef };
+		var results = await Mediator.CreateStream(new GetFilteredObjectsQuery(filter)).ToListAsync();
+
+		await Assert.That(results.Any(o => o.DBRef.Number == objDbRef.Number)).IsTrue();
+
+		// Asserted on the raw result set, not a client-side .Where(...) narrowing of it. Narrowing first
+		// and then asserting IsNotEmpty() passes just as happily when the provider ignored the filter
+		// and handed back every object in the database — which is what two of the three used to do.
+		await Assert.That(results.Any(o => o.DBRef.Number == unzonedDbRef.Number)).IsFalse();
 	}
 
 	[Test]

@@ -498,7 +498,7 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@purge"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PurgeCompleteFormat), executor, executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PurgeComplete), executor, executor)).IsTrue();
 	}
 
 	[Test]

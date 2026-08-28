@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Quartz;
 using SharpMUSH.Library.ExpandedObjectData;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 
@@ -178,13 +179,21 @@ public class ScheduledTaskManagementServiceTests
 		jobContext.JobDetail.Returns(jobDetail);
 		jobDetail.JobDataMap.Returns(jobDataMap);
 
-		var job = new ScheduledTaskManagementService.UpdatePurgeTimeJob(dataService, logger);
+		var destructionService = Substitute.For<IObjectDestructionService>();
+		var serviceProvider = Substitute.For<IServiceProvider>();
+		serviceProvider.GetService(typeof(IMUSHCodeParser)).Returns(Substitute.For<IMUSHCodeParser>());
+
+		var job = new ScheduledTaskManagementService.UpdatePurgeTimeJob(
+			dataService, destructionService, serviceProvider, logger);
 
 		await job.Execute(jobContext);
 
 		await dataService.Received(1).SetExpandedServerDataAsync(
 			Arg.Is<UptimeData>(d => d.NextPurgeTime > now && d.NextPurgeTime <= now.AddHours(1.1))
 		);
+
+		// The deadline moving forward is not the point of the job any more — the purge is.
+		await destructionService.Received(1).PurgeAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -209,11 +218,20 @@ public class ScheduledTaskManagementServiceTests
 		jobContext.JobDetail.Returns(jobDetail);
 		jobDetail.JobDataMap.Returns(jobDataMap);
 
-		var job = new ScheduledTaskManagementService.UpdatePurgeTimeJob(dataService, logger);
+		var destructionService = Substitute.For<IObjectDestructionService>();
+		var serviceProvider = Substitute.For<IServiceProvider>();
+		serviceProvider.GetService(typeof(IMUSHCodeParser)).Returns(Substitute.For<IMUSHCodeParser>());
+
+		var job = new ScheduledTaskManagementService.UpdatePurgeTimeJob(
+			dataService, destructionService, serviceProvider, logger);
 
 		await job.Execute(jobContext);
 
 		await dataService.DidNotReceive().SetExpandedServerDataAsync(Arg.Any<UptimeData>());
+
+		// Before the deadline, nothing is destroyed — this is the guard that keeps the frequent
+		// trigger from purging on every tick.
+		await destructionService.DidNotReceive().PurgeAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]

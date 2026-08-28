@@ -86,6 +86,35 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 		return new DBRef(nextKey, now);
 	}
 
+	public async ValueTask<bool> DeleteObjectAsync(DBRef dbref, CancellationToken cancellationToken = default)
+	{
+		var node = await GetObjectNodeAsync(dbref, cancellationToken);
+		if (node.IsNone)
+		{
+			return false;
+		}
+
+		var name = node.Known.Object().Name;
+
+		// DETACH DELETE drops every incident relationship with the node, so the inbound half -- another
+		// object's HAS_PARENT / HAS_ZONE / HAS_HOME / AT_LOCATION pointing here -- is unset in the same
+		// step. That is the graph-native equivalent of the db_top scan in PennMUSH's free_object()
+		// (src/destroy.c). Mail *received* dies with the object (clear_player -> do_mail_clear +
+		// do_mail_purge); mail it sent survives with a dangling sender, which MailFromAsync tolerates.
+		await ExecuteWithRetryAsync("""
+MATCH (o:Object {key: $key})
+OPTIONAL MATCH (typed)-[:IS_OBJECT]->(o)
+OPTIONAL MATCH (typed)-[:HAS_ATTRIBUTE*1..]->(attr:Attribute)
+OPTIONAL MATCH (typed)-[:RECEIVED_MAIL]->(mail:Mail)
+OPTIONAL MATCH (o)-[:HAS_EXPANDED_DATA]->(data:ExpandedObjectData)
+DETACH DELETE attr, mail, data, typed, o
+""", new { key = dbref.Number }, cancellationToken);
+
+		logger.LogInformation("Deleted object #{DbRef} ({Name}) from the database", dbref.Number, name);
+
+		return true;
+	}
+
 	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
 	SharpPlayer creator, CancellationToken cancellationToken = default)
 	{
@@ -331,6 +360,52 @@ RETURN o, p
 			parameters["maxKey"] = filter.MaxDbRef.Value;
 		}
 
+		// Relationship predicates as inner MATCHes: the object must have the edge, which is exactly
+		// what an inner join gives. These were absent, and their absence was invisible — with no
+		// condition contributed, a caller asking for "objects owned by #7" got `MATCH (o:Object)
+		// RETURN o`, the entire database, reported as a filtered result.
+		var joins = new List<string>();
+
+		if (filter.Owner.HasValue)
+		{
+			joins.Add("MATCH (o)-[:HAS_OWNER]->(:Player {key: $ownerKey})");
+			parameters["ownerKey"] = filter.Owner.Value.Number;
+		}
+		if (filter.Zone.HasValue)
+		{
+			joins.Add("MATCH (o)-[:HAS_ZONE]->(:Object {key: $zoneKey})");
+			parameters["zoneKey"] = filter.Zone.Value.Number;
+		}
+		if (filter.Parent.HasValue)
+		{
+			joins.Add("MATCH (o)-[:HAS_PARENT]->(:Object {key: $parentKey})");
+			parameters["parentKey"] = filter.Parent.Value.Number;
+		}
+
+		// Flags and powers need OPTIONAL MATCH + collect rather than an inner join, because both match
+		// case-insensitively and the flag predicate also has to accept a type name — GetObjectFlagsAsync
+		// synthesises a type-named flag that no HAS_FLAG edge backs, and HelperFunctions.HasFlag sees it.
+		var stages = new List<string>();
+
+		if (!string.IsNullOrEmpty(filter.HasFlag))
+		{
+			stages.Add("WITH DISTINCT o "
+				+ "OPTIONAL MATCH (o)-[:HAS_FLAG]->(flag:ObjectFlag) "
+				+ "WITH o, collect(toLower(flag.name)) AS flagNames "
+				+ "WHERE $flagName IN flagNames OR toLower(o.type) = $flagName");
+			parameters["flagName"] = filter.HasFlag.ToLowerInvariant();
+		}
+		if (!string.IsNullOrEmpty(filter.HasPower))
+		{
+			// Alias as well as name, mirroring HelperFunctions.HasPower. collect() drops nulls, so a
+			// power with no alias contributes nothing rather than a null entry.
+			stages.Add("WITH DISTINCT o "
+				+ "OPTIONAL MATCH (o)-[:HAS_POWER]->(power:Power) "
+				+ "WITH o, collect(toLower(power.name)) + collect(toLower(power.alias)) AS powerNames "
+				+ "WHERE $powerName IN powerNames");
+			parameters["powerName"] = filter.HasPower.ToLowerInvariant();
+		}
+
 		var whereClause = conditions.Count > 0 ? $"WHERE {string.Join(" AND ", conditions)}" : "";
 		var limitClause = "";
 		if (filter.Skip.HasValue || filter.Limit.HasValue)
@@ -342,7 +417,8 @@ RETURN o, p
 				limitClause = $"SKIP {skip}";
 		}
 
-		var cypher = $"MATCH (o:Object) {whereClause} RETURN o {limitClause}";
+		var cypher = $"MATCH (o:Object) {string.Join(" ", joins)} {whereClause} "
+			+ $"{string.Join(" ", stages)} RETURN DISTINCT o {limitClause}";
 		var result = await ExecuteWithRetryAsync(cypher, parameters, cancellationToken);
 
 		foreach (var record in result.Result)
@@ -368,21 +444,38 @@ RETURN o, p
 		}
 	}
 
-	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+	public async IAsyncEnumerable<AnySharpContent> GetHomedAtAsync(DBRef home,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
+		// HAS_HOME links content → its home. Rooms are excluded in the match: a room reuses this
+		// relationship for its drop-to, which is not a home.
 		var result = await ExecuteWithRetryAsync("""
-MATCH (e:Exit)-[:AT_LOCATION]->(dest {key: $destKey})
-MATCH (e)-[:IS_OBJECT]->(o:Object {type: 'EXIT'})
-RETURN o, e
-""", new { destKey = destination.Number }, cancellationToken);
+MATCH (c)-[:HAS_HOME]->(dest {key: $homeKey})
+WHERE c:Player OR c:Thing OR c:Exit
+RETURN c.key AS key
+""", new { homeKey = home.Number }, cancellationToken);
 
 		foreach (var record in result.Result)
 		{
-			var objNode = record["o"].As<INode>();
-			var exitNode = record["e"].As<INode>();
-			var sharpObj = MapNodeToSharpObject(objNode);
-			var key = objNode["key"].As<int>();
-			yield return BuildExit(ExitId(key), exitNode, sharpObj);
+			var candidate = await GetObjectNodeAsync(new DBRef(record["key"].As<int>()), cancellationToken);
+			if (candidate.IsNone || candidate.IsRoom) continue;
+
+			yield return candidate.Known.AsContent;
+		}
+	}
+
+	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		// An exit's destination is HAS_HOME (AT_LOCATION is its *source* room), so entrances are the
+		// exit-shaped subset of what is homed here. Matching on AT_LOCATION returned the exits leading
+		// OUT of the room instead — the exact opposite set.
+		await foreach (var content in GetHomedAtAsync(destination, cancellationToken))
+		{
+			if (content.IsExit)
+			{
+				yield return content.AsExit;
+			}
 		}
 	}
 
