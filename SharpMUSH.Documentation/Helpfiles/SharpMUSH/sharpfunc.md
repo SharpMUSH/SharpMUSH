@@ -701,7 +701,7 @@ would show white text on an ANSI-blue background.
 - [colors()]
 # ANSI2
   Old-style valid color codes are:
-```
+```text
         f - flash                       F - not flash
         h - hilite                      H - not hilite
         u - underscore                  U - not underscore
@@ -1592,7 +1592,7 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
   div() returns the integer part of the quotient. floordiv() returns the largest integer less than or equal to the quotient; for positive numbers, they are identical, but for negative numbers they may differ. fdiv() returns the floating-point quotient.
 
   Examples:
-```
+```sharp
    div(13,4)          ==>   3      and     floordiv(13,4)     ==>   3
    div(-13,4)         ==>  -3      but     floordiv(-13,4)    ==>  -4
    div(13,-4)         ==>  -3      but     floordiv(13,-4)    ==>  -4

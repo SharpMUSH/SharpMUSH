@@ -79,7 +79,7 @@ Attributes can be arranged in a hierarchical tree; these are called "attribute t
 
 Attribute trees use the backtick (\`) character to separate their components (much as filesystems use / or \\). For example, the following attribute name would be a couple levels down in its tree:
 
-```
+```sharp
 CHAR`SKILLS`PHYSICAL
 ```
 

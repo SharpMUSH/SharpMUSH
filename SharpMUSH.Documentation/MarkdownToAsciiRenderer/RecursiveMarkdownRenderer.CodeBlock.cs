@@ -34,9 +34,12 @@ public partial class RecursiveMarkdownRenderer
 			if (colored is not null) return MModule.MarkupSingle2(CodeBackgroundStyle, colored);
 		}
 
-		// Apply background styling to unlabeled fenced code blocks so they are visually
-		// distinct from regular prose, consistent with labelled code blocks.
-		if (code is FencedCodeBlock fencedPlain && string.IsNullOrWhiteSpace(fencedPlain.Info))
+		// Apply background styling to every fenced code block that was not syntax-highlighted
+		// above: no language tag at all, or a tag that neither the softcode highlighter nor
+		// ColorCode recognises (e.g. ```text). Both cases render as plain 2-space-indented
+		// text, so they must look alike — only indented (non-fenced) code blocks fall through
+		// to the unstyled path below.
+		if (code is FencedCodeBlock fencedPlain)
 		{
 			var bgLines = fencedPlain.Lines.Lines?
 				.Where(line => line.Slice.Text != null)

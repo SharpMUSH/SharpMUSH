@@ -256,7 +256,7 @@ In the past, players set DARK were automatically hidden from the WHO list via `@
 
 The DEBUG flag is used for debugging MUSHcode. When an object is set DEBUG, all parser evaluation results will be shown to the object's owner and to any dbrefs in the object's DEBUGFORWARDLIST, in the format:
 
-```
+```text
 #dbref! <string to evaluate> :
 #dbref!  recursive evaluation of functions in string
 #dbref! <string to evaluate> => <evaluated string>
@@ -565,7 +565,7 @@ The UNINSPECTED flag is used by some MUSHes to mark new players who haven't been
 
 The VERBOSE flag is similar to DEBUG, but shows less information. When an object is set VERBOSE, all command evaluation results will be shown to the object's owner, in the format:
 
-```
+```text
 #dbref! <string to evaluate> => <evaluated string>
 ```
 

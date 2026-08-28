@@ -289,7 +289,7 @@ Channel locks are managed by the separate `@clock` command, not by a `@channel` 
 # @CHANNEL LIST
 
 The output of `@channel/list` looks like this:
-```
+```text
 Channel        Status  Lock                  Description
 Public         On-     *UNLOCKED*           Public chat channel
 Admin          Off     =WIZARD              Administrative discussion
