@@ -124,9 +124,9 @@ public static class SharpAttributeExtensions
 	/// (<c>src/attrib.c:1935, 1984</c>) - only <c>flag_mask</c> and the object-level
 	/// <c>NoCommand(thing)</c> check differ between <c>$</c> and <c>^</c>.
 	/// <para>
-	/// Note <see cref="CommandDiscoveryService.ListenPatternRegex"/> is deliberately the naive
-	/// <c>[^:]+</c> form rather than the command regex's escape-aware lookbehind; this follows the
-	/// handler that dispatches listens rather than diverging from it.
+	/// <see cref="CommandDiscoveryService.ListenPatternRegex"/> is escape-aware for the same reason
+	/// the command one is — <c>set_cmd_flags</c> runs one scan for both sigils — so <c>\:</c> is not a
+	/// terminator here either.
 	/// </para>
 	/// </summary>
 	public static bool IsListen(this SharpAttribute attribute)

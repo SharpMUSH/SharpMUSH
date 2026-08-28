@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -8,11 +7,8 @@ namespace SharpMUSH.Library.Services;
 /// Pure changeset computation for package installs and upgrades
 /// (decisions 20.7, 20.15, 20.20). See <see cref="IPackagePlanService"/>.
 /// </summary>
-public partial class PackagePlanService : IPackagePlanService
+public class PackagePlanService : IPackagePlanService
 {
-	[GeneratedRegex(@"^\$(?<pattern>[^:]+):", RegexOptions.Singleline)]
-	private static partial Regex CommandPatternRegex();
-
 	public PackageChangeset ComputeChangeset(PackagePlanInputs inputs)
 	{
 		var manifest = inputs.Manifest;
@@ -586,17 +582,25 @@ public partial class PackagePlanService : IPackagePlanService
 	/// Extracts the normalized command pattern from a <c>$pattern:action</c>
 	/// attribute value (lowercased, whitespace collapsed), or null when the
 	/// value does not define a command.
+	/// <para>
+	/// Uses the dispatcher's own split and separator unescaping rather than a local
+	/// <c>[^:]+</c>: two packages collide when the commands they install match the same input, and
+	/// that is decided by the pattern <c>CommandAttributeScanner</c> compiles, not by the raw text.
+	/// <c>$foo\:bar:…</c> is one command named <c>foo:bar</c> — cutting it at the escaped colon
+	/// compared <c>foo\</c> instead and missed the collision.
+	/// </para>
 	/// </summary>
 	public static string? ExtractCommandPattern(string value)
 	{
-		var match = CommandPatternRegex().Match(value);
+		var match = CommandDiscoveryService.CommandPatternRegex().Match(value);
 		if (!match.Success)
 		{
 			return null;
 		}
 
+		var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);
 		var collapsed = string.Join(' ',
-			match.Groups["pattern"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+			pattern.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 		return collapsed.ToLowerInvariant();
 	}
 }
