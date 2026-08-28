@@ -573,13 +573,15 @@ public partial class Commands
 
 		var descriptorArg = args.TryGetValue("0", out var arg0) ? arg0.Message?.ToPlainText().Trim() ?? string.Empty : string.Empty;
 
-		var target = await ResolveSocksetTarget(parser, executor, descriptorArg);
+		var target = await ResolveSocksetTarget(parser, executor, descriptorArg, isWizard);
 		if (target is null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SocksetInvalidDescriptor), executor);
 			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
+		// PennMUSH compares *player* identity here, not descriptor identity: a player with two clients
+		// open may @sockset either of their own connections. Only reaching someone else's needs wizard.
 		var isOwnDescriptor = target.Ref == executor.Object().DBRef;
 
 		if (!isOwnDescriptor && !isWizard)
@@ -618,11 +620,18 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// PennMUSH <c>lookup_desc()</c>: an empty argument means "the descriptor I am on", a number means
-	/// that descriptor, and anything else is a player name whose least-idle connection is used.
+	/// PennMUSH <c>lookup_desc()</c> (src/bsd.c): an empty argument means "the descriptor I am on", a
+	/// number means that descriptor, and anything else is a player name whose least-idle connection is
+	/// used.
+	///
+	/// <para>
+	/// A descriptor number resolves for an unprivileged executor only when the descriptor is theirs.
+	/// PennMUSH returns NULL otherwise, so the caller reports "Invalid descriptor." rather than a
+	/// permission error: refusing by permission would tell a mortal which handle numbers are live.
+	/// </para>
 	/// </summary>
 	private static async ValueTask<IConnectionService.ConnectionData?> ResolveSocksetTarget(
-		IMUSHCodeParser parser, AnySharpObject executor, string descriptorArg)
+		IMUSHCodeParser parser, AnySharpObject executor, string descriptorArg, bool isWizard)
 	{
 		if (descriptorArg.Length == 0)
 		{
@@ -631,14 +640,21 @@ public partial class Commands
 
 		if (long.TryParse(descriptorArg, out var handle))
 		{
-			return ConnectionService!.Get(handle);
+			var connection = ConnectionService!.Get(handle);
+
+			return connection is not null && (isWizard || connection.Ref == executor.Object().DBRef)
+				? connection
+				: null;
 		}
 
 		var player = await Mediator!.CreateStream(new GetPlayerQuery(descriptorArg)).FirstOrDefaultAsync();
+		if (player is null) return null;
 
-		return player is null
-			? null
-			: await LeastIdleConnection(new DBRef(player.Object.Key, player.Object.CreationTime));
+		var playerRef = new DBRef(player.Object.Key, player.Object.CreationTime);
+
+		return isWizard || playerRef == executor.Object().DBRef
+			? await LeastIdleConnection(playerRef)
+			: null;
 	}
 
 	private static async ValueTask<IConnectionService.ConnectionData?> LeastIdleConnection(DBRef who)

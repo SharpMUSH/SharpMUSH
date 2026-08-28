@@ -212,22 +212,74 @@ public class SocketCommandTests
 	{
 		var handle = await LoggedInHandleAsync("SocksetSet");
 
-		await Assert.That(await RunForLastAsync(handle, "SOCKSET WIDTH=100")).IsEqualTo("SocksetWidthSet");
+		await Assert.That(await RunForLastAsync(handle, "SOCKSET WIDTH=100")).IsEqualTo("Width set.");
 		await Assert.That(ConnectionService.Get(handle)!.Metadata.GetValueOrDefault("WIDTH")).IsEqualTo("100");
 	}
 
 	[Test]
-	// The expectations are resource keys, not English: every one of these answers goes through
-	// NotifyLocalized, and the key names the branch the command took more precisely than its wording.
-	[Arguments("SOCKSET WIDTH=-1", "SocksetWidthNeedsPositiveInteger")]
-	[Arguments("SOCKSET WIDTH=wide", "SocksetWidthNeedsPositiveInteger")]
-	[Arguments("SOCKSET NOSUCHOPTION=1", "SocksetInvalidOptionFormat")]
-	[Arguments("SOCKSET WIDTH", "SocksetNeedsOptionAndValue")]
-	public async Task SocksetRejectsBadInput(string input, string expected)
+	[Arguments("SOCKSET WIDTH=-1", "Width expects a positive integer.")]
+	[Arguments("SOCKSET WIDTH=wide", "Width expects a positive integer.")]
+	[Arguments("SOCKSET NOSUCHOPTION=1", "@sockset option 'NOSUCHOPTION' is not a valid option.")]
+	[Arguments("SOCKSET WIDTH", "You must give an option and a value.")]
+	public async Task SocksetRejectsBadInputWithPennMushWording(string input, string expected)
 	{
 		var handle = await LoggedInHandleAsync("SocksetBad");
 
 		await Assert.That(await RunForLastAsync(handle, input)).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// PennMUSH parses these with parse_integer and does not validate: a non-numeric argument yields
+	/// zero and is stored silently, and no error is reported to a client that is very often a script.
+	/// Pinned because "invalid input is rejected" would be the natural but wrong assumption here.
+	/// </summary>
+	[Test]
+	[Arguments("SCREENWIDTH wide", "WIDTH", "0")]
+	[Arguments("SCREENHEIGHT tall", "HEIGHT", "0")]
+	[Arguments("SCREENWIDTH", "WIDTH", "0")]
+	[Arguments("PROMPT_NEWLINES yes", "PROMPT_NEWLINES", "0")]
+	public async Task DescriptorSettingsTakeUnparseableValuesAsZeroWithoutComplaining(
+		string input, string key, string expected)
+	{
+		var handle = await LoggedInHandleAsync("BadDescriptor");
+
+		var said = await RunAsync(handle, input);
+
+		await Assert.That(ConnectionService.Get(handle)!.Metadata.GetValueOrDefault(key)).IsEqualTo(expected);
+		await Assert.That(said).IsEmpty();
+	}
+
+	/// <summary>
+	/// The SOCKSET route and the direct command route share no code, so the option engine's
+	/// validation must not be assumed to cover the direct one.
+	/// </summary>
+	[Test]
+	public async Task SocksetRejectsAWidthTheDirectCommandWouldHaveAccepted()
+	{
+		var handle = await LoggedInHandleAsync("SocksetVsDirect");
+
+		await RunAsync(handle, "SCREENWIDTH wide");
+		await Assert.That(ConnectionService.Get(handle)!.Metadata.GetValueOrDefault("WIDTH")).IsEqualTo("0");
+
+		await Assert.That(await RunForLastAsync(handle, "SOCKSET WIDTH=wide"))
+			.IsEqualTo("Width expects a positive integer.");
+		await Assert.That(ConnectionService.Get(handle)!.Metadata.GetValueOrDefault("WIDTH")).IsEqualTo("0");
+	}
+
+	/// <summary>
+	/// PennMUSH runs both routes through set_userstring, so a whitespace-only value clears rather than
+	/// storing spaces. Without this the two routes disagreed: SOCKSET stored "   " and Show() reported
+	/// a prefix as set, while the bare command cleared it.
+	/// </summary>
+	[Test]
+	public async Task SocksetClearsAWhitespaceOnlyPrefixJustAsTheCommandDoes()
+	{
+		var handle = await LoggedInHandleAsync("PrefixBlank");
+
+		await RunAsync(handle, "OUTPUTPREFIX >>");
+		await Assert.That(await RunForLastAsync(handle, "SOCKSET OUTPUTPREFIX=   "))
+			.IsEqualTo("OUTPUTPREFIX cleared.");
+		await Assert.That(ConnectionService.Get(handle)!.Metadata.ContainsKey("OutputPrefix")).IsFalse();
 	}
 
 	// --- DOING / SESSION at the connect screen --------------------------------------------------
@@ -239,6 +291,8 @@ public class SocketCommandTests
 	[Test]
 	[Arguments("DOING")]
 	[Arguments("SESSION")]
+	[Arguments("DOINGfoo")]
+	[Arguments("SESSIONfoo")]
 	public async Task DoingAndSessionShowTheWhoListingAtTheConnectScreen(string input)
 	{
 		var handle = await AnonymousHandleAsync();
@@ -256,32 +310,19 @@ public class SocketCommandTests
 	/// Runs one line of input and returns only what that line produced. Registering a handle already
 	/// sends it the connect screen, so the notifications are windowed around the command rather than
 	/// read from the whole session — otherwise "this command says nothing" can never be asserted.
-	/// Both <c>Notify</c> and <c>NotifyLocalized</c> are collected: "Huh?" arrives on the latter, and
-	/// a test that watched only the former would read a rejected command as silence.
+	/// The recorder captures both <c>Notify</c> and <c>NotifyLocalized</c>, which matters because
+	/// "Huh?" arrives on the latter: a window that watched only the former would read a rejected
+	/// command as silence.
 	/// </summary>
 	private async ValueTask<string[]> RunAsync(long handle, string input)
 	{
-		var before = Notify.ReceivedCalls().Count();
+		var before = WebAppFactoryArg.Notifications.CountForHandle(handle);
 
 		await Parser.CommandParse(handle, ConnectionService, MModule.single(input));
 
-		return Notify.ReceivedCalls().Skip(before)
-			.Where(call => call.GetArguments() is [long h, ..] && h == handle)
-			.Select(TextOf)
-			.OfType<string>()
-			.ToArray();
+		return [.. WebAppFactoryArg.Notifications.ForHandle(handle).Skip(before)];
 	}
 
 	private async ValueTask<string?> RunForLastAsync(long handle, string input)
 		=> (await RunAsync(handle, input)).LastOrDefault();
-
-	private static string? TextOf(ICall call) => call.GetMethodInfo().Name switch
-	{
-		nameof(INotifyService.Notify) when call.GetArguments() is [_, OneOf<MString, string> message, ..]
-			=> message.Match(ms => ms.ToPlainText(), s => s),
-		// The localized overload carries a resource key rather than text; the key is what a test wants
-		// to see, since it names the branch the command took.
-		nameof(INotifyService.NotifyLocalized) when call.GetArguments() is [_, string key, ..] => key,
-		_ => null
-	};
 }

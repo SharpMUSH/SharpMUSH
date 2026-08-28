@@ -4936,7 +4936,7 @@ Attempts to run a user-defined command on a specific object. If the `/room` swit
 - [USER-DEFINED COMMANDS]
 - [EVALUATION ORDER]
 # socket commands
-These commands can only be entered by a connected player through their client. They generally do things that only affect a specific connection and would be meaningless if run by an object or disconnected player.
+These commands can only be entered through a client, on the connection they are typed into. They act on that connection rather than on a game object, so they work whether or not you have connected to a character, and would be meaningless if run by an object or from a queued action.
 
 - IDLE
 - INFO
@@ -4951,11 +4951,10 @@ These commands can only be entered by a connected player through their client. T
 - MSSP-REQUEST
 - VERSION
 
-Despite the paragraph above, these commands are answered whether or not you are
-connected — PennMUSH handles them before it decides whether a descriptor has a
-player behind it, and SharpMUSH does the same. They act on the connection that
-typed them, so a player with two clients open sets the screen width of one
-without touching the other.
+PennMUSH handles these before it decides whether a descriptor has a player behind
+it, and SharpMUSH does the same, which is why they answer at the connect screen
+too. Because they act on the connection that typed them, a player with two
+clients open sets the screen width of one without touching the other.
 
 VERSION is a SharpMUSH addition: PennMUSH has only `@version`. It reports the
 same lines that `@version` does and is accepted at the connect screen, because

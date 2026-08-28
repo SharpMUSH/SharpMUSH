@@ -66,6 +66,15 @@ public interface ISharpDatabase
 	ValueTask<int> GetOwnedObjectCountAsync(SharpPlayer player, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Gets the total number of objects in the database — PennMUSH's <c>db_top</c>, reported by the
+	/// INFO socket command. Counted in the store rather than by walking the objects, because INFO is
+	/// answerable before login and is polled by MUD listing crawlers.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Number of objects in the database</returns>
+	ValueTask<int> GetObjectCountAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Create a new room.
 	/// </summary>
 	/// <param name="name">Room Name</param>

@@ -94,7 +94,7 @@ public partial class Commands
 	{
 		var net = Configuration!.CurrentValue.Net;
 		var uptime = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
-		var size = await Mediator!.CreateStream(new GetAllObjectsQuery()).CountAsync();
+		var size = await Mediator!.Send(new GetObjectCountQuery());
 
 		// PennMUSH prints "Address:" unconditionally, even when mud_url is unset — unlike @version,
 		// which omits the line. The block is a fixed-shape record for bots, so a field never vanishes.
@@ -428,6 +428,12 @@ public static class SocketOptions
 
 		SocksetResult SetOrClear(string key, string newValue, string setKey, string clearedKey)
 		{
+			// PennMUSH routes both the socket command and this option through the same set_userstring:
+			// leading whitespace is skipped and a value that is empty afterwards clears the setting.
+			// Without the TrimStart, "SOCKSET OUTPUTPREFIX=   " would store spaces and Show() would
+			// report a prefix as set, while the bare OUTPUTPREFIX command cleared it.
+			newValue = newValue.TrimStart();
+
 			if (string.IsNullOrEmpty(newValue))
 			{
 				connection.Metadata.TryRemove(key, out _);

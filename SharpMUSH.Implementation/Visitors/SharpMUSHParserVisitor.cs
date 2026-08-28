@@ -1109,9 +1109,11 @@ public class SharpMUSHParserVisitor(
 			// other two are routed to it rather than duplicated. DOING and SESSION deliberately keep
 			// CB.Default: giving them the SOCKET flag would drop them out of the in-game abbreviation
 			// trie, so "doin" would stop working for a logged-in player.
+			// PennMUSH matches these with strncmp, not equality, so "DOINGfoo" is DOING with a listing
+			// filter of "foo" rather than an unknown command.
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null
-					&& (command.Equals("DOING", StringComparison.OrdinalIgnoreCase)
-							|| command.Equals("SESSION", StringComparison.OrdinalIgnoreCase)))
+					&& (command.StartsWith("DOING", StringComparison.OrdinalIgnoreCase)
+							|| command.StartsWith("SESSION", StringComparison.OrdinalIgnoreCase)))
 			{
 				var whoLookup = parser.CommandLibrary
 					.Where(x => x.Value.IsSystem && x.Key.Equals("WHO", StringComparison.OrdinalIgnoreCase))

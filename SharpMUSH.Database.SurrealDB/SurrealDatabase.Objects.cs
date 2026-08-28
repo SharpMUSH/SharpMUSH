@@ -317,6 +317,14 @@ public partial class SurrealDatabase
 		return (int)results[0].cnt;
 	}
 
+	public async ValueTask<int> GetObjectCountAsync(CancellationToken cancellationToken = default)
+	{
+		var response = await ExecuteAsync("SELECT count() AS cnt FROM object GROUP ALL", cancellationToken);
+
+		var results = response.GetValue<List<CountRecord>>(0)!;
+		return results.Count == 0 ? 0 : (int)results[0].cnt;
+	}
+
 	#endregion
 
 	#region Object Retrieval

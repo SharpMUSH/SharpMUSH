@@ -1024,6 +1024,17 @@ public partial class ArangoDatabase
 		return result.FirstOrDefault();
 	}
 
+	public async ValueTask<int> GetObjectCountAsync(CancellationToken ct = default)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<int>(
+			handle,
+			$"FOR v IN {DatabaseConstants.Objects:@} COLLECT WITH COUNT INTO length RETURN length",
+			cache: false,
+			cancellationToken: ct);
+
+		return result.FirstOrDefault();
+	}
+
 	public async ValueTask<bool> DeleteObjectAsync(DBRef dbref, CancellationToken ct = default)
 	{
 		var node = await GetObjectNodeAsync(dbref, ct);
