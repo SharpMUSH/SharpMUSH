@@ -582,8 +582,18 @@ public partial class SurrealDatabase
 	{
 		// has_home links content → its home. Rooms come back too (a room's drop-to reuses this edge)
 		// and are dropped below, because a drop-to is not a home.
+		//
+		// Compares `out` to a whole record id rather than reaching through it for `out.key`, which
+		// would dereference the linked record on every row of has_home. This one is a standalone
+		// query, so it is linear either way rather than quadratic like the `WHERE ... IN (subquery)`
+		// forms nearby — but object destruction calls it per object destroyed, and a room takes its
+		// exits with it, so the constant matters.
+		var homeNode = await GetObjectNodeAsync(home, cancellationToken);
+		if (homeNode.IsNone) yield break;
+
+		var homeTable = ExtractTable(homeNode.Known.Id()!);
 		var response = await ExecuteAsync(
-			"SELECT VALUE in.key FROM has_home WHERE out.key = $homeKey",
+			$"SELECT VALUE in.key FROM has_home WHERE out = {homeTable}:$homeKey",
 			new Dictionary<string, object?> { ["homeKey"] = home.Number }, cancellationToken);
 
 		foreach (var key in response.GetValue<List<int>>(0) ?? [])

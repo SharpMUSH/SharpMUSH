@@ -20,6 +20,15 @@ namespace SharpMUSH.Tests.Commands;
 ///                    own source, every dangling reference to the dbref unset.
 ///
 /// Test-config invariants (mushcnf.dst): probate_judge = 1, default_home = 0.
+///
+/// <para>
+/// Caveat worth knowing before adding to this file: the <c>@purge</c> tests are globally
+/// destructive by nature. PennMUSH's purge walks the whole database, so these free every
+/// GOING_TWICE object in the shared session database, not just their own — including fixtures
+/// another test created, destroyed and has not finished asserting on. The window is small and six
+/// consecutive full-suite runs across all three providers were clean, but a test that leaves an
+/// object GOING and then reads it back is racing this.
+/// </para>
 /// </summary>
 [NotInParallel]
 public class ObjectDestructionTests
