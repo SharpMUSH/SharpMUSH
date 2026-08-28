@@ -1,6 +1,14 @@
+using Markdig.Syntax.Inlines;
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
+using SharpMUSH.Implementation.Functions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Text;
+using TUnit.Assertions.Enums;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -559,5 +567,387 @@ public class MarkdownFunctionUnitTests
 
 		await Assert.That(plainText).DoesNotContain("==="); // Default H1 uses === underline
 		await Assert.That(plainText).DoesNotContain("---"); // Default H2 uses --- underline (also used in tables but we don't have tables in this test)
+	}
+
+	/// <summary>
+	/// <c>rendermarkdown()</c> hands its output to softcode that may present it however it likes, so a
+	/// <c>[[wiki link]]</c> stays neutral styled prose here. The clickable <c>@wiki &lt;page&gt;</c>
+	/// command link belongs to the <c>@wiki</c> command alone, which is the only surface that can act on
+	/// it. (<c>%[</c> / <c>%]</c> escape the brackets past the MUSH parser.)
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdown_WikiLink_IsNotACommandLink()
+	{
+		var result = await EvaluateAsync("rendermarkdown(See %[%[Getting Started%]%] for details.)");
+
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo("See Getting Started for details.");
+		await Assert.That(result.Render("html")).DoesNotContain("xch_cmd");
+		await Assert.That(result.Render("html")).DoesNotContain("@wiki");
+		await Assert.That(result.Render("pueblo")).DoesNotContain("XCH_CMD");
+
+		// Still underlined, so nothing about the terminal rendering changed.
+		await Assert.That(result.ToString()).Contains(Underlined);
+	}
+
+	/// <summary>
+	/// The inline and link templates. LINK and WIKILINK are the point of the exercise: a game that wants
+	/// a markdown link to become a command its client can run needs the target and the
+	/// already-a-command flag, not just the text.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_InlineAndLinkTemplates_Override()
+	{
+		var obj = await CreateTemplateObject("MarkdownInlineTemplateObj");
+
+		// & rather than attrib_set() so the template is stored unevaluated.
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`BOLD {obj}=[ansi(hr,BOLD:%0)]"));
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`INLINECODE {obj}=<%0>"));
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`LINK {obj}=%0 %(%1%) cmd=%2"));
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`WIKILINK {obj}=[ansi(hc,%0)] %(@wiki %1%)"));
+
+		// No commas: rendermarkdowncustom()'s second argument is the template object, so a comma in
+		// the markdown would be read as one (and the third as a width).
+		var markdown = "A **strong** `word`.%r%rSee %[%[Help:Markdown Guide%]%] and "
+			+ "%[Site%]%(https://example.com%) and %[newbie%].";
+
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
+
+		var plainText = result.ToPlainText();
+
+		await Assert.That(plainText).Contains("BOLD:strong");
+		await Assert.That(plainText).Contains("<word>");
+
+		// A URL link and a help-topic shortcut reach the same template and are told apart by %2.
+		await Assert.That(plainText).Contains("Site (https://example.com) cmd=0");
+		await Assert.That(plainText).Contains("newbie (help newbie) cmd=1");
+
+		// WIKILINK's %1 is the fully qualified @wiki reference, whatever short form was written.
+		// This is the example in `help rendermarkdowncustom`, verbatim.
+		await Assert.That(plainText).Contains("Markdown Guide (@wiki help:general:markdown_guide)");
+	}
+
+	/// <summary>
+	/// Every template is optional and absent ones change nothing: an object with no
+	/// <c>RENDERMARKUP`</c> attributes at all must render byte-for-byte like <c>rendermarkdown()</c>,
+	/// including for the elements that only gained a template hook now.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_NoTemplates_MatchesDefaultRenderingForNewHooks()
+	{
+		var createResult = (await Parser.FunctionParse(MModule.single("create(MarkdownNoTemplateObj)")))?.Message?.ToString()!;
+		await Assert.That(createResult).IsNotNull();
+		var obj = createResult.Trim();
+
+		var markdown = "A **strong** `word` and %[Site%]%(https://example.com%) "
+			+ "and %[%[Help:Markdown Guide%]%].%r%r- %[x%] done%r- %[ %] todo";
+
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
+
+		var expected = RecursiveMarkdownHelper.RenderMarkdown(
+			"A **strong** `word` and [Site](https://example.com) "
+			+ "and [[Help:Markdown Guide]].\n\n- [x] done\n- [ ] todo");
+
+		await AssertMarkupStringEquals(result, expected);
+	}
+
+	/// <summary>
+	/// Evaluates <paramref name="expression"/> and returns its message, failing the test if there is
+	/// none. The single convention for these tests.
+	/// </summary>
+	/// <remarks>
+	/// Asserting non-null and then writing <c>result!</c> at each use reads fine but leaves the
+	/// compiler's null-flow analysis — and CodeQL's — unable to see the guard, so every call site
+	/// carried a suppression that proved nothing. Throwing is what actually narrows the type; the
+	/// assertion above it is what produces the readable failure when a function returns no message.
+	/// </remarks>
+	private async Task<MString> EvaluateAsync(string expression)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(expression)))?.Message;
+
+		await Assert.That(result).IsNotNull();
+
+		return result ?? throw new InvalidOperationException($"'{expression}' evaluated to no message.");
+	}
+
+	/// <summary>Creates a fresh object to hang RENDERMARKUP templates on.</summary>
+	private async Task<string> CreateTemplateObject(string name) =>
+		(await EvaluateAsync($"create({name})")).ToString().Trim();
+
+	/// <summary>
+	/// TABLE hands over the table described as one JSON object, not the finished block. That is what
+	/// lets a template lay a table out in a game's own style rather than only recolour the built-in one.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_TableTemplate_ReceivesTheTableAsJson()
+	{
+		var obj = await CreateTemplateObject("MarkdownTableJsonObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`TABLE {obj}=%0"));
+
+		// The last row writes one cell where the header has three.
+		var markdown = "| A | B | C |%r|:---|:---:|---:|%r| 1 | 2 | 3 |%r| 4 |";
+
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
+
+		await Assert.That(result.ToPlainText().Trim()).IsEqualTo(
+			"""{"width":78,"align":["<","-",">"],"widths":[23,23,22],"head":["A","B","C"],"rows":[["1","2","3"],["4","",""]]}""");
+	}
+
+	/// <summary>
+	/// <c>width</c> is the width the <em>caller</em> asked this render for, not the reader's terminal
+	/// width — a fixed-width export has to get a table that agrees with the prose around it.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_TableTemplate_WidthIsTheRequestedRenderWidth()
+	{
+		var obj = await CreateTemplateObject("MarkdownTableWidthObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`TABLE {obj}=W:[json_query(%0,get,width)]"));
+
+		var markdown = "| A |%r|---|%r| 1 |";
+
+		var wide = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj},120)");
+		var narrow = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj},40)");
+
+		await Assert.That(wide.ToPlainText()).Contains("W:120");
+		await Assert.That(narrow.ToPlainText()).Contains("W:40");
+	}
+
+	/// <summary>
+	/// The cells are markdown <em>source</em>, not a rendering. That is the contract: a template decides
+	/// whether to call <c>rendermarkdown()</c> on a cell, so the formatting choice stays with the game.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_TableTemplate_CellsAreRawSourceNotRendered()
+	{
+		var obj = await CreateTemplateObject("MarkdownTableRawSourceObj");
+		await Parser.CommandParse(MModule.single(
+			$"&RENDERMARKUP`TABLE {obj}=RAW:[json_query(%0,extract,$.head%[0%])]"
+			+ " OUT:[rendermarkdown([json_query(%0,extract,$.head%[0%])])]"));
+
+		var markdown = "| **loud** |%r|---|%r| x |";
+
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
+
+		var plainText = result.ToPlainText();
+
+		// Verbatim: the asterisks are still there and nothing has been styled for us.
+		await Assert.That(plainText).Contains("RAW:**loud**");
+		// And the template can render the cell itself, which is where styling comes from.
+		await Assert.That(plainText).Contains("OUT:loud");
+		await Assert.That(result.ToString()).Contains(Bold);
+	}
+
+	/// <summary>
+	/// JSON, not a delimited list, so a cell holding a quote or a backslash round-trips instead of
+	/// silently shifting the columns. A literal pipe is <c>\|</c> in table source and is passed through
+	/// as written — <c>rendermarkdown()</c> is what resolves it.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_TableTemplate_EscapesRoundTripThroughJsonQuery()
+	{
+		var obj = await CreateTemplateObject("MarkdownTableEscapeObj");
+		await Parser.CommandParse(MModule.single(
+			$"&RENDERMARKUP`TABLE {obj}=COLS:[json_query([json_query(%0,get,widths)],size)] RAW:%0"
+			+ " CELL:[json_query(%0,extract,$.head%[0%])]"
+			+ " OUT:[rendermarkdown([json_query(%0,extract,$.head%[0%])])]"));
+
+		// MUSH collapses "\\" to one backslash, so markdown sees: | say "hi" \| pipe |
+		var markdown = "| say \"hi\" \\\\| pipe |%r|---|%r| x |";
+
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
+
+		var plainText = result.ToPlainText();
+
+		await Assert.That(plainText)
+			.Contains("COLS:1")
+			.Because("the escaped pipe is cell content and must not have opened a second column");
+		// Encoded in the payload: the quote and the backslash both escaped.
+		await Assert.That(plainText).Contains("\\\"hi\\\"");
+		await Assert.That(plainText).Contains("\\\\|");
+		// Decoded back to exactly the source the author wrote, escapes and all.
+		await Assert.That(plainText)
+			.Contains("CELL:say \"hi\" \\| pipe")
+			.Because("the \\| is left as written; unescaping it here would make it indistinguishable "
+				+ "from a cell boundary");
+		// rendermarkdown() is what turns the escape into the character.
+		await Assert.That(plainText).Contains("OUT:say \"hi\" | pipe");
+	}
+
+	/// <summary>
+	/// The worked example from <c>help rendermarkdowncustom</c>, run verbatim, so the documented output
+	/// is the output. Demonstrates what the JSON payload is for: <c>json_map()</c> walks <c>rows</c>,
+	/// each row's helper walks its own cells, and the layout is the game's.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_TableTemplate_RebuildsTheTableWithLalign()
+	{
+		var obj = await CreateTemplateObject("MarkdownTableAlignObj");
+
+		// Helpers are addressed by dbref, not "me": a RENDERMARKUP template is evaluated with the
+		// *caller* as executor, so "me" inside one is the caller, not the object holding the templates.
+		foreach (var attribute in new[]
+		{
+			"&FUN`VAL {0}=%1",
+			"&FUN`TABLE`SPEC {0}=[json_query(%1,unescape)][json_query(%q<wd>,get,%2)]",
+			"&FUN`TABLE`CELL {0}=[rendermarkdown([json_query(%1,unescape)],[max(10,json_query(%q<wd>,get,%2))])]",
+			"&FUN`TABLE`ROW {0}=[lalign(%q<spec>,[json_map({0}/FUN`TABLE`CELL,%0,|)],|)]",
+			"&FUN`TABLE`ROWJ {0}=[u({0}/FUN`TABLE`ROW,%1)]",
+			"&FUN`TABLE`HEAD {0}=[ansi(hw,[u({0}/FUN`TABLE`ROW,[json_query(%0,get,head)])])]",
+			"&FUN`TABLE`RULE {0}=[repeat(-,%q<tw>)]",
+			"&FUN`TABLE`BODY {0}=[json_map({0}/FUN`TABLE`ROWJ,[json_query(%0,get,rows)],%r)]",
+			"&RENDERMARKUP`TABLE {0}=[setq(wd,json_query(%0,get,widths))]"
+				+ "[setq(spec,json_map({0}/FUN`TABLE`SPEC,[json_query(%0,get,align)],%b))]"
+				+ "[setq(tw,add(lmath(add,[json_map({0}/FUN`VAL,%q<wd>,%b)]),sub(json_query(%q<wd>,size),1)))]"
+				+ "[jiter({0}/FUN`TABLE`HEAD {0}/FUN`TABLE`RULE {0}/FUN`TABLE`BODY,%0,%r)]",
+		})
+		{
+			await Parser.CommandParse(MModule.single(string.Format(attribute, obj)));
+		}
+
+		var markdown = "| Command | Effect | Cost |%r|:---|:-:|--:|"
+			+ "%r| @wiki | Show the **index** | 0 |"
+			+ "%r| @wiki/search | Find pages | 1 |"
+			+ "%r| @wiki/audit | Staff report |";
+
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj},40)");
+
+		var lines = result.ToPlainText().Split('\n').Select(line => line.TrimEnd()).ToList();
+		// Exactly what the helpfile prints for this template, at the columns the payload's own widths
+		// give — measured from the rendered cells, which is the thing a template cannot do for itself.
+		await Assert.That(lines).IsEquivalentTo(["Command          Effect     Cost", "--------------------------------", "@wiki        Show the index    0", "@wiki/search   Find pages      1", "@wiki/audit   Staff report"], CollectionOrdering.Matching);
+		// The cell's markdown was rendered by the template, so "index" really is bold.
+		await Assert.That(result.ToString()).Contains(Bold);
+	}
+
+	/// <summary>
+	/// A table on an object with no TABLE template renders exactly as <c>rendermarkdown()</c> would, and
+	/// no payload is built at all — the template is looked up before the table is taken apart.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_NoTableTemplate_MatchesDefaultRendering()
+	{
+		var obj = await CreateTemplateObject("MarkdownNoTableTemplateObj");
+
+		var markdown = "| A | B |%r|---|---|%r| 1 | 2 |";
+
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
+
+		var expected = RecursiveMarkdownHelper.RenderMarkdown("| A | B |\n|---|---|\n| 1 | 2 |");
+
+		await AssertMarkupStringEquals(result, expected);
+	}
+
+	/// <summary>
+	/// IMAGE's <c>%0</c> is the alt text, plain. Alt text can hold inline markup, and the built-in
+	/// placeholder is built from <c>ToPlainText().Trim()</c>, so handing a template rendered content
+	/// would leak ANSI into an argument the helpfile calls "the alt text".
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_ImageTemplate_AltTextArrivesPlain()
+	{
+		var obj = await CreateTemplateObject("MarkdownImageAltObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`IMAGE {obj}=ALT:%0/URL:%1"));
+
+		// The alt text carries bold and inline code, both of which the renderer would style.
+		var markdown = "!%[a **bold** `logo`%]%(/assets/Logo.svg%)";
+
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
+
+		await Assert.That(result.ToPlainText()).Contains("ALT:a bold logo/URL:/assets/Logo.svg");
+		await Assert.That(result.ToString())
+			.DoesNotContain(ESC)
+			.Because("the alt text is documented as plain, so no markup from inside it may reach the "
+				+ "template as ANSI");
+	}
+
+	/// <summary>
+	/// A template must not be reachable in a state where the default renders nothing. An autolink with
+	/// no URL renders as nothing, so a set AUTOLINK template has to stay unfired.
+	/// </summary>
+	/// <remarks>
+	/// Driven through a hand-built node rather than through markdown, deliberately. Markdig will not
+	/// produce a URL-less <see cref="AutolinkInline"/> from any source text — <c>&lt;&gt;</c> and
+	/// <c>&lt;not a url&gt;</c> produce no autolink node at all — so a markdown-level test would pass
+	/// without ever reaching the guard and would prove nothing. The guard exists because the base
+	/// renderer has one, and parity with the base is the property under test.
+	/// </remarks>
+	[Test]
+	public async Task RenderMarkdownCustom_AutolinkTemplate_DoesNotFireWithoutAUrl()
+	{
+		var obj = await CreateTemplateObject("MarkdownAutolinkGuardObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`AUTOLINK {obj}=SAW-AN-AUTOLINK:%0"));
+
+		var renderer = await BuildCustomRendererAsync(obj);
+
+		var withoutUrl = renderer.Render(new AutolinkInline(string.Empty));
+		await Assert.That(withoutUrl.ToPlainText())
+			.IsEqualTo(string.Empty)
+			.Because("the default renderer emits nothing here, so a template must not emit something");
+
+		// The control, same renderer: a real autolink does reach the template.
+		var withUrl = renderer.Render(new AutolinkInline("https://example.com"));
+		await Assert.That(withUrl.ToPlainText()).IsEqualTo("SAW-AN-AUTOLINK:https://example.com");
+	}
+
+	/// <summary>
+	/// A <see cref="CustomizableMarkdownRenderer"/> over <paramref name="templateDbref"/>, built the way
+	/// <c>rendermarkdowncustom()</c> builds one, so a single AST node can be pushed through it.
+	/// </summary>
+	private async Task<CustomizableMarkdownRenderer> BuildCustomRendererAsync(string templateDbref)
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+
+		var executor = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse("#1")));
+		var templateObject = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(templateDbref)));
+
+		return new CustomizableMarkdownRenderer(
+			Parser, executor.Known, templateObject.Known, attributeService);
+	}
+
+	/// <summary>
+	/// The same guard for the other two link-ish elements: a link with no URL is not a link, and a wiki
+	/// link with no display text renders as nothing.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_LinkTemplates_DoNotFireForEmptyElements()
+	{
+		var obj = await CreateTemplateObject("MarkdownLinkGuardObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`LINK {obj}=SAW-A-LINK:%0"));
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`WIKILINK {obj}=SAW-A-WIKILINK:%0"));
+
+		// A URL-less link: the default emits the bracket text as prose, so the template is not consulted.
+		var empty = await EvaluateAsync($"rendermarkdowncustom(%[just text%]%(%),{obj})");
+		await Assert.That(empty.ToPlainText()).DoesNotContain("SAW-A-LINK");
+		await Assert.That(empty.ToPlainText()).Contains("just text");
+
+		// An empty wiki link is not a wiki link at all, so nothing fires and the source stays put.
+		var emptyWiki = await EvaluateAsync($"rendermarkdowncustom(%[%[%]%],{obj})");
+		await Assert.That(emptyWiki.ToPlainText()).DoesNotContain("SAW-A-WIKILINK");
+
+		// The control: a real link of each kind does reach its template.
+		var real = await EvaluateAsync($"rendermarkdowncustom(%[Site%]%(https://example.com%) %[%[Home%]%],{obj})");
+		await Assert.That(real.ToPlainText()).Contains("SAW-A-LINK:Site");
+		await Assert.That(real.ToPlainText()).Contains("SAW-A-WIKILINK:Home");
+	}
+
+	/// <summary>
+	/// BOLD, ITALIC and UNDERLINE style the flattened text in the default rendering, so their templates
+	/// receive it flattened too — an argument that carried ANSI for some inputs and not others could not
+	/// be handled from softcode at all.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_EmphasisTemplates_ContentArrivesPlain()
+	{
+		var obj = await CreateTemplateObject("MarkdownEmphasisPlainObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`BOLD {obj}=<%0>"));
+
+		// Inline code nested inside the bold run would otherwise arrive coloured.
+		var result = await EvaluateAsync($"rendermarkdowncustom(A **bold `code` run** here.,{obj})");
+
+		await Assert.That(result.ToPlainText()).Contains("<bold code run>");
+		await Assert.That(result.ToString())
+			.DoesNotContain(ESC)
+			.Because("the nested inline code's colour must not survive into the template argument");
 	}
 }

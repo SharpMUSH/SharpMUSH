@@ -135,4 +135,35 @@ public class WikiSyntaxInGameRenderingTests
 		await Assert.That(text).Contains("[ ]");
 		await Assert.That(text).Contains("Open item");
 	}
+
+	/// <summary>
+	/// The helpfiles that <em>document</em> <c>[[wiki link]]</c> syntax are themselves rendered by this
+	/// renderer, which eats <c>[[...]]</c>. Every occurrence in the prose is inside a code span for that
+	/// reason; this pins it, because losing the brackets would leave help text explaining a syntax it
+	/// cannot show.
+	/// </summary>
+	[Test]
+	[Arguments("sharpwiki.md", "[[Page Name]]")]
+	[Arguments("markdown.md", "[[Page Name]]")]
+	public async Task Helpfile_DocumentingWikiLinkSyntax_KeepsItsBrackets(string file, string expected)
+	{
+		var helpDir = FindHelpfilesDirectory();
+		if (helpDir is null) return; // running outside the repo
+
+		var text = Render(await File.ReadAllTextAsync(Path.Join(helpDir, file)));
+
+		await Assert.That(text).Contains(expected);
+	}
+
+	private static string? FindHelpfilesDirectory()
+	{
+		var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+		while (dir is not null)
+		{
+			var candidate = Path.Join(dir.FullName, "SharpMUSH.Documentation", "Helpfiles", "SharpMUSH");
+			if (Directory.Exists(candidate)) return candidate;
+			dir = dir.Parent;
+		}
+		return null;
+	}
 }

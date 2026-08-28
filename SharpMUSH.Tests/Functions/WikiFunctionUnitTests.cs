@@ -305,4 +305,29 @@ public class WikiFunctionUnitTests
 			.DoesNotContain("(fr)")
 			.Because("a reference is a slug, never a title, so no locale can change it");
 	}
+
+	/// <remarks>
+	/// <c>@wiki</c> renders a page's <c>[[wiki links]]</c> as clickable <c>@wiki &lt;page&gt;</c> command
+	/// links. <c>wiki()</c> must not: its output goes to softcode, which can already decorate a page
+	/// however the game wants, and silently attaching a command to text a game means to reuse elsewhere
+	/// would take that choice away.
+	/// </remarks>
+	[Test]
+	public async Task Wiki_WikiLinksAreNotRenderedAsCommandLinks()
+	{
+		var created = await WikiService.CreateAsync(
+			"Fn Wiki Link Page", "See [[Getting Started]] for details.", "#1");
+		await Assert.That(created.IsT0).IsTrue();
+		var page = created.AsT0;
+
+		var text = (await Parser.FunctionParse(MModule.single($"wiki({page.Slug})")))!.Message!;
+		var markdown = (await Parser.FunctionParse(MModule.single($"wiki({page.Slug},markdown)")))!.Message!;
+
+		await Assert.That(text.Render("html")).DoesNotContain("xch_cmd");
+		await Assert.That(text.Render("pueblo")).DoesNotContain("XCH_CMD");
+		await Assert.That(markdown.Render("html")).DoesNotContain("xch_cmd");
+		await Assert.That(markdown.ToPlainText())
+			.Contains("[[Getting Started]]")
+			.Because("the markdown field is the source as authored, not a rendering of it");
+	}
 }

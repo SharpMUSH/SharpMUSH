@@ -29,7 +29,8 @@ public static class RecursiveMarkdownHelper
 	/// <item><see cref="MarkdownExtensions.UseTaskLists"/> — renders <c>- [x]</c>
 	///   task list markers.</item>
 	/// <item><see cref="WikiLinkExtension"/> — parses <c>[[Page Name]]</c> wiki links;
-	///   rendered as underlined display text in-game.</item>
+	///   rendered as underlined display text in-game, or as a clickable <c>@wiki &lt;page&gt;</c>
+	///   command link when the caller supplies <c>WikiCommandRenderer</c>.</item>
 	/// </list>
 	/// </summary>
 	private static MarkdownPipeline BuildPipeline() =>
