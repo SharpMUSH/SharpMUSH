@@ -480,36 +480,46 @@ public partial class SurrealDatabase
 		// Relationship and flag/power predicates. These were absent, and their absence was invisible:
 		// with none of them contributing a condition, a caller asking for "objects owned by #7" got
 		// `SELECT * FROM object` — the entire database, reported as a filtered result.
-		// Each is a subquery over the relation table, matching the id of the object row being scanned
-		// against the relation's `in`.
+		//
+		// Each compares the relation's `out` to a whole record id rather than reaching through it for a
+		// field. `WHERE out.key = $k` reads the same and is quadratic: it dereferences the linked record
+		// for every row of the relation table, and none of the `out` indexes can serve it. Measured on
+		// the embedded engine, the owner filter cost 23ms over 50 objects, 162ms over 150 and 599ms over
+		// 300 — which on a CI runner reached the driver's 30s query timeout, and the SurrealDB embedded
+		// driver handles that timeout by completing an already-completed TaskCompletionSource from a
+		// native callback, aborting the process (SIGABRT). Record-id comparison is index-backed and flat.
 		if (filter.Owner.HasValue)
 		{
-			conditions.Add("id IN (SELECT VALUE in FROM has_owner WHERE out.key = $ownerKey)");
+			conditions.Add("id IN (SELECT VALUE in FROM has_owner WHERE out = player:$ownerKey)");
 			parameters["ownerKey"] = filter.Owner.Value.Number;
 		}
 		if (filter.Zone.HasValue)
 		{
-			conditions.Add("id IN (SELECT VALUE in FROM has_zone WHERE out.key = $zoneKey)");
+			conditions.Add("id IN (SELECT VALUE in FROM has_zone WHERE out = object:$zoneKey)");
 			parameters["zoneKey"] = filter.Zone.Value.Number;
 		}
 		if (filter.Parent.HasValue)
 		{
-			conditions.Add("id IN (SELECT VALUE in FROM has_parent WHERE out.key = $parentKey)");
+			conditions.Add("id IN (SELECT VALUE in FROM has_parent WHERE out = object:$parentKey)");
 			parameters["parentKey"] = filter.Parent.Value.Number;
 		}
 		if (!string.IsNullOrEmpty(filter.HasFlag))
 		{
-			// The type disjunct reproduces the type-named flag GetObjectFlagsAsync synthesises, which no
-			// has_flags edge backs but HelperFunctions.HasFlag still reports.
+			// Case-insensitive matching happens against the flag table (a hundred-odd rows, scanned once)
+			// rather than through every has_flags edge. The type disjunct reproduces the type-named flag
+			// GetObjectFlagsAsync synthesises, which no has_flags edge backs but HelperFunctions.HasFlag
+			// still reports.
 			conditions.Add("(string::lowercase(type) = $flagName "
-				+ "OR id IN (SELECT VALUE in FROM has_flags WHERE string::lowercase(out.name) = $flagName))");
+				+ "OR id IN (SELECT VALUE in FROM has_flags WHERE out IN "
+				+ "(SELECT VALUE id FROM object_flag WHERE string::lowercase(name) = $flagName)))");
 			parameters["flagName"] = filter.HasFlag.ToLowerInvariant();
 		}
 		if (!string.IsNullOrEmpty(filter.HasPower))
 		{
 			// Alias as well as name, mirroring HelperFunctions.HasPower.
-			conditions.Add("id IN (SELECT VALUE in FROM has_powers "
-				+ "WHERE string::lowercase(out.name) = $powerName OR string::lowercase(out.alias) = $powerName)");
+			conditions.Add("id IN (SELECT VALUE in FROM has_powers WHERE out IN "
+				+ "(SELECT VALUE id FROM power WHERE string::lowercase(name) = $powerName "
+				+ "OR string::lowercase(alias) = $powerName))");
 			parameters["powerName"] = filter.HasPower.ToLowerInvariant();
 		}
 
