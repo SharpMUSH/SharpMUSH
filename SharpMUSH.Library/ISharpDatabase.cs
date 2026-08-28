@@ -97,6 +97,28 @@ public interface ISharpDatabase
 	ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location, SharpPlayer creator, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Irrevocably remove an object from the database — the storage half of PennMUSH's
+	/// <c>free_object()</c> (<c>src/destroy.c</c>).
+	/// </summary>
+	/// <remarks>
+	/// This is a raw storage operation and performs <b>no</b> game-layer bookkeeping: it does not
+	/// move contents home, relink exits, chown possessions, run <c>@adestroy</c>, or check
+	/// permissions. Callers must run those first — <c>IObjectDestructionService.DestroyObjectAsync</c>
+	/// is the only supported entry point for destroying a live object.
+	/// <para>
+	/// Removes the object document, its typed vertex, its whole attribute subtree, its expanded
+	/// object data, any mail it received, and every edge incident to those vertices. Edges pointing
+	/// <i>at</i> the object from elsewhere (another object's parent, zone, home, or location) are
+	/// removed too, which leaves those references unset — matching <c>free_object()</c>'s
+	/// <c>Zone(i) = NOTHING</c> / <c>Parent(i) = NOTHING</c> sweep.
+	/// </para>
+	/// </remarks>
+	/// <param name="dbref">Object to delete</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns><c>true</c> if an object was deleted, <c>false</c> if no such object existed</returns>
+	ValueTask<bool> DeleteObjectAsync(DBRef dbref, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Link an exit to a destination location.
 	/// </summary>
 	/// <param name="exit"><see cref="SharpExit"/></param>
@@ -583,6 +605,24 @@ public interface ISharpDatabase
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>An async enumerable of exits leading to the destination</returns>
 	IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Everything whose <c>home</c> is <paramref name="home"/>: players and things that go there on
+	/// <c>home</c>, plus exits that lead there (an exit's home edge <i>is</i> its destination).
+	/// </summary>
+	/// <remarks>
+	/// Rooms are excluded. A room reuses the same home edge for its drop-to, which is not a home in
+	/// any sense a caller here means. <see cref="GetEntrancesAsync"/> is the exit-only view of this.
+	/// <para>
+	/// Object destruction needs this: deleting an object severs the home edges pointing at it, and
+	/// a player or thing with no home edge throws on every subsequent read, so those dependents have
+	/// to be rehomed to <c>default_home</c> first — PennMUSH <c>free_object()</c>'s
+	/// <c>Home(i) = DEFAULT_HOME</c> pass (<c>src/destroy.c</c>).
+	/// </para>
+	/// </remarks>
+	/// <param name="home">The prospective home</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	IAsyncEnumerable<AnySharpContent> GetHomedAtAsync(DBRef home, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.

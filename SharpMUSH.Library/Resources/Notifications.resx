@@ -295,9 +295,6 @@
   <data name="GuestCantDestroy" xml:space="preserve">
     <value>I'm sorry, Dave, I'm afraid I can't do that.</value>
   </data>
-  <data name="AlreadyDestroyed" xml:space="preserve">
-    <value>Destroying that again is hardly necessary.</value>
-  </data>
   <data name="DestroyGodBlasphemous" xml:space="preserve">
     <value>Destroying God would be blasphemous.</value>
   </data>
@@ -681,6 +678,9 @@
   <!-- Building / Creating -->
   <data name="Destroyed" xml:space="preserve">
     <value>Destroyed.</value>
+  </data>
+  <data name="FloorDisappearsNothingness" xml:space="preserve">
+    <value>The floor disappears under your feet, you fall through NOTHINGness and then:</value>
   </data>
   <data name="LinkedToHome" xml:space="preserve">
     <value>Linked to home.</value>
@@ -2276,11 +2276,8 @@
   </data>
 
   <!-- @purge -->
-  <data name="PurgeCompleteFormat" xml:space="preserve">
-    <value>Purge complete. {0} objects advanced to GOING_TWICE. {1} objects marked for final deletion.</value>
-  </data>
-  <data name="PurgeNoteBackgroundGc" xml:space="preserve">
-    <value>Note: Actual object deletion is handled by background garbage collection in SharpMUSH.</value>
+  <data name="PurgeComplete" xml:space="preserve">
+    <value>Purge complete.</value>
   </data>
 
   <!-- @shutdown -->

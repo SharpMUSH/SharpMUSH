@@ -488,9 +488,10 @@ public static class ErrorMessages
 
 		// --- Destruction edge-case notifications (PennMUSH src/destroy.c) ---
 		public const string GuestCantDestroy = "I'm sorry, Dave, I'm afraid I can't do that.";
-		public const string AlreadyDestroyed = "Destroying that again is hardly necessary.";
 		public const string DestroyGodBlasphemous = "Destroying God would be blasphemous.";
 		public const string TooSpecialToDestroy = "That is too special to be destroyed.";
+		public const string FloorDisappearsNothingness =
+			"The floor disappears under your feet, you fall through NOTHINGness and then:";
 
 		// --- Movement default notifications (PennMUSH src/move.c) ---
 		public const string DefaultOLeave = "has left.";
@@ -1551,9 +1552,7 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NewPasswordSetFormat = "Set new password for {0}: {1}";
 
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PurgeCompleteFormat = "Purge complete. {0} objects advanced to GOING_TWICE. {1} objects marked for final deletion.";
-		public const string PurgeNoteBackgroundGc = "Note: Actual object deletion is handled by background garbage collection in SharpMUSH.";
+		public const string PurgeComplete = "Purge complete.";
 
 		public const string ShutdownOnlyGodPanic = "Only God can perform a panic shutdown.";
 		public const string ShutdownPanicInitiated = "PANIC SHUTDOWN initiated by God.";
