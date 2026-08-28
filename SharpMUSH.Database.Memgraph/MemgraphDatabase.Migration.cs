@@ -581,8 +581,8 @@ f.typeRestrictions = $typeRestrictions
 			("prefixmatch", "", false),
 			("cmdsyntax", "x", true),
 			("funsyntax", "f", true),
-			("internal", "I", true),
-			("nodump", "D", true),
+			("internal", "", true),
+			("nodump", "", true),
 		};
 
 		foreach (var af in attrFlags)
