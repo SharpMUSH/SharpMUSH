@@ -19,6 +19,7 @@ Two entry points, pick one based on how you terminate TLS:
 | `sharpmush.service` | Optional systemd unit — brings the stack up from the compose file on boot |
 | `.env.example` | Template for secrets/config — copy to `.env` and fill in |
 | `.gitignore` | Keeps your real `.env` out of git |
+| `../nats.conf` | NATS server config (repo root, shared with the dev stack). Sets `max_payload` to 6 MB — a server-level limit with no CLI flag, so it has to come from a file. Both compose files bind-mount it. |
 | `README.md` | This file |
 
 ## First-time setup

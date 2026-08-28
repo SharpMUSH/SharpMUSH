@@ -15,7 +15,10 @@ services:
   nats:
     image: nats:2-alpine
     container_name: sharpmush-nats
-    command: ["-js", "-m", "8222"]
+    # -c: max_payload (6 MB) — a server-level limit with no CLI flag, so it needs a config file.
+    command: ["-js", "-m", "8222", "-c", "/etc/nats/nats.conf"]
+    volumes:
+      - ./nats.conf:/etc/nats/nats.conf:ro
     ports:
       - "4222:4222"   # NATS client port
       - "8222:8222"   # NATS monitoring port
