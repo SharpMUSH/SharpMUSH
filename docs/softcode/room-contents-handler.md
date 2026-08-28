@@ -99,7 +99,7 @@ configures a different handler object, substitute its dbref throughout.
 &FN`WHOVIS #9=cand(not(hastype(%0,exit)),cor(not(isplayer(%0)),hasflag(%0,CONNECTED)))
 &FN`WHOROW #9=json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))
 &FN`EXITROW #9=json(object,name,json(string,name(%0)),cmd,json(string,goto [num(%0)]))
-&ROOM`CONTENTS #9=think oob(lcon(%0),room.contents,json(object,who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0)),u(me/FN`WHOROW,itext(0)),%b,|),|)));think oob(lcon(%0),room.exits,json(object,exits,json_array(iter(lexits(%0),u(me/FN`EXITROW,itext(0)),%b,|),|)))
+&ROOM`CONTENTS #9=think oob(lcon(%0),room.contents,json(object,who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0)),u(me/FN`WHOROW,itext(0)),%b,|),|)));think oob(lcon(%0),room.exits,json(object,exits,json_array(iter(if(hastype(%0,room),lexits(%0)),u(me/FN`EXITROW,itext(0)),%b,|),|)))
 ```
 
 Reading the main handler:
@@ -111,7 +111,11 @@ Reading the main handler:
 - `json(object, who, <array>)` — wrap as `{"who": [...]}`.
 - `oob(lcon(%0), room.contents, <json>)` — send to every connected occupant of
   the room (non-players / non-connected are skipped automatically).
-- The second statement does the same for `room.exits` via ``FN`EXITROW``/`lexits`.
+- The second statement does the same for `room.exits` via ``FN`EXITROW``/`lexits`,
+  guarded on `%0` being a room. The event fires for whichever container was
+  affected and that is not always a room — a player carrying something, or a thing
+  something was teleported into, raise it too. `lexits()` answers `#-1` for those,
+  as PennMUSH does, and an unguarded `iter()` would build a row out of `#-1`.
 
 Verify it is set:
 

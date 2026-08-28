@@ -41,5 +41,14 @@ objects:
       #
       # iter()/json_array() use "|" as their separator: a row like {"cmd":"look #1"}
       # contains a space, and the default space separator would split it apart.
+      #
+      # The exits half is guarded on %0 actually being a room. The event fires for
+      # whatever container was affected, and a container is not always a room — a
+      # player carrying something, or a thing something was teleported into, both
+      # raise it. lexits() answers #-1 for those, as PennMUSH does (help lexits is
+      # `lexits(<room>)`, and dbwalk's validloc is IsRoom for exits), and an
+      # unguarded iter() would then build one bogus row out of "#-1" and try to
+      # look it up. An empty exits list is the right answer for a non-room, and
+      # still worth sending: it clears whatever the sidebar showed before.
       ROOM`CONTENTS: |-
-        think oob(lcon(%0),room.contents,json(object,who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0)),u(me/FN`WHOROW,itext(0)),%b,|),|)));think oob(lcon(%0),room.exits,json(object,exits,json_array(iter(lexits(%0),u(me/FN`EXITROW,itext(0)),%b,|),|)))
+        think oob(lcon(%0),room.contents,json(object,who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0)),u(me/FN`WHOROW,itext(0)),%b,|),|)));think oob(lcon(%0),room.exits,json(object,exits,json_array(iter(if(hastype(%0,room),lexits(%0)),u(me/FN`EXITROW,itext(0)),%b,|),|)))
