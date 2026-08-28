@@ -272,16 +272,29 @@ public static partial class HelperFunctions
 		=> obj.Object().HasFlag(flag);
 
 	/// <summary>
-	/// Name only. PennMUSH's <c>has_flag_by_name</c> resolves through <c>flag_hash_lookup</c>, which
-	/// carries each flag's aliases as well, so <c>COLOUR</c> answers for <c>COLOR</c> there and does not
-	/// here. Left alone deliberately: <see cref="ISharpDatabase.GetFilteredObjectsAsync"/> documents its
-	/// <c>HasFlag</c> pushdown predicate as name-or-type and no aliases <em>because</em> this helper
-	/// behaves that way, and <c>ObjectSearchFilterPushdownTests</c> pins that on all three providers.
-	/// Changing it means changing three providers, the contract and those tests together.
+	/// Name <b>or</b> alias, as PennMUSH's <c>has_flag_by_name</c> resolves it: the name goes through
+	/// <c>flag_hash_lookup</c> → <c>match_flag_ns</c>, which searches <c>ptab_flag</c> — declared in
+	/// <c>src/flags.c</c> as "Table of flags by name, inc. aliases".
 	/// </summary>
+	/// <remarks>
+	/// This matched <c>Name</c> alone, leaving every aliased flag reachable by exactly one of its
+	/// spellings — <c>COLOUR</c> did not answer for <c>COLOR</c>, nor <c>LISTENER</c> for
+	/// <c>MONITOR</c> — while <c>HasPower</c> one screen up already matched a power's alias. See #834.
+	/// <para>
+	/// The database-level <c>HasFlag</c> predicate in
+	/// <see cref="ISharpDatabase.GetFilteredObjectsAsync"/> is defined to agree with this helper and is
+	/// pinned against it on all three providers, so the two move together.
+	/// </para>
+	/// <para>
+	/// Not ported from <c>flag_hash_lookup</c>: its single-character fallback to a flag's <em>letter</em>,
+	/// which would make <c>HasFlag("D")</c> mean DARK. Letters are not unique in the seed (ABODE and
+	/// ANSI share 'A'), Penn disambiguates by object type, and nothing here asks by letter.
+	/// </para>
+	/// </remarks>
 	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag)
 		=> await obj.Flags.Value
-			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase));
+			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase)
+									 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)));
 
 	/// <summary>
 	/// PennMUSH <c>LOUD</c> (hlp/pennflag.hlp:256): "LOUD objects bypass all speech, channel speech, and
