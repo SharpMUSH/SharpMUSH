@@ -1,0 +1,125 @@
+format: 1
+package: wiki-reader
+version: 1.0.0
+authors: [SharpMUSH]
+description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
+license: MIT
+keywords: [wiki, help, navigation, ui]
+requires_server: ">=0.1"
+
+depends:
+  - package: common-functions
+    version: ">=1.1"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/common-functions/
+      branch: main
+      # common-functions ships here, not in SharpMUSH.Packages, so this points
+      # at the server repo where the other examples point at the package repo.
+
+objects:
+  - ref: wiki_global
+    type: thing
+    name: Wiki Reader
+    location: "{{$master_room}}"
+    attributes:
+
+      FUN:
+        value: |-
+          Reads. GET lookups, IS predicates, DISPLAY formatting.
+        flags: [no_command]
+      INC:
+        value: |-
+          Reusable command steps. IS assertions, DO effects, DISPLAY output.
+        flags: [no_command]
+
+      # CODEBLOCK and TABLE are left unset on purpose: their defaults already
+      # syntax-highlight and lay out better than a template would here.
+      RENDERMARKUP`H1: |-
+        [ansi(hw,%0)]
+      RENDERMARKUP`H2: |-
+        [ansi(hc,%0)]
+      RENDERMARKUP`H3: |-
+        [ansi(hb,%0)]
+      RENDERMARKUP`LISTITEM: |-
+        [if(%0,[ansi(hc,%1.)],[ansi(hc,*)])] %2
+      RENDERMARKUP`QUOTE: |-
+        [ansi(hy,%0)]
+      # [[Page]] in an article body becomes a +wiki command for a client that
+      # can click one, and stays highlighted prose for everyone else.
+      RENDERMARKUP`WIKILINK: |-
+        [if(pueblo(%#),[tagwrap(a,xch_cmd="+wiki %1" xch_hint="%2",%0)],[ansi(hc,%0)])]
+
+      INC`DISPLAY`ERROR: |-
+        @pemit %#=[ansi(hr,Wiki>)] %0
+      INC`DISPLAY`INFO: |-
+        @pemit %#=[ansi(hc,Wiki>)] %0
+
+      FUN`GET`ROWS: |-
+        max(5,sub(height(%#,24),6))
+      FUN`GET`NPAGES: |-
+        add(1,div(sub(max(1,words(%0)),1),u(%!/FUN`GET`ROWS)))
+      FUN`GET`SLICE: |-
+        extract(%0,add(1,mul(sub(%1,1),u(%!/FUN`GET`ROWS))),u(%!/FUN`GET`ROWS))
+
+      # wiki() answers #-1 NO SUCH WIKI PAGE for a missing page AND for a draft.
+      FUN`IS`PAGE: |-
+        not(strmatch(wiki(%0,title),#-1*))
+      FUN`IS`UNCATEGORISED: |-
+        not(wiki(%0,category))
+      FUN`IS`UNTAGGED: |-
+        not(wiki(%0,tags))
+
+      # xch_cmd requires the Send_OOB @power; without it the ref still prints.
+      FUN`DISPLAY`REF: |-
+        if(pueblo(%#),[tagwrap(a,xch_cmd="+wiki %0" xch_hint="Read %0",%0)],%0)
+      FUN`DISPLAY`ROW: |-
+        [ljust(u(%!/FUN`DISPLAY`REF,%0),34)][wiki(%0,title)]
+      FUN`DISPLAY`RECENTROW: |-
+        [ljust(u(%!/FUN`DISPLAY`REF,%0),34)][ljust(wiki(%0,title),28)][timestring(sub(secs(),wiki(%0,updated)))] ago
+
+      # %0 title · %1 refs · %2 page · %3 row attribute · %4 paging stem
+      INC`DO`LISTING: |-
+        @assert %1=@include %!/INC`DISPLAY`INFO=Nothing to show.; @assert lte(%2,setr(np,u(%!/FUN`GET`NPAGES,%1)))=@include %!/INC`DISPLAY`ERROR=There [if(gt(%q<np>,1),are %q<np> pages,is one page)] — asked for %2.; @pemit %#=[header(%0)]%r[iter(u(%!/FUN`GET`SLICE,%1,%2),u(%!/%3,%i0),%b,%r)]%r[footer([words(%1)] entries%b-%b page %2 of %q<np>[if(lt(%2,%q<np>),%b-%b %4=[add(%2,1)])])]
+
+      INC`IS`ADMIN: |-
+        @assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.
+      INC`IS`PAGE: |-
+        @assert %q<ref>=@include %!/INC`DISPLAY`ERROR=Which page? Try +wiki/list.; @assert u(%!/FUN`IS`PAGE,%q<ref>)=@include %!/INC`DISPLAY`ERROR=No such wiki page: %q<ref>
+
+      # Non-capturing groups are "(?\:" — a bare colon would end the pattern.
+      CMD`INDEX:
+        value: |-
+          $^\+wiki$:@pemit %#=[header(Wiki)]%r[iter(main help character system,[ljust(%i0,12)][rjust(words(wikilist(%i0)),4)] pages,%b,%r)]%r[line()]%r+wiki <page>%b·%b+wiki/list [<namespace>]%b·%b+wiki/search <text>%b·%b+wiki/recent%r[footer()]
+        flags: [regexp]
+
+      CMD`READ:
+        value: |-
+          $^\+wiki\s+(?<ref>.+)$:@assert [setr(ref,trim(r(ref,args)))]=@@; @include %!/INC`IS`PAGE; @pemit %#=[header([wiki(%q<ref>,title)]%b([wiki(%q<ref>,namespace)][if(wiki(%q<ref>,category),:[wiki(%q<ref>,category)])]))]%r[rendermarkdowncustom(wiki(%q<ref>,markdown),%!,width(%#,78))]%r[footer(rev [wiki(%q<ref>,revision)]%b[[]wiki(%q<ref>,locale)[]]%b-%b[timestring(sub(secs(),wiki(%q<ref>,updated)))] ago)]
+        flags: [regexp]
+
+      CMD`LIST:
+        value: |-
+          $^\+wiki/list(?\:\s+(?<ns>\S+))?(?\:=(?<page>\d+))?$:@assert [setq(ns,r(ns,args))][setq(refs,wikilist(%q<ns>))][setq(title,Pages[if(%q<ns>,: %q<ns>)])][setq(hint,+wiki/list %q<ns>)][setr(pg,strfirstof(r(page,args),1))]=@@; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<pg>,FUN`DISPLAY`ROW,%q<hint>
+        flags: [regexp]
+
+      CMD`SEARCH:
+        value: |-
+          $^\+wiki/search\s+(?<q>.+?)(?\:=(?<page>\d+))?$:@assert [setq(q,r(q,args))][setq(refs,wikisearch(%q<q>))][setq(title,Search: %q<q>)][setq(hint,+wiki/search %q<q>)][setr(pg,strfirstof(r(page,args),1))]=@@; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<pg>,FUN`DISPLAY`ROW,%q<hint>
+        flags: [regexp]
+
+      CMD`RECENT:
+        value: |-
+          $^\+wiki/recent(?\:\s+(?<count>\d+))?(?\:=(?<page>\d+))?$:@assert [setq(n,strfirstof(r(count,args),10))][setq(refs,wikirecent(%q<n>))][setq(title,Recently edited)][setq(hint,+wiki/recent %q<n>)][setr(pg,strfirstof(r(page,args),1))]=@@; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<pg>,FUN`DISPLAY`RECENTROW,%q<hint>
+        flags: [regexp]
+
+      CMD`INFO:
+        value: |-
+          $^\+wiki/info\s+(?<ref>.+)$:@assert [setr(ref,trim(r(ref,args)))]=@@; @include %!/INC`IS`PAGE; @pemit %#=[header([wiki(%q<ref>,title)])]%r[iter(title namespace category tags revision locale author,[ljust(ucstr(%i0),12)][wiki(%q<ref>,%i0)],%b,%r)]%r[ljust(UPDATED,12)][timestring(sub(secs(),wiki(%q<ref>,updated)))] ago%r[footer(%q<ref>)]
+        flags: [regexp]
+
+      # Drafts never appear in wikilist(), so this audits published pages only.
+      CMD`AUDIT:
+        value: |-
+          $^\+wiki/audit$:@include %!/INC`IS`ADMIN; @pemit %#=[setq(a,wikilist())][setq(u,filterq(cat,%!/FUN`IS`UNCATEGORISED,%q<a>))][setq(t,filterq(tag,%!/FUN`IS`UNTAGGED,%q<a>))][header(Wiki audit)]%r[ljust(Published pages,24)][words(%q<a>)]%r[ljust(Without a category,24)][words(%q<u>)]%r[ljust(Without tags,24)][words(%q<t>)]%r[line(Uncategorised)]%r[iter(%q<u>,u(%!/FUN`DISPLAY`ROW,%i0),%b,%r)]%r[footer(drafts are invisible to softcode - use @wiki/list)]
+        flags: [regexp]
