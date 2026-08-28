@@ -107,7 +107,7 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 			_logger.LogInformation("[NATS-CONSUMER] Consumer active — subject: {Subject}, durable: {Durable}",
 				reg.Subject, reg.DurableName);
 
-			await foreach (var msg in consumer.ConsumeAsync<JsonElement>(serializer: NatsJsonSerializer<JsonElement>.Default, cancellationToken: ct))
+			await foreach (var msg in consumer.ConsumeAsync<JsonElement>(serializer: CompressingNatsSerializer<JsonElement>.Default, cancellationToken: ct))
 			{
 				try
 				{
