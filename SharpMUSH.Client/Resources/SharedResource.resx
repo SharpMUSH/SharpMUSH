@@ -2081,7 +2081,7 @@
     <value>Spacer</value>
   </data>
   <data name="LayWidgetWikiBody" xml:space="preserve">
-    <value>Wiki Body</value>
+    <value>Wiki Page</value>
   </data>
   <data name="LaySpacerHelp" xml:space="preserve">
     <value>Height of the empty space, in pixels. Its width follows the placement's column span.</value>

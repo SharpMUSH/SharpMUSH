@@ -14,6 +14,7 @@
 else if (Mode == WikiMode.View)
 {
     <WikiDisplay Slug="@Slug" Namespace="@Namespace" Category="@Category" Locale="@Locale" Article="@_article"
+                 Embedded="@Embedded"
                  ActivateEditMode="ActivateEditMode" OnArticleRestored="HandleArticleRestored" />
 }
 else
@@ -55,6 +56,18 @@ else
 
     /// <summary>The locale requested via <c>?lang=</c>; null means the reader's stored preference.</summary>
     [Parameter] public string? Locale { get; init; }
+
+    /// <summary>
+    /// True when this renders inside another page (a layout widget) rather than as the <c>/wiki</c>
+    /// route itself, which drops chrome that only makes sense on that route.
+    /// </summary>
+    [Parameter] public bool Embedded { get; init; }
+
+    /// <summary>
+    /// Raised once the page has been fetched, with <c>true</c> when it exists. Lets an embedding
+    /// component drop its own frame rather than wrap an empty or missing page in one.
+    /// </summary>
+    [Parameter] public EventCallback<bool> OnLoaded { get; init; }
 
     private WikiArticle? _article;
 
@@ -240,6 +253,7 @@ else
         }
 
         _loading = false;
+        await OnLoaded.InvokeAsync(_article is not null);
         await base.OnInitializedAsync();
     }
 }

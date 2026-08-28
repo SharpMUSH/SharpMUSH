@@ -131,10 +131,11 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 				[WidgetZone.MainContent] =
 				[
 					new WidgetPlacement("Stats", 0, null, Span: 12),
-					new WidgetPlacement("ActiveScene", 1, null, Span: 8),
-					new WidgetPlacement("OnlineCharacters", 2, null, Span: 4),
-					new WidgetPlacement("RecentWikiActivity", 3, null, Span: 8),
-					new WidgetPlacement("Quickstart", 4, null, Span: 4)
+					new WidgetPlacement("WikiBody", 1, HomeWikiPage, Span: 12),
+					new WidgetPlacement("ActiveScene", 2, null, Span: 8),
+					new WidgetPlacement("OnlineCharacters", 3, null, Span: 4),
+					new WidgetPlacement("RecentWikiActivity", 4, null, Span: 8),
+					new WidgetPlacement("Quickstart", 5, null, Span: 4)
 				]
 			},
 			SidebarsOff),
@@ -171,6 +172,15 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 			},
 			SidebarsOff)
 	};
+
+	/// <summary>
+	/// Addresses the Wiki Body widget at <c>main/general/home</c> for the landing page. The config is
+	/// explicit because that widget's no-config behaviour is the character biography, which the home
+	/// page has no character for. Parsed rather than serialized from an anonymous type: the client
+	/// publishes trimmed, and this needs no reflection to survive it.
+	/// </summary>
+	private static readonly JsonElement HomeWikiPage =
+		JsonDocument.Parse("""{"slug":"home","namespace":"main"}""").RootElement.Clone();
 
 	private static LayoutSettings SidebarsOff => new(LeftSidebarEnabled: false, RightSidebarEnabled: false);
 }

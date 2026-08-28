@@ -1230,7 +1230,7 @@
     <value>Espaceur</value>
   </data>
   <data name="LayWidgetWikiBody" xml:space="preserve">
-    <value>Corps du wiki</value>
+    <value>Page wiki</value>
   </data>
   <data name="LaySpacerHelp" xml:space="preserve">
     <value>Hauteur de l'espace vide, en pixels. Sa largeur suit le nombre de colonnes de l'emplacement.</value>

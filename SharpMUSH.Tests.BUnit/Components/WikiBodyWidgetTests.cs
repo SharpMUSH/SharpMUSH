@@ -54,9 +54,11 @@ public class WikiBodyWidgetTests : TrackingBunitContext
 			.AddSingleton<WikiMarkdigPipeline>()
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
-		AddAuthorization();
+		Auth = AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
+
+	private BunitAuthorizationContext Auth { get; }
 
 	private static JsonElement BuildConfig(object obj)
 		=> JsonSerializer.SerializeToElement(obj,
@@ -159,5 +161,48 @@ public class WikiBodyWidgetTests : TrackingBunitContext
 		// An admin who configures a page means it, even on a profile page.
 		var path = RenderInProfileAndCapture("Gandalf", BuildConfig(new { Slug = "house-rules" }));
 		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/general/house-rules");
+	}
+
+	/// <summary>
+	/// The default home layout places this widget on a page nobody has written yet, so the missing case
+	/// is the shipped state of a fresh game, not an error. A reader who could not write the page gets
+	/// nothing at all — no card, no "does not exist" alert under the stat tiles.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task MissingPage_RendersNothingForAReaderWhoCannotWriteIt()
+	{
+		var cut = Render<WikiBodyWidget>(p => p.Add(x => x.Config, BuildConfig(new { Slug = "home" })));
+
+		cut.WaitForState(() => cut.Markup.Trim().Length == 0, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Markup.Trim()).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>Someone who can write the page is the one person the missing state is useful to.</summary>
+	[TUnit.Core.Test]
+	public async Task MissingPage_OffersCreationToSomeoneWhoCanWriteIt()
+	{
+		Auth.SetAuthorized("editor");
+		Auth.SetPolicies("wiki.create");
+
+		var cut = Render<WikiBodyWidget>(p => p.Add(x => x.Config, BuildConfig(new { Slug = "home" })));
+
+		cut.WaitForState(() => cut.Markup.Contains("CreateThisPage"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Markup).Contains("CreateThisPage");
+	}
+
+	/// <summary>
+	/// Embedded on someone else's page, the missing-page notice must not offer a way "back" to a wiki
+	/// the reader never navigated from — that link belongs to the /wiki route.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task MissingPage_OmitsTheBackLinkThatBelongsToTheWikiRoute()
+	{
+		Auth.SetAuthorized("editor");
+		Auth.SetPolicies("wiki.create");
+
+		var cut = Render<WikiBodyWidget>(p => p.Add(x => x.Config, BuildConfig(new { Slug = "home" })));
+
+		cut.WaitForState(() => cut.Markup.Contains("CreateThisPage"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".wiki-back")).IsEmpty();
 	}
 }

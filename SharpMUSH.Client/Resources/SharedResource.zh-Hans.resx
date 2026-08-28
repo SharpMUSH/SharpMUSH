@@ -1801,7 +1801,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayWidgetWikiBody" xml:space="preserve">
-    <value>Wiki 正文</value>
+    <value>Wiki 页面</value>
     <comment>MT</comment>
   </data>
   <data name="LayWidgetWikiIndex" xml:space="preserve">

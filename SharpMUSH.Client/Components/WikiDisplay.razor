@@ -29,7 +29,11 @@
 else if (Article is null)
 {
     <div class="wiki-article">
-        <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["Wiki"]</a>
+        @* Embedded on another page, there is no wiki the reader came from, so no way "back" to it. *@
+        @if (!Embedded)
+        {
+            <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["Wiki"]</a>
+        }
         <MudAlert Severity="@Severity.Info" Variant="Variant.Outlined" Class="mt-2">
             <AuthorizeView Policy="wiki.create">
                 <Authorized>
@@ -131,6 +135,13 @@ else
 
     [Parameter]
     public WikiArticle? Article { get; init; }
+
+    /// <summary>
+    /// True when this page is rendered inside another page (a layout widget) rather than as the
+    /// <c>/wiki</c> route itself. Suppresses chrome that only makes sense on the wiki route.
+    /// </summary>
+    [Parameter]
+    public bool Embedded { get; init; }
 
     [Parameter]
     public required Func<Task> ActivateEditMode { get; init; }

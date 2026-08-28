@@ -1,20 +1,29 @@
 @using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using SharpMUSH.Client.Components
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Library.Services
+@inject IAuthorizationService Authorization
+@inject AuthenticationStateProvider AuthenticationState
 
 @* Renders one wiki page. Which page, in precedence order: an explicit slug in the widget config; a
    "character" shorthand in the config (the Character-namespace page whose slug is that name); or the
    character from the cascading ProfilePageContext when placed on the profile page. Explicit config
    outranks the context so a fixed page can sit on a profile. *@
 
-@if (!string.IsNullOrWhiteSpace(_slug))
+@* A page that does not exist takes the frame with it: this widget ships in the default home layout,
+   where the page is unwritten until someone writes it, and an empty bordered card under the stat
+   tiles is worse than nothing. Someone who could write it still sees the offer. *@
+@if (!string.IsNullOrWhiteSpace(_slug) && !NothingToShow)
 {
     @* The wrapper is the container-query context; its scoped CSS clamps the paper's padding. *@
     <div class="wiki-body-widget">
         <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
-            <WikiView Slug="@_slug" Namespace="@_namespace" Category="@_category" Locale="@_locale"
-                      Mode="WikiView.WikiMode.View" />
+            @* Keyed on the address: WikiView fetches once, on init, so a reconfigured widget has to
+               remount to go and read the page it now points at. *@
+            <WikiView @key="_address" Slug="@_slug" Namespace="@_namespace" Category="@_category" Locale="@_locale"
+                      Mode="WikiView.WikiMode.View" Embedded="true" OnLoaded="HandleLoaded" />
         </MudPaper>
     </div>
 }
@@ -32,6 +41,21 @@
     private string? _category;
     private string? _locale;
 
+    /// <summary>The page address the current <see cref="_missing"/> answer was measured against.</summary>
+    private string? _address;
+
+    /// <summary>True once the configured page has been fetched and turned out not to exist.</summary>
+    private bool _missing;
+
+    /// <summary>True when the viewer holds <c>wiki.create</c>, so a missing page is worth showing them.</summary>
+    private bool _mayCreate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationState.GetAuthenticationStateAsync();
+        _mayCreate = (await Authorization.AuthorizeAsync(state.User, null, "wiki.create")).Succeeded;
+    }
+
     protected override void OnParametersSet()
     {
         var cfg = ParseConfig();
@@ -45,16 +69,43 @@
 
         if (slug is not null)
         {
-            (_slug, _namespace, _category, _locale) = (slug, ns, category, locale);
+            SetPage(slug, ns, category, locale);
             return;
         }
 
         // No explicit page — fall back to a character biography, from config or from the page context.
         var character = Blank(cfg?.Character) ?? Blank(PageContext?.CharacterName);
 
-        (_slug, _namespace, _category, _locale) =
-            (character, WikiRoutes.CharacterNamespace, category, locale);
+        SetPage(character, WikiRoutes.CharacterNamespace, category, locale);
     }
+
+    /// <summary>
+    /// Points the widget at a page, forgetting the previous page's found/missing answer whenever the
+    /// address changes — otherwise a reconfigured widget stays hidden on the strength of the old page.
+    /// </summary>
+    private void SetPage(string? slug, string? ns, string? category, string? locale)
+    {
+        var address = string.Join('\u0000', slug, ns, category, locale);
+        if (address != _address)
+        {
+            _address = address;
+            _missing = false;
+        }
+
+        (_slug, _namespace, _category, _locale) = (slug, ns, category, locale);
+    }
+
+    /// <summary>Records whether the configured page exists, so the frame can follow it.</summary>
+    private void HandleLoaded(bool found) => _missing = !found;
+
+    /// <summary>
+    /// True when the only thing left to frame is the wiki's "no such page" notice: honest wording on
+    /// the <c>/wiki</c> route, but noise in a card under the stat tiles of a game whose home page
+    /// nobody has written. A character biography is excluded — its absence has its own deliberate
+    /// empty state ("has not written one yet"), which is a message worth framing.
+    /// </summary>
+    private bool NothingToShow =>
+        _missing && !_mayCreate && !WikiRoutes.IsCharacterProfile(_namespace, _category);
 
     /// <summary>Trims a config value, mapping blank to null so downstream defaults apply.</summary>
     private static string? Blank(string? value)
