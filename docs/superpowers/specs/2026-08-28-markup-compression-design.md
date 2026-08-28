@@ -1,7 +1,7 @@
 # Markup compression: format, memory, and wire
 
 **Date:** 2026-08-28
-**Status:** approved, ready to implement
+**Status:** implemented
 
 ## Problem
 
@@ -170,20 +170,29 @@ Three call sites: both `PublishAsync` calls in `NatsJetStreamMessageBus` and the
 `ConsumeAsync` in `NatsJetStreamConsumerService`. Applied to every message type — anything
 under the threshold passes through as plain JSON.
 
-## Expected results
+## Results
 
-| Step | bytes on the guide | vs today |
+All measured after implementation, on the same rendered guide.
+
+| Step | bytes | vs before |
 |---|---|---|
-| today | 794,777 | 1x |
-| coalescing alone | 37,589 | 21x (measured) |
-| + compact format | ~6,600 | ~120x (modelled) |
-| + gzip on the bus | ~3,400 | ~230x (measured on the coalesced blob) |
+| before | 794,777 | 1x |
+| coalescing alone | 37,589 | 21x |
+| + compact format | **5,752** | **138x** |
+| + gzip on the bus | **2,508** | **317x** |
 
-At roughly 6,600 bytes the text itself is 4,840 of them — about 74%. The compact format lands
-near the floor for uncompressed JSON, which is why gzip is the lever that buys anything
-beyond it.
+Runs went 2,440 → 147. ANSI and HTML renders are identical before and after, which is the
+property that matters — the run count is an implementation detail, the rendered bytes are not.
 
-Memory: `MModule.single("hello")` from 936 bytes to roughly 130.
+At 5,752 bytes the text itself is 4,840 of them, about 84%. The compact format lands near the
+floor for uncompressed JSON, which is why gzip is the lever that buys anything beyond it.
+
+Two smaller numbers that matter more in aggregate:
+
+```
+serialize(single("hello"))  :  80 bytes ->  13
+MModule.single("hello")     : 936 bytes -> 120   (per instance, GC.GetTotalAllocatedBytes)
+```
 
 ## Testing
 

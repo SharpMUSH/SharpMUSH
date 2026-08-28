@@ -32,9 +32,10 @@ public class LinkKindRenderTests
 			AnsiMarkup.Create(linkUrl: "help topic", linkKind: LinkKind.Command), "topic");
 		var json = MModule.serialize(cmd);
 
-		await Assert.That(json).Contains("LinkKind");
-
 		var back = MModule.deserialize(json);
+
+		await Assert.That(((AnsiMarkup)back.Runs[0].Markups[0]).Details.LinkKind)
+			.IsEqualTo(LinkKind.Command);
 		await Assert.That(MModule.serialize(back)).IsEqualTo(json);
 	}
 
@@ -100,19 +101,14 @@ public class LinkKindRenderTests
 	}
 
 	[Test]
-	public async Task Serialization_LegacyPayloadWithoutLinkKind_DefaultsToUrl()
+	public async Task Serialization_PayloadWithoutLinkKind_DefaultsToUrl()
 	{
-		var cmd = MModule.MarkupSingle(
-			AnsiMarkup.Create(linkUrl: "help topic", linkKind: LinkKind.Command), "topic");
-		var json = MModule.serialize(cmd);
+		// LinkKind.Url is 0 and is therefore never written. A palette entry carrying a link but no
+		// "lk" key has to read back as navigation, not as a command.
+		const string withoutLinkKind = """{"t":"topic","p":[null,[{"lu":"help topic"}]],"r":[5,1]}""";
 
-		// Simulate a pre-LinkKind payload by stripping the property entirely.
-		var legacy = System.Text.RegularExpressions.Regex.Replace(json, "\"LinkKind\":\\d+,?", "");
-		legacy = legacy.Replace(",}", "}");
+		var back = MModule.deserialize(withoutLinkKind);
 
-		var back = MModule.deserialize(legacy);
-
-		// Missing field => default(LinkKind) == Url => navigation rendering.
 		await Assert.That(back.Render("html")).Contains("href=\"help topic\"");
 		await Assert.That(back.Render("html")).DoesNotContain("xch_cmd");
 	}
