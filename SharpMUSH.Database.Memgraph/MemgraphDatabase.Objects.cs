@@ -86,6 +86,35 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 		return new DBRef(nextKey, now);
 	}
 
+	public async ValueTask<bool> DeleteObjectAsync(DBRef dbref, CancellationToken cancellationToken = default)
+	{
+		var node = await GetObjectNodeAsync(dbref, cancellationToken);
+		if (node.IsNone)
+		{
+			return false;
+		}
+
+		var name = node.Known.Object().Name;
+
+		// DETACH DELETE drops every incident relationship with the node, so the inbound half -- another
+		// object's HAS_PARENT / HAS_ZONE / HAS_HOME / AT_LOCATION pointing here -- is unset in the same
+		// step. That is the graph-native equivalent of the db_top scan in PennMUSH's free_object()
+		// (src/destroy.c). Mail *received* dies with the object (clear_player -> do_mail_clear +
+		// do_mail_purge); mail it sent survives with a dangling sender, which MailFromAsync tolerates.
+		await ExecuteWithRetryAsync("""
+MATCH (o:Object {key: $key})
+OPTIONAL MATCH (typed)-[:IS_OBJECT]->(o)
+OPTIONAL MATCH (typed)-[:HAS_ATTRIBUTE*1..]->(attr:Attribute)
+OPTIONAL MATCH (typed)-[:RECEIVED_MAIL]->(mail:Mail)
+OPTIONAL MATCH (o)-[:HAS_EXPANDED_DATA]->(data:ExpandedObjectData)
+DETACH DELETE attr, mail, data, typed, o
+""", new { key = dbref.Number }, cancellationToken);
+
+		logger.LogInformation("Deleted object #{DbRef} ({Name}) from the database", dbref.Number, name);
+
+		return true;
+	}
+
 	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
 	SharpPlayer creator, CancellationToken cancellationToken = default)
 	{
@@ -415,21 +444,38 @@ RETURN o, p
 		}
 	}
 
-	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+	public async IAsyncEnumerable<AnySharpContent> GetHomedAtAsync(DBRef home,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
+		// HAS_HOME links content → its home. Rooms are excluded in the match: a room reuses this
+		// relationship for its drop-to, which is not a home.
 		var result = await ExecuteWithRetryAsync("""
-MATCH (e:Exit)-[:AT_LOCATION]->(dest {key: $destKey})
-MATCH (e)-[:IS_OBJECT]->(o:Object {type: 'EXIT'})
-RETURN o, e
-""", new { destKey = destination.Number }, cancellationToken);
+MATCH (c)-[:HAS_HOME]->(dest {key: $homeKey})
+WHERE c:Player OR c:Thing OR c:Exit
+RETURN c.key AS key
+""", new { homeKey = home.Number }, cancellationToken);
 
 		foreach (var record in result.Result)
 		{
-			var objNode = record["o"].As<INode>();
-			var exitNode = record["e"].As<INode>();
-			var sharpObj = MapNodeToSharpObject(objNode);
-			var key = objNode["key"].As<int>();
-			yield return BuildExit(ExitId(key), exitNode, sharpObj);
+			var candidate = await GetObjectNodeAsync(new DBRef(record["key"].As<int>()), cancellationToken);
+			if (candidate.IsNone || candidate.IsRoom) continue;
+
+			yield return candidate.Known.AsContent;
+		}
+	}
+
+	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		// An exit's destination is HAS_HOME (AT_LOCATION is its *source* room), so entrances are the
+		// exit-shaped subset of what is homed here. Matching on AT_LOCATION returned the exits leading
+		// OUT of the room instead — the exact opposite set.
+		await foreach (var content in GetHomedAtAsync(destination, cancellationToken))
+		{
+			if (content.IsExit)
+			{
+				yield return content.AsExit;
+			}
 		}
 	}
 

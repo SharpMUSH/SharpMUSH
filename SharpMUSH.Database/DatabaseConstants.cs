@@ -81,6 +81,25 @@ public static class DatabaseConstants
 	public const string AccountOwnsCharacter = "edge_account_owns_character";
 
 	/// <summary>
+	/// Every edge collection in the database. Object deletion sweeps all of them for edges incident
+	/// to the vertices it is removing: PennMUSH's <c>free_object()</c> can afford a linear scan over
+	/// <c>db_top</c> to null out dangling Zone/Parent/Home/Location/Next references
+	/// (<c>src/destroy.c</c>), and this list is the graph-shaped equivalent of that scan.
+	/// <para>
+	/// <c>ArangoDeleteObjectEdgeCoverageTests</c> asserts this stays in sync with the edge
+	/// collections the migrations actually create, so a new edge type cannot silently start
+	/// surviving object deletion.
+	/// </para>
+	/// </summary>
+	public static readonly string[] edgeCollections =
+	[
+		AccountHasRole, AccountOwnsCharacter, AtLocation, HasAttribute, HasAttributeEntry,
+		HasAttributeFlag, HasAttributeOwner, HasExit, HasFlags, HasHome, HasHook, HasObjectData,
+		HasObjectOwner, HasParent, HasPowers, HasZone, IsObject, OnChannel, OwnerOfChannel,
+		PackageDependsOn, ReceivedMail, SenderOfMail
+	];
+
+	/// <summary>
 	/// Describes the relationship between actualized types and their objects.
 	/// <see cref="verticesAll"/> -> <see cref="IsObject"/> -> <see cref="Objects"/>
 	/// </summary>

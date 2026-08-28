@@ -577,6 +577,24 @@ public partial class SurrealDatabase
 		}
 	}
 
+	public async IAsyncEnumerable<AnySharpContent> GetHomedAtAsync(DBRef home,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		// has_home links content → its home. Rooms come back too (a room's drop-to reuses this edge)
+		// and are dropped below, because a drop-to is not a home.
+		var response = await ExecuteAsync(
+			"SELECT VALUE in.key FROM has_home WHERE out.key = $homeKey",
+			new Dictionary<string, object?> { ["homeKey"] = home.Number }, cancellationToken);
+
+		foreach (var key in response.GetValue<List<int>>(0) ?? [])
+		{
+			var candidate = await GetObjectNodeAsync(new DBRef(key), cancellationToken);
+			if (candidate.IsNone || candidate.IsRoom) continue;
+
+			yield return candidate.Known.AsContent;
+		}
+	}
+
 	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		// The destination is resolved first so the subquery can compare `out` to a whole record id, and
@@ -758,6 +776,85 @@ public partial class SurrealDatabase
 			["warnings"] = (int)warnings
 		};
 		await ExecuteAsync("UPDATE object:$key SET warnings = $warnings", parameters, cancellationToken);
+	}
+
+	/// <summary>
+	/// Every relation table an object vertex can appear in, as <c>in</c> or as <c>out</c>. Object
+	/// deletion sweeps all of them — the inbound half is what unsets other objects' parent/zone/
+	/// home/location references to the deleted object, standing in for the <c>db_top</c> scan in
+	/// PennMUSH's <c>free_object()</c> (<c>src/destroy.c</c>) that a graph store cannot do.
+	/// </summary>
+	private static readonly string[] ObjectRelationTables =
+	[
+		"account_has_role", "account_owns_character", "at_location", "has_attribute",
+		"has_attribute_entry", "has_attribute_flag", "has_attribute_owner", "has_flags",
+		"has_home", "has_owner", "has_parent", "has_powers", "has_zone", "is_object",
+		"mail_sender", "member_of_channel", "owner_of_channel", "received_mail"
+	];
+
+	public async ValueTask<bool> DeleteObjectAsync(DBRef dbref, CancellationToken cancellationToken = default)
+	{
+		var node = await GetObjectNodeAsync(dbref, cancellationToken);
+		if (node.IsNone)
+		{
+			return false;
+		}
+
+		var known = node.Known;
+		var name = known.Object().Name;
+		var table = ExtractTable(known.Id()!);
+		var key = dbref.Number;
+
+		// Attributes first, one subtree at a time, reusing the same leaf-before-branch walk @WIPE uses.
+		var topLevelAttributes = await ExecuteAsync(
+			"SELECT VALUE key FROM type::thing($table, $key)->has_attribute->attribute",
+			new Dictionary<string, object?> { ["table"] = table, ["key"] = key }, cancellationToken);
+
+		foreach (var attributeKey in topLevelAttributes.GetValue<List<string>>(0) ?? [])
+		{
+			if (string.IsNullOrEmpty(attributeKey)) continue;
+
+			await WipeAttributeDescendantsAsync(attributeKey, cancellationToken);
+			await ExecuteAsync(
+				"BEGIN TRANSACTION;" +
+				"DELETE has_attribute WHERE out = attribute:⟨$attributeKey⟩;" +
+				"DELETE has_attribute WHERE in = attribute:⟨$attributeKey⟩;" +
+				"DELETE has_attribute_flag WHERE in = attribute:⟨$attributeKey⟩;" +
+				"DELETE has_attribute_owner WHERE in = attribute:⟨$attributeKey⟩;" +
+				"DELETE has_attribute_entry WHERE in = attribute:⟨$attributeKey⟩;" +
+				"DELETE attribute:⟨$attributeKey⟩;" +
+				"COMMIT TRANSACTION",
+				new Dictionary<string, object?> { ["attributeKey"] = attributeKey }, cancellationToken);
+		}
+
+		// Mail *received* dies with the object (PennMUSH clear_player -> do_mail_clear + do_mail_purge).
+		// Mail it sent to others survives with a dangling sender; MailFromAsync already yields None there.
+		// LET binds the ids up front because deleting received_mail would otherwise destroy the subquery.
+		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"LET $doomedMail = (SELECT VALUE out FROM received_mail WHERE in = type::thing($table, $key));" +
+			"DELETE mail_sender WHERE in IN $doomedMail;" +
+			"DELETE received_mail WHERE out IN $doomedMail;" +
+			"DELETE mail WHERE id IN $doomedMail;" +
+			"COMMIT TRANSACTION",
+			new Dictionary<string, object?> { ["table"] = table, ["key"] = key }, cancellationToken);
+
+		var sweep = string.Join(string.Empty, ObjectRelationTables.Select(relation =>
+			$"DELETE {relation} WHERE in IN $doomed OR out IN $doomed;"));
+
+		await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"LET $doomed = [type::thing($table, $key), object:$key];" +
+			sweep +
+			"DELETE object_data WHERE objectKey = $key;" +
+			"DELETE type::thing($table, $key);" +
+			"DELETE object:$key;" +
+			"COMMIT TRANSACTION",
+			new Dictionary<string, object?> { ["table"] = table, ["key"] = key }, cancellationToken);
+
+		logger.LogInformation("Deleted object #{DbRef} ({Name}) from the database", key, name);
+
+		return true;
 	}
 
 	#endregion

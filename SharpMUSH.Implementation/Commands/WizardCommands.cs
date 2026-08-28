@@ -1923,34 +1923,21 @@ public partial class Commands
 		return new CallState(arg1);
 	}
 
+	/// <remarks>
+	/// PennMUSH <c>purge()</c> (<c>src/destroy.c</c>): one pass over the database, advancing objects
+	/// marked <c>GOING</c> to <c>GOING_TWICE</c> and freeing the ones that already reached
+	/// <c>GOING_TWICE</c>. Two passes, so an accidental <c>@destroy</c> stays recoverable via
+	/// <c>@undestroy</c> for a whole purge interval. A special object that somehow got marked is
+	/// spared rather than freed.
+	/// </remarks>
 	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Purge(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// NOTE: For SharpMUSH, this is a simplified implementation
-		// In a cloud/web environment, actual object deletion should be handled by a background service
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var objects = Mediator!.CreateStream(new GetAllTypedObjectsQuery());
-		var goingToTwice = 0;
-		var twiceDestroyed = 0;
+		await ObjectDestructionService!.PurgeAsync(parser);
 
-		await foreach (var obj in objects)
-		{
-			// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
-			if (await obj.HasFlag("GOING") && !await obj.HasFlag("GOING_TWICE"))
-			{
-				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
-				goingToTwice++;
-			}
-			// Objects marked GOING_TWICE would be deleted by background GC
-			else if (await obj.HasFlag("GOING_TWICE"))
-			{
-				twiceDestroyed++;
-			}
-		}
-
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PurgeCompleteFormat), executor, goingToTwice, twiceDestroyed);
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PurgeNoteBackgroundGc), executor);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PurgeComplete), executor);
 
 		return CallState.Empty;
 	}
