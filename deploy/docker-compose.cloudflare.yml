@@ -27,9 +27,11 @@ services:
   nats:
     image: nats:2.10-alpine
     container_name: sharpmush-nats
-    command: ["-js", "-sd", "/data", "-m", "8222"]
+    command: ["-js", "-sd", "/data", "-m", "8222", "-c", "/etc/nats/nats.conf"]
     volumes:
       - nats-data:/data
+      # max_payload (6 MB) is a server-level limit with no CLI flag, so it needs a config file.
+      - ../nats.conf:/etc/nats/nats.conf:ro
     networks:
       - sharpmush-net
     healthcheck:

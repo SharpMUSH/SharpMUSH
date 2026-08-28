@@ -1,3 +1,15 @@
+# NATS server config. max_payload is a server-level limit with no command-line flag, so it
+# can only come from a config file — see ../nats.conf, which this mirrors for the compose
+# stacks. Left at the 1 MB default, a single @wiki page of syntax-highlighted markup
+# serialises past it and the publish fails with NatsPayloadTooLargeException.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nats-config
+data:
+  nats.conf: |
+    max_payload: 6291456
+---
 # Persistent Volume for the infrastructure pod
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -48,7 +60,11 @@ spec:
               value: "password"
         - name: nats
           image: nats:2-alpine
-          args: ["-js", "-m", "8222"]
+          args: ["-js", "-m", "8222", "-c", "/etc/nats/nats.conf"]
+          volumeMounts:
+            - name: nats-config
+              mountPath: /etc/nats
+              readOnly: true
           ports:
             - name: client
               containerPort: 4222
@@ -77,6 +93,9 @@ spec:
         - name: infra-storage
           persistentVolumeClaim:
             claimName: sharpmush-infra-pvc
+        - name: nats-config
+          configMap:
+            name: nats-config
 ---
 apiVersion: v1
 kind: Service
