@@ -179,8 +179,17 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 	/// page has no character for. Parsed rather than serialized from an anonymous type: the client
 	/// publishes trimmed, and this needs no reflection to survive it.
 	/// </summary>
-	private static readonly JsonElement HomeWikiPage =
-		JsonDocument.Parse("""{"slug":"home","namespace":"main"}""").RootElement.Clone();
+	private static readonly JsonElement HomeWikiPage = Config("""{"slug":"home","namespace":"main"}""");
+
+	/// <summary>
+	/// A standalone <see cref="JsonElement"/> parsed from literal JSON. The document owns pooled
+	/// buffers and the clone does not, so the document has to be disposed once the copy is taken.
+	/// </summary>
+	private static JsonElement Config(string json)
+	{
+		using var document = JsonDocument.Parse(json);
+		return document.RootElement.Clone();
+	}
 
 	private static LayoutSettings SidebarsOff => new(LeftSidebarEnabled: false, RightSidebarEnabled: false);
 }
