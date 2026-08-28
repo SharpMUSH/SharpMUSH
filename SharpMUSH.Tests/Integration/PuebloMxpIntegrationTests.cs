@@ -80,6 +80,44 @@ public class PuebloMxpIntegrationTests
 	}
 
 	/// <summary>
+	/// PUEBLOCLIENT is a socket command, not a one-shot greeting. This sends an ordinary line first so
+	/// the handshake is no longer the connection's first submitted line — which is exactly what a
+	/// client that negotiates slowly, or that re-sends the handshake because it thinks it is showing
+	/// raw HTML, actually does. The first-line-only implementation passed the test above and still
+	/// failed this one, leaving such a client in plain text for the rest of the session.
+	/// </summary>
+	[Test]
+	[Timeout(120_000)]
+	public async Task PuebloHandshake_ArrivingLate_StillSwitchesToHtml(CancellationToken cancellationToken)
+	{
+		using var client = new TcpClient();
+		await client.ConnectAsync(IPAddress.Loopback, Fixture.TelnetPort);
+		client.ReceiveTimeout = ReceiveTimeoutMs;
+
+		await using var stream = client.GetStream();
+
+		var hello = await ReadUntilAsync(stream,
+			s => s.Contains("Pueblo 1.10 Enhanced"), cancellationToken);
+		await Assert.That(hello).Contains("Pueblo 1.10 Enhanced");
+
+		// An unrelated line first: WHO answers at the connect screen, so this exercises the parser
+		// rather than being swallowed, and proves the handshake below is not the first line.
+		await SendLineAsync(stream, "WHO", cancellationToken);
+		await ReadUntilAsync(stream, s => s.Contains("Player Name"), cancellationToken);
+
+		await SendLineAsync(stream, "PUEBLOCLIENT 2.01", cancellationToken);
+		await Task.Delay(500, cancellationToken);
+
+		await SendLineAsync(stream, "connect God", cancellationToken);
+
+		var postLogin = await ReadUntilAsync(stream,
+			s => s.Contains("Room Zero"), cancellationToken);
+
+		await Assert.That(postLogin).Contains("<send")
+			.Because("A handshake that arrives after another line must still switch the connection to Pueblo");
+	}
+
+	/// <summary>
 	/// Verifies that without a PUEBLOCLIENT response, the server sends
 	/// standard ANSI output (no HTML tags in the room description).
 	/// </summary>

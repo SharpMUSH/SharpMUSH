@@ -81,6 +81,39 @@ public class ConnectionService(
 			IConnectionService.ConnectionState.LoggedIn, firstLogin));
 	}
 
+	public async ValueTask Unbind(long handle)
+	{
+		var get = Get(handle);
+		if (get is null || get.Ref is null) return;
+
+		var formerRef = get.Ref;
+
+		// State is updated before the notification is published, so a PLAYER`DISCONNECT handler asking
+		// for the player's remaining connections does not count the one that is leaving.
+		_sessionState.AddOrUpdate(handle,
+			_ => throw new InvalidDataException("Tried to add a new handle during Logout."),
+			(_, y) => y with { Ref = null, State = IConnectionService.ConnectionState.Connected });
+
+		if (stateStore != null)
+		{
+			// A null objid is how the store spells "bound to nobody"; the reconciled State has to move
+			// with it, or a restart would restore a handle that claims to be logged in with no player.
+			await stateStore.SetPlayerBindingAsync(handle, null);
+			await stateStore.UpdateMetadataAsync(handle, "State", nameof(IConnectionService.ConnectionState.Connected));
+		}
+
+		foreach (var handler in _handlers)
+		{
+			handler((handle, formerRef, get.State, IConnectionService.ConnectionState.Connected));
+		}
+
+		telemetryService?.RecordConnectionEvent("logged_out");
+		UpdateConnectionMetrics();
+
+		await publisher.Publish(new ConnectionStateChangeNotification(handle, formerRef, get.State,
+			IConnectionService.ConnectionState.Connected));
+	}
+
 	public async ValueTask BindAccount(long handle, string accountId)
 	{
 		var get = Get(handle);

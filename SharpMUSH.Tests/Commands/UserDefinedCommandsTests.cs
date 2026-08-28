@@ -241,6 +241,60 @@ public class UserDefinedCommandsTests
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
+	/// <summary>
+	/// A regexp $-command carrying a non-capturing group. The <c>:</c> in <c>(?:…)</c> would end the
+	/// pattern, so PennMUSH has it written <c>(?\:…)</c> and turns it back into <c>:</c> before
+	/// compiling (<c>atr_single_match_r</c>, <c>src/attrib.c:1786-1798</c>). Without that step .NET is
+	/// handed <c>(?\:</c>, <c>CommandAttributeScanner</c>'s catch swallows the ArgumentException, and
+	/// the command silently ceases to exist — the symptom is "Huh?", never an error message.
+	/// <para>
+	/// <c>\\:</c> in the typed line is what stores <c>\:</c>: the attribute value is evaluated on set,
+	/// same as it is in Penn.
+	/// </para>
+	/// </summary>
+	[Test]
+	public async ValueTask Regex_NonCapturingGroup_IsWrittenWithAnEscapedColon()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRxNoCap");
+		var token = TestIsolationHelpers.GenerateUniqueName("ucnc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($@"&UTEST_RXNOCAP {obj}=${token} (?\\:at|toward) ([A-Za-z]+):@emit {token}: %1"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@set {obj}/UTEST_RXNOCAP=regexp"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} toward door"));
+
+		// %1 is "door", not "toward": the alternation is a group that does not capture.
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: door")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// The same escape in a wildcard pattern, where the failure is quieter still: an un-collapsed
+	/// <c>\:</c> survives <c>Regex.Escape</c> and becomes a backslash the typed line has to contain.
+	/// </summary>
+	[Test]
+	public async ValueTask Wildcard_EscapedColonIsALiteralColonInThePattern()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcColon");
+		var token = TestIsolationHelpers.GenerateUniqueName("ucc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($@"&UTEST_COLON {obj}=${token}\\:go *:@emit {token}: %0"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}:go north"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: north")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
 	[Test]
 	[Category("TestInfrastructure")]
 	[Skip("Test needs investigation - unrelated to communication commands")]

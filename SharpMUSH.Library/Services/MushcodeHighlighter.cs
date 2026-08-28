@@ -20,9 +20,6 @@ namespace SharpMUSH.Library.Services;
 /// </remarks>
 public static partial class MushcodeHighlighter
 {
-	[GeneratedRegex(@"^\$(?<pattern>[^:]+):", RegexOptions.Singleline)]
-	private static partial Regex CommandPatternRegex();
-
 	// Function name immediately followed by an open paren: u(, switch(, etc.
 	[GeneratedRegex(@"\G(?<name>[a-zA-Z_][a-zA-Z0-9_]*)\(")]
 	private static partial Regex FunctionCallRegex();
@@ -74,8 +71,10 @@ public static partial class MushcodeHighlighter
 
 		var position = 0;
 
-		// Leading $pattern: gets its own class.
-		var command = CommandPatternRegex().Match(value);
+		// Leading $pattern: gets its own class. Shares the dispatcher's split rather than re-deriving
+		// it, so the highlighted span ends where the command scanner actually ends the pattern — a
+		// naive [^:]+ cut an escaped \: short and painted half a pattern as code.
+		var command = CommandDiscoveryService.CommandPatternRegex().Match(value);
 		if (command.Success)
 		{
 			Append(builder, "mush-cmdpattern", value[..command.Length], dangerSpans, 0);

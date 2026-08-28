@@ -51,24 +51,45 @@ public class TelnetServer : ConnectionHandler
 		_options = options;
 	}
 
+	/// <summary>
+	/// PennMUSH <c>PUEBLO_COMMAND</c> (hdrs/conf.h): the literal <c>"PUEBLOCLIENT "</c>, matched with
+	/// <c>strncmp</c>. The trailing space is part of the constant, so the token has to be followed by
+	/// whitespace to count as the handshake.
+	/// </summary>
+	private static bool IsPuebloHandshake(string input)
+	{
+		const string command = "PUEBLOCLIENT";
+
+		return input.StartsWith(command, StringComparison.OrdinalIgnoreCase)
+					 && input.Length > command.Length
+					 && char.IsWhiteSpace(input[command.Length]);
+	}
+
 	public override async Task OnConnectedAsync(ConnectionContext connection)
 	{
 		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
-		var awaitingInitialPuebloHandshake = _options.PuebloEnabled;
-
 		TelnetInterpreterBuilder builder = _telnetFactory.CreateBuilder()
 			.OnSubmit(async (byteArray, encoding, _) =>
 			{
 				var input = encoding.GetString(byteArray);
 
-				// Detect Pueblo handshake response only on the first submitted line.
-				if (awaitingInitialPuebloHandshake &&
-						input.StartsWith("PUEBLOCLIENT", StringComparison.OrdinalIgnoreCase))
+				// PUEBLOCLIENT is a socket command, not a one-shot greeting: PennMUSH answers it in
+				// do_command (src/bsd.c) on any line, at any point in the session, and a client whose
+				// handshake was late — or that re-sends it because it thinks it is showing raw HTML —
+				// gets switched into Pueblo mode all the same. Restricting it to the first submitted
+				// line meant a slightly slow Pueblo client sent its handshake straight through to the
+				// parser, which answered "Huh?" and left the connection in plain-text mode forever.
+				// PennMUSH's PUEBLO_COMMAND is the literal "PUEBLOCLIENT " — trailing space included —
+				// matched with strncmp, so the token must be followed by whitespace. A bare
+				// StartsWith would also swallow "PUEBLOCLIENTX", suppressing it from the parser and
+				// switching the connection to Pueblo on a word that is not the handshake.
+				if (_options.PuebloEnabled && IsPuebloHandshake(input))
 				{
-					awaitingInitialPuebloHandshake = false;
-					_logger.LogInformation("Pueblo handshake detected on handle {Handle}: {Response}",
-						nextPort, input.TrimEnd());
+					// Debug, and without the client-supplied text: this branch is reachable on every
+					// line for the whole session, so a client that repeats it would otherwise flood the
+					// log at Information with content it chose.
+					_logger.LogDebug("Pueblo handshake detected on handle {Handle}", nextPort);
 
 					if (await TryUpdateFormatAsync(nextPort, OutputFormat.Pueblo, ct))
 					{
@@ -82,7 +103,6 @@ public class TelnetServer : ConnectionHandler
 					return;
 				}
 
-				awaitingInitialPuebloHandshake = false;
 				await _publishEndpoint.Publish(new TelnetInputMessage(nextPort, input), ct);
 			})
 			.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>

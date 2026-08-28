@@ -488,9 +488,10 @@ public static class ErrorMessages
 
 		// --- Destruction edge-case notifications (PennMUSH src/destroy.c) ---
 		public const string GuestCantDestroy = "I'm sorry, Dave, I'm afraid I can't do that.";
-		public const string AlreadyDestroyed = "Destroying that again is hardly necessary.";
 		public const string DestroyGodBlasphemous = "Destroying God would be blasphemous.";
 		public const string TooSpecialToDestroy = "That is too special to be destroyed.";
+		public const string FloorDisappearsNothingness =
+			"The floor disappears under your feet, you fall through NOTHINGness and then:";
 
 		// --- Movement default notifications (PennMUSH src/move.c) ---
 		public const string DefaultOLeave = "has left.";
@@ -549,6 +550,27 @@ public static class ErrorMessages
 		public const string OutputSuffixSet = "OUTPUTSUFFIX set.";
 		public const string OutputPrefixCleared = "OUTPUTPREFIX cleared.";
 		public const string OutputSuffixCleared = "OUTPUTSUFFIX cleared.";
+
+		// --- SOCKSET / @SOCKSET (PennMUSH src/bsd.c sockset()) ---
+		public const string SocksetNotConnected = "You are not connected?";
+		public const string SocksetNeedsOptionAndValue = "You must give an option and a value.";
+		public const string SocksetSetWhatOption = "Set what option?";
+		public const string SocksetWidthSet = "Width set.";
+		public const string SocksetHeightSet = "Height set.";
+		public const string SocksetWidthNeedsPositiveInteger = "Width expects a positive integer.";
+		public const string SocksetHeightNeedsPositiveInteger = "Height expects a positive integer.";
+		public const string SocksetTerminalTypeSet = "Terminal Type set.";
+		public const string SocksetPromptNewlinesOn = "A newline will be sent after a prompt.";
+		public const string SocksetPromptNewlinesOff = "No newline will be sent after a prompt.";
+		public const string SocksetStripAccentsOn = "Accents will be stripped.";
+		public const string SocksetStripAccentsOff = "Accents will not be stripped.";
+		public const string SocksetUnknownColorStyle =
+			"Unknown color style. Valid color styles: 'auto', 'plain', 'hilite', '16color', 'xterm256'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetColorStyleSetFormat = "Colorstyle set to '{0}'";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetInvalidOptionFormat = "@sockset option '{0}' is not a valid option.";
+		public const string SocksetInvalidDescriptor = "Invalid descriptor.";
 
 		public const string LocaleSetFormat = "Locale set to {0}.";
 		public const string LocaleCleared = "Locale cleared (reset to default).";
@@ -1551,9 +1573,7 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NewPasswordSetFormat = "Set new password for {0}: {1}";
 
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PurgeCompleteFormat = "Purge complete. {0} objects advanced to GOING_TWICE. {1} objects marked for final deletion.";
-		public const string PurgeNoteBackgroundGc = "Note: Actual object deletion is handled by background garbage collection in SharpMUSH.";
+		public const string PurgeComplete = "Purge complete.";
 
 		public const string ShutdownOnlyGodPanic = "Only God can perform a panic shutdown.";
 		public const string ShutdownPanicInitiated = "PANIC SHUTDOWN initiated by God.";

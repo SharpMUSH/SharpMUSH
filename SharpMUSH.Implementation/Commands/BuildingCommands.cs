@@ -355,21 +355,10 @@ public partial class Commands
 				shouldNotify: true);
 		}
 
-		// Objects already marked GOING_TWICE are effectively garbage.
-		if (await obj.HasFlag("GOING_TWICE"))
-		{
-			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.AlreadyDestroyed,
-				shouldNotify: true);
-		}
-
-		// Protect special configuration objects (player_start, master_room, base_room, default_home).
-		var dbConfig = Configuration!.CurrentValue.Database;
-		var objKey = obj.Object().Key;
-		if (objKey == dbConfig.PlayerStart || objKey == dbConfig.MasterRoom
-			|| objKey == dbConfig.BaseRoom || objKey == dbConfig.DefaultHome)
+		// Protect special configuration objects (player_start, master_room, base_room, default_home,
+		// God, probate_judge) — PennMUSH special_object(). Shared with the destruction service so the
+		// two cannot drift; a GOING special object is refused there too rather than freed.
+		if (ObjectDestructionService!.IsSpecialObject(obj.Object().DBRef))
 		{
 			return await NotifyService!.NotifyAndReturn(
 				executor.Object().DBRef,
@@ -445,17 +434,25 @@ public partial class Commands
 			}
 		}
 
+		// "@destroying an object while it is set GOING destroys it immediately" — PennMUSH
+		// src/destroy.c do_destroy(), which calls free_object() right here. GOING_TWICE is the purge
+		// cycle's own second-pass marker, not a state @destroy stops at.
 		if (await obj.HasFlag("GOING"))
 		{
-			// Phase 2b: object-lifecycle destroy seam. Fired while the object is still in the DB so a plugin
-			// hook can still read it; this is the second-stage (GOING -> GOING_TWICE) commit.
+			// Phase 2b: object-lifecycle destroy seam. Fired while the object is still in the DB so a
+			// plugin hook can still read it; after FreeObjectAsync there is nothing left to read.
 			await NotifyObjectDestroyingAsync(parser, obj.Object().DBRef);
 
-			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Destroyed), executor);
+			if (!await ObjectDestructionService!.FreeObjectAsync(parser, obj))
+			{
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: ErrorMessages.Notifications.TooSpecialToDestroy,
+					shouldNotify: true);
+			}
 
-			// NOTE: Actual object deletion from database requires a garbage collection system.
-			// Objects marked GOING_TWICE will be cleaned up by a future purge process.
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Destroyed), executor);
 			return CallState.Empty;
 		}
 

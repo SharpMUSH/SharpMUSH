@@ -86,8 +86,11 @@ public static class CommandAttributeScanner
 			if (!match.Success)
 				continue;
 
-			// Extract command pattern and determine if it's REGEX or wildcard
-			var pattern = match.Value.Remove(match.Length - 1, 1).Remove(0, 1);
+			// Extract command pattern and determine if it's REGEX or wildcard. The stored match half
+			// still carries Penn's separator escape, so \: has to collapse back to a plain colon before
+			// either compiler sees it — without that, a regexp pattern's own (?\:...) is not a legal
+			// .NET construct and the whole $-command is thrown away by the catch below.
+			var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);
 			var isRegex = attr.Flags.Any(flag => flag.Name.Equals("REGEXP", StringComparison.OrdinalIgnoreCase));
 			// Skip any optional leading whitespace so that "$cmd: @pemit" and "$cmd:@pemit" are
 			// both handled correctly — a leading space would otherwise cause an empty command name

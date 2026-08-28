@@ -614,8 +614,16 @@ public partial class ArangoDatabase
 	public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref,
 		CancellationToken cancellationToken = default)
 	{
-		var obj = await arangoDb.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.Objects,
-			dbref.Number.ToString(), cancellationToken: cancellationToken);
+		// DOCUMENT() + FILTER rather than Document.GetAsync: the latter raises ArangoException on a
+		// missing document, so the "not found" contract this method advertises — and that namelist()
+		// and GetObjectsByZoneAsync both branch on — was unreachable, and asking about a dbref that
+		// does not exist threw instead of answering. The other two providers already return null.
+		var result = await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
+			$"LET obj = DOCUMENT('{DatabaseConstants.Objects}', @key) FILTER obj != null RETURN obj",
+			bindVars: new Dictionary<string, object> { { "key", dbref.Number.ToString() } },
+			cache: true, cancellationToken: cancellationToken);
+
+		var obj = result.FirstOrDefault();
 
 		if (obj is null)
 		{
@@ -806,8 +814,12 @@ public partial class ArangoDatabase
 
 		if (filter.Owner.HasValue)
 		{
-			filters.Add($@"LENGTH(FOR owner IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphObjectOwners}' 
-				FILTER owner._key == @ownerKey 
+			// Two hops, not one. The ownership edge lands on the typed node_players vertex, whose _key is
+			// an Arango-generated id — only the node_objects document is keyed by dbref. Comparing the
+			// dbref to the player vertex's key matched nothing, ever; hop on to the owner's own object.
+			filters.Add($@"LENGTH(FOR owner IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphObjectOwners}'
+				FOR ownerObject IN 1..1 OUTBOUND owner GRAPH '{DatabaseConstants.GraphObjects}'
+				FILTER ownerObject._key == @ownerKey
 				LIMIT 1
 				RETURN 1) > 0");
 			bindVars["ownerKey"] = filter.Owner.Value.Number.ToString();
@@ -833,13 +845,27 @@ public partial class ArangoDatabase
 
 		if (!string.IsNullOrEmpty(filter.HasFlag))
 		{
-			filters.Add("@flagName IN v.Flags[*].Name");
+			// Flags are edges to node_object_flags, not an array on the object — `v.Flags[*].Name` read a
+			// field that node_objects documents do not have, so the predicate was false for every row.
+			// The Type disjunct reproduces the type-named flag GetObjectFlagsAsync synthesises, which
+			// HelperFunctions.HasFlag sees and which no edge backs.
+			filters.Add($@"(LOWER(v.Type) == LOWER(@flagName) OR LENGTH(
+				FOR flag IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphFlags}'
+				FILTER LOWER(flag.Name) == LOWER(@flagName)
+				LIMIT 1
+				RETURN 1) > 0)");
 			bindVars["flagName"] = filter.HasFlag;
 		}
 
 		if (!string.IsNullOrEmpty(filter.HasPower))
 		{
-			filters.Add("@powerName IN v.Powers[*].Name");
+			// Same defect as HasFlag above, and matching on Alias too because HelperFunctions.HasPower
+			// does. There is no synthesised type-power, so no Type disjunct here.
+			filters.Add($@"LENGTH(
+				FOR power IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphPowers}'
+				FILTER LOWER(power.Name) == LOWER(@powerName) OR LOWER(power.Alias) == LOWER(@powerName)
+				LIMIT 1
+				RETURN 1) > 0");
 			bindVars["powerName"] = filter.HasPower;
 		}
 
@@ -894,27 +920,41 @@ public partial class ArangoDatabase
 		}
 	}
 
+	public async IAsyncEnumerable<AnySharpContent> GetHomedAtAsync(DBRef home,
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		var homeNode = await GetObjectNodeAsync(home, ct);
+		if (homeNode.IsNone) yield break;
+
+		// Home edges run FROM the content's typed vertex TO its home's typed vertex, so traverse
+		// INBOUND from the home. Rooms come back too — a room's drop-to reuses this edge — and are
+		// dropped, because a drop-to is not a home.
+		var ids = arangoDb.Query.ExecuteStreamAsync<string>(handle,
+			$"FOR v IN 1..1 INBOUND @{StartVertex} GRAPH {DatabaseConstants.GraphHomes} RETURN v._id",
+			bindVars: new Dictionary<string, object> { { StartVertex, homeNode.Id()! } },
+			cancellationToken: ct);
+
+		await foreach (var id in ids.WithCancellation(ct))
+		{
+			var candidate = await GetObjectNodeAsync(id, ct);
+			if (candidate.IsNone || candidate.IsRoom) continue;
+
+			yield return candidate.Known.AsContent;
+		}
+	}
+
 	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination,
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
-		// Exits are connected to their destination via the AtLocation edge in GraphLocations
-		var exitIds = arangoDb.Query.ExecuteStreamAsync<string>(handle,
-			$@"FOR v, e IN 1..1 INBOUND @destination GRAPH @graph
-			   FILTER v.Type == @exitType
-			   RETURN v._id",
-			bindVars: new Dictionary<string, object>
-			{
-				{ "destination", $"{DatabaseConstants.Objects}/{destination.Number}" },
-				{ "graph", DatabaseConstants.GraphLocations },
-				{ "exitType", DatabaseConstants.TypeExit }
-			}, cancellationToken: ct) ?? AsyncEnumerable.Empty<string>();
-
-		await foreach (var id in exitIds.WithCancellation(ct))
+		// An exit's destination is its home edge (at_location is its *source* room), so entrances are
+		// the exit-shaped subset of what is homed here. Traversing at_location instead returned exits
+		// leading OUT of the room, and doing it from the Objects document — which at_location never
+		// touches — returned nothing at all.
+		await foreach (var content in GetHomedAtAsync(destination, ct))
 		{
-			var optionalObj = await GetObjectNodeAsync(id, ct);
-			if (!optionalObj.IsNone)
+			if (content.IsExit)
 			{
-				yield return optionalObj.AsExit;
+				yield return content.AsExit;
 			}
 		}
 	}
@@ -982,6 +1022,119 @@ public partial class ArangoDatabase
 			cancellationToken: ct);
 
 		return result.FirstOrDefault();
+	}
+
+	public async ValueTask<int> GetObjectCountAsync(CancellationToken ct = default)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<int>(
+			handle,
+			$"FOR v IN {DatabaseConstants.Objects:@} COLLECT WITH COUNT INTO length RETURN length",
+			cache: false,
+			cancellationToken: ct);
+
+		return result.FirstOrDefault();
+	}
+
+	public async ValueTask<bool> DeleteObjectAsync(DBRef dbref, CancellationToken ct = default)
+	{
+		var node = await GetObjectNodeAsync(dbref, ct);
+		if (node.IsNone)
+		{
+			return false;
+		}
+
+		var known = node.Known;
+		var objectId = known.Object().Id!;
+		var typedId = known.Id()!;
+		var name = known.Object().Name;
+
+		// The attribute subtree hangs off the typed vertex (see GraphAttributes' TECH DEBT note), and
+		// each attribute carries its own flag/entry/owner edges, so the whole tree has to come along.
+		var attributeIds = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..999 OUTBOUND @{StartVertex} GRAPH {DatabaseConstants.GraphAttributes} RETURN v._id",
+			bindVars: new Dictionary<string, object> { { StartVertex, typedId } }, cancellationToken: ct);
+
+		// Expanded object data (node_object_data) hangs off the Objects document.
+		var objectDataIds = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 OUTBOUND @{StartVertex} GRAPH {DatabaseConstants.GraphObjectData} RETURN v._id",
+			bindVars: new Dictionary<string, object> { { StartVertex, objectId } }, cancellationToken: ct);
+
+		// Mail *received* dies with the object (PennMUSH clear_player -> do_mail_clear + do_mail_purge).
+		// Mail it sent to others survives with a dangling sender; MailFromAsync already yields None there.
+		var receivedMailIds = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 OUTBOUND @{StartVertex} GRAPH {DatabaseConstants.GraphMail} " +
+			"FILTER IS_SAME_COLLECTION(@mailCollection, v) RETURN v._id",
+			bindVars: new Dictionary<string, object>
+			{
+				{ StartVertex, typedId },
+				{ "mailCollection", DatabaseConstants.Mails }
+			}, cancellationToken: ct);
+
+		string[] doomedVertices = new[] { objectId, typedId }
+			.Concat(attributeIds)
+			.Concat(objectDataIds)
+			.Concat(receivedMailIds)
+			.ToArray();
+
+		var transaction = await arangoDb.Transaction.BeginAsync(handle,
+			new ArangoTransaction
+			{
+				LockTimeout = DatabaseBehaviorConstants.TransactionTimeout,
+				WaitForSync = true,
+				Collections = new ArangoTransactionScope
+				{
+					Exclusive =
+					[
+						DatabaseConstants.Objects, DatabaseConstants.Players, DatabaseConstants.Rooms,
+						DatabaseConstants.Things, DatabaseConstants.Exits, DatabaseConstants.Attributes,
+						DatabaseConstants.ObjectData, DatabaseConstants.Mails,
+						.. DatabaseConstants.edgeCollections
+					]
+				}
+			}, ct);
+
+		try
+		{
+			// Sweep every edge incident to a doomed vertex in either direction. The inbound half is what
+			// unsets other objects' parent/zone/home/location references to us, standing in for the
+			// db_top scan in PennMUSH free_object() (src/destroy.c) that a graph store cannot do.
+			foreach (var edgeCollection in DatabaseConstants.edgeCollections)
+			{
+				await arangoDb.Query.ExecuteAsync<ArangoVoid>(transaction,
+					"FOR e IN @@edge FILTER e._from IN @ids OR e._to IN @ids REMOVE e IN @@edge",
+					bindVars: new Dictionary<string, object>
+					{
+						{ "@edge", edgeCollection },
+						{ "ids", doomedVertices }
+					}, cancellationToken: ct);
+			}
+
+			// Attribute leaves before their branches, so a mid-flight failure cannot orphan a subtree.
+			IEnumerable<string> documentOrder = attributeIds.Reverse<string>()
+				.Concat(objectDataIds)
+				.Concat(receivedMailIds)
+				.Concat(new[] { typedId, objectId });
+
+			foreach (var vertexId in documentOrder)
+			{
+				var parts = vertexId.Split('/', 2);
+				await arangoDb.Query.ExecuteAsync<ArangoVoid>(transaction,
+					"FOR d IN @@c FILTER d._key == @key REMOVE d IN @@c",
+					bindVars: new Dictionary<string, object> { { "@c", parts[0] }, { "key", parts[1] } },
+					cancellationToken: ct);
+			}
+
+			await arangoDb.Transaction.CommitAsync(transaction, ct);
+		}
+		catch
+		{
+			await arangoDb.Transaction.AbortAsync(transaction, ct);
+			throw;
+		}
+
+		logger.LogInformation("Deleted object #{DbRef} ({Name}) from the database", dbref.Number, name);
+
+		return true;
 	}
 
 	#endregion

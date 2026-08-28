@@ -90,9 +90,19 @@ public static class TestHelpers
 	public sealed class NotificationRecorder
 	{
 		private readonly ConcurrentDictionary<int, ConcurrentQueue<string>> _byRecipient = new();
+		private readonly ConcurrentDictionary<long, ConcurrentQueue<string>> _byHandle = new();
 
 		internal void Record(int recipient, string message)
 			=> _byRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<string>()).Enqueue(message);
+
+		/// <summary>
+		/// Records output aimed at a connection rather than at an object. Socket commands (INFO,
+		/// MSSP-REQUEST, SOCKSET…) answer the descriptor that typed them, and at the connect screen
+		/// there is no object to key on at all, so those notifications are invisible to
+		/// <see cref="For(DBRef)"/> and need their own index.
+		/// </summary>
+		internal void RecordHandle(long handle, string message)
+			=> _byHandle.GetOrAdd(handle, _ => new ConcurrentQueue<string>()).Enqueue(message);
 
 		/// <summary>Everything <paramref name="who"/> has been notified of so far, in order.</summary>
 		public List<string> For(DBRef who)
@@ -101,6 +111,14 @@ public static class TestHelpers
 		/// <summary>How many notifications <paramref name="who"/> has had, for windowing.</summary>
 		public int CountFor(DBRef who)
 			=> _byRecipient.TryGetValue(who.Number, out var queue) ? queue.Count : 0;
+
+		/// <summary>Everything sent to connection <paramref name="handle"/> so far, in order.</summary>
+		public List<string> ForHandle(long handle)
+			=> _byHandle.TryGetValue(handle, out var queue) ? [.. queue] : [];
+
+		/// <summary>How many notifications connection <paramref name="handle"/> has had, for windowing.</summary>
+		public int CountForHandle(long handle)
+			=> _byHandle.TryGetValue(handle, out var queue) ? queue.Count : 0;
 	}
 
 	/// <summary>
@@ -127,6 +145,8 @@ public static class TestHelpers
 			capture.TryCapture(recipient, message);
 			recorder?.Record(recipient, message);
 		}
+
+		void DeliverToHandle(long handle, string message) => recorder?.RecordHandle(handle, message);
 
 		notifier
 			.When(x => x.Notify(Arg.Any<DBRef>(), Arg.Any<OneOf<MString, string>>(),
@@ -168,6 +188,39 @@ public static class TestHelpers
 			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
 			.Do(call => Deliver(
 				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
+				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
+
+		// Handle-addressed output: the descriptor overloads. These have no DBRef to capture against —
+		// a connect-screen socket has no object behind it — so they are recorded by handle instead.
+		notifier
+			.When(x => x.Notify(Arg.Any<long>(), Arg.Any<OneOf<MString, string>>(),
+				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
+			.Do(call => DeliverToHandle(
+				call.ArgAt<long>(0),
+				PlainText(call.ArgAt<OneOf<MString, string>>(1))));
+
+		notifier
+			.When(x => x.Notify(Arg.Any<long[]>(), Arg.Any<OneOf<MString, string>>(),
+				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
+			.Do(call =>
+			{
+				var text = PlainText(call.ArgAt<OneOf<MString, string>>(1));
+				foreach (var handle in call.ArgAt<long[]>(0))
+				{
+					DeliverToHandle(handle, text);
+				}
+			});
+
+		notifier
+			.When(x => x.NotifyLocalized(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<object[]>()))
+			.Do(call => DeliverToHandle(
+				call.ArgAt<long>(0),
+				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
+
+		notifier
+			.When(x => x.NotifyLocalized(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
+			.Do(call => DeliverToHandle(
+				call.ArgAt<long>(0),
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
 
 		return notifier;
