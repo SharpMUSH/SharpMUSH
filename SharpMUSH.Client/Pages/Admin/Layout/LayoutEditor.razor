@@ -7,6 +7,7 @@
 @inject IWidgetRegistry Registry
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 <PageTitle>@Loc["LayEditorPageTitle", ScopeLabel] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
@@ -40,10 +41,15 @@
     }
     else
     {
+        @* --le-drag-span sizes the drop skeleton to the widget in flight, so the dashed box shows the
+           real landing footprint rather than a generic one-column stub. *@
         <MudDropContainer T="EditItem" @ref="_container" Items="_items"
                           ItemsSelector="@((item, zoneId) => item.Zone == zoneId)"
                           ItemsClassSelector="@ItemsClass"
-                          ItemDropped="OnDropped" Class="le-board">
+                          ItemDraggingClass="le-item-lifted"
+                          ItemPicked="OnPicked"
+                          ItemDropped="OnDropped" Class="le-board"
+                          Style="@($"--le-drag-span:{_dragSpan};")">
             <ChildContent>
                 <div class="le-palette">
                     <div class="le-panel-label">@Loc["LayWidgetsPanel"]</div>
@@ -52,56 +58,90 @@
 
                     <div class="le-panel-label" style="margin-top:1.125rem;">@Loc["LaySidebarsAndFooter"]</div>
                     <div class="le-settings">
-                        <label class="le-toggle"><input type="checkbox" checked="@_leftOn" @onchange="@(e => { _leftOn = (bool)e.Value!; _dirty = true; })" /> @Loc[WidgetZone.LeftSidebar.ResourceKey()]</label>
-                        <label class="le-toggle"><input type="checkbox" checked="@_rightOn" @onchange="@(e => { _rightOn = (bool)e.Value!; _dirty = true; })" /> @Loc[WidgetZone.RightSidebar.ResourceKey()]</label>
-                        <label class="le-toggle"><input type="checkbox" checked="@_footerOn" @onchange="@(e => { _footerOn = (bool)e.Value!; _dirty = true; })" /> @Loc[WidgetZone.Footer.ResourceKey()]</label>
+                        <label class="le-toggle"><input type="checkbox" checked="@_leftOn" @onchange="@(e => { _leftOn = (bool)e.Value!; _dirty = true; InvalidatePreview(); })" /> @Loc[WidgetZone.LeftSidebar.ResourceKey()]</label>
+                        <label class="le-toggle"><input type="checkbox" checked="@_rightOn" @onchange="@(e => { _rightOn = (bool)e.Value!; _dirty = true; InvalidatePreview(); })" /> @Loc[WidgetZone.RightSidebar.ResourceKey()]</label>
+                        <label class="le-toggle"><input type="checkbox" checked="@_footerOn" @onchange="@(e => { _footerOn = (bool)e.Value!; _dirty = true; InvalidatePreview(); })" /> @Loc[WidgetZone.Footer.ResourceKey()]</label>
                     </div>
                 </div>
 
                 <div class="le-zones">
                     @foreach (var zone in _scopeInfo.Zones)
                     {
-                        <div class="le-zone">
+                        <div class="le-zone" id="@ZoneElementId(zone)">
                             <div class="le-zone-head">
                                 <MudIcon Icon="@ZoneIcon(zone)" Style="font-size:0.875rem;color:var(--accent);" />
                                 <span>@Loc[zone.ResourceKey()]</span>
                                 <span class="le-zone-hint">@(IsGridZone(zone) ? Loc["LayGridZoneHint"] : Loc["LayFlowZoneHint"])</span>
                             </div>
-                            <MudDropZone T="EditItem" Identifier="@zone.ToString()"
+                            @* AllowReorder is what makes a drop land where it was released. Without it
+                               MudBlazor's CommitTransaction reports index -1 and every drop lands at the
+                               front of the zone — and it renders no drop skeleton either. *@
+                            <MudDropZone T="EditItem" Identifier="@zone.ToString()" AllowReorder="true"
                                          Class="@($"le-zone-drop {(IsGridZone(zone) ? "le-zone-drop--grid" : "")}")" />
                         </div>
                     }
                 </div>
             </ChildContent>
             <ItemRenderer>
-                <div class="le-item @(context.IsTemplate ? "le-item--template" : "")">
-                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Style="font-size:0.875rem;color:var(--text-faint);" />
+                <div class="le-item @(context.IsTemplate ? "le-item--template" : "") @(ReferenceEquals(context, _resizing) ? "le-item--resizing" : "")">
+                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="le-item-grip" Style="font-size:0.875rem;color:var(--text-faint);" />
                     <span class="le-item-name">@context.DisplayName</span>
                     @if (!context.IsTemplate)
                     {
                         <span style="flex:1;"></span>
                         @if (IsGridZoneName(context.Zone))
                         {
-                            <div class="le-width" @onpointerdown:stopPropagation="true" title="@Loc["LayWidthInColumns"]">
-                                <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Style="font-size:0.8125rem;color:var(--text-faint);" />
-                                <input type="range" min="1" max="12" step="1" class="le-span-slider"
-                                       value="@ClampSpan(context.Span)"
-                                       @oninput="@(e => PreviewSpan(context, e.Value))"
-                                       @onchange="@(e => CommitSpan(context, e.Value))"
-                                       @onclick:stopPropagation="true" />
-                                <span class="le-span-num">@ClampSpan(context.Span)</span>
-                            </div>
+                            <span class="le-span-num" title="@Loc["LayWidthInColumns"]">@ClampSpan(context.Span)</span>
                         }
                         @if (context.Config is not null)
                         {
                             <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:0.75rem;color:var(--accent);" Title="@Loc["LayHasConfig"]" />
                         }
+                        @* Dragging is never the only way to reorder: these are the keyboard and touch path. *@
+                        <button type="button" class="le-item-btn le-item-btn--up" title="@Loc["LayMoveUp"]"
+                                disabled="@(!CanMove(context, -1))"
+                                @onclick="@(() => MoveBy(context, -1))" @onclick:stopPropagation="true">
+                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowUp" Style="font-size:0.8125rem;" />
+                        </button>
+                        <button type="button" class="le-item-btn le-item-btn--down" title="@Loc["LayMoveDown"]"
+                                disabled="@(!CanMove(context, 1))"
+                                @onclick="@(() => MoveBy(context, 1))" @onclick:stopPropagation="true">
+                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Style="font-size:0.8125rem;" />
+                        </button>
                         <button type="button" class="le-item-btn" title="@Loc["LayConfigure"]" @onclick="@(() => EditConfigAsync(context))" @onclick:stopPropagation="true">
                             <MudIcon Icon="@Icons.Material.Filled.Settings" Style="font-size:0.8125rem;" />
                         </button>
                         <button type="button" class="le-item-btn le-item-btn--danger" title="@Loc["LayRemove"]" @onclick="@(() => Remove(context))" @onclick:stopPropagation="true">
                             <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.8125rem;" />
                         </button>
+                        @if (IsGridZoneName(context.Zone))
+                        {
+                            @* The width grip sits ON the edge it moves, so the pointer never has to chase a
+                               control that is itself being resized. draggable=false keeps a grab here from
+                               starting a MudBlazor drag transaction instead of a resize. *@
+                            @* draggable=false alone is not enough: the grip sits inside MudBlazor's
+                               draggable drop item, so the first move would start a native HTML5 drag on
+                               the ancestor — and starting a drag revokes the pointer capture, killing the
+                               resize one pixel in. Cancelling the mousedown default stops that drag from
+                               ever beginning. *@
+                            <div class="le-resize" id="@ResizeGripId(context)"
+                                 role="separator" aria-orientation="vertical" tabindex="0"
+                                 draggable="false"
+                                 @onmousedown:preventDefault="true"
+                                 @onmousedown:stopPropagation="true"
+                                 aria-label="@Loc["LayWidthInColumns"]"
+                                 aria-valuenow="@ClampSpan(context.Span)" aria-valuemin="1" aria-valuemax="12"
+                                 aria-valuetext="@Loc["LayColumnsValue", ClampSpan(context.Span)]"
+                                 title="@Loc["LayResizeHint"]"
+                                 @onpointerdown="@(e => BeginResizeAsync(context, e))"
+                                 @onpointerdown:stopPropagation="true"
+                                 @onpointermove="@(e => OnResizeMove(context, e))"
+                                 @onpointerup="@(_ => EndResize())"
+                                 @onpointercancel="@(_ => EndResize())"
+                                 @onkeydown="@(e => ResizeByKey(context, e))"
+                                 @onkeydown:stopPropagation="true"
+                                 @onclick:stopPropagation="true"></div>
+                        }
                     }
                 </div>
             </ItemRenderer>
@@ -109,7 +149,9 @@
 
         @if (_showPreview)
         {
-            var preview = BuildPreviewLayout();
+            @* Preview is a snapshot, not a live projection: rebuilding it on every pointer move during a
+               resize re-lays the whole page (and changes its height) under the user. It settles on release. *@
+            var preview = Preview;
             <div class="le-preview">
                 <div class="le-preview-head">
                     <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;color:var(--accent);" />
@@ -157,26 +199,155 @@
 
     private static int ClampSpan(int span) => span is >= 1 and <= 12 ? span : 12;
 
-    private static int ParseSpan(object? value)
-        => int.TryParse(value?.ToString(), out var n) ? Math.Clamp(n, 1, 12) : 12;
-
     private string ItemsClass(EditItem item, string dropzoneId)
         => !item.IsTemplate && IsGridZoneName(dropzoneId)
             ? $"le-span-{ClampSpan(item.Span)}"
             : string.Empty;
 
-    // While dragging the slider: update the number and the live preview without re-laying the editor
-    // grid (which would interrupt the drag). The editor grid cell resizes on release (CommitSpan).
-    private void PreviewSpan(EditItem item, object? value)
+    /// <summary>Number of columns a grid zone lays out. Mirrors <c>repeat(12, 1fr)</c> in the stylesheet.</summary>
+    private const int GridColumns = 12;
+
+    /// <summary>Wraps the drop zone so JS can measure the grid without touching MudBlazor's own element id.</summary>
+    private string ZoneElementId(WidgetZone zone) => $"le-zone-{Scope}-{zone}";
+
+    /// <summary>Identifies the grip to <c>setPointerCapture</c>, which needs a real element.</summary>
+    private static string ResizeGripId(EditItem item) => $"le-grip-{item.InstanceId}";
+
+    private EditItem? _resizing;
+    private int _resizeStartSpan;
+    private double _resizeStartX;
+    private double _resizeColumnWidth;
+    private bool _skipRender;
+
+    /// <summary>
+    /// Column width of the widget currently being dragged, published to CSS as <c>--le-drag-span</c> so
+    /// the drop skeleton matches the footprint the widget will actually occupy.
+    /// </summary>
+    private int _dragSpan = GridColumns;
+
+    private void OnPicked(MudDragAndDropItemTransaction<EditItem> transaction)
+        => _dragSpan = transaction.Item is { IsTemplate: false } item ? ClampSpan(item.Span) : GridColumns;
+
+    private async Task BeginResizeAsync(EditItem item, PointerEventArgs e)
     {
-        item.Span = ParseSpan(value);
-        _dirty = true;
-        StateHasChanged();
+        // Below the narrow-viewport breakpoint the zone collapses to one column, so there is no
+        // column width to drag against. The keyboard path still works there; pointer resize does not.
+        var columnWidth = await JS.InvokeAsync<double>(
+            "sharpmushLayout.gridColumnWidth", ZoneElementId(Enum.Parse<WidgetZone>(item.Zone)), GridColumns);
+        if (columnWidth <= 0)
+        {
+            return;
+        }
+
+        _resizing = item;
+        _resizeStartSpan = ClampSpan(item.Span);
+        _resizeStartX = e.ClientX;
+        _resizeColumnWidth = columnWidth;
+
+        await JS.InvokeVoidAsync("sharpmushLayout.capturePointer", ResizeGripId(item), e.PointerId);
     }
 
-    private void CommitSpan(EditItem item, object? value)
+    private void OnResizeMove(EditItem item, PointerEventArgs e)
     {
-        item.Span = ParseSpan(value);
+        // Pointer capture keeps the moves coming to this grip, but every other grip carries the same
+        // handler; ignore anything that is not the gesture in progress.
+        if (_resizing is null || !ReferenceEquals(item, _resizing))
+        {
+            _skipRender = true;
+            return;
+        }
+
+        var span = Math.Clamp(
+            _resizeStartSpan + (int)Math.Round((e.ClientX - _resizeStartX) / _resizeColumnWidth), 1, GridColumns);
+
+        // Re-render only when a column boundary is crossed. Pointer moves arrive far faster than the
+        // grid can meaningfully change, and rendering each one is what made the old slider thrash.
+        if (span == ClampSpan(_resizing.Span))
+        {
+            _skipRender = true;
+            return;
+        }
+
+        _resizing.Span = span;
+        _dirty = true;
+        ApplySpans();
+    }
+
+    private void EndResize()
+    {
+        if (_resizing is null)
+        {
+            _skipRender = true;
+            return;
+        }
+
+        _resizing = null;
+        InvalidatePreview();
+    }
+
+    private void ResizeByKey(EditItem item, KeyboardEventArgs e)
+    {
+        var step = e.ShiftKey ? 3 : 1;
+        var delta = e.Key switch
+        {
+            "ArrowRight" => step,
+            "ArrowLeft" => -step,
+            _ => 0
+        };
+
+        var span = Math.Clamp(ClampSpan(item.Span) + delta, 1, GridColumns);
+        if (delta == 0 || span == ClampSpan(item.Span))
+        {
+            _skipRender = true;
+            return;
+        }
+
+        item.Span = span;
+        _dirty = true;
+        InvalidatePreview();
+        ApplySpans();
+    }
+
+    // A pointer move that changes nothing must not re-render: the editor grid, and every widget in the
+    // live preview below it, would be rebuilt dozens of times per second for no visible difference.
+    protected override bool ShouldRender()
+    {
+        if (!_skipRender)
+        {
+            return true;
+        }
+
+        _skipRender = false;
+        return false;
+    }
+
+    /// <summary>
+    /// Re-applies <see cref="ItemsClass"/> to the placed widgets. A plain <c>StateHasChanged</c> does not
+    /// reach inside <c>MudDropContainer</c> — the column-span class is only re-read when the container
+    /// refreshes — so a width change is invisible without this.
+    /// </summary>
+    private void ApplySpans() => _container?.Refresh();
+
+    private bool CanMove(EditItem item, int delta)
+    {
+        if (!_zones.TryGetValue(item.Zone, out var list))
+        {
+            return false;
+        }
+
+        var index = list.IndexOf(item);
+        return index >= 0 && index + delta >= 0 && index + delta < list.Count;
+    }
+
+    private void MoveBy(EditItem item, int delta)
+    {
+        if (!CanMove(item, delta) || !_zones.TryGetValue(item.Zone, out var list))
+        {
+            return;
+        }
+
+        var index = list.IndexOf(item);
+        (list[index], list[index + delta]) = (list[index + delta], list[index]);
         _dirty = true;
         RebuildItems();
     }
@@ -190,6 +361,13 @@
     private List<EditItem> _palette = [];
     private Dictionary<string, List<EditItem>> _zones = [];
     private List<EditItem> _items = [];
+
+    private LayoutConfiguration? _preview;
+
+    /// <summary>The layout the preview panel renders. Rebuilt on commit, never mid-gesture.</summary>
+    private LayoutConfiguration Preview => _preview ??= BuildPreviewLayout();
+
+    private void InvalidatePreview() => _preview = null;
 
     private bool _leftOn, _rightOn, _footerOn;
     private string _leftWidth = "280px", _rightWidth = "280px";
@@ -255,9 +433,15 @@
 
     private void RebuildItems()
     {
-        _items = _palette
-            .Concat(_scopeInfo!.Zones.SelectMany(z => _zones[z.ToString()]))
-            .ToList();
+        // Mutated in place, never reassigned: Refresh makes each zone re-read Container.Items straight
+        // away, and Container.Items still points at whatever list was last passed as a parameter. Handing
+        // it a fresh list here would have the zones rebuild their indices from the *old* order, and the
+        // reordering would be discarded on the next render (MudBlazor#7191).
+        _items.Clear();
+        _items.AddRange(_palette.Concat(_scopeInfo!.Zones.SelectMany(z => _zones[z.ToString()])));
+        InvalidatePreview();
+        // Refresh clears each zone's internal reorder indices, so display order is re-derived from
+        // _items — keeping what the editor shows and what Publish writes the same thing.
         _container?.Refresh();
     }
 
@@ -349,6 +533,7 @@
             ? null
             : JsonDocument.Parse(json).RootElement.Clone();
         _dirty = true;
+        InvalidatePreview();
         StateHasChanged();
     }
 

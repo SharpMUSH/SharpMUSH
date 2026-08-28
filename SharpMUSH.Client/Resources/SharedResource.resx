@@ -2002,6 +2002,18 @@
   <data name="LayWidthInColumns" xml:space="preserve">
     <value>Width in columns (1–12)</value>
   </data>
+  <data name="LayColumnsValue" xml:space="preserve">
+    <value>{0} of 12 columns</value>
+  </data>
+  <data name="LayResizeHint" xml:space="preserve">
+    <value>Drag to set width, or use the arrow keys</value>
+  </data>
+  <data name="LayMoveUp" xml:space="preserve">
+    <value>Move earlier</value>
+  </data>
+  <data name="LayMoveDown" xml:space="preserve">
+    <value>Move later</value>
+  </data>
   <data name="LayHasConfig" xml:space="preserve">
     <value>Has config</value>
   </data>
