@@ -257,41 +257,62 @@ The function looks for attributes on `<object>` with specific names that define 
 - ``RENDERMARKUP`CONTAINER`` - Custom container (`::: name args`) rendering
   - `%0` - The directive name (`category`, `tag`, `pagelist`, `recent`, or your own)
   - `%1` - The rest of the fence line, empty if there is none
-  - `%2` - The container's rendered contents
+  - `%2` - The container's contents, rendered (see the note below)
   
 - ``RENDERMARKUP`BOLD`` - Bold (`**text**`) rendering
-  - `%0` - The bold content (already rendered)
+  - `%0` - The emphasised text, plain
   
 - ``RENDERMARKUP`ITALIC`` - Italic (`*text*`) rendering
-  - `%0` - The italic content (already rendered)
+  - `%0` - The emphasised text, plain
   
 - ``RENDERMARKUP`UNDERLINE`` - Underline rendering
-  - `%0` - The underlined content (already rendered)
+  - `%0` - The underlined text, plain
   
 - ``RENDERMARKUP`INLINECODE`` - Inline code (`` `text` ``) rendering
   - `%0` - The code text (plain text)
   
-- ``RENDERMARKUP`LINK`` - Link rendering
-  - `%0` - The link text as it would be shown (the URL, if the link has no text)
+- ``RENDERMARKUP`LINK`` - Link rendering. Not called for a link with no URL,
+  which is not a link and renders as its own text
+  - `%0` - The link text as it would be shown, plain (the URL, if the link has
+    no text)
   - `%1` - The URL, or the command for a command link
   - `%2` - Is it a command link? (1 for a command, 0 for a URL)
   - `%3` - The link title/hint, empty if there is none
   
-- ``RENDERMARKUP`WIKILINK`` - Wiki link (`[[Page Name]]`) rendering
-  - `%0` - The display text
+- ``RENDERMARKUP`WIKILINK`` - Wiki link (`[[Page Name]]`) rendering. Not called
+  for a link with no display text, which renders as nothing
+  - `%0` - The display text, plain
   - `%1` - The `@wiki` page reference, always fully qualified as
     `<namespace>:<category>:<slug>`
   - `%2` - The target page's title
   
-- ``RENDERMARKUP`AUTOLINK`` - Autolink (`<https://example.com>`) rendering
+- ``RENDERMARKUP`AUTOLINK`` - Autolink (`<https://example.com>`) rendering. Not
+  called for an autolink with no URL, which renders as nothing
   - `%0` - The URL, which is also the text shown
   
 - ``RENDERMARKUP`IMAGE`` - Image (`![alt](url)`) rendering
-  - `%0` - The alt text, empty if there is none
+  - `%0` - The alt text, plain and trimmed; empty if there is none
   - `%1` - The image URL
   
 - ``RENDERMARKUP`TASKLIST`` - Task list marker (`- [x]`) rendering
   - `%0` - Is it ticked? (1 for `[x]`, 0 for `[ ]`)
+
+**Note on plain versus rendered arguments.** An argument is plain wherever the
+built-in rendering of that element is: `BOLD`, `ITALIC` and `UNDERLINE` style
+the flattened text, so nested markup is discarded before you see it, and the
+same is true of `LINK`'s `%0` and `IMAGE`'s `%0`. The elements that legitimately
+work from already-rendered content pass it through and are marked as such above:
+the headings, `LISTITEM`, `QUOTE` and `CONTAINER`. The distinction is worth
+knowing because there is no way to test for it from softcode - an argument that
+carried ANSI for some inputs and not others could not be handled correctly at
+all.
+
+**Note on templates and empty elements.** A template is never consulted where
+the built-in rendering would have produced nothing, or would not have treated
+the element as that kind of element at all: a link with no URL, a wiki link with
+no display text, an autolink with no URL, a table with no rows. Setting a
+template can change how something is drawn; it cannot make something appear
+where nothing was.
 
 **Note on TABLE's cells.** They are markdown *source*, not rendered text - a
 cell reading `**loud**` arrives with its asterisks. Call `rendermarkdown()` on a

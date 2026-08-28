@@ -230,76 +230,133 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 
 	private static MString Text(string? value) => MModule.single(value ?? string.Empty);
 
+	/// <summary>
+	/// Rendered content reduced to the plain text the default rendering would have used.
+	/// </summary>
+	/// <remarks>
+	/// Every element whose built-in rendering calls <c>ToPlainText()</c> on its content hands the
+	/// template the same plain text, so a template is never given markup the default would have thrown
+	/// away. The alternative — an argument that carries ANSI for some inputs and not others — is worse
+	/// than either choice on its own, because nothing in softcode can tell which it received.
+	/// The elements that genuinely work from rendered content (headings, LISTITEM, QUOTE, CONTAINER)
+	/// pass it through instead, and say so on their own members.
+	/// </remarks>
+	private static MString Plain(MString content) => MModule.single(content.ToPlainText());
+
 	/// <summary>Runs <paramref name="templateName"/>, or <c>null</c> when the object does not define it.</summary>
 	private MString? Template(string templateName, Dictionary<string, CallState> args) =>
 		TryEvaluateTemplate(templateName, args).GetAwaiter().GetResult();
 
+	/// <summary>
+	/// <c>RENDERMARKUP`BOLD</c>: <c>%0</c> the emphasised text, plain.
+	/// </summary>
+	/// <remarks>
+	/// Plain because <see cref="RecursiveMarkdownRenderer.RenderBold"/> is: it styles
+	/// <c>content.ToPlainText()</c>, so nested markup is already discarded by the default rendering and
+	/// a template that received it would be the only thing in the pipeline that could see it.
+	/// </remarks>
 	protected override MString RenderBold(MString content) =>
-		Template("BOLD", Args(content)) ?? base.RenderBold(content);
+		Template("BOLD", Args(Plain(content))) ?? base.RenderBold(content);
 
+	/// <inheritdoc cref="RenderBold"/>
 	protected override MString RenderItalic(MString content) =>
-		Template("ITALIC", Args(content)) ?? base.RenderItalic(content);
+		Template("ITALIC", Args(Plain(content))) ?? base.RenderItalic(content);
 
+	/// <inheritdoc cref="RenderBold"/>
 	protected override MString RenderUnderline(MString content) =>
-		Template("UNDERLINE", Args(content)) ?? base.RenderUnderline(content);
+		Template("UNDERLINE", Args(Plain(content))) ?? base.RenderUnderline(content);
 
+	/// <summary><c>RENDERMARKUP`INLINECODE</c>: <c>%0</c> the code text, which is plain by construction.</summary>
 	protected override MString RenderInlineCode(CodeInline code) =>
 		Template("INLINECODE", Args(Text(code.Content))) ?? base.RenderInlineCode(code);
 
 	/// <summary>
-	/// <c>RENDERMARKUP`LINK</c>: <c>%0</c> link text, <c>%1</c> URL or command, <c>%2</c> whether the
-	/// source already marked it a command, <c>%3</c> the link title/hint.
+	/// <c>RENDERMARKUP`LINK</c>: <c>%0</c> link text (plain), <c>%1</c> URL or command, <c>%2</c> whether
+	/// the source already marked it a command, <c>%3</c> the link title/hint.
 	/// </summary>
 	/// <remarks>
 	/// <c>%2</c> is what makes the template usable: a help-topic shortcut (<c>[topic]</c>) already
 	/// carries a command in <c>%1</c> rather than a URL, and a template that wrapped it in an
 	/// <c>xch_cmd</c> and a plain <c>https:</c> link in an <c>href</c> has to be able to tell them apart.
 	/// Images are not links and keep going to <c>IMAGE</c>.
+	/// <para>
+	/// A link with no URL is not a link: the default rendering emits the content unchanged rather than
+	/// any link markup, so the template is not consulted at all. Otherwise an object with a LINK template
+	/// would decorate something the default would have left as prose.
+	/// </para>
 	/// </remarks>
 	protected override MString RenderLink(LinkInline link, MString content)
 	{
+		// Images are dispatched by the base implementation, which routes them to RenderImage.
 		if (link.IsImage) return base.RenderLink(link, content);
 
 		var url = link.Url ?? string.Empty;
-		// The text the default rendering would show, so a template never has to reproduce the
-		// "empty link text falls back to the URL" rule for itself.
-		var text = string.IsNullOrWhiteSpace(content.ToPlainText()) ? MModule.single(url) : content;
+		if (string.IsNullOrWhiteSpace(url)) return base.RenderLink(link, content);
+
+		// The text the default rendering would show — trimmed, plain, and falling back to the URL when
+		// the link has no text — so a template never has to reproduce that rule for itself.
+		var contentText = content.ToPlainText().Trim();
+		var text = string.IsNullOrWhiteSpace(contentText) ? url : contentText;
 		var isCommand = link.GetData(HelpTopicInlineParser.CommandDataKey) is true;
 
-		return Template("LINK", Args(text, Text(url), Flag(isCommand), Text(link.Title)))
+		return Template("LINK", Args(Text(text), Text(url), Flag(isCommand), Text(link.Title)))
 			?? base.RenderLink(link, content);
 	}
 
 	/// <summary>
-	/// <c>RENDERMARKUP`IMAGE</c>: <c>%0</c> alt text, <c>%1</c> image URL.
+	/// <c>RENDERMARKUP`IMAGE</c>: <c>%0</c> the alt text, plain and trimmed, <c>%1</c> the image URL.
 	/// </summary>
+	/// <remarks>
+	/// Plain because <see cref="RecursiveMarkdownRenderer.RenderImage"/> is: the built-in placeholder is
+	/// built from <c>content.ToPlainText().Trim()</c>. Alt text can hold inline markup
+	/// (<c>![a **bold** logo](…)</c>), and handing that over rendered would leak ANSI into a softcode
+	/// argument that the helpfile calls "the alt text".
+	/// </remarks>
 	protected override MString RenderImage(LinkInline link, MString content) =>
-		Template("IMAGE", Args(content, Text(link.Url))) ?? base.RenderImage(link, content);
+		Template("IMAGE", Args(Text(content.ToPlainText().Trim()), Text(link.Url)))
+			?? base.RenderImage(link, content);
 
 	/// <summary>
 	/// <c>RENDERMARKUP`WIKILINK</c>: <c>%0</c> display text, <c>%1</c> the <c>@wiki</c> page reference,
-	/// <c>%2</c> the target page's title.
+	/// <c>%2</c> the target page's title. All three are plain by construction.
 	/// </summary>
 	/// <remarks>
 	/// <c>%1</c> is the fully qualified <c>namespace:category:slug</c> form, so a template can build
 	/// <c>@wiki %1</c> and get a working command — which is what <c>@wiki</c> itself renders a wiki link
 	/// as. Falling through to <c>base</c> rather than to a fixed rendering keeps whatever default the
 	/// surface has: neutral prose here, the command link under <c>@wiki</c>.
+	/// <para>
+	/// A link with no display text renders as nothing by default, so the template is not consulted for
+	/// one.
+	/// </para>
 	/// </remarks>
 	protected override MString RenderWikiLink(WikiLinkInline wikiLink)
 	{
 		var display = wikiLink.DisplayText ?? wikiLink.Title;
+		if (string.IsNullOrWhiteSpace(display)) return base.RenderWikiLink(wikiLink);
+
 		var reference = WikiCommandHelper.ReferenceForWikiLink(wikiLink);
 
 		return Template("WIKILINK", Args(Text(display), Text(reference), Text(wikiLink.Title)))
 			?? base.RenderWikiLink(wikiLink);
 	}
 
-	/// <summary><c>RENDERMARKUP`AUTOLINK</c>: <c>%0</c> the URL, which is also the text shown.</summary>
+	/// <summary>
+	/// <c>RENDERMARKUP`AUTOLINK</c>: <c>%0</c> the URL, which is also the text shown.
+	/// </summary>
+	/// <remarks>
+	/// An autolink with no URL renders as nothing by default. The template is not consulted for one,
+	/// or an object with an AUTOLINK template would emit output where every other renderer emits
+	/// nothing at all.
+	/// </remarks>
 	protected override MString RenderAutolink(AutolinkInline autolink) =>
-		Template("AUTOLINK", Args(Text(autolink.Url))) ?? base.RenderAutolink(autolink);
+		string.IsNullOrEmpty(autolink.Url)
+			? base.RenderAutolink(autolink)
+			: Template("AUTOLINK", Args(Text(autolink.Url))) ?? base.RenderAutolink(autolink);
 
 	/// <summary><c>RENDERMARKUP`TASKLIST</c>: <c>%0</c> is 1 when the box is ticked.</summary>
+	/// <remarks>A task-list marker is a checked flag and nothing else, so there is no state in which the
+	/// default renders nothing and no content that could carry markup.</remarks>
 	protected override MString RenderTaskList(TaskList task) =>
 		Template("TASKLIST", Args(Flag(task.Checked))) ?? base.RenderTaskList(task);
 

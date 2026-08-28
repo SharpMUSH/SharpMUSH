@@ -1,5 +1,12 @@
+using Markdig.Syntax.Inlines;
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
+using SharpMUSH.Implementation.Functions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Text;
 
 namespace SharpMUSH.Tests.Functions;
@@ -831,5 +838,126 @@ public class MarkdownFunctionUnitTests
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("| A | B |\n|---|---|\n| 1 | 2 |");
 
 		await AssertMarkupStringEquals(result!, expected);
+	}
+
+	/// <summary>
+	/// IMAGE's <c>%0</c> is the alt text, plain. Alt text can hold inline markup, and the built-in
+	/// placeholder is built from <c>ToPlainText().Trim()</c>, so handing a template rendered content
+	/// would leak ANSI into an argument the helpfile calls "the alt text".
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_ImageTemplate_AltTextArrivesPlain()
+	{
+		var obj = await CreateTemplateObject("MarkdownImageAltObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`IMAGE {obj}=ALT:%0/URL:%1"));
+
+		// The alt text carries bold and inline code, both of which the renderer would style.
+		var markdown = "!%[a **bold** `logo`%]%(/assets/Logo.svg%)";
+
+		var result = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
+		await Assert.That(result).IsNotNull();
+
+		await Assert.That(result!.ToPlainText()).Contains("ALT:a bold logo/URL:/assets/Logo.svg");
+		await Assert.That(result.ToString())
+			.DoesNotContain(ESC)
+			.Because("the alt text is documented as plain, so no markup from inside it may reach the "
+				+ "template as ANSI");
+	}
+
+	/// <summary>
+	/// A template must not be reachable in a state where the default renders nothing. An autolink with
+	/// no URL renders as nothing, so a set AUTOLINK template has to stay unfired.
+	/// </summary>
+	/// <remarks>
+	/// Driven through a hand-built node rather than through markdown, deliberately. Markdig will not
+	/// produce a URL-less <see cref="AutolinkInline"/> from any source text — <c>&lt;&gt;</c> and
+	/// <c>&lt;not a url&gt;</c> produce no autolink node at all — so a markdown-level test would pass
+	/// without ever reaching the guard and would prove nothing. The guard exists because the base
+	/// renderer has one, and parity with the base is the property under test.
+	/// </remarks>
+	[Test]
+	public async Task RenderMarkdownCustom_AutolinkTemplate_DoesNotFireWithoutAUrl()
+	{
+		var obj = await CreateTemplateObject("MarkdownAutolinkGuardObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`AUTOLINK {obj}=SAW-AN-AUTOLINK:%0"));
+
+		var renderer = await BuildCustomRendererAsync(obj);
+
+		var withoutUrl = renderer.Render(new AutolinkInline(string.Empty));
+		await Assert.That(withoutUrl.ToPlainText())
+			.IsEqualTo(string.Empty)
+			.Because("the default renderer emits nothing here, so a template must not emit something");
+
+		// The control, same renderer: a real autolink does reach the template.
+		var withUrl = renderer.Render(new AutolinkInline("https://example.com"));
+		await Assert.That(withUrl.ToPlainText()).IsEqualTo("SAW-AN-AUTOLINK:https://example.com");
+	}
+
+	/// <summary>
+	/// A <see cref="CustomizableMarkdownRenderer"/> over <paramref name="templateDbref"/>, built the way
+	/// <c>rendermarkdowncustom()</c> builds one, so a single AST node can be pushed through it.
+	/// </summary>
+	private async Task<CustomizableMarkdownRenderer> BuildCustomRendererAsync(string templateDbref)
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+
+		var executor = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse("#1")));
+		var templateObject = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(templateDbref)));
+
+		return new CustomizableMarkdownRenderer(
+			Parser, executor.Known, templateObject.Known, attributeService);
+	}
+
+	/// <summary>
+	/// The same guard for the other two link-ish elements: a link with no URL is not a link, and a wiki
+	/// link with no display text renders as nothing.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_LinkTemplates_DoNotFireForEmptyElements()
+	{
+		var obj = await CreateTemplateObject("MarkdownLinkGuardObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`LINK {obj}=SAW-A-LINK:%0"));
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`WIKILINK {obj}=SAW-A-WIKILINK:%0"));
+
+		// A URL-less link: the default emits the bracket text as prose, so the template is not consulted.
+		var empty = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom(%[just text%]%(%),{obj})")))?.Message;
+		await Assert.That(empty!.ToPlainText()).DoesNotContain("SAW-A-LINK");
+		await Assert.That(empty.ToPlainText()).Contains("just text");
+
+		// An empty wiki link is not a wiki link at all, so nothing fires and the source stays put.
+		var emptyWiki = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom(%[%[%]%],{obj})")))?.Message;
+		await Assert.That(emptyWiki!.ToPlainText()).DoesNotContain("SAW-A-WIKILINK");
+
+		// The control: a real link of each kind does reach its template.
+		var real = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom(%[Site%]%(https://example.com%) %[%[Home%]%],{obj})")))?.Message;
+		await Assert.That(real!.ToPlainText()).Contains("SAW-A-LINK:Site");
+		await Assert.That(real.ToPlainText()).Contains("SAW-A-WIKILINK:Home");
+	}
+
+	/// <summary>
+	/// BOLD, ITALIC and UNDERLINE style the flattened text in the default rendering, so their templates
+	/// receive it flattened too — an argument that carried ANSI for some inputs and not others could not
+	/// be handled from softcode at all.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_EmphasisTemplates_ContentArrivesPlain()
+	{
+		var obj = await CreateTemplateObject("MarkdownEmphasisPlainObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`BOLD {obj}=<%0>"));
+
+		// Inline code nested inside the bold run would otherwise arrive coloured.
+		var result = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom(A **bold `code` run** here.,{obj})")))?.Message;
+		await Assert.That(result).IsNotNull();
+
+		await Assert.That(result!.ToPlainText()).Contains("<bold code run>");
+		await Assert.That(result.ToString())
+			.DoesNotContain(ESC)
+			.Because("the nested inline code's colour must not survive into the template argument");
 	}
 }
