@@ -649,4 +649,187 @@ public class MarkdownFunctionUnitTests
 
 		await AssertMarkupStringEquals(result!, expected);
 	}
+
+	/// <summary>Creates a fresh object to hang RENDERMARKUP templates on.</summary>
+	private async Task<string> CreateTemplateObject(string name)
+	{
+		var created = (await Parser.FunctionParse(MModule.single($"create({name})")))?.Message?.ToString()!;
+		await Assert.That(created).IsNotNull();
+		return created.Trim();
+	}
+
+	/// <summary>
+	/// TABLE hands over the table described as one JSON object, not the finished block. That is what
+	/// lets a template lay a table out in a game's own style rather than only recolour the built-in one.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_TableTemplate_ReceivesTheTableAsJson()
+	{
+		var obj = await CreateTemplateObject("MarkdownTableJsonObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`TABLE {obj}=%0"));
+
+		// The last row writes one cell where the header has three.
+		var markdown = "| A | B | C |%r|:---|:---:|---:|%r| 1 | 2 | 3 |%r| 4 |";
+
+		var result = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
+		await Assert.That(result).IsNotNull();
+
+		await Assert.That(result!.ToPlainText().Trim()).IsEqualTo(
+			"""{"width":78,"align":["<","-",">"],"widths":[22,22,22],"head":["A","B","C"],"rows":[["1","2","3"],["4","",""]]}""");
+	}
+
+	/// <summary>
+	/// <c>width</c> is the width the <em>caller</em> asked this render for, not the reader's terminal
+	/// width — a fixed-width export has to get a table that agrees with the prose around it.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_TableTemplate_WidthIsTheRequestedRenderWidth()
+	{
+		var obj = await CreateTemplateObject("MarkdownTableWidthObj");
+		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`TABLE {obj}=W:[json_query(%0,get,width)]"));
+
+		var markdown = "| A |%r|---|%r| 1 |";
+
+		var wide = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom({markdown},{obj},120)")))?.Message;
+		var narrow = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom({markdown},{obj},40)")))?.Message;
+
+		await Assert.That(wide!.ToPlainText()).Contains("W:120");
+		await Assert.That(narrow!.ToPlainText()).Contains("W:40");
+	}
+
+	/// <summary>
+	/// The cells are markdown <em>source</em>, not a rendering. That is the contract: a template decides
+	/// whether to call <c>rendermarkdown()</c> on a cell, so the formatting choice stays with the game.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_TableTemplate_CellsAreRawSourceNotRendered()
+	{
+		var obj = await CreateTemplateObject("MarkdownTableRawSourceObj");
+		await Parser.CommandParse(MModule.single(
+			$"&RENDERMARKUP`TABLE {obj}=RAW:[json_query(%0,extract,$.head%[0%])]"
+			+ " OUT:[rendermarkdown([json_query(%0,extract,$.head%[0%])])]"));
+
+		var markdown = "| **loud** |%r|---|%r| x |";
+
+		var result = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
+		await Assert.That(result).IsNotNull();
+
+		var plainText = result!.ToPlainText();
+
+		// Verbatim: the asterisks are still there and nothing has been styled for us.
+		await Assert.That(plainText).Contains("RAW:**loud**");
+		// And the template can render the cell itself, which is where styling comes from.
+		await Assert.That(plainText).Contains("OUT:loud");
+		await Assert.That(result.ToString()).Contains(Bold);
+	}
+
+	/// <summary>
+	/// JSON, not a delimited list, so a cell holding a quote or a backslash round-trips instead of
+	/// silently shifting the columns. A literal pipe is <c>\|</c> in table source and is passed through
+	/// as written — <c>rendermarkdown()</c> is what resolves it.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_TableTemplate_EscapesRoundTripThroughJsonQuery()
+	{
+		var obj = await CreateTemplateObject("MarkdownTableEscapeObj");
+		await Parser.CommandParse(MModule.single(
+			$"&RENDERMARKUP`TABLE {obj}=COLS:[json_query([json_query(%0,get,widths)],size)] RAW:%0"
+			+ " CELL:[json_query(%0,extract,$.head%[0%])]"
+			+ " OUT:[rendermarkdown([json_query(%0,extract,$.head%[0%])])]"));
+
+		// MUSH collapses "\\" to one backslash, so markdown sees: | say "hi" \| pipe |
+		var markdown = "| say \"hi\" \\\\| pipe |%r|---|%r| x |";
+
+		var result = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
+		await Assert.That(result).IsNotNull();
+
+		var plainText = result!.ToPlainText();
+
+		await Assert.That(plainText)
+			.Contains("COLS:1")
+			.Because("the escaped pipe is cell content and must not have opened a second column");
+		// Encoded in the payload: the quote and the backslash both escaped.
+		await Assert.That(plainText).Contains("\\\"hi\\\"");
+		await Assert.That(plainText).Contains("\\\\|");
+		// Decoded back to exactly the source the author wrote, escapes and all.
+		await Assert.That(plainText)
+			.Contains("CELL:say \"hi\" \\| pipe")
+			.Because("the \\| is left as written; unescaping it here would make it indistinguishable "
+				+ "from a cell boundary");
+		// rendermarkdown() is what turns the escape into the character.
+		await Assert.That(plainText).Contains("OUT:say \"hi\" | pipe");
+	}
+
+	/// <summary>
+	/// The worked example from <c>help rendermarkdowncustom</c>, run verbatim, so the documented output
+	/// is the output. Demonstrates what the JSON payload is for: <c>json_map()</c> walks <c>rows</c>,
+	/// each row's helper walks its own cells, and the layout is the game's.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_TableTemplate_RebuildsTheTableWithLalign()
+	{
+		var obj = await CreateTemplateObject("MarkdownTableAlignObj");
+
+		// Helpers are addressed by dbref, not "me": a RENDERMARKUP template is evaluated with the
+		// *caller* as executor, so "me" inside one is the caller, not the object holding the templates.
+		foreach (var attribute in new[]
+		{
+			"&FUN`VAL {0}=%1",
+			"&FUN`TABLE`SPEC {0}=[json_query(%1,unescape)][json_query(%q<wd>,get,%2)]",
+			"&FUN`TABLE`CELL {0}=[rendermarkdown([json_query(%1,unescape)],[max(10,json_query(%q<wd>,get,%2))])]",
+			"&FUN`TABLE`ROW {0}=[lalign(%q<spec>,[json_map({0}/FUN`TABLE`CELL,%0,|)],|)]",
+			"&FUN`TABLE`ROWJ {0}=[u({0}/FUN`TABLE`ROW,%1)]",
+			"&FUN`TABLE`HEAD {0}=[ansi(hw,[u({0}/FUN`TABLE`ROW,[json_query(%0,get,head)])])]",
+			"&FUN`TABLE`RULE {0}=[repeat(-,%q<tw>)]",
+			"&FUN`TABLE`BODY {0}=[json_map({0}/FUN`TABLE`ROWJ,[json_query(%0,get,rows)],%r)]",
+			"&RENDERMARKUP`TABLE {0}=[setq(wd,json_query(%0,get,widths))]"
+				+ "[setq(spec,json_map({0}/FUN`TABLE`SPEC,[json_query(%0,get,align)],%b))]"
+				+ "[setq(tw,add(lmath(add,[json_map({0}/FUN`VAL,%q<wd>,%b)]),sub(json_query(%q<wd>,size),1)))]"
+				+ "[jiter({0}/FUN`TABLE`HEAD {0}/FUN`TABLE`RULE {0}/FUN`TABLE`BODY,%0,%r)]",
+		})
+		{
+			await Parser.CommandParse(MModule.single(string.Format(attribute, obj)));
+		}
+
+		var markdown = "| Command | Effect | Cost |%r|:---|:-:|--:|"
+			+ "%r| @wiki | Show the **index** | 0 |"
+			+ "%r| @wiki/search | Find pages | 1 |"
+			+ "%r| @wiki/audit | Staff report |";
+
+		var result = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom({markdown},{obj},40)")))?.Message;
+		await Assert.That(result).IsNotNull();
+
+		var lines = result!.ToPlainText().Split('\n').Select(line => line.TrimEnd()).ToList();
+		// Exactly what the helpfile prints for this template, at the columns the payload's own widths
+		// give — measured from the rendered cells, which is the thing a template cannot do for itself.
+		await Assert.That(lines).IsEquivalentTo(["Command          Effect     Cost", "--------------------------------", "@wiki        Show the index    0", "@wiki/search   Find pages      1", "@wiki/audit   Staff report"]);
+		// The cell's markdown was rendered by the template, so "index" really is bold.
+		await Assert.That(result.ToString()).Contains(Bold);
+	}
+
+	/// <summary>
+	/// A table on an object with no TABLE template renders exactly as <c>rendermarkdown()</c> would, and
+	/// no payload is built at all — the template is looked up before the table is taken apart.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_NoTableTemplate_MatchesDefaultRendering()
+	{
+		var obj = await CreateTemplateObject("MarkdownNoTableTemplateObj");
+
+		var markdown = "| A | B |%r|---|---|%r| 1 | 2 |";
+
+		var result = (await Parser.FunctionParse(
+			MModule.single($"rendermarkdowncustom({markdown},{obj})")))?.Message;
+		await Assert.That(result).IsNotNull();
+
+		var expected = RecursiveMarkdownHelper.RenderMarkdown("| A | B |\n|---|---|\n| 1 | 2 |");
+
+		await AssertMarkupStringEquals(result!, expected);
+	}
 }

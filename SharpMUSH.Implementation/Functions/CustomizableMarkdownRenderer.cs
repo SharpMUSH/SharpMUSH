@@ -9,6 +9,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.Json;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -47,10 +48,50 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		_attributeService = attributeService;
 	}
 
+	/// <summary>
+	/// The markdown this renderer was handed, kept so <c>RENDERMARKUP`TABLE</c> can give a template each
+	/// cell's raw source. Markdig records cell positions as offsets into the string it parsed, so the
+	/// string has to outlive the parse.
+	/// </summary>
+	private string? _markdownSource;
+
 	public MString RenderMarkdown(string markdown)
 	{
-		var result = RecursiveMarkdownHelper.RenderMarkdown(markdown, this);
-		return result;
+		_markdownSource = markdown;
+		return RecursiveMarkdownHelper.RenderMarkdown(markdown, this);
+	}
+
+	/// <summary>
+	/// Whether the object defines <c>RENDERMARKUP`{templateName}</c>, caching a negative answer.
+	/// </summary>
+	/// <remarks>
+	/// Separate from <see cref="TryEvaluateTemplate"/> so a caller can ask <em>before</em> building the
+	/// arguments. Every other template's arguments are a rendered MString it already has in hand;
+	/// TABLE's is a JSON serialisation of the whole table, which no game that has not configured the
+	/// template should pay for.
+	/// </remarks>
+	private bool HasTemplate(string templateName)
+	{
+		if (_absentTemplates.Contains(templateName)) return false;
+
+		try
+		{
+			var maybeAttr = _attributeService.GetAttributeAsync(
+				_executor,
+				_templateObject,
+				$"RENDERMARKUP`{templateName}",
+				mode: IAttributeService.AttributeMode.Execute,
+				parent: false).GetAwaiter().GetResult();
+
+			if (maybeAttr.IsAttribute) return true;
+		}
+		catch
+		{
+			// Treat a failed lookup as absent, exactly as TryEvaluateTemplate does.
+		}
+
+		_absentTemplates.Add(templateName);
+		return false;
 	}
 
 	/// <summary>
@@ -263,17 +304,115 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		Template("TASKLIST", Args(Flag(task.Checked))) ?? base.RenderTaskList(task);
 
 	/// <summary>
-	/// <c>RENDERMARKUP`TABLE</c>: <c>%0</c> is the whole table, already laid out in columns.
+	/// <c>RENDERMARKUP`TABLE</c>: <c>%0</c> is the table described as one JSON object, so a template can
+	/// lay the table out itself:
+	/// <c>{"width":78,"align":["&lt;","&gt;"],"widths":[36,36],"head":["A","B"],
+	/// "rows":[["1","2"],["3","4"]]}</c>.
 	/// </summary>
 	/// <remarks>
-	/// The table is handed over rendered rather than as its cells: column widths are computed across
-	/// every row at once against the render width, so there is no per-cell hook that could produce an
-	/// aligned table. A template can therefore frame, indent or colour a table, not re-lay it out.
+	/// Cells carry their markdown <em>source</em>, not rendered text: a cell reading <c>**loud**</c>
+	/// arrives with its asterisks, and a template calls <c>rendermarkdown()</c> on it when it wants
+	/// formatting. That keeps the decision with the game, and it is why JSON is safe here — the payload
+	/// is authored article source, not rendered output with ANSI in it. <c>\|</c> escapes are left
+	/// exactly as written, because <c>rendermarkdown()</c> is what resolves them.
+	/// <c>widths</c> is the one thing a template could not work out for itself: source length is not
+	/// rendered length, and only this side has both the cell and the rendering rules. Without it every
+	/// template would divide the total by the column count and produce uniform columns — worse than the
+	/// default layout it is replacing.
+	/// <para>
+	/// One object rather than parallel arguments because it nests: <c>json_map()</c> walks
+	/// <c>rows</c> and then each row, so a per-row and a per-cell helper attribute compose instead of
+	/// threading five arguments through every call by hand.
+	/// </para>
+	/// <para>
+	/// <c>width</c> is the width <em>this render</em> was asked for, which is not necessarily the
+	/// reader's <c>width(%#)</c>: a caller may have passed a fixed width for an export, or be rendering
+	/// for an object that is not connected at all. A template computing its own budget would lay the
+	/// table out to a different width than the prose around it, so the renderer's own value is carried
+	/// here rather than left to be guessed at.
+	/// </para>
+	/// <para>
+	/// The template is looked up before any of this is built, so a game with no TABLE template pays
+	/// nothing per table.
+	/// </para>
 	/// </remarks>
 	protected override MString RenderTable(Table table)
 	{
-		var rendered = base.RenderTable(table);
-		return Template("TABLE", Args(rendered)) ?? rendered;
+		// Both conditions are required and both are cheap: no template means no payload, and no retained
+		// source means no way to quote a cell. The second cannot happen through rendermarkdowncustom(),
+		// which always enters via RenderMarkdown(string).
+		if (_markdownSource is null || !HasTemplate("TABLE")) return base.RenderTable(table);
+
+		// Cells are collected twice on purpose. The payload carries source, but the column widths can
+		// only be measured from the rendering: "**index**" is nine characters of source and five on
+		// screen, so a template measuring what it is given would be wrong by the length of the markup.
+		var rows = table
+			.OfType<TableRow>()
+			.Select(row =>
+			{
+				var cells = row.OfType<TableCell>().ToArray();
+				return (
+					row.IsHeader,
+					Source: cells.Select(CellSource).ToArray(),
+					Rendered: (IReadOnlyList<MString>)cells.Select(RenderTableCell).ToArray());
+			})
+			.ToList();
+
+		if (rows.Count == 0) return base.RenderTable(table);
+
+		var columns = rows.Max(row => row.Source.Length);
+
+		// No column count of its own: align and widths both carry exactly one entry per column, and a
+		// third field saying the same number is a third thing that can disagree with the other two.
+		// A template that wants it reads json_query(json_query(%0,get,widths),size).
+		var payload = new
+		{
+			width = MaxWidth,
+			// align()'s own justification characters, not letters: every template feeds these straight
+			// into an align()/lalign() width spec, so translating here once keeps the same switch() out
+			// of every template. Nothing wants them as l/c/r.
+			align = Enumerable.Range(0, columns).Select(column =>
+				table.ColumnDefinitions.Count > column
+					? table.ColumnDefinitions[column].Alignment switch
+					{
+						TableColumnAlign.Center => "-",
+						TableColumnAlign.Right => ">",
+						_ => "<"
+					}
+					: "<").ToArray(),
+			// The same widths the built-in layout would use, computed from the rendered cells.
+			widths = ComputeColumnWidths(
+				rows.Select(row => row.Rendered).ToList(), columns, TableContentWidth(columns)),
+			head = rows.FirstOrDefault(row => row.IsHeader).Source ?? [],
+			rows = rows.Where(row => !row.IsHeader).Select(row => row.Source).ToArray()
+		};
+
+		// Serialised with the options json() uses, so a template meets one JSON dialect whichever
+		// function produced the document it is reading.
+		var custom = Template("TABLE", Args(MModule.single(
+			JsonSerializer.Serialize(payload, JsonHelpers.RelaxedJsonOptions))));
+
+		return custom ?? base.RenderTable(table);
+	}
+
+	/// <summary>
+	/// One cell's markdown source, trimmed of the padding spaces the table syntax puts around it.
+	/// </summary>
+	/// <remarks>
+	/// Markdig pads a row shorter than the table's column count with cells that carry no source span at
+	/// all (<c>Start 0</c>, <c>End -1</c>). Those answer as empty strings, so a short row arrives padded
+	/// to <c>columns</c> rather than as a shorter array — trimming them back off would be a guess about
+	/// which trailing empties the author wrote and which the parser added.
+	/// The bounds are re-checked against the source rather than trusted, because a wrong span here would
+	/// be an <see cref="ArgumentOutOfRangeException"/> in the middle of a render.
+	/// </remarks>
+	private string CellSource(TableCell cell)
+	{
+		var span = cell.Span;
+		if (_markdownSource is null || span.Start < 0 || span.Length <= 0) return string.Empty;
+
+		var end = Math.Min(span.End, _markdownSource.Length - 1);
+		return end < span.Start ? string.Empty : _markdownSource[span.Start..(end + 1)].Trim();
 	}
 
 	/// <summary>

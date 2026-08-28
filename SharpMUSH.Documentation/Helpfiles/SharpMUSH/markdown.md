@@ -225,9 +225,35 @@ The function looks for attributes on `<object>` with specific names that define 
 - ``RENDERMARKUP`QUOTE`` - Block quote rendering
   - `%0` - The quote content (already rendered)
   
-- ``RENDERMARKUP`TABLE`` - Table rendering
-  - `%0` - The whole table, already laid out in columns
+- ``RENDERMARKUP`TABLE`` - Table rendering. Receives the table described as a
+  single JSON object, so a template can lay the table out itself
+  - `%0` - The table, as JSON:
+    ```json
+    {
+      "width": 78,
+      "align": ["<", "-", ">"],
+      "widths": [22, 22, 22],
+      "head": ["Command", "Effect", "Cost"],
+      "rows": [["`@wiki`", "Show the **index**", "0"]]
+    }
+    ```
+  - `width` - the width this render was asked for. Not the same as `width(%#)`:
+    the caller may have chosen a fixed width, and a table laid out to a
+    different one disagrees with the prose around it
+  - `align` - one entry per column: the `align()` justification character,
+    `<` left, `-` centre, `>` right, and `<` for a column the table does not
+    align. Ready to concatenate with a width into an `align()`/`lalign()` spec
+  - `widths` - one integer per column, the width the default renderer would
+    use. Computed from the *rendered* cell content, which is why a template
+    cannot work it out from the raw source it is given: `**index**` is nine
+    characters of source and five on screen
+  - `head` - the header row's cells; an empty array when there is no header row
+  - `rows` - the body rows, an array of arrays. A row shorter than the table is
+    padded with empty cells, so every row has one cell per column
   
+  There is no column count: `align` and `widths` already have exactly one entry
+  per column. Read it with `json_query(json_query(%0,get,widths),size)`.
+
 - ``RENDERMARKUP`CONTAINER`` - Custom container (`::: name args`) rendering
   - `%0` - The directive name (`category`, `tag`, `pagelist`, `recent`, or your own)
   - `%1` - The rest of the fence line, empty if there is none
@@ -266,6 +292,23 @@ The function looks for attributes on `<object>` with specific names that define 
   
 - ``RENDERMARKUP`TASKLIST`` - Task list marker (`- [x]`) rendering
   - `%0` - Is it ticked? (1 for `[x]`, 0 for `[ ]`)
+
+**Note on TABLE's cells.** They are markdown *source*, not rendered text - a
+cell reading `**loud**` arrives with its asterisks. Call `rendermarkdown()` on a
+cell when you want it formatted; the choice of whether and how stays with you.
+A literal pipe is written `\|` in table source and is handed over as written,
+because `rendermarkdown()` is what resolves it.
+
+Reach for `json_map()` rather than picking the JSON apart with string
+functions: it walks `rows`, and then each row's own cells, so a per-row and a
+per-cell helper compose. Two things about it are worth knowing before you write
+one. It passes the callee `%0` type, `%1` the element's **raw JSON**, and `%2`
+its index; a string element arrives quoted, so `json_query(%1,unescape)` is what
+gets you the value. And the element lands in `%1`, not `%0`, which is why the
+example below needs a one-token `ROWJ` adapter to hand a row on to `u()`.
+
+Templates are evaluated with the *caller* as executor, so `me` inside one is the
+player, not the object the templates live on. Address helper attributes by dbref.
 
 **Note on `%2` for LINK.** SharpMUSH help text writes a bare `[topic]` for a
 help-topic shortcut, and the renderer turns that into a link whose `%1` is the
@@ -360,12 +403,50 @@ a clickable command link and needs no template; this hook is for the games that
 want a different presentation of their own. (`%[`, `%]`, `%(` and `%)` are how
 you get literal brackets and parentheses past the parser.)
 
+A table template receives the table as JSON and lays it out itself. This one
+rebuilds the default look with `lalign()`:
+```sharp
+&FUN`VAL #123=%1
+&FUN`TABLE`SPEC #123=[json_query(%1,unescape)][json_query(%q<wd>,get,%2)]
+&FUN`TABLE`CELL #123=[rendermarkdown([json_query(%1,unescape)],[max(10,json_query(%q<wd>,get,%2))])]
+&FUN`TABLE`ROW #123=[lalign(%q<spec>,[json_map(#123/FUN`TABLE`CELL,%0,|)],|)]
+&FUN`TABLE`ROWJ #123=[u(#123/FUN`TABLE`ROW,%1)]
+&FUN`TABLE`HEAD #123=[ansi(hw,[u(#123/FUN`TABLE`ROW,[json_query(%0,get,head)])])]
+&FUN`TABLE`RULE #123=[repeat(-,%q<tw>)]
+&FUN`TABLE`BODY #123=[json_map(#123/FUN`TABLE`ROWJ,[json_query(%0,get,rows)],%r)]
+&RENDERMARKUP`TABLE #123=[setq(wd,json_query(%0,get,widths))][setq(spec,json_map(#123/FUN`TABLE`SPEC,[json_query(%0,get,align)],%b))][setq(tw,add(lmath(add,[json_map(#123/FUN`VAL,%q<wd>,%b)]),sub(json_query(%q<wd>,size),1)))][jiter(#123/FUN`TABLE`HEAD #123/FUN`TABLE`RULE #123/FUN`TABLE`BODY,%0,%r)]
+think rendermarkdowncustom(| Command | Effect | Cost |%r|:---|:-:|--:|%r| @wiki | Show the **index** | 0 |%r| @wiki/search | Find pages | 1 |%r| @wiki/audit | Staff report |, #123, 40)
+```
+Output:
+```markdown
+Command          Effect     Cost
+--------------------------------
+@wiki        Show the index    0
+@wiki/search   Find pages      1
+@wiki/audit   Staff report
+```
+(header in bright white, `index` bold because the cell was passed through
+`rendermarkdown()`, and the short last row padded out by `lalign()`)
+
+Three registers are computed once from the payload: `%q<wd>` keeps `widths` as
+JSON for indexed lookup, `%q<spec>` zips `align` with `widths` into an `align()`
+width spec, and `%q<tw>` is the table's own width. `jiter()` then fans the
+payload across the three bands, each receiving it as `%0`.
+
+`json_map()` supplies the element value as `%1` and its index as `%2` - the
+index is how `SPEC` and `CELL` find their own column's width, and
+`FUN`TABLE`ROWJ` exists only to move that value into `%0` for `u()`. A string
+element arrives as raw JSON, quoted, which is why `SPEC` and `CELL` read it
+through `json_query(%1,unescape)`. `FUN`TABLE`ROW` and `FUN`TABLE`CELL` read
+`%q<spec>` and `%q<wd>` from the enclosing call, so a `ulocal()` in this chain
+would break them. The `max(10,...)` is `rendermarkdown()`'s own minimum width,
+which a narrow column can fall under.
+
 **Elements with no template.** Every element the renderer can be asked to style
 is in the list above. What is left renders with fixed behaviour and has no hook:
 plain text, paragraphs, line breaks, horizontal rules, raw HTML, and the
-individual rows and cells of a table - a table's column widths are computed
-across all of its rows at once, so only the finished table is offered, as
-`TABLE`.
+individual rows and cells of a table, which arrive as part of `TABLE` rather
+than as hooks of their own.
 
 **Notes:**
 - If a template attribute is not found on the object, the default rendering is used

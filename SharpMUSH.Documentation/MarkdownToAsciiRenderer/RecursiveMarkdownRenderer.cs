@@ -32,6 +32,13 @@ public partial class RecursiveMarkdownRenderer
 	private readonly int _maxWidth;
 	private readonly IMUSHCodeParser? _mushParser;
 
+	/// <summary>
+	/// The width this render is laid out to — the one the caller asked for, which is not necessarily the
+	/// reader's terminal width. Exposed to subclasses because a renderer that lays a block out for itself
+	/// has to work to the same budget as everything around it.
+	/// </summary>
+	protected int MaxWidth => _maxWidth;
+
 	private const int START_BORDER_WIDTH = 2; // "| "
 	private const int END_BORDER_WIDTH = 2; // " |"
 	private const int COLUMN_SEPARATOR_WIDTH = 3; // " | "
