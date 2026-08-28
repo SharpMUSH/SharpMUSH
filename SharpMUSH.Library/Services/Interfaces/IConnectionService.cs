@@ -69,6 +69,15 @@ public interface IConnectionService
 	/// </summary>
 	ValueTask BindAccount(long handle, string accountId);
 
+	/// <summary>
+	/// Releases a handle from the character it is bound to and returns it to
+	/// <see cref="ConnectionState.Connected"/> — the connect screen — without closing the socket.
+	/// This is PennMUSH's <c>logout_sock</c> (src/bsd.c): the LOGOUT socket command puts a player back
+	/// at the login prompt on the same connection, which is why it is a distinct operation from
+	/// <see cref="Disconnect"/> rather than a disconnect followed by a reconnect.
+	/// </summary>
+	ValueTask Unbind(long handle);
+
 	void Update(long handle, string key, string value);
 
 	/// <summary>

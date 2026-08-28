@@ -282,6 +282,103 @@ public class SocketCommandTests
 		await Assert.That(ConnectionService.Get(handle)!.Metadata.ContainsKey("OutputPrefix")).IsFalse();
 	}
 
+	// --- LOGOUT ---------------------------------------------------------------------------------
+
+	/// <summary>
+	/// PennMUSH <c>logout_sock</c>: the character is left but the socket is not. The connection must
+	/// come back at the connect screen, still registered, with no player bound — which is what makes
+	/// LOGOUT different from QUIT rather than a slower spelling of it.
+	/// </summary>
+	[Test]
+	public async Task LogoutReleasesTheCharacterAndKeepsTheConnection()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LogoutKeep");
+
+		await RunAsync(player.Handle, "LOGOUT");
+
+		var connection = ConnectionService.Get(player.Handle);
+
+		await Assert.That(connection).IsNotNull();
+		await Assert.That(connection!.Ref).IsNull();
+		await Assert.That(connection.State).IsEqualTo(IConnectionService.ConnectionState.Connected);
+	}
+
+	/// <summary>
+	/// <c>welcome_user(d, 0)</c> closes out logout_sock, so the descriptor lands back on the same
+	/// screen a new connection sees and can log in again without reconnecting.
+	/// </summary>
+	[Test]
+	public async Task LogoutShowsTheConnectScreenAgain()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LogoutScreen");
+
+		var said = await RunAsync(player.Handle, "LOGOUT");
+
+		await Assert.That(said.Any(m => m.Contains("Welcome to SharpMUSH"))).IsTrue()
+			.Because("logout_sock ends by showing the login screen a fresh connection would get");
+	}
+
+	/// <summary>
+	/// A second login on the same socket must not inherit the first one's screen-scraping wrappers.
+	/// PennMUSH clears output_prefix, output_suffix and the command count in logout_sock for exactly
+	/// this reason.
+	/// </summary>
+	[Test]
+	public async Task LogoutResetsTheDescriptorTheDepartingPlayerConfigured()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LogoutReset");
+
+		await RunAsync(player.Handle, "OUTPUTPREFIX >>");
+		await RunAsync(player.Handle, "OUTPUTSUFFIX <<");
+		await Assert.That(ConnectionService.Get(player.Handle)!.Metadata.ContainsKey("OutputPrefix")).IsTrue();
+
+		await RunAsync(player.Handle, "LOGOUT");
+
+		var metadata = ConnectionService.Get(player.Handle)!.Metadata;
+		await Assert.That(metadata.ContainsKey("OutputPrefix")).IsFalse();
+		await Assert.That(metadata.ContainsKey("OutputSuffix")).IsFalse();
+		await Assert.That(ConnectionService.Get(player.Handle)!.CommandCount).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// After LOGOUT the connection is anonymous again, so the commands that are only reachable before
+	/// login answer it and the in-game ones do not.
+	/// </summary>
+	[Test]
+	public async Task LogoutLeavesTheConnectionAbleToLogInAgain()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LogoutRelogin");
+
+		await RunAsync(player.Handle, "LOGOUT");
+
+		// DOING only shows the WHO listing for a connection with no executor, so a listing here proves
+		// the parser now treats this handle as sitting at the connect screen.
+		var listing = await RunForLastAsync(player.Handle, "DOING");
+
+		await Assert.That(listing).IsNotNull().And.Contains("Player Name");
+	}
+
+	/// <summary>
+	/// PennMUSH logs "Logout, never connected. &lt;Connection not dropped&gt;" and does nothing else —
+	/// no quit file, no state change, and above all no disturbance to the socket.
+	/// </summary>
+	[Test]
+	public async Task LogoutAtTheConnectScreenIsASilentNoOp()
+	{
+		var handle = await AnonymousHandleAsync();
+
+		var said = await RunAsync(handle, "LOGOUT");
+
+		await Assert.That(said).IsEmpty();
+		await Assert.That(ConnectionService.Get(handle)).IsNotNull();
+		await Assert.That(ConnectionService.Get(handle)!.State)
+			.IsEqualTo(IConnectionService.ConnectionState.Connected);
+	}
+
 	// --- DOING / SESSION at the connect screen --------------------------------------------------
 
 	/// <summary>
