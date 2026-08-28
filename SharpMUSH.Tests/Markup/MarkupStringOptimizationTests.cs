@@ -8,7 +8,8 @@ using M = MarkupString.MarkupImplementation.AnsiMarkup;
 namespace SharpMUSH.Tests.Markup;
 
 /// <summary>
-/// Unit tests for MarkupString optimization functionality and core behaviors.
+/// Unit tests for MarkupString core behaviours, including the run coalescing the constructor
+/// performs (previously a separate <c>optimize</c> pass that nothing called).
 /// </summary>
 public class MarkupStringOptimizationTests
 {
@@ -17,7 +18,7 @@ public class MarkupStringOptimizationTests
 	{
 		var emptyMarkup = A.empty();
 
-		var result = emptyMarkup; // msOptimize is private, would need to be exposed or tested indirectly
+		var result = emptyMarkup;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 		await Assert.That(result.Length).IsEqualTo(0);
@@ -310,96 +311,63 @@ public class MarkupStringOptimizationTests
 	}
 
 	[Test]
-	public async Task OptimizeMarkupString_PlainText_RemainsUnchanged()
-	{
-		var markupString = A.single("Hello World");
-
-		var optimized = A.optimize(markupString);
-
-		await Assert.That(optimized.ToPlainText()).IsEqualTo(markupString.ToPlainText());
-		await Assert.That(optimized.Length).IsEqualTo(markupString.Length);
-		await Assert.That(optimized.ToString()).IsEqualTo(markupString.ToString());
-	}
-
-	[Test]
-	public async Task OptimizeMarkupString_SingleMarkup_RemainsUnchanged()
-	{
-		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
-		var markupString = A.MarkupSingle(redMarkup, "Hello World");
-
-		var optimized = A.optimize(markupString);
-
-		await Assert.That(optimized.ToPlainText()).IsEqualTo(markupString.ToPlainText());
-		await Assert.That(optimized.Length).IsEqualTo(markupString.Length);
-	}
-
-	[Test]
-	public async Task OptimizeMarkupString_AdjacentSameMarkup_MergesContent()
+	public async Task Construction_AdjacentSameMarkup_MergesContent()
 	{
 		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var first = A.MarkupSingle(redMarkup, "Hello ");
 		var second = A.MarkupSingle(redMarkup, "World");
+
 		var combined = A.concat(first, second);
 
-		var optimized = A.optimize(combined);
-
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
-		await Assert.That(optimized.Length).IsEqualTo(11);
-
-		await Assert.That(optimized.ToString()).IsEqualTo(combined.ToString());
+		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello World");
+		await Assert.That(combined.Length).IsEqualTo(11);
+		await Assert.That(combined.Runs.Length).IsEqualTo(1);
 	}
 
 	[Test]
-	public async Task OptimizeMarkupString_DifferentMarkup_DoesNotMerge()
+	public async Task Construction_DifferentMarkup_DoesNotMerge()
 	{
 		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var blueMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 		var first = A.MarkupSingle(redMarkup, "Hello ");
 		var second = A.MarkupSingle(blueMarkup, "World");
+
 		var combined = A.concat(first, second);
 
-		var optimized = A.optimize(combined);
-
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
-		await Assert.That(optimized.Length).IsEqualTo(11);
-
-		await Assert.That(optimized.ToString()).IsEqualTo(combined.ToString());
+		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello World");
+		await Assert.That(combined.Length).IsEqualTo(11);
+		await Assert.That(combined.Runs.Length).IsEqualTo(2);
 	}
 
 	[Test]
-	public async Task OptimizeMarkupString_NestedSameMarkup_LiftsContent()
+	public async Task Construction_NestedSameMarkup_KeepsBothMarkupsOnTheRun()
 	{
-
 		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var innerMarkup = A.MarkupSingle(redMarkup, "Hello");
+
 		var outerMarkup = A.MarkupSingle2(redMarkup, innerMarkup);
 
-		var optimized = A.optimize(outerMarkup);
-
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello");
-		await Assert.That(optimized.Length).IsEqualTo(5);
-
-		await Assert.That(optimized.ToString()).IsEqualTo(outerMarkup.ToString());
+		await Assert.That(outerMarkup.ToPlainText()).IsEqualTo("Hello");
+		await Assert.That(outerMarkup.Length).IsEqualTo(5);
+		await Assert.That(outerMarkup.Runs.Length).IsEqualTo(1);
 	}
 
 	[Test]
-	public async Task OptimizeMarkupString_NestedDifferentMarkup_DoesNotLift()
+	public async Task Construction_NestedDifferentMarkup_KeepsBothMarkupsOnTheRun()
 	{
 		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var blueMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 		var innerMarkup = A.MarkupSingle(blueMarkup, "Hello");
+
 		var outerMarkup = A.MarkupSingle2(redMarkup, innerMarkup);
 
-		var optimized = A.optimize(outerMarkup);
-
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello");
-		await Assert.That(optimized.Length).IsEqualTo(5);
-
-		await Assert.That(optimized.Runs.Length).IsEqualTo(outerMarkup.Runs.Length);
+		await Assert.That(outerMarkup.ToPlainText()).IsEqualTo("Hello");
+		await Assert.That(outerMarkup.Length).IsEqualTo(5);
+		await Assert.That(outerMarkup.Runs[0].Markups.Length).IsEqualTo(2);
 	}
 
 	[Test]
-	public async Task OptimizeMarkupString_ComplexNesting_OptimizesCorrectly()
+	public async Task Construction_ComplexNesting_CoalescesCorrectly()
 	{
 		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 
@@ -410,16 +378,13 @@ public class MarkupStringOptimizationTests
 		var combined = A.concat(A.concat(inner1, inner2), inner3);
 		var wrapped = A.MarkupSingle2(redMarkup, combined);
 
-		var optimized = A.optimize(wrapped);
-
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello Beautiful World");
-		await Assert.That(optimized.Length).IsEqualTo(21);
-
-		await Assert.That(optimized.ToString()).IsEqualTo(wrapped.ToString());
+		await Assert.That(wrapped.ToPlainText()).IsEqualTo("Hello Beautiful World");
+		await Assert.That(wrapped.Length).IsEqualTo(21);
+		await Assert.That(wrapped.Runs.Length).IsEqualTo(1);
 	}
 
 	[Test]
-	public async Task OptimizeMarkupString_MixedTextAndMarkup_HandlesCorrectly()
+	public async Task Construction_MixedTextAndMarkup_HandlesCorrectly()
 	{
 		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var plainText = A.single("Plain ");
@@ -428,29 +393,26 @@ public class MarkupStringOptimizationTests
 
 		var combined = A.concat(A.concat(plainText, redText), moreRedText);
 
-		var optimized = A.optimize(combined);
-
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Plain Red Text");
-		await Assert.That(optimized.Length).IsEqualTo(14);
-
-		await Assert.That(optimized).IsEqualTo(combined);
+		await Assert.That(combined.ToPlainText()).IsEqualTo("Plain Red Text");
+		await Assert.That(combined.Length).IsEqualTo(14);
+		// "Plain " is unmarked; the two red fragments merge into one run behind it.
+		await Assert.That(combined.Runs.Length).IsEqualTo(2);
 	}
 
 	[Test]
-	public async Task OptimizeMarkupString_EmptyMarkup_HandlesCorrectly()
+	public async Task Construction_EmptyMarkup_HandlesCorrectly()
 	{
 		var emptyMarkup = A.empty();
 		var textMarkup = A.single("Hello");
+
 		var combined = A.concat(emptyMarkup, textMarkup);
 
-		var optimized = A.optimize(combined);
-
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello");
-		await Assert.That(optimized.Length).IsEqualTo(5);
+		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello");
+		await Assert.That(combined.Length).IsEqualTo(5);
 	}
 
 	[Test]
-	public async Task OptimizeMarkupString_DeepNesting_OptimizesRecursively()
+	public async Task Construction_DeepNesting_CoalescesRecursively()
 	{
 		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 
@@ -459,11 +421,8 @@ public class MarkupStringOptimizationTests
 		var level3 = A.MarkupSingle2(redMarkup, level2);
 		var level4 = A.MarkupSingle2(redMarkup, level3);
 
-		var optimized = A.optimize(level4);
-
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Deep");
-		await Assert.That(optimized.Length).IsEqualTo(4);
-
-		await Assert.That(optimized.ToString()).IsEqualTo(level4.ToString());
+		await Assert.That(level4.ToPlainText()).IsEqualTo("Deep");
+		await Assert.That(level4.Length).IsEqualTo(4);
+		await Assert.That(level4.Runs.Length).IsEqualTo(1);
 	}
 }

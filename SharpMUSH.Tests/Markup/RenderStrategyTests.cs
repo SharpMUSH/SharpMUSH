@@ -91,8 +91,7 @@ public class RenderStrategyTests
 		var part2 = AMS.MarkupSingle(redMarkup, " World");
 		var combined = AMS.concat(part1, part2);
 
-		var optimized = AMS.optimize(combined);
-		var result = optimized.RenderWith(AMS.RenderStrategies.AnsiStrategy);
+		var result = combined.RenderWith(AMS.RenderStrategies.AnsiStrategy);
 
 		await Assert.That(result).Contains("Hello World");
 		await Assert.That(result).Contains("\u001b[");

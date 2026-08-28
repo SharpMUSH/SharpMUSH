@@ -258,34 +258,35 @@ public class HtmlMarkupTests
 	}
 
 	[Test]
-	public async Task HtmlMarkup_OptimizeAdjacentSameHtml_MergesContent()
+	public async Task HtmlMarkup_AdjacentSameHtml_MergesAtConstruction()
 	{
 		var boldMarkup = H.Create("b");
 		var first = A.MarkupSingle(boldMarkup, "Hello ");
 		var second = A.MarkupSingle(boldMarkup, "World");
+
 		var combined = A.concat(first, second);
 
-		var optimized = A.optimize(combined);
-
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
-		await Assert.That(optimized.Length).IsEqualTo(11);
+		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello World");
+		await Assert.That(combined.Length).IsEqualTo(11);
+		await Assert.That(combined.Runs.Length).IsEqualTo(1);
+		await Assert.That(combined.Render("html")).IsEqualTo("<b>Hello World</b>");
 	}
 
 	[Test]
-	public async Task HtmlMarkup_OptimizeDifferentHtml_DoesNotMerge()
+	public async Task HtmlMarkup_DifferentHtml_DoesNotMerge()
 	{
 		var boldMarkup = H.Create("b");
 		var italicMarkup = H.Create("i");
 		var first = A.MarkupSingle(boldMarkup, "Bold ");
 		var second = A.MarkupSingle(italicMarkup, "Italic");
+
 		var combined = A.concat(first, second);
 
-		var optimized = A.optimize(combined);
+		await Assert.That(combined.ToPlainText()).IsEqualTo("Bold Italic");
+		await Assert.That(combined.Length).IsEqualTo(11);
+		await Assert.That(combined.Runs.Length).IsEqualTo(2);
 
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Bold Italic");
-		await Assert.That(optimized.Length).IsEqualTo(11);
-
-		var output = optimized.ToString();
+		var output = combined.ToString();
 		await Assert.That(output).Contains("<b>");
 		await Assert.That(output).Contains("<i>");
 	}
