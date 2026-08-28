@@ -385,14 +385,21 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
-	public async Task RenderCodeBlock_WithUnknownLanguage_ShouldFallBackToPlainText()
+	public async Task RenderCodeBlock_WithUnknownLanguage_ShouldRenderLikeAnUnlabeledFence()
 	{
+		// A tag neither the softcode highlighter nor ColorCode recognises (```text, ```gdscript, ...)
+		// gets no *syntax* colouring, but it is still a fenced code block and must keep the same
+		// code background as an unlabeled fence — otherwise labelling a block for indexing purposes
+		// would silently change how it looks in-game.
 		var markdown = "```xyz_unknown_language\nsome code here\n```";
+		var unlabeled = "```\nsome code here\n```";
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		var unlabeledResult = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(unlabeled);
 
 		await Assert.That(result.ToPlainText().Trim()).Contains("some code here");
-		await Assert.That(result.ToString().Contains(ESC)).IsFalse();
+		await Assert.That(result.ToString()).Contains($"{ESC}[48;2;45;45;45m");
+		await Assert.That(result.ToString()).IsEqualTo(unlabeledResult.ToString());
 	}
 
 	[Test]
@@ -879,5 +886,45 @@ public class RecursiveMarkdownRendererWithParserTests
 		await Assert.That(ansi.Contains(ESC)).IsTrue();
 
 		await Assert.That(ansi.Contains(Foreground(0xDC, 0xDC, 0xAA))).IsTrue();
+	}
+
+	/// <summary>
+	/// Every shipped helpfile is rendered through the real <c>IMUSHCodeParser</c>, which is the only
+	/// path that exercises the ```sharp softcode highlighter. A block tagged ```sharp whose contents
+	/// the tokeniser cannot handle would otherwise blow up in-game on a <c>help</c> lookup with
+	/// nothing in CI to catch it, so this pins that all of them survive a render.
+	/// </summary>
+	[Test]
+	public async Task RenderHelpfiles_WithRealParser_ShouldNotThrow()
+	{
+		var helpDir = FindHelpfilesDirectory();
+		if (helpDir is null) return; // running outside the repo
+
+		var parser = WebAppFactoryArg.FunctionParser;
+		var files = Directory.EnumerateFiles(helpDir, "*.md", SearchOption.AllDirectories).Order().ToList();
+
+		await Assert.That(files).IsNotEmpty();
+
+		foreach (var file in files)
+		{
+			var markdown = await File.ReadAllTextAsync(file);
+
+			var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+				.RenderMarkdown(markdown, 78, parser);
+
+			await Assert.That(result.ToPlainText()).IsNotEmpty().Because($"{Path.GetFileName(file)} rendered empty");
+		}
+	}
+
+	private static string? FindHelpfilesDirectory()
+	{
+		var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+		while (dir is not null)
+		{
+			var candidate = Path.Join(dir.FullName, "SharpMUSH.Documentation", "Helpfiles", "SharpMUSH");
+			if (Directory.Exists(candidate)) return candidate;
+			dir = dir.Parent;
+		}
+		return null;
 	}
 }

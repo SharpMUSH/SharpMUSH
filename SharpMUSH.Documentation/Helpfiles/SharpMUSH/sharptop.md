@@ -65,7 +65,7 @@ This is the index to the MUSH online help files.
 
 
   Examples:
-```
+```sharp
   help/query cosine OR tangent
   help/query "treated as"
   help/query NEAR(player wizard, 20)
@@ -235,7 +235,7 @@ This is the index to the MUSH online help files.
   SharpMUSH has a built-in mail system that lets you send messages to players, even if they aren't online. You can keep mail you receive for as long as you like, and re-read it any time.
 
   To list all the messages you've received, type '`@mail`'. You'll see something like:
-```
+```text
 -------------------------  MAIL (folder  0)  ----------------------------
 [-----]  0:1    One           Welcome!                   Wed Dec 08 09:57
 [-----]  0:2   *Mike          Example Mail               Sat Dec 11 07:55
@@ -1224,7 +1224,7 @@ Standard Attributes: (see `@list/attribs` for the complete list)<br>
     > &CHECK Bar=$check:@emit No, I'm the parent! ([name(me)])
 ```
 
-```
+```sharp
     > check
     I'm the child (Foo)
     No, I'm the parent! (Foo)
@@ -1494,9 +1494,7 @@ See [queue2]
     > say regmatch(foo bar, lit(^[[:word:]]+$))
     You say "0"
 ```
-```
   Other, less useful, character class keywords include ascii, cntrl, graph, print, punct, and xdigit.
-```
 
 # REGEXP EXAMPLES
   The regexp pattern '.' is equivalent to the wildcard '?'; it matches one and only one of an arbitrary character.
@@ -1802,9 +1800,7 @@ See [queue2]
   > drop box
   Cyclonus just dropped his box.
 ```
-```
   Let's say that Cyclonus's dbref number is #10 and the box's dbref number is #11. The dbref of the room Cyclonus is standing in is #13. When Cyclonus dropped the box above, these were the values of the following %-subs:
-```
 ```sharp
   %n = Cyclonus
   %# = #10

@@ -83,7 +83,7 @@ Available functions:
 ```
 
 Each of these produces the HTML output:
-```
+```html
 <a href="https://sharpmush.com">SharpMUSH</a>
 ```
 
@@ -101,7 +101,7 @@ This wizard-only function will output *<string>* as an HTML Tag.
 ```
 
 Will output (in HTML):
-```
+```html
 \<b\>Foo</b>
 ```
 
@@ -127,7 +127,7 @@ tag(img,src="https://sharpmush.com/image.jpg",align="left",width="300")
 ```
 
 Will output (in HTML):
-```
+```html
 <img src="https://sharpmush.com/image.jpg" align="left" width="300">
 ```
 
@@ -149,7 +149,7 @@ endtag(b)
 ```
 
 Will output (in HTML):
-```
+```html
 </b>
 ```
 
@@ -171,7 +171,7 @@ tagwrap(a,href="https://sharpmush.com",SharpMUSH Downloads)]
 ```
 
 Will output (in HTML):
-```
+```html
 <a href="http://sharpmush.com">SharpMUSH Downloads</a>
 ```
 
@@ -240,13 +240,13 @@ For example, if one uses:
 
 then any players in the room with a WebSocket connection would see (rendered as HTML)
 
-```
+```html
 <a href="https://sharpmush.com">SharpMUSH</a>
 ```
 
 while non-WebSocket connections and listening objects would see
 
-```
+```text
 Go to https://sharpmush.com
 ```
 

@@ -766,7 +766,7 @@ You try a test
 But you're too low!
 ```
 
-```
+```sharp
 > testme 10
 You try a test
 And you succeed!
@@ -1343,7 +1343,7 @@ with the exception that `@decompile/tf` does not include commands for setting at
 To set up `@decompile/tf`:
 
 In TinyFugue:
-```
+```text
 /def -ag -mglob -p100 -t"FugueEdit > *" fe = /grab %-2
 ```
 
@@ -2409,13 +2409,13 @@ You say, "No"
 > &foo me=$foo *: say Checking... ; @if %0=say Yes, {say No ; say Sorry!}
 ```
 
-```
+```sharp
 > foo 1
 You say, "Checking..."
 You say, "Yes"
 ```
 
-```
+```sharp
 > foo 0
 You say, "Checking..."
 You say, "No"
@@ -2585,7 +2585,7 @@ Since the wildcard (*) matches anything, anyone inside the object will hear anyt
 > @ahear Butler=:walks over to the new arrival and takes %p coat.
 ```
 In this case, the listen pattern is met whenever someone 'arrives' in the room, and then the object does whatever is inside its @ahear attribute.
-```
+```text
 Cyclonus has arrived.
 Butler walks over to the new arrival and takes his coat.
 ```
@@ -2734,15 +2734,15 @@ See [@message2] for examples.
 ```
 
 Mike sees:
-```
+```text
 Player sez, 'This is a test'
 ```
 Walker sees:
-```
+```text
 From Player: This is a test
 ```
 Javelin sees:
-```
+```text
 Player says, "This is a test"
 ```
 
@@ -2765,15 +2765,15 @@ A (very) basic language system:
 ```
 
 You see:
-```
+```text
 You say (Spanish), "The rain in Spain falls mainly on the plain"
 ```
 Bob sees (something like):
-```
+```text
 Mike says (Spanish), "The rain ... ... falls ... ... ... ..."
 ```
 Juan sees:
-```
+```text
 Mike says (Spanish), "The rain in Spain falls mainly on the plain"
 ```
 # @moniker

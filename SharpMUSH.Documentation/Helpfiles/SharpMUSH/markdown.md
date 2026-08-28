@@ -62,7 +62,7 @@ Basic text formatting:
 think rendermarkdown(This is **bold** and *italic* text)
 ```
 Output:
-```
+```text
 This is bold and italic text
 ```
 (with ANSI codes for bold and italic styling)
@@ -72,7 +72,7 @@ Headings:
 think rendermarkdown(# My Heading%r%rThis is a paragraph)
 ```
 Output:
-```
+```text
 My Heading
 ==========
 
@@ -85,13 +85,13 @@ Links (note the escaping):
 think rendermarkdown(%[Click here%]%(https://example.com%))
 ```
 Output:
-```
+```text
 Click here
 ```
 (with ANSI OSC 8 hyperlink - clickable in compatible terminals)
 
 Tables:
-```
+```sharp
 think rendermarkdown(| Name | Age |%r|------|-----|%r| Alice | 30 |%r| Bob | 25 |)
 ```
 Output:
@@ -104,7 +104,7 @@ Output:
 (table expands to use default 78 character width, borders styled with ANSI faint)
 
 Tables with custom width:
-```
+```sharp
 think rendermarkdown(| Name | Age |%r|------|-----|%r| Alice | 30 |, 50)
 ```
 Output:
@@ -121,7 +121,7 @@ Code blocks with syntax highlighting (use `sharp` tag for SharpMUSH softcode):
 think rendermarkdown(``````sharp%rname(%#)%rget(#1/ATTR)%r```````)
 ```
 Output (with ANSI colour):
-```
+```text
   name(                    <- yellow (function call)
   %#                       <- bright blue (substitution)
   )
@@ -129,11 +129,11 @@ Output (with ANSI colour):
 ```
 
 Code blocks (plain, no language tag):
-```
+```sharp
 think rendermarkdown(``````%rvar x = 42;%rvar y = 100;%r```````)
 ```
 Output:
-```javascript
+```text
   var x = 42;
   var y = 100;
 ```
@@ -168,7 +168,7 @@ Block quotes:
 think rendermarkdown(> This is a quote%r> spanning multiple lines)
 ```
 Output:
-```
+```text
   This is a quote
   spanning multiple lines
 ```
@@ -358,7 +358,7 @@ Set up custom code block with yellow header:
 think rendermarkdowncustom(``````%rvar x = 42;%r```````, #123)
 ```
 Output:
-```
+```text
 CODE:
   var x = 42;
 ```
