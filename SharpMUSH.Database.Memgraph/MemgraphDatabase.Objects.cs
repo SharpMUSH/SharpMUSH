@@ -238,6 +238,13 @@ RETURN count(o) AS cnt
 		return result.Result.Count > 0 ? (int)result.Result[0]["cnt"].As<long>() : 0;
 	}
 
+	public async ValueTask<int> GetObjectCountAsync(CancellationToken cancellationToken = default)
+	{
+		var result = await ExecuteWithRetryAsync("MATCH (o:Object) RETURN count(o) AS cnt",
+			ct: cancellationToken);
+		return result.Result.Count > 0 ? (int)result.Result[0]["cnt"].As<long>() : 0;
+	}
+
 	#endregion
 
 	#region Object Retrieval

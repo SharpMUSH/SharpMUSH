@@ -551,22 +551,125 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// <c>@sockset [&lt;descriptor&gt;]=&lt;option&gt;,&lt;value&gt;[,&lt;option&gt;,&lt;value&gt;…]</c> —
+	/// PennMUSH <c>cmd_sockset</c> (src/cmds.c). The in-game face of the same option engine the
+	/// <c>SOCKSET</c> socket command drives, with a descriptor argument so a wizard can adjust someone
+	/// else's connection.
+	///
+	/// <para>
+	/// Not wizard-only: PennMUSH lets anyone read and set options on their <i>own</i> descriptor here,
+	/// and only requires privilege to reach another player's. Refusing mortals outright, as this
+	/// command used to, made <c>@sockset</c> useless for the people it is mostly for.
+	/// </para>
+	/// </summary>
 	[SharpCommand(Name = "@SOCKSET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSArgs,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = ["socket", "option", "value"])]
 	public static async ValueTask<Option<CallState>> SocketSet(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var isWizard = await executor.IsWizard();
 
-		if (!await executor.IsWizard())
+		var descriptorArg = args.TryGetValue("0", out var arg0) ? arg0.Message?.ToPlainText().Trim() ?? string.Empty : string.Empty;
+
+		var target = await ResolveSocksetTarget(parser, executor, descriptorArg, isWizard);
+		if (target is null)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SocksetInvalidDescriptor), executor);
+			return new CallState(ErrorMessages.Returns.NotFound);
+		}
+
+		// PennMUSH compares *player* identity here, not descriptor identity: a player with two clients
+		// open may @sockset either of their own connections. Only reaching someone else's needs wizard.
+		var isOwnDescriptor = target.Ref == executor.Object().DBRef;
+
+		if (!isOwnDescriptor && !isWizard)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		await NotifyService!.Notify(executor, "@SOCKSET: Socket option configuration not yet implemented.", executor);
-		await NotifyService!.Notify(executor, "This command would set options on specific player connections/sockets.", executor);
+		// PennMUSH walks args_right in (option, value) pairs starting at index 1, so the right-hand
+		// side is "OPTION,VALUE" — not "OPTION=VALUE" — and several pairs may be set in one command.
+		var pairs = args.Where(kv => kv.Key != "0")
+			.OrderBy(kv => int.Parse(kv.Key))
+			.Select(kv => kv.Value.Message?.ToPlainText() ?? string.Empty)
+			.ToArray();
+
+		if (pairs.Length == 0)
+		{
+			await NotifyService!.Notify(executor, SocketOptions.Show(target, "\n"), executor);
+			return CallState.Empty;
+		}
+
+		for (var i = 0; i + 1 < pairs.Length; i += 2)
+		{
+			var result = SocketOptions.Set(target, pairs[i], pairs[i + 1]);
+			await NotifyService!.NotifyLocalized(executor, result.Key, result.Arguments);
+		}
+
+		// An odd trailing element means the last option arrived without a value; PennMUSH answers the
+		// same way it answers an empty option name.
+		if (pairs.Length % 2 != 0)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SocksetSetWhatOption), executor);
+		}
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>lookup_desc()</c> (src/bsd.c): an empty argument means "the descriptor I am on", a
+	/// number means that descriptor, and anything else is a player name whose least-idle connection is
+	/// used.
+	///
+	/// <para>
+	/// A descriptor number resolves for an unprivileged executor only when the descriptor is theirs.
+	/// PennMUSH returns NULL otherwise, so the caller reports "Invalid descriptor." rather than a
+	/// permission error: refusing by permission would tell a mortal which handle numbers are live.
+	/// </para>
+	/// </summary>
+	private static async ValueTask<IConnectionService.ConnectionData?> ResolveSocksetTarget(
+		IMUSHCodeParser parser, AnySharpObject executor, string descriptorArg, bool isWizard)
+	{
+		if (descriptorArg.Length == 0)
+		{
+			return CurrentConnection(parser) ?? await LeastIdleConnection(executor.Object().DBRef);
+		}
+
+		if (long.TryParse(descriptorArg, out var handle))
+		{
+			var connection = ConnectionService!.Get(handle);
+
+			return connection is not null && (isWizard || connection.Ref == executor.Object().DBRef)
+				? connection
+				: null;
+		}
+
+		var player = await Mediator!.CreateStream(new GetPlayerQuery(descriptorArg)).FirstOrDefaultAsync();
+		if (player is null) return null;
+
+		var playerRef = new DBRef(player.Object.Key, player.Object.CreationTime);
+
+		return isWizard || playerRef == executor.Object().DBRef
+			? await LeastIdleConnection(playerRef)
+			: null;
+	}
+
+	private static async ValueTask<IConnectionService.ConnectionData?> LeastIdleConnection(DBRef who)
+	{
+		IConnectionService.ConnectionData? best = null;
+
+		await foreach (var connection in ConnectionService!.Get(who))
+		{
+			if (best is null || (connection.Idle ?? TimeSpan.MaxValue) < (best.Idle ?? TimeSpan.MaxValue))
+			{
+				best = connection;
+			}
+		}
+
+		return best;
 	}
 
 	[SharpCommand(Name = "@SLAVE", Switches = ["RESTART"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
@@ -2991,60 +3094,52 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "OUTPUTPREFIX", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["prefix"])]
-	public static async ValueTask<Option<CallState>> OutputPrefix(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var prefix = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToPlainText().Trim();
+	/// <summary>
+	/// <c>OUTPUTPREFIX &lt;text&gt;</c> — PennMUSH src/bsd.c, <c>set_userstring(&amp;d-&gt;output_prefix, ...)</c>.
+	/// A descriptor setting, not a player one: it is handled above the <c>d-&gt;connected</c> branch in
+	/// <c>do_command</c>, so it answers at the connect screen too, and it applies to the socket that
+	/// typed it rather than to whichever of the player's clients happens to be listed first.
+	/// PennMUSH says nothing back — robot clients set this on every command and would drown in
+	/// acknowledgements — so the confirmation lives only on <c>SOCKSET OUTPUTPREFIX=...</c>.
+	/// </summary>
+	[SharpCommand(Name = "OUTPUTPREFIX", Switches = [], Behavior = CB.SOCKET | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["prefix"])]
+	public static ValueTask<Option<CallState>> OutputPrefix(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> SetUserString(parser, "OutputPrefix");
 
-		await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+	/// <summary>
+	/// <c>OUTPUTSUFFIX &lt;text&gt;</c> — the trailing counterpart of <see cref="OutputPrefix"/>, and
+	/// silent for the same reason.
+	/// </summary>
+	[SharpCommand(Name = "OUTPUTSUFFIX", Switches = [], Behavior = CB.SOCKET | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["suffix"])]
+	public static ValueTask<Option<CallState>> OutputSuffix(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> SetUserString(parser, "OutputSuffix");
+
+	/// <summary>
+	/// PennMUSH <c>set_userstring()</c> (src/bsd.c): leading whitespace is skipped, an otherwise empty
+	/// value clears the setting, and trailing whitespace is kept — a prefix of <c>"&gt;&gt; "</c> is a
+	/// legitimate thing to ask for.
+	/// </summary>
+	private static ValueTask<Option<CallState>> SetUserString(IMUSHCodeParser parser, string key)
+	{
+		var connection = CurrentConnection(parser);
+		if (connection is null)
 		{
-			if (conn.State == IConnectionService.ConnectionState.LoggedIn)
-			{
-				if (string.IsNullOrEmpty(prefix))
-				{
-					conn.Metadata.TryRemove("OutputPrefix", out _);
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OutputPrefixCleared), executor);
-				}
-				else
-				{
-					conn.Metadata["OutputPrefix"] = prefix;
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OutputPrefixSet), executor);
-				}
-				break;
-			}
+			return ValueTask.FromResult<Option<CallState>>(new None());
 		}
 
-		return CallState.Empty;
-	}
+		var value = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 0, MModule.empty())
+			.ToPlainText().TrimStart();
 
-	[SharpCommand(Name = "OUTPUTSUFFIX", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["suffix"])]
-	public static async ValueTask<Option<CallState>> OutputSuffix(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var suffix = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToPlainText().Trim();
-
-		await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+		if (string.IsNullOrEmpty(value))
 		{
-			if (conn.State == IConnectionService.ConnectionState.LoggedIn)
-			{
-				if (string.IsNullOrEmpty(suffix))
-				{
-					conn.Metadata.TryRemove("OutputSuffix", out _);
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OutputSuffixCleared), executor);
-				}
-				else
-				{
-					conn.Metadata["OutputSuffix"] = suffix;
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OutputSuffixSet), executor);
-				}
-				break;
-			}
+			connection.Metadata.TryRemove(key, out _);
+		}
+		else
+		{
+			connection.Metadata[key] = value;
 		}
 
-		return CallState.Empty;
+		return ValueTask.FromResult<Option<CallState>>(new None());
 	}
 
 	/// <summary>

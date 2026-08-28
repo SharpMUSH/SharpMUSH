@@ -42,10 +42,17 @@ public partial class Commands
 
 		var filteredPlayers = await everyone
 			.Where(player => player.Ref.HasValue && (isWizard || player.PresenceClass != PresenceClasses.Portal))
-			.Select(async (player, i, ct) =>
+			// PennMUSH dump_users skips a descriptor whose player is not a GoodObject. A handle can
+			// outlive the object it is bound to — @nuke a connected player, or a stale entry recovered
+			// from the state store — and Known throws on that None, taking the whole listing down with
+			// an #-1 EXCEPTION rather than omitting one row.
+			.Select(async (player, _, ct) => (Player: player,
+				Object: await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value), ct)))
+			.Where(entry => !entry.Object.IsNone)
+			.Select(async (entry, i, ct) =>
 			{
-				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value), ct);
-				var known = obj.Known;
+				var player = entry.Player;
+				var known = entry.Object.Known;
 				var name = known.Object().Name;
 				var namePadded = name.Length < 16 ? name.PadRight(16) : name;
 				var onFor = TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3);
