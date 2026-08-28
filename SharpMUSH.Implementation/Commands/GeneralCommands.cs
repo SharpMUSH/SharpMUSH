@@ -2199,111 +2199,142 @@ public partial class Commands
 			return isVisual;
 		}
 
-		if (executor.IsContent && switches.Contains("ROOM"))
+		async ValueTask ReportMatches(IAsyncEnumerable<AnySharpObject> candidates)
 		{
-			var where = await executor.AsContent.Location();
-			var whereContent = where.Content(Mediator!);
-
-			var matchedContent =
-				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
-					whereContent.Select(x => x.WithRoomOption()),
-					arg0);
-
-			if (matchedContent.IsSome())
+			var matched = await CommandDiscoveryService!.MatchUserDefinedCommand(parser, candidates, arg0);
+			if (!matched.IsSome())
 			{
-				foreach (var (i, (obj, attr, _)) in matchedContent.AsValue().Index())
+				return;
+			}
+
+			foreach (var (i, (obj, attr, _)) in matched.AsValue().Index())
+			{
+				if (!await CanScan(obj))
 				{
-					if (await CanScan(obj))
-					{
-						runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-						await NotifyService!.Notify(executor,
-							$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]", executor);
-					}
+					continue;
 				}
+
+				runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+				await NotifyService!.Notify(executor,
+					$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]", executor);
 			}
 		}
 
-		if (executor.IsContainer && switches.Contains("SELF"))
+		static IAsyncEnumerable<AnySharpObject> Just(AnySharpObject obj) => new[] { obj }.ToAsyncEnumerable();
+
+		var here = executor.IsContent ? await executor.AsContent.Location() : null;
+
+		// Both zones are wanted by the ZONE branch and by the master room's already-scanned guard, and
+		// resolving one costs a fetch, so only pay for them when a branch that reads them will run.
+		var needsZones = switches.Contains("ZONE") || switches.Contains("GLOBALS");
+		var hereZone = !needsZones || here is null
+			? null
+			: await here.Object().Zone.WithCancellation(CancellationToken.None) is { IsNone: false } locationZone
+				? locationZone.Known
+				: null;
+		var personalZone = !needsZones
+			? null
+			: await executor.Object().Zone.WithCancellation(CancellationToken.None) is { IsNone: false } ownZone
+				? ownZone.Known
+				: null;
+
+		var scannedNeighbors = false;
+
+		if (here is not null && switches.Contains("ROOM"))
 		{
-			var executorContents = executor.AsContainer.Content(Mediator!);
+			// Penn splits this into two flags and @scan with no switches sets both: CHECK_NEIGHBORS for
+			// the contents of the location, CHECK_HERE for the location object itself
+			// (src/game.c:1892-1911). Only the first was implemented, so a $-command living on the room
+			// - the ordinary place to put one - was never reported.
+			await ReportMatches(here.Content(Mediator!).Select(x => x.WithRoomOption()));
+			await ReportMatches(Just(here.WithExitOption()));
+			scannedNeighbors = true;
+		}
 
-			var matchedContent =
-				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
-					executorContents.Select(x => x.WithRoomOption()),
-					arg0);
-
-			if (matchedContent.IsSome())
+		if (switches.Contains("SELF"))
+		{
+			// CHECK_INVENTORY, then CHECK_SELF (src/game.c:1911-1927). The self check is not gated on
+			// being a container: Penn scans the executor whether or not it can hold anything, and this
+			// whole branch used to be skipped for an executor that could not.
+			if (executor.IsContainer)
 			{
-				foreach (var (i, (obj, attr, _)) in matchedContent.AsValue().Index())
-				{
-					if (await CanScan(obj))
-					{
-						runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-						await NotifyService!.Notify(executor,
-							$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]", executor);
-					}
-				}
+				await ReportMatches(executor.AsContainer.Content(Mediator!).Select(x => x.WithRoomOption()));
+			}
+
+			// An executor standing in the room is already in its contents, so the neighbours pass above
+			// has reported it. do_scan lets that duplicate through because it prints the two passes under
+			// separate headings; this returns one flat list, so follow scan_list instead, which drops
+			// CHECK_SELF the moment CHECK_NEIGHBORS is set for exactly this reason (src/game.c:1763-1764).
+			if (!scannedNeighbors)
+			{
+				await ReportMatches(Just(executor));
 			}
 		}
 
 		if (switches.Contains("ZONE"))
 		{
-			if (executor.IsContent)
+			// A zone that is a room is a Zone Master Room and its CONTENTS carry the commands; a zone
+			// that is anything else carries them itself (src/game.c:1931-1978). Scanning the contents in
+			// both cases - which is what this did - looks in the wrong place for every non-room zone,
+			// and the executor's own zone was not consulted at all.
+			if (hereZone is not null)
 			{
-				var location = await executor.AsContent.Location();
-				var locationZone = await location.Object().Zone.WithCancellation(CancellationToken.None);
+				await ScanZone(hereZone);
+			}
 
-				if (!locationZone.IsNone)
-				{
-					var zoneObject = locationZone.Known;
-
-					var zoneContents = Mediator!.CreateStream(new GetContentsQuery(zoneObject.Object().DBRef))
-						?? AsyncEnumerable.Empty<AnySharpContent>();
-
-					var zoneMatched =
-						await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
-							zoneContents.Select(x => x.WithRoomOption()),
-							arg0);
-
-					if (zoneMatched.IsSome())
-					{
-						foreach (var (i, (obj, attr, _)) in zoneMatched.AsValue().Index())
-						{
-							if (await CanScan(obj))
-							{
-								runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-								await NotifyService!.Notify(executor,
-									$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]", executor);
-							}
-						}
-					}
-				}
+			if (personalZone is not null
+					&& (hereZone is null || personalZone.Object().DBRef != hereZone.Object().DBRef))
+			{
+				await ScanZone(personalZone);
 			}
 		}
 
-		if (switches.Contains("GLOBAL"))
+		if (switches.Contains("GLOBALS"))
 		{
+			// This tested for "GLOBAL". The switch is declared GLOBALS, the no-switch default supplies
+			// GLOBALS, and @scan/global is rejected as an invalid switch - so no spelling reached this
+			// branch and the master room was never scanned. It also called AsValue() with no IsSome()
+			// guard, so simply correcting the name would have traded dead code for a crash;
+			// ReportMatches guards it now.
 			var masterRoom = new DBRef(Convert.ToInt32(Configuration!.CurrentValue.Database.MasterRoom));
-			var masterRoomContents = Mediator!.CreateStream(new GetContentsQuery(masterRoom))
-															 ?? AsyncEnumerable.Empty<AnySharpContent>();
 
-			var masterRoomContent =
-				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
-					masterRoomContents.Select(x => x.WithRoomOption()),
-					arg0);
+			// Penn's own guard, verbatim: skip when the executor stands in the master room, or the master
+			// room is either zone (src/game.c:1984). Note it tests only those three dbrefs - it does NOT
+			// ask whether the ROOM or ZONE branch actually ran, so `@scan/globals` from inside the master
+			// room reports nothing in PennMUSH too. Kept as-is for parity rather than "improved".
+			var alreadyScanned = here?.Object().DBRef == masterRoom
+				|| hereZone?.Object().DBRef == masterRoom
+				|| personalZone?.Object().DBRef == masterRoom;
 
-			foreach (var (i, (obj, attr, _)) in masterRoomContent.AsValue().Index())
+			if (!alreadyScanned)
 			{
-				if (await CanScan(obj))
-				{
-					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-					await NotifyService!.Notify(executor,
-						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]", executor);
-				}
+				await ReportMatches(Mediator!.CreateStream(new GetContentsQuery(masterRoom))
+					?.Select(x => x.WithRoomOption()) ?? AsyncEnumerable.Empty<AnySharpObject>());
 			}
 		}
 
 		return new CallState(string.Join(" ", runningOutput));
+
+		async ValueTask ScanZone(AnySharpObject zone)
+		{
+			if (zone.IsRoom)
+			{
+				// Penn guards both zone blocks with the same expression - Location(player) != Zone(player)
+				// (src/game.c:1937, 1971) - which compares the location to the PERSONAL zone even while
+				// scanning the location's zone. Reads like a slip, but it is what Penn does, and it is
+				// materially different from comparing against the zone being scanned: with no personal
+				// zone set, Zone(player) is NOTHING and the location's Zone Master Room is always scanned.
+				if (here?.Object().DBRef != personalZone?.Object().DBRef)
+				{
+					await ReportMatches(Mediator!.CreateStream(new GetContentsQuery(zone.Object().DBRef))
+						?.Select(x => x.WithRoomOption()) ?? AsyncEnumerable.Empty<AnySharpObject>());
+				}
+
+				return;
+			}
+
+			await ReportMatches(Just(zone));
+		}
 	}
 
 	[SharpCommand(Name = "@SWITCH",
