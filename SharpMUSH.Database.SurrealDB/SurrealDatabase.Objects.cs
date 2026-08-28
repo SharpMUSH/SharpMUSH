@@ -481,45 +481,56 @@ public partial class SurrealDatabase
 		// with none of them contributing a condition, a caller asking for "objects owned by #7" got
 		// `SELECT * FROM object` — the entire database, reported as a filtered result.
 		//
-		// Each compares the relation's `out` to a whole record id rather than reaching through it for a
-		// field. `WHERE out.key = $k` reads the same and is quadratic: it dereferences the linked record
-		// for every row of the relation table, and none of the `out` indexes can serve it. Measured on
-		// the embedded engine, the owner filter cost 23ms over 50 objects, 162ms over 150 and 599ms over
-		// 300 — which on a CI runner reached the driver's 30s query timeout, and the SurrealDB embedded
-		// driver handles that timeout by completing an already-completed TaskCompletionSource from a
-		// native callback, aborting the process (SIGABRT). Record-id comparison is index-backed and flat.
+		// Each relation lookup is LET-bound rather than inlined into the WHERE. SurrealDB re-evaluates
+		// an inline `WHERE id IN (subquery)` once per row of the outer table, which makes the filter
+		// quadratic in database size; LET evaluates it once. Measured on the embedded engine over
+		// databases of 50 / 150 / 300 objects, the inline owner filter cost 23ms / 162ms / 599ms, and
+		// on a CI runner that curve reached the driver's 30s query timeout — which the SurrealDB
+		// embedded driver mishandles by completing an already-completed TaskCompletionSource from a
+		// native callback, aborting the process. Bound, it is 3ms / 3ms / 5ms.
+		//
+		// Comparing `out` to a whole record id rather than reaching through it for `out.key` matters
+		// too, since only the former can use the `out` indexes. See GetEntrancesAsync for the same
+		// pair of fixes on the same shape.
+		var bindings = new List<string>();
+
 		if (filter.Owner.HasValue)
 		{
-			conditions.Add("id IN (SELECT VALUE in FROM has_owner WHERE out = player:$ownerKey)");
+			bindings.Add("LET $ownedIds = (SELECT VALUE in FROM has_owner WHERE out = player:$ownerKey)");
+			conditions.Add("id IN $ownedIds");
 			parameters["ownerKey"] = filter.Owner.Value.Number;
 		}
 		if (filter.Zone.HasValue)
 		{
-			conditions.Add("id IN (SELECT VALUE in FROM has_zone WHERE out = object:$zoneKey)");
+			bindings.Add("LET $zonedIds = (SELECT VALUE in FROM has_zone WHERE out = object:$zoneKey)");
+			conditions.Add("id IN $zonedIds");
 			parameters["zoneKey"] = filter.Zone.Value.Number;
 		}
 		if (filter.Parent.HasValue)
 		{
-			conditions.Add("id IN (SELECT VALUE in FROM has_parent WHERE out = object:$parentKey)");
+			bindings.Add("LET $childIds = (SELECT VALUE in FROM has_parent WHERE out = object:$parentKey)");
+			conditions.Add("id IN $childIds");
 			parameters["parentKey"] = filter.Parent.Value.Number;
 		}
 		if (!string.IsNullOrEmpty(filter.HasFlag))
 		{
-			// Case-insensitive matching happens against the flag table (a hundred-odd rows, scanned once)
+			// Case-insensitive matching runs against the flag table (a hundred-odd rows, scanned once)
 			// rather than through every has_flags edge. The type disjunct reproduces the type-named flag
 			// GetObjectFlagsAsync synthesises, which no has_flags edge backs but HelperFunctions.HasFlag
 			// still reports.
-			conditions.Add("(string::lowercase(type) = $flagName "
-				+ "OR id IN (SELECT VALUE in FROM has_flags WHERE out IN "
-				+ "(SELECT VALUE id FROM object_flag WHERE string::lowercase(name) = $flagName)))");
+			bindings.Add("LET $matchingFlags = (SELECT VALUE id FROM object_flag "
+				+ "WHERE string::lowercase(name) = $flagName)");
+			bindings.Add("LET $flaggedIds = (SELECT VALUE in FROM has_flags WHERE out IN $matchingFlags)");
+			conditions.Add("(string::lowercase(type) = $flagName OR id IN $flaggedIds)");
 			parameters["flagName"] = filter.HasFlag.ToLowerInvariant();
 		}
 		if (!string.IsNullOrEmpty(filter.HasPower))
 		{
 			// Alias as well as name, mirroring HelperFunctions.HasPower.
-			conditions.Add("id IN (SELECT VALUE in FROM has_powers WHERE out IN "
-				+ "(SELECT VALUE id FROM power WHERE string::lowercase(name) = $powerName "
-				+ "OR string::lowercase(alias) = $powerName))");
+			bindings.Add("LET $matchingPowers = (SELECT VALUE id FROM power "
+				+ "WHERE string::lowercase(name) = $powerName OR string::lowercase(alias) = $powerName)");
+			bindings.Add("LET $poweredIds = (SELECT VALUE in FROM has_powers WHERE out IN $matchingPowers)");
+			conditions.Add("id IN $poweredIds");
 			parameters["powerName"] = filter.HasPower.ToLowerInvariant();
 		}
 
@@ -535,10 +546,12 @@ public partial class SurrealDatabase
 				limitClause = $"START {skip}";
 		}
 
-		var query = $"SELECT * FROM object {whereClause} {limitClause}";
+		var prelude = bindings.Count > 0 ? string.Join(";", bindings) + ";" : "";
+		var query = $"{prelude}SELECT * FROM object {whereClause} {limitClause}";
 		var response = await ExecuteAsync(query, parameters, cancellationToken);
 
-		var results = response.GetValue<List<ObjectRecord>>(0)!;
+		// The SELECT is the last statement; each LET above occupies a response slot ahead of it.
+		var results = response.GetValue<List<ObjectRecord>>(bindings.Count)!;
 		foreach (var record in results)
 		{
 			yield return MapRecordToSharpObject(record);
@@ -566,15 +579,27 @@ public partial class SurrealDatabase
 
 	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
+		// The destination is resolved first so the subquery can compare `out` to a whole record id, and
+		// the subquery is LET-bound rather than inlined. Both matter, and the second matters more:
+		// SurrealDB re-evaluates an inline `WHERE ... IN (subquery)` once per row of the outer table,
+		// so this walked all of has_home for every exit in the database. Measured on the embedded
+		// engine over databases of 50 / 150 / 300 objects, it cost 10ms / 71ms / 238ms while returning
+		// nothing at all. Index-backed comparison alone only brought that to 179ms; the LET makes it
+		// 2ms / 1ms / 2ms.
+		var destinationNode = await GetObjectNodeAsync(destination, cancellationToken);
+		if (destinationNode.IsNone) yield break;
+
+		var destinationTable = ExtractTable(destinationNode.Known.Id()!);
 		var parameters = new Dictionary<string, object?> { ["destKey"] = destination.Number };
 
 		// Find exits whose destination (has_home) points to the target.
 		// has_home links exit → destination; at_location links exit → source room.
 		var response = await ExecuteAsync(
-			"SELECT VALUE key FROM exit WHERE key IN (SELECT VALUE in.key FROM has_home WHERE out.key = $destKey)",
+			$"LET $candidates = (SELECT VALUE in.key FROM has_home WHERE out = {destinationTable}:$destKey);"
+			+ "SELECT VALUE key FROM exit WHERE key IN $candidates",
 			parameters, cancellationToken);
 
-		var exitKeys = response.GetValue<List<int>>(0) ?? [];
+		var exitKeys = response.GetValue<List<int>>(1) ?? [];
 
 		foreach (var key in exitKeys)
 		{
