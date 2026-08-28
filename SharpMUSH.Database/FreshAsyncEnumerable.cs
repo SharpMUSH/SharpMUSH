@@ -22,9 +22,19 @@ namespace SharpMUSH.Database;
 /// Calling the iterator method afresh per enumeration gives each consumer a state machine no one else
 /// holds a reference to, which removes both. It costs one allocation per enumeration; the alternative
 /// (each enumeration after the first) already allocates a copy.
+/// <para>
+/// The factory takes the <em>enumeration's</em> cancellation token rather than closing over one. A
+/// closed-over token would be whichever token happened to be current when the containing
+/// <c>Lazy</c>/<c>AsyncLazy</c> first resolved, and these enumerables outlive that by design — so once
+/// that one caller went away, every later enumeration would start life cancelled. An
+/// <c>[EnumeratorCancellation]</c> iterator links its parameter token with the one passed to
+/// <c>GetAsyncEnumerator</c>, so a cancelled captured token poisons the enumeration even when the
+/// caller passes <see cref="CancellationToken.None"/>.
+/// </para>
 /// </remarks>
-public sealed class FreshAsyncEnumerable<T>(Func<IAsyncEnumerable<T>> factory) : IAsyncEnumerable<T>
+public sealed class FreshAsyncEnumerable<T>(Func<CancellationToken, IAsyncEnumerable<T>> factory)
+	: IAsyncEnumerable<T>
 {
 	public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-		=> factory().GetAsyncEnumerator(cancellationToken);
+		=> factory(cancellationToken).GetAsyncEnumerator(cancellationToken);
 }

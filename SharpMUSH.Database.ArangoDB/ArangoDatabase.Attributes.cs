@@ -210,7 +210,7 @@ public partial class ArangoDatabase
 			null,
 			x.LongName,
 			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult<IAsyncEnumerable<SharpAttribute>>(
-				new FreshAsyncEnumerable<SharpAttribute>(() => GetTopLevelAttributesAsync(x.Id, ct)))),
+				new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(x.Id, enumCt)))),
 			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
 			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
 		{
@@ -247,7 +247,7 @@ public partial class ArangoDatabase
 					x.LongName,
 					new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
 						Task.FromResult<IAsyncEnumerable<LazySharpAttribute>>(
-							new FreshAsyncEnumerable<LazySharpAttribute>(() => GetTopLevelLazyAttributesAsync(x.Id, ct)))),
+							new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(x.Id, enumCt)))),
 					new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
 					new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)),
 					Value: new AsyncLazy<MString>(async ct =>
@@ -444,7 +444,7 @@ public partial class ArangoDatabase
 			x.LongName,
 			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
 				Task.FromResult<IAsyncEnumerable<LazySharpAttribute>>(
-					new FreshAsyncEnumerable<LazySharpAttribute>(() => GetTopLevelLazyAttributesAsync(x.Id, ct)))),
+					new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(x.Id, enumCt)))),
 			new AsyncLazy<SharpPlayer?>(async ct => await GetObjectOwnerAsync(x.Id, ct)),
 			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)),
 			new AsyncLazy<MString>(async ct =>
@@ -1041,7 +1041,7 @@ public partial class ArangoDatabase
 			null,
 			x.LongName,
 			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult<IAsyncEnumerable<SharpAttribute>>(
-				new FreshAsyncEnumerable<SharpAttribute>(() => GetTopLevelAttributesAsync(x.Id, ct)))),
+				new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(x.Id, enumCt)))),
 			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
 			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
 		{
@@ -1250,7 +1250,7 @@ public partial class ArangoDatabase
 			null,
 			x.LongName,
 			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct => Task.FromResult<IAsyncEnumerable<LazySharpAttribute>>(
-				new FreshAsyncEnumerable<LazySharpAttribute>(() => GetTopLevelLazyAttributesAsync(x.Id, ct)))),
+				new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(x.Id, enumCt)))),
 			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
 			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)),
 			new AsyncLazy<MString>(ct =>

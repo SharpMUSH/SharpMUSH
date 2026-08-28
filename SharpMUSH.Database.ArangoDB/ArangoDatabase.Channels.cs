@@ -83,8 +83,7 @@ public partial class ArangoDatabase
 			ModLock = x.ModLock,
 			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetChannelOwnerAsync(x.Id, ct)),
 			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
-				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(
-					() => GetChannelMembersAsync(x.Id, CancellationToken.None))),
+				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(enumCt => GetChannelMembersAsync(x.Id, enumCt))),
 			Mogrifier = x.Mogrifier,
 			Buffer = x.Buffer
 		};

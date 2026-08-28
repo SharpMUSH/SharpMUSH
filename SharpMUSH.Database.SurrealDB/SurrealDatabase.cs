@@ -299,16 +299,16 @@ public partial class SurrealDatabase(
 			ModifiedTime = modifiedTime,
 			Warnings = warnings,
 			Locks = DeserializeLocks(locksJson),
-			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(() => GetObjectFlagsForIdAsync(id, type.ToUpper(), CancellationToken.None))),
-			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(() => GetPowersForIdAsync(id, CancellationToken.None))),
-			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(() => GetTopLevelAttributesAsync(id, CancellationToken.None))),
-			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(() => GetTopLevelLazyAttributesAsync(id, CancellationToken.None))),
-			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(() => GetAllAttributesForIdAsync(id, CancellationToken.None))),
-			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(() => GetAllLazyAttributesForIdAsync(id, CancellationToken.None))),
+			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => GetObjectFlagsForIdAsync(id, type.ToUpper(), enumCt))),
+			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(enumCt => GetPowersForIdAsync(id, enumCt))),
+			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),
+			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
+			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesForIdAsync(id, enumCt))),
+			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesForIdAsync(id, enumCt))),
 			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
 			Parent = new(async ct => await GetParentForObjectAsync(id, ct)),
 			Zone = new(async ct => await GetZoneAsync(id, ct)),
-			Children = new(() => new FreshAsyncEnumerable<SharpObject>(() => GetChildrenAsync(id, CancellationToken.None)!))
+			Children = new(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(id, enumCt)!))
 		};
 	}
 
@@ -725,7 +725,7 @@ public partial class SurrealDatabase(
 			flags,
 			null,
 			record.longName,
-			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<SharpAttribute>>(new FreshAsyncEnumerable<SharpAttribute>(() => GetTopLevelAttributesAsync(id, innerCt)))),
+			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<SharpAttribute>>(new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt)))),
 			new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 			new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)))
 		{
@@ -746,7 +746,7 @@ public partial class SurrealDatabase(
 			flags,
 			null,
 			record.longName,
-			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<LazySharpAttribute>>(new FreshAsyncEnumerable<LazySharpAttribute>(() => GetTopLevelLazyAttributesAsync(id, innerCt)))),
+			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<LazySharpAttribute>>(new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt)))),
 			new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 			new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)),
 			Value: new AsyncLazy<MString>(innerCt =>

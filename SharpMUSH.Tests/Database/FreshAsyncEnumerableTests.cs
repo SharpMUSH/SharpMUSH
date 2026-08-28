@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Database;
 
 namespace SharpMUSH.Tests.Database;
@@ -49,10 +50,12 @@ public class FreshAsyncEnumerableTests
 		public void Complete() => _queue.CompleteAdding();
 	}
 
-	private static async IAsyncEnumerable<int> Numbers()
+	private static async IAsyncEnumerable<int> Numbers(
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		for (var i = 0; i < 3; i++)
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			// An await inside the body, as every real provider query has: it is the suspension point
 			// that leaves the state machine "running" when a stale consumer disposes it.
 			await Task.Yield();
@@ -68,7 +71,7 @@ public class FreshAsyncEnumerableTests
 
 		OnOneThread(async () =>
 		{
-			IAsyncEnumerable<int> shared = Numbers();
+			var shared = Numbers();
 
 			var first = shared.GetAsyncEnumerator();
 			while (await first.MoveNextAsync()) { }
@@ -103,6 +106,7 @@ public class FreshAsyncEnumerableTests
 
 		OnOneThread(async () =>
 		{
+			// Held as the interface, which is how the models hold it — the concrete type is not the point.
 			IAsyncEnumerable<int> shared = new FreshAsyncEnumerable<int>(Numbers);
 
 			var first = shared.GetAsyncEnumerator();
@@ -132,15 +136,59 @@ public class FreshAsyncEnumerableTests
 	public async Task FreshAsyncEnumerable_ReplaysInFullOnEveryEnumeration()
 	{
 		var calls = 0;
-		IAsyncEnumerable<int> shared = new FreshAsyncEnumerable<int>(() =>
+		IAsyncEnumerable<int> shared = new FreshAsyncEnumerable<int>(ct =>
 		{
 			calls++;
-			return Numbers();
+			return Numbers(ct);
 		});
 
 		await Assert.That(await shared.ToArrayAsync()).IsEquivalentTo(new[] { 0, 1, 2 });
 		await Assert.That(await shared.ToArrayAsync()).IsEquivalentTo(new[] { 0, 1, 2 });
 		await Assert.That(calls).IsEqualTo(2);
+	}
+
+	/// <summary>
+	/// The factory takes the enumeration's token instead of closing over one, so a token that was
+	/// current when the containing <c>Lazy</c>/<c>AsyncLazy</c> first resolved cannot outlive that
+	/// caller and cancel everyone who comes after.
+	/// </summary>
+	/// <remarks>
+	/// These enumerables are cached per object and enumerated for the rest of that object's life, while
+	/// the token at first resolution belongs to whichever request happened to touch it first. An
+	/// <c>[EnumeratorCancellation]</c> iterator links its parameter token with the one passed to
+	/// <c>GetAsyncEnumerator</c>, so a captured-and-since-cancelled token fails the enumeration even
+	/// when the caller passes <see cref="CancellationToken.None"/> — silently, as a cancelled read.
+	/// </remarks>
+	[Test]
+	public async Task FreshAsyncEnumerable_DoesNotCarryAStaleCancellationIntoLaterEnumerations()
+	{
+		using var first = new CancellationTokenSource();
+		IAsyncEnumerable<int> shared = new FreshAsyncEnumerable<int>(Numbers);
+
+		await Assert.That(await shared.ToArrayAsync(first.Token))
+			.IsEquivalentTo(new[] { 0, 1, 2 })
+			.Because("the first caller's own enumeration has to work before the later ones matter");
+
+		// The first caller goes away.
+		await first.CancelAsync();
+
+		await Assert.That(await shared.ToArrayAsync())
+			.IsEquivalentTo(new[] { 0, 1, 2 });
+		await Assert.That(await shared.ToArrayAsync(CancellationToken.None))
+			.IsEquivalentTo(new[] { 0, 1, 2 });
+	}
+
+	/// <summary>The enumeration's own token still cancels it — threading it through is not swallowing it.</summary>
+	[Test]
+	public async Task FreshAsyncEnumerable_StillHonoursTheEnumerationsOwnToken()
+	{
+		using var cancelled = new CancellationTokenSource();
+		await cancelled.CancelAsync();
+
+		IAsyncEnumerable<int> shared = new FreshAsyncEnumerable<int>(Numbers);
+
+		await Assert.That(async () => await shared.ToArrayAsync(cancelled.Token))
+			.Throws<OperationCanceledException>();
 	}
 
 	/// <summary>
@@ -151,6 +199,7 @@ public class FreshAsyncEnumerableTests
 	[Test]
 	public async Task FreshAsyncEnumerable_SurvivesInterleavedShortCircuitingConsumers()
 	{
+		// Held as the interface, which is how the models hold it — the concrete type is not the point.
 		IAsyncEnumerable<int> shared = new FreshAsyncEnumerable<int>(Numbers);
 
 		var results = await Task.WhenAll(Enumerable.Range(0, 64).Select(async i =>

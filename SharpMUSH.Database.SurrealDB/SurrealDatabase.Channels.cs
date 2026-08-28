@@ -316,8 +316,7 @@ public partial class SurrealDatabase
 			Mogrifier = record.mogrifier,
 			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetChannelOwnerAsync(channelName, ct)),
 			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
-				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(
-					() => GetChannelMembersAsync(channelName, CancellationToken.None)))
+				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(enumCt => GetChannelMembersAsync(channelName, enumCt)))
 		};
 	}
 

@@ -24,6 +24,11 @@ namespace SharpMUSH.Library.Behaviors;
 /// and stores its result after the second invalidation still caches a pre-write answer. Closing that
 /// needs the read side to carry a version, not more invalidation.
 /// </para>
+/// <para>
+/// The second pass runs on the failure path too, and under <see cref="CancellationToken.None"/>. A
+/// handler that threw may have committed part of its write first, and a cancelled caller may have
+/// left one behind entirely; in both cases the entry is stale and nobody else is going to clear it.
+/// </para>
 /// </remarks>
 public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache)
 	: IPipelineBehavior<TRequest, TResponse>
@@ -36,12 +41,35 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache)
 		// Before, so nothing inside the handler reads its own stale entry...
 		await InvalidateCacheAsync(message, cancellationToken);
 
-		var result = await next(message, cancellationToken);
+		try
+		{
+			var result = await next(message, cancellationToken);
 
-		// ...and after, so a concurrent read that repopulated the key mid-write does not outlive it.
-		await InvalidateCacheAsync(message, cancellationToken);
+			// ...and after, so a concurrent read that repopulated the key mid-write does not outlive it.
+			// CancellationToken.None deliberately: the write has happened, so the stale entry has to go
+			// whether or not the caller is still interested. Passing the request token here would let a
+			// cancellation leave exactly the poisoned entry this pass exists to remove.
+			await InvalidateCacheAsync(message, CancellationToken.None);
 
-		return result;
+			return result;
+		}
+		catch
+		{
+			// A handler that threw may still have committed part of its write before it did, and a
+			// cancelled caller may have left one behind entirely — either way the second pass is more
+			// necessary here than on the success path, not less.
+			try
+			{
+				await InvalidateCacheAsync(message, CancellationToken.None);
+			}
+			catch
+			{
+				// Never replace the exception that brought us here with one from the cleanup: the
+				// handler's failure is the one the caller has to see.
+			}
+
+			throw;
+		}
 	}
 
 	private async ValueTask InvalidateCacheAsync(TRequest message, CancellationToken cancellationToken)
