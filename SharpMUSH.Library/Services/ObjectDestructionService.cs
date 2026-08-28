@@ -127,23 +127,35 @@ public class ObjectDestructionService(
 			return 0;
 		}
 
-		// A full scan with the GOING test in application code, not an ObjectSearchFilter.HasFlag
-		// pushdown. That pushdown cannot be trusted here and fails in opposite directions per
-		// provider: ArangoDB filters on `v.Flags[*].Name` against node_objects documents, which hold
-		// no Flags array (flags are edges), so it matches nothing and the purge would silently stop
-		// destroying anything; SurrealDB's GetFilteredObjectsAsync ignores HasFlag outright, so it
-		// matches everything and the purge would flag the entire database GOING_TWICE. Until those
-		// are fixed, the scan is the only correct option on all three providers.
+		// GOING is pushed down to the database. PennMUSH purge() can afford to walk db_top because the
+		// whole database is in memory; this runs on a timer against a remote store, where "fetch every
+		// object, then fetch each one's flags" is a full scan plus a round-trip per object, every ten
+		// minutes, to find a set that is usually empty.
 		//
-		// Materialised before mutating: the stream is a live read, and freeing an object (which
-		// cascades into the exits of a room) deletes rows out from under it.
-		var candidates = await mediator.CreateStream(new GetAllTypedObjectsQuery(), cancellationToken)
+		// Materialised before mutating: the stream is a live read, and freeing an object (which cascades
+		// into the exits of a room) deletes rows out from under it.
+		var doomed = await mediator
+			.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { HasFlag = GoingFlag }),
+				cancellationToken)
 			.ToListAsync(cancellationToken);
 
 		var freed = 0;
 
-		foreach (var candidate in candidates)
+		foreach (var doomedObject in doomed)
 		{
+			// Re-resolved because a cascade earlier in this pass may already have taken it (a room takes
+			// its exits with it), and a stale dbref reads as None.
+			var node = await mediator.Send(new GetObjectNodeQuery(doomedObject.DBRef), cancellationToken);
+			if (node.IsNone) continue;
+
+			var candidate = node.Known;
+
+			// Belt and braces over the pushdown, deliberately kept despite being redundant with the
+			// query above. A provider that silently ignores HasFlag hands back the entire database, and
+			// with no second opinion this loop would then mark every object in the game GOING_TWICE and
+			// start freeing them on the following pass. All three providers ignored or broke that
+			// predicate until it was fixed and pinned (ObjectSearchFilterPushdownTests); the cost of not
+			// trusting it here is one flag read on an already-small set.
 			if (!await candidate.HasFlag(GoingFlag)) continue;
 
 			if (!await candidate.HasFlag(GoingTwiceFlag))
@@ -154,8 +166,6 @@ public class ObjectDestructionService(
 				continue;
 			}
 
-			// A cascade earlier in this pass may already have taken it (a room takes its exits); the
-			// storage delete reports false for a dbref that is already gone, so it is not counted twice.
 			if (await FreeObjectAsync(parser, candidate, cancellationToken))
 			{
 				freed++;
