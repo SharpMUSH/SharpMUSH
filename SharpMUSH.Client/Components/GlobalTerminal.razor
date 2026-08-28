@@ -223,41 +223,50 @@
 
         DebugLine($"[DBG] init: connected={_connected} isLoggedIn={AccountAuth.IsLoggedIn}");
 
+        // Every auto-connect below reaches the connection gateway, which is routinely down, restarting,
+        // or simply not running in a partial dev stack. Letting that escape here is fatal out of all
+        // proportion: this component mounts from MainLayout, so one refused socket replaces every page
+        // in the app with Blazor's "unhandled error" bar. Report it the way the manual Connect button
+        // already does and leave the terminal disconnected but usable.
         if (!_connected)
         {
-            if (HostEnv.IsDevelopment() && !AccountAuth.IsLoggedIn && !AccountAuth.ExplicitlyLoggedOut)
+            try
             {
-                // In dev, the Blazor AuthStateProvider hasn't necessarily run yet, so
-                // AccountAuth.IsLoggedIn may still be false.  Call GetDebugOttAsync()
-                // directly — it both populates AccountSessionToken and returns the OTT
-                // in one round-trip, avoiding any ordering dependency.
-                // Guarded by ExplicitlyLoggedOut (mirrors MainLayout): GlobalTerminal is mounted
-                // on nearly every page via MainLayout, so without this guard, any reload/nav
-                // after an explicit logout would silently re-authenticate as the debug admin.
-                DebugLine("[DBG] dev path: fetching debug OTT");
-                var debugOtt = await AccountAuth.GetDebugOttAsync();
-                DebugLine($"[DBG] dev path: ott={(debugOtt?.Token is null ? "NULL" : "OK")} account={(debugOtt?.AccountId is null ? "NULL" : "OK")}");
-                if (debugOtt?.Token is not null)
+                if (HostEnv.IsDevelopment() && !AccountAuth.IsLoggedIn && !AccountAuth.ExplicitlyLoggedOut)
                 {
-                    SetPlayerName(debugOtt.PlayerName);
-                    await Terminal.ConnectWithOttAsync(_serverUri, debugOtt.Token);
+                    // In dev, the Blazor AuthStateProvider hasn't necessarily run yet, so
+                    // AccountAuth.IsLoggedIn may still be false.  Call GetDebugOttAsync()
+                    // directly — it both populates AccountSessionToken and returns the OTT
+                    // in one round-trip, avoiding any ordering dependency.
+                    // Guarded by ExplicitlyLoggedOut (mirrors MainLayout): GlobalTerminal is mounted
+                    // on nearly every page via MainLayout, so without this guard, any reload/nav
+                    // after an explicit logout would silently re-authenticate as the debug admin.
+                    DebugLine("[DBG] dev path: fetching debug OTT");
+                    var debugOtt = await AccountAuth.GetDebugOttAsync();
+                    DebugLine($"[DBG] dev path: ott={(debugOtt?.Token is null ? "NULL" : "OK")} account={(debugOtt?.AccountId is null ? "NULL" : "OK")}");
+                    if (debugOtt?.Token is not null)
+                    {
+                        SetPlayerName(debugOtt.PlayerName);
+                        await Terminal.ConnectWithOttAsync(_serverUri, debugOtt.Token);
+                    }
+                }
+                else if (AccountAuth.IsLoggedIn)
+                {
+                    // Read the roster off the service rather than the call's result: it assigns
+                    // Characters on success and leaves it untouched on failure, so a failed fetch
+                    // leaves nothing to connect as — which is what should happen.
+                    if (AccountAuth.Characters.Count == 0)
+                        await AccountAuth.GetCharactersAsync();
+                    var target = AccountAuth.ActiveCharacter ?? AccountAuth.Characters.FirstOrDefault();
+                    if (target is not null)
+                        await ConnectAsCharacterAsync(target);
+                }
+                else if (AllowGuest && await ServerInfo.GuestLoginsEnabledAsync())
+                {
+                    await Terminal.ConnectAsGuestAsync(_serverUri);
                 }
             }
-            else if (AccountAuth.IsLoggedIn)
-            {
-                // Read the roster off the service rather than the call's result: it assigns
-                // Characters on success and leaves it untouched on failure, so a failed fetch
-                // leaves nothing to connect as — which is what should happen.
-                if (AccountAuth.Characters.Count == 0)
-                    await AccountAuth.GetCharactersAsync();
-                var target = AccountAuth.ActiveCharacter ?? AccountAuth.Characters.FirstOrDefault();
-                if (target is not null)
-                    await ConnectAsCharacterAsync(target);
-            }
-            else if (AllowGuest && await ServerInfo.GuestLoginsEnabledAsync())
-            {
-                await Terminal.ConnectAsGuestAsync(_serverUri);
-            }
+            catch (Exception ex) { AddLocalLine(Loc["TermErrorLine", ex.Message], TerminalLineSource.System); }
         }
 
         DebugLine($"[DBG] init done: connected={Terminal.IsConnected} isLoggedIn={AccountAuth.IsLoggedIn}");
