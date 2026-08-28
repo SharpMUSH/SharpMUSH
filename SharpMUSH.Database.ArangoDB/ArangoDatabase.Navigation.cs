@@ -278,13 +278,21 @@ public partial class ArangoDatabase
 	/// Batch-fetches all contents of a container in a single AQL query, avoiding N+1 round-trips.
 	/// Returns both the typed vertex and its Objects document for each content item.
 	/// </summary>
+	/// <remarks>
+	/// The query used to end <c>FILTER obj != null</c>, which dropped any half-linked row on the floor:
+	/// an object reachable through the Locations graph whose Objects document was not would simply not
+	/// appear in its container's contents, with no error anywhere. That is invisible in exactly the way
+	/// issue #797 describes — <c>loc()</c> answers, <c>lcon()</c> does not, and nothing says why. The
+	/// row is now kept and reported. Creation writes both graphs' collections inside one transaction
+	/// (<c>CreateThingAsync</c>), so this should be unreachable; if it ever fires, the log names the
+	/// vertex and the caller sees a short list it can attribute rather than a silent one it cannot.
+	/// </remarks>
 	private async IAsyncEnumerable<AnySharpContent> GetContentsBatchAsync(string startVertex,
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
 		var results = arangoDb.Query.ExecuteStreamAsync<System.Text.Json.JsonElement>(handle,
 			$"FOR typed IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} " +
 			$"LET obj = FIRST(FOR o IN 1..1 OUTBOUND typed GRAPH {DatabaseConstants.GraphObjects} RETURN o) " +
-			$"FILTER obj != null " +
 			$"RETURN {{typed: typed, obj: obj}}",
 			new Dictionary<string, object> { { StartVertex, startVertex } },
 			cancellationToken: ct);
@@ -293,6 +301,17 @@ public partial class ArangoDatabase
 		{
 			var typedEl = result.GetProperty("typed");
 			var objEl = result.GetProperty("obj");
+
+			if (objEl.ValueKind == System.Text.Json.JsonValueKind.Null)
+			{
+				logger.LogError(
+					"Contents of {Container} include {Typed}, which has no Objects document. Omitting it "
+					+ "from the contents list; it will be invisible to lcon(), look and every locate scope "
+					+ "while its location edge still resolves.",
+					startVertex, typedEl.TryGetProperty("_id", out var missingId) ? missingId.GetString() : "<unknown>");
+				continue;
+			}
+
 			var node = HydrateObjectFromElements(typedEl, objEl);
 			yield return node.Match<AnySharpContent>(
 				player => player,
@@ -388,7 +407,6 @@ public partial class ArangoDatabase
 			$"FOR typed IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} " +
 			$"FILTER IS_SAME_COLLECTION('{DatabaseConstants.Exits}', typed) " +
 			$"LET obj = FIRST(FOR o IN 1..1 OUTBOUND typed GRAPH {DatabaseConstants.GraphObjects} RETURN o) " +
-			$"FILTER obj != null " +
 			$"RETURN {{typed: typed, obj: obj}}",
 			new Dictionary<string, object> { { StartVertex, startVertex } },
 			cancellationToken: ct);
@@ -397,6 +415,17 @@ public partial class ArangoDatabase
 		{
 			var typedEl = result.GetProperty("typed");
 			var objEl = result.GetProperty("obj");
+
+			// Same half-linked case as GetContentsBatchAsync above, and the same reason to say so.
+			if (objEl.ValueKind == System.Text.Json.JsonValueKind.Null)
+			{
+				logger.LogError(
+					"Exits of {Container} include {Typed}, which has no Objects document. Omitting it from "
+					+ "the exit list; it will be unusable and invisible while its location edge resolves.",
+					startVertex, typedEl.TryGetProperty("_id", out var missingId) ? missingId.GetString() : "<unknown>");
+				continue;
+			}
+
 			var node = HydrateObjectFromElements(typedEl, objEl);
 			if (node.IsNone) continue;
 			yield return node.Known().AsExit;

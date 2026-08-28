@@ -304,6 +304,15 @@ public static class ErrorMessages
 		public const string StatusCodeMustBe3Digit = "#-1 STATUS CODE MUST BE A 3-DIGIT NUMBER";
 		public const string StatusCodeRequired = "#-1 STATUS CODE REQUIRED";
 		public const string StatusLineTooLong = "#-1 STATUS LINE MUST BE LESS THAN 40 CHARACTERS";
+		/// <summary>
+		/// PennMUSH's refusal when the executor has no standing to ask about either argument —
+		/// <c>fun_nearby</c> (src/fundb.c:896) and <c>fun_zwho</c>/<c>fun_lwho</c>'s neighbours.
+		/// </summary>
+		public const string NoObjectsControlled = "#-1 NO OBJECTS CONTROLLED";
+
+		/// <summary>The bare failure Penn writes with <c>safe_str("#-1", ...)</c>, with no reason.</summary>
+		public const string Nothing = "#-1";
+
 		public const string Unfindable = "#-1 UNFINDABLE";
 		public const string UnknownFlag = "#-1 UNKNOWN FLAG";
 		public const string UpdateFailed = "#-1 UPDATE FAILED";

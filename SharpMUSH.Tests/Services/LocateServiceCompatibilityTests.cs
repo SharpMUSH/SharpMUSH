@@ -718,11 +718,16 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
+	/// <summary>
+	/// An alias answers exactly or not at all. MATCH_LIST's partial branch is
+	/// <c>string_match(Name(match), name)</c> (match.c:214) and there is no partial alias match
+	/// anywhere in match.c — <c>match_aliases</c> reaches <c>check_alias</c>, which compares each
+	/// <c>;</c>-separated entry for equality. This used to answer here, so a player aliased
+	/// <c>Administrator</c> was reachable as <c>Admin</c> on SharpMUSH and not on PennMUSH (#794).
+	/// </summary>
 	[Test]
-	public async Task MatchList_PlayerAlias_PrefixMatch()
+	public async Task MatchList_PlayerAlias_DoesNotPrefixMatch()
 	{
-		// A player found by alias prefix (PennMUSH string_match() behavior for aliases).
-
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var target = _factory.CreatePlayer(5, "Wizard", ["Administrator"], sharedRoom);
@@ -733,28 +738,80 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { target }.ToAsyncEnumerable();
 
-		// "Admin" is a prefix of alias "Administrator"
+		// "Admin" is a prefix of the alias "Administrator", and of nothing else about this player.
 		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
 			HelperFunctions.ParseDbRef("Admin"), 0);
 		await _locateService.MatchList(state, list, player, "Admin");
-		var bestMatch = state.Best;
-		var curr = state.Count;
-		var exact = state.Exact;
 
-		await Assert.That(curr).IsEqualTo(1);
-		await Assert.That(exact).IsFalse(); // partial match
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(state.Count).IsEqualTo(0);
+		await Assert.That(state.Best.IsNone).IsTrue();
+	}
+
+	/// <summary>
+	/// The half that stays: abbreviating a player is served by <c>string_match</c> over the player's
+	/// <em>name</em>, which the partial branch does run. Removing the alias-prefix arm was not meant to
+	/// take that with it.
+	/// </summary>
+	[Test]
+	public async Task MatchList_PlayerName_StillPrefixMatches()
+	{
+		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
+		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
+		var target = _factory.CreatePlayer(5, "Bartholomew", ["Administrator"], sharedRoom);
+
+		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
+				Arg.Any<IPermissionService.InteractType>())
+			.Returns(true);
+
+		var list = new[] { target }.ToAsyncEnumerable();
+
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Bart"), 0);
+		await _locateService.MatchList(state, list, player, "Bart");
+
+		await Assert.That(state.Count).IsEqualTo(1);
+		await Assert.That(state.Exact).IsFalse();
+		await Assert.That(state.Best.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+	}
+
+	/// <summary>
+	/// An alias still answers when it is spelled in full, in the exact branch where
+	/// <c>match_aliases</c> puts it.
+	/// </summary>
+	[Test]
+	public async Task MatchList_PlayerAlias_StillMatchesInFull()
+	{
+		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
+		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
+		var target = _factory.CreatePlayer(5, "Wizard", ["Administrator"], sharedRoom);
+
+		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
+				Arg.Any<IPermissionService.InteractType>())
+			.Returns(true);
+
+		var list = new[] { target }.ToAsyncEnumerable();
+
+		var state = new LocateService.MatchState(LocateFlags.NoTypePreference,
+			HelperFunctions.ParseDbRef("Administrator"), 0);
+		await _locateService.MatchList(state, list, player, "Administrator");
+
+		await Assert.That(state.Count).IsEqualTo(1);
+		await Assert.That(state.Exact).IsTrue();
+		await Assert.That(state.Best.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
-	public async Task MatchList_PlayerAlias_ExactMatchBeforePrefixMatchForAliases()
+	public async Task MatchList_PlayerAlias_ExactAliasBeatsAPartialName()
 	{
-		// When two players match: one by exact alias, one by prefix alias — the exact one wins.
+		// One player answers "Wiz" exactly, by alias; the other only as a prefix of its name. The exact
+		// one wins and resets the counter, whichever order they arrive in. (The second player used to
+		// match on an alias prefix rather than its name; aliases no longer prefix-match at all, so the
+		// partial arm here is now the name — which is what MATCH_LIST tests. See #794.)
 
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var exactPlayer = _factory.CreatePlayer(5, "ExactAliasPlayer", ["Wiz"], sharedRoom);
-		var prefixPlayer = _factory.CreatePlayer(6, "PrefixAliasPlayer", ["Wizard"], sharedRoom);
+		var prefixPlayer = _factory.CreatePlayer(6, "Wizard", ["SomethingElse"], sharedRoom);
 
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
 				Arg.Any<IPermissionService.InteractType>())

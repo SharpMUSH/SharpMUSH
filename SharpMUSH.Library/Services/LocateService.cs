@@ -616,8 +616,11 @@ public partial class LocateService(
 
 		if (!allowPartial) return MatchKind.None;
 
-		return (cur.IsPlayer && AnyAliasStartsWith(aliases, name))
-					 || (!cur.IsExit && StringMatch(objectName, name))
+		// Name only, never aliases: MATCH_LIST's partial branch is string_match(Name(match), name) and
+		// there is no partial alias match anywhere in match.c. A player's aliases answer in the exact
+		// branch above and nowhere else. Abbreviating a player is still served here, by string_match
+		// over the player's name. See issue #794.
+		return !cur.IsExit && StringMatch(objectName, name)
 			? MatchKind.Partial
 			: MatchKind.None;
 	}
@@ -669,23 +672,6 @@ public partial class LocateService(
 		foreach (var alias in aliases)
 		{
 			if (alias.Equals(name, StringComparison.OrdinalIgnoreCase)) return true;
-		}
-
-		return false;
-	}
-
-	/// <summary>
-	/// Prefix-matching against a player's aliases, which PennMUSH does <b>not</b> do — MATCH_LIST's
-	/// partial branch tests <c>string_match(Name(match), name)</c> and no aliases at all. Penn serves the
-	/// same intent through <c>visible_short_page</c> on the player-match path instead. Kept separate from
-	/// <see cref="AnyAliasMatches"/> rather than folded behind a mode flag so that removing it is a
-	/// deletion: see issue #794.
-	/// </summary>
-	private static bool AnyAliasStartsWith(ReadOnlySpan<string> aliases, string name)
-	{
-		foreach (var alias in aliases)
-		{
-			if (alias.StartsWith(name, StringComparison.OrdinalIgnoreCase)) return true;
 		}
 
 		return false;

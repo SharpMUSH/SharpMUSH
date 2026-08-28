@@ -140,17 +140,23 @@ public static partial class HelperFunctions
 		return true;
 	}
 
+	// VISUAL, DARK, LIGHT, AUDIBLE, ORPHAN and PUPPET are flags in PennMUSH (hdrs/dbdefs.h:132-162,
+	// each one a has_flag_by_name call) and are seeded as flags by all three providers. They used to be
+	// asked of Powers, a collection that has never held an entry by any of those names, so every one of
+	// them answered false unconditionally — DARK objects were listed by look and WHO, VISUAL granted
+	// nothing, IsAlive()'s puppet and audible terms never fired. See issue #796. Can_Dark, See_All,
+	// Hide and Long_Fingers nearby really are powers and are left alone.
 	public static async ValueTask<bool> IsVisual(this AnySharpObject obj)
-		=> await obj.HasPower("Visual");
+		=> await obj.HasFlag("VISUAL");
 
 	public static async ValueTask<bool> IsDark(this AnySharpObject obj)
-		=> await obj.HasPower("Dark");
+		=> await obj.HasFlag("DARK");
 
 	public static async ValueTask<bool> IsDark(this SharpObject obj)
-		=> await obj.HasPower("Dark");
+		=> await obj.HasFlag("DARK");
 
 	public static async ValueTask<bool> IsLight(this AnySharpObject obj)
-		=> await obj.HasPower("Light");
+		=> await obj.HasFlag("LIGHT");
 
 	public static async ValueTask<bool> IsOpaque(this AnySharpObject obj)
 		=> await obj.HasFlag("OPAQUE");
@@ -165,10 +171,10 @@ public static partial class HelperFunctions
 		=> await obj.IsDark() && (await obj.CanDark() || !await obj.IsAlive());
 
 	public static async ValueTask<bool> IsAudible(this AnySharpObject obj)
-		=> await obj.HasPower("Audible");
+		=> await obj.HasFlag("AUDIBLE");
 
 	public static async ValueTask<bool> IsOrphan(this AnySharpObject obj)
-		=> await obj.HasPower("Orphan");
+		=> await obj.HasFlag("ORPHAN");
 
 	public static async ValueTask<bool> IsListener(this AnySharpObject obj) => await obj.HasFlag("Monitor");
 
@@ -180,53 +186,24 @@ public static partial class HelperFunctions
 				 .AnyAsync(x => x.Name == "FORWARDLIST"));
 
 	public static async ValueTask<bool> IsPuppet(this AnySharpObject obj)
-		=> await obj.HasPower("Puppet");
+		=> await obj.HasFlag("PUPPET");
 
-	public static async ValueTask<bool> HasPower(this AnySharpObject obj, string power)
-	{
-		try
-		{
-			return await obj.Object().Powers.Value
-				.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
-										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
-		}
-		catch (NotSupportedException)
-		{
-			// Core.Arango 3.12.x can throw NotSupportedException (or InvalidOperationException) from
-			// ExecuteStreamAsync.DisposeAsync() in a race condition. Treat as "no power" so callers
-			// (e.g. PermissionService.Controls) degrade gracefully instead of crashing or silently
-			// aborting the enclosing operation.
-			return false;
-		}
-		catch (InvalidOperationException)
-		{
-			// Same as NotSupportedException above.
-			return false;
-		}
-	}
+	public static ValueTask<bool> HasPower(this AnySharpObject obj, string power)
+		=> obj.Object().HasPower(power);
 
+	/// <summary>
+	/// Both overloads used to swallow <see cref="NotSupportedException"/> and
+	/// <see cref="InvalidOperationException"/>, blamed on a Core.Arango disposal race. The race was
+	/// ours: the ArangoDB provider cached one <c>async IAsyncEnumerable</c> state machine per object
+	/// property and handed it to every consumer, so one consumer's disposal could land on another's
+	/// live enumeration. <c>FreshAsyncEnumerable</c> gives each enumeration its own machine, and the
+	/// catch is gone with it — a swallow here answers "no power" to a question that failed, which is
+	/// fail-open for anything phrased as a restriction. See issue #798.
+	/// </summary>
 	public static async ValueTask<bool> HasPower(this SharpObject obj, string power)
-	{
-		try
-		{
-			return await obj.Powers.Value
-				.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
-										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
-		}
-		catch (NotSupportedException)
-		{
-			// Core.Arango 3.12.x can throw NotSupportedException (or InvalidOperationException) from
-			// ExecuteStreamAsync.DisposeAsync() in a race condition. Treat as "no power" so callers
-			// (e.g. PermissionService.Controls) degrade gracefully instead of crashing or silently
-			// aborting the enclosing operation.
-			return false;
-		}
-		catch (InvalidOperationException)
-		{
-			// Same as NotSupportedException above.
-			return false;
-		}
-	}
+		=> await obj.Powers.Value
+			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
+									 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
 
 	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections,
 		IAttributeService attributes)
@@ -291,8 +268,19 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> HasLongFingers(this AnySharpObject obj)
 		=> await obj.IsPriv() || await obj.HasPower("Long_Fingers");
 
-	public static async ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
-		=> await obj.Object().Flags.Value
+	public static ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
+		=> obj.Object().HasFlag(flag);
+
+	/// <summary>
+	/// Name only. PennMUSH's <c>has_flag_by_name</c> resolves through <c>flag_hash_lookup</c>, which
+	/// carries each flag's aliases as well, so <c>COLOUR</c> answers for <c>COLOR</c> there and does not
+	/// here. Left alone deliberately: <see cref="ISharpDatabase.GetFilteredObjectsAsync"/> documents its
+	/// <c>HasFlag</c> pushdown predicate as name-or-type and no aliases <em>because</em> this helper
+	/// behaves that way, and <c>ObjectSearchFilterPushdownTests</c> pins that on all three providers.
+	/// Changing it means changing three providers, the contract and those tests together.
+	/// </summary>
+	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag)
+		=> await obj.Flags.Value
 			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase));
 
 	/// <summary>
