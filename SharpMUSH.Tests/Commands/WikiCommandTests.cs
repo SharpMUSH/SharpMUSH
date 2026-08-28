@@ -1165,4 +1165,96 @@ public class WikiCommandTests
 		// The display text is the page title, never the raw target, and the brackets never leak.
 		await ExpectNotifyPlainText(player.DbRef, "See Markdown Guide for details.");
 	}
+
+	/// <summary>
+	/// The markdown a page is stored with, containing every construct the renderer would otherwise
+	/// transform: headings, a table, inline markup, a fenced code block, and softcode punctuation.
+	/// </summary>
+	private const string RawSourceBody =
+		"# Heading\n\nSome **bold** text and a [[Wiki Link]].\n\n"
+		+ "| A | B |\n|---|---|\n| 1 | 2 |\n\n"
+		+ "```sharp\nthink [add(1,2)] %0 $foo\n```\n\n- item one\n- item two";
+
+	/// <summary>
+	/// <c>@wiki/md</c> answers with the stored source, byte for byte. <c>wiki(&lt;page&gt;, markdown)</c>
+	/// could already do this for softcode; the command could not, so reading the source of a page before
+	/// editing it meant going through a function to read your own wiki.
+	/// </summary>
+	[Test]
+	public async ValueTask WikiView_Md_ShowsStoredMarkdownVerbatim()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMdReader");
+		var page = await SeedSourcePageAsync("Raw Source Dragons", RawSourceBody);
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/md {page.Slug}"));
+
+		// Every line intact and in order: nothing rendered, reflowed, re-indented or wrapped.
+		await ExpectNotifyPlainText(player.DbRef, RawSourceBody);
+		// The header still identifies the page, so a raw body is not an anonymous blob of text.
+		await ExpectNotifyPlainText(player.DbRef, $"Wiki: {page.Title} [main]");
+	}
+
+	/// <summary>
+	/// Raw markdown is full of <c>[</c>, <c>%</c> and <c>$</c>. It has to arrive as text.
+	/// </summary>
+	[Test]
+	public async ValueTask WikiView_Md_DoesNotEvaluateTheSourceAsSoftcode()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMdLiteral");
+		var page = await SeedSourcePageAsync("Literal Dragons", "Call [add(1,2)] with %0 and $foo.");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/md {page.Slug}"));
+
+		await ExpectNotifyPlainText(player.DbRef, "Call [add(1,2)] with %0 and $foo.");
+		await ExpectNoNotify(player.DbRef, "Call 3 with");
+	}
+
+	/// <summary>
+	/// <c>/md</c> is a modifier and composes with the other modifiers rather than replacing them:
+	/// <c>/source/md</c> is the source locale's markdown, which is what a translator wants in front of
+	/// them before writing <c>@wiki/translate</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask WikiView_SourceMd_ShowsTheSourceLocalesMarkdown()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMdTranslator");
+		var slug = await SeedTranslatedPageAsync(
+			"Md Locale Dragons", "# English source", "Dragons Md", "# Source francaise", published: true);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+
+		// Without /source the reader's own locale is served, still as raw markdown.
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/view/md {slug}"));
+		await ExpectNotifyPlainText(player.DbRef, "# Source francaise");
+
+		// With it, the locale the page was written in.
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/view/source/md {slug}"));
+		await ExpectNotifyPlainText(player.DbRef, "# English source");
+	}
+
+	/// <summary>
+	/// <c>/md</c> is a presentation choice made after permission, never instead of it: asking for a
+	/// draft's source is still asking for a draft.
+	/// </summary>
+	[Test]
+	public async ValueTask WikiView_Md_StillWithholdsADraftWithoutTheDraftSwitch()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMdDraftReader");
+		var draft = await SeedUnpublishedPageAsync(
+			"Md Draft Dragons", "Contains the plugh-md-marker token.");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@wiki/md {draft.Slug}"));
+
+		await ExpectNoNotify(player.DbRef, "plugh-md-marker");
+		await ExpectNotifyPlainText(player.DbRef, "WIKI: This is a draft; its body is not shown.");
+	}
 }

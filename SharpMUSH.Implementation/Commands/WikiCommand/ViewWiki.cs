@@ -59,6 +59,12 @@ public static class ViewWiki
 	/// <c>/DRAFT</c>: render an unpublished body rather than withholding it. Subject to
 	/// <see cref="WikiCommandHelper.CanSeeDrafts"/> — on its own it grants nothing.
 	/// </param>
+	/// <param name="showRaw">
+	/// <c>/MD</c>: show the stored markdown instead of the rendered body, so a builder can read the
+	/// source of the page they are about to <c>@wiki/edit</c> without detouring through
+	/// <c>wiki(&lt;page&gt;, markdown)</c>. Reveals nothing extra: it changes the presentation of a body
+	/// the reader is already allowed to see, and is applied after the same draft gate.
+	/// </param>
 	public static async ValueTask<MString> Handle(
 		IMUSHCodeParser parser,
 		IMediator mediator,
@@ -68,7 +74,8 @@ public static class ViewWiki
 		MString target,
 		string? locale = null,
 		bool forceSource = false,
-		bool showDraft = false)
+		bool showDraft = false,
+		bool showRaw = false)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(target.ToPlainText());
@@ -103,12 +110,26 @@ public static class ViewWiki
 		var tags = page.Tags.Count > 0 ? string.Join(", ", page.Tags) : "-";
 
 		// An unpublished body is opt-in even for a wizard: reading a draft is a deliberate act, not the
-		// default a stray @wiki on a half-written page should perform.
-		// WikiCommandRenderer rather than the shared default: a [[wiki link]] in the body is only
-		// followable from a surface that can navigate the wiki, and this is that surface.
-		var rendered = published || (showDraft && maySeeDrafts)
-			? RecursiveMarkdownHelper.RenderMarkdown(markdown, new WikiCommandRenderer(RenderWidth, parser))
-			: DraftWithheld("body", maySeeDrafts);
+		// default a stray @wiki on a half-written page should perform. The gate is the same whether the
+		// body is rendered or raw — /MD is a presentation choice made after permission, never before it.
+		MString rendered;
+		if (!published && !(showDraft && maySeeDrafts))
+		{
+			rendered = DraftWithheld("body", maySeeDrafts);
+		}
+		else if (showRaw)
+		{
+			// Byte-exact, deliberately: the point of /MD is source you can paste back into @wiki/edit,
+			// so nothing here may wrap, re-indent or otherwise touch it. MModule.single also means the
+			// markdown's own [ ] % $ reach the player as text rather than as anything to evaluate.
+			rendered = MModule.single(markdown);
+		}
+		else
+		{
+			// WikiCommandRenderer rather than the shared default: a [[wiki link]] in the body is only
+			// followable from a surface that can navigate the wiki, and this is that surface.
+			rendered = RecursiveMarkdownHelper.RenderMarkdown(markdown, new WikiCommandRenderer(RenderWidth, parser));
+		}
 
 		var output = MModule.multipleWithDelimiter(MModule.single("\n"),
 		[

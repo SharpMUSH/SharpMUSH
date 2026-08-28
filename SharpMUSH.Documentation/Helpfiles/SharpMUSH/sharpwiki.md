@@ -27,6 +27,8 @@ Viewing and discovery:
 * `@wiki/search <text>` - find pages by title or content, in any locale
 * `@wiki/recent [<count>]` - recently edited pages (default 10)
 * `@wiki/history <page>` - revision history
+* `@wiki/md <page>` - show the page's markdown source instead of the rendered
+  body
 * `@wiki/view/draft <page>` - also render the page if it is a draft (wizard)
 
 Authoring:
@@ -45,6 +47,14 @@ Administration:
 
 The `/noeval` switch may be combined with any of the above to suppress
 softcode evaluation of the arguments.
+
+Source:
+`@wiki/md <page>` prints the markdown a page is stored with, exactly as stored -
+nothing is rendered, reflowed or wrapped, and the page's own `[`, `%` and `$`
+reach you as text. That is the copy you edit: read it with `/md`, change it, and
+put it back with `@wiki/edit <page>=<markdown>`. `@wiki/view/source/md <page>`
+gives a translator the source locale's markdown to work from before writing
+`@wiki/translate`. The softcode equivalent is `wiki(<page>, markdown)`.
 
 Drafts:
 An unpublished page is a draft, and `@wiki` does not render a draft's body or
@@ -74,10 +84,15 @@ appears in brackets next to the revision number on the header line.
 * `@wiki/translate <page>/<lang>=<markdown>` - write the `<lang>` translation.
   See [@wiki/translate].
 
-Like `/noeval` and `/source`, `/draft` is a modifier rather than an action, so
-it combines with `/view` and `/history` instead of replacing them (`/draft`
-has no effect on `/search`, which already includes drafts for anyone who can
-see them).
+Like `/noeval`, `/source` and `/md`, `/draft` is a modifier rather than an
+action, so it combines with `/view` and `/history` instead of replacing them
+(`/draft` has no effect on `/search`, which already includes drafts for anyone
+who can see them; `/md` has none on `/history` or the listings).
+
+The modifiers are orthogonal and stack: `/source` chooses the locale, `/md`
+chooses raw over rendered, `/draft` decides whether an unpublished body is shown
+at all. `/md` grants nothing - a draft still needs `/draft` and still needs the
+wizard bit, so asking for a draft's source is still asking for a draft.
 
 Your `LOCALE` decides what you *read*. It never decides what you *write*:
 `@wiki/translate` takes the language in the command and refuses to run without

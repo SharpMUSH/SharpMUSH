@@ -21,7 +21,7 @@ public partial class Commands
 		[
 			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
 			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "TAG", "PUBLISH", "UNPUBLISH",
-			"NOEVAL", "SOURCE", "DRAFT"
+			"NOEVAL", "SOURCE", "DRAFT", "MD"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["page", "content"])]
@@ -33,10 +33,15 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		// NOEVAL, SOURCE and DRAFT are modifiers, not actions: leaving any of them in this set would make
-		// "@wiki/view/source foo" look like two actions and trip TooManySwitches.
-		var actions = switches.Where(s => s is not ("NOEVAL" or "SOURCE" or "DRAFT")).ToArray();
+		// NOEVAL, SOURCE, DRAFT and MD are modifiers, not actions: leaving any of them in this set would
+		// make "@wiki/view/source foo" look like two actions and trip TooManySwitches.
+		var actions = switches.Where(s => s is not ("NOEVAL" or "SOURCE" or "DRAFT" or "MD")).ToArray();
 		var forceSource = switches.Contains("SOURCE");
+		// /MD shows the stored markdown instead of the rendered body. Orthogonal to the other two:
+		// /SOURCE picks the locale, /DRAFT gates unpublished content, /MD picks raw over rendered.
+		// Meaningless on the listings and on /history, where it is ignored rather than refused — the
+		// same treatment /DRAFT gets on /search.
+		var showRaw = switches.Contains("MD");
 		// /DRAFT is an opt-in to render unpublished content, never a grant: ViewWiki still checks
 		// WikiCommandHelper.CanSeeDrafts, so a mortal passing it gets exactly what they get without it.
 		var showDraft = switches.Contains("DRAFT");
@@ -109,7 +114,7 @@ public partial class Commands
 			"TAG" when hasArg0
 				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Tag),
 			"VIEW" when hasArg0 && !hasArg1
-				=> await ViewWiki.Handle(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource, showDraft),
+				=> await ViewWiki.Handle(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource, showDraft, showRaw),
 			_ => MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand),
 		};
 
