@@ -346,6 +346,16 @@ public sealed class AnsiMarkup : IMarkup
 				"mxp" => WrapAsMxp(Details, text),
 				_ => WrapAndRestore(text, outerMarkup),
 			};
+
+	/// <summary>
+	/// Value equality, forwarded to <see cref="Details"/> — a <c>readonly record struct</c> that
+	/// already has it. Run coalescing compares markups with <c>Equals</c>, so without this two
+	/// separately-created-but-identical markups never merge, and a syntax-highlighted code block
+	/// (which creates one markup per token) keeps every one of its runs.
+	/// </summary>
+	public override bool Equals(object? obj) => obj is AnsiMarkup other && Details.Equals(other.Details);
+
+	public override int GetHashCode() => Details.GetHashCode();
 }
 
 public sealed class HtmlMarkup : IMarkup
@@ -397,4 +407,9 @@ public sealed class HtmlMarkup : IMarkup
 			};
 
 	public string Optimize(string text) => text;
+
+	/// <inheritdoc cref="AnsiMarkup.Equals(object?)"/>
+	public override bool Equals(object? obj) => obj is HtmlMarkup other && Details.Equals(other.Details);
+
+	public override int GetHashCode() => Details.GetHashCode();
 }

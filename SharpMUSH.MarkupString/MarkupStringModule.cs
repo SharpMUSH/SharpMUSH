@@ -156,40 +156,6 @@ file sealed class RunStartComparer : IComparer<AttributeRun>
 	public int Compare(AttributeRun a, AttributeRun b) => a.Start.CompareTo(b.Start);
 }
 
-public sealed class ColorJsonConverter : JsonConverter<Color>
-{
-	/// <summary>
-	/// Parses <c>#rrggbb</c> / <c>#rrggbbaa</c> manually so the converter works on platforms
-	/// where <c>System.Drawing.Common</c> (and thus <see cref="ColorTranslator"/>) is unsupported —
-	/// notably Blazor WebAssembly, where the portal deserializes markup client-side. The
-	/// <see cref="Write"/> method only ever emits these hex forms, so the manual path is exhaustive
-	/// for our own data; a <see cref="ColorTranslator.FromHtml"/> fallback is kept only for any
-	/// foreign named-colour strings (never produced here, never hit on WASM).
-	/// </summary>
-	public override Color Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-	{
-		var s = reader.GetString();
-		if (s is { Length: > 0 } && s[0] == '#' && (s.Length == 7 || s.Length == 9)
-				&& byte.TryParse(s.AsSpan(1, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var r)
-				&& byte.TryParse(s.AsSpan(3, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var g)
-				&& byte.TryParse(s.AsSpan(5, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var b))
-		{
-			byte a = 255;
-			if (s.Length == 9
-					&& !byte.TryParse(s.AsSpan(7, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out a))
-				a = 255;
-			return Color.FromArgb(a, r, g, b);
-		}
-
-		return ColorTranslator.FromHtml(s!);
-	}
-
-	public override void Write(Utf8JsonWriter writer, Color value, JsonSerializerOptions options) =>
-			writer.WriteStringValue(value.A == 255
-					? $"#{value.R:x2}{value.G:x2}{value.B:x2}"
-					: $"#{value.R:x2}{value.G:x2}{value.B:x2}{value.A:x2}");
-}
-
 /// <summary>
 /// A flat, attributed markup string inspired by NSAttributedString.
 /// Fully immutable — text is a .NET string, runs are ImmutableArray&lt;AttributeRun&gt;.
@@ -199,23 +165,29 @@ public sealed class MarkupString
 	private readonly string _text;
 	private readonly ImmutableArray<AttributeRun> _runs;
 
-	private readonly Lazy<string> _cachedToString;
-	private readonly Lazy<string> _cachedAnsiRender;
-	private readonly Lazy<string> _cachedHtmlRender;
-	private readonly Lazy<string> _cachedPlainTextRender;
-	private readonly Lazy<string> _cachedPuebloRender;
-	private readonly Lazy<string> _cachedMxpRender;
+	/// <remarks>
+	/// Six plain fields rather than six <see cref="Lazy{T}"/>. Lazy allocates an object and a closure
+	/// apiece — about 840 bytes per <see cref="MarkupString"/>, paid in the constructor whether or not
+	/// anything ever renders. The parser builds and discards intermediates by the thousand and renders
+	/// none of them.
+	/// <para>
+	/// The trade is that <c>Lazy</c> guaranteed its factory ran exactly once and these do not: two
+	/// threads racing on the same unrendered instance both compute the render and one wins. Every
+	/// render is a pure function of immutable state, so both compute the same string — the race is
+	/// benign, and only ever costs duplicated work.
+	/// </para>
+	/// </remarks>
+	private string? _cachedToString;
+	private string? _cachedAnsiRender;
+	private string? _cachedHtmlRender;
+	private string? _cachedPlainTextRender;
+	private string? _cachedPuebloRender;
+	private string? _cachedMxpRender;
 
 	public MarkupString(string text, ImmutableArray<AttributeRun> runs)
 	{
 		_text = text;
-		_runs = runs;
-		_cachedToString = new Lazy<string>(() => NativeToString());
-		_cachedAnsiRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.AnsiStrategy));
-		_cachedHtmlRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.HtmlStrategy));
-		_cachedPlainTextRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.PlainTextStrategy));
-		_cachedPuebloRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.PuebloStrategy));
-		_cachedMxpRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.MxpStrategy));
+		_runs = Coalesce(runs);
 	}
 
 	public string Text => _text;
@@ -224,22 +196,22 @@ public sealed class MarkupString
 
 	public string ToPlainText() => _text;
 
-	public override string ToString() => _cachedToString.Value;
+	public override string ToString() => _cachedToString ??= NativeToString();
 
 	public string Render(string format) => format.ToLowerInvariant() switch
 	{
-		"html" => _cachedHtmlRender.Value,
-		"plaintext" or "plain" => _cachedPlainTextRender.Value,
-		"pueblo" => _cachedPuebloRender.Value,
-		"mxp" => _cachedMxpRender.Value,
-		_ => _cachedAnsiRender.Value,
+		"html" => _cachedHtmlRender ??= RenderWith(MarkupStringModule.RenderStrategies.HtmlStrategy),
+		"plaintext" or "plain" => _cachedPlainTextRender ??= RenderWith(MarkupStringModule.RenderStrategies.PlainTextStrategy),
+		"pueblo" => _cachedPuebloRender ??= RenderWith(MarkupStringModule.RenderStrategies.PuebloStrategy),
+		"mxp" => _cachedMxpRender ??= RenderWith(MarkupStringModule.RenderStrategies.MxpStrategy),
+		_ => _cachedAnsiRender ??= RenderWith(MarkupStringModule.RenderStrategies.AnsiStrategy),
 	};
 
 	public string Render(RenderFormat format) => format switch
 	{
-		RenderFormat.Ansi => _cachedAnsiRender.Value,
-		RenderFormat.Html => _cachedHtmlRender.Value,
-		RenderFormat.PlainText => _cachedPlainTextRender.Value,
+		RenderFormat.Ansi => _cachedAnsiRender ??= RenderWith(MarkupStringModule.RenderStrategies.AnsiStrategy),
+		RenderFormat.Html => _cachedHtmlRender ??= RenderWith(MarkupStringModule.RenderStrategies.HtmlStrategy),
+		RenderFormat.PlainText => _cachedPlainTextRender ??= RenderWith(MarkupStringModule.RenderStrategies.PlainTextStrategy),
 		RenderFormat.Custom => RenderWith(format.ToStrategy()),
 		_ => throw new NotSupportedException(),
 	};
@@ -310,6 +282,65 @@ public sealed class MarkupString
 		return firstMarkup is null
 				? RenderWith(MarkupStringModule.RenderStrategies.PlainTextStrategy)
 				: RenderWith(new NativeRenderStrategy(firstMarkup));
+	}
+
+	/// <summary>
+	/// Folds adjacent runs that carry equal markup into one. Runs are built one fragment at a time
+	/// by <see cref="MarkupStringModule.ConcatMany"/> and friends, so a string assembled from many
+	/// like-styled pieces — a syntax-highlighted code block, a table row — arrives here with one run
+	/// per piece. Left unmerged those runs cost memory, serialised bytes, and one wrapper element per
+	/// run in every non-ANSI render.
+	/// </summary>
+	/// <remarks>
+	/// Runs a scan before allocating anything: the common case has nothing to merge, and pays one
+	/// O(n) pass and no allocation. Merging requires <see cref="IMarkup"/> value equality, which
+	/// <see cref="MarkupImplementation.AnsiMarkup"/> and <see cref="MarkupImplementation.HtmlMarkup"/>
+	/// provide by forwarding to their <c>readonly record struct</c> details.
+	/// </remarks>
+	private static ImmutableArray<AttributeRun> Coalesce(ImmutableArray<AttributeRun> runs)
+	{
+		if (runs.Length < 2) return runs;
+
+		var firstMerge = -1;
+		for (var i = 1; i < runs.Length; i++)
+		{
+			if (!Mergeable(runs[i - 1], runs[i])) continue;
+			firstMerge = i;
+			break;
+		}
+
+		if (firstMerge < 0) return runs;
+
+		var merged = new List<AttributeRun>(runs.Length - 1);
+		for (var i = 0; i < firstMerge - 1; i++) merged.Add(runs[i]);
+
+		var current = runs[firstMerge - 1];
+		for (var i = firstMerge; i < runs.Length; i++)
+		{
+			var next = runs[i];
+			if (Mergeable(current, next))
+				current = new AttributeRun(current.Start, current.Length + next.Length, current.Markups);
+			else
+			{
+				merged.Add(current);
+				current = next;
+			}
+		}
+		merged.Add(current);
+
+		return ImmutableArray.CreateRange(merged);
+	}
+
+	private static bool Mergeable(in AttributeRun a, in AttributeRun b) =>
+			a.End == b.Start && MarkupsEqual(a.Markups, b.Markups);
+
+	private static bool MarkupsEqual(ImmutableArray<IMarkup> a, ImmutableArray<IMarkup> b)
+	{
+		if (a.Length != b.Length) return false;
+		for (var i = 0; i < a.Length; i++)
+			if (!a[i].Equals(b[i]))
+				return false;
+		return true;
 	}
 
 	public override bool Equals(object? obj) => obj switch
@@ -533,36 +564,6 @@ public static partial class MarkupStringModule
 	}
 	public static MarkupString trim(MarkupString ams, string trimChars, TrimType trimType) =>
 			Trim(ams, trimChars, trimType);
-
-	public static MarkupString Optimize(MarkupString ams)
-	{
-		if (ams.Runs.Length <= 1) return ams;
-
-		static bool MarkupsEqual(ImmutableArray<IMarkup> a, ImmutableArray<IMarkup> b)
-		{
-			if (a.Length != b.Length) return false;
-			for (int i = 0; i < a.Length; i++)
-				if (!a[i].Equals(b[i])) return false;
-			return true;
-		}
-
-		var merged = new List<AttributeRun>();
-		var current = ams.Runs[0];
-		for (int i = 1; i < ams.Runs.Length; i++)
-		{
-			var next = ams.Runs[i];
-			if (current.End == next.Start && MarkupsEqual(current.Markups, next.Markups))
-				current = new AttributeRun(current.Start, current.Length + next.Length, current.Markups);
-			else
-			{
-				merged.Add(current);
-				current = next;
-			}
-		}
-		merged.Add(current);
-		return new MarkupString(ams.Text, ImmutableArray.CreateRange(merged));
-	}
-	public static MarkupString optimize(MarkupString ams) => Optimize(ams);
 
 	public static int IndexOf(MarkupString ams, string search) =>
 			ams.Text.IndexOf(search, StringComparison.Ordinal);
@@ -1002,28 +1003,11 @@ public static partial class MarkupStringModule
 	public static IEnumerable<(Match, IEnumerable<MarkupString>)> getWildcardMatches(MarkupString input, MarkupString pattern) =>
 			GetWildcardMatches(input, pattern);
 
-	private static readonly JsonSerializerOptions _serializationOptions = BuildSerializationOptions();
-	private static JsonSerializerOptions BuildSerializationOptions()
-	{
-		var opts = new JsonSerializerOptions
-		{
-			// Polymorphic serialization for IMarkup subtypes via [JsonDerivedType] on IMarkup
-		};
-		opts.Converters.Add(new ColorJsonConverter());
-		return opts;
-	}
-	public static JsonSerializerOptions SerializationOptions => _serializationOptions;
-	public static JsonSerializerOptions serializationOptions => _serializationOptions;
-
-	public static string Serialize(MarkupString ams) =>
-			JsonSerializer.Serialize(ams, _serializationOptions);
+	/// <inheritdoc cref="MarkupStringSerializer"/>
+	public static string Serialize(MarkupString ams) => MarkupStringSerializer.Serialize(ams);
 	public static string serialize(MarkupString ams) => Serialize(ams);
 
-	public static MarkupString Deserialize(string jsonString)
-	{
-		if (jsonString.Length == 0) return Empty();
-		return JsonSerializer.Deserialize<MarkupString>(jsonString, _serializationOptions)
-					 ?? Empty();
-	}
+	/// <inheritdoc cref="MarkupStringSerializer"/>
+	public static MarkupString Deserialize(string jsonString) => MarkupStringSerializer.Deserialize(jsonString);
 	public static MarkupString deserialize(string jsonString) => Deserialize(jsonString);
 }

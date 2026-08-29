@@ -296,34 +296,30 @@ public class MarkupStringTests
 	}
 
 	[Test]
-	public async Task Optimize_AdjacentSameMarkup_MergesRuns()
+	public async Task Construction_AdjacentSameMarkup_MergesRuns()
 	{
 		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var part1 = AMS.MarkupSingle(red, "Hello");
 		var part2 = AMS.MarkupSingle(red, " World");
+
 		var combined = AMS.concat(part1, part2);
 
-		await Assert.That(combined.Runs.Length).IsEqualTo(2);
-
-		var optimized = AMS.optimize(combined);
-
-		await Assert.That(optimized.Runs.Length).IsEqualTo(1);
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
+		await Assert.That(combined.Runs.Length).IsEqualTo(1);
+		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello World");
 	}
 
 	[Test]
-	public async Task Optimize_DifferentMarkup_DoesNotMerge()
+	public async Task Construction_DifferentMarkup_DoesNotMerge()
 	{
 		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 		var part1 = AMS.MarkupSingle(red, "Hello");
 		var part2 = AMS.MarkupSingle(blue, " World");
+
 		var combined = AMS.concat(part1, part2);
 
-		var optimized = AMS.optimize(combined);
-
-		await Assert.That(optimized.Runs.Length).IsEqualTo(2);
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
+		await Assert.That(combined.Runs.Length).IsEqualTo(2);
+		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello World");
 	}
 
 	[Test]
@@ -614,24 +610,6 @@ public class MarkupStringTests
 	}
 
 	[Test]
-	public async Task Immutability_OptimizeDoesNotMutateOriginal()
-	{
-		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
-		var part1 = AMS.MarkupSingle(red, "Hello");
-		var part2 = AMS.MarkupSingle(red, " World");
-		var combined = AMS.concat(part1, part2);
-
-		var optimized = AMS.optimize(combined);
-
-		await Assert.That(combined.Runs.Length).IsEqualTo(2);
-
-		await Assert.That(optimized.Runs.Length).IsEqualTo(1);
-
-		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello World");
-		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
-	}
-
-	[Test]
 	public async Task Immutability_RemoveDoesNotMutateOriginal()
 	{
 		var ams = AMS.single("Hello World");
@@ -790,20 +768,9 @@ public class MarkupStringTests
 		var ams = AMS.MarkupSingle(red, "AB");
 		var result = AMS.repeat(ams, 5);
 
-		await Assert.That(result.Runs.Length).IsEqualTo(5);
+		// Five like-marked copies coalesce into one run at construction.
+		await Assert.That(result.Runs.Length).IsEqualTo(1);
+		await Assert.That(result.ToPlainText()).IsEqualTo("ABABABABAB");
 		await AssertRunsSortedByStart(result);
-	}
-
-	[Test]
-	public async Task SortOrder_Optimize_RunsRemainSorted()
-	{
-		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
-
-		var a = AMS.MarkupSingle(red, "Hello");
-		var b = AMS.MarkupSingle(red, " World");
-		var combined = AMS.concat(a, b);
-		var optimized = AMS.optimize(combined);
-
-		await AssertRunsSortedByStart(optimized);
 	}
 }
