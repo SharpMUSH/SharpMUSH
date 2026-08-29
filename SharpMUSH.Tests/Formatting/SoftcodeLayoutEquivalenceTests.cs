@@ -117,8 +117,13 @@ public class SoftcodeLayoutEquivalenceTests
 		() => "[aaaaaaaaaaaa,bbbbbbbbbbbb]",
 		() => "strcat(one,[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa],two)",
 
-		// A brace group containing a comma. That comma is data, not a separator.
+		// A brace group containing a comma. That comma is data, not a separator — but the '{' itself is
+		// structural, so this breaks at the brace and nowhere inside it.
 		() => "strcat(a,b,{c,def})",
+
+		// A [...] inside a brace: the one thing inside a brace group that is structural, since
+		// bracketPattern re-enables function recognition for what it encloses.
+		() => "switch(1,1,{[strcat(alpha bravo,charlie delta)] and some trailing words},none)",
 
 		// Brace groups suppressing and re-enabling function evaluation, long enough to break.
 		() => "strcat(a,{add(1,2)},b,{[add(3,4)]},c,{a fairly long literal, with a comma},d)",
@@ -521,6 +526,7 @@ public class SoftcodeLayoutEquivalenceTests
 		var exercised = new Dictionary<string, List<string>>
 		{
 			["OBRACK"] = [],
+			["OBRACE"] = [],
 			["FUNCHAR"] = [],
 			["COMMAWS"] = [],
 			["SEMICOLON"] = []

@@ -113,13 +113,45 @@ public class SoftcodeLayoutTests
 	}
 
 	[Test]
-	public async Task BraceGroups_AreNeverBrokenInside()
+	public async Task BraceGroups_BreakAtTheirOpenerAndNowhereElse()
 	{
+		// A '{' is structural — VisitBracePattern emits its VisitChildren result, so the OBRACE token and
+		// the whitespace it absorbed never reach the output. What it encloses is not: a ',' inside braces
+		// is prose in every dialect, so the brace body stays on one line however long it is.
 		const string src = "switch(%0,1,{say a very long thing indeed, honestly},2,{other})";
 		var tokens = Lex(src);
 		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
 
-		await Assert.That(rendered).Contains("{say a very long thing indeed, honestly}");
+		await Assert.That(rendered).Contains("say a very long thing indeed, honestly}");
+		await Assert.That(rendered).DoesNotContain("indeed,\n");
+	}
+
+	[Test]
+	public async Task BraceGroup_BreaksAtABracketInsideIt()
+	{
+		// The other half: a [...] inside braces re-enables function recognition, so it and the call it
+		// leads are break positions even though the brace body around them is prose.
+		const string src = "switch(%0,1,{[strcat(alpha bravo,charlie delta,echo foxtrot)] trailing words},2,b)";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 30, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).Contains("[strcat(\n");
+	}
+
+	[Test]
+	public async Task BraceGroup_LeavesAFunctionNameInsideItAlone()
+	{
+		// Inside braces a name( is generic text (braceExplicitEvaluationString routes through genericText,
+		// SharpMUSHParser.g4:81-86), so it is never dispatched and its delimiters carry their whitespace
+		// into the output. Breaking there would change what the brace body contains.
+		const string src = "switch(%0,1,{a literal strcat(alpha bravo,charlie delta) written out},2,b)";
+		var tokens = Lex(src);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList);
+
+		var open = tokens.Index().First(x => x.Item.Text.TrimEnd() == "{").Index;
+		var close = tokens.Index().First(x => x.Item.Text.TrimEnd() == "}").Index;
+
+		await Assert.That(breaks.Any(b => b.TokenIndex > open && b.TokenIndex < close)).IsFalse();
 	}
 
 	[Test]
@@ -375,7 +407,9 @@ public class SoftcodeLayoutTests
 		var close = tokens.Index().First(x => x.Item.Text.TrimEnd() == "}").Index;
 
 		await Assert.That(breaks).IsNotEmpty();
-		await Assert.That(breaks.Any(b => b.TokenIndex >= open && b.TokenIndex < close)).IsFalse();
+		// Strictly after the '{': the brace's own opener is a legitimate break position. What must not
+		// appear is a break at the comma between the braces, which is what popping the group would create.
+		await Assert.That(breaks.Any(b => b.TokenIndex > open && b.TokenIndex < close)).IsFalse();
 	}
 
 	[Test]

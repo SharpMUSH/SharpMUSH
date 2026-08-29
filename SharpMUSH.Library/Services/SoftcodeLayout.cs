@@ -90,6 +90,17 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// text-position reading at all — it appears nowhere in <c>beginGenericText</c>, only in
 /// <c>bracketPattern</c>, whose visitor discards the token's text.
 /// </description></item>
+/// <item><description>
+/// After an <c>OBRACE</c>, on the same grounds. <c>VisitBracePattern</c>
+/// (<c>SharpMUSHParserVisitor.cs:2572</c>) emits its <c>VisitChildren</c> result — stripping the braces,
+/// or re-adding them as fresh <c>MModule.single</c> literals under <c>PreserveBraces</c> — so the
+/// <c>OBRACE</c> token and the whitespace it absorbed never reach the output. The one path that would
+/// carry them, <c>GetContextText</c> over the whole <c>bracePattern</c>, is reached only when
+/// <c>VisitChildren</c> returns null, which a non-empty brace cannot do:
+/// <c>VisitBraceExplicitEvaluationString</c> has its own <c>GetContextText</c> fallback and its span
+/// starts past the <c>OBRACE</c>. An empty <c>{}</c> is excluded anyway, by the same guard that excludes
+/// an empty call.
+/// </description></item>
 /// </list>
 /// <para>
 /// Two further rules, neither of which may be weakened:
@@ -101,10 +112,17 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// final argument. Closers cuddle the last item.
 /// </description></item>
 /// <item><description>
-/// Never break inside a brace group, nor inside a <see cref="SoftcodeCallKind.CopiesArgumentSource"/>
-/// call. Brace contents are literal in some contexts and re-parsed as code in others, and a
-/// source-copying call's contents are never visited at all, so both are atomic here: always rendered
-/// flat, never recursed into.
+/// Never break inside a <see cref="SoftcodeCallKind.CopiesArgumentSource"/> call. Its contents are
+/// never visited at all, so nothing there discards the whitespace a delimiter absorbed: it is atomic,
+/// always rendered flat, never recursed into.
+/// </description></item>
+/// <item><description>
+/// A brace group is recursed into, but almost nothing inside it is structural. Function names inside
+/// braces are generic text — <c>braceExplicitEvaluationString</c> routes through <c>genericText</c>
+/// rather than <c>beginGenericText</c> (<c>SharpMUSHParser.g4:81-86</c>) — and a <c>,</c> or <c>;</c>
+/// there is prose in every dialect (<c>:158-159</c>, both predicates satisfied by
+/// <c>inBraceDepth &gt; 0</c>). So the only positions a brace group offers are its own <c>{</c> and any
+/// <c>[...]</c> inside it, which re-enables recognition for what that bracket encloses.
 /// </description></item>
 /// <item><description>
 /// Never break inside a leading <c>$pattern:</c> or <c>^pattern:</c> — see <see cref="SoftcodeSource"/>.
@@ -115,8 +133,7 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// </description></item>
 /// </list>
 /// <para>
-/// <c>EQUALS</c> and <c>OBRACE</c> absorb whitespace too, and are structural in some positions, but
-/// v1 never breaks at either.
+/// <c>EQUALS</c> absorbs whitespace too, and is structural in some positions, but is never broken at.
 /// </para>
 /// <para>
 /// <b>Where those positions are used</b> is a separate question from where they exist, and the answer
@@ -415,7 +432,24 @@ public static class SoftcodeLayout
 						"OBRACK" => false,
 						// Anything but a call that evaluates its arguments is text at its own delimiters.
 						"FUNCHAR" => enclosingSuppresses || isTextAtItsDelimiters,
-						// Braces are never recursed into, so their own state is never consulted.
+						// Inside braces a function name is generic text: braceExplicitEvaluationString routes
+						// through genericText rather than beginGenericText (SharpMUSHParser.g4:81-86), so a
+						// name( there is never dispatched and opens no break position. Only a [...] inside
+						// re-enables recognition, which the OBRACK arm above already does.
+						"OBRACE" => true,
+						_ => enclosingSuppresses
+					},
+					DelimitersAreText = type switch
+					{
+						"OBRACK" => false,
+						"FUNCHAR" => enclosingSuppresses || isTextAtItsDelimiters,
+						// A '{' is structural even though what it encloses is not code: VisitBracePattern
+						// (SharpMUSHParserVisitor.cs:2572) emits its VisitChildren result, so the OBRACE
+						// token — and the whitespace it absorbed — never reaches the output. The
+						// GetContextText fallback that would carry it is reached only when VisitChildren
+						// returns null, which a non-empty brace cannot do: VisitBraceExplicitEvaluationString
+						// has its own GetContextText fallback, sliced from a span that starts past the OBRACE.
+						"OBRACE" => false,
 						_ => enclosingSuppresses
 					},
 					CopiesSource = copiesSource
@@ -440,7 +474,7 @@ public static class SoftcodeLayout
 				// Only an argument separator inside a name(...) the parser will dispatch. Elsewhere — at
 				// root, inside a bracket or brace group, or inside a call that is being reproduced as
 				// text — the comma is prose and its absorbed whitespace is literal.
-				if (stack.Peek().OpenType == "FUNCHAR" && !stack.Peek().SuppressesFunctions)
+				if (stack.Peek().OpenType == "FUNCHAR" && !stack.Peek().DelimitersAreText)
 				{
 					stack.Peek().BreakPoints.Add(i);
 				}
@@ -534,7 +568,7 @@ public static class SoftcodeLayout
 	/// </para>
 	/// </summary>
 	private static bool OpensABreak(Group group, int lastContent) =>
-		group.OpenIndex >= 0 && group.OpenIndex + 1 <= lastContent && !group.SuppressesFunctions;
+		group.OpenIndex >= 0 && group.OpenIndex + 1 <= lastContent && !group.DelimitersAreText;
 
 	/// <summary>
 	/// Renders one group top-down, returning the column the following text starts at.
@@ -694,11 +728,22 @@ public static class SoftcodeLayout
 		public bool HasNewline { get; set; }
 
 		/// <summary>
-		/// Whether function recognition is off inside this group — and, for a <c>FUNCHAR</c> group,
-		/// whether the group is itself being reproduced as text rather than dispatched. A group in that
-		/// state opens no break positions: its delimiters' absorbed whitespace reaches the output.
+		/// Whether function recognition is off for what this group encloses, mirroring
+		/// <c>_suppressFunctionEval</c> in <c>SharpMUSHParserVisitor</c>. True inside an unresolved call
+		/// and inside a brace group; a <c>[...]</c> switches it back on.
 		/// </summary>
 		public bool SuppressesFunctions { get; init; }
+
+		/// <summary>
+		/// Whether this group's own opener and separators are reproduced as source text, in which case
+		/// they are not break positions — the whitespace they absorbed would reach the output.
+		/// <para>
+		/// Distinct from <see cref="SuppressesFunctions"/>, with which it agrees on every group but a
+		/// brace. A <c>{</c> is a structural delimiter that encloses non-code: recognition is off inside
+		/// it, yet the delimiter itself may be broken at.
+		/// </para>
+		/// </summary>
+		public bool DelimitersAreText { get; init; }
 
 		/// <summary>
 		/// Whether this group is a call whose contents are copied from the source rather than evaluated
@@ -708,7 +753,9 @@ public static class SoftcodeLayout
 
 		/// <summary>
 		/// Whether the group is rendered flat unconditionally, so that nothing inside it is ever broken.
+		/// Only a source-copying call: its span is never visited, so no whitespace inside it is ever
+		/// discarded. A brace group is <em>not</em> atomic — its contents are visited.
 		/// </summary>
-		public bool IsAtomic => OpenType == "OBRACE" || CopiesSource;
+		public bool IsAtomic => CopiesSource;
 	}
 }
