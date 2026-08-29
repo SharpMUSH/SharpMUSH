@@ -150,6 +150,12 @@
       <Link>BundledPackages\scene.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene.package.yaml</LogicalName>
     </EmbeddedResource>
+    <!-- Shipped but NOT installed at first boot: the offline catalogue an admin can install
+         from without a git remote. See BundledPackages.Descriptor.InstallAtFirstBoot. -->
+    <EmbeddedResource Include="..\examples\packages\wiki-reader\package.yaml">
+      <Link>BundledPackages\wiki-reader.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.wiki-reader.package.yaml</LogicalName>
+    </EmbeddedResource>
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.0.0-preview.1" />
     <PackageReference Include="SurrealDb.Embedded.InMemory" Version="0.9.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
