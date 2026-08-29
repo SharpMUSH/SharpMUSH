@@ -240,8 +240,9 @@ public class CachingBehaviorTests
 	public async Task StraddlingRead_DoesNotOutliveTheWriteThatInvalidatedIt(bool byKey, bool byTag)
 	{
 		using var cache = new FusionCache(new FusionCacheOptions());
-		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache);
-		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache);
+		var clock = new CacheInvalidationClock();
+		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache, clock);
+		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache, clock);
 		var probe = new StaleReadProbe();
 		var write = new StaleReadWrite(byKey ? [probe.CacheKey] : [], byTag ? probe.CacheTags : []);
 

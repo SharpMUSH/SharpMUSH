@@ -10,7 +10,7 @@ namespace SharpMUSH.Library.Behaviors;
 /// On cache miss the stream is materialized to a list, stored in FusionCache, and yielded.
 /// On cache hit the stored list is yielded directly.
 /// </summary>
-public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
+public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, ICacheInvalidationClock clock)
 	: IStreamPipelineBehavior<TRequest, TResponse>
 	where TRequest : IStreamQuery<TResponse>, ICacheable
 {
@@ -20,9 +20,24 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 		[EnumeratorCancellation] CancellationToken cancellationToken
 	)
 	{
-		var list = await cache.GetOrSetAsync(message.CacheKey,
-			async _ => await MaterializeAsync(message, next, cancellationToken),
-			tags: CacheEntryTags.For(message), token: cancellationToken);
+		var list = await cache.GetOrSetAsync<List<TResponse>>(message.CacheKey,
+			async (ctx, ct) =>
+			{
+				// Before the stream is drawn on, so it covers the whole read and not just its tail.
+				var readStartedAt = clock.Now();
+				var materialized = await MaterializeAsync(message, next, ct);
+
+				// The caller still gets what the database said; it is only keeping it that is wrong.
+				if (clock.InvalidatedSince(message.CacheKey, readStartedAt))
+				{
+					ctx.Options.SetSkipMemoryCacheWrite(true);
+				}
+
+				return materialized;
+			},
+			options: null,
+			tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
+			token: cancellationToken);
 
 		foreach (var item in list)
 		{

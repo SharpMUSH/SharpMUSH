@@ -20,14 +20,12 @@ namespace SharpMUSH.Library.Behaviors;
 /// exercised in the configuration it shipped in. Both passes now always run.
 /// </para>
 /// <para>
-/// Both passes go through <c>RemoveByTagAsync</c>, including for the targeted <see cref="CacheKeys"/>:
-/// every entry is tagged with its own key (<see cref="CacheEntryTags"/>) precisely so that it can be.
-/// <c>RemoveAsync</c> alone drops only what is in the cache at that instant, which leaves the window
-/// this class used to document as open — a read that issued its query before the commit and stores its
-/// answer after the second pass. A tag invalidation is a recorded event rather than a deletion, and
-/// FusionCache resolves it against when the entry's factory <em>began</em>, so that late store is
-/// recognised as pre-write and is never served. That is the "read side carries a version" this needed,
-/// and issue #838 is what it cost while it was missing.
+/// Removing a key is not on its own enough, because <c>RemoveAsync</c> drops only what is in the cache
+/// at that instant: a read that issued its query before the commit and stores its answer after the
+/// second pass reinstates exactly what was just removed. So each pass also records the keys against
+/// <see cref="ICacheInvalidationClock"/>, and the caching behaviours refuse to store a read that began
+/// before the record. That is the "read side carries a version" this class used to document as the
+/// missing piece, and issue #838 is what it cost while it was missing.
 /// </para>
 /// <para>
 /// The second pass runs on the failure path too, and under <see cref="CancellationToken.None"/>. A
@@ -35,7 +33,7 @@ namespace SharpMUSH.Library.Behaviors;
 /// left one behind entirely; in both cases the entry is stale and nobody else is going to clear it.
 /// </para>
 /// </remarks>
-public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache)
+public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache, ICacheInvalidationClock clock)
 	: IPipelineBehavior<TRequest, TResponse>
 	where TRequest : ICommand<TResponse>, ICacheInvalidating
 {
@@ -79,18 +77,20 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache)
 
 	private async ValueTask InvalidateCacheAsync(TRequest message, CancellationToken cancellationToken)
 	{
-		// RemoveAsync as well as the tag pass: the marker is what makes the invalidation durable against
-		// a straddling read, but it leaves the entry in memory until something replaces it, and a write
-		// has no reason to keep paying for the old answer.
 		foreach (var key in message.CacheKeys)
 		{
 			await cache.RemoveAsync(key, token: cancellationToken);
 		}
 
-		string[] tokens = [.. message.CacheKeys, .. message.CacheTags];
-		if (tokens.Length != 0)
+		// After the removals, never before: a read that starts once this returns has to find the key
+		// both absent and recorded, or it could store an answer the removal was meant to discard.
+		clock.Invalidated(message.CacheKeys);
+
+		// Tags need no such record — FusionCache already resolves a tag invalidation against when an
+		// entry's factory began, which is the same comparison the clock makes for a key.
+		if (message.CacheTags.Length != 0)
 		{
-			await cache.RemoveByTagAsync(tokens, token: cancellationToken);
+			await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
 		}
 	}
 }
