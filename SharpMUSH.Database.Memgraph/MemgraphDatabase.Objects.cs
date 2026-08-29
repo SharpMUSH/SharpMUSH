@@ -396,10 +396,15 @@ RETURN o, p
 
 		if (!string.IsNullOrEmpty(filter.HasFlag))
 		{
+			// Aliases as well as names, as HelperFunctions.HasFlag does. A flag's aliases are a list, so
+			// they are flattened with reduce() rather than appended the way the single-valued power
+			// alias below is; coalesce() covers a flag stored with no alias list at all.
 			stages.Add("WITH DISTINCT o "
 				+ "OPTIONAL MATCH (o)-[:HAS_FLAG]->(flag:ObjectFlag) "
-				+ "WITH o, collect(toLower(flag.name)) AS flagNames "
-				+ "WHERE $flagName IN flagNames OR toLower(o.type) = $flagName");
+				+ "WITH o, collect(toLower(flag.name)) AS flagNames, "
+				+ "collect([a IN coalesce(flag.aliases, []) | toLower(a)]) AS aliasLists "
+				+ "WITH o, flagNames, reduce(acc = [], l IN aliasLists | acc + l) AS aliasNames "
+				+ "WHERE $flagName IN flagNames OR $flagName IN aliasNames OR toLower(o.type) = $flagName");
 			parameters["flagName"] = filter.HasFlag.ToLowerInvariant();
 		}
 		if (!string.IsNullOrEmpty(filter.HasPower))

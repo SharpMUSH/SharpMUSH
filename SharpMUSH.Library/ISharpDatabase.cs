@@ -577,11 +577,12 @@ public interface ISharpDatabase
 	///     ownership points at the typed player vertex, which needs a further hop to its object.
 	///   </item>
 	///   <item>
-	///     <c>HasFlag</c> — case-insensitive match on a flag's <c>Name</c>, <b>or</b> on the object's own
-	///     <c>Type</c>. Type counts because <c>GetObjectFlagsAsync</c> synthesises a type-named flag that
-	///     has no edge behind it, so <c>HasFlag("THING")</c> is true in application code
-	///     (<c>HelperFunctions.HasFlag</c>) and has to be true here too. Aliases do not count — the
-	///     application-layer helper does not consider them either.
+	///     <c>HasFlag</c> — case-insensitive match on a flag's <c>Name</c> or any of its
+	///     <c>Aliases</c>, <b>or</b> on the object's own <c>Type</c>. Type counts because
+	///     <c>GetObjectFlagsAsync</c> synthesises a type-named flag that has no edge behind it, so
+	///     <c>HasFlag("THING")</c> is true in application code (<c>HelperFunctions.HasFlag</c>) and has
+	///     to be true here too. Aliases count because PennMUSH's <c>ptab_flag</c> holds them alongside
+	///     the names, so <c>has_flag_by_name</c> resolves either spelling and that helper now does too.
 	///   </item>
 	///   <item>
 	///     <c>HasPower</c> — case-insensitive match on a power's <c>Name</c> <b>or</b> its <c>Alias</c>,

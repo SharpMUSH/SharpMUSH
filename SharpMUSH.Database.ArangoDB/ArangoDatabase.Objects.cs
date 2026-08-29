@@ -844,10 +844,12 @@ public partial class ArangoDatabase
 			// Flags are edges to node_object_flags, not an array on the object — `v.Flags[*].Name` read a
 			// field that node_objects documents do not have, so the predicate was false for every row.
 			// The Type disjunct reproduces the type-named flag GetObjectFlagsAsync synthesises, which
-			// HelperFunctions.HasFlag sees and which no edge backs.
+			// HelperFunctions.HasFlag sees and which no edge backs. Aliases count for the same reason
+			// they count in that helper: Penn's ptab_flag holds them alongside the names.
 			filters.Add($@"(LOWER(v.Type) == LOWER(@flagName) OR LENGTH(
 				FOR flag IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphFlags}'
 				FILTER LOWER(flag.Name) == LOWER(@flagName)
+					OR LOWER(@flagName) IN (FOR a IN (flag.Aliases OR []) RETURN LOWER(a))
 				LIMIT 1
 				RETURN 1) > 0)");
 			bindVars["flagName"] = filter.HasFlag;

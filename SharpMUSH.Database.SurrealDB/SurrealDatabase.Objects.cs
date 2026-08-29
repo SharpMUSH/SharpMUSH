@@ -525,9 +525,11 @@ public partial class SurrealDatabase
 			// Case-insensitive matching runs against the flag table (a hundred-odd rows, scanned once)
 			// rather than through every has_flags edge. The type disjunct reproduces the type-named flag
 			// GetObjectFlagsAsync synthesises, which no has_flags edge backs but HelperFunctions.HasFlag
-			// still reports.
+			// still reports. Aliases count too, as they do in that helper — the alias list is on the
+			// flag row, so lowercasing it here costs one more pass over those same rows.
 			bindings.Add("LET $matchingFlags = (SELECT VALUE id FROM object_flag "
-				+ "WHERE string::lowercase(name) = $flagName)");
+				+ "WHERE string::lowercase(name) = $flagName "
+				+ "OR $flagName IN (aliases ?? []).map(|$a| string::lowercase($a)))");
 			bindings.Add("LET $flaggedIds = (SELECT VALUE in FROM has_flags WHERE out IN $matchingFlags)");
 			conditions.Add("(string::lowercase(type) = $flagName OR id IN $flaggedIds)");
 			parameters["flagName"] = filter.HasFlag.ToLowerInvariant();
