@@ -7,9 +7,12 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Server.Services;
 
 /// <summary>
-/// Installs every bundled default package (see <see cref="BundledPackages.All"/>) at first boot,
-/// in dependency order, through the package manager — proving the package manager can own a core
-/// system's softcode (decision 20.3). Attach-mode packages land on a configured handler object —
+/// Installs the bundled packages flagged <see cref="BundledPackages.Descriptor.InstallAtFirstBoot"/>
+/// at first boot, in dependency order, through the package manager — proving the package manager can
+/// own a core system's softcode (decision 20.3). The rest of the catalogue ships in the image without
+/// being installed; an admin installs those from the reserved <c>bundled</c> source, and this service
+/// then keeps them upgraded like any other bundled package. Attach-mode packages land on a
+/// configured handler object —
 /// the HTTP verb routers / profile API on <c>http_handler</c>, the room.contents OOB pushes on
 /// <c>event_handler</c> — and are skipped when that handler is not configured; create-mode
 /// packages (e.g. <c>common-functions</c>, <c>scene</c>) always install.
@@ -54,6 +57,18 @@ public class DefaultPackagesBootstrapService(
 			{
 				logger.LogDebug("No {Handler} configured; skipping attach-mode package {PackageId}.",
 					package.Requires is BundledPackageHandler.Http ? "http_handler" : "event_handler",
+					package.PackageId);
+				continue;
+			}
+
+			// An available-not-installed package is the admin's call to make, so bootstrap never
+			// creates it. It still maintains one the admin has installed: the flag decides whether
+			// a package arrives, not whether it is kept current once it is here. Skipping the
+			// upgrade instead would leave an opted-in package frozen at the version that shipped
+			// the day it was installed, with no upgrade path short of a manual reinstall.
+			if (!package.InstallAtFirstBoot && (await registry.GetInstalledPackageAsync(package.PackageId)).IsT1)
+			{
+				logger.LogDebug("Bundled {PackageId} is available but not installed; leaving it to the admin.",
 					package.PackageId);
 				continue;
 			}
@@ -113,7 +128,8 @@ public class DefaultPackagesBootstrapService(
 			.Select(a => new PackageConflictDecision(a.TargetRef, a.Attribute, PackageConflictResolution.KeepMine))
 			.ToList();
 
-		var source = new PackageApplySource("bundled:sharpmush", packageId, "bundled", null);
+		var source = new PackageApplySource(
+			BundledPackages.SourceRepo, packageId, BundledPackages.SourceCommit, null);
 		var result = await installer.ApplyAsync(manifest, new PackageApplyRequest(
 			source, new Dictionary<string, string>(), decisions), cancellationToken);
 

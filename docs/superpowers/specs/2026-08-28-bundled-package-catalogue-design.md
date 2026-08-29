@@ -94,9 +94,17 @@ In `PackagesController`:
 
 ### 4. Portal
 
-No new page. The bundled entry appears in the remotes list with a "shipped with this
-server" badge and no delete action; `AdminPackageBrowse` and `AdminPackageReview` handle it
-like any other remote.
+No new page. The bundled entry appears in the remotes list — already badged `Official` by the
+existing `TrustBadge` — with its delete action suppressed, because there is no row to delete.
+`AdminPackageBrowse` and `AdminPackageReview` handle it like any other remote.
+
+No new localizable string: a "shipped with this server" badge would mean 16 `.resx` files for one
+label, and the synthesized README explains the catalogue when an admin browses it. If the label
+turns out to be wanted it is a separate, self-contained change.
+
+The README endpoint has no file to read for an embedded package, so it renders one from the
+manifest: name, version, description, whether the package installs at first boot, its dependencies,
+and the objects it creates. The catalogue root renders an index of the six.
 
 ### 5. Dependencies
 
