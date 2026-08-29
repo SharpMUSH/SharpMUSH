@@ -130,7 +130,9 @@ public class FollowCommandTests
 	/// <c>dotnet run --project SharpMUSH.Tests --
 	/// --treenode-filter "/*/*/FollowCommandTests/MortalUnfollow_ClearsTheWizardFlaggedAttribute"</c>
 	/// </remarks>
-	[Test, Explicit]
+	// [Explicit] lives on the class (issue #838) and covers this method too; repeating it here is
+	// TUnit0017, which fails the build of the whole test project.
+	[Test]
 	public async ValueTask MortalUnfollow_ClearsTheWizardFlaggedAttribute()
 	{
 		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
