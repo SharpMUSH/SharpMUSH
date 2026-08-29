@@ -85,16 +85,68 @@ public static class SoftcodeFormatter
 		ParseType parseType,
 		out int plainCodeLength)
 	{
-		var overrideAt = BuildErrorOverride(source, errors);
+		var classifyFunction = SoftcodeLayout.ClassifierFor(parser);
+
+		var overrideAt = Compose(
+			BuildErrorOverride(source, errors),
+			BuildBracketOverride(tokens, classifyFunction, parseType));
 		var colored = SemanticTokenRenderer.Render(source, semanticTokens, overrideAt);
 
-		var classifyFunction = SoftcodeLayout.ClassifierFor(parser);
 		var breaks = SoftcodeLayout.Compute(tokens, width, classifyFunction: classifyFunction, parseType: parseType);
 
 		var laidOut = ApplyBreaks(colored, tokens, breaks);
 		plainCodeLength = MModule.getLength(laidOut);
 
 		return errors.Count == 0 ? laidOut : AppendErrorSummary(laidOut, errors);
+	}
+
+	/// <summary>
+	/// Layers two per-offset overrides, <paramref name="wins"/> first — and preserves the <c>null</c>
+	/// result that keeps <see cref="SemanticTokenRenderer.Render"/> on its override-free fast path when
+	/// neither has anything to say.
+	/// </summary>
+	private static Func<int, Ansi?>? Compose(Func<int, Ansi?>? wins, Func<int, Ansi?>? loses)
+	{
+		if (wins is null)
+		{
+			return loses;
+		}
+
+		if (loses is null)
+		{
+			return wins;
+		}
+
+		return offset => wins(offset) ?? loses(offset);
+	}
+
+	/// <summary>
+	/// Colours each matched structural delimiter by its nesting depth, so a <c>(</c> and its <c>)</c>
+	/// read as a pair. Offsets come from <see cref="SoftcodeLayout.ComputeDelimiterDepths"/> — the same
+	/// group-tree walk the layout engine uses — rather than from scanning for bracket characters, which
+	/// would mis-pair an escaped <c>\[</c>, a <c>(</c> in prose, or anything inside a source-copying
+	/// call. Returns <c>null</c> when the source has no structural delimiter at all.
+	/// <para>
+	/// Layered <em>beneath</em> <see cref="BuildErrorOverride"/>: an unbalanced delimiter is the case
+	/// where both want the same character, and there the parse error is the more urgent thing to show.
+	/// </para>
+	/// </summary>
+	private static Func<int, Ansi?>? BuildBracketOverride(IReadOnlyList<TokenInfo> tokens,
+		Func<string, SoftcodeCallKind> classifyFunction, ParseType parseType)
+	{
+		var delimiters = SoftcodeLayout.ComputeDelimiterDepths(tokens, classifyFunction, parseType);
+		if (delimiters.Count == 0)
+		{
+			return null;
+		}
+
+		var styleByOffset = new Dictionary<int, Ansi>(delimiters.Count);
+		foreach (var delimiter in delimiters)
+		{
+			styleByOffset[delimiter.Offset] = SemanticTokenAnsiPalette.GetBracketDepthStyle(delimiter.Depth);
+		}
+
+		return offset => styleByOffset.GetValueOrDefault(offset);
 	}
 
 	/// <summary>
