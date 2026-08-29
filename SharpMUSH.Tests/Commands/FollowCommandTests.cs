@@ -21,19 +21,20 @@ namespace SharpMUSH.Tests.Commands;
 /// path so that regression cannot come back unnoticed.
 /// </para>
 /// <para>
-/// Marked <see cref="ExplicitAttribute"/> pending investigation (issue #838): both cases fail intermittently on the
-/// <b>Memgraph</b> leg under full-suite load, and pass there in isolation (2/2) and on ArangoDB and
-/// SurrealDB under the same load. No mechanism has been identified — the FOLLOWING write goes through
-/// <c>GetGod()</c>, and its gates are <c>IsGod</c> (a key comparison, no flag lookup) and
-/// <c>IsWizard</c> → <c>HasFlag("WIZARD")</c>, and WIZARD carries no aliases — so this is parked rather
-/// than diagnosed. Run explicitly to work on it:
-/// <code>
-/// SHARPMUSH_DATABASE_PROVIDER=memgraph dotnet run --project SharpMUSH.Tests -- \
-///   --treenode-filter "/*/*/FollowCommandTests/*"
-/// </code>
+/// These were <see cref="ExplicitAttribute"/> under issue #838, where they failed intermittently on the
+/// <b>Memgraph</b> leg under full-suite load and passed in isolation and on the other two providers. The
+/// FOLLOWING write was never the problem: the failure was the <em>locate</em>, and its cause was in the
+/// cache pipeline. <c>CreatePlayerCommand</c> invalidated <c>object-contents:#N</c> with
+/// <c>RemoveAsync</c> and declared no tag covering it, so a contents read that had queried the database
+/// before the leader was created and returned after the invalidation stored its pre-creation list on
+/// top — and the leader was absent from the room for that entry's whole lifetime. Memgraph surfaced it
+/// because its <c>GetContentsAsync</c> costs a round trip per occupant, which is what made the read slow
+/// enough to straddle a creation. See
+/// <c>CachingBehaviorTests.ContentsCache_HoldsEveryObjectCreatedWhileItWasBeingRead</c>, which
+/// reproduced it directly (17 of 40 players missing from their own room), and
+/// <c>StraddlingRead_DoesNotOutliveTheWriteThatInvalidatedIt</c>, which pins the behavior.
 /// </para>
 /// </summary>
-[Explicit]
 public class FollowCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -115,24 +116,11 @@ public class FollowCommandTests
 	}
 
 	/// <remarks>
-	/// This one would want [Explicit] on its own account even without the class-level one above: it flakes
-	/// on CI against Memgraph (issue #839), not because the behaviour it pins is in
-	/// doubt. The failure surfaces as FOLLOW failing to resolve the leader by name ("I can't see that
-	/// here"), with the stack landing in MemgraphDatabase.ExecuteWithRetryAsync after a burst of
-	/// "Memgraph transient conflict, retrying" — the provider's retry loop losing a race under
-	/// concurrent writes. It passes against Arango and SurrealDB in the same CI run, and the whole
-	/// suite passes against Memgraph locally, so the fault is in the provider's write contention
-	/// handling rather than in FOLLOW.
-	/// <para>
-	/// MortalFollow_OverwritesTheWizardFlaggedAttribute above goes through the same FollowAndReport
-	/// path and is equally exposed; it has not failed yet, so it is left enabled.
-	/// </para>
-	/// Run it by naming the method — a class-level wildcard filter does not pick up an [Explicit] test:
-	/// <c>dotnet run --project SharpMUSH.Tests --
-	/// --treenode-filter "/*/*/FollowCommandTests/MortalUnfollow_ClearsTheWizardFlaggedAttribute"</c>
+	/// This is the case that failed on CI (issue #839), and it failed in the locate rather than in the
+	/// write: "I can't see that here. | I don't see that here." for a leader created moments earlier in
+	/// the same room. The burst of "Memgraph transient conflict, retrying" around it was contention, not
+	/// the cause — see the class summary for what was.
 	/// </remarks>
-	// [Explicit] lives on the class (issue #838) and covers this method too; repeating it here is
-	// TUnit0017, which fails the build of the whole test project.
 	[Test]
 	public async ValueTask MortalUnfollow_ClearsTheWizardFlaggedAttribute()
 	{

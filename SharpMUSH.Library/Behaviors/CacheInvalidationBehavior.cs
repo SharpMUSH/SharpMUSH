@@ -20,9 +20,14 @@ namespace SharpMUSH.Library.Behaviors;
 /// exercised in the configuration it shipped in. Both passes now always run.
 /// </para>
 /// <para>
-/// A narrower window remains and is not closed here: a read that issues its query before the commit
-/// and stores its result after the second invalidation still caches a pre-write answer. Closing that
-/// needs the read side to carry a version, not more invalidation.
+/// Both passes go through <c>RemoveByTagAsync</c>, including for the targeted <see cref="CacheKeys"/>:
+/// every entry is tagged with its own key (<see cref="CacheEntryTags"/>) precisely so that it can be.
+/// <c>RemoveAsync</c> alone drops only what is in the cache at that instant, which leaves the window
+/// this class used to document as open — a read that issued its query before the commit and stores its
+/// answer after the second pass. A tag invalidation is a recorded event rather than a deletion, and
+/// FusionCache resolves it against when the entry's factory <em>began</em>, so that late store is
+/// recognised as pre-write and is never served. That is the "read side carries a version" this needed,
+/// and issue #838 is what it cost while it was missing.
 /// </para>
 /// <para>
 /// The second pass runs on the failure path too, and under <see cref="CancellationToken.None"/>. A
@@ -74,14 +79,18 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache)
 
 	private async ValueTask InvalidateCacheAsync(TRequest message, CancellationToken cancellationToken)
 	{
+		// RemoveAsync as well as the tag pass: the marker is what makes the invalidation durable against
+		// a straddling read, but it leaves the entry in memory until something replaces it, and a write
+		// has no reason to keep paying for the old answer.
 		foreach (var key in message.CacheKeys)
 		{
 			await cache.RemoveAsync(key, token: cancellationToken);
 		}
 
-		if (message.CacheTags.Length != 0)
+		string[] tokens = [.. message.CacheKeys, .. message.CacheTags];
+		if (tokens.Length != 0)
 		{
-			await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
+			await cache.RemoveByTagAsync(tokens, token: cancellationToken);
 		}
 	}
 }

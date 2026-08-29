@@ -20,13 +20,9 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 		[EnumeratorCancellation] CancellationToken cancellationToken
 	)
 	{
-		var list = message.CacheTags.Length > 0
-			? await cache.GetOrSetAsync(message.CacheKey,
-				async _ => await MaterializeAsync(message, next, cancellationToken),
-				tags: message.CacheTags, token: cancellationToken)
-			: await cache.GetOrSetAsync(message.CacheKey,
-				async _ => await MaterializeAsync(message, next, cancellationToken),
-				token: cancellationToken);
+		var list = await cache.GetOrSetAsync(message.CacheKey,
+			async _ => await MaterializeAsync(message, next, cancellationToken),
+			tags: CacheEntryTags.For(message), token: cancellationToken);
 
 		foreach (var item in list)
 		{
