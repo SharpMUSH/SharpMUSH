@@ -1,7 +1,7 @@
 # Bundled package catalogue: shipped is not installed
 
 **Date:** 2026-08-28
-**Status:** approved, unimplemented
+**Status:** implemented (PR #841)
 
 ## Problem
 
