@@ -320,6 +320,26 @@ packages:
     description: +who and +where commands
 ```
 
+### The bundled catalogue
+
+A handful of these packages are also embedded in the server assembly and appear
+in the portal under the reserved remote name **`bundled`** — no clone, no
+network, no configured remote. Two different decisions live there:
+
+- **Shipped**: the package is in the image and can be installed from the
+  catalogue at any time.
+- **Installed at first boot**: a new game gets it without being asked.
+  `http-handler`, `profile-handler`, `room-contents`, `common-functions` and
+  `scene` are; `wiki-reader` ships available and unenabled, because it puts a
+  `+wiki` object in the master room.
+
+Both are declared in `SharpMUSH.Server/Services/BundledPackages.cs`, and adding
+a package to the catalogue also means adding its `EmbeddedResource` to
+`SharpMUSH.Server.csproj`. A catalogue package may only depend on another
+catalogue package — otherwise its offline install would need the network after
+all. Anything installed from the catalogue records `bundled:sharpmush` as its
+source repo and is upgraded in place when a later build ships a newer version.
+
 **Releases are git tags** named `<package-dir>/v<version>` — e.g.
 `who-where/v1.2.0` (the Go-modules monorepo convention). The version list in
 the browser is the tag list; installing a version checks out its tag; HEAD is

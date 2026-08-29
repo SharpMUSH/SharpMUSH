@@ -6,6 +6,7 @@ using SharpMUSH.Library.API;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -28,6 +29,16 @@ public class PackagesController(
 	public const string DefaultOfficialRepoUrl = "https://github.com/SharpMUSH/SharpMUSH-Packages";
 
 	private static readonly WikiMarkdigPipeline Markdown = new();
+
+	/// <summary>
+	/// The catalogue of packages embedded in this build, presented as a remote that is always
+	/// present and cannot be edited or removed. Everything else here treats it like any other
+	/// remote — browse, plan, apply, review, roll back — except that its manifests come from
+	/// embedded resources instead of a clone, so a game with no remotes configured and no network
+	/// can still install what its own image ships.
+	/// </summary>
+	private static readonly PackageRemoteRecord CatalogueRemote = new(
+		BundledPackages.RemoteName, BundledPackages.SourceRepo, PackageRemoteTrust.Official, null);
 
 	private IPackageRegistryService Registry => (IPackageRegistryService)database;
 
@@ -206,6 +217,15 @@ public class PackagesController(
 			return NotFound($"'{id}' is not installed.");
 		}
 
+		// A package that came out of the image has no git remote to ask. Before this branch existed
+		// the fallback below synthesized a remote whose URL was "bundled:sharpmush" and handed it to
+		// the source service, which tried to clone that as a repo — so every bundled package (all
+		// five installed at first boot) answered this endpoint with a 502.
+		if (BundledPackages.IsCatalogueSource(installed.AsT0.SourceRepo))
+		{
+			return Ok(CatalogueUpdateInfo(installed.AsT0));
+		}
+
 		var remotes = await Registry.GetPackageRemotesAsync();
 		var remote = remotes.FirstOrDefault(r =>
 				string.Equals(r.Url, installed.AsT0.SourceRepo, StringComparison.OrdinalIgnoreCase))
@@ -219,17 +239,32 @@ public class PackagesController(
 			error => StatusCode(StatusCodes.Status502BadGateway, error.Value));
 	}
 
-	/// <summary>Lists configured remotes.</summary>
+	/// <summary>
+	/// Lists remotes: the built-in catalogue first, then the configured ones. A stored remote that
+	/// shadows the reserved name is dropped rather than listed twice — it can only predate the
+	/// reservation, since <see cref="UpsertRemote"/> now refuses that name.
+	/// </summary>
 	[HttpGet("remotes")]
 	[Authorize]
-	public async Task<ActionResult<IReadOnlyList<PackageRemoteRecord>>> GetRemotes() =>
-		Ok(await Registry.GetPackageRemotesAsync());
+	public async Task<ActionResult<IReadOnlyList<PackageRemoteRecord>>> GetRemotes()
+	{
+		var configured = await Registry.GetPackageRemotesAsync();
+		return Ok(configured
+			.Where(r => !BundledPackages.IsCatalogueRemote(r.Name))
+			.Prepend(CatalogueRemote)
+			.ToList());
+	}
 
 	/// <summary>Adds or updates a configured remote.</summary>
 	[HttpPost("remotes")]
 	[Authorize]
 	public async Task<IActionResult> UpsertRemote([FromBody] RemoteRequest request)
 	{
+		if (BundledPackages.IsCatalogueRemote(request.Name))
+		{
+			return Conflict($"'{BundledPackages.RemoteName}' is reserved for the packages shipped with this server.");
+		}
+
 		if (string.IsNullOrWhiteSpace(request.Name) || !Uri.TryCreate(request.Url, UriKind.Absolute, out _))
 		{
 			return BadRequest("A remote requires a name and a valid URL.");
@@ -251,6 +286,12 @@ public class PackagesController(
 	[Authorize]
 	public async Task<IActionResult> DeleteRemote(string name)
 	{
+		if (BundledPackages.IsCatalogueRemote(name))
+		{
+			return Conflict(
+				$"'{BundledPackages.RemoteName}' is the catalogue shipped with this server and cannot be removed.");
+		}
+
 		await Registry.RemovePackageRemoteAsync(name);
 		return NoContent();
 	}
@@ -260,6 +301,11 @@ public class PackagesController(
 	[Authorize]
 	public async Task<ActionResult<PackageRepoSnapshot>> Browse(string name, CancellationToken cancellationToken)
 	{
+		if (BundledPackages.IsCatalogueRemote(name))
+		{
+			return Ok(BrowseCatalogue());
+		}
+
 		var remote = await Registry.GetPackageRemoteAsync(name);
 		if (remote.IsT1)
 		{
@@ -324,12 +370,23 @@ public class PackagesController(
 		}
 
 		var (manifest, _, manifestSource) = fetched.AsT0;
-		var remote = (await Registry.GetPackageRemoteAsync(request.Remote)).AsT0;
+		var isCatalogue = BundledPackages.IsCatalogueRemote(request.Remote);
+		var remote = isCatalogue
+			? CatalogueRemote
+			: (await Registry.GetPackageRemoteAsync(request.Remote)).AsT0;
 
 		// Managed packages (Phase 4) carry a compiled DLL alongside package.yaml;
 		// resolve a binary reader over the same commit so the installer can verify
 		// and deposit the bytes. Softcode/application packages need none.
 		IManagedPackageBinarySource? binarySource = null;
+		if (manifest.Kind == PackageKind.Managed && isCatalogue)
+		{
+			// The catalogue embeds manifests, not DLLs: there is nothing to read the binaries out
+			// of. No bundled package is managed today, and this refuses rather than handing the
+			// installer a git source that would try to clone "bundled:sharpmush".
+			return BadRequest("A managed package cannot be installed from the bundled catalogue.");
+		}
+
 		if (manifest.Kind == PackageKind.Managed)
 		{
 			var binary = await source.GetBinarySourceAsync(remote, request.Path, manifestSource.Commit, cancellationToken);
@@ -341,8 +398,13 @@ public class PackagesController(
 			binarySource = binary.AsT0;
 		}
 
+		// A catalogue install records the package id as its path, which is what first-boot bootstrap
+		// writes. Normalizing here (rather than trusting whatever path the client echoed back) keeps
+		// the two routes producing one identity, so update checks and uninstall cannot tell them apart.
+		var applyPath = isCatalogue ? manifest.Name : request.Path;
+
 		var result = await installer.ApplyAsync(manifest, new PackageApplyRequest(
-			new PackageApplySource(remote.Url, request.Path, manifestSource.Commit, remote.Branch),
+			new PackageApplySource(remote.Url, applyPath, manifestSource.Commit, remote.Branch),
 			request.ConfigureAnswers ?? new Dictionary<string, string>(),
 			request.Decisions ?? [],
 			request.KeepRevisions,
@@ -356,16 +418,30 @@ public class PackagesController(
 	private async Task<OneOf.OneOf<(PackageManifest Manifest, IReadOnlyList<string> Warnings, PackageManifestSource Source), ActionResult>>
 		FetchManifestAsync(string remoteName, string path, string? version, CancellationToken cancellationToken)
 	{
-		var remote = await Registry.GetPackageRemoteAsync(remoteName);
-		if (remote.IsT1)
+		var isCatalogue = BundledPackages.IsCatalogueRemote(remoteName);
+
+		OneOf.OneOf<PackageManifestSource, ActionResult> fetched;
+		if (isCatalogue)
 		{
-			return NotFound($"No configured remote named '{remoteName}'.");
+			fetched = FetchCatalogueManifest(path);
+		}
+		else
+		{
+			var remote = await Registry.GetPackageRemoteAsync(remoteName);
+			if (remote.IsT1)
+			{
+				return NotFound($"No configured remote named '{remoteName}'.");
+			}
+
+			var fromRemote = await source.GetManifestAsync(remote.AsT0, path, version, cancellationToken);
+			fetched = fromRemote.IsT1
+				? NotFound(fromRemote.AsT1.Value)
+				: fromRemote.AsT0;
 		}
 
-		var fetched = await source.GetManifestAsync(remote.AsT0, path, version, cancellationToken);
 		if (fetched.IsT1)
 		{
-			return NotFound(fetched.AsT1.Value);
+			return fetched.AsT1;
 		}
 
 		var parsed = manifests.ParseManifest(fetched.AsT0.ManifestYaml);
@@ -378,9 +454,157 @@ public class PackagesController(
 			});
 		}
 
+		// The image ships exactly one version of each catalogue package, so an explicit version
+		// request can only be honoured when it names that one. Serving the shipped manifest anyway
+		// would install something other than what was asked for.
+		var shipped = parsed.AsT0.Manifest.Version.ToString();
+		if (isCatalogue && !string.IsNullOrWhiteSpace(version) &&
+			!string.Equals(version, shipped, StringComparison.OrdinalIgnoreCase))
+		{
+			return NotFound(
+				$"This server ships {parsed.AsT0.Manifest.Name} v{shipped}; the catalogue has no other versions.");
+		}
+
 		return (parsed.AsT0.Manifest,
 			parsed.AsT0.Warnings.Select(w => w.ToString()).ToList(),
 			fetched.AsT0);
+	}
+
+	/// <summary>
+	/// Reads a catalogue manifest out of the server assembly. <paramref name="path"/> is the
+	/// package id (the catalogue has no directories); a trailing slash is tolerated because the
+	/// browse entries of a git remote carry one and the UI passes back whatever it was given.
+	/// </summary>
+	private OneOf.OneOf<PackageManifestSource, ActionResult> FetchCatalogueManifest(string path)
+	{
+		var packageId = (path ?? "").Trim().Trim('/');
+		if (!BundledPackages.Contains(packageId))
+		{
+			return NotFound($"'{packageId}' is not shipped with this server.");
+		}
+
+		// Version stays null: the catalogue is a dev channel of one, not a release tag.
+		return new PackageManifestSource(
+			BundledPackages.ManifestYaml(packageId), BundledPackages.SourceCommit, null);
+	}
+
+	/// <summary>
+	/// The catalogue as a browse snapshot. An entry whose manifest does not parse is still listed,
+	/// with null metadata, exactly as an unparsable package in a git remote would be — the browse
+	/// screen should show that something is wrong rather than silently drop it.
+	/// </summary>
+	private PackageRepoSnapshot BrowseCatalogue()
+	{
+		var entries = BundledPackages.All
+			.Select(descriptor =>
+			{
+				var parsed = manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId));
+				return parsed.IsT0
+					? new PackageRepoEntry(descriptor.PackageId, parsed.AsT0.Manifest.Name,
+						parsed.AsT0.Manifest.Version.ToString(), parsed.AsT0.Manifest.Description, [])
+					: new PackageRepoEntry(descriptor.PackageId, null, null, null, []);
+			})
+			.ToList();
+
+		return new PackageRepoSnapshot(
+			BundledPackages.RemoteName, BundledPackages.SourceRepo, BundledPackages.SourceCommit, entries);
+	}
+
+	/// <summary>
+	/// A README synthesized from a catalogue manifest: the package's own description, what it
+	/// creates, and whether a new game gets it. Null when <paramref name="path"/> names something
+	/// this build does not ship. An empty path asks for the "repo root" README — the catalogue's
+	/// own index.
+	/// </summary>
+	private string? CatalogueReadme(string? path)
+	{
+		var packageId = (path ?? "").Trim().Trim('/');
+		if (packageId.Length == 0)
+		{
+			return string.Join('\n',
+				"# Bundled with this server",
+				"",
+				"Packages embedded in this build. They install without a network connection or a",
+				"configured remote. Those marked *installed at first boot* are already in every new",
+				"game; the rest are available for you to install when you want them.",
+				"",
+				string.Join('\n', BundledPackages.All.Select(d =>
+					$"- **{d.PackageId}**{(d.InstallAtFirstBoot ? " — installed at first boot" : "")}")));
+		}
+
+		if (!BundledPackages.Contains(packageId))
+		{
+			return null;
+		}
+
+		var parsed = manifests.ParseManifest(BundledPackages.ManifestYaml(packageId));
+		if (parsed.IsT1)
+		{
+			return $"# {packageId}\n\nThis build's manifest for `{packageId}` could not be read.";
+		}
+
+		var manifest = parsed.AsT0.Manifest;
+		var descriptor = BundledPackages.All.Single(d =>
+			string.Equals(d.PackageId, packageId, StringComparison.OrdinalIgnoreCase));
+
+		var lines = new List<string>
+		{
+			$"# {manifest.Name} {manifest.Version}",
+			"",
+			manifest.Description,
+			"",
+			descriptor.InstallAtFirstBoot
+				? "Installed at first boot — every new game has this."
+				: "Shipped with this server, not installed. Installing it is your call."
+		};
+
+		if (manifest.Dependencies.Count > 0)
+		{
+			lines.Add("");
+			lines.Add("## Requires");
+			lines.AddRange(manifest.Dependencies.Select(d => $"- `{d.PackageId}` {d.Constraint}"));
+		}
+
+		if (manifest.Objects.Count > 0)
+		{
+			lines.Add("");
+			lines.Add("## Creates");
+			lines.AddRange(manifest.Objects.Select(o => $"- {o.Name ?? o.Ref} (`{o.Type}`)"));
+		}
+
+		return string.Join('\n', lines);
+	}
+
+	/// <summary>
+	/// Update status for a package installed from the image. "An update is available" means what
+	/// bootstrap means by it — this build ships a strictly newer version — so the answer here and
+	/// what the next restart does cannot disagree. There are no tags to move and no branch to
+	/// diverge, so the dev-channel and moved-tag signals are always false.
+	/// </summary>
+	private PackageUpdateInfo CatalogueUpdateInfo(InstalledPackageRecord installed)
+	{
+		// Installed from an older build's catalogue and no longer shipped: nothing to compare against.
+		if (!BundledPackages.Contains(installed.Id))
+		{
+			return new PackageUpdateInfo(installed.Version, null, null, false, false, false);
+		}
+
+		// An unparsable embedded manifest is a build defect that BundledPackagesTests catches; here
+		// it must not turn an update check into a 500.
+		var parsed = manifests.ParseManifest(BundledPackages.ManifestYaml(installed.Id));
+		if (parsed.IsT1)
+		{
+			return new PackageUpdateInfo(installed.Version, null, null, false, false, false);
+		}
+
+		var shipped = parsed.AsT0.Manifest.Version;
+		return new PackageUpdateInfo(
+			installed.Version,
+			shipped.ToString(),
+			BundledPackages.SourceCommit,
+			DefaultPackagesBootstrapService.IsNewer(shipped, installed.Version),
+			PathChangedAtHead: false,
+			InstalledTagMoved: false);
 	}
 
 	/// <summary>
@@ -392,6 +616,16 @@ public class PackagesController(
 	public async Task<ActionResult<ReadmeResponse>> GetRemoteReadme(
 		string name, [FromQuery] string? path, [FromQuery] string? version, CancellationToken cancellationToken)
 	{
+		// The image embeds manifests, not READMEs. Rather than 404 the browse screen's description
+		// pane for every bundled package, render what the manifest itself says.
+		if (BundledPackages.IsCatalogueRemote(name))
+		{
+			var markdown = CatalogueReadme(path);
+			return markdown is null
+				? NotFound($"'{path}' is not shipped with this server.")
+				: Ok(new ReadmeResponse(markdown, Markdown.RenderToHtml(markdown)));
+		}
+
 		var remote = await Registry.GetPackageRemoteAsync(name);
 		if (remote.IsT1)
 		{

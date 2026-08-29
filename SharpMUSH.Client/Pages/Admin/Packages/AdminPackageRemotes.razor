@@ -41,8 +41,13 @@
                             <MudTd>
                                 <MudIconButton Icon="@Icons.Material.Filled.TravelExplore" Size="Size.Small"
                                                title="@Loc["PkgBrowse"]" Href="@($"/admin/packages/browse?remote={Uri.EscapeDataString(context.Name)}")" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                                               OnClick="@(() => DeleteAsync(context.Name))" />
+                                @* The bundled catalogue is not a configured remote — it is the set of
+                                   packages embedded in this server build, so there is nothing to delete. *@
+                                @if (!BundledPackageSource.IsCatalogueRemote(context.Name))
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                                   OnClick="@(() => DeleteAsync(context.Name))" />
+                                }
                             </MudTd>
                         </RowTemplate>
                     </MudTable>

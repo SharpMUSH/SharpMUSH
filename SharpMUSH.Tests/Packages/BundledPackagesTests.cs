@@ -91,4 +91,66 @@ public class BundledPackagesTests
 			}
 		}
 	}
+
+	/// <summary>
+	/// Shipping a package in the image and installing it into every game are separate decisions.
+	/// This pins the set that first boot creates: a package added to the catalogue must opt in
+	/// explicitly, so the next application to ship cannot appear in every game by accident.
+	/// </summary>
+	[Test]
+	public async Task FirstBootInstalls_OnlyTheFlaggedDefaults()
+	{
+		var installed = BundledPackages.All
+			.Where(d => d.InstallAtFirstBoot)
+			.Select(d => d.PackageId);
+
+		await Assert.That(installed).IsEquivalentTo(new[]
+		{
+			"http-handler", "profile-handler", "room-contents", "common-functions", "scene"
+		});
+	}
+
+	/// <summary>
+	/// wiki-reader is the first available-not-installed package: it ships in the image so an admin
+	/// can install it offline, but it puts a +wiki object in the master room, which no game should
+	/// get without asking for it.
+	/// </summary>
+	[Test]
+	public async Task WikiReader_ShipsInTheCatalogue_ButNotAtFirstBoot()
+	{
+		await Assert.That(BundledPackages.All.Select(d => d.PackageId)).Contains("wiki-reader");
+
+		var descriptor = BundledPackages.All.Single(d => d.PackageId == "wiki-reader");
+		await Assert.That(descriptor.InstallAtFirstBoot).IsFalse();
+		await Assert.That(descriptor.Requires).IsEqualTo(BundledPackageHandler.None);
+
+		var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml("wiki-reader"));
+		await Assert.That(parsed.IsT0).IsTrue().Because("wiki-reader's manifest must be embedded");
+	}
+
+	/// <summary>
+	/// A catalogue package must be installable from the catalogue alone. An entry whose dependency
+	/// only exists in the git repo would offer an offline install that then needs the network —
+	/// the one failure the bundled source exists to avoid.
+	/// </summary>
+	[Test]
+	public async Task EveryCatalogueDependency_IsAlsoInTheCatalogue()
+	{
+		var catalogue = BundledPackages.All.Select(d => d.PackageId).ToHashSet();
+
+		foreach (var descriptor in BundledPackages.All)
+		{
+			var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId));
+			await Assert.That(parsed.IsT0)
+				.IsTrue()
+				.Because($"bundled manifest '{descriptor.PackageId}' must parse");
+
+			foreach (var dependency in parsed.AsT0.Manifest.Dependencies)
+			{
+				await Assert.That(catalogue)
+					.Contains(dependency.PackageId)
+					.Because($"{descriptor.PackageId} depends on {dependency.PackageId}, which must ship too");
+			}
+		}
+	}
 }

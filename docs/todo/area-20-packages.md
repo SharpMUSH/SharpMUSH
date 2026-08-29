@@ -275,6 +275,28 @@
       (dep-gated plan, configure-resolved role, owning-package provenance,
       dependents block, uninstall reclaim)
 
+### Iteration: Bundled catalogue — shipped is not installed
+- [x] `BundledPackages.Descriptor` gains `InstallAtFirstBoot`, splitting "embedded
+      in the image" from "installed into every game". The five handlers/libraries
+      stay on; `wiki-reader` ships available and unenabled (it puts a `+wiki`
+      object in the master room)
+- [x] Bootstrap installs only the flagged entries, but upgrades any catalogue
+      package the admin has installed — the flag decides whether a package
+      arrives, not whether it is maintained once it is here
+- [x] Reserved remote `bundled` resolves manifests from embedded resources, so
+      browse → plan → apply installs a shipped package with no configured remote
+      and no network. The reserved name cannot be created, shadowed, or deleted
+- [x] Catalogue installs record `bundled:sharpmush` / commit `bundled` — the same
+      identity first-boot bootstrap writes, so the two routes are one registry row
+- [x] Fixes update-check for every bundled package: it resolved a git remote for
+      `bundled:sharpmush` and answered 502; it now compares against the embedded
+      manifest
+- [x] README for a bundled package is synthesized from its manifest (no file to
+      read in an assembly)
+- [x] Tests: `BundledPackagesTests` (flag split, catalogue-closed dependencies) +
+      `BundledCatalogueTests` (offline browse/plan/apply, reserved-name refusals,
+      update check without git, wiki-reader absent at first boot)
+
 ## Deferred to v2 (post-merge polish)
 - [ ] Dependency graph visualization (deps render as text/blockers today)
 - [ ] Dbref linking in review panes (clickable, resolution tooltip)
