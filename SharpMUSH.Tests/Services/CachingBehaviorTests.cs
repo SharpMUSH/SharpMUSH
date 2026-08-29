@@ -265,9 +265,54 @@ public class CachingBehaviorTests
 			.Because("the pre-write answer landed in the cache after the invalidation, so it must not be served");
 	}
 
-	private sealed record StaleReadProbe : IStreamQuery<string>, ICacheable
+	/// <summary>
+	/// Declining to store one straddling read must not stop anything else from being cached — neither
+	/// the same key on its next read, nor any other key.
+	/// </summary>
+	/// <remarks>
+	/// <c>SetSkipMemoryCacheWrite</c> reads like "stop using the cache", and would be a silent disaster
+	/// if <c>ctx.Options</c> were the cache's shared defaults rather than a per-call duplicate: caching
+	/// would be off process-wide and every other test here would still pass, only slower. It is per-call,
+	/// and this is what says so.
+	/// </remarks>
+	[Test]
+	public async Task DecliningOneStaleStoreLeavesCachingOnForEverythingElse()
 	{
-		public string CacheKey => "stale-read-probe";
+		using var cache = new FusionCache(new FusionCacheOptions());
+		var clock = new CacheInvalidationClock();
+		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache, clock);
+		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache, clock);
+
+		var straddled = new StaleReadProbe("skip-probe");
+		var untouched = new StaleReadProbe("other-probe");
+
+		var readStarted = new TaskCompletionSource();
+		var writeCommitted = new TaskCompletionSource();
+
+		var straddlingRead = Materialize(reads, straddled, (_, _) => Blocked(readStarted, writeCommitted.Task, "before"));
+		await readStarted.Task;
+		await writes.Handle(new StaleReadWrite([straddled.CacheKey], []),
+			(_, _) => ValueTask.FromResult(true), CancellationToken.None);
+		writeCommitted.SetResult();
+		await straddlingRead;
+
+		await Assert.That((await cache.TryGetAsync<List<string>>(straddled.CacheKey)).HasValue).IsFalse()
+			.Because("the straddling read is the one store that had to be declined");
+
+		// The same key, read afresh: nothing about the skipped store may stick to it.
+		await Materialize(reads, straddled, (_, _) => Once("after"));
+		await Assert.That((await cache.TryGetAsync<List<string>>(straddled.CacheKey)).HasValue).IsTrue()
+			.Because("skipping a write is per-operation, so the next read of the same key still caches");
+
+		// And a key that was never invalidated at all.
+		await Materialize(reads, untouched, (_, _) => Once("untouched"));
+		await Assert.That((await cache.TryGetAsync<List<string>>(untouched.CacheKey)).HasValue).IsTrue()
+			.Because("ctx.Options is a per-call duplicate, not the cache's shared defaults");
+	}
+
+	private sealed record StaleReadProbe(string Key = "stale-read-probe") : IStreamQuery<string>, ICacheable
+	{
+		public string CacheKey => Key;
 		public string[] CacheTags => ["stale-read-probe-tag"];
 	}
 
