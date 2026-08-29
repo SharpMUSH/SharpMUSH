@@ -46,12 +46,58 @@ public class SoftcodeLayoutTests
 		await Assert.That(rendered).IsEqualTo(
 			"""
 			switch(
-			  words(%0),
+			  words(
+			    %0),
 			  0,
 			  nothing at all,
 			  1,
 			  just one,
 			  many words here)
+			""");
+	}
+
+	[Test]
+	public async Task BrokenCall_ExpandsEveryCallNestedInsideIt()
+	{
+		// words(%0) above fits on its line and is expanded anyway, and so is everything here: the width
+		// test decides where expansion starts, not how deep it goes. A call that has been split reads as
+		// one argument per line all the way down rather than a two-line head over a dense flat tail.
+		const string src = "u(%!/FUN`HEADER`DISPLAY`[ucstr(firstof(%2,center))],%0,if(strlen(%1),%1,width(%#)))";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 78, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			u(
+			  %!/FUN`HEADER`DISPLAY`[ucstr(
+			    firstof(
+			      %2,
+			      center))],
+			  %0,
+			  if(
+			    strlen(
+			      %1),
+			    %1,
+			    width(
+			      %#)))
+			""");
+	}
+
+	[Test]
+	public async Task CommandSeparation_DoesNotExpandTheCommandsThemselves()
+	{
+		// The root goes multi-line here because there are three commands to separate, which is not "a
+		// call was split" — so it starts no expansion, and each command's calls are measured on their own.
+		// Propagating from the root would blow every short call in a long $-command out over five lines.
+		const string src = "@pemit %#=[u(FUN`A,%0)];@pemit %#=[u(FUN`B,%0)];@pemit %#=[u(FUN`C,%0)]";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 40, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			@pemit %#=[u(FUN`A,%0)];
+			@pemit %#=[u(FUN`B,%0)];
+			@pemit %#=[u(FUN`C,%0)]
 			""");
 	}
 
@@ -67,13 +113,97 @@ public class SoftcodeLayoutTests
 	}
 
 	[Test]
-	public async Task BraceGroups_AreNeverBrokenInside()
+	public async Task BraceGroups_BreakAtTheirOpenerAndNowhereElse()
 	{
+		// A '{' is structural — VisitBracePattern emits its VisitChildren result, so the OBRACE token and
+		// the whitespace it absorbed never reach the output. What it encloses is not: a ',' inside braces
+		// is prose in every dialect, so the brace body stays on one line however long it is.
 		const string src = "switch(%0,1,{say a very long thing indeed, honestly},2,{other})";
 		var tokens = Lex(src);
 		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
 
-		await Assert.That(rendered).Contains("{say a very long thing indeed, honestly}");
+		await Assert.That(rendered).Contains("say a very long thing indeed, honestly}");
+		await Assert.That(rendered).DoesNotContain("indeed,\n");
+	}
+
+	[Test]
+	public async Task BraceGroup_BreaksAtABracketInsideIt()
+	{
+		// The other half: a [...] inside braces re-enables function recognition, so it and the call it
+		// leads are break positions even though the brace body around them is prose.
+		const string src = "switch(%0,1,{[strcat(alpha bravo,charlie delta,echo foxtrot)] trailing words},2,b)";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 30, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).Contains("[strcat(\n");
+	}
+
+	[Test]
+	public async Task BraceGroup_LeavesAFunctionNameInsideItAlone()
+	{
+		// Inside braces a name( is generic text (braceExplicitEvaluationString routes through genericText,
+		// SharpMUSHParser.g4:81-86), so it is never dispatched and its delimiters carry their whitespace
+		// into the output. Breaking there would change what the brace body contains.
+		const string src = "switch(%0,1,{a literal strcat(alpha bravo,charlie delta) written out},2,b)";
+		var tokens = Lex(src);
+		var breaks = SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList);
+
+		var open = tokens.Index().First(x => x.Item.Text.TrimEnd() == "{").Index;
+		var close = tokens.Index().First(x => x.Item.Text.TrimEnd() == "}").Index;
+
+		await Assert.That(breaks.Any(b => b.TokenIndex > open && b.TokenIndex < close)).IsFalse();
+	}
+
+	[Test]
+	public async Task BraceGroup_StartsNoExpansionInsideItself()
+	{
+		// A '{' going multi-line is not a call being split — it is the same event as the root separating
+		// commands at their ';', and a brace body is a command in the cases that matter. So the body is
+		// measured on its own: it lands on its own line and stays flat there because it fits.
+		const string src = "@dolist [u(FUN`FIELDS)]={@pemit %#=[ljust([capstr(##)]:,12)][default(%q0,unset)]}";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 78, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			@dolist [u(FUN`FIELDS)]={
+			  @pemit %#=[ljust([capstr(##)]:,12)][default(%q0,unset)]}
+			""");
+	}
+
+	[Test]
+	public async Task BraceGroup_StopsAnExpansionComingFromOutside()
+	{
+		// The other direction: the enclosing switch() is split, which would otherwise force everything
+		// beneath it open. The brace group is measured on its own, so it neither breaks at its '{' nor
+		// expands inside — asserted as an exact render, because checking only that the body stayed flat
+		// misses a '{' left dangling above it, which is what this originally did.
+		const string src = "switch(%0,1,{a branch with [u(FUN`X,%1)] in it},2,another arm entirely,fallback)";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 60, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			switch(
+			  %0,
+			  1,
+			  {a branch with [u(FUN`X,%1)] in it},
+			  2,
+			  another arm entirely,
+			  fallback)
+			""");
+	}
+
+	[Test]
+	public async Task ShortBraceGroup_IsNotSplitByAnExpandedParent()
+	{
+		// The degenerate case of the same rule, and the one that makes it obvious: a five-character
+		// branch has nothing to gain from a line of its own.
+		const string src = "switch(%0,1,{short},2,another arm entirely here,a fallback arm goes here)";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 60, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).Contains("\n  {short},");
 	}
 
 	[Test]
@@ -234,6 +364,79 @@ public class SoftcodeLayoutTests
 	}
 
 	[Test]
+	public async Task SingleArgumentCall_BreaksAfterItsOpener()
+	{
+		// One content token is not an empty group. The opener guard exists to stop a call with nothing
+		// between its delimiters from putting its closer on a line by itself; a call with exactly one
+		// argument has something to move down there, and its FUNCHAR is the same sanctioned break
+		// position it is in a call with five. Without this, a long one-argument call — strcat() over a
+		// single u() is the everyday shape — is the one construct the engine cannot wrap at all, and
+		// overflows the width silently.
+		const string src = "strcat(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			strcat(
+			  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)
+			""");
+	}
+
+	[Test]
+	public async Task BracketGroup_CuddlesTheCallItLeads()
+	{
+		// A '[' hands its break to the call that starts right after it: '[u(' on one line, rather than a
+		// '[' alone above an indented 'u('. The call's own opener break does the same work one line and
+		// one indent level cheaper, and the bracket can afford to delegate because its opener is the only
+		// break position it owns.
+		const string src = "[u(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)]";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			[u(
+			  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)]
+			""");
+	}
+
+	[Test]
+	public async Task BracketGroup_TakesItsOwnBreakWhenItLeadsNoCall()
+	{
+		// Nothing to delegate to: the bracket's content is prose, so the '[' is the only break position
+		// on the line and it takes it. Same when the call it leads can take no break of its own.
+		const string src = "[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			[
+			  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]
+			""");
+	}
+
+	[Test]
+	public async Task EmptyCall_StaysWholeEvenInsideAnExpandedCall()
+	{
+		// A call with no arguments has nothing to move to the next line, so the expansion an enclosing
+		// break forces stops at its delimiters — 'rand(' would otherwise be left hanging over a lone ')'.
+		const string src = "switch(rand(),0,aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb)";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 40, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			switch(
+			  rand(),
+			  0,
+			  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
+			  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb)
+			""");
+	}
+
+	[Test]
 	public async Task EmptyCall_KeepsItsDelimitersTogether()
 	{
 		var tokens = Lex("rand()");
@@ -256,7 +459,9 @@ public class SoftcodeLayoutTests
 		var close = tokens.Index().First(x => x.Item.Text.TrimEnd() == "}").Index;
 
 		await Assert.That(breaks).IsNotEmpty();
-		await Assert.That(breaks.Any(b => b.TokenIndex >= open && b.TokenIndex < close)).IsFalse();
+		// Strictly after the '{': the brace's own opener is a legitimate break position. What must not
+		// appear is a break at the comma between the braces, which is what popping the group would create.
+		await Assert.That(breaks.Any(b => b.TokenIndex > open && b.TokenIndex < close)).IsFalse();
 	}
 
 	[Test]

@@ -61,7 +61,11 @@ If both are set, `cmdsyntax` takes priority, since a command list may itself con
 
 Formatting never rewrites the stored attribute; `@decompile` and the raw value returned by `get()`/`v()` are unaffected regardless of these flags.
 
-Text inside `{ ... }` braces (for example, each branch of a braced `@switch`) is never broken across lines -- it is rendered as a single, unbroken line per brace group. A `@switch` whose branches are wrapped in `{}`, the most common style, will therefore show one line per branch rather than having its contents indented further.
+A value that already fits your screen width is shown on one line. When a call does not fit, it is split with one argument per line -- and so is every call and bracket group nested inside it, however short, so that a split call reads as a tree rather than as a wrapped first line above a dense remainder. A call with no arguments, such as `rand()`, is never split: there is nothing to put on the next line. A `[` that sits directly in front of a call stays with it, so you will see `[u(` at the end of a line rather than a `[` on a line of its own.
+
+Two functions are shown exactly as you stored them, however long they get and whatever encloses them: `lit()` and `localize()`. Both take their argument as literal text rather than evaluating it, so the layout leaves their contents alone -- a line break inserted inside one would become part of what it returns.
+
+What sits between `{ ... }` braces is prose to the formatter: a `,` or `;` there is data, not a separator, so a braced branch stays on one line however long it is, and a function name written inside braces is left exactly as you typed it. The `{` itself can start a new line, and a `[ ... ]` inside the braces is laid out normally, since brackets are the one thing that make code out of a brace body again. A `@switch` whose branches are wrapped in `{}`, the most common style, therefore shows one line per branch, with any bracketed call inside a branch indented under it.
 
 **See Also:**
 - [@set]

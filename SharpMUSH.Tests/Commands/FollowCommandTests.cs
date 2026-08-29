@@ -115,7 +115,8 @@ public class FollowCommandTests
 	}
 
 	/// <remarks>
-	/// [Explicit] because this flakes on CI against Memgraph (issue #839), not because the behaviour it pins is in
+	/// This one would want [Explicit] on its own account even without the class-level one above: it flakes
+	/// on CI against Memgraph (issue #839), not because the behaviour it pins is in
 	/// doubt. The failure surfaces as FOLLOW failing to resolve the leader by name ("I can't see that
 	/// here"), with the stack landing in MemgraphDatabase.ExecuteWithRetryAsync after a burst of
 	/// "Memgraph transient conflict, retrying" — the provider's retry loop losing a race under

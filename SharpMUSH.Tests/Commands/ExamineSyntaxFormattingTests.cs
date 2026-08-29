@@ -72,9 +72,11 @@ public class ExamineSyntaxFormattingTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"examine {obj}/LONGFN"));
 
 		// The layout engine's first break for this exact input lands right after "switch(", putting
-		// "words(%0)," alone on an indented line. No other code path (raw or otherwise) produces a
-		// newline immediately before "words(" — only SoftcodeLayout's break insertion does.
-		await ExpectPlainText("\n  words(%0),");
+		// words() alone on an indented line — and, because a call that breaks expands everything nested
+		// inside it, splitting words() over its own argument in turn. No other code path (raw or
+		// otherwise) produces a newline immediately before "words(" — only SoftcodeLayout's break
+		// insertion does.
+		await ExpectPlainText("\n  words(\n    %0),");
 	}
 
 	[Test]
@@ -170,7 +172,7 @@ public class ExamineSyntaxFormattingTests
 		// not that width silently became 1 (which would break after nearly every character instead).
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(testPlayer.DbRef),
-			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextContains(m, "\n  words(%0),")),
+			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextContains(m, "\n  words(\n    %0),")),
 			Arg.Any<AnySharpObject?>(),
 			Arg.Any<INotifyService.NotificationType>());
 	}

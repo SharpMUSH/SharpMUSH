@@ -109,8 +109,21 @@ public class SoftcodeLayoutEquivalenceTests
 		// Nested strcat: breaks at several depths, and every character of every argument is echoed.
 		() => "strcat(one,strcat(two,strcat(three,strcat(four,five))),six)",
 
-		// A brace group containing a comma. That comma is data, not a separator.
+		// Bracket groups that break at the '[' itself. A '[' hands its break to a call it leads, so
+		// '[u(...)]' cuddles and exercises no OBRACK break; a bracket over prose is the shape that still
+		// does, and the one Corpus_ExercisesEachBreakPosition counts for that position. The comma in the
+		// first belongs at root: inside an argument list, inFunction > 0 makes a comma between brackets a
+		// parse error (see UnparseableCorpus).
+		() => "[aaaaaaaaaaaa,bbbbbbbbbbbb]",
+		() => "strcat(one,[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa],two)",
+
+		// A brace group containing a comma. That comma is data, not a separator — but the '{' itself is
+		// structural, so this breaks at the brace and nowhere inside it.
 		() => "strcat(a,b,{c,def})",
+
+		// A [...] inside a brace: the one thing inside a brace group that is structural, since
+		// bracketPattern re-enables function recognition for what it encloses.
+		() => "switch(1,1,{[strcat(alpha bravo,charlie delta)] and some trailing words},none)",
 
 		// Brace groups suppressing and re-enabling function evaluation, long enough to break.
 		() => "strcat(a,{add(1,2)},b,{[add(3,4)]},c,{a fairly long literal, with a comma},d)",
@@ -513,6 +526,7 @@ public class SoftcodeLayoutEquivalenceTests
 		var exercised = new Dictionary<string, List<string>>
 		{
 			["OBRACK"] = [],
+			["OBRACE"] = [],
 			["FUNCHAR"] = [],
 			["COMMAWS"] = [],
 			["SEMICOLON"] = []
