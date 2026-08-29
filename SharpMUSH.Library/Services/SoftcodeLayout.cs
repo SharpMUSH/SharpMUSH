@@ -586,6 +586,12 @@ public static class SoftcodeLayout
 	/// multi-command attribute, which is the opposite of what the width test is for.
 	/// </para>
 	/// <para>
+	/// A brace group is the same kind of event and is excluded on the same grounds, but in both
+	/// directions: it neither starts an expansion nor passes one through. Its body is a command in the
+	/// cases that matter — <c>@dolist</c>, <c>@switch</c>, a <c>$</c>-command branch — so it is measured
+	/// on its own however it came to be on a line of its own.
+	/// </para>
+	/// <para>
 	/// It cannot override atomicity. A brace group and a source-copying call are rendered flat whatever
 	/// their surroundings, because that is a correctness rule about whitespace reaching the output rather
 	/// than a preference about shape.
@@ -619,7 +625,13 @@ public static class SoftcodeLayout
 		// and one that fails it emits nothing anywhere. That makes it what forces the groups nested inside
 		// to break as well.
 		var goesMultiLine = OpensABreak(group, lastContent);
-		var childrenForced = forced || goesMultiLine;
+
+		// A brace group is a unit boundary for expansion, in both directions: it neither starts one nor
+		// passes one through. A '{' going multi-line is not a call being split — it is the same kind of
+		// event as the root separating its commands at their ';', and a brace body *is* a command in the
+		// cases that matter (@dolist, @switch, $-command branches). Measuring it on its own is what stops
+		// a two-line @dolist becoming eight.
+		var childrenForced = (forced || goesMultiLine) && group.OpenType != "OBRACE";
 
 		// A '[' hands its break to the call that starts right after it rather than taking one itself:
 		// '[u(' reads better than a '[' alone above an indented 'u(', and the call's own opener break does

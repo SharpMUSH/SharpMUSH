@@ -155,6 +155,35 @@ public class SoftcodeLayoutTests
 	}
 
 	[Test]
+	public async Task BraceGroup_StartsNoExpansionInsideItself()
+	{
+		// A '{' going multi-line is not a call being split — it is the same event as the root separating
+		// commands at their ';', and a brace body is a command in the cases that matter. So the body is
+		// measured on its own: it lands on its own line and stays flat there because it fits.
+		const string src = "@dolist [u(FUN`FIELDS)]={@pemit %#=[ljust([capstr(##)]:,12)][default(%q0,unset)]}";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 78, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			@dolist [u(FUN`FIELDS)]={
+			  @pemit %#=[ljust([capstr(##)]:,12)][default(%q0,unset)]}
+			""");
+	}
+
+	[Test]
+	public async Task BraceGroup_StopsAnExpansionComingFromOutside()
+	{
+		// The other direction: the enclosing switch() is split, which would otherwise force everything
+		// beneath it open. The brace body is still measured on its own and stays flat.
+		const string src = "switch(%0,1,{a branch with [u(FUN`X,%1)] in it},2,another arm entirely,fallback)";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 60, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).Contains("a branch with [u(FUN`X,%1)] in it}");
+	}
+
+	[Test]
 	public async Task NestedGroups_IndentByDepth()
 	{
 		const string src = "switch(add(one thing,another thing),1,yes,no)";
