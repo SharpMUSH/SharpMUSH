@@ -61,6 +61,8 @@ If both are set, `cmdsyntax` takes priority, since a command list may itself con
 
 Formatting never rewrites the stored attribute; `@decompile` and the raw value returned by `get()`/`v()` are unaffected regardless of these flags.
 
+A value that already fits your screen width is shown on one line. When a call does not fit, it is split with one argument per line -- and so is every call and bracket group nested inside it, however short, so that a split call reads as a tree rather than as a wrapped first line above a dense remainder. A call with no arguments, such as `rand()`, is never split: there is nothing to put on the next line.
+
 Text inside `{ ... }` braces (for example, each branch of a braced `@switch`) is never broken across lines -- it is rendered as a single, unbroken line per brace group. A `@switch` whose branches are wrapped in `{}`, the most common style, will therefore show one line per branch rather than having its contents indented further.
 
 **See Also:**

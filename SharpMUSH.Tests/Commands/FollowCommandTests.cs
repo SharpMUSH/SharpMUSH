@@ -115,7 +115,9 @@ public class FollowCommandTests
 	}
 
 	/// <remarks>
-	/// [Explicit] because this flakes on CI against Memgraph (issue #839), not because the behaviour it pins is in
+	/// The class-level [Explicit] (issue #838) covers this method too; TUnit0017 forbids repeating the
+	/// attribute here. It would need it on its own regardless: it flakes on CI against Memgraph (issue
+	/// #839), not because the behaviour it pins is in
 	/// doubt. The failure surfaces as FOLLOW failing to resolve the leader by name ("I can't see that
 	/// here"), with the stack landing in MemgraphDatabase.ExecuteWithRetryAsync after a burst of
 	/// "Memgraph transient conflict, retrying" — the provider's retry loop losing a race under
@@ -130,7 +132,7 @@ public class FollowCommandTests
 	/// <c>dotnet run --project SharpMUSH.Tests --
 	/// --treenode-filter "/*/*/FollowCommandTests/MortalUnfollow_ClearsTheWizardFlaggedAttribute"</c>
 	/// </remarks>
-	[Test, Explicit]
+	[Test]
 	public async ValueTask MortalUnfollow_ClearsTheWizardFlaggedAttribute()
 	{
 		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(

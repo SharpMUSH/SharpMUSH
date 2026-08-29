@@ -46,12 +46,59 @@ public class SoftcodeLayoutTests
 		await Assert.That(rendered).IsEqualTo(
 			"""
 			switch(
-			  words(%0),
+			  words(
+			    %0),
 			  0,
 			  nothing at all,
 			  1,
 			  just one,
 			  many words here)
+			""");
+	}
+
+	[Test]
+	public async Task BrokenCall_ExpandsEveryCallNestedInsideIt()
+	{
+		// words(%0) above fits on its line and is expanded anyway, and so is everything here: the width
+		// test decides where expansion starts, not how deep it goes. A call that has been split reads as
+		// one argument per line all the way down rather than a two-line head over a dense flat tail.
+		const string src = "u(%!/FUN`HEADER`DISPLAY`[ucstr(firstof(%2,center))],%0,if(strlen(%1),%1,width(%#)))";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 78, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			u(
+			  %!/FUN`HEADER`DISPLAY`[
+			    ucstr(
+			      firstof(
+			        %2,
+			        center))],
+			  %0,
+			  if(
+			    strlen(
+			      %1),
+			    %1,
+			    width(
+			      %#)))
+			""");
+	}
+
+	[Test]
+	public async Task CommandSeparation_DoesNotExpandTheCommandsThemselves()
+	{
+		// The root goes multi-line here because there are three commands to separate, which is not "a
+		// call was split" — so it starts no expansion, and each command's calls are measured on their own.
+		// Propagating from the root would blow every short call in a long $-command out over five lines.
+		const string src = "@pemit %#=[u(FUN`A,%0)];@pemit %#=[u(FUN`B,%0)];@pemit %#=[u(FUN`C,%0)]";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 40, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			@pemit %#=[u(FUN`A,%0)];
+			@pemit %#=[u(FUN`B,%0)];
+			@pemit %#=[u(FUN`C,%0)]
 			""");
 	}
 
@@ -231,6 +278,60 @@ public class SoftcodeLayoutTests
 		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 10, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
 
 		await Assert.That(rendered).DoesNotContain("\n)");
+	}
+
+	[Test]
+	public async Task SingleArgumentCall_BreaksAfterItsOpener()
+	{
+		// One content token is not an empty group. The opener guard exists to stop a call with nothing
+		// between its delimiters from putting its closer on a line by itself; a call with exactly one
+		// argument has something to move down there, and its FUNCHAR is the same sanctioned break
+		// position it is in a call with five. Without this, a long one-argument call — strcat() over a
+		// single u() is the everyday shape — is the one construct the engine cannot wrap at all, and
+		// overflows the width silently.
+		const string src = "strcat(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			strcat(
+			  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)
+			""");
+	}
+
+	[Test]
+	public async Task SingleContentBracketGroup_BreaksAfterItsOpener()
+	{
+		const string src = "[u(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)]";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			[
+			  u(
+			    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)]
+			""");
+	}
+
+	[Test]
+	public async Task EmptyCall_StaysWholeEvenInsideAnExpandedCall()
+	{
+		// A call with no arguments has nothing to move to the next line, so the expansion an enclosing
+		// break forces stops at its delimiters — 'rand(' would otherwise be left hanging over a lone ')'.
+		const string src = "switch(rand(),0,aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb)";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 40, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			switch(
+			  rand(),
+			  0,
+			  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
+			  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb)
+			""");
 	}
 
 	[Test]

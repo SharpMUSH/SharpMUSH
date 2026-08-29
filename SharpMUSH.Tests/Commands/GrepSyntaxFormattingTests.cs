@@ -138,11 +138,12 @@ public class GrepSyntaxFormattingTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@grep/print {obj}=words"));
 
 		// The layout engine's first break for this exact input lands right after "switch(", putting
-		// "words(%0)," alone on an indented line -- the same break @examine's equivalent test proves
-		// against the identical LongCode input. No other code path (raw or otherwise) produces a
-		// newline immediately before "words(" for this attribute; only SoftcodeLayout's break
-		// insertion does, so this fragment is unreachable unless @grep/PRINT actually formatted it.
-		await ExpectPlainText("\n  words(%0),");
+		// words() alone on an indented line and expanding it over its own argument in turn -- the same
+		// break @examine's equivalent test proves against the identical LongCode input. No other code
+		// path (raw or otherwise) produces a newline immediately before "words(" for this attribute;
+		// only SoftcodeLayout's break insertion does, so this fragment is unreachable unless
+		// @grep/PRINT actually formatted it.
+		await ExpectPlainText("\n  words(\n    %0),");
 	}
 
 	[Test]
@@ -195,7 +196,7 @@ public class GrepSyntaxFormattingTests
 		// The isWild branch assigns displayValue = formatted directly, skipping the highlight-slice
 		// path entirely -- a separate code path from GrepPrintOnFlaggedAttribute_IsFormatted's literal
 		// match, and one with no coverage before this test.
-		await ExpectPlainText("\n  words(%0),");
+		await ExpectPlainText("\n  words(\n    %0),");
 	}
 
 	[Test]

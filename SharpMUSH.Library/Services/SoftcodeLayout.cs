@@ -118,6 +118,16 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// <c>EQUALS</c> and <c>OBRACE</c> absorb whitespace too, and are structural in some positions, but
 /// v1 never breaks at either.
 /// </para>
+/// <para>
+/// <b>Where those positions are used</b> is a separate question from where they exist, and the answer
+/// is not "wherever a line would otherwise overflow". A call that does not fit is split at every
+/// position it owns, and so is <em>every call and bracket group nested inside it</em>, however short —
+/// so a broken call reads as one argument per line all the way down rather than a wrapped head over a
+/// dense flat tail. The width test decides only where that expansion starts; it is not re-asked
+/// underneath. The synthetic root does not start one: it takes the multi-line path whenever the
+/// attribute holds a literal newline or its commands are separated at their <c>;</c>, neither of which
+/// is a call being split.
+/// </para>
 /// </summary>
 public static class SoftcodeLayout
 {
@@ -178,7 +188,11 @@ public static class SoftcodeLayout
 	/// in the codebase: <see cref="ParseType.Function"/> emits no semicolon breaks at all.
 	/// </para>
 	/// </param>
-	/// <returns>The breaks, in ascending token order. Empty when everything fits flat.</returns>
+	/// <returns>
+	/// The breaks, in ascending token order. Empty when everything fits flat — but once one call does
+	/// not fit, the result covers every break position inside it too, not just enough of them to get
+	/// under <paramref name="width"/>.
+	/// </returns>
 	public static IReadOnlyList<SoftcodeBreak> Compute(IReadOnlyList<TokenInfo> tokens, int width,
 		int indentUnit = 2, Func<string, SoftcodeCallKind>? classifyFunction = null,
 		ParseType parseType = ParseType.Function)
@@ -486,14 +500,33 @@ public static class SoftcodeLayout
 	/// <summary>
 	/// Renders one group top-down, returning the column the following text starts at.
 	/// </summary>
+	/// <param name="forced">
+	/// Whether an enclosing call has already gone multi-line, in which case this group breaks too rather
+	/// than being measured against <paramref name="width"/>. Once a call is split across lines, every
+	/// call and bracket group beneath it is split as well, so that a broken call reads as a tree with one
+	/// argument per line all the way down instead of a two-line head over a dense flat tail.
+	/// <para>
+	/// The flag is raised only by a <em>delimited</em> group that actually emits a break, never by the
+	/// synthetic root. The root takes the breaking path for two reasons that are not "a call was split":
+	/// it holds a literal newline (attributes have since PR #775), or its commands are being separated at
+	/// their <c>;</c>. Propagating from either would expand every short call in a multi-line or
+	/// multi-command attribute, which is the opposite of what the width test is for.
+	/// </para>
+	/// <para>
+	/// It cannot override atomicity. A brace group and a source-copying call are rendered flat whatever
+	/// their surroundings, because that is a correctness rule about whitespace reaching the output rather
+	/// than a preference about shape.
+	/// </para>
+	/// </param>
 	private static int Layout(Group group, IReadOnlyList<TokenInfo> tokens, int depth, int column, int width,
-		int indentUnit, List<SoftcodeBreak> breaks)
+		int indentUnit, List<SoftcodeBreak> breaks, bool forced = false)
 	{
 		// A brace group and a source-copying call are both atomic: their contents reach the output as
 		// raw source, so no break anywhere inside them is safe — not even at a bracket, since no visitor
 		// runs over that span to discard the whitespace a delimiter absorbed.
-		// Anything else stays flat only if it is genuinely one line and that line fits.
-		if (group.IsAtomic || (!group.HasNewline && column + group.FlatWidth <= width))
+		// Anything else stays flat only if nothing above it has broken, it is genuinely one line, and
+		// that line fits.
+		if (group.IsAtomic || (!forced && !group.HasNewline && column + group.FlatWidth <= width))
 		{
 			return group.HasNewline ? group.FlatWidth : column + group.FlatWidth;
 		}
@@ -511,14 +544,29 @@ public static class SoftcodeLayout
 			lastContent--;
 		}
 
+		// Whether this group breaks after its own opener. The synthetic root has no opening delimiter and
+		// so emits no opener break; it breaks only at its own structural separators. An empty group emits
+		// none either — there is nothing to put on the next line but the closer. Nor does a call the
+		// parser will reproduce as text, whose FUNCHAR is sliced from the source with its absorbed
+		// whitespace intact.
+		//
+		// The bound is inclusive: one content token is not an empty group. A call with a single argument
+		// has something to move to the next line, and its FUNCHAR is the same sanctioned break position it
+		// is in a call with five — nothing about that position's safety counts arguments. Under an
+		// exclusive bound, strcat() wrapped around one long u() — the everyday shape — was the one
+		// construct the engine could not wrap at all, and it overflowed silently.
+		//
+		// It doubles as the test for "this group goes multi-line", which is what forces the groups nested
+		// inside it to break as well: every other break position this group owns lies strictly between
+		// OpenIndex and lastContent, so a group with a separator to break at necessarily satisfies this
+		// too, and one that fails it emits nothing anywhere.
+		var breaksHere = group.OpenIndex >= 0 && group.OpenIndex + 1 <= lastContent && !group.SuppressesFunctions;
+		var childrenForced = forced || breaksHere;
+
 		var i = start;
 		if (group.OpenIndex >= 0)
 		{
-			// The synthetic root has no opening delimiter and so emits no opener break; it breaks only
-			// at its own structural separators. An empty group emits none either — there is nothing to
-			// put on the next line but the closer. Nor does a call the parser will reproduce as text,
-			// whose FUNCHAR is sliced from the source with its absorbed whitespace intact.
-			if (group.OpenIndex + 1 < lastContent && !group.SuppressesFunctions)
+			if (breaksHere)
 			{
 				breaks.Add(new SoftcodeBreak(group.OpenIndex, indent));
 				column = indent;
@@ -540,7 +588,7 @@ public static class SoftcodeLayout
 			if (childCursor < group.Children.Count && group.Children[childCursor].OpenIndex == i)
 			{
 				var child = group.Children[childCursor++];
-				column = Layout(child, tokens, depth + 1, column, width, indentUnit, breaks);
+				column = Layout(child, tokens, depth + 1, column, width, indentUnit, breaks, childrenForced);
 				i = child.CloseIndex + 1;
 				continue;
 			}
