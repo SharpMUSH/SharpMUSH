@@ -109,6 +109,14 @@ public class SoftcodeLayoutEquivalenceTests
 		// Nested strcat: breaks at several depths, and every character of every argument is echoed.
 		() => "strcat(one,strcat(two,strcat(three,strcat(four,five))),six)",
 
+		// Bracket groups that break at the '[' itself. A '[' hands its break to a call it leads, so
+		// '[u(...)]' cuddles and exercises no OBRACK break; a bracket over prose is the shape that still
+		// does, and the one Corpus_ExercisesEachBreakPosition counts for that position. The comma in the
+		// first belongs at root: inside an argument list, inFunction > 0 makes a comma between brackets a
+		// parse error (see UnparseableCorpus).
+		() => "[aaaaaaaaaaaa,bbbbbbbbbbbb]",
+		() => "strcat(one,[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa],two)",
+
 		// A brace group containing a comma. That comma is data, not a separator.
 		() => "strcat(a,b,{c,def})",
 

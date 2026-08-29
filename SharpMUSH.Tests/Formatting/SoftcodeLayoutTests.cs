@@ -69,11 +69,10 @@ public class SoftcodeLayoutTests
 		await Assert.That(rendered).IsEqualTo(
 			"""
 			u(
-			  %!/FUN`HEADER`DISPLAY`[
-			    ucstr(
-			      firstof(
-			        %2,
-			        center))],
+			  %!/FUN`HEADER`DISPLAY`[ucstr(
+			    firstof(
+			      %2,
+			      center))],
 			  %0,
 			  if(
 			    strlen(
@@ -301,17 +300,36 @@ public class SoftcodeLayoutTests
 	}
 
 	[Test]
-	public async Task SingleContentBracketGroup_BreaksAfterItsOpener()
+	public async Task BracketGroup_CuddlesTheCallItLeads()
 	{
+		// A '[' hands its break to the call that starts right after it: '[u(' on one line, rather than a
+		// '[' alone above an indented 'u('. The call's own opener break does the same work one line and
+		// one indent level cheaper, and the bracket can afford to delegate because its opener is the only
+		// break position it owns.
 		const string src = "[u(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)]";
 		var tokens = Lex(src);
 		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
 
 		await Assert.That(rendered).IsEqualTo(
 			"""
+			[u(
+			  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)]
+			""");
+	}
+
+	[Test]
+	public async Task BracketGroup_TakesItsOwnBreakWhenItLeadsNoCall()
+	{
+		// Nothing to delegate to: the bracket's content is prose, so the '[' is the only break position
+		// on the line and it takes it. Same when the call it leads can take no break of its own.
+		const string src = "[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 20, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).IsEqualTo(
+			"""
 			[
-			  u(
-			    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)]
+			  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]
 			""");
 	}
 

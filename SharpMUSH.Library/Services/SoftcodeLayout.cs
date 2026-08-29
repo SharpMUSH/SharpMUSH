@@ -128,6 +128,14 @@ public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 /// attribute holds a literal newline or its commands are separated at their <c>;</c>, neither of which
 /// is a call being split.
 /// </para>
+/// <para>
+/// One shape is spelled differently from the rest. A <c>[</c> that leads a call hands its break to that
+/// call rather than taking one — <c>[u(</c> stays on one line, instead of a <c>[</c> alone above an
+/// indented <c>u(</c>, and the arguments come in one level rather than two. A bracket group can afford
+/// to delegate because its opener is the only break position it owns; a call cannot, since its comma
+/// breaks are indented to match its own opener break. A <c>[</c> over prose, or over a call that can
+/// take no break, still breaks at itself.
+/// </para>
 /// </summary>
 public static class SoftcodeLayout
 {
@@ -498,6 +506,37 @@ public static class SoftcodeLayout
 	}
 
 	/// <summary>
+	/// The last token in <paramref name="group"/> that is not a closing delimiter. Breaking immediately
+	/// before a closer would put a literal newline inside the last argument, so that token never carries
+	/// a break. Trailing closers are skipped rather than assumed to be exactly one: a group closed
+	/// implicitly by end of input has none, and the root may end in any number of stray ones.
+	/// </summary>
+	private static int LastContentIndex(Group group, IReadOnlyList<TokenInfo> tokens)
+	{
+		var lastContent = group.CloseIndex;
+		while (lastContent >= group.FirstIndex && Array.IndexOf(Closers, tokens[lastContent].Type) >= 0)
+		{
+			lastContent--;
+		}
+
+		return lastContent;
+	}
+
+	/// <summary>
+	/// Whether <paramref name="group"/> has a break to take after its own opening delimiter, given its
+	/// <paramref name="lastContent"/>.
+	/// <para>
+	/// The bound is inclusive: one content token is not an empty group. A call with a single argument has
+	/// something to move to the next line, and its FUNCHAR is the same sanctioned break position it is in
+	/// a call with five — nothing about that position's safety counts arguments. Under an exclusive bound,
+	/// <c>strcat()</c> wrapped around one long <c>u()</c> — the everyday shape — was the one construct the
+	/// engine could not wrap at all, and it overflowed silently.
+	/// </para>
+	/// </summary>
+	private static bool OpensABreak(Group group, int lastContent) =>
+		group.OpenIndex >= 0 && group.OpenIndex + 1 <= lastContent && !group.SuppressesFunctions;
+
+	/// <summary>
 	/// Renders one group top-down, returning the column the following text starts at.
 	/// </summary>
 	/// <param name="forced">
@@ -533,35 +572,41 @@ public static class SoftcodeLayout
 
 		var indent = Math.Min(depth * indentUnit, width / 2);
 		var start = group.FirstIndex;
+		var lastContent = LastContentIndex(group, tokens);
 
-		// Breaking immediately before a closer would put a literal newline inside the last argument, so
-		// the last real content token never carries a break. Trailing closers are skipped rather than
-		// assumed to be exactly one: a group closed implicitly by end of input has none, and the root
-		// may end in any number of stray ones.
-		var lastContent = group.CloseIndex;
-		while (lastContent >= start && Array.IndexOf(Closers, tokens[lastContent].Type) >= 0)
-		{
-			lastContent--;
-		}
-
-		// Whether this group breaks after its own opener. The synthetic root has no opening delimiter and
-		// so emits no opener break; it breaks only at its own structural separators. An empty group emits
+		// Whether this group goes multi-line at all. The synthetic root has no opening delimiter and so
+		// emits no opener break; it breaks only at its own structural separators. An empty group emits
 		// none either — there is nothing to put on the next line but the closer. Nor does a call the
 		// parser will reproduce as text, whose FUNCHAR is sliced from the source with its absorbed
 		// whitespace intact.
 		//
-		// The bound is inclusive: one content token is not an empty group. A call with a single argument
-		// has something to move to the next line, and its FUNCHAR is the same sanctioned break position it
-		// is in a call with five — nothing about that position's safety counts arguments. Under an
-		// exclusive bound, strcat() wrapped around one long u() — the everyday shape — was the one
-		// construct the engine could not wrap at all, and it overflowed silently.
+		// This is the whole test: every other break position the group owns lies strictly between
+		// OpenIndex and lastContent, so a group with a separator to break at necessarily satisfies it too,
+		// and one that fails it emits nothing anywhere. That makes it what forces the groups nested inside
+		// to break as well.
+		var goesMultiLine = OpensABreak(group, lastContent);
+		var childrenForced = forced || goesMultiLine;
+
+		// A '[' hands its break to the call that starts right after it rather than taking one itself:
+		// '[u(' reads better than a '[' alone above an indented 'u(', and the call's own opener break does
+		// the same work one line and one indent level cheaper. A bracket group can afford to delegate
+		// because its opener is the only break position it has — a call cannot, since its comma breaks are
+		// indented to match its opener break and would sit at odds with a cuddled first argument.
 		//
-		// It doubles as the test for "this group goes multi-line", which is what forces the groups nested
-		// inside it to break as well: every other break position this group owns lies strictly between
-		// OpenIndex and lastContent, so a group with a separator to break at necessarily satisfies this
-		// too, and one that fails it emits nothing anywhere.
-		var breaksHere = group.OpenIndex >= 0 && group.OpenIndex + 1 <= lastContent && !group.SuppressesFunctions;
-		var childrenForced = forced || breaksHere;
+		// Only to a call that will actually break: if the leading call is empty, atomic or reproduced as
+		// text it takes no break, and the '[' is then the only lever left on the line.
+		var cuddlesLeadingCall = goesMultiLine
+			&& group.OpenType == "OBRACK"
+			&& group.Children is [{ OpenType: "FUNCHAR", IsAtomic: false } leading, ..]
+			&& leading.OpenIndex == group.OpenIndex + 1
+			&& OpensABreak(leading, LastContentIndex(leading, tokens));
+
+		var breaksHere = goesMultiLine && !cuddlesLeadingCall;
+
+		// A cuddled '[' adds no line, so it must add no indent level either: the call it handed its break
+		// to is the thing that opens the new line, and its arguments belong one level in from where the
+		// bracket started, not two. Every other group nests its children as usual.
+		var childDepth = depth + (cuddlesLeadingCall ? 0 : 1);
 
 		var i = start;
 		if (group.OpenIndex >= 0)
@@ -588,7 +633,7 @@ public static class SoftcodeLayout
 			if (childCursor < group.Children.Count && group.Children[childCursor].OpenIndex == i)
 			{
 				var child = group.Children[childCursor++];
-				column = Layout(child, tokens, depth + 1, column, width, indentUnit, breaks, childrenForced);
+				column = Layout(child, tokens, childDepth, column, width, indentUnit, breaks, childrenForced);
 				i = child.CloseIndex + 1;
 				continue;
 			}
