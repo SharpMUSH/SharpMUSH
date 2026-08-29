@@ -151,9 +151,18 @@ public class MarkupCompressionTests
 
 		foreach (var format in new[] { "ansi", "html", "plaintext", "pueblo", "mxp" })
 		{
-			await Assert.That(ReferenceEquals(ams.Render(format), ams.Render(format))).IsTrue();
+			// Bound to locals rather than compared inline: two calls to the same method look like a
+			// tautology to static analysis, and naming them says what the test is actually about.
+			var firstRender = ams.Render(format);
+			var secondRender = ams.Render(format);
+
+			await Assert.That(ReferenceEquals(firstRender, secondRender)).IsTrue()
+				.Because($"the {format} render must be cached, not recomputed");
 		}
 
-		await Assert.That(ReferenceEquals(ams.ToString(), ams.ToString())).IsTrue();
+		var firstToString = ams.ToString();
+		var secondToString = ams.ToString();
+
+		await Assert.That(ReferenceEquals(firstToString, secondToString)).IsTrue();
 	}
 }
