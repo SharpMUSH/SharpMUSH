@@ -136,6 +136,50 @@ public class ObjectSearchFilterPushdownTests
 			"HasFlag = MONITOR");
 	}
 
+	/// <summary>
+	/// A flag's aliases answer for it, because PennMUSH's <c>ptab_flag</c> — the table
+	/// <c>has_flag_by_name</c> resolves through — is "Table of flags by name, inc. aliases"
+	/// (src/flags.c). MONITOR is seeded with LISTENER and WATCHER, and neither used to match here or in
+	/// <c>HelperFunctions.HasFlag</c> (issue #834).
+	/// </summary>
+	[Test]
+	public async Task HasFlag_MatchesAnAliasOfTheFlag()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("FlagAliasPushdown");
+
+		var match = await CreateThingAsync($"{token}_Match");
+		var control = await CreateThingAsync($"{token}_Control");
+		// Set it by its canonical name; the point is that the *query* may use either spelling.
+		await RunAsync($"@set {match}=MONITOR");
+
+		await AssertFilteredAsync(
+			await ProbeAsync(new ObjectSearchFilter { HasFlag = "LISTENER" }, match, control),
+			"HasFlag = LISTENER (alias of MONITOR)");
+	}
+
+	/// <summary>
+	/// The alias arm must not swallow the name arm, nor match a flag the object does not carry: an
+	/// alias of some <em>other</em> flag still returns nothing.
+	/// </summary>
+	[Test]
+	public async Task HasFlag_DoesNotMatchAnUnrelatedFlagsAlias()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("FlagAliasNegative");
+
+		var match = await CreateThingAsync($"{token}_Match");
+		await RunAsync($"@set {match}=MONITOR");
+
+		// COLOUR is COLOR's alias, and this object has neither.
+		var found = await Mediator.CreateStream(new GetFilteredObjectsQuery(
+				new ObjectSearchFilter { HasFlag = "COLOUR" }))
+			.Where(x => x.Name.StartsWith(token, StringComparison.Ordinal))
+			.ToListAsync();
+
+		await Assert.That(found)
+			.IsEmpty()
+			.Because("an alias must resolve to its own flag and no other");
+	}
+
 	[Test]
 	public async Task HasPower_ReturnsOnlyObjectsCarryingThatPower()
 	{

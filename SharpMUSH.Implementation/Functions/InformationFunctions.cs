@@ -640,6 +640,18 @@ public partial class Functions
 			});
 	}
 
+	/// <summary>
+	/// PennMUSH <c>fun_nearby</c> (src/fundb.c:896). Three things about the shape are load-bearing:
+	/// <list type="number">
+	///   <item>The answer is <c>nearby()</c> — immediate locations plus the two carrying cases — and not
+	///     "same enclosing room". A coin in a bag in the Tavern is <em>not</em> nearby a player standing
+	///     in the Tavern, because the coin's <c>where_is</c> is the bag.</item>
+	///   <item>The permission gate comes first, so an executor with no standing gets
+	///     <c>#-1 NO OBJECTS CONTROLLED</c> rather than being told whether the argument resolved.</item>
+	///   <item>An unresolvable argument answers a bare <c>#-1</c>. The match itself is noisy
+	///     (<c>match_thing</c> is <c>noisy_match_result</c>), so the reason went to the executor already.</item>
+	/// </list>
+	/// </summary>
 	[SharpFunction(Name = "nearby", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object1", "object2"])]
 	public static async ValueTask<CallState> Nearby(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -647,29 +659,33 @@ public partial class Functions
 		var obj1Arg = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var obj2Arg = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
 
+		// Both matches run before anything branches: Penn matches both, then gates, then reports.
 		var maybeObj1 = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
 			parser, executor, executor, obj1Arg, LocateFlags.All);
-
-		if (maybeObj1.IsError)
-		{
-			return maybeObj1.AsError;
-		}
-
 		var maybeObj2 = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
 			parser, executor, executor, obj2Arg, LocateFlags.All);
 
-		if (maybeObj2.IsError)
+		var obj1 = maybeObj1.IsError ? null : maybeObj1.AsSharpObject;
+		var obj2 = maybeObj2.IsError ? null : maybeObj2.AsSharpObject;
+
+		// controls() and nearby() are both false for NOTHING in Penn, so an argument that did not
+		// resolve simply contributes nothing to the gate rather than skipping it.
+		if (!await Standing(executor, obj1) && !await Standing(executor, obj2) && !await executor.IsSee_All())
 		{
-			return maybeObj2.AsError;
+			return new CallState(ErrorMessages.Returns.NoObjectsControlled);
 		}
 
-		var obj1 = maybeObj1.AsSharpObject;
-		var obj2 = maybeObj2.AsSharpObject;
+		if (obj1 is null || obj2 is null)
+		{
+			return new CallState(ErrorMessages.Returns.Nothing);
+		}
 
-		var room1 = await LocateService.Room(obj1);
-		var room2 = await LocateService.Room(obj2);
+		return new CallState(await Library.Services.LocateService.Nearby(obj1, obj2));
 
-		return new CallState(room1.Object().DBRef == room2.Object().DBRef);
+		static async ValueTask<bool> Standing(AnySharpObject executor, AnySharpObject? obj)
+			=> obj is not null
+				 && (await PermissionService!.Controls(executor, obj)
+						 || await Library.Services.LocateService.Nearby(executor, obj));
 	}
 
 	[SharpFunction(Name = "playermem", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]

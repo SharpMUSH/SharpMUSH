@@ -231,7 +231,7 @@ DELETE r
 			Mogrifier = node.Properties.ContainsKey("mogrifier") ? node["mogrifier"].As<string>() : "",
 			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetChannelOwnerAsync(channelName, ct)),
 			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
-			GetChannelMembersAsync(channelName, CancellationToken.None))
+				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(enumCt => GetChannelMembersAsync(channelName, enumCt)))
 		};
 	}
 

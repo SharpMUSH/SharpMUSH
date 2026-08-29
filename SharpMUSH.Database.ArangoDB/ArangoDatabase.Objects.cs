@@ -598,16 +598,18 @@ public partial class ArangoDatabase
 			ModifiedTime = obj.GetProperty("ModifiedTime").GetInt64(),
 			Warnings = warnings,
 			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty,
-			Flags = new(() => GetObjectFlagsAsync(id, type.ToUpper(), CancellationToken.None)),
-			Powers = new(() => GetPowersAsync(id, CancellationToken.None)),
-			Attributes = new(() => GetTopLevelAttributesAsync(id, CancellationToken.None)),
-			LazyAttributes = new(() => GetTopLevelLazyAttributesAsync(id, CancellationToken.None)),
-			AllAttributes = new(() => GetAllAttributesAsync(id, CancellationToken.None)),
-			LazyAllAttributes = new(() => GetAllLazyAttributesAsync(id, CancellationToken.None)),
+			// FreshAsyncEnumerable, not the iterator directly: the Lazy caches one instance that every
+			// call site enumerates, and an async iterator's state machine is not safe to share. See #798.
+			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => GetObjectFlagsAsync(id, type.ToUpper(), enumCt))),
+			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(enumCt => GetPowersAsync(id, enumCt))),
+			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),
+			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
+			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesAsync(id, enumCt))),
+			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesAsync(id, enumCt))),
 			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
 			Parent = new(async ct => await GetParentAsync(id, ct)),
 			Zone = new(async ct => await GetZoneAsync(id, ct)),
-			Children = new(() => GetChildrenAsync(id, CancellationToken.None))
+			Children = new(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(id, enumCt)!))
 		};
 	}
 
@@ -664,24 +666,18 @@ public partial class ArangoDatabase
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
 			Warnings = obj.Warnings,
-			Flags =
-				new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() => GetObjectFlagsAsync(obj.Id, obj.Type.ToUpper(), CancellationToken.None)),
-			Powers = new Lazy<IAsyncEnumerable<SharpPower>>(() => GetPowersAsync(obj.Id, CancellationToken.None)),
-			Attributes =
-				new Lazy<IAsyncEnumerable<SharpAttribute>>(() =>
-					GetTopLevelAttributesAsync(obj.Id, CancellationToken.None)),
-			LazyAttributes =
-				new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() =>
-					GetTopLevelLazyAttributesAsync(obj.Id, CancellationToken.None)),
-			AllAttributes =
-				new Lazy<IAsyncEnumerable<SharpAttribute>>(() => GetAllAttributesAsync(obj.Id, CancellationToken.None)),
-			LazyAllAttributes =
-				new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() =>
-					GetAllLazyAttributesAsync(obj.Id, CancellationToken.None)),
+			// FreshAsyncEnumerable, not the iterator directly: the Lazy caches one instance that every
+			// call site enumerates, and an async iterator's state machine is not safe to share. See #798.
+			Flags = new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => GetObjectFlagsAsync(obj.Id, obj.Type.ToUpper(), enumCt))),
+			Powers = new Lazy<IAsyncEnumerable<SharpPower>>(() => new FreshAsyncEnumerable<SharpPower>(enumCt => GetPowersAsync(obj.Id, enumCt))),
+			Attributes = new Lazy<IAsyncEnumerable<SharpAttribute>>(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(obj.Id, enumCt))),
+			LazyAttributes = new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(obj.Id, enumCt))),
+			AllAttributes = new Lazy<IAsyncEnumerable<SharpAttribute>>(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesAsync(obj.Id, enumCt))),
+			LazyAllAttributes = new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesAsync(obj.Id, enumCt))),
 			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetObjectOwnerAsync(obj.Id, ct)),
 			Parent = new AsyncLazy<AnyOptionalSharpObject>(async ct => await GetParentAsync(obj.Id, ct)),
 			Zone = new AsyncLazy<AnyOptionalSharpObject>(async ct => await GetZoneAsync(obj.Id, ct)),
-			Children = new Lazy<IAsyncEnumerable<SharpObject>?>(() => GetChildrenAsync(obj.Id, CancellationToken.None))
+			Children = new Lazy<IAsyncEnumerable<SharpObject>?>(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(obj.Id, enumCt)!))
 		};
 	public async ValueTask SetLockAsync(SharpObject target, string lockName, Library.Models.SharpLockData lockData,
 		CancellationToken ct = default)
@@ -848,10 +844,12 @@ public partial class ArangoDatabase
 			// Flags are edges to node_object_flags, not an array on the object — `v.Flags[*].Name` read a
 			// field that node_objects documents do not have, so the predicate was false for every row.
 			// The Type disjunct reproduces the type-named flag GetObjectFlagsAsync synthesises, which
-			// HelperFunctions.HasFlag sees and which no edge backs.
+			// HelperFunctions.HasFlag sees and which no edge backs. Aliases count for the same reason
+			// they count in that helper: Penn's ptab_flag holds them alongside the names.
 			filters.Add($@"(LOWER(v.Type) == LOWER(@flagName) OR LENGTH(
 				FOR flag IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphFlags}'
 				FILTER LOWER(flag.Name) == LOWER(@flagName)
+					OR LOWER(@flagName) IN (FOR a IN (flag.Aliases OR []) RETURN LOWER(a))
 				LIMIT 1
 				RETURN 1) > 0)");
 			bindVars["flagName"] = filter.HasFlag;

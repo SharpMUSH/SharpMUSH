@@ -98,28 +98,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "con", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Con(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return CallState.Empty;
-				}
-
-				var contents = await locate.AsContainer.Content(Mediator!)
-					.Take(1)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-				return string.Join(" ", contents);
-			});
-	}
+		=> await WalkFirst(parser, WalkType.Contents);
 
 	[SharpFunction(Name = "controls", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "victim"])]
 	public static async ValueTask<CallState> Controls(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -277,37 +256,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "exit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Exit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (locate.IsPlayer && enactor.Object().DBRef == locate.Object().DBRef)
-				{
-					locate = (await locate.AsPlayer.Location.WithCancellation(CancellationToken.None)).WithExitOption();
-				}
-
-				if (!locate.IsRoom)
-				{
-					return ErrorMessages.Returns.ErrorNotARoom;
-				}
-
-				var exits = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsExit)
-					.Select(x => x.Object().DBRef)
-					.ToArrayAsync();
-
-				return exits.Length != 0
-					? exits.First().ToString()
-					: string.Empty;
-			});
-	}
+		=> await WalkFirst(parser, WalkType.Exit);
 
 	[SharpFunction(Name = "followers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Followers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1427,45 +1376,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "next", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Next(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				AnySharpContainer location;
-
-				if (locate.IsExit)
-				{
-					var exitLocation = await locate.AsExit.Location.WithCancellation(CancellationToken.None);
-					location = exitLocation;
-				}
-				else if (locate.IsContent)
-				{
-					location = await locate.AsContent.Location();
-				}
-				else
-				{
-					// Rooms don't have a next
-					return "#-1";
-				}
-
-				var contents = await location.Content(Mediator!).ToListAsync();
-
-				var currentIndex = contents.FindIndex(x => x.Object().DBRef == locate.Object().DBRef);
-
-				if (currentIndex == -1 || currentIndex == contents.Count - 1)
-				{
-					return "#-1";
-				}
-
-				return contents[currentIndex + 1].Object().DBRef;
-			});
-	}
+		=> await WalkNext(parser);
 
 	[SharpFunction(Name = "nextdbref", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static async ValueTask<CallState> NextDbReference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1795,499 +1706,67 @@ public partial class Functions
 
 	[SharpFunction(Name = "xthings", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-
-		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
-		{
-			return ErrorMessages.Returns.InvalidArguments;
-		}
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			arg0,
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var things = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsThing)
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", things);
-			});
-	}
+		=> await WalkWindow(parser, WalkType.Thing, skipDark: false);
 
 	[SharpFunction(Name = "xvcon", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-
-		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
-		{
-			return ErrorMessages.Returns.InvalidArguments;
-		}
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			arg0,
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var paginated = await locate.AsContainer.Content(Mediator!)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", paginated);
-			});
-	}
+		=> await WalkWindow(parser, WalkType.Contents, skipDark: true);
 
 	[SharpFunction(Name = "xvexits", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-
-		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
-		{
-			return ErrorMessages.Returns.InvalidArguments;
-		}
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			arg0,
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var paginated = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", paginated);
-			});
-	}
+		=> await WalkWindow(parser, WalkType.Exit, skipDark: true);
 
 	[SharpFunction(Name = "xvplayers", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-
-		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
-		{
-			return ErrorMessages.Returns.InvalidArguments;
-		}
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			arg0,
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var paginated = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", paginated);
-			});
-	}
+		=> await WalkWindow(parser, WalkType.Player, skipDark: true);
 
 	[SharpFunction(Name = "xvthings", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-
-		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
-		{
-			return ErrorMessages.Returns.InvalidArguments;
-		}
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			arg0,
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var paginated = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", paginated);
-			});
-	}
+		=> await WalkWindow(parser, WalkType.Thing, skipDark: true);
 
 	[SharpFunction(Name = "xcon", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-
-		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
-		{
-			return ErrorMessages.Returns.InvalidArguments;
-		}
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			arg0,
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var contents = await locate.AsContainer.Content(Mediator!)
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", contents);
-			});
-	}
+		=> await WalkWindow(parser, WalkType.Contents, skipDark: false);
 
 	[SharpFunction(Name = "xexits", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-
-		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
-		{
-			return ErrorMessages.Returns.InvalidArguments;
-		}
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			arg0,
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var exits = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsExit)
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", exits);
-			});
-	}
+		=> await WalkWindow(parser, WalkType.Exit, skipDark: false);
 
 	[SharpFunction(Name = "xplayers", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-
-		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
-		{
-			return ErrorMessages.Returns.InvalidArguments;
-		}
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			arg0,
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var players = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsPlayer)
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", players);
-			});
-	}
+		=> await WalkWindow(parser, WalkType.Player, skipDark: false);
 
 	[SharpFunction(Name = "lcon", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			 async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var contents = await locate.AsContainer.Content(Mediator!)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-				return string.Join(" ", contents);
-			});
-	}
+		=> await WalkContentsWithFilter(parser);
 
 	[SharpFunction(Name = "lexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			 async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var exits = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsExit)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-				return string.Join(" ", exits);
-			});
-	}
+		=> await WalkList(parser, WalkType.Exit, skipDark: false);
 
 	[SharpFunction(Name = "lplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var players = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsPlayer)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-				return string.Join(" ", players);
-			});
-	}
+		=> await WalkList(parser, WalkType.Player, skipDark: false);
 
 	[SharpFunction(Name = "lthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var things = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsThing)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-				return string.Join(" ", things);
-			});
-	}
+		=> await WalkList(parser, WalkType.Thing, skipDark: false);
 
 	[SharpFunction(Name = "lvcon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var visibleContents = await locate.AsContainer.Content(Mediator!)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", visibleContents);
-			});
-	}
+		=> await WalkList(parser, WalkType.Contents, skipDark: true);
 
 	[SharpFunction(Name = "lvexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var visibleExits = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", visibleExits);
-			});
-	}
+		=> await WalkList(parser, WalkType.Exit, skipDark: true);
 
 	[SharpFunction(Name = "lvplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var visiblePlayers = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", visiblePlayers);
-			});
-	}
+		=> await WalkList(parser, WalkType.Player, skipDark: true);
 
 	[SharpFunction(Name = "lvthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				var visibleThings = await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", visibleThings);
-			});
-	}
+		=> await WalkList(parser, WalkType.Thing, skipDark: true);
 
 	/// <summary>
 	/// Checks a single-letter flag string (like "Wc!P") against an object.
@@ -2555,186 +2034,33 @@ public partial class Functions
 
 	[SharpFunction(Name = "ncon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				return await locate.AsContainer.Content(Mediator!).CountAsync();
-			});
-	}
+		=> await WalkCount(parser, WalkType.Contents, skipDark: false);
 
 	[SharpFunction(Name = "nexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				return await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsExit)
-					.CountAsync();
-			});
-	}
+		=> await WalkCount(parser, WalkType.Exit, skipDark: false);
 
 	[SharpFunction(Name = "nplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				return await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsPlayer)
-					.CountAsync();
-			});
-	}
+		=> await WalkCount(parser, WalkType.Player, skipDark: false);
 
 	[SharpFunction(Name = "nthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				return await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsThing)
-					.CountAsync();
-			});
-	}
+		=> await WalkCount(parser, WalkType.Thing, skipDark: false);
 
 	[SharpFunction(Name = "nvcon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				return await locate.AsContainer.Content(Mediator!)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.CountAsync();
-			});
-	}
+		=> await WalkCount(parser, WalkType.Contents, skipDark: true);
 
 	[SharpFunction(Name = "nvexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				return await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.CountAsync();
-			});
-	}
+		=> await WalkCount(parser, WalkType.Exit, skipDark: true);
 
 	[SharpFunction(Name = "nvplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				return await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.CountAsync();
-			});
-	}
+		=> await WalkCount(parser, WalkType.Player, skipDark: true);
 
 	[SharpFunction(Name = "nvthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				if (!locate.IsContainer)
-				{
-					return ErrorMessages.Returns.ExitsCannotContainThings;
-				}
-
-				return await locate.AsContainer.Content(Mediator!)
-					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.CountAsync();
-			});
-	}
+		=> await WalkCount(parser, WalkType.Thing, skipDark: true);
 }
