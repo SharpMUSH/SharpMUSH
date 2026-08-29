@@ -600,12 +600,17 @@ public static class SoftcodeLayout
 	private static int Layout(Group group, IReadOnlyList<TokenInfo> tokens, int depth, int column, int width,
 		int indentUnit, List<SoftcodeBreak> breaks, bool forced = false)
 	{
-		// A brace group and a source-copying call are both atomic: their contents reach the output as
-		// raw source, so no break anywhere inside them is safe — not even at a bracket, since no visitor
-		// runs over that span to discard the whitespace a delimiter absorbed.
+		// A brace group is a unit boundary for expansion in both directions, so an enclosing split does not
+		// reach it: it goes multi-line only when its own contents genuinely do not fit. Without this, a
+		// five-character {short} branch inside a split switch() would be broken after its '{' for no gain.
+		var forcedHere = forced && group.OpenType != "OBRACE";
+
+		// A source-copying call is atomic: its contents reach the output as raw source, so no break
+		// anywhere inside it is safe — not even at a bracket, since no visitor runs over that span to
+		// discard the whitespace a delimiter absorbed.
 		// Anything else stays flat only if nothing above it has broken, it is genuinely one line, and
 		// that line fits.
-		if (group.IsAtomic || (!forced && !group.HasNewline && column + group.FlatWidth <= width))
+		if (group.IsAtomic || (!forcedHere && !group.HasNewline && column + group.FlatWidth <= width))
 		{
 			return group.HasNewline ? group.FlatWidth : column + group.FlatWidth;
 		}
@@ -626,12 +631,12 @@ public static class SoftcodeLayout
 		// to break as well.
 		var goesMultiLine = OpensABreak(group, lastContent);
 
-		// A brace group is a unit boundary for expansion, in both directions: it neither starts one nor
-		// passes one through. A '{' going multi-line is not a call being split — it is the same kind of
-		// event as the root separating its commands at their ';', and a brace body *is* a command in the
-		// cases that matter (@dolist, @switch, $-command branches). Measuring it on its own is what stops
-		// a two-line @dolist becoming eight.
-		var childrenForced = (forced || goesMultiLine) && group.OpenType != "OBRACE";
+		// The other half of the brace boundary: it passes no expansion through either. A '{' going
+		// multi-line is not a call being split — it is the same kind of event as the root separating its
+		// commands at their ';', and a brace body *is* a command in the cases that matter (@dolist,
+		// @switch, $-command branches). Measuring it on its own is what stops a two-line @dolist becoming
+		// eight.
+		var childrenForced = (forcedHere || goesMultiLine) && group.OpenType != "OBRACE";
 
 		// A '[' hands its break to the call that starts right after it rather than taking one itself:
 		// '[u(' reads better than a '[' alone above an indented 'u(', and the call's own opener break does

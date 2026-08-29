@@ -175,12 +175,35 @@ public class SoftcodeLayoutTests
 	public async Task BraceGroup_StopsAnExpansionComingFromOutside()
 	{
 		// The other direction: the enclosing switch() is split, which would otherwise force everything
-		// beneath it open. The brace body is still measured on its own and stays flat.
+		// beneath it open. The brace group is measured on its own, so it neither breaks at its '{' nor
+		// expands inside — asserted as an exact render, because checking only that the body stayed flat
+		// misses a '{' left dangling above it, which is what this originally did.
 		const string src = "switch(%0,1,{a branch with [u(FUN`X,%1)] in it},2,another arm entirely,fallback)";
 		var tokens = Lex(src);
 		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 60, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
 
-		await Assert.That(rendered).Contains("a branch with [u(FUN`X,%1)] in it}");
+		await Assert.That(rendered).IsEqualTo(
+			"""
+			switch(
+			  %0,
+			  1,
+			  {a branch with [u(FUN`X,%1)] in it},
+			  2,
+			  another arm entirely,
+			  fallback)
+			""");
+	}
+
+	[Test]
+	public async Task ShortBraceGroup_IsNotSplitByAnExpandedParent()
+	{
+		// The degenerate case of the same rule, and the one that makes it obvious: a five-character
+		// branch has nothing to gain from a line of its own.
+		const string src = "switch(%0,1,{short},2,another arm entirely here,a fallback arm goes here)";
+		var tokens = Lex(src);
+		var rendered = Render(tokens, SoftcodeLayout.Compute(tokens, width: 60, classifyFunction: AllNamesEvaluateTheirArguments, parseType: ParseType.CommandList));
+
+		await Assert.That(rendered).Contains("\n  {short},");
 	}
 
 	[Test]
