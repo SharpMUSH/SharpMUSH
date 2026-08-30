@@ -229,18 +229,21 @@ DELETE r
 			ModLock = node.Properties.ContainsKey("modLock") ? node["modLock"].As<string>() : "",
 			Buffer = node.Properties.ContainsKey("buffer") ? node["buffer"].As<int>() : 0,
 			Mogrifier = node.Properties.ContainsKey("mogrifier") ? node["mogrifier"].As<string>() : "",
-			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetChannelOwnerAsync(channelName, ct)),
+			Owner = new AsyncLazy<SharpPlayer?>(async ct => await GetChannelOwnerAsync(channelName, ct)),
 			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
 				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(enumCt => GetChannelMembersAsync(channelName, enumCt)))
 		};
 	}
 
-	private async ValueTask<SharpPlayer> GetChannelOwnerAsync(string channelName, CancellationToken ct)
+	private async ValueTask<SharpPlayer?> GetChannelOwnerAsync(string channelName, CancellationToken ct)
 	{
 		var result = await ExecuteWithRetryAsync("""
 MATCH (c:Channel {name: $name})-[:HAS_CHANNEL_OWNER]->(o:Object)
 RETURN o
 """, new { name = channelName }, ct);
+
+		// No row is a real answer, not a broken one: the channel may have lost its owner, or gone itself.
+		if (result.Result.Count == 0) return null;
 
 		var objNode = result.Result[0]["o"].As<INode>();
 		var ownerObj = await BuildTypedObjectFromObjectNode(objNode, ct);

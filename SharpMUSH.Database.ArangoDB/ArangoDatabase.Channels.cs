@@ -34,11 +34,15 @@ public partial class ArangoDatabase
 				}, cancellationToken: ct)
 			.Select(SharpChannelQueryToSharpChannel);
 
-	private async ValueTask<SharpPlayer> GetChannelOwnerAsync(string channelId, CancellationToken ct = default)
+	private async ValueTask<SharpPlayer?> GetChannelOwnerAsync(string channelId, CancellationToken ct = default)
 	{
 		var vertexes = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN v._id",
 			cancellationToken: ct);
+
+		// No vertex is a real answer, not a broken one: the channel may have lost its owner, or gone itself.
+		if (vertexes.Count == 0) return null;
+
 		var vertex = vertexes.First();
 		var owner = await GetObjectNodeAsync(vertex, ct);
 		return owner.AsPlayer;
@@ -81,7 +85,7 @@ public partial class ArangoDatabase
 			SeeLock = x.SeeLock,
 			HideLock = x.HideLock,
 			ModLock = x.ModLock,
-			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetChannelOwnerAsync(x.Id, ct)),
+			Owner = new AsyncLazy<SharpPlayer?>(async ct => await GetChannelOwnerAsync(x.Id, ct)),
 			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
 				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(enumCt => GetChannelMembersAsync(x.Id, enumCt))),
 			Mogrifier = x.Mogrifier,

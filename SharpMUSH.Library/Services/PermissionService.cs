@@ -479,7 +479,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	/// </summary>
 	public async ValueTask<bool> ChannelCanModifyAsync(AnySharpObject target, SharpChannel channel) =>
 		await target.IsWizard()
-		|| (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id()
+		|| (await channel.Owner.WithCancellation(CancellationToken.None))?.Id == target.Id()
 		|| (
 			!await target.HasPower("guest")
 			&& !string.IsNullOrWhiteSpace(channel.ModLock)
@@ -514,12 +514,13 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	public async ValueTask<bool> ChannelCanNukeAsync(AnySharpObject target, SharpChannel channel)
 		=> await target.IsWizard()
-			 || (await channel.Owner.WithCancellation(CancellationToken.None)).Id ==
+			 // A channel nobody owns matches nobody's owner, so only a wizard can nuke it.
+			 || (await channel.Owner.WithCancellation(CancellationToken.None))?.Id ==
 			 (await target.Object().Owner.WithCancellation(CancellationToken.None)).Id;
 
 	public async ValueTask<bool> ChannelCanDecomposeAsync(AnySharpObject target, SharpChannel channel)
 		=> await target.IsSee_All()
-			 || (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id()
+			 || (await channel.Owner.WithCancellation(CancellationToken.None))?.Id == target.Id()
 			 || await ChannelCanModifyAsync(target, channel);
 
 	public async ValueTask<bool> CanNoSpoof(AnySharpObject executor)

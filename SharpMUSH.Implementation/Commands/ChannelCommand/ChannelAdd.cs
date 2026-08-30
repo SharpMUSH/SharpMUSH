@@ -60,7 +60,7 @@ public static class ChannelAdd
 		var allChannels = Mediator.CreateStream(new GetChannelListQuery());
 		var ownedChannels = await allChannels
 			.Where(async (x, _) =>
-				(await x.Owner.WithCancellation(CancellationToken.None)).Id == executorOwner.Id)
+				(await x.Owner.WithCancellation(CancellationToken.None))?.Id == executorOwner.Id)
 			.CountAsync();
 
 		if (!await executor.IsPriv() && ownedChannels >= Configuration.CurrentValue.Chat.MaxChannels)

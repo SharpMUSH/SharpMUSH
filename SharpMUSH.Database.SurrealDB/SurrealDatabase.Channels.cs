@@ -314,13 +314,13 @@ public partial class SurrealDatabase
 			ModLock = record.modLock,
 			Buffer = record.buffer,
 			Mogrifier = record.mogrifier,
-			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetChannelOwnerAsync(channelName, ct)),
+			Owner = new AsyncLazy<SharpPlayer?>(async ct => await GetChannelOwnerAsync(channelName, ct)),
 			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
 				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(enumCt => GetChannelMembersAsync(channelName, enumCt)))
 		};
 	}
 
-	private async ValueTask<SharpPlayer> GetChannelOwnerAsync(string channelName, CancellationToken ct)
+	private async ValueTask<SharpPlayer?> GetChannelOwnerAsync(string channelName, CancellationToken ct)
 	{
 		var parameters = new Dictionary<string, object?> { ["name"] = channelName };
 		var response = await ExecuteAsync(
@@ -328,8 +328,9 @@ public partial class SurrealDatabase
 			parameters, ct);
 
 		var ownerKeys = response.GetValue<List<int>>(0)!;
-		if (ownerKeys.Count == 0)
-			throw new InvalidOperationException($"No owner found for channel '{channelName}'");
+
+		// No key is a real answer, not a broken one: the channel may have lost its owner, or gone itself.
+		if (ownerKeys.Count == 0) return null;
 
 		var ownerKey = ownerKeys[0];
 		var typed = await BuildTypedObjectFromKey(ownerKey, ct);

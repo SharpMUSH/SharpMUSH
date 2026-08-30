@@ -560,7 +560,8 @@ public partial class Commands
 		await foreach (var channel in channels)
 		{
 			var channelOwner = await channel.Owner.WithCancellation(CancellationToken.None);
-			if (channelOwner.Object.DBRef.Number != playerDbRefNumber)
+			// A channel nobody owns is not this player's to hand on.
+			if (channelOwner?.Object.DBRef.Number != playerDbRefNumber)
 				continue;
 
 			await Mediator.Send(new UpdateChannelOwnerCommand(channel, probatePlayer));

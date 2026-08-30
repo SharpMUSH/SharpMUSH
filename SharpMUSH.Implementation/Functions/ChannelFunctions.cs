@@ -415,7 +415,7 @@ public partial class Functions
 		var channel = maybeChannel.AsChannel;
 		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
 
-		return new CallState(owner.Object.DBRef.ToString());
+		return new CallState(owner?.Object.DBRef.ToString() ?? ErrorMessages.Returns.Nothing);
 	}
 
 	[SharpFunction(Name = "crecall", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel", "lines", "start"])]
@@ -700,7 +700,7 @@ public partial class Functions
 		return infoType switch
 		{
 			"name" => new CallState(channel.Name),
-			"owner" => new CallState($"#{owner.Object.DBRef.Number}"),
+			"owner" => new CallState(owner is null ? ErrorMessages.Returns.Nothing : $"#{owner.Object.DBRef.Number}"),
 			"members" => new CallState((await channel.Members.Value.CountAsync()).ToString()),
 			"buffer" => new CallState("50"), // Default buffer size
 			_ => new CallState(ErrorMessages.Returns.InvalidInfoType)
