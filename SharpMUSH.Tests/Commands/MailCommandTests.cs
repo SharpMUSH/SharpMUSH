@@ -292,6 +292,37 @@ public class MailCommandTests
 		await Assert.That(mail!.Content.ToPlainText()).Contains("-- Regards");
 	}
 
+	/// <summary>
+	/// Delivering to nobody has two causes — no name resolved, or every resolved recipient refuses
+	/// mail from this sender — and both used to return the same empty recipient list, so a caller
+	/// could only report one of them. The web endpoint reported a mail-locked character as though
+	/// they did not exist.
+	/// </summary>
+	[Test]
+	public async ValueTask MailDistinguishesAnUnknownNameFromARefusedOne()
+	{
+		var sender = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailRefusedFrom");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailRefusedTo");
+
+		var targetParser = WebAppFactoryArg.CommandParserFor(target.DbRef, target.Handle);
+		await targetParser.CommandParse(target.Handle, ConnectionService,
+			MModule.single($"@lock/mail me=#{target.DbRef.Number}"));
+
+		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
+
+		var refused = await parser.CommandParse(sender.Handle, ConnectionService,
+			MModule.single($"@mail #{target.DbRef.Number}=Subject/Body."));
+		var missing = await parser.CommandParse(sender.Handle, ConnectionService,
+			MModule.single("@mail NoSuchPlayerAtAll=Subject/Body."));
+
+		await Assert.That(refused.Message!.ToPlainText())
+			.IsEqualTo(ErrorMessages.Returns.RecipientDoesNotAcceptMail);
+		await Assert.That(missing.Message!.ToPlainText())
+			.IsEqualTo(ErrorMessages.Returns.NoSuchPlayer);
+	}
+
 	[Test]
 	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]

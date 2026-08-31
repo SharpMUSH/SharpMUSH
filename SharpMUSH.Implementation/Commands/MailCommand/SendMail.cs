@@ -194,6 +194,17 @@ public static class SendMail
 			}
 		}
 
+		// Delivering to nobody has two causes, and an empty recipient list cannot tell them apart:
+		// either no name resolved, or every name that did resolve refuses mail from this sender. Both
+		// are already reported to the sender by notification; naming them in the return value too is
+		// what lets a non-interactive caller — the web endpoint — say which one happened.
+		if (delivered.Count == 0)
+		{
+			return MModule.single(knownPlayerList.Count == 0
+				? ErrorMessages.Returns.NoSuchPlayer
+				: ErrorMessages.Returns.RecipientDoesNotAcceptMail);
+		}
+
 		return MModule.multipleWithDelimiter(
 			MModule.single(" "),
 			delivered

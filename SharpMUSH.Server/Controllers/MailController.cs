@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -157,16 +158,22 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 		var result = await commandInvoker.InvokeAsync("@MAIL", character, arguments, switches);
 		var message = result?.Message?.ToPlainText() ?? string.Empty;
 
+		// @mail returns the dbrefs it delivered to, or names which way it failed. A recipient who
+		// refuses your mail exists, so that is a 403 and not the 404 an unresolvable name gets.
+		if (message == ErrorMessages.Returns.NoSuchPlayer)
+		{
+			return NotFound(new { error = $"No such character: {request.To}" });
+		}
+
 		if (message.StartsWith("#-1", StringComparison.Ordinal))
 		{
 			return StatusCode(StatusCodes.Status403Forbidden, new { error = message });
 		}
 
-		// @mail returns the dbrefs it actually delivered to. Nothing means every name was refused, and
-		// the reason went to the character as a notification rather than into this response.
 		if (string.IsNullOrWhiteSpace(message))
 		{
-			return NotFound(new { error = $"No such character: {request.To}" });
+			return StatusCode(StatusCodes.Status500InternalServerError,
+				new { error = "@MAIL returned no result." });
 		}
 
 		logger.LogInformation("Web mail sent from {From} to {To}.", character, request.To);
