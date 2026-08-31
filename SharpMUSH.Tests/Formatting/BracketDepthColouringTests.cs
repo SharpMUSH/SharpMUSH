@@ -88,7 +88,13 @@ public class BracketDepthColouringTests
 	{
 		var result = Format(@"ljust(%b\[%b[left(%0)]%b\]%b,%1)");
 
-		await Assert.That(StyleAt(result, 9)).IsNotEqualTo(StyleAt(result, 12));
+		// Null, not merely "different from the real bracket": this Format overload passes no semantic
+		// tokens, so the depth override is the only thing that can paint anything here. Asserting a
+		// difference would still pass if '\[' were painted some *other* depth's colour, which is the
+		// exact defect a lexical matcher produces -- it pairs '\[' with the ']' at 21 and shifts every
+		// depth after it.
+		await Assert.That(StyleAt(result, 9)).IsNull();
+		await Assert.That(StyleAt(result, 24)).IsNull();
 		await Assert.That(StyleAt(result, 12)).IsEqualTo(StyleAt(result, 21));
 	}
 
