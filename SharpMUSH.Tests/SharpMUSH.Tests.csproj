@@ -24,7 +24,7 @@
 
   <ItemGroup>
     <PackageReference Include="bunit" Version="2.9.0" />
-    <PackageReference Include="AngleSharp" Version="1.7.0" />
+    <PackageReference Include="AngleSharp" Version="1.7.2" />
     <PackageReference Include="coverlet.collector" Version="10.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
