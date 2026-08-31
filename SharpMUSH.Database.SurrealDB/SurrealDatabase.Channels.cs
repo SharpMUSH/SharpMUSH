@@ -107,11 +107,22 @@ public partial class SurrealDatabase
 		//
 		// One transaction so the channel node and its owner/membership edges commit together — otherwise
 		// the channel is visible before its owner edge and GetChannelOwnerAsync throws.
+		//
+		// RELATE channel:⟨$name⟩->..., not RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT
+		// 1)->...: the channel's own record id already IS $name (see the CREATE just above), so there was
+		// never a need to look it up by its indexed `name` field at all - and under SurrealDB 3.0.5 doing
+		// so is actively broken (surrealdb/surrealdb#6584, fixed upstream in 3.1.0-beta.3 but not yet
+		// picked up by the SurrealDb.Embedded.InMemory/RocksDb 1.0.0 NuGet packages, which still pin
+		// surrealdb-core 3.0.5): selecting a record via an indexed field, within the same transaction
+		// that just inserted it, returns id = NONE - reliably, every time, no concurrency required -
+		// because the index isn't updated with the transaction's own pending write. A RELATE endpoint
+		// that evaluates to NONE fails outright, so every channel creation failed. Referencing the known
+		// id directly sidesteps the bug instead of relying on the (still-broken) fix.
 		const string createQuery =
 			"BEGIN TRANSACTION;" +
 			"CREATE channel:⟨$name⟩ SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = '';" +
-			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->object:$ownerKey;" +
-			"RELATE object:$ownerKey->member_of_channel->(SELECT VALUE id FROM channel WHERE name = $name LIMIT 1) SET combine = false, gagged = false, hide = false, mute = false, title = '';" +
+			"RELATE channel:⟨$name⟩->owner_of_channel->object:$ownerKey;" +
+			"RELATE object:$ownerKey->member_of_channel->channel:⟨$name⟩ SET combine = false, gagged = false, hide = false, mute = false, title = '';" +
 			"COMMIT TRANSACTION";
 
 		const int maxAttempts = 8;

@@ -63,6 +63,14 @@ public partial class SurrealDatabase
 		{
 			logger.LogInformation("Migrating SurrealDB Database");
 
+			// SurrealDB 3.x errors "table 'x' does not exist" on ANY read (whole-table or record-id)
+			// against a table that has never been written to or explicitly DEFINE'd - unlike 2.x, which
+			// silently returned an empty result. MigrationAppliedAsync below is the very first query ever
+			// run against a fresh database, against the "migration" table specifically, so every table
+			// this provider ever reads from must exist before that point - not just "migration". This is
+			// idempotent and cheap, so it runs unconditionally on every Migrate() call, not just first-run.
+			await ExecuteAsync(string.Join(' ', TableNames.Select(t => $"DEFINE TABLE IF NOT EXISTS {t} SCHEMALESS;")), cancellationToken);
+
 			// Migrations are recorded in the database: a migration id that is already present is never
 			// run again, so a restart against a persistent store re-applies nothing. Everything outside
 			// the gated block is idempotent (IF NOT EXISTS / UPSERT), so re-running Migrate() is always
@@ -226,6 +234,24 @@ public partial class SurrealDatabase
 	/// recorded in the database's <c>migration</c> table is never applied again.
 	/// </summary>
 	private const string InitialSeedMigrationId = "0001_initial_seed";
+
+	/// <summary>
+	/// Every table this provider ever reads or writes. Kept in sync by hand - there is no schema
+	/// reflection to derive it from - and DEFINE TABLE'd unconditionally at the top of every
+	/// Migrate() call so no table is ever read before it exists (see the call site).
+	/// </summary>
+	private static readonly string[] TableNames =
+	[
+		"account", "account_has_role", "account_owns_character", "at_location", "attribute",
+		"attribute_entry", "attribute_flag", "channel", "counter", "exit", "has_attribute",
+		"has_attribute_entry", "has_attribute_flag", "has_attribute_owner", "has_flags", "has_home",
+		"has_owner", "has_parent", "has_powers", "has_zone", "is_object", "mail", "mail_sender",
+		"member_of_channel", "migration", "object", "object_data", "object_flag", "owner_of_channel",
+		"player", "power", "received_mail", "role", "room", "server_data", "server_state", "session",
+		"sys_application", "sys_layout", "sys_managed_attribute", "sys_managed_structure", "sys_package",
+		"sys_package_dependency", "sys_package_object", "sys_package_revision", "sys_remote", "thing",
+		"wiki_page", "wiki_revision", "wiki_translation"
+	];
 
 	/// <summary>
 	/// Recomputes the dbref allocator from what the database actually holds. Runs on every

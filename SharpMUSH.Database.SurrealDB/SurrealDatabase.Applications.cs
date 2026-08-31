@@ -57,7 +57,7 @@ public partial class SurrealDatabase : IApplicationRegistryService
 			["componentTypeName"] = application.ComponentTypeName
 		};
 		await ExecuteAsync("""
-			UPSERT type::thing('sys_application', $slug) SET slug = $slug, displayName = $displayName,
+			UPSERT type::record('sys_application', $slug) SET slug = $slug, displayName = $displayName,
 				icon = $icon, kind = $kind, schemaUrl = $schemaUrl, dataUrl = $dataUrl,
 				submitRoute = $submitRoute, minimumRole = $minimumRole, navPlacement = $navPlacement,
 				zones = $zones, sortOrder = $sortOrder, owningPackage = $owningPackage,
@@ -86,7 +86,7 @@ public partial class SurrealDatabase : IApplicationRegistryService
 
 	public async Task RemoveApplicationAsync(string slug)
 	{
-		await ExecuteAsync("DELETE type::thing('sys_application', $slug)",
+		await ExecuteAsync("DELETE type::record('sys_application', $slug)",
 			new Dictionary<string, object?> { ["slug"] = slug });
 	}
 

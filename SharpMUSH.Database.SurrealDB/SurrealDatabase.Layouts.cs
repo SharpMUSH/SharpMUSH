@@ -29,7 +29,7 @@ public partial class SurrealDatabase : ILayoutRegistryService
 			["json"] = LayoutSerialization.Serialize(layout)
 		};
 		await ExecuteAsync(
-			"UPSERT type::thing('sys_layout', $scope) SET scope = $scope, json = $json",
+			"UPSERT type::record('sys_layout', $scope) SET scope = $scope, json = $json",
 			parameters);
 	}
 
@@ -59,7 +59,7 @@ public partial class SurrealDatabase : ILayoutRegistryService
 
 	public async Task RemoveLayoutAsync(string scope)
 	{
-		await ExecuteAsync("DELETE type::thing('sys_layout', $scope)",
+		await ExecuteAsync("DELETE type::record('sys_layout', $scope)",
 			new Dictionary<string, object?> { ["scope"] = scope });
 	}
 

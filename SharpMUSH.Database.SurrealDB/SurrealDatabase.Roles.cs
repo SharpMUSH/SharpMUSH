@@ -52,7 +52,7 @@ public partial class SurrealDatabase : IRoleRegistryService
 			["updatedAt"] = role.UpdatedAt
 		};
 		await ExecuteAsync("""
-			UPSERT type::thing('role', $slug) SET slug = $slug, name = $name, color = $color,
+			UPSERT type::record('role', $slug) SET slug = $slug, name = $name, color = $color,
 				priority = $priority, isSystem = $isSystem, permissionsJson = $permissionsJson,
 				createdAt = $createdAt, updatedAt = $updatedAt
 			""", parameters);
@@ -78,7 +78,7 @@ public partial class SurrealDatabase : IRoleRegistryService
 
 	public async Task RemoveRoleAsync(string slug)
 	{
-		await ExecuteAsync("DELETE type::thing('role', $slug)",
+		await ExecuteAsync("DELETE type::record('role', $slug)",
 			new Dictionary<string, object?> { ["slug"] = slug });
 	}
 

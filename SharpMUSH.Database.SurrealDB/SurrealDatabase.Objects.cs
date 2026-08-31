@@ -461,7 +461,9 @@ public partial class SurrealDatabase
 		if (!string.IsNullOrEmpty(filter.NamePattern))
 		{
 			if (filter.UseRegex)
-				conditions.Add("string::lowercase(name) ~ $namePattern");
+				// SurrealDB 3.x removed the `~` fuzzy-match operator entirely; string::matches is the
+				// regex-match function that was always available alongside it.
+				conditions.Add("string::matches(string::lowercase(name), $namePattern)");
 			else
 				conditions.Add("string::lowercase(name) CONTAINS string::lowercase($namePattern)");
 			parameters["namePattern"] = filter.UseRegex ? ToFullMatchRegex(filter.NamePattern.ToLower()) : filter.NamePattern;

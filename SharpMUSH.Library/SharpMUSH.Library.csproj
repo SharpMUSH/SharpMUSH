@@ -111,11 +111,7 @@
     <PackageReference Include="Core.Arango" Version="3.12.3" PrivateAssets="all" />
     <PackageReference Include="Neo4j.Driver" Version="6.0.0" PrivateAssets="all" />
     <!-- The core SurrealDb.Net client only (NOT the embedded provider). -->
-    <PackageReference Include="SurrealDb.Net" Version="0.9.0" PrivateAssets="all" />
-    <!-- SurrealDb.Net pulls System.Linq.Async 6.x, whose IOrderedAsyncEnumerable collides at compile time
-         with .NET 10's built-in System.Linq.AsyncEnumerable. ExcludeAssets="compile" keeps the runtime
-         assembly available but drops its compile-time facade (same fix the SurrealDB provider uses). -->
-    <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" PrivateAssets="all" />
+    <PackageReference Include="SurrealDb.Net" Version="1.0.0" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- The IEndpointContributor plugin seam (Plugins/IEndpointContributor.cs) takes an
