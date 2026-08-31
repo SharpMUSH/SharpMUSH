@@ -176,7 +176,10 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 				new { error = "@MAIL returned no result." });
 		}
 
-		logger.LogInformation("Web mail sent from {From} to {To}.", character, request.To);
+		// The recipients the command reports, not the string the caller sent: request.To is arbitrary
+		// caller text and a newline in it would forge log lines, while this is the engine's own list of
+		// what it actually delivered to — which is the more useful record anyway.
+		logger.LogInformation("Web mail sent from {From} to {Delivered}.", character, message);
 		return Ok(new { sent = true });
 	}
 
