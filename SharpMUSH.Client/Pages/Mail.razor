@@ -158,6 +158,13 @@ else
     private bool _bodyLoading;
     private bool _loading;
 
+    // Each pane's in-flight fetch is identified by a ticket rather than by what it was fetching:
+    // picking INBOX, then SENT, then INBOX again gives two requests the same folder name, so
+    // comparing names lets the older of the two win. A request applies its result only while it
+    // still holds the latest ticket.
+    private long _folderTicket;
+    private long _readTicket;
+
     protected override async Task OnInitializedAsync()
     {
         _characterActive = Terminal.IsConnected;
@@ -176,6 +183,8 @@ else
 
     private async Task SelectFolderAsync(string folder)
     {
+        var ticket = ++_folderTicket;
+        _readTicket++;
         _folder = folder;
         _selected = null;
         _body = null;
@@ -183,10 +192,9 @@ else
 
         var messages = await MailApi.ListAsync(folder);
 
-        // Same guard the reading pane uses: a slow list that lands after the reader picked another
-        // folder must neither replace the newer folder's rows nor clear the loading state the newer
-        // fetch still owns.
-        if (_folder != folder) return;
+        // A slow list that lands after the reader picked another folder must neither replace the
+        // newer folder's rows nor clear the loading state the newer fetch still owns.
+        if (ticket != _folderTicket) return;
 
         _messages = messages;
         _loading = false;
@@ -199,6 +207,7 @@ else
     /// </summary>
     private async Task SelectMessageAsync(MailService.MailSummary msg)
     {
+        var ticket = ++_readTicket;
         _selected = msg;
         _body = null;
         _bodyLoading = true;
@@ -206,7 +215,7 @@ else
         var message = await MailApi.ReadAsync(msg.Folder, msg.Number);
 
         // A slow read that lands after the reader has moved on must not overwrite the newer message.
-        if (_selected?.Number != msg.Number || _selected.Folder != msg.Folder) return;
+        if (ticket != _readTicket) return;
 
         _body = message?.Body;
         _bodyLoading = false;
