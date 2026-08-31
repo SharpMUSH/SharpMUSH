@@ -71,7 +71,9 @@ public sealed class CacheInvalidationClock : ICacheInvalidationClock
 		// A stamp older than the swept history cannot be cleared, because the record that would have
 		// cleared it is gone.
 		=> stamp <= Volatile.Read(ref _sweptThrough)
-			 || (_invalidatedAt.TryGetValue(key, out var at) && at > stamp);
+			 // Inclusive: two calls can land on the same tick, and then nothing says which came first.
+			 // Reading it as invalidated costs a cache fill; reading it the other way keeps a stale entry.
+			 || (_invalidatedAt.TryGetValue(key, out var at) && at >= stamp);
 
 	private void Sweep(long now)
 	{

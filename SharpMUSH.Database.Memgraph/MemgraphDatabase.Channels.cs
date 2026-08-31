@@ -125,11 +125,14 @@ c.buffer = $buffer, c.mogrifier = $mogrifier
 		var channelName = channel.Name.ToPlainText();
 		var ownerObjKey = newOwner.Object.Key;
 
+		// OPTIONAL on the old edge: gating the CREATE on finding one made re-owning a channel that has
+		// lost its owner a silent no-op, and that channel is exactly the one that needs re-owning.
+		// @channel/chown and ObjectDestructionService both arrive here.
 		await ExecuteWithRetryAsync("""
-MATCH (c:Channel {name: $name})-[r:HAS_CHANNEL_OWNER]->()
-DELETE r
-WITH c
+MATCH (c:Channel {name: $name})
 MATCH (o:Object {key: $ownerKey})
+OPTIONAL MATCH (c)-[r:HAS_CHANNEL_OWNER]->()
+DELETE r
 CREATE (c)-[:HAS_CHANNEL_OWNER]->(o)
 """, new { name = channelName, ownerKey = ownerObjKey }, cancellationToken);
 	}

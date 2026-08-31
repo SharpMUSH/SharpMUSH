@@ -115,6 +115,55 @@ public class FollowCommandTests
 			.Because("a mortal must be able to change who they follow: PennMUSH writes FOLLOWING as GOD");
 	}
 
+	/// <summary>
+	/// FOLLOW refuses a leader it cannot resolve, and writes nothing.
+	/// </summary>
+	/// <remarks>
+	/// The counterpart to the cache bug above, and the reason it went unnoticed for so long: a leader who
+	/// genuinely is not there produces the same "I can't see that here." as a leader the cached contents
+	/// list had lost. This pins the wording for the honest case, so the two stay distinguishable by what
+	/// FOLLOWING holds afterwards rather than by the message alone.
+	/// </remarks>
+	[Test]
+	public async ValueTask MortalFollow_RefusesALeaderItCannotResolve()
+	{
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowNoSuch");
+
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(follower.DbRef);
+
+		await Parser.CommandParse(follower.Handle, ConnectionService,
+			MModule.single($"follow {TestIsolationHelpers.GenerateUniqueName("NobodyHere")}"));
+
+		var report = recorder.For(follower.DbRef).Skip(before).ToArray();
+
+		await Assert.That(report.Any(m => m.Contains("can't see that here") || m.Contains("don't see that here")))
+			.IsTrue()
+			.Because($"FOLLOW must refuse a name that resolves to nothing; it said: {string.Join(" | ", report)}");
+
+		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse()
+			.Because("a refused FOLLOW writes no FOLLOWING at all");
+	}
+
+	/// <summary>
+	/// UNFOLLOW with nothing to unfollow leaves FOLLOWING absent rather than creating it.
+	/// </summary>
+	[Test]
+	public async ValueTask MortalUnfollow_WithNothingToUnfollowWritesNothing()
+	{
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "UnfollowNothing");
+
+		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse()
+			.Because("precondition: a fresh player follows nobody");
+
+		await Parser.CommandParse(follower.Handle, ConnectionService, MModule.single("unfollow"));
+
+		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse()
+			.Because("clearing an attribute that was never set must not create it");
+	}
+
 	/// <remarks>
 	/// This is the case that failed on CI (issue #839), and it failed in the locate rather than in the
 	/// write: "I can't see that here. | I don't see that here." for a leader created moments earlier in

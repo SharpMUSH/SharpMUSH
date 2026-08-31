@@ -239,9 +239,23 @@ public partial class ArangoDatabase
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e._key",
 			new Dictionary<string, object> { { StartVertex, channel.Id! } }, cancellationToken: ct);
-		var ownerEdgeKey = response.First();
+
+		// A channel with no owner edge is exactly the one that most needs re-owning, so create the edge
+		// rather than updating one that is not there. Giving an ownerless channel an owner is the repair
+		// for it -- @channel/chown and ObjectDestructionService both arrive here.
+		if (response.Count == 0)
+		{
+			await arangoDb.Graph.Edge.CreateAsync(
+				handle,
+				DatabaseConstants.GraphChannels,
+				DatabaseConstants.OwnerOfChannel,
+				new SharpEdgeCreateRequest(channel.Id!, newOwner.Id!),
+				cancellationToken: ct);
+			return;
+		}
+
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OwnerOfChannel,
-			ownerEdgeKey, new { To = newOwner.Id }, cancellationToken: ct);
+			response.First(), new { To = newOwner.Id }, cancellationToken: ct);
 	}
 
 	public async ValueTask DeleteChannelAsync(SharpChannel channel, CancellationToken ct = default) =>

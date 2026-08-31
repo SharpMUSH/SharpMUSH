@@ -190,6 +190,11 @@ public class CachingBehaviorTests
 		// One creation followed at once by a read of the room, which is what FOLLOW does: create the
 		// leader, then resolve them by name out of the room's contents.
 		using var readersRun = new CancellationTokenSource();
+		// The token stops the loop but is deliberately NOT handed to the stream. FusionCache keeps the
+		// token of whichever caller started a factory, and this cache is shared for the whole test
+		// session, so a test-scoped token passed in here outlives its `using` inside somebody else's
+		// in-flight read -- which fails as "The CancellationTokenSource has been disposed". Reads are
+		// short; letting the last one finish is cheaper than leaking a token into shared state.
 		var readers = Enumerable.Range(0, 4).Select(_ => Task.Run(async () =>
 		{
 			while (!readersRun.IsCancellationRequested)

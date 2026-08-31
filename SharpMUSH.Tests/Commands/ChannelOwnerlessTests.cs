@@ -59,4 +59,41 @@ public class ChannelOwnerlessTests
 		await Assert.That(resolvedOwner).IsNull()
 			.Because("an ownerless channel has no owner to report, and asking must not throw");
 	}
+
+	/// <summary>
+	/// An ownerless channel can be given an owner.
+	/// </summary>
+	/// <remarks>
+	/// Reading one without throwing is only half of it: the channel that has lost its owner is exactly
+	/// the one that needs re-owning, and both <c>@channel/chown</c> and <c>ObjectDestructionService</c>
+	/// arrive at <c>UpdateChannelOwnerAsync</c> to do it. Memgraph gated its <c>CREATE</c> on finding an
+	/// existing owner edge, so re-owning was a silent no-op; ArangoDB called <c>First()</c> on the empty
+	/// edge list and threw. Either way the channel could not be repaired.
+	/// </remarks>
+	[Test]
+	public async Task AnOwnerlessChannelCanBeGivenAnOwner()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("Reowned").Replace("_", string.Empty);
+
+		var doomedDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "ReownedChanOwner");
+		var doomed = (await Mediator.Send(new GetObjectNodeQuery(doomedDbRef))).AsPlayer;
+
+		await Mediator.Send(new CreateChannelCommand(MModule.single(name), ["Player"], doomed));
+		await Mediator.Send(new DeleteObjectCommand(doomedDbRef));
+
+		var ownerless = (await Mediator.Send(new GetChannelQuery(name)))!;
+		await Assert.That(await ownerless.Owner.WithCancellation(CancellationToken.None)).IsNull()
+			.Because("precondition: there is nothing to repair unless the channel really lost its owner");
+
+		var heir = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		await Mediator.Send(new UpdateChannelOwnerCommand(ownerless, heir));
+
+		var repaired = (await Mediator.Send(new GetChannelQuery(name)))!;
+		var owner = await repaired.Owner.WithCancellation(CancellationToken.None);
+
+		await Assert.That(owner).IsNotNull()
+			.Because("re-owning a channel that has no owner is the repair, not a no-op");
+		await Assert.That(owner!.Object.DBRef.Number).IsEqualTo(1);
+	}
 }
