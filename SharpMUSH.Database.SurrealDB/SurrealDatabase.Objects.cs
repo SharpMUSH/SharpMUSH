@@ -20,6 +20,9 @@ namespace SharpMUSH.Database.SurrealDB;
 
 public partial class SurrealDatabase
 {
+	/// <summary>God, who inherits ownership that would otherwise be severed by a delete.</summary>
+	private const int GodKey = 1;
+
 	#region Object CRUD
 
 	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
@@ -858,6 +861,25 @@ public partial class SurrealDatabase
 			"DELETE mail WHERE id IN $doomedMail;" +
 			"COMMIT TRANSACTION",
 			new Dictionary<string, object?> { ["table"] = table, ["key"] = key }, cancellationToken);
+
+		// A channel always has an owner, so ownership cannot be allowed to die with the owner. The game
+		// layer hands a doomed player's channels to the probate judge before it gets here
+		// (ObjectDestructionService.ClearPlayerAsync); this is the floor under that for every other way
+		// an object can be deleted, and it hands them to God rather than letting the relation sweep below
+		// drop the edge and leave a channel nobody owns.
+		if (key != GodKey)
+		{
+			// RELATE the replacement before deleting the old edge, matching UpdateChannelOwnerAsync's idiom:
+			// the new edges point at God, so the delete below -- and the relation sweep further down --
+			// leave them alone.
+			await ExecuteAsync(
+				"BEGIN TRANSACTION;" +
+				"RELATE (SELECT VALUE in FROM owner_of_channel WHERE out = object:$key)" +
+				"->owner_of_channel->object:$heirKey;" +
+				"DELETE owner_of_channel WHERE out = object:$key;" +
+				"COMMIT TRANSACTION",
+				new Dictionary<string, object?> { ["key"] = key, ["heirKey"] = GodKey }, cancellationToken);
+		}
 
 		var sweep = string.Join(string.Empty, ObjectRelationTables.Select(relation =>
 			$"DELETE {relation} WHERE in IN $doomed OR out IN $doomed;"));

@@ -148,12 +148,6 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		// For channel locks, we need to evaluate the lock against the unlocker
 		// Channels don't have the same object structure, so we pass a synthetic object representation
 		var channelOwner = gatedChannel.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
-
-		// The owner is the object the lock is evaluated against, so a channel that has lost its owner has
-		// nothing to evaluate. Fail closed: the lock is not passed, and the wizard and owner arms that
-		// callers check first are what still gets anyone in.
-		if (channelOwner is null) return false;
-
 		var syntheticGated = new AnySharpObject(channelOwner);
 		return compile(syntheticGated, unlocker);
 	}

@@ -44,9 +44,7 @@ public static class ChannelWhat
 			var owner = await channel.Owner.WithCancellation(CancellationToken.None);
 			lines.Add(MModule.concat(MModule.single("Channel: "), channel.Name));
 			lines.Add(MModule.concat(MModule.single("Description: "), channel.Description));
-			lines.Add(MModule.single(owner is null
-				? $"Owner: {ErrorMessages.Returns.Nothing}"
-				: $"Owner: {owner.Object.Name}(#{owner.Object.DBRef.Number})"));
+			lines.Add(MModule.single($"Owner: {owner.Object.Name}(#{owner.Object.DBRef.Number})"));
 			lines.Add(MModule.single($"Flags: {string.Join(" ", channel.Privs)}"));
 			lines.Add(MModule.single($"Mogrifier: {(string.IsNullOrEmpty(channel.Mogrifier) ? "none" : channel.Mogrifier)}"));
 			lines.Add(MModule.single($"Buffer: {channel.Buffer}"));

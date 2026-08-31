@@ -8,21 +8,20 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// A channel whose owner has been destroyed must still be readable.
+/// A channel always has an owner. Deleting the owner hands the channel on; it never orphans it.
 /// </summary>
 /// <remarks>
-/// <c>SharpChannel.Owner</c> is an <see cref="AsyncLazy{T}"/> that queries the database when it is first
-/// awaited, so a channel that has been listed is not yet fully materialised — and the owner edge can be
-/// gone by the time anyone asks. Destroying a player is the deterministic way there: the delete detaches
-/// every relationship on the object, <c>HAS_CHANNEL_OWNER</c> included, and leaves the channel node
-/// behind with nothing on the other end.
+/// Deleting an object severs every relationship on it, and channel ownership rode along: the channel
+/// survived with nothing on the other end, every provider threw out of the row access, and because
+/// <c>@channel/add</c> resolves the owner of <em>every</em> channel to count the ones the executor owns,
+/// a single orphan broke channel creation for the whole session. That is what made
+/// <c>ChannelAddStoresPrivilegesInCanonicalCasing</c> and <c>MortalCannotJoinOrSpeakOnAnyGatedChannel</c>
+/// flake.
 /// <para>
-/// Every provider then threw out of the row access — Memgraph indexing <c>Result[0]</c>, ArangoDB
-/// calling <c>First()</c> — and because <c>@channel/add</c> resolves the owner of <em>every</em> channel
-/// to count the ones the executor owns, a single ownerless channel broke channel creation for everybody
-/// from then on. That is what made <c>ChannelAddStoresPrivilegesInCanonicalCasing</c> and
-/// <c>MortalCannotJoinOrSpeakOnAnyGatedChannel</c> flake: they failed whenever some earlier test in the
-/// session had destroyed a channel owner.
+/// The fix is to keep the invariant rather than to model its absence.
+/// <c>ObjectDestructionService.ClearPlayerAsync</c> already handed a doomed player's channels to the
+/// probate judge; <c>DeleteObjectAsync</c> now does the same to God for every other route to a delete,
+/// so ownership cannot die with the owner whichever way the object goes.
 /// </para>
 /// </remarks>
 public class ChannelOwnerlessTests
@@ -32,68 +31,103 @@ public class ChannelOwnerlessTests
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	[Test]
-	public async Task AChannelOutlivingItsOwnerIsStillReadable()
+	private static string UniqueChannel(string prefix)
+		=> TestIsolationHelpers.GenerateUniqueName(prefix).Replace("_", string.Empty);
+
+	private async Task<DBRef> ChannelOwnedBy(string name, DBRef ownerDbRef)
 	{
-		var name = TestIsolationHelpers.GenerateUniqueName("Ownerless").Replace("_", string.Empty);
-
-		// Deliberately no connection handle: this player gets deleted out from under the database, and a
-		// handle still bound to a destroyed dbref would leave a phantom in WHO for the rest of the session.
-		var ownerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
-			WebAppFactoryArg.Services, Mediator, "OwnerlessChanOwner");
-		var ownerObject = (await Mediator.Send(new GetObjectNodeQuery(ownerDbRef))).AsPlayer;
-
-		await Mediator.Send(new CreateChannelCommand(MModule.single(name), ["Player"], ownerObject));
-		await Mediator.Send(new DeleteObjectCommand(ownerDbRef));
-
-		var listed = await Mediator.CreateStream(new GetChannelListQuery())
-			.Where(c => c.Name.ToPlainText() == name)
-			.FirstOrDefaultAsync();
-
-		await Assert.That(listed).IsNotNull()
-			.Because("destroying the owner destroys the owner, not the channel");
-
-		// What @channel/add does to every channel in the list before it creates one.
-		var resolvedOwner = await listed!.Owner.WithCancellation(CancellationToken.None);
-
-		await Assert.That(resolvedOwner).IsNull()
-			.Because("an ownerless channel has no owner to report, and asking must not throw");
+		var owner = (await Mediator.Send(new GetObjectNodeQuery(ownerDbRef))).AsPlayer;
+		await Mediator.Send(new CreateChannelCommand(MModule.single(name), ["Player"], owner));
+		return ownerDbRef;
 	}
 
 	/// <summary>
-	/// An ownerless channel can be given an owner.
+	/// Deleting a channel's owner through storage re-owns the channel rather than orphaning it.
 	/// </summary>
 	/// <remarks>
-	/// Reading one without throwing is only half of it: the channel that has lost its owner is exactly
-	/// the one that needs re-owning, and both <c>@channel/chown</c> and <c>ObjectDestructionService</c>
-	/// arrive at <c>UpdateChannelOwnerAsync</c> to do it. Memgraph gated its <c>CREATE</c> on finding an
-	/// existing owner edge, so re-owning was a silent no-op; ArangoDB called <c>First()</c> on the empty
-	/// edge list and threw. Either way the channel could not be repaired.
+	/// The raw <see cref="DeleteObjectCommand"/> deliberately, because it is the route that bypasses
+	/// <c>ObjectDestructionService</c>'s probate hand-off — the floor has to hold on its own.
 	/// </remarks>
 	[Test]
-	public async Task AnOwnerlessChannelCanBeGivenAnOwner()
+	public async Task DeletingAnOwnerHandsTheChannelOnRatherThanOrphaningIt()
 	{
-		var name = TestIsolationHelpers.GenerateUniqueName("Reowned").Replace("_", string.Empty);
+		var name = UniqueChannel("Ownerless");
 
-		var doomedDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+		var doomed = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "OwnerlessChanOwner");
+		await ChannelOwnedBy(name, doomed);
+
+		await Mediator.Send(new DeleteObjectCommand(doomed));
+
+		var channel = await Mediator.Send(new GetChannelQuery(name));
+		await Assert.That(channel).IsNotNull()
+			.Because("deleting the owner destroys the owner, not the channel");
+
+		// What @channel/add does to every channel in the list before it creates one.
+		var owner = await channel!.Owner.WithCancellation(CancellationToken.None);
+
+		await Assert.That(owner.Object.DBRef.Number).IsEqualTo(1)
+			.Because("ownership cannot die with the owner, so God inherits what nobody else claimed");
+	}
+
+	/// <summary>
+	/// The whole channel list stays readable after an owner is deleted.
+	/// </summary>
+	/// <remarks>
+	/// The list is the shape that actually broke: <c>@channel/add</c> resolves every owner in it, so one
+	/// unreadable channel is enough to stop anyone creating one.
+	/// </remarks>
+	[Test]
+	public async Task TheChannelListStaysReadableAfterAnOwnerIsDeleted()
+	{
+		var name = UniqueChannel("ListSurvives");
+
+		var doomed = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "ListSurvivesOwner");
+		await ChannelOwnedBy(name, doomed);
+
+		await Mediator.Send(new DeleteObjectCommand(doomed));
+
+		var owners = new List<int>();
+		await foreach (var listed in Mediator.CreateStream(new GetChannelListQuery()))
+		{
+			owners.Add((await listed.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number);
+		}
+
+		await Assert.That(owners).IsNotEmpty()
+			.Because("resolving every owner in the list must not throw for any channel in it");
+	}
+
+	/// <summary>
+	/// Re-owning works on a channel whose owner edge is already missing.
+	/// </summary>
+	/// <remarks>
+	/// The repair path for data that predates the invariant being enforced. Memgraph gated its
+	/// <c>CREATE</c> on finding an existing owner edge, so re-owning such a channel was a silent no-op;
+	/// ArangoDB called <c>First()</c> on the empty edge list and threw. Both <c>@channel/chown</c> and
+	/// <c>ObjectDestructionService</c> arrive at <c>UpdateChannelOwnerAsync</c> to do it.
+	/// </remarks>
+	[Test]
+	public async Task ReOwningWorksOnAChannelThatHasLostItsOwnerEdge()
+	{
+		var name = UniqueChannel("Reowned");
+
+		var doomed = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "ReownedChanOwner");
-		var doomed = (await Mediator.Send(new GetObjectNodeQuery(doomedDbRef))).AsPlayer;
+		await ChannelOwnedBy(name, doomed);
+		await Mediator.Send(new DeleteObjectCommand(doomed));
 
-		await Mediator.Send(new CreateChannelCommand(MModule.single(name), ["Player"], doomed));
-		await Mediator.Send(new DeleteObjectCommand(doomedDbRef));
+		var channel = (await Mediator.Send(new GetChannelQuery(name)))!;
+		var heir = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "ReownedChanHeir");
+		var heirPlayer = (await Mediator.Send(new GetObjectNodeQuery(heir))).AsPlayer;
 
-		var ownerless = (await Mediator.Send(new GetChannelQuery(name)))!;
-		await Assert.That(await ownerless.Owner.WithCancellation(CancellationToken.None)).IsNull()
-			.Because("precondition: there is nothing to repair unless the channel really lost its owner");
+		await Mediator.Send(new UpdateChannelOwnerCommand(channel, heirPlayer));
 
-		var heir = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
-		await Mediator.Send(new UpdateChannelOwnerCommand(ownerless, heir));
+		var reowned = (await Mediator.Send(new GetChannelQuery(name)))!;
+		var owner = await reowned.Owner.WithCancellation(CancellationToken.None);
 
-		var repaired = (await Mediator.Send(new GetChannelQuery(name)))!;
-		var owner = await repaired.Owner.WithCancellation(CancellationToken.None);
-
-		await Assert.That(owner).IsNotNull()
-			.Because("re-owning a channel that has no owner is the repair, not a no-op");
-		await Assert.That(owner!.Object.DBRef.Number).IsEqualTo(1);
+		await Assert.That(owner.Object.DBRef.Number).IsEqualTo(heir.Number)
+			.Because("re-owning a channel is the repair, and must not be a no-op");
 	}
 }

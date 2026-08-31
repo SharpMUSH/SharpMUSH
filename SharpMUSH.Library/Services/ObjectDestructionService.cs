@@ -211,8 +211,7 @@ public class ObjectDestructionService(
 			await foreach (var channel in mediator.CreateStream(new GetChannelListQuery(), ct))
 			{
 				var channelOwner = await channel.Owner.WithCancellation(ct);
-				// A channel nobody owns is not this player's to hand on.
-				if (channelOwner?.Object.DBRef.Number != playerDbRefNumber) continue;
+				if (channelOwner.Object.DBRef.Number != playerDbRefNumber) continue;
 
 				await mediator.Send(new UpdateChannelOwnerCommand(channel, probate), ct);
 			}

@@ -12,17 +12,11 @@ public class SharpChannel
 	public required MString Name { get; set; }
 	public MString Description { get; set; } = MModule.empty();
 	/// <summary>
-	/// Who owns the channel, or <see langword="null"/> if nothing does.
+	/// Who owns the channel. Never absent: a channel always has an owner, and deleting one hands its
+	/// channels on rather than severing the edge — <c>ObjectDestructionService.ClearPlayerAsync</c> to
+	/// the probate judge, and <c>DeleteObjectAsync</c> to God for every other route to a delete.
 	/// </summary>
-	/// <remarks>
-	/// Nullable because the data can genuinely say so: deleting an object detaches every relationship on
-	/// it, channel ownership included, so a channel outlives an owner deleted through storage rather than
-	/// through <c>ObjectDestructionService</c> (which re-owns first). A stale channel list resolving a
-	/// since-deleted channel lands in the same place. Every provider used to throw out of the row access
-	/// instead, and since <c>@channel/add</c> resolves the owner of every channel to count its own, one
-	/// ownerless channel broke channel creation for everybody.
-	/// </remarks>
-	public required AsyncLazy<SharpPlayer?> Owner { get; set; }
+	public required AsyncLazy<SharpPlayer> Owner { get; set; }
 	public required Lazy<IAsyncEnumerable<MemberAndStatus>> Members { get; set; }
 	public required string[] Privs { get; set; }
 	public string JoinLock { get; set; } = string.Empty;

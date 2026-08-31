@@ -19,6 +19,9 @@ namespace SharpMUSH.Database.Memgraph;
 
 public partial class MemgraphDatabase
 {
+	/// <summary>God, who inherits ownership that would otherwise be severed by a delete.</summary>
+	private const int GodKey = 1;
+
 	#region Object CRUD
 
 	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
@@ -95,6 +98,19 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 		}
 
 		var name = node.Known.Object().Name;
+
+		// A channel always has an owner, so ownership cannot be allowed to die with the owner. The game
+		// layer hands a doomed player's channels to the probate judge before it gets here
+		// (ObjectDestructionService.ClearPlayerAsync); this is the floor under that for every other way
+		// an object can be deleted, and it hands them to God rather than letting DETACH DELETE sever the
+		// edge and leave a channel nobody owns.
+		await ExecuteWithRetryAsync("""
+MATCH (c:Channel)-[r:HAS_CHANNEL_OWNER]->(o:Object {key: $key})
+MATCH (heir:Object {key: $heirKey})
+WHERE o.key <> $heirKey
+DELETE r
+CREATE (c)-[:HAS_CHANNEL_OWNER]->(heir)
+""", new { key = dbref.Number, heirKey = GodKey }, cancellationToken);
 
 		// DETACH DELETE drops every incident relationship with the node, so the inbound half -- another
 		// object's HAS_PARENT / HAS_ZONE / HAS_HOME / AT_LOCATION pointing here -- is unset in the same

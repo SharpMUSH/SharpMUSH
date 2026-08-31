@@ -147,8 +147,7 @@ public class PlayerDestructionTests
 		var channelBefore = await Mediator.Send(new GetChannelQuery("PDT_ChannelChown"));
 		await Assert.That(channelBefore).IsNotNull();
 		var ownerBefore = await channelBefore!.Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(ownerBefore).IsNotNull();
-		await Assert.That(ownerBefore!.Object.DBRef.Number).IsEqualTo(playerDbRef.Number);
+		await Assert.That(ownerBefore.Object.DBRef.Number).IsEqualTo(playerDbRef.Number);
 
 		await Parser.CommandParse(
 			1, ConnectionService,
@@ -157,8 +156,7 @@ public class PlayerDestructionTests
 		var channelAfter = await Mediator.Send(new GetChannelQuery("PDT_ChannelChown"));
 		await Assert.That(channelAfter).IsNotNull();
 		var ownerAfter = await channelAfter!.Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(ownerAfter).IsNotNull();
-		await Assert.That(ownerAfter!.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
+		await Assert.That(ownerAfter.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
 	}
 
 	[Test]
@@ -177,8 +175,7 @@ public class PlayerDestructionTests
 
 		var thingBeforeNuke = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
 		var ownerBefore = await thingBeforeNuke.Known.Object().Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(ownerBefore).IsNotNull();
-		await Assert.That(ownerBefore!.Object.DBRef.Number).IsEqualTo(playerDbRef.Number);
+		await Assert.That(ownerBefore.Object.DBRef.Number).IsEqualTo(playerDbRef.Number);
 
 		// nuke the player  (destroy_possessions=yes)
 		await Parser.CommandParse(
@@ -218,8 +215,7 @@ public class PlayerDestructionTests
 		await Assert.That(isGoing).IsFalse();
 
 		var ownerAfter = await thingAfterNuke.Known.Object().Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(ownerAfter).IsNotNull();
-		await Assert.That(ownerAfter!.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
+		await Assert.That(ownerAfter.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
 	}
 
 	// Validates that the attribute re-assignment step (which runs AFTER channel-chown
@@ -315,8 +311,7 @@ public class PlayerDestructionTests
 		var combinedChannel = await Mediator.Send(new GetChannelQuery("PDT_CombinedChannel"));
 		await Assert.That(combinedChannel).IsNotNull();
 		var channelOwner = await combinedChannel!.Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(channelOwner).IsNotNull();
-		await Assert.That(channelOwner!.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
+		await Assert.That(channelOwner.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
 
 		var nonSafeObj = await Mediator.Send(new GetObjectNodeQuery(nonSafeDbRef));
 		await Assert.That(await nonSafeObj.Known.HasFlag("GOING")).IsTrue();

@@ -27,7 +27,7 @@ public partial class SurrealDatabase
 		var response = await ExecuteAsync("SELECT * FROM channel", cancellationToken);
 		var results = response.GetValue<List<ChannelDbRecord>>(0)!;
 		foreach (var element in results)
-			yield return MapRecordToChannel(element);
+			yield return MapRecordToChannel(element, await OwnerOrGodAsync(element.name, cancellationToken));
 	}
 
 	public async ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default)
@@ -38,7 +38,9 @@ public partial class SurrealDatabase
 			parameters, cancellationToken);
 
 		var results = response.GetValue<List<ChannelDbRecord>>(0)!;
-		return results.Count > 0 ? MapRecordToChannel(results[0]) : null;
+		if (results.Count == 0) return null;
+
+		return MapRecordToChannel(results[0], await OwnerOrGodAsync(results[0].name, cancellationToken));
 	}
 
 	public async IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -51,7 +53,28 @@ public partial class SurrealDatabase
 
 		var records = response.GetValue<List<ChannelDbRecord>>(0)!;
 		foreach (var channelRecord in records)
-			yield return MapRecordToChannel(channelRecord);
+			yield return MapRecordToChannel(channelRecord, await OwnerOrGodAsync(channelRecord.name, cancellationToken));
+	}
+
+	/// <summary>
+	/// A channel is never dropped for want of an owner.
+	/// </summary>
+	/// <remarks>
+	/// Skipping it looked tidier and was wrong: the channel vanished from the listing, and
+	/// <c>GetChannelAsync</c> answered "I don't recognize that channel" for one that plainly existed.
+	/// A channel missing its owner is a broken invariant, not a missing channel — say so in the log and
+	/// read it as God's, which is who <c>DeleteObjectAsync</c> would have given it to.
+	/// </remarks>
+	private async ValueTask<SharpPlayer> OwnerOrGodAsync(string channelName, CancellationToken ct)
+	{
+		var owner = await GetChannelOwnerAsync(channelName, ct);
+		if (owner is not null) return owner;
+
+		logger.LogWarning(
+			"Channel '{Channel}' has no owner; reading it as God's. A channel always has an owner, so this "
+			+ "is data that predates DeleteObjectAsync handing ownership on.", channelName);
+
+		return (await BuildTypedObjectFromKey(GodKey, ct)).AsPlayer;
 	}
 
 	/// <summary>
@@ -295,7 +318,17 @@ public partial class SurrealDatabase
 		await ExecuteAsync(query, parameters, cancellationToken);
 	}
 
-	private SharpChannel MapRecordToChannel(ChannelDbRecord record)
+	/// <summary>
+	/// The owner is read as the listing is drawn and handed in here, rather than left to an
+	/// <see cref="AsyncLazy{T}"/> that goes back to the database whenever something first asks.
+	/// </summary>
+	/// <remarks>
+	/// The late read left a window: <c>@channel/add</c> resolves the owner of every channel to count the
+	/// ones the executor owns, and a channel deleted between the list being read and its owner being asked
+	/// for took the whole command with it. A channel whose owner has gone is dropped from the listing
+	/// rather than reported — a channel always has an owner, so a row without one no longer exists.
+	/// </remarks>
+	private SharpChannel MapRecordToChannel(ChannelDbRecord record, SharpPlayer owner)
 	{
 		var channelName = record.name;
 		var markedUpName = string.IsNullOrEmpty(record.markedUpName) ? channelName : record.markedUpName;
@@ -314,7 +347,7 @@ public partial class SurrealDatabase
 			ModLock = record.modLock,
 			Buffer = record.buffer,
 			Mogrifier = record.mogrifier,
-			Owner = new AsyncLazy<SharpPlayer?>(async ct => await GetChannelOwnerAsync(channelName, ct)),
+			Owner = new AsyncLazy<SharpPlayer>(_ => Task.FromResult(owner)),
 			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
 				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(enumCt => GetChannelMembersAsync(channelName, enumCt)))
 		};
@@ -329,7 +362,9 @@ public partial class SurrealDatabase
 
 		var ownerKeys = response.GetValue<List<int>>(0)!;
 
-		// No key is a real answer, not a broken one: the channel may have lost its owner, or gone itself.
+		// A channel always has an owner, so no key means the channel itself has gone -- deleted while this
+		// read was walking the list. Absent, not broken: the caller drops the channel from the listing
+		// rather than failing every reader of it.
 		if (ownerKeys.Count == 0) return null;
 
 		var ownerKey = ownerKeys[0];
