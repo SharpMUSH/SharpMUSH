@@ -18,6 +18,14 @@ namespace SharpMUSH.Library.Behaviors;
 /// key-targeted invalidation needs — tagging every entry with its own key would buy the same guarantee
 /// by writing a tag marker per object, and tags are meant to name a category, not an identity.
 /// </para>
+/// <para>
+/// The barrier is <em>per-process</em>, which is the whole of it while the cache is memory-only
+/// (<c>AddFusionCache().TryWithAutoSetup()</c>, no distributed layer and no backplane). Several server
+/// instances against a shared L2 would need a distributed barrier as well: this clock cannot see a
+/// factory in flight on another instance, and a key removal broadcast over a backplane does not cancel
+/// one. The caching behaviours already decline the distributed write for a read they have caught, so
+/// the gap is only the reads they cannot see — worth closing when that topology exists, and not before.
+/// </para>
 /// </remarks>
 public interface ICacheInvalidationClock
 {
