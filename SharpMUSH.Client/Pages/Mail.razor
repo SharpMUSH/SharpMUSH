@@ -180,7 +180,15 @@ else
         _selected = null;
         _body = null;
         _loading = true;
-        _messages = await MailApi.ListAsync(_folder);
+
+        var messages = await MailApi.ListAsync(folder);
+
+        // Same guard the reading pane uses: a slow list that lands after the reader picked another
+        // folder must neither replace the newer folder's rows nor clear the loading state the newer
+        // fetch still owns.
+        if (_folder != folder) return;
+
+        _messages = messages;
         _loading = false;
     }
 
