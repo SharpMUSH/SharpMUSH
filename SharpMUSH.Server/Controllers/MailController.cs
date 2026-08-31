@@ -1,6 +1,7 @@
 using DotNext.Threading;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Commands.Database;
@@ -8,8 +9,9 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
-using MarkupString;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Services;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -33,9 +35,13 @@ namespace SharpMUSH.Server.Controllers;
 [ApiController]
 [Route("api/mail")]
 [Authorize]
-public class MailController(IMediator mediator, ILogger<MailController> logger) : ControllerBase
+public class MailController(IMediator mediator, IEngineCommandInvoker commandInvoker, ILogger<MailController> logger) : ControllerBase
 {
 	private const string DefaultFolder = "INBOX";
+
+	/// <summary>extmail.h:71 — <c>SUBJECT_LEN</c>. Past this the command would treat the whole
+	/// argument as the body, so the endpoint refuses rather than silently losing the subject.</summary>
+	private const int SubjectLength = 60;
 
 	public record MailSummaryDto(int Number, string From, string Subject, DateTimeOffset DateSent, bool Read, bool Urgent, string Folder);
 	public record MailMessageDto(int Number, string From, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, bool Read, string Folder);
@@ -106,44 +112,64 @@ public class MailController(IMediator mediator, ILogger<MailController> logger) 
 			mail.Folder);
 	}
 
+	/// <summary>
+	/// Sends by running the engine's own <c>@MAIL</c>, so recipient resolution, the mail lock,
+	/// <c>MAILSIGNATURE</c>, the <c>AMAIL</c> trigger and the delivery notice all happen exactly as
+	/// they do in-game. This endpoint used to resolve the recipient itself with a player-name lookup
+	/// — a second mail implementation that drifted from the command it was meant to mirror, and that
+	/// could not address <c>me</c>, a dbref or <c>*name</c>.
+	///
+	/// Arguments go over pre-split, never spliced into a command line, so a <c>;</c> in a body cannot
+	/// start a second command; <c>NOEVAL</c> then keeps the caller's text as text rather than
+	/// softcode.
+	/// </summary>
 	[HttpPost]
 	public async Task<IActionResult> Send([FromBody] SendMailRequest request, CancellationToken ct)
 	{
-		var sender = await ResolvePlayerAsync(ct);
-		if (sender is null) return Unauthorized();
+		if (User.GetActingCharacter() is not { } character) return Unauthorized();
 
 		if (string.IsNullOrWhiteSpace(request.To))
 		{
 			return BadRequest(new { error = "Recipient is required." });
 		}
 
-		var recipient = await ResolvePlayerByNameAsync(request.To, ct);
-		if (recipient is null)
+		var subject = request.Subject ?? string.Empty;
+		if (subject.Length > SubjectLength)
+		{
+			return BadRequest(new { error = $"Subject may be at most {SubjectLength} characters." });
+		}
+
+		// @mail takes "[subject/]message" as one argument and ends the subject at the first single
+		// '/', a doubled one being a literal (extmail.c:1337) — so a slash the caller typed is doubled
+		// on the way in and arrives as the character they meant.
+		var subjectAndBody = $"{subject.Replace("/", "//")}/{request.Body ?? string.Empty}";
+
+		var arguments = new Dictionary<string, CallState>
+		{
+			["0"] = new CallState(request.To),
+			["1"] = new CallState(subjectAndBody)
+		};
+
+		// The send arm is selected by the *last* switch, so NOEVAL cannot be the one that ends the
+		// list; SEND is named explicitly to close that over any future reordering.
+		string[] switches = request.Urgent ? ["NOEVAL", "URGENT", "SEND"] : ["NOEVAL", "SEND"];
+
+		var result = await commandInvoker.InvokeAsync("@MAIL", character, arguments, switches);
+		var message = result?.Message?.ToPlainText() ?? string.Empty;
+
+		if (message.StartsWith("#-1", StringComparison.Ordinal))
+		{
+			return StatusCode(StatusCodes.Status403Forbidden, new { error = message });
+		}
+
+		// @mail returns the dbrefs it actually delivered to. Nothing means every name was refused, and
+		// the reason went to the character as a notification rather than into this response.
+		if (string.IsNullOrWhiteSpace(message))
 		{
 			return NotFound(new { error = $"No such character: {request.To}" });
 		}
 
-		var mail = new SharpMail
-		{
-			DateSent = DateTimeOffset.UtcNow,
-			Fresh = true,
-			Read = false,
-			Tagged = false,
-			Urgent = request.Urgent,
-			Cleared = false,
-			Forwarded = false,
-			Folder = DefaultFolder,
-			Content = MModule.single(request.Body ?? string.Empty),
-			Subject = MModule.single(request.Subject ?? string.Empty),
-			From = new AsyncLazy<AnyOptionalSharpObject>(async _ =>
-			{
-				await ValueTask.CompletedTask;
-				return sender;
-			})
-		};
-
-		await mediator.Send(new SendMailCommand(sender.Object, recipient, mail), ct);
-		logger.LogInformation("Web mail sent from #{From} to {To}.", sender.Object.Key, recipient.Object.Name);
+		logger.LogInformation("Web mail sent from {From} to {To}.", character, request.To);
 		return Ok(new { sent = true });
 	}
 
@@ -178,14 +204,5 @@ public class MailController(IMediator mediator, ILogger<MailController> logger) 
 
 		var result = await mediator.Send(new GetObjectNodeQuery(character), ct);
 		return result.IsPlayer ? result.AsPlayer : null;
-	}
-
-	private async Task<SharpPlayer?> ResolvePlayerByNameAsync(string name, CancellationToken ct)
-	{
-		await foreach (var player in mediator.CreateStream(new GetPlayerQuery(name)).WithCancellation(ct))
-		{
-			return player;
-		}
-		return null;
 	}
 }

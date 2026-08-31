@@ -7,6 +7,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using OneOf;
 
@@ -152,6 +153,143 @@ public class MailCommandTests
 
 		await Assert.That(NotificationsTo(player.DbRef))
 			.DoesNotContain(m => m!.StartsWith("MAIL: You sent a message to "));
+	}
+
+	/// <summary>
+	/// extmail.c:1337 — a doubled subject cookie is a literal <c>/</c> and does not end the subject;
+	/// only a single one does. SharpMUSH split on the first <c>/</c> unconditionally, so a subject
+	/// could not contain one at all.
+	/// </summary>
+	[Test]
+	public async ValueTask MailSubjectTakesADoubledSlashAsALiteral()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailSlashSubj");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@mail me=and//or/The body."));
+
+		var mail = await Mediator.Send(new GetMailQuery(
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+
+		await Assert.That(mail).IsNotNull();
+		await Assert.That(mail!.Subject.ToPlainText()).IsEqualTo("and/or");
+		await Assert.That(mail.Content.ToPlainText()).IsEqualTo("The body.");
+	}
+
+	/// <summary>
+	/// SUBJECT_LEN is 60 (extmail.h:71). With no cookie the whole message is the body and the first
+	/// SUBJECT_LEN characters are the subject; SharpMUSH truncated at 20.
+	/// </summary>
+	[Test]
+	public async ValueTask MailWithoutASubjectTakesSixtyCharacters()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailImplicitSubj");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		var body = new string('x', 80);
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single($"@mail me={body}"));
+
+		var mail = await Mediator.Send(new GetMailQuery(
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+
+		await Assert.That(mail).IsNotNull();
+		await Assert.That(mail!.Subject.ToPlainText()).IsEqualTo(new string('x', 60));
+		await Assert.That(mail.Content.ToPlainText()).IsEqualTo(body);
+	}
+
+	/// <summary>
+	/// real_send_mail (extmail.c:127,138) gates the *sender's* confirmation on silent and notifies
+	/// the recipient unconditionally. SharpMUSH had it exactly inverted, which also meant
+	/// <c>mailsend()</c> — which PennMUSH calls with silent=1 — could not notify its recipient.
+	/// </summary>
+	[Test]
+	public async ValueTask MailSilentSuppressesTheSenderConfirmationNotTheDelivery()
+	{
+		var sender = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailSilentFrom");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailSilentTo");
+		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
+
+		await parser.CommandParse(sender.Handle, ConnectionService,
+			MModule.single($"@mail/silent #{target.DbRef.Number}=Quiet/Body."));
+
+		await Assert.That(NotificationsTo(sender.DbRef))
+			.DoesNotContain(m => m!.StartsWith("MAIL: You sent"));
+		await Assert.That(NotificationsTo(target.DbRef))
+			.Contains(m => m!.Contains("You have"));
+	}
+
+	/// <summary>
+	/// fun_mailsend is not its own mail implementation in PennMUSH — it calls do_mail_send, the same
+	/// function @mail uses (extmail.c:1466). SharpMUSH's mailsend() had a third one, and while its
+	/// bare PlayersPreference locate did resolve <c>me</c>, nothing held the two implementations to
+	/// the same recipient rules. This pins them together now that there is only one.
+	/// </summary>
+	[Test]
+	public async ValueTask MailSendFunctionResolvesMeLikeTheCommand()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailSendFnMe");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("think [mailsend(me,Fn Subject/Fn body.)]"));
+
+		var mail = await Mediator.Send(new GetMailQuery(
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+
+		await Assert.That(mail).IsNotNull();
+		await Assert.That(mail!.Subject.ToPlainText()).IsEqualTo("Fn Subject");
+		await Assert.That(mail.Content.ToPlainText()).StartsWith("Fn body.");
+	}
+
+	/// <summary>
+	/// do_mail_send is called with silent=1 (extmail.c:1466), which suppresses the sender's
+	/// confirmation only — the recipient's delivery notice is outside that gate. mailsend() used to
+	/// notify nobody at all.
+	/// </summary>
+	[Test]
+	public async ValueTask MailSendFunctionNotifiesTheRecipientButNotTheSender()
+	{
+		var sender = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailSendFnFrom");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailSendFnTo");
+		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
+
+		await parser.CommandParse(sender.Handle, ConnectionService,
+			MModule.single($"think [mailsend(#{target.DbRef.Number},Fn Subject/Fn body.)]"));
+
+		await Assert.That(NotificationsTo(target.DbRef)).Contains(m => m!.Contains("You have"));
+		await Assert.That(NotificationsTo(sender.DbRef)).DoesNotContain(m => m!.StartsWith("MAIL: You sent"));
+	}
+
+	/// <summary>
+	/// nosig is 0 at the fun_mailsend call site, so a signature applies exactly as it does for the
+	/// command. mailsend() never read MAILSIGNATURE.
+	/// </summary>
+	[Test]
+	public async ValueTask MailSendFunctionAppliesTheSendersSignature()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailSendFnSig");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("&MAILSIGNATURE me=-- Regards"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("think [mailsend(me,Sig Subject/Sig body.)]"));
+
+		var mail = await Mediator.Send(new GetMailQuery(
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+
+		await Assert.That(mail).IsNotNull();
+		await Assert.That(mail!.Content.ToPlainText()).Contains("-- Regards");
 	}
 
 	[Test]

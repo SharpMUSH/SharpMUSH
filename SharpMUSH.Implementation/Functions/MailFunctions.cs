@@ -311,6 +311,13 @@ public partial class Functions
 		var from = await mail.From.WithCancellation(CancellationToken.None);
 		return new CallState(from.Object()?.DBRef.ToString() ?? "#-1");
 	}
+	/// <summary>
+	/// fun_mailsend is <c>do_mail_send(executor, args[0], args[1], 0, 1, 0)</c> (extmail.c:1466) —
+	/// the same send @mail performs, with silent=1 and nosig=0 — rather than a mail implementation of
+	/// its own. Delegating to the command's handler is what gives the function PennMUSH's recipient
+	/// rules, the mail lock, MAILSIGNATURE, the AMAIL trigger and the recipient's delivery notice,
+	/// none of which the separate copy here had.
+	/// </summary>
 	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["player", "message"])]
 	public static async ValueTask<CallState> mailsend(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -320,62 +327,13 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.Arguments;
-		var sender = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var recipientArg = args["0"].Message!.ToPlainText()!;
-		var messageArg = args["1"].Message!;
+		await SendMail.Handle(parser, PermissionService!, LocateService!, ObjectDataService!, Mediator!,
+			NotifyService!, AttributeService!, Configuration!,
+			args["0"].Message!, args["1"].Message!, ["SILENT"]);
 
-		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
-			parser, sender, sender, recipientArg, LocateFlags.PlayersPreference);
-
-		if (locateResult.IsError)
-		{
-			return new CallState(locateResult.AsError.Value);
-		}
-
-		if (locateResult.IsNone)
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
-		}
-
-		var recipient = locateResult.AsPlayer;
-
-		if (!PermissionService!.PassesLock(sender, recipient, LockType.Mail))
-		{
-			return new CallState(ErrorMessages.Returns.RecipientDoesNotAcceptMail);
-		}
-
-		// Parse subject and message (split on /)
-		var subjectBodySplit = MModule.indexOf(messageArg, "/");
-
-		var subject = subjectBodySplit > -1
-			? MModule.substring(0, subjectBodySplit, messageArg)
-			: MModule.substring(0, Math.Min(20, messageArg.Length), messageArg);
-
-		var message = subjectBodySplit > -1
-			? MModule.substring(subjectBodySplit + 1, messageArg.Length - subjectBodySplit - 1, messageArg)
-			: messageArg;
-
-		var mail = new SharpMail
-		{
-			DateSent = DateTimeOffset.UtcNow,
-			Fresh = true,
-			Read = false,
-			Tagged = false,
-			Urgent = false,
-			Cleared = false,
-			Forwarded = false,
-			Folder = "INBOX",
-			Content = message,
-			Subject = subject,
-			From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(async _ =>
-			{
-				return await ValueTask.FromResult(sender.WithNoneOption());
-			}),
-		};
-
-		await Mediator!.Send(new Library.Commands.Database.SendMailCommand(sender.Object(), recipient, mail));
-
+		// do_mail_send reports a bad recipient by notifying the sender, so the function itself returns
+		// nothing on every path that reaches it.
 		return new CallState(string.Empty);
 	}
 	[SharpFunction(Name = "mailstats", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]

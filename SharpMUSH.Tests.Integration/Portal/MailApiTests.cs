@@ -101,6 +101,93 @@ public class MailApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
+	/// The endpoint runs the engine's own <c>@MAIL</c> rather than carrying a second mail
+	/// implementation, so the recipient rules are the command's: <c>me</c>, a dbref and <c>*name</c>
+	/// all resolve. Its own resolver was a bare player-name lookup, so none of these worked.
+	/// </summary>
+	[Test]
+	[Arguments("me")]
+	[Arguments("#1")]
+	[Arguments("*God")]
+	public async Task Send_ResolvesRecipientsTheWayTheCommandDoes(string recipient)
+	{
+		var http = CreateClient();
+		var subject = Tag("to");
+
+		var sent = await http.PostAsJsonAsync("api/mail", new SendMailRequest(recipient, subject, "Body.", false));
+		await Assert.That(sent.StatusCode).IsEqualTo(HttpStatusCode.OK);
+
+		var list = await ListAsync(http);
+		await Assert.That(list.Any(m => m.Subject == subject)).IsTrue();
+	}
+
+	/// <summary>
+	/// Arguments reach the command pre-split, never spliced into a command line, so a body is stored
+	/// exactly as typed: a <c>;</c> does not start a second command and softcode in it is not
+	/// evaluated. This is the guarantee that makes running the command safe for web input.
+	/// </summary>
+	[Test]
+	public async Task Send_StoresTheBodyLiterally()
+	{
+		var http = CreateClient();
+		var subject = Tag("literal");
+		const string body = "first; @pemit me=pwned [add(1,1)] 100% %r done";
+
+		await SendAsync(http, subject, body);
+
+		var list = await ListAsync(http);
+		var mine = list.Single(m => m.Subject == subject);
+		var message = await http.GetFromJsonAsync<MailMessageDto>($"api/mail/INBOX/{mine.Number}");
+
+		await Assert.That(message!.Body).IsEqualTo(body);
+	}
+
+	/// <summary>
+	/// A subject may contain a <c>/</c>: it is doubled on the way into the command's
+	/// <c>[subject/]message</c> argument and comes back as one character.
+	/// </summary>
+	[Test]
+	public async Task Send_KeepsASlashInTheSubject()
+	{
+		var http = CreateClient();
+		var subject = $"{Tag("slash")}-and/or";
+
+		await SendAsync(http, subject, "Body.");
+
+		var list = await ListAsync(http);
+		await Assert.That(list.Any(m => m.Subject == subject)).IsTrue();
+	}
+
+	/// <summary>The urgent flag has to survive the hop through the command's switches.</summary>
+	[Test]
+	public async Task Send_MarksUrgentMailUrgent()
+	{
+		var http = CreateClient();
+		var subject = Tag("urgent");
+
+		var sent = await http.PostAsJsonAsync("api/mail", new SendMailRequest(Self, subject, "Body.", true));
+		await Assert.That(sent.StatusCode).IsEqualTo(HttpStatusCode.OK);
+
+		var list = await ListAsync(http);
+		await Assert.That(list.Single(m => m.Subject == subject).Urgent).IsTrue();
+	}
+
+	/// <summary>
+	/// The command reports an unmatched name to the character rather than in a return value, so the
+	/// endpoint infers the failure from an empty delivered-recipient list.
+	/// </summary>
+	[Test]
+	public async Task Send_UnknownRecipientIsNotFound()
+	{
+		var http = CreateClient();
+
+		var sent = await http.PostAsJsonAsync("api/mail",
+			new SendMailRequest("NoSuchCharacterAnywhere", Tag("miss"), "Body.", false));
+
+		await Assert.That(sent.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+	}
+
+	/// <summary>
 	/// Delete read the same shifted index, so deleting the message you were looking at removed its
 	/// neighbour instead — silent data loss rather than a 404.
 	/// </summary>
