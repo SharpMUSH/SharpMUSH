@@ -1788,6 +1788,9 @@
   </data>
 
   <!-- @mail command -->
+  <data name="MailNoSuchUniquePlayer" xml:space="preserve">
+    <value>No such unique player: {0}.</value>
+  </data>
   <data name="MailTooManySwitches" xml:space="preserve">
     <value>Error: Too many switches passed to @mail.</value>
   </data>

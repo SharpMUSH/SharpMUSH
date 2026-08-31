@@ -24,6 +24,11 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET    /api/mail/{folder}/{number}   — read one message (marks it read)
 ///   POST   /api/mail                     — send mail { to, subject, body, urgent }
 ///   DELETE /api/mail/{folder}/{number}   — delete a message
+///
+/// <c>{number}</c> is the number the list reports, which is the number <c>@mail</c> prints: folders
+/// are numbered from 1 for the reader and indexed from 0 in the database, so every route that takes
+/// one converts it with <see cref="FolderIndex"/> — the same <c>n - 1</c> the <c>@mail</c> command
+/// applies before it queries.
 /// </summary>
 [ApiController]
 [Route("api/mail")]
@@ -79,7 +84,9 @@ public class MailController(IMediator mediator, ILogger<MailController> logger) 
 		var player = await ResolvePlayerAsync(ct);
 		if (player is null) return Unauthorized();
 
-		var mail = await mediator.Send(new GetMailQuery(player, number, folder), ct);
+		if (FolderIndex(number) is not { } index) return NotFound();
+
+		var mail = await mediator.Send(new GetMailQuery(player, index, folder), ct);
 		if (mail is null) return NotFound();
 
 		// Reading marks it read, mirroring @mail.
@@ -146,12 +153,20 @@ public class MailController(IMediator mediator, ILogger<MailController> logger) 
 		var player = await ResolvePlayerAsync(ct);
 		if (player is null) return Unauthorized();
 
-		var mail = await mediator.Send(new GetMailQuery(player, number, folder), ct);
+		if (FolderIndex(number) is not { } index) return NotFound();
+
+		var mail = await mediator.Send(new GetMailQuery(player, index, folder), ct);
 		if (mail is null) return NotFound();
 
 		await mediator.Send(new DeleteMailCommand(mail), ct);
 		return Ok(new { deleted = true });
 	}
+
+	/// <summary>
+	/// The 1-based message number a caller quotes, as the 0-based index the mail query takes; null
+	/// for a number below 1, which names no message.
+	/// </summary>
+	private static int? FolderIndex(int number) => number >= 1 ? number - 1 : null;
 
 	private static async Task<string> FromNameAsync(SharpMail mail)
 		=> (await mail.From.WithCancellation(CancellationToken.None)).Object()?.Name ?? "(unknown)";

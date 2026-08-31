@@ -71,8 +71,8 @@ else
                     @foreach (var msg in _messages)
                     {
                         var m = msg;
-                        <div style="@($"padding:0.625rem 0.875rem;border-bottom:1px solid var(--border-soft);cursor:pointer;background:{(_selected?.Number == m.Number ? "var(--surface-2)" : "transparent")};border-left:{(!m.Read ? "3px solid var(--accent)" : "3px solid transparent")}")"
-                             @onclick="() => SelectMessage(m)">
+                        <div class="mail-row" style="@($"padding:0.625rem 0.875rem;border-bottom:1px solid var(--border-soft);cursor:pointer;background:{(_selected?.Number == m.Number ? "var(--surface-2)" : "transparent")};border-left:{(!m.Read ? "3px solid var(--accent)" : "3px solid transparent")}")"
+                             @onclick="() => SelectMessageAsync(m)">
                             <div style="display:flex;align-items:center;gap:0.375rem;margin-bottom:0.125rem;">
                                 @if (!m.Read)
                                 {
@@ -114,7 +114,21 @@ else
                     </div>
                 </div>
                 <div class="mail-reading-body">
-                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                    @if (_bodyLoading)
+                    {
+                        <MudSkeleton Height="18px" Class="mb-1" />
+                        <MudSkeleton Height="18px" Width="80%" Class="mb-1" />
+                        <MudSkeleton Height="18px" Width="60%" />
+                    }
+                    else if (_body is null)
+                    {
+                        <MudText Style="font-size:0.8125rem;color:var(--text-faint);">@Loc["MailNotFound"]</MudText>
+                    }
+                    else
+                    {
+                        <div style="white-space:pre-wrap;font-family:var(--font-mono);font-size:0.8125rem;line-height:1.6;color:var(--text);">@_body</div>
+                    }
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="mt-3"
                                Color="Color.Default" OnClick="OpenDetail">
                         @Loc["NavMailReadFullMessage"]
                     </MudButton>
@@ -140,6 +154,8 @@ else
     private IReadOnlyList<string> _folders = ["INBOX"];
     private IReadOnlyList<MailService.MailSummary> _messages = [];
     private MailService.MailSummary? _selected;
+    private string? _body;
+    private bool _bodyLoading;
     private bool _loading;
 
     protected override async Task OnInitializedAsync()
@@ -162,12 +178,40 @@ else
     {
         _folder = folder;
         _selected = null;
+        _body = null;
         _loading = true;
         _messages = await MailApi.ListAsync(_folder);
         _loading = false;
     }
 
-    private void SelectMessage(MailService.MailSummary msg) => _selected = msg;
+    /// <summary>
+    /// The reading pane holds the message, not just its envelope: selecting a row fetches the body
+    /// the same way <c>/mail/{number}</c> does. It used to show sender, subject and date over a
+    /// "read full message" link and nothing else, so the pane the layout calls the body was empty.
+    /// </summary>
+    private async Task SelectMessageAsync(MailService.MailSummary msg)
+    {
+        _selected = msg;
+        _body = null;
+        _bodyLoading = true;
+
+        var message = await MailApi.ReadAsync(msg.Folder, msg.Number);
+
+        // A slow read that lands after the reader has moved on must not overwrite the newer message.
+        if (_selected?.Number != msg.Number || _selected.Folder != msg.Folder) return;
+
+        _body = message?.Body;
+        _bodyLoading = false;
+
+        // Reading marks it read server-side; clear the unread marker in the list to match.
+        if (message is not null && !msg.Read)
+        {
+            _messages = _messages
+                .Select(m => m.Number == msg.Number && m.Folder == msg.Folder ? m with { Read = true } : m)
+                .ToList();
+            _selected = _selected with { Read = true };
+        }
+    }
 
     private void OpenDetail()
     {

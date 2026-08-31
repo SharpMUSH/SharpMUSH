@@ -3,6 +3,7 @@ using Mediator;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -14,9 +15,22 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class SendMail
 {
+	/// <summary>
+	/// PennMUSH resolves a recipient with
+	/// <c>match_result(player, current, TYPE_PLAYER, MAT_ME | MAT_ABSOLUTE | MAT_PLAYER)</c>
+	/// (extmail.c:1379) before falling back to <c>lookup_player</c>, so <c>me</c>, <c>#dbref</c>,
+	/// <c>*name</c> and a bare player name are all recipients. <see cref="LocateFlags.MatchMeForLooker"/>
+	/// is what carries "me"; it is not in <c>LocateService</c>'s standard player flag set, which models
+	/// <c>lookup_player</c> alone.
+	/// </summary>
+	private const LocateFlags RecipientMatchFlags =
+		LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.MatchMeForLooker |
+		LocateFlags.AbsoluteMatch | LocateFlags.MatchOptionalWildCardForPlayerName;
+
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IPermissionService permissionService,
-		IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService,
-		IAttributeService attributeService, IOptionsWrapper<SharpMUSHOptions> configuration,
+		ILocateService locateService, IExpandedObjectDataService objectDataService, IMediator mediator,
+		INotifyService notifyService, IAttributeService attributeService,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
 		MString nameList, MString subjectAndMessage, string[] switches)
 	{
 		var urgent = switches.Contains("URGENT");
@@ -25,8 +39,23 @@ public static class SendMail
 
 		var sender = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		var playerList = ArgHelpers.PopulatedNameList(mediator, nameList.ToPlainText()!);
-		var knownPlayerList = await playerList.Where(x => x != null).Select(x => x!).ToListAsync();
+		var knownPlayerList = new List<SharpPlayer>();
+		foreach (var name in ArgHelpers.NameListString(nameList.ToPlainText()!))
+		{
+			var located = await locateService.Locate(parser, sender, sender, name, RecipientMatchFlags);
+
+			// extmail.c:1382 — an unmatched name is reported, not skipped. It used to be filtered out of
+			// the recipient list silently, so `@mail me=Subject/Body` sent nothing and said nothing.
+			if (located.IsValid() && located.WithoutError().WithoutNone() is { IsPlayer: true } found)
+			{
+				knownPlayerList.Add(found.AsPlayer);
+				continue;
+			}
+
+			await notifyService.NotifyLocalized(sender, nameof(ErrorMessages.Notifications.MailNoSuchUniquePlayer),
+				sender, name);
+		}
+
 		var subjectBodySplit = MModule.indexOf(subjectAndMessage, "/");
 
 		var subject = subjectBodySplit > -1
@@ -71,6 +100,8 @@ public static class SendMail
 			}),
 		};
 
+		var delivered = new List<SharpPlayer>();
+
 		foreach (var player in knownPlayerList)
 		{
 			if (!permissionService.PassesLock(sender, player, LockType.Mail))
@@ -79,6 +110,7 @@ public static class SendMail
 				continue;
 			}
 
+			delivered.Add(player);
 			await mediator.Send(new SendMailCommand(sender.Object(), player, mail));
 			await notifyService.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.", sender);
 
@@ -117,7 +149,7 @@ public static class SendMail
 
 		return MModule.multipleWithDelimiter(
 			MModule.single(" "),
-			knownPlayerList
+			delivered
 				.Select(x => x.Object.DBRef)
 				.Select(x => x.ToString())
 				.Select(MModule.single));

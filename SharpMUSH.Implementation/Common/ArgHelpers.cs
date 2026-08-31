@@ -242,16 +242,6 @@ public static partial class ArgHelpers
 				? HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue().ToString()
 				: x.Groups["User"].Value);
 
-	public static IAsyncEnumerable<SharpPlayer?> PopulatedNameList(IMediator mediator, string list)
-		=> NameList(list)
-			.ToAsyncEnumerable()
-			.Select<OneOf<DBRef, string>, SharpPlayer?>(async (x, ct) =>
-				await x.Match(
-					async dbref => (await mediator.Send(new GetObjectNodeQuery(dbref), ct)).TryPickT0(out var player, out _)
-						? player
-						: null,
-					async name => await mediator.CreateStream(new GetPlayerQuery(name), ct).FirstOrDefaultAsync(cancellationToken: ct)));
-
 	public static async ValueTask<CallState> ForHandleOrPlayer(IMUSHCodeParser parser, IMediator mediator,
 		IConnectionService connectionService, ILocateService locateService, CallState value,
 		Func<long, IConnectionService.ConnectionData, ValueTask<CallState>> handleFunc,

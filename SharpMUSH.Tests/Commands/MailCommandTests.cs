@@ -1,7 +1,8 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -104,6 +105,53 @@ public class MailCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You have received a message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// PennMUSH resolves each @mail recipient with
+	/// <c>match_result(player, current, TYPE_PLAYER, MAT_ME | MAT_ABSOLUTE | MAT_PLAYER)</c>
+	/// (extmail.c:1379), so <c>me</c> is a recipient exactly like <c>#dbref</c> or a player name.
+	/// SharpMUSH looked the name up as a player name only, so <c>@mail me=...</c> matched nothing —
+	/// and, because the unresolved entry was silently filtered out, said nothing either.
+	/// </summary>
+	[Test]
+	public async ValueTask MailToMeDeliversToTheSender()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailToMe");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@mail me=Me Subject/Me body."));
+
+		var notifications = NotificationsTo(player.DbRef);
+
+		await Assert.That(notifications).Contains(m => m!.StartsWith("MAIL: You sent a message to "));
+		await Assert.That(notifications).Contains(m => m!.StartsWith("MAIL: You have received a message"));
+	}
+
+	/// <summary>
+	/// extmail.c:1382 — when nothing matches, PennMUSH says <c>No such unique player: %s.</c>
+	/// SharpMUSH dropped the unmatched name on the floor and reported success for the empty list.
+	/// </summary>
+	[Test]
+	public async ValueTask MailToAnUnknownNameSaysSo()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailToNobody");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@mail NoSuchPlayerAtAll=Subject/Body."));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
+			NotifyService,
+			nameof(ErrorMessages.Notifications.MailNoSuchUniquePlayer),
+			"No such unique player: NoSuchPlayerAtAll.",
+			player.DbRef)).IsTrue();
+
+		await Assert.That(NotificationsTo(player.DbRef))
+			.DoesNotContain(m => m!.StartsWith("MAIL: You sent a message to "));
 	}
 
 	[Test]
