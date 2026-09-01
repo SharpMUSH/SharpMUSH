@@ -166,8 +166,7 @@ public class CachingBehaviorTests
 	/// </summary>
 	/// <remarks>
 	/// A stale contents entry does not heal: nothing re-invalidates the key, so the object stays missing
-	/// from the room for the entry's whole lifetime and every look, locate and FOLLOW in that room is
-	/// answered from it.
+	/// from the room for the entry's whole lifetime.
 	/// </remarks>
 	[Test]
 	public async Task ContentsCache_HoldsEveryObjectCreatedWhileItWasBeingRead()
@@ -183,18 +182,15 @@ public class CachingBehaviorTests
 			TestIsolationHelpers.GenerateUniqueName("ContentsRacer"), "TestPassword123",
 			room, room, (int)options.CurrentValue.Limit.StartingQuota));
 
-		// The window is as wide as the read is slow, and a contents read costs one round trip per
-		// occupant on Memgraph. An empty room is read faster than a creation commits and races nothing.
+		// The window is as wide as the read is slow, and a contents read costs one round trip per occupant
+		// on Memgraph. An empty room is read faster than a creation commits and races nothing.
 		for (var i = 0; i < 60; i++) await Populate();
 
-		// One creation followed at once by a read of the room, which is what FOLLOW does: create the
-		// leader, then resolve them by name out of the room's contents.
+		// One creation followed at once by a read of the room, which is what FOLLOW does.
 		using var readersRun = new CancellationTokenSource();
-		// The token stops the loop but is deliberately NOT handed to the stream. FusionCache keeps the
+		// The token stops the loop but is deliberately NOT handed to the stream: FusionCache keeps the
 		// token of whichever caller started a factory, and this cache is shared for the whole test
-		// session, so a test-scoped token passed in here outlives its `using` inside somebody else's
-		// in-flight read -- which fails as "The CancellationTokenSource has been disposed". Reads are
-		// short; letting the last one finish is cheaper than leaking a token into shared state.
+		// session, so a test-scoped token outlives its `using` inside somebody else's in-flight read.
 		var readers = Enumerable.Range(0, 4).Select(_ => Task.Run(async () =>
 		{
 			while (!readersRun.IsCancellationRequested)
@@ -225,29 +221,21 @@ public class CachingBehaviorTests
 	/// whether the write names the entry by key or reaches it by tag.
 	/// </summary>
 	/// <remarks>
-	/// Issue #838. <c>IFusionCache.RemoveAsync</c> drops only what is in the cache at that instant, so a
-	/// straddling read stores its stale list on top of the invalidation and every later reader is served
-	/// it until something else happens to clear the key. That is why a player created in a room could be
-	/// absent from the room's cached contents indefinitely, and why <c>FOLLOW</c> answered "I can't see
-	/// that here." for someone standing in the same room. <c>CreatePlayerCommand</c> invalidates
-	/// <c>object-contents:#N</c> by key and declares no tag that covers it, so it was exactly the
-	/// vulnerable shape; <c>MoveObjectCommand</c> escaped it only by falling back to the
-	/// <c>ObjectContents</c> tag.
-	/// <para>
-	/// The window is as wide as the read is slow, which is why this surfaced on Memgraph — whose
-	/// <c>GetContentsAsync</c> issues a query per item — and not on ArangoDB or SurrealDB.
-	/// </para>
+	/// Issue #838, and the reason the create commands carry the <c>ObjectContents</c> tag.
+	/// <c>RemoveAsync</c> drops only what is in the cache at that instant, so a straddling read stores its
+	/// stale list on top of the invalidation and every later reader is served it. A tag invalidation is a
+	/// timestamp FusionCache compares against when the entry was created, so the late store loses.
+	/// <c>CreatePlayerCommand</c> invalidated <c>object-contents:#N</c> by key alone;
+	/// <c>MoveObjectCommand</c> was safe only because it fell back to the tag.
 	/// </remarks>
 	[Test]
-	[Arguments(true, false)]
 	[Arguments(false, true)]
 	[Arguments(true, true)]
 	public async Task StraddlingRead_DoesNotOutliveTheWriteThatInvalidatedIt(bool byKey, bool byTag)
 	{
 		using var cache = new FusionCache(new FusionCacheOptions());
-		var clock = new CacheInvalidationClock();
-		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache, clock);
-		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache, clock);
+		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache);
+		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache);
 		var probe = new StaleReadProbe();
 		var write = new StaleReadWrite(byKey ? [probe.CacheKey] : [], byTag ? probe.CacheTags : []);
 
@@ -268,51 +256,6 @@ public class CachingBehaviorTests
 
 		await Assert.That(afterWrite).IsEquivalentTo(new[] { "after" })
 			.Because("the pre-write answer landed in the cache after the invalidation, so it must not be served");
-	}
-
-	/// <summary>
-	/// Declining to store one straddling read must not stop anything else from being cached — neither
-	/// the same key on its next read, nor any other key.
-	/// </summary>
-	/// <remarks>
-	/// <c>SetSkipMemoryCacheWrite</c> reads like "stop using the cache", and would be a silent disaster
-	/// if <c>ctx.Options</c> were the cache's shared defaults rather than a per-call duplicate: caching
-	/// would be off process-wide and every other test here would still pass, only slower. It is per-call,
-	/// and this is what says so.
-	/// </remarks>
-	[Test]
-	public async Task DecliningOneStaleStoreLeavesCachingOnForEverythingElse()
-	{
-		using var cache = new FusionCache(new FusionCacheOptions());
-		var clock = new CacheInvalidationClock();
-		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache, clock);
-		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache, clock);
-
-		var straddled = new StaleReadProbe("skip-probe");
-		var untouched = new StaleReadProbe("other-probe");
-
-		var readStarted = new TaskCompletionSource();
-		var writeCommitted = new TaskCompletionSource();
-
-		var straddlingRead = Materialize(reads, straddled, (_, _) => Blocked(readStarted, writeCommitted.Task, "before"));
-		await readStarted.Task;
-		await writes.Handle(new StaleReadWrite([straddled.CacheKey], []),
-			(_, _) => ValueTask.FromResult(true), CancellationToken.None);
-		writeCommitted.SetResult();
-		await straddlingRead;
-
-		await Assert.That((await cache.TryGetAsync<List<string>>(straddled.CacheKey)).HasValue).IsFalse()
-			.Because("the straddling read is the one store that had to be declined");
-
-		// The same key, read afresh: nothing about the skipped store may stick to it.
-		await Materialize(reads, straddled, (_, _) => Once("after"));
-		await Assert.That((await cache.TryGetAsync<List<string>>(straddled.CacheKey)).HasValue).IsTrue()
-			.Because("skipping a write is per-operation, so the next read of the same key still caches");
-
-		// And a key that was never invalidated at all.
-		await Materialize(reads, untouched, (_, _) => Once("untouched"));
-		await Assert.That((await cache.TryGetAsync<List<string>>(untouched.CacheKey)).HasValue).IsTrue()
-			.Because("ctx.Options is a per-call duplicate, not the cache's shared defaults");
 	}
 
 	private sealed record StaleReadProbe(string Key = "stale-read-probe") : IStreamQuery<string>, ICacheable

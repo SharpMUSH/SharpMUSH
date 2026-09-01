@@ -15,6 +15,7 @@ public record CreateExitCommand(string Name, string[] Aliases, AnySharpContainer
 	[
 		Definitions.CacheTags.ObjectOwnership,
 		Definitions.CacheTags.ExitList,
-		Definitions.CacheTags.ObjectList
+		Definitions.CacheTags.ObjectList,
+		Definitions.CacheTags.ObjectContents
 	];
 }

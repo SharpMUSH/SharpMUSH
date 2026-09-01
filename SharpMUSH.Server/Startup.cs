@@ -386,7 +386,6 @@ public class Startup(
 		services.AddSingleton<ConfigurationReloadService>();
 		services.AddSingleton<IOptionsChangeTokenSource<SharpMUSHOptions>>(sp =>
 			sp.GetRequiredService<ConfigurationReloadService>());
-		services.AddSingleton<ICacheInvalidationClock, CacheInvalidationClock>();
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(typeof(IStreamPipelineBehavior<,>), typeof(StreamQueryCachingBehavior<,>));

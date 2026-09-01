@@ -21,18 +21,10 @@ namespace SharpMUSH.Tests.Commands;
 /// path so that regression cannot come back unnoticed.
 /// </para>
 /// <para>
-/// These were <see cref="ExplicitAttribute"/> under issue #838, where they failed intermittently on the
-/// <b>Memgraph</b> leg under full-suite load and passed in isolation and on the other two providers. The
-/// FOLLOWING write was never the problem: the failure was the <em>locate</em>, and its cause was in the
-/// cache pipeline. <c>CreatePlayerCommand</c> invalidated <c>object-contents:#N</c> with
-/// <c>RemoveAsync</c> and declared no tag covering it, so a contents read that had queried the database
-/// before the leader was created and returned after the invalidation stored its pre-creation list on
-/// top — and the leader was absent from the room for that entry's whole lifetime. Memgraph surfaced it
-/// because its <c>GetContentsAsync</c> costs a round trip per occupant, which is what made the read slow
-/// enough to straddle a creation. See
-/// <c>CachingBehaviorTests.ContentsCache_HoldsEveryObjectCreatedWhileItWasBeingRead</c>, which
-/// reproduced it directly (17 of 40 players missing from their own room), and
-/// <c>StraddlingRead_DoesNotOutliveTheWriteThatInvalidatedIt</c>, which pins the behavior.
+/// These were <see cref="ExplicitAttribute"/> under issue #838, where they failed on the Memgraph leg
+/// under full-suite load. The FOLLOWING write was never the problem: the locate was, because
+/// <c>CreatePlayerCommand</c> invalidated the room's cached contents by key alone. See
+/// <c>CachingBehaviorTests.StraddlingRead_DoesNotOutliveTheWriteThatInvalidatedIt</c>.
 /// </para>
 /// </summary>
 public class FollowCommandTests
@@ -119,10 +111,8 @@ public class FollowCommandTests
 	/// FOLLOW refuses a leader it cannot resolve, and writes nothing.
 	/// </summary>
 	/// <remarks>
-	/// The counterpart to the cache bug above, and the reason it went unnoticed for so long: a leader who
-	/// genuinely is not there produces the same "I can't see that here." as a leader the cached contents
-	/// list had lost. This pins the wording for the honest case, so the two stay distinguishable by what
-	/// FOLLOWING holds afterwards rather than by the message alone.
+	/// A leader who genuinely is not there produces the same "I can't see that here." as one the cached
+	/// contents list had lost, so this pins the honest case.
 	/// </remarks>
 	[Test]
 	public async ValueTask MortalFollow_RefusesALeaderItCannotResolve()
@@ -165,10 +155,8 @@ public class FollowCommandTests
 	}
 
 	/// <remarks>
-	/// This is the case that failed on CI (issue #839), and it failed in the locate rather than in the
-	/// write: "I can't see that here. | I don't see that here." for a leader created moments earlier in
-	/// the same room. The burst of "Memgraph transient conflict, retrying" around it was contention, not
-	/// the cause — see the class summary for what was.
+	/// The case that failed on CI (issue #839). It failed in the locate, not the write; the
+	/// "Memgraph transient conflict" noise around it was contention, not the cause.
 	/// </remarks>
 	[Test]
 	public async ValueTask MortalUnfollow_ClearsTheWizardFlaggedAttribute()

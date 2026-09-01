@@ -20,12 +20,9 @@ namespace SharpMUSH.Library.Behaviors;
 /// exercised in the configuration it shipped in. Both passes now always run.
 /// </para>
 /// <para>
-/// Removing a key is not on its own enough, because <c>RemoveAsync</c> drops only what is in the cache
-/// at that instant: a read that issued its query before the commit and stores its answer after the
-/// second pass reinstates exactly what was just removed. So each pass also records the keys against
-/// <see cref="ICacheInvalidationClock"/>, and the caching behaviours refuse to store a read that began
-/// before the record. That is the "read side carries a version" this class used to document as the
-/// missing piece, and issue #838 is what it cost while it was missing.
+/// A narrower window remains and is not closed here: a read that issues its query before the commit
+/// and stores its result after the second invalidation still caches a pre-write answer. Closing that
+/// needs the read side to carry a version, not more invalidation.
 /// </para>
 /// <para>
 /// The second pass runs on the failure path too, and under <see cref="CancellationToken.None"/>. A
@@ -33,7 +30,7 @@ namespace SharpMUSH.Library.Behaviors;
 /// left one behind entirely; in both cases the entry is stale and nobody else is going to clear it.
 /// </para>
 /// </remarks>
-public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache, ICacheInvalidationClock clock)
+public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache)
 	: IPipelineBehavior<TRequest, TResponse>
 	where TRequest : ICommand<TResponse>, ICacheInvalidating
 {
@@ -82,12 +79,6 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache, 
 			await cache.RemoveAsync(key, token: cancellationToken);
 		}
 
-		// After the removals, never before: a read that starts once this returns has to find the key
-		// both absent and recorded, or it could store an answer the removal was meant to discard.
-		clock.Invalidated(message.CacheKeys);
-
-		// Tags need no such record — FusionCache already resolves a tag invalidation against when an
-		// entry's factory began, which is the same comparison the clock makes for a key.
 		if (message.CacheTags.Length != 0)
 		{
 			await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
