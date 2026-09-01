@@ -9,6 +9,51 @@ public class ParserBehaviorUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
+	/// <summary>
+	/// Text following a leading function call keeps the space between them.
+	/// <para>
+	/// <c>evaluationString</c> is <c>function explicitEvaluationString?</c>
+	/// (<c>SharpMUSHParser.g4:65-67</c>), so the text after a leading call is parsed as a *second*
+	/// <c>explicitEvaluationString</c> whose first element is a <c>beginGenericText</c>. The
+	/// leading-space strip in <c>VisitBeginGenericText</c> keys off being a direct child of an
+	/// <c>explicitEvaluationString</c>, which that node is — so it used to be treated as the start of
+	/// the string and lose its space. It is not the start of anything; the function is.
+	/// </para>
+	/// <para>
+	/// Verified against the built PennMUSH <c>netmush</c>: <c>think add(1,2) (3)</c> prints
+	/// <c>3 (3)</c>, <c>think add(1,2) x</c> prints <c>3 x</c>, and the two-space form compresses to
+	/// one space rather than to none.
+	/// </para>
+	/// </summary>
+	[Test]
+	[Arguments("add(1,2) x", "3 x")]
+	[Arguments("add(1,2) (3)", "3 (3)")]
+	[Arguments("add(1,2)  (3)", "3 (3)")]
+	[Arguments("add(1,2) [add(3,4)] z", "3 7 z")]
+	// Already correct: this tail arrives through genericText, not as an explicitEvaluationString's
+	// first element, so it never met the strip. Pinned so a fix cannot regress it.
+	[Arguments("[add(1,2)] (3)", "3 (3)")]
+	public async Task SpaceAfterLeadingFunctionSurvives(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// The other half of the same rule: whitespace that really is at the start of an evaluation
+	/// string is still stripped. This is what the strip in <c>VisitBeginGenericText</c> exists for,
+	/// and narrowing it must not switch it off.
+	/// </summary>
+	[Test]
+	[Arguments(" x", "x")]
+	[Arguments("  x", "x")]
+	[Arguments(" add(1,2)", "add(1,2)")]
+	public async Task LeadingWhitespaceIsStillStripped(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 	// Penn lit.1-lit.6: lit() prevents evaluation
 	[Test]
 	[Arguments("lit(hello world)", "hello world")]
