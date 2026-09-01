@@ -86,13 +86,26 @@ public class SoftcodeFormatterTests
 	}
 
 	/// <summary>
-	/// Whether <paramref name="offset"/> carries an <c>AnsiMarkup</c> — the same shape as
-	/// <c>SemanticTokenRendererTests.StyleDetailsAt</c>, simplified to a bool. A run covering the offset
-	/// is not by itself proof of an override hit: <c>MString</c> carries a run over every character
-	/// (e.g. the default/absent markup <c>MModule.single</c> assigns), so the check has to look inside
-	/// the run's <c>Markups</c> for an actual <see cref="AnsiMarkup"/> rather than merely finding a run.
+	/// <c>SoftcodeFormatter.ErrorStyle</c>, rebuilt from the same codes. The tests below assert where the
+	/// error highlight starts and stops, so they must compare against <em>that</em> style specifically.
+	/// <para>
+	/// They used to ask the weaker question "does this offset carry any <c>AnsiMarkup</c> at all", which
+	/// worked only for as long as nothing else painted a delimiter. Bracket-depth colouring does, so
+	/// under the old check a <c>(</c> just outside the error span read as styled and the span looked
+	/// wider than it is. The behaviour under test never changed; the proxy for it did.
+	/// </para>
 	/// </summary>
-	private static bool IsStyled(MString ms, int offset)
+	private static readonly AnsiStructure ErrorStyleDetails = AnsiCodeParser.ParseCodes("i r").Details;
+
+	/// <summary>
+	/// Whether <paramref name="offset"/> carries the error highlight — the same walk as
+	/// <c>SemanticTokenRendererTests.StyleDetailsAt</c>, compared against
+	/// <see cref="ErrorStyleDetails"/>. A run covering the offset is not by itself proof of an override
+	/// hit: <c>MString</c> carries a run over every character (e.g. the default/absent markup
+	/// <c>MModule.single</c> assigns), so the check has to look inside the run's <c>Markups</c> for an
+	/// actual <see cref="AnsiMarkup"/> rather than merely finding a run.
+	/// </summary>
+	private static bool IsErrorStyled(MString ms, int offset)
 	{
 		foreach (var run in ms.Runs)
 		{
@@ -101,7 +114,7 @@ public class SoftcodeFormatterTests
 				continue;
 			}
 
-			return run.Markups.Any(markup => markup is AnsiMarkup);
+			return run.Markups.Any(markup => markup is AnsiMarkup ansi && Equals(ansi.Details, ErrorStyleDetails));
 		}
 
 		return false;
@@ -128,11 +141,11 @@ public class SoftcodeFormatterTests
 
 		var result = Format(src, errors: errors);
 
-		await Assert.That(IsStyled(result, 3)).IsFalse().Because("offset 3 ('(') is before Column");
-		await Assert.That(IsStyled(result, 4)).IsTrue();
-		await Assert.That(IsStyled(result, 5)).IsTrue();
-		await Assert.That(IsStyled(result, 6)).IsTrue();
-		await Assert.That(IsStyled(result, 7)).IsFalse().Because("offset 7 is Column + OffendingToken.Length");
+		await Assert.That(IsErrorStyled(result, 3)).IsFalse().Because("offset 3 ('(') is before Column");
+		await Assert.That(IsErrorStyled(result, 4)).IsTrue();
+		await Assert.That(IsErrorStyled(result, 5)).IsTrue();
+		await Assert.That(IsErrorStyled(result, 6)).IsTrue();
+		await Assert.That(IsErrorStyled(result, 7)).IsFalse().Because("offset 7 is Column + OffendingToken.Length");
 	}
 
 	/// <summary>
@@ -148,9 +161,9 @@ public class SoftcodeFormatterTests
 
 		var result = Format(src, errors: errors);
 
-		await Assert.That(IsStyled(result, 3)).IsFalse();
-		await Assert.That(IsStyled(result, 4)).IsTrue();
-		await Assert.That(IsStyled(result, 5)).IsFalse().Because("no OffendingToken means a length-1 span");
+		await Assert.That(IsErrorStyled(result, 3)).IsFalse();
+		await Assert.That(IsErrorStyled(result, 4)).IsTrue();
+		await Assert.That(IsErrorStyled(result, 5)).IsFalse().Because("no OffendingToken means a length-1 span");
 	}
 
 	/// <summary>
@@ -170,11 +183,11 @@ public class SoftcodeFormatterTests
 
 		var result = Format(src, errors: errors);
 
-		await Assert.That(IsStyled(result, 9)).IsFalse().Because("offset 9 ('(') is before the span");
-		await Assert.That(IsStyled(result, 10)).IsTrue();
-		await Assert.That(IsStyled(result, 11)).IsTrue();
-		await Assert.That(IsStyled(result, 12)).IsTrue();
-		await Assert.That(IsStyled(result, 13)).IsFalse().Because("offset 13 (')') is past the span");
+		await Assert.That(IsErrorStyled(result, 9)).IsFalse().Because("offset 9 ('(') is before the span");
+		await Assert.That(IsErrorStyled(result, 10)).IsTrue();
+		await Assert.That(IsErrorStyled(result, 11)).IsTrue();
+		await Assert.That(IsErrorStyled(result, 12)).IsTrue();
+		await Assert.That(IsErrorStyled(result, 13)).IsFalse().Because("offset 13 (')') is past the span");
 	}
 
 	/// <summary>Boundary case: an error at the very start of the source, offset 0.</summary>
@@ -186,8 +199,8 @@ public class SoftcodeFormatterTests
 
 		var result = Format(src, errors: errors);
 
-		await Assert.That(IsStyled(result, 0)).IsTrue();
-		await Assert.That(IsStyled(result, 1)).IsFalse();
+		await Assert.That(IsErrorStyled(result, 0)).IsTrue();
+		await Assert.That(IsErrorStyled(result, 1)).IsFalse();
 	}
 
 	[Test]

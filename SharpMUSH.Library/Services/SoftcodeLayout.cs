@@ -49,7 +49,22 @@ public enum SoftcodeCallKind
 public readonly record struct SoftcodeBreak(int TokenIndex, int Indent);
 
 /// <summary>
-/// Decides where a line break may be inserted when displaying MUSH softcode.
+/// A structural delimiter and the nesting depth of the group it opens or closes. An opener and its
+/// matching closer carry the <em>same</em> depth, so a consumer painting bracket colours gets a matched
+/// pair in one colour without having to re-derive the pairing.
+/// </summary>
+/// <param name="Offset">
+/// Character offset of the delimiter itself in the source — for a <c>FUNCHAR</c>, the <c>(</c> rather
+/// than the start of the name, which is coloured as a function by the semantic tokens.
+/// </param>
+/// <param name="Depth">Nesting depth, 0 for an outermost group.</param>
+public readonly record struct SoftcodeDelimiter(int Offset, int Depth);
+
+/// <summary>
+/// Decides where a line break may be inserted when displaying MUSH softcode, and — from the same group
+/// tree, via <see cref="ComputeDelimiterDepths"/> — which delimiters are a matched structural pair and
+/// how deeply nested. Both questions turn on the same analysis of which characters the parser treats as
+/// structure rather than as text, which is why they are answered here rather than by a second walk.
 /// <para>
 /// Softcode is whitespace-significant: whitespace is literal data almost everywhere. Seven lexer
 /// rules carry <c>fragment WS: [ \r\n\f\t]*</c> and so swallow the whitespace that follows them —
@@ -250,6 +265,102 @@ public static class SoftcodeLayout
 
 		return breaks;
 	}
+
+	/// <summary>
+	/// The matched structural delimiters in <paramref name="tokens"/> and their nesting depths — the
+	/// data bracket colouring is painted from.
+	/// <para>
+	/// This asks a different question from <see cref="Compute"/> — not "where may a break go" but "which
+	/// characters are a matched pair" — and deliberately answers it from the same
+	/// <c>BuildGroupTree</c> walk, because a <em>lexical</em> bracket matcher gets softcode wrong in
+	/// three ways that this one does not. A <c>\[</c> never lexes to an <c>OBRACK</c>, so an escape is
+	/// not a bracket. A bare <c>(</c> is <c>beginGenericText</c>, not a <c>FUNCHAR</c>, so prose is not
+	/// structure. And a <see cref="SoftcodeCallKind.CopiesArgumentSource"/> body reaches the output as
+	/// raw source, so the delimiters inside it are literal characters and are not reported.
+	/// </para>
+	/// <para>
+	/// An <em>unmatched</em> opener yields nothing: it has no partner to share a colour with, and the
+	/// group tree closes it implicitly at the last token, which is a position the source does not have a
+	/// delimiter at. Its children are still reported — one unterminated call does not make the balanced
+	/// calls inside it unreadable — and an unmatched delimiter is a parse error, which <c>@examine</c>
+	/// already paints over the top of any colouring here.
+	/// </para>
+	/// <para>
+	/// A <see cref="SoftcodeCallKind.Unresolved"/> call <em>is</em> reported. Its parentheses are
+	/// reproduced as text rather than dispatched, so they are not break positions — but they are still
+	/// the two characters the author wrote as a pair, and depth is display only. Nothing here changes
+	/// what the code does; <see cref="Compute"/> alone decides that.
+	/// </para>
+	/// </summary>
+	/// <param name="tokens">The lexed softcode, in source order.</param>
+	/// <param name="classifyFunction">
+	/// As <see cref="Compute"/>'s. Omitting it classifies every name as
+	/// <see cref="SoftcodeCallKind.CopiesArgumentSource"/> — the conservative answer, which here means
+	/// reporting an outermost call's own parentheses and nothing within.
+	/// </param>
+	/// <param name="parseType">
+	/// As <see cref="Compute"/>'s. Used only to exclude a leading <c>$pattern:</c> / <c>^pattern:</c>,
+	/// whose brackets are glob data compiled to a regex rather than code.
+	/// </param>
+	/// <returns>The delimiters in ascending offset order.</returns>
+	public static IReadOnlyList<SoftcodeDelimiter> ComputeDelimiterDepths(IReadOnlyList<TokenInfo> tokens,
+		Func<string, SoftcodeCallKind>? classifyFunction = null, ParseType parseType = ParseType.Function)
+	{
+		if (tokens.Count == 0)
+		{
+			return [];
+		}
+
+		var root = BuildGroupTree(tokens, FirstCodeTokenIndex(tokens, parseType),
+			classifyFunction ?? (_ => SoftcodeCallKind.CopiesArgumentSource), SeparatesCommands(parseType));
+
+		var delimiters = new List<SoftcodeDelimiter>();
+		CollectDelimiters(root, tokens, depth: 0, delimiters);
+		delimiters.Sort((left, right) => left.Offset.CompareTo(right.Offset));
+
+		return delimiters;
+	}
+
+	/// <summary>
+	/// Walks the group tree emitting each explicitly-closed group's opener and closer at its depth.
+	/// </summary>
+	private static void CollectDelimiters(Group group, IReadOnlyList<TokenInfo> tokens, int depth,
+		List<SoftcodeDelimiter> into)
+	{
+		if (group.OpenIndex >= 0)
+		{
+			if (group.ClosedExplicitly)
+			{
+				into.Add(new SoftcodeDelimiter(DelimiterOffset(tokens[group.OpenIndex]), depth));
+				into.Add(new SoftcodeDelimiter(tokens[group.CloseIndex].StartIndex, depth));
+			}
+
+			// A source-copying call's body is never visited, so what looks like a bracket in there is a
+			// literal character. Stop rather than descend — the same rule that makes it atomic to layout.
+			if (group.IsAtomic)
+			{
+				return;
+			}
+
+			depth++;
+		}
+
+		foreach (var child in group.Children)
+		{
+			CollectDelimiters(child, tokens, depth, into);
+		}
+	}
+
+	/// <summary>
+	/// Offset of the delimiter character within an opening token. A <c>FUNCHAR</c> is lexed as
+	/// <c>name '(' WS</c>, so only its <c>(</c> is the delimiter — the name is already coloured as a
+	/// function, and the absorbed whitespace is not a character anyone is matching. <c>OBRACK</c> and
+	/// <c>OBRACE</c> lead with their delimiter.
+	/// </summary>
+	private static int DelimiterOffset(TokenInfo opener) =>
+		opener.Type == "FUNCHAR" && opener.Text.IndexOf('(') is var paren && paren > 0
+			? opener.StartIndex + paren
+			: opener.StartIndex;
 
 	/// <summary>
 	/// Index of the first token that is code rather than match data — <c>0</c> for everything without a
@@ -466,7 +577,9 @@ public static class SoftcodeLayout
 				// exactly as a closer that would unwind the root is ignored.
 				if (stack.Count > 1 && stack.Peek().OpenType == closedOpener)
 				{
-					stack.Pop().CloseIndex = i;
+					var closed = stack.Pop();
+					closed.CloseIndex = i;
+					closed.ClosedExplicitly = true;
 				}
 			}
 			else if (type == "COMMAWS")
@@ -727,6 +840,14 @@ public static class SoftcodeLayout
 
 		/// <summary>Index of the last token in the group, inclusive — the closer when there is one.</summary>
 		public int CloseIndex { get; set; }
+
+		/// <summary>
+		/// Whether <see cref="CloseIndex"/> points at a real matching closer, rather than at the last
+		/// token of the input where an unterminated group was closed implicitly. Layout does not care —
+		/// its trailing-closer scan handles both — but a consumer pairing delimiters for display must not
+		/// paint a closer the source never wrote.
+		/// </summary>
+		public bool ClosedExplicitly { get; set; }
 
 		/// <summary>
 		/// Indices of this group's own structural separators, ascending. Only separators that are

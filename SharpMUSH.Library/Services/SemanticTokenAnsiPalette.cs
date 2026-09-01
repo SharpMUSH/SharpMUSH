@@ -47,4 +47,39 @@ public static class SemanticTokenAnsiPalette
 
 		return Ansi.Create(foreground: new AnsiColor.RGB(color.Value), bold: bold);
 	}
+
+	/// <summary>
+	/// Colours for matched structural delimiters, indexed by nesting depth. Aligned with VS Code dark+'s
+	/// <c>editorBracketHighlight.foreground1..3</c>, like the rest of this palette, and deliberately
+	/// distinct from every entry in <see cref="GetStyle"/>: a bracket has to be told apart from the
+	/// function name it follows, not just from the bracket one level out.
+	/// </summary>
+	private static readonly Color[] BracketDepthColors =
+	[
+		Color.FromArgb(0xFF, 0xD7, 0x00), // gold
+		Color.FromArgb(0xDA, 0x70, 0xD6), // orchid
+		Color.FromArgb(0x17, 0x9F, 0xFF)  // azure
+	];
+
+	/// <summary>
+	/// Number of distinct depth colours before the cycle repeats. Exposed so a caller does not have to
+	/// hard-code the cycle length to reason about (or test) what a deeply nested bracket is painted.
+	/// </summary>
+	public static int BracketDepthColorCount => BracketDepthColors.Length;
+
+	/// <summary>
+	/// The style for a structural delimiter at <paramref name="depth"/>, cycling every
+	/// <see cref="BracketDepthColorCount"/> levels so arbitrarily deep nesting still gets a colour.
+	/// <para>
+	/// Never <c>null</c>, unlike <see cref="GetStyle"/>: a delimiter reported by
+	/// <c>SoftcodeLayout.ComputeDelimiterDepths</c> is known structure, so there is no "leave it at the
+	/// terminal default" case to express. Bold, because at 78 columns a single character carrying the
+	/// only cue to nesting needs the weight.
+	/// </para>
+	/// </summary>
+	/// <param name="depth">Nesting depth, 0 for an outermost group. Negative values are treated as 0.</param>
+	public static Ansi GetBracketDepthStyle(int depth) =>
+		Ansi.Create(
+			foreground: new AnsiColor.RGB(BracketDepthColors[Math.Max(depth, 0) % BracketDepthColors.Length]),
+			bold: true);
 }

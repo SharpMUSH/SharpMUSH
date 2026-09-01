@@ -292,6 +292,26 @@ Truecolor may be emitted freely. `OutputTransformService.ApplyAnsiTransformation
 (`SharpMUSH.ConnectionServer/Services/OutputTransformService.cs:63-86`) downgrades
 xterm256 to 16 colours or strips ANSI entirely per connection capability.
 
+### Bracket depth
+
+Matched structural delimiters are coloured by nesting depth, cycling every three
+levels, so an opener and its closer share a colour. Depths come from
+`SoftcodeLayout.ComputeDelimiterDepths`, which reuses the same `BuildGroupTree`
+walk the break positions come from, and are applied through the same per-offset
+`overrideAt` hook as the error style — layered *beneath* it, since an unbalanced
+delimiter is exactly where both want the same character.
+
+Reusing the group tree is the whole point. A lexical bracket matcher is wrong for
+softcode in three ways: `\[` never lexes to an `OBRACK`, so an escape is not a
+bracket; a bare `(` is `beginGenericText` rather than a `FUNCHAR`, so prose is not
+structure; and a `CopiesArgumentSource` body reaches the output as raw source, so
+the delimiters inside it are literal characters. An unmatched opener is reported as
+nothing at all — it has no partner to share a colour with, and it is a parse error,
+which the error style already covers.
+
+Unlike layout, this is display-only: it changes no break position and cannot alter
+what the code does.
+
 ### Errors
 
 Inline: the offending span rendered in an error style — inverse video plus red

@@ -2685,13 +2685,36 @@ public class SharpMUSHParserVisitor(
 			// Strip leading when this is the FIRST text node in an evaluation string
 			// (direct child of explicitEvaluationString). When reached via genericText
 			// (text between brackets), leading spaces are meaningful separators.
-			if (context.Parent is ExplicitEvaluationStringContext or BraceExplicitEvaluationStringContext)
+			//
+			// Being that first element is necessary but NOT sufficient, because an
+			// explicitEvaluationString is not always the start of the string it belongs to:
+			// `evaluationString: function explicitEvaluationString?` (SharpMUSHParser.g4:65-67)
+			// parses the text *after* a leading call as a second explicitEvaluationString, whose
+			// first element is exactly such a node. `add(1,2) x` used to lose that space and yield
+			// "3x"; the space separates the call's result from what follows it and is no more
+			// leading than the "3" is. So a tail-of-a-call node is excluded here.
+			if (context.Parent is ExplicitEvaluationStringContext or BraceExplicitEvaluationStringContext
+					&& !FollowsACallInTheSameEvaluationString(context.Parent))
 				compressed = MModule.trim(compressed, " ", global::MarkupString.TrimType.TrimStart);
 			return result with { Message = compressed };
 		}
 
 		return result;
 	}
+
+	/// <summary>
+	/// Whether <paramref name="explicitEvaluationString"/> is the trailing half of
+	/// <c>evaluationString: function explicitEvaluationString?</c> rather than a string's own
+	/// beginning &mdash; i.e. whether a <c>function</c> was already emitted to its left.
+	/// <para>
+	/// Only that one production puts an <c>explicitEvaluationString</c> after something that
+	/// produces output. Everywhere else it is genuinely first, and its leading whitespace is the
+	/// string's own leading whitespace.
+	/// </para>
+	/// </summary>
+	private static bool FollowsACallInTheSameEvaluationString(Antlr4.Runtime.Tree.IParseTree explicitEvaluationString)
+		=> explicitEvaluationString.Parent is EvaluationStringContext evaluationString
+			 && evaluationString.function() is not null;
 
 	public override async ValueTask<CallState?> VisitValidSubstitution(
 		[NotNull] ValidSubstitutionContext context)
