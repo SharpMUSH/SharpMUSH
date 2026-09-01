@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration;
@@ -6600,8 +6600,8 @@ public partial class Commands
 					arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
-				=> await SendMail.Handle(parser, PermissionService!, ObjectDataService!, Mediator!, NotifyService!, AttributeService!, Configuration!, arg0!,
-					arg1!, switches),
+				=> await SendMail.Handle(parser, PermissionService!, LocateService!, ObjectDataService!, Mediator!, NotifyService!,
+					AttributeService!, Configuration!, arg0!, arg1!, switches),
 			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
 															int.TryParse(arg0?.ToPlainText(), out var number)
 				=> await ReadMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, Math.Max(0, number - 1),

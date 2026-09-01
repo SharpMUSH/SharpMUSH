@@ -1,15 +1,18 @@
 using DotNext.Threading;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
-using MarkupString;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Services;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -24,13 +27,21 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET    /api/mail/{folder}/{number}   — read one message (marks it read)
 ///   POST   /api/mail                     — send mail { to, subject, body, urgent }
 ///   DELETE /api/mail/{folder}/{number}   — delete a message
+///
+/// <c>{number}</c> is the number the list reports, as <c>@mail</c> prints it. A folder is numbered
+/// from 1 for the reader and indexed from 0 in the database, so every route taking one converts it
+/// with <see cref="FolderIndex"/>.
 /// </summary>
 [ApiController]
 [Route("api/mail")]
 [Authorize]
-public class MailController(IMediator mediator, ILogger<MailController> logger) : ControllerBase
+public class MailController(IMediator mediator, IEngineCommandInvoker commandInvoker, ILogger<MailController> logger) : ControllerBase
 {
 	private const string DefaultFolder = "INBOX";
+
+	/// <summary>extmail.h:71 — <c>SUBJECT_LEN</c>. Past it the command reads the whole argument as
+	/// the body, so refusing beats silently losing the subject.</summary>
+	private const int SubjectLength = 60;
 
 	public record MailSummaryDto(int Number, string From, string Subject, DateTimeOffset DateSent, bool Read, bool Urgent, string Folder);
 	public record MailMessageDto(int Number, string From, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, bool Read, string Folder);
@@ -79,7 +90,9 @@ public class MailController(IMediator mediator, ILogger<MailController> logger) 
 		var player = await ResolvePlayerAsync(ct);
 		if (player is null) return Unauthorized();
 
-		var mail = await mediator.Send(new GetMailQuery(player, number, folder), ct);
+		if (FolderIndex(number) is not { } index) return NotFound();
+
+		var mail = await mediator.Send(new GetMailQuery(player, index, folder), ct);
 		if (mail is null) return NotFound();
 
 		// Reading marks it read, mirroring @mail.
@@ -99,44 +112,66 @@ public class MailController(IMediator mediator, ILogger<MailController> logger) 
 			mail.Folder);
 	}
 
+	/// <summary>
+	/// Sends by running the engine's own <c>@MAIL</c>, so recipient resolution, the mail lock,
+	/// <c>MAILSIGNATURE</c>, the <c>AMAIL</c> trigger and the delivery notice happen as they do
+	/// in-game. Arguments go over pre-split, never spliced into a command line, so a <c>;</c> in a
+	/// body cannot start a second command; <c>NOEVAL</c> keeps the caller's text as text.
+	/// </summary>
 	[HttpPost]
 	public async Task<IActionResult> Send([FromBody] SendMailRequest request, CancellationToken ct)
 	{
-		var sender = await ResolvePlayerAsync(ct);
-		if (sender is null) return Unauthorized();
+		if (User.GetActingCharacter() is not { } character) return Unauthorized();
 
 		if (string.IsNullOrWhiteSpace(request.To))
 		{
 			return BadRequest(new { error = "Recipient is required." });
 		}
 
-		var recipient = await ResolvePlayerByNameAsync(request.To, ct);
-		if (recipient is null)
+		var subject = request.Subject ?? string.Empty;
+		if (subject.Length > SubjectLength)
+		{
+			return BadRequest(new { error = $"Subject may be at most {SubjectLength} characters." });
+		}
+
+		// The subject ends at the first single '/', a doubled one being a literal (extmail.c:1337).
+		var subjectAndBody = $"{subject.Replace("/", "//")}/{request.Body ?? string.Empty}";
+
+		var arguments = new Dictionary<string, CallState>
+		{
+			["0"] = new CallState(request.To),
+			["1"] = new CallState(subjectAndBody)
+		};
+
+		// The send arm is selected by the *last* switch, so NOEVAL must not end the list.
+		string[] switches = request.Urgent ? ["NOEVAL", "URGENT", "SEND"] : ["NOEVAL", "SEND"];
+
+		var result = await commandInvoker.InvokeAsync("@MAIL", character, arguments, switches);
+		var message = result?.Message?.ToPlainText() ?? string.Empty;
+
+		// A recipient who refuses your mail exists, so that is a 403, not the 404 a bad name gets.
+		if (message == ErrorMessages.Returns.NoSuchPlayer)
 		{
 			return NotFound(new { error = $"No such character: {request.To}" });
 		}
 
-		var mail = new SharpMail
+		if (message == ErrorMessages.Returns.RecipientDoesNotAcceptMail)
 		{
-			DateSent = DateTimeOffset.UtcNow,
-			Fresh = true,
-			Read = false,
-			Tagged = false,
-			Urgent = request.Urgent,
-			Cleared = false,
-			Forwarded = false,
-			Folder = DefaultFolder,
-			Content = MModule.single(request.Body ?? string.Empty),
-			Subject = MModule.single(request.Subject ?? string.Empty),
-			From = new AsyncLazy<AnyOptionalSharpObject>(async _ =>
-			{
-				await ValueTask.CompletedTask;
-				return sender;
-			})
-		};
+			return StatusCode(StatusCodes.Status403Forbidden, new { error = message });
+		}
 
-		await mediator.Send(new SendMailCommand(sender.Object, recipient, mail), ct);
-		logger.LogInformation("Web mail sent from #{From} to {To}.", sender.Object.Key, recipient.Object.Name);
+		// Only those two are the caller's doing. @mail can also return TooManySwitches or
+		// BadArgumentsToMailCommand, which this endpoint builds and so can only get wrong itself —
+		// blaming the caller with a 403 would send them looking in the wrong place.
+		if (string.IsNullOrWhiteSpace(message) || message.StartsWith("#-1", StringComparison.Ordinal))
+		{
+			logger.LogError("@MAIL refused a web send with {Result}.", message);
+			return StatusCode(StatusCodes.Status500InternalServerError,
+				new { error = "@MAIL could not send the message." });
+		}
+
+		// The engine's list, not request.To: caller text with a newline in it would forge log lines.
+		logger.LogInformation("Web mail sent from {From} to {Delivered}.", character, message);
 		return Ok(new { sent = true });
 	}
 
@@ -146,12 +181,16 @@ public class MailController(IMediator mediator, ILogger<MailController> logger) 
 		var player = await ResolvePlayerAsync(ct);
 		if (player is null) return Unauthorized();
 
-		var mail = await mediator.Send(new GetMailQuery(player, number, folder), ct);
+		if (FolderIndex(number) is not { } index) return NotFound();
+
+		var mail = await mediator.Send(new GetMailQuery(player, index, folder), ct);
 		if (mail is null) return NotFound();
 
 		await mediator.Send(new DeleteMailCommand(mail), ct);
 		return Ok(new { deleted = true });
 	}
+
+	private static int? FolderIndex(int number) => number >= 1 ? number - 1 : null;
 
 	private static async Task<string> FromNameAsync(SharpMail mail)
 		=> (await mail.From.WithCancellation(CancellationToken.None)).Object()?.Name ?? "(unknown)";
@@ -163,14 +202,5 @@ public class MailController(IMediator mediator, ILogger<MailController> logger) 
 
 		var result = await mediator.Send(new GetObjectNodeQuery(character), ct);
 		return result.IsPlayer ? result.AsPlayer : null;
-	}
-
-	private async Task<SharpPlayer?> ResolvePlayerByNameAsync(string name, CancellationToken ct)
-	{
-		await foreach (var player in mediator.CreateStream(new GetPlayerQuery(name)).WithCancellation(ct))
-		{
-			return player;
-		}
-		return null;
 	}
 }

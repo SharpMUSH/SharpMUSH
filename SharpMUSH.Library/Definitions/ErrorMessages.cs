@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace SharpMUSH.Library.Definitions;
 
@@ -1326,6 +1326,7 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string IncludeErrorExecutingFormat = "Error executing included attribute: {0}";
 
+		public const string MailNoSuchUniquePlayer = "No such unique player: {0}.";
 		public const string MailTooManySwitches = "Error: Too many switches passed to @mail.";
 		public const string MailBadArguments = "MAIL: Bad arguments to @mail. See 'help @mail' for usage.";
 
