@@ -312,11 +312,8 @@ public partial class Functions
 		return new CallState(from.Object()?.DBRef.ToString() ?? "#-1");
 	}
 	/// <summary>
-	/// fun_mailsend is <c>do_mail_send(executor, args[0], args[1], 0, 1, 0)</c> (extmail.c:1466) —
-	/// the same send @mail performs, with silent=1 and nosig=0 — rather than a mail implementation of
-	/// its own. Delegating to the command's handler is what gives the function PennMUSH's recipient
-	/// rules, the mail lock, MAILSIGNATURE, the AMAIL trigger and the recipient's delivery notice,
-	/// none of which the separate copy here had.
+	/// extmail.c:1466 — <c>do_mail_send(executor, args[0], args[1], 0, 1, 0)</c>: the same send
+	/// <c>@mail</c> performs, with silent=1 and nosig=0.
 	/// </summary>
 	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["player", "message"])]
 	public static async ValueTask<CallState> mailsend(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -332,8 +329,7 @@ public partial class Functions
 			NotifyService!, AttributeService!, Configuration!,
 			args["0"].Message!, args["1"].Message!, ["SILENT"]);
 
-		// do_mail_send reports a bad recipient by notifying the sender, so the function itself returns
-		// nothing on every path that reaches it.
+		// do_mail_send notifies the sender about a bad recipient, so the function returns nothing.
 		return new CallState(string.Empty);
 	}
 	[SharpFunction(Name = "mailstats", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]

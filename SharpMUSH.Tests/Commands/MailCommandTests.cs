@@ -109,11 +109,8 @@ public class MailCommandTests
 	}
 
 	/// <summary>
-	/// PennMUSH resolves each @mail recipient with
-	/// <c>match_result(player, current, TYPE_PLAYER, MAT_ME | MAT_ABSOLUTE | MAT_PLAYER)</c>
-	/// (extmail.c:1379), so <c>me</c> is a recipient exactly like <c>#dbref</c> or a player name.
-	/// SharpMUSH looked the name up as a player name only, so <c>@mail me=...</c> matched nothing —
-	/// and, because the unresolved entry was silently filtered out, said nothing either.
+	/// extmail.c:1379 matches with <c>MAT_ME</c>, so <c>me</c> is a recipient like any other.
+	/// A name-only lookup matched nothing here, and the silent filter said nothing either.
 	/// </summary>
 	[Test]
 	public async ValueTask MailToMeDeliversToTheSender()
@@ -131,10 +128,7 @@ public class MailCommandTests
 		await Assert.That(notifications).Contains(m => m!.StartsWith("MAIL: You have received a message"));
 	}
 
-	/// <summary>
-	/// extmail.c:1382 — when nothing matches, PennMUSH says <c>No such unique player: %s.</c>
-	/// SharpMUSH dropped the unmatched name on the floor and reported success for the empty list.
-	/// </summary>
+	/// <summary>extmail.c:1382 — an unmatched name is reported, not dropped.</summary>
 	[Test]
 	public async ValueTask MailToAnUnknownNameSaysSo()
 	{
@@ -155,11 +149,7 @@ public class MailCommandTests
 			.DoesNotContain(m => m!.StartsWith("MAIL: You sent a message to "));
 	}
 
-	/// <summary>
-	/// extmail.c:1337 — a doubled subject cookie is a literal <c>/</c> and does not end the subject;
-	/// only a single one does. SharpMUSH split on the first <c>/</c> unconditionally, so a subject
-	/// could not contain one at all.
-	/// </summary>
+	/// <summary>extmail.c:1337 — a doubled cookie is a literal, so a subject may contain a slash.</summary>
 	[Test]
 	public async ValueTask MailSubjectTakesADoubledSlashAsALiteral()
 	{
@@ -179,8 +169,8 @@ public class MailCommandTests
 	}
 
 	/// <summary>
-	/// SUBJECT_LEN is 60 (extmail.h:71). With no cookie the whole message is the body and the first
-	/// SUBJECT_LEN characters are the subject; SharpMUSH truncated at 20.
+	/// extmail.h:71 — with no cookie the whole message is the body and the first SUBJECT_LEN (60)
+	/// characters are the subject.
 	/// </summary>
 	[Test]
 	public async ValueTask MailWithoutASubjectTakesSixtyCharacters()
@@ -203,8 +193,7 @@ public class MailCommandTests
 
 	/// <summary>
 	/// real_send_mail (extmail.c:127,138) gates the *sender's* confirmation on silent and notifies
-	/// the recipient unconditionally. SharpMUSH had it exactly inverted, which also meant
-	/// <c>mailsend()</c> — which PennMUSH calls with silent=1 — could not notify its recipient.
+	/// the recipient unconditionally. This was inverted.
 	/// </summary>
 	[Test]
 	public async ValueTask MailSilentSuppressesTheSenderConfirmationNotTheDelivery()
@@ -225,10 +214,8 @@ public class MailCommandTests
 	}
 
 	/// <summary>
-	/// fun_mailsend is not its own mail implementation in PennMUSH — it calls do_mail_send, the same
-	/// function @mail uses (extmail.c:1466). SharpMUSH's mailsend() had a third one, and while its
-	/// bare PlayersPreference locate did resolve <c>me</c>, nothing held the two implementations to
-	/// the same recipient rules. This pins them together now that there is only one.
+	/// fun_mailsend calls do_mail_send (extmail.c:1466), so the function and the command cannot
+	/// have different recipient rules. This pins them together.
 	/// </summary>
 	[Test]
 	public async ValueTask MailSendFunctionResolvesMeLikeTheCommand()
@@ -249,9 +236,8 @@ public class MailCommandTests
 	}
 
 	/// <summary>
-	/// do_mail_send is called with silent=1 (extmail.c:1466), which suppresses the sender's
-	/// confirmation only — the recipient's delivery notice is outside that gate. mailsend() used to
-	/// notify nobody at all.
+	/// silent=1 (extmail.c:1466) suppresses the sender's confirmation only; the delivery notice is
+	/// outside that gate.
 	/// </summary>
 	[Test]
 	public async ValueTask MailSendFunctionNotifiesTheRecipientButNotTheSender()
@@ -269,10 +255,7 @@ public class MailCommandTests
 		await Assert.That(NotificationsTo(sender.DbRef)).DoesNotContain(m => m!.StartsWith("MAIL: You sent"));
 	}
 
-	/// <summary>
-	/// nosig is 0 at the fun_mailsend call site, so a signature applies exactly as it does for the
-	/// command. mailsend() never read MAILSIGNATURE.
-	/// </summary>
+	/// <summary>nosig is 0 at the fun_mailsend call site, so MAILSIGNATURE applies.</summary>
 	[Test]
 	public async ValueTask MailSendFunctionAppliesTheSendersSignature()
 	{
@@ -294,9 +277,7 @@ public class MailCommandTests
 
 	/// <summary>
 	/// Delivering to nobody has two causes — no name resolved, or every resolved recipient refuses
-	/// mail from this sender — and both used to return the same empty recipient list, so a caller
-	/// could only report one of them. The web endpoint reported a mail-locked character as though
-	/// they did not exist.
+	/// mail — and an empty recipient list cannot tell a caller which.
 	/// </summary>
 	[Test]
 	public async ValueTask MailDistinguishesAnUnknownNameFromARefusedOne()

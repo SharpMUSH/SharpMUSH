@@ -14,9 +14,8 @@ using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>
-/// The slice of <c>api/mail</c> the /mail page touches: the folder list, one INBOX message, and
-/// that message's body. The body is served only at the number the list reported, so a page that
-/// reads the wrong number gets a 404 here rather than silently passing.
+/// The slice of <c>api/mail</c> the /mail page touches. The body is served only at the number the
+/// list reported, so a page reading the wrong number 404s here rather than silently passing.
 /// </summary>
 file sealed class MailPageApiHandler : HttpMessageHandler
 {
@@ -61,11 +60,8 @@ file sealed class MailPageApiHandler : HttpMessageHandler
 }
 
 /// <summary>
-/// The /mail reading pane. It used to render the envelope — sender, subject, date — over a
-/// "read full message" link and nothing else, so the pane the layout calls <c>.mail-reading-body</c>
-/// held no body at all; the only way to read a message was the detail route, which was itself
-/// answering 404 for a one-message mailbox (see MailApiTests). Selecting a row has to put the
-/// message text on screen.
+/// Selecting a row has to put the message text on screen: <c>.mail-reading-body</c> rendered the
+/// envelope over a "read full message" link and no body at all.
 /// </summary>
 public class MailPageTests : TrackingBunitContext, IAsyncDisposable
 {

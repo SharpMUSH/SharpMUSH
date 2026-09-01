@@ -158,10 +158,8 @@ else
     private bool _bodyLoading;
     private bool _loading;
 
-    // Each pane's in-flight fetch is identified by a ticket rather than by what it was fetching:
-    // picking INBOX, then SENT, then INBOX again gives two requests the same folder name, so
-    // comparing names lets the older of the two win. A request applies its result only while it
-    // still holds the latest ticket.
+    // A fetch is identified by ticket, not by what it fetched: INBOX, then SENT, then INBOX again
+    // gives two requests the same folder name, so comparing names lets the older one win.
     private long _folderTicket;
     private long _readTicket;
 
@@ -192,19 +190,13 @@ else
 
         var messages = await MailApi.ListAsync(folder);
 
-        // A slow list that lands after the reader picked another folder must neither replace the
-        // newer folder's rows nor clear the loading state the newer fetch still owns.
         if (ticket != _folderTicket) return;
 
         _messages = messages;
         _loading = false;
     }
 
-    /// <summary>
-    /// The reading pane holds the message, not just its envelope: selecting a row fetches the body
-    /// the same way <c>/mail/{number}</c> does. It used to show sender, subject and date over a
-    /// "read full message" link and nothing else, so the pane the layout calls the body was empty.
-    /// </summary>
+    /// <summary>Selecting a row fetches the body, the same way <c>/mail/{number}</c> does.</summary>
     private async Task SelectMessageAsync(MailService.MailSummary msg)
     {
         var ticket = ++_readTicket;
@@ -214,13 +206,12 @@ else
 
         var message = await MailApi.ReadAsync(msg.Folder, msg.Number);
 
-        // A slow read that lands after the reader has moved on must not overwrite the newer message.
         if (ticket != _readTicket) return;
 
         _body = message?.Body;
         _bodyLoading = false;
 
-        // Reading marks it read server-side; clear the unread marker in the list to match.
+        // Reading marks it read server-side; match that in the list.
         if (message is not null && !msg.Read)
         {
             _messages = _messages

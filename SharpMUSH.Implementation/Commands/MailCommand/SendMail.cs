@@ -16,12 +16,9 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 public static class SendMail
 {
 	/// <summary>
-	/// PennMUSH resolves a recipient with
-	/// <c>match_result(player, current, TYPE_PLAYER, MAT_ME | MAT_ABSOLUTE | MAT_PLAYER)</c>
-	/// (extmail.c:1379) before falling back to <c>lookup_player</c>, so <c>me</c>, <c>#dbref</c>,
-	/// <c>*name</c> and a bare player name are all recipients. <see cref="LocateFlags.MatchMeForLooker"/>
-	/// is what carries "me"; it is not in <c>LocateService</c>'s standard player flag set, which models
-	/// <c>lookup_player</c> alone.
+	/// extmail.c:1379 — <c>MAT_ME | MAT_ABSOLUTE | MAT_PLAYER</c>, then <c>lookup_player</c>.
+	/// <see cref="LocateFlags.MatchMeForLooker"/> is named here rather than added to
+	/// <c>LocateService</c>'s player flag set, which models <c>lookup_player</c> alone.
 	/// </summary>
 	private const LocateFlags RecipientMatchFlags =
 		LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.MatchMeForLooker |
@@ -34,11 +31,9 @@ public static class SendMail
 	private const int SubjectLength = 60;
 
 	/// <summary>
-	/// Splits <c>[subject/]message</c> the way extmail.c:1336 does: a doubled cookie is a literal
-	/// <c>/</c> that does not end the subject, a single one ends it, and the scan stops at
-	/// <see cref="SubjectLength"/>. When no cookie ends the subject PennMUSH rewinds the message
-	/// pointer, so the whole thing is the body and the subject is only its opening — which is why
-	/// this returns the original string as the body rather than the remainder.
+	/// Splits <c>[subject/]message</c> as extmail.c:1336 does: a doubled cookie is a literal, a
+	/// single one ends the subject, and the scan stops at <see cref="SubjectLength"/>. With no
+	/// cookie PennMUSH rewinds, so the body is the whole string rather than a remainder.
 	/// </summary>
 	private static (MString Subject, MString Body) SplitSubject(MString subjectAndMessage)
 	{
@@ -51,7 +46,6 @@ public static class SendMail
 		{
 			if (text[position] == SubjectCookie)
 			{
-				// A doubled cookie contributes one literal character and consumes two.
 				if (position + 1 < text.Length && text[position + 1] == SubjectCookie)
 				{
 					segments.Add(MModule.substring(position, 1, subjectAndMessage));
@@ -70,8 +64,7 @@ public static class SendMail
 
 		var subject = segments.Count > 0 ? MModule.concatMany(segments) : MModule.empty();
 
-		// extmail.c:1350 — the subject only counts as given when the scan actually stopped on a
-		// cookie, which includes stopping there because the cap ran out.
+		// extmail.c:1350 — given only if the scan stopped on a cookie, the cap included.
 		return position < text.Length && text[position] == SubjectCookie
 			? (subject, MModule.substring(position + 1, text.Length - position - 1, subjectAndMessage))
 			: (subject, subjectAndMessage);
@@ -94,8 +87,7 @@ public static class SendMail
 		{
 			var located = await locateService.Locate(parser, sender, sender, name, RecipientMatchFlags);
 
-			// extmail.c:1382 — an unmatched name is reported, not skipped. It used to be filtered out of
-			// the recipient list silently, so `@mail me=Subject/Body` sent nothing and said nothing.
+			// extmail.c:1382 — an unmatched name is reported, not skipped.
 			if (located.IsValid() && located.WithoutError().WithoutNone() is { IsPlayer: true } found)
 			{
 				knownPlayerList.Add(found.AsPlayer);
@@ -155,10 +147,8 @@ public static class SendMail
 			delivered.Add(player);
 			await mediator.Send(new SendMailCommand(sender.Object(), player, mail));
 
-			// real_send_mail (extmail.c:127) gates the sender's confirmation on silent; the delivery
-			// notice at :138 sits outside that block and always fires. These were the wrong way round,
-			// which is also why mailsend() — PennMUSH calls it with silent=1 — could not tell its
-			// recipient anything.
+			// real_send_mail gates the sender's confirmation on silent (extmail.c:127); the delivery
+			// notice at :138 sits outside that block and always fires.
 			if (!silent)
 			{
 				await notifyService.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.", sender);
@@ -194,10 +184,8 @@ public static class SendMail
 			}
 		}
 
-		// Delivering to nobody has two causes, and an empty recipient list cannot tell them apart:
-		// either no name resolved, or every name that did resolve refuses mail from this sender. Both
-		// are already reported to the sender by notification; naming them in the return value too is
-		// what lets a non-interactive caller — the web endpoint — say which one happened.
+		// Delivering to nobody has two causes an empty list cannot tell apart, and a non-interactive
+		// caller only ever sees this return value — the notifications above go to the sender.
 		if (delivered.Count == 0)
 		{
 			return MModule.single(knownPlayerList.Count == 0

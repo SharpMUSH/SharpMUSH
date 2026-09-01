@@ -14,14 +14,11 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.BUnit.Controllers;
 
 /// <summary>
-/// <c>POST api/mail</c> runs the engine's <c>@MAIL</c> rather than sending mail itself, so what is
-/// left to test here is the seam: what it hands the command, and how it reads the command back.
+/// <c>POST api/mail</c> runs the engine's <c>@MAIL</c> rather than sending mail itself, so the seam
+/// is what is left to test: what it hands the command, and how it reads the command back.
 ///
-/// The read-back matters because "delivered to nobody" has two causes. An unresolvable name and a
-/// recipient whose mail lock refuses you both used to arrive as an empty recipient list, and the
-/// endpoint reported both as <c>404 No such character</c> — telling a sender that someone who
-/// exists does not. The mail-lock half cannot be reached through the integration harness, which
-/// authenticates as <c>#1</c>: a wizard passes every lock, so the refusal never happens there.
+/// The mail-lock case lives here because it cannot be reached through the integration harness,
+/// which authenticates as <c>#1</c> — a wizard passes every lock, so the refusal never happens.
 /// </summary>
 public class MailControllerTests
 {
@@ -62,7 +59,7 @@ public class MailControllerTests
 		await Assert.That(result).IsTypeOf<NotFoundObjectResult>();
 	}
 
-	/// <summary>The headline case: a recipient who refuses your mail exists, so this is not a 404.</summary>
+	/// <summary>A recipient who refuses your mail exists, so this is not a 404.</summary>
 	[Test]
 	public async Task MailLockedRecipientIsForbidden()
 	{
@@ -84,7 +81,7 @@ public class MailControllerTests
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}
 
-	/// <summary>A command that did not run at all is this server's fault, not the caller's.</summary>
+	/// <summary>A command that did not run is this server's fault, not the caller's.</summary>
 	[Test]
 	public async Task AnAbsentResultIsAServerError()
 	{
@@ -97,9 +94,8 @@ public class MailControllerTests
 	}
 
 	/// <summary>
-	/// The command reads <c>[subject/]message</c> as one argument and ends the subject at the first
-	/// single <c>/</c>, so a slash the caller typed has to arrive doubled or the subject would be cut
-	/// in half (extmail.c:1337).
+	/// The subject ends at the first single <c>/</c> (extmail.c:1337), so a slash the caller typed
+	/// has to arrive doubled or the subject is cut in half.
 	/// </summary>
 	[Test]
 	public async Task ASlashInTheSubjectIsDoubledForTheCommand()
@@ -115,8 +111,8 @@ public class MailControllerTests
 	}
 
 	/// <summary>
-	/// The send arm of @mail is chosen by the *last* switch, so NOEVAL — which is what keeps the
-	/// caller's text from being evaluated as softcode — must never be the one that ends the list.
+	/// The send arm is chosen by the *last* switch, so NOEVAL — which keeps the caller's text from
+	/// being evaluated — must never end the list.
 	/// </summary>
 	[Test]
 	[Arguments(false)]

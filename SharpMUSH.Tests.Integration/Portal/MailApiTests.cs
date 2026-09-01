@@ -5,17 +5,12 @@ using System.Net.Http.Json;
 namespace SharpMUSH.Tests.Integration.Portal;
 
 /// <summary>
-/// The mailbox API (<c>api/mail</c>) the portal's Mail view reads through. It is the same mail the
-/// in-game <c>@mail</c> command reads, so the two have to agree on how a message is numbered: the
-/// list is numbered from 1, as <c>@mail</c> prints it, while a folder is indexed from 0 in the
-/// database (which is why <c>@mail &lt;n&gt;</c> passes <c>n - 1</c>). The controller handed the
-/// display number straight to the query, so reading message 1 returned message 2 and the last
-/// message in a folder was a 404 — a mailbox holding one message could not be opened at all.
+/// The mailbox API (<c>api/mail</c>) the portal's Mail view reads through — the same mail
+/// <c>@mail</c> reads, so the two must agree on numbering: the list numbers from 1, as <c>@mail</c>
+/// prints it, while a folder is indexed from 0 (hence <c>@mail &lt;n&gt;</c> passing <c>n - 1</c>).
 ///
-/// The test host authenticates every request as <c>#1</c> (the debug authentication handler stands
-/// in for the account-session handler outside production), so these act on one shared mailbox.
-/// Nothing here may assume it starts empty: each test tags its own messages and asserts against
-/// those.
+/// Every request authenticates as <c>#1</c>, so these share one mailbox. Nothing here may assume it
+/// starts empty: each test tags its own messages and asserts against those.
 /// </summary>
 /// <remarks>
 /// <see cref="NotInParallelAttribute"/> because a folder is addressed by position: these tests share
@@ -55,8 +50,8 @@ public class MailApiTests(ServerWebAppFactory factory)
 		=> (await http.GetFromJsonAsync<List<MailSummaryDto>>("api/mail?folder=INBOX"))!;
 
 	/// <summary>
-	/// The headline case. The number the list reports for a message is the number that reads it —
-	/// including the last one, which is where the off-by-one ran off the end and 404'd.
+	/// The number the list reports is the number that reads it — including the last, where the
+	/// off-by-one ran off the end and 404'd.
 	/// </summary>
 	[Test]
 	public async Task Read_UsesTheNumberTheListReported()
@@ -76,10 +71,7 @@ public class MailApiTests(ServerWebAppFactory factory)
 		await Assert.That(message.Body).IsEqualTo("The body of the message.");
 	}
 
-	/// <summary>
-	/// Where the mailbox holds more than one message the off-by-one was silent rather than a 404:
-	/// every read returned its successor. Every listed number has to fetch what the list showed.
-	/// </summary>
+	/// <summary>Past one message the off-by-one was silent: every read returned its successor.</summary>
 	[Test]
 	public async Task Read_EachListedNumberFetchesThatMessage()
 	{
@@ -101,9 +93,8 @@ public class MailApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// The endpoint runs the engine's own <c>@MAIL</c> rather than carrying a second mail
-	/// implementation, so the recipient rules are the command's: <c>me</c>, a dbref and <c>*name</c>
-	/// all resolve. Its own resolver was a bare player-name lookup, so none of these worked.
+	/// The endpoint runs the engine's <c>@MAIL</c>, so the recipient rules are the command's:
+	/// <c>me</c>, a dbref and <c>*name</c> all resolve.
 	/// </summary>
 	[Test]
 	[Arguments("me")]
@@ -122,9 +113,8 @@ public class MailApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// Arguments reach the command pre-split, never spliced into a command line, so a body is stored
-	/// exactly as typed: a <c>;</c> does not start a second command and softcode in it is not
-	/// evaluated. This is the guarantee that makes running the command safe for web input.
+	/// Arguments reach the command pre-split, so a <c>;</c> starts no second command and softcode is
+	/// not evaluated. This is what makes running the command safe for web input.
 	/// </summary>
 	[Test]
 	public async Task Send_StoresTheBodyLiterally()
@@ -142,10 +132,7 @@ public class MailApiTests(ServerWebAppFactory factory)
 		await Assert.That(message!.Body).IsEqualTo(body);
 	}
 
-	/// <summary>
-	/// A subject may contain a <c>/</c>: it is doubled on the way into the command's
-	/// <c>[subject/]message</c> argument and comes back as one character.
-	/// </summary>
+	/// <summary>A <c>/</c> in a subject is doubled on the way in and comes back as one character.</summary>
 	[Test]
 	public async Task Send_KeepsASlashInTheSubject()
 	{
@@ -172,10 +159,8 @@ public class MailApiTests(ServerWebAppFactory factory)
 		await Assert.That(list.Single(m => m.Subject == subject).Urgent).IsTrue();
 	}
 
-	/// <summary>
-	/// The command reports an unmatched name to the character rather than in a return value, so the
-	/// endpoint infers the failure from an empty delivered-recipient list.
-	/// </summary>
+	/// <summary>The command reports an unmatched name to the character, so the endpoint reads its
+	/// return value to answer the caller.</summary>
 	[Test]
 	public async Task Send_UnknownRecipientIsNotFound()
 	{
@@ -187,10 +172,7 @@ public class MailApiTests(ServerWebAppFactory factory)
 		await Assert.That(sent.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
 
-	/// <summary>
-	/// Delete read the same shifted index, so deleting the message you were looking at removed its
-	/// neighbour instead — silent data loss rather than a 404.
-	/// </summary>
+	/// <summary>Delete read the same shifted index, removing the neighbour of the message named.</summary>
 	[Test]
 	public async Task Delete_RemovesTheMessageAtThatNumber()
 	{

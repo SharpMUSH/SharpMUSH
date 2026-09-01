@@ -28,10 +28,9 @@ namespace SharpMUSH.Server.Controllers;
 ///   POST   /api/mail                     — send mail { to, subject, body, urgent }
 ///   DELETE /api/mail/{folder}/{number}   — delete a message
 ///
-/// <c>{number}</c> is the number the list reports, which is the number <c>@mail</c> prints: folders
-/// are numbered from 1 for the reader and indexed from 0 in the database, so every route that takes
-/// one converts it with <see cref="FolderIndex"/> — the same <c>n - 1</c> the <c>@mail</c> command
-/// applies before it queries.
+/// <c>{number}</c> is the number the list reports, as <c>@mail</c> prints it. A folder is numbered
+/// from 1 for the reader and indexed from 0 in the database, so every route taking one converts it
+/// with <see cref="FolderIndex"/>.
 /// </summary>
 [ApiController]
 [Route("api/mail")]
@@ -40,8 +39,8 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 {
 	private const string DefaultFolder = "INBOX";
 
-	/// <summary>extmail.h:71 — <c>SUBJECT_LEN</c>. Past this the command would treat the whole
-	/// argument as the body, so the endpoint refuses rather than silently losing the subject.</summary>
+	/// <summary>extmail.h:71 — <c>SUBJECT_LEN</c>. Past it the command reads the whole argument as
+	/// the body, so refusing beats silently losing the subject.</summary>
 	private const int SubjectLength = 60;
 
 	public record MailSummaryDto(int Number, string From, string Subject, DateTimeOffset DateSent, bool Read, bool Urgent, string Folder);
@@ -115,14 +114,9 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 
 	/// <summary>
 	/// Sends by running the engine's own <c>@MAIL</c>, so recipient resolution, the mail lock,
-	/// <c>MAILSIGNATURE</c>, the <c>AMAIL</c> trigger and the delivery notice all happen exactly as
-	/// they do in-game. This endpoint used to resolve the recipient itself with a player-name lookup
-	/// — a second mail implementation that drifted from the command it was meant to mirror, and that
-	/// could not address <c>me</c>, a dbref or <c>*name</c>.
-	///
-	/// Arguments go over pre-split, never spliced into a command line, so a <c>;</c> in a body cannot
-	/// start a second command; <c>NOEVAL</c> then keeps the caller's text as text rather than
-	/// softcode.
+	/// <c>MAILSIGNATURE</c>, the <c>AMAIL</c> trigger and the delivery notice happen as they do
+	/// in-game. Arguments go over pre-split, never spliced into a command line, so a <c>;</c> in a
+	/// body cannot start a second command; <c>NOEVAL</c> keeps the caller's text as text.
 	/// </summary>
 	[HttpPost]
 	public async Task<IActionResult> Send([FromBody] SendMailRequest request, CancellationToken ct)
@@ -140,9 +134,7 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 			return BadRequest(new { error = $"Subject may be at most {SubjectLength} characters." });
 		}
 
-		// @mail takes "[subject/]message" as one argument and ends the subject at the first single
-		// '/', a doubled one being a literal (extmail.c:1337) — so a slash the caller typed is doubled
-		// on the way in and arrives as the character they meant.
+		// The subject ends at the first single '/', a doubled one being a literal (extmail.c:1337).
 		var subjectAndBody = $"{subject.Replace("/", "//")}/{request.Body ?? string.Empty}";
 
 		var arguments = new Dictionary<string, CallState>
@@ -151,15 +143,13 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 			["1"] = new CallState(subjectAndBody)
 		};
 
-		// The send arm is selected by the *last* switch, so NOEVAL cannot be the one that ends the
-		// list; SEND is named explicitly to close that over any future reordering.
+		// The send arm is selected by the *last* switch, so NOEVAL must not end the list.
 		string[] switches = request.Urgent ? ["NOEVAL", "URGENT", "SEND"] : ["NOEVAL", "SEND"];
 
 		var result = await commandInvoker.InvokeAsync("@MAIL", character, arguments, switches);
 		var message = result?.Message?.ToPlainText() ?? string.Empty;
 
-		// @mail returns the dbrefs it delivered to, or names which way it failed. A recipient who
-		// refuses your mail exists, so that is a 403 and not the 404 an unresolvable name gets.
+		// A recipient who refuses your mail exists, so that is a 403, not the 404 a bad name gets.
 		if (message == ErrorMessages.Returns.NoSuchPlayer)
 		{
 			return NotFound(new { error = $"No such character: {request.To}" });
@@ -176,9 +166,7 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 				new { error = "@MAIL returned no result." });
 		}
 
-		// The recipients the command reports, not the string the caller sent: request.To is arbitrary
-		// caller text and a newline in it would forge log lines, while this is the engine's own list of
-		// what it actually delivered to — which is the more useful record anyway.
+		// The engine's list, not request.To: caller text with a newline in it would forge log lines.
 		logger.LogInformation("Web mail sent from {From} to {Delivered}.", character, message);
 		return Ok(new { sent = true });
 	}
@@ -198,10 +186,6 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 		return Ok(new { deleted = true });
 	}
 
-	/// <summary>
-	/// The 1-based message number a caller quotes, as the 0-based index the mail query takes; null
-	/// for a number below 1, which names no message.
-	/// </summary>
 	private static int? FolderIndex(int number) => number >= 1 ? number - 1 : null;
 
 	private static async Task<string> FromNameAsync(SharpMail mail)
