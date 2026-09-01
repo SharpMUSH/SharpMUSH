@@ -340,12 +340,8 @@ public partial class SurrealDatabase
 			parameters, ct);
 
 		var ownerKeys = response.GetValue<List<int>>(0)!;
-
-		// No key means the channel is gone, not that it has no owner -- say which.
 		if (ownerKeys.Count == 0)
-			throw new InvalidOperationException(
-				$"Channel '{channelName}' has no owner. Channel ownership is handed on when an owner is destroyed, "
-				+ "so this is a channel that was deleted while a reference to it was still held.");
+			throw new InvalidOperationException($"No owner found for channel '{channelName}'");
 
 		var ownerKey = ownerKeys[0];
 		var typed = await BuildTypedObjectFromKey(ownerKey, ct);

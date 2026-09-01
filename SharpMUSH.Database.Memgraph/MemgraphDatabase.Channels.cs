@@ -254,13 +254,6 @@ MATCH (c:Channel {name: $name})-[:HAS_CHANNEL_OWNER]->(o:Object)
 RETURN o
 """, new { name = channelName }, ct);
 
-		// Not indexed blind: no row means the channel is gone, not that it has no owner. Name it, rather
-		// than reporting an index out of range from three frames deeper.
-		if (result.Result.Count == 0)
-			throw new InvalidOperationException(
-				$"Channel '{channelName}' has no owner. Channel ownership is handed on when an owner is destroyed, "
-				+ "so this is a channel that was deleted while a reference to it was still held.");
-
 		var objNode = result.Result[0]["o"].As<INode>();
 		var ownerObj = await BuildTypedObjectFromObjectNode(objNode, ct);
 		return ownerObj.AsPlayer;

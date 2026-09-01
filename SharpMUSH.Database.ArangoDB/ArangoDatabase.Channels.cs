@@ -39,13 +39,6 @@ public partial class ArangoDatabase
 		var vertexes = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN v._id",
 			cancellationToken: ct);
-		// Not First() blind: no vertex means the channel is gone, not that it has no owner. Name it,
-		// rather than reporting "sequence contains no elements" from three frames deeper.
-		if (vertexes.Count == 0)
-			throw new InvalidOperationException(
-				$"Channel '{channelId}' has no owner. Channel ownership is handed on when an owner is destroyed, "
-				+ "so this is a channel that was deleted while a reference to it was still held.");
-
 		var vertex = vertexes.First();
 		var owner = await GetObjectNodeAsync(vertex, ct);
 		return owner.AsPlayer;
