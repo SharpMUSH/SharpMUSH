@@ -23,9 +23,6 @@ namespace SharpMUSH.Database.ArangoDB;
 
 public partial class ArangoDatabase
 {
-	/// <summary>God, who inherits ownership that would otherwise be severed by a delete.</summary>
-	private const int GodKey = 1;
-
 	#region Objects
 
 	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
@@ -1048,22 +1045,6 @@ public partial class ArangoDatabase
 		var objectId = known.Object().Id!;
 		var typedId = known.Id()!;
 		var name = known.Object().Name;
-
-		// A channel always has an owner, so ownership cannot be allowed to die with the owner. The game
-		// layer hands a doomed player's channels to the probate judge before it gets here
-		// (ObjectDestructionService.ClearPlayerAsync); this is the floor under that for every other way
-		// an object can be deleted, and it hands them to God rather than leaving a channel nobody owns.
-		if (dbref.Number != GodKey)
-		{
-			await arangoDb.Query.ExecuteAsync<object>(handle,
-				$"FOR e IN {DatabaseConstants.OwnerOfChannel} FILTER e._to == @doomed "
-				+ $"UPDATE e WITH {{ _to: @heir }} IN {DatabaseConstants.OwnerOfChannel}",
-				bindVars: new Dictionary<string, object>
-				{
-					{ "doomed", objectId },
-					{ "heir", $"{DatabaseConstants.Objects}/{GodKey}" }
-				}, cancellationToken: ct);
-		}
 
 		// The attribute subtree hangs off the typed vertex (see GraphAttributes' TECH DEBT note), and
 		// each attribute carries its own flag/entry/owner edges, so the whole tree has to come along.

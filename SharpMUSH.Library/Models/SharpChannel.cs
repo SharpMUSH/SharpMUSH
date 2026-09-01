@@ -11,11 +11,6 @@ public class SharpChannel
 	[JsonIgnore] public string? Id { get; set; }
 	public required MString Name { get; set; }
 	public MString Description { get; set; } = MModule.empty();
-	/// <summary>
-	/// Who owns the channel. Never absent: a channel always has an owner, and deleting one hands its
-	/// channels on rather than severing the edge — <c>ObjectDestructionService.ClearPlayerAsync</c> to
-	/// the probate judge, and <c>DeleteObjectAsync</c> to God for every other route to a delete.
-	/// </summary>
 	public required AsyncLazy<SharpPlayer> Owner { get; set; }
 	public required Lazy<IAsyncEnumerable<MemberAndStatus>> Members { get; set; }
 	public required string[] Privs { get; set; }

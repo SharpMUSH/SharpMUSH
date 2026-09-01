@@ -23,27 +23,39 @@ public partial class MemgraphDatabase
 
 	public async IAsyncEnumerable<SharpChannel> GetAllChannelsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var result = await ExecuteWithRetryAsync(ChannelWithOwner("MATCH (c:Channel)"), ct: cancellationToken);
+		var result = await ExecuteWithRetryAsync("MATCH (c:Channel) RETURN c", ct: cancellationToken);
 		foreach (var record in result.Result)
-			yield return await MapRecordToChannelAsync(record, cancellationToken);
+			yield return MapNodeToChannel(record["c"].As<INode>());
+	}
+
+	public async IAsyncEnumerable<SharpChannel> GetChannelsOwnedByAsync(DBRef owner,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		var result = await ExecuteWithRetryAsync("""
+MATCH (c:Channel)-[:HAS_CHANNEL_OWNER]->(:Object {key: $key})
+RETURN c
+""", new { key = owner.Number }, cancellationToken);
+
+		foreach (var record in result.Result)
+			yield return MapNodeToChannel(record["c"].As<INode>());
 	}
 
 	public async ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default)
 	{
-		var result = await ExecuteWithRetryAsync(ChannelWithOwner("MATCH (c:Channel {name: $name})"),
-			new { name }, cancellationToken);
-		return result.Result.Count > 0 ? await MapRecordToChannelAsync(result.Result[0], cancellationToken) : null;
+		var result = await ExecuteWithRetryAsync("MATCH (c:Channel {name: $name}) RETURN c", new { name }, cancellationToken);
+		return result.Result.Count > 0 ? MapNodeToChannel(result.Result[0]["c"].As<INode>()) : null;
 	}
 
 	public async IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var objKey = obj.Object().Key;
-		var result = await ExecuteWithRetryAsync(
-			ChannelWithOwner("MATCH (member:Object {key: $key})-[:ON_CHANNEL]->(c:Channel)"),
-			new { key = objKey }, cancellationToken);
+		var result = await ExecuteWithRetryAsync("""
+MATCH (o:Object {key: $key})-[:ON_CHANNEL]->(c:Channel)
+RETURN c
+""", new { key = objKey }, cancellationToken);
 
 		foreach (var record in result.Result)
-			yield return await MapRecordToChannelAsync(record, cancellationToken);
+			yield return MapNodeToChannel(record["c"].As<INode>());
 	}
 
 	/// <summary>
@@ -125,14 +137,11 @@ c.buffer = $buffer, c.mogrifier = $mogrifier
 		var channelName = channel.Name.ToPlainText();
 		var ownerObjKey = newOwner.Object.Key;
 
-		// OPTIONAL on the old edge: gating the CREATE on finding one made re-owning a channel that has
-		// lost its owner a silent no-op, and that channel is exactly the one that needs re-owning.
-		// @channel/chown and ObjectDestructionService both arrive here.
 		await ExecuteWithRetryAsync("""
-MATCH (c:Channel {name: $name})
-MATCH (o:Object {key: $ownerKey})
-OPTIONAL MATCH (c)-[r:HAS_CHANNEL_OWNER]->()
+MATCH (c:Channel {name: $name})-[r:HAS_CHANNEL_OWNER]->()
 DELETE r
+WITH c
+MATCH (o:Object {key: $ownerKey})
 CREATE (c)-[:HAS_CHANNEL_OWNER]->(o)
 """, new { name = channelName, ownerKey = ownerObjKey }, cancellationToken);
 	}
@@ -209,73 +218,7 @@ DELETE r
 		await ExecuteWithRetryAsync(cypher, parameters, cancellationToken);
 	}
 
-	/// <summary>
-	/// Completes a channel match by joining through to its owner, object node and typed node together.
-	/// </summary>
-	/// <remarks>
-	/// The owner used to be an <c>AsyncLazy</c> that queried when something first awaited it, which cost a
-	/// round trip per channel — <c>@channel/add</c> resolves every owner in the list to count its own —
-	/// and left a window in which the channel could be deleted between the list being read and the owner
-	/// being asked for. Reading it here makes the channel a snapshot: one query, and nothing to race.
-	/// <para>
-	/// The join is inner on purpose. A channel always has an owner, so a row without one is not a channel;
-	/// it drops out of listings rather than throwing and taking every reader of the list with it.
-	/// </para>
-	/// </remarks>
-	private static string ChannelWithOwner(string match) => $"""
-{match}
-OPTIONAL MATCH (c)-[:HAS_CHANNEL_OWNER]->(ownerObj:Object)
-OPTIONAL MATCH (ownerTyped:Player)-[:IS_OBJECT]->(ownerObj)
-RETURN c, ownerObj, ownerTyped
-""";
-
-	/// <summary>
-	/// The owner from the same row where it is there, and a direct read where it is not.
-	/// </summary>
-	/// <remarks>
-	/// The join is OPTIONAL and the channel is never dropped for want of an owner. An inner join looked
-	/// tidier and was wrong: a channel whose owner did not come back vanished from the listing, and
-	/// <c>GetChannelAsync</c> answered "I don't recognize that channel" for one that plainly existed.
-	/// A channel missing its owner is a broken invariant, not a missing channel — say so in the log and
-	/// read it as God's, which is who <c>DeleteObjectAsync</c> would have given it to.
-	/// </remarks>
-	private async ValueTask<SharpChannel> MapRecordToChannelAsync(IRecord record, CancellationToken ct)
-	{
-		var channelNode = record["c"].As<INode>();
-
-		if (record["ownerObj"] is not null && record["ownerTyped"] is not null)
-		{
-			var ownerObjNode = record["ownerObj"].As<INode>();
-			var ownerTypedNode = record["ownerTyped"].As<INode>();
-
-			if (ownerObjNode is not null && ownerTypedNode is not null)
-			{
-				return MapNodeToChannel(channelNode, BuildPlayer(
-					PlayerId(ownerObjNode["key"].As<int>()), ownerTypedNode, MapNodeToSharpObject(ownerObjNode)));
-			}
-		}
-
-		var channelName = channelNode["name"].As<string>();
-		var owner = await GetChannelOwnerAsync(channelName, ct);
-
-		if (owner is null)
-		{
-			logger.LogWarning(
-				"Channel '{Channel}' has no owner; reading it as God's. A channel always has an owner, so "
-				+ "this is data that predates DeleteObjectAsync handing ownership on.", channelName);
-			owner = (await BuildTypedObjectFromKeyAsync(GodKey, ct)).AsPlayer;
-		}
-
-		return MapNodeToChannel(channelNode, owner);
-	}
-
-	private async ValueTask<AnyOptionalSharpObject> BuildTypedObjectFromKeyAsync(int key, CancellationToken ct)
-	{
-		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) RETURN o", new { key }, ct);
-		return await BuildTypedObjectFromObjectNode(result.Result[0]["o"].As<INode>(), ct);
-	}
-
-	private SharpChannel MapNodeToChannel(INode node, SharpPlayer owner)
+	private SharpChannel MapNodeToChannel(INode node)
 	{
 		var channelName = node["name"].As<string>();
 		var markedUpName = node.Properties.ContainsKey("markedUpName")
@@ -298,20 +241,25 @@ RETURN c, ownerObj, ownerTyped
 			ModLock = node.Properties.ContainsKey("modLock") ? node["modLock"].As<string>() : "",
 			Buffer = node.Properties.ContainsKey("buffer") ? node["buffer"].As<int>() : 0,
 			Mogrifier = node.Properties.ContainsKey("mogrifier") ? node["mogrifier"].As<string>() : "",
-			Owner = new AsyncLazy<SharpPlayer>(_ => Task.FromResult(owner)),
+			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetChannelOwnerAsync(channelName, ct)),
 			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
 				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(enumCt => GetChannelMembersAsync(channelName, enumCt)))
 		};
 	}
 
-	private async ValueTask<SharpPlayer?> GetChannelOwnerAsync(string channelName, CancellationToken ct)
+	private async ValueTask<SharpPlayer> GetChannelOwnerAsync(string channelName, CancellationToken ct)
 	{
 		var result = await ExecuteWithRetryAsync("""
 MATCH (c:Channel {name: $name})-[:HAS_CHANNEL_OWNER]->(o:Object)
 RETURN o
 """, new { name = channelName }, ct);
 
-		if (result.Result.Count == 0) return null;
+		// Not indexed blind: no row means the channel is gone, not that it has no owner. Name it, rather
+		// than reporting an index out of range from three frames deeper.
+		if (result.Result.Count == 0)
+			throw new InvalidOperationException(
+				$"Channel '{channelName}' has no owner. Channel ownership is handed on when an owner is destroyed, "
+				+ "so this is a channel that was deleted while a reference to it was still held.");
 
 		var objNode = result.Result[0]["o"].As<INode>();
 		var ownerObj = await BuildTypedObjectFromObjectNode(objNode, ct);

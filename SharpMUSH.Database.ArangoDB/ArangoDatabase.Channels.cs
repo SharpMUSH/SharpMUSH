@@ -26,67 +26,25 @@ public partial class ArangoDatabase
 	#region Channels
 
 	public IAsyncEnumerable<SharpChannel> GetAllChannelsAsync(CancellationToken ct = default)
-		=> WithOwners(arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(
-			handle, "FOR v IN @@C RETURN v",
-			bindVars: new Dictionary<string, object>
-			{
-				{ "@C", DatabaseConstants.Channels }
-			}, cancellationToken: ct), ct);
+		=> arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(
+				handle, "FOR v IN @@C RETURN v",
+				bindVars: new Dictionary<string, object>
+				{
+					{ "@C", DatabaseConstants.Channels }
+				}, cancellationToken: ct)
+			.Select(SharpChannelQueryToSharpChannel);
 
-	/// <summary>
-	/// Reads each channel's owner as the list is drawn, rather than leaving an <c>AsyncLazy</c> to go back
-	/// to the database whenever something first asks.
-	/// </summary>
-	/// <remarks>
-	/// The late read left a window: <c>@channel/add</c> resolves the owner of every channel to count the
-	/// ones the executor owns, and a channel deleted between the list being read and its owner being asked
-	/// for took the whole command with it. Reading here makes the listing a snapshot of one moment.
-	/// <para>
-	/// A channel whose owner has gone is dropped rather than reported. A channel always has an owner, so a
-	/// row without one is a channel that no longer exists — it belongs out of the listing, not thrown at
-	/// whoever happened to be reading.
-	/// </para>
-	/// </remarks>
-	private async IAsyncEnumerable<SharpChannel> WithOwners(IAsyncEnumerable<SharpChannelQueryResult> channels,
-		[EnumeratorCancellation] CancellationToken ct)
-	{
-		await foreach (var channel in channels.WithCancellation(ct))
-		{
-			yield return SharpChannelQueryToSharpChannel(channel, await OwnerOrGodAsync(channel.Id, ct));
-		}
-	}
-
-	/// <summary>
-	/// A channel is never dropped for want of an owner.
-	/// </summary>
-	/// <remarks>
-	/// Skipping it looked tidier and was wrong: the channel vanished from the listing, and
-	/// <c>GetChannelAsync</c> answered "I don't recognize that channel" for one that plainly existed.
-	/// A channel missing its owner is a broken invariant, not a missing channel — say so in the log and
-	/// read it as God's, which is who <c>DeleteObjectAsync</c> would have given it to.
-	/// </remarks>
-	private async ValueTask<SharpPlayer> OwnerOrGodAsync(string channelId, CancellationToken ct)
-	{
-		var owner = await GetChannelOwnerAsync(channelId, ct);
-		if (owner is not null) return owner;
-
-		logger.LogWarning(
-			"Channel '{Channel}' has no owner; reading it as God's. A channel always has an owner, so this "
-			+ "is data that predates DeleteObjectAsync handing ownership on.", channelId);
-
-		return (await GetObjectNodeAsync(new DBRef(GodKey), ct)).AsPlayer;
-	}
-
-	private async ValueTask<SharpPlayer?> GetChannelOwnerAsync(string channelId, CancellationToken ct = default)
+	private async ValueTask<SharpPlayer> GetChannelOwnerAsync(string channelId, CancellationToken ct = default)
 	{
 		var vertexes = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN v._id",
 			cancellationToken: ct);
-
-		// A channel always has an owner, so no vertex means the channel itself has gone -- deleted while
-		// this read was walking the list. Absent, not broken: the caller drops the channel from the
-		// listing rather than failing every reader of it.
-		if (vertexes.Count == 0) return null;
+		// Not First() blind: no vertex means the channel is gone, not that it has no owner. Name it,
+		// rather than reporting "sequence contains no elements" from three frames deeper.
+		if (vertexes.Count == 0)
+			throw new InvalidOperationException(
+				$"Channel '{channelId}' has no owner. Channel ownership is handed on when an owner is destroyed, "
+				+ "so this is a channel that was deleted while a reference to it was still held.");
 
 		var vertex = vertexes.First();
 		var owner = await GetObjectNodeAsync(vertex, ct);
@@ -118,7 +76,7 @@ public partial class ArangoDatabase
 		return result;
 	}
 
-	private SharpChannel SharpChannelQueryToSharpChannel(SharpChannelQueryResult x, SharpPlayer owner) =>
+	private SharpChannel SharpChannelQueryToSharpChannel(SharpChannelQueryResult x) =>
 		new()
 		{
 			Id = x.Id,
@@ -130,12 +88,22 @@ public partial class ArangoDatabase
 			SeeLock = x.SeeLock,
 			HideLock = x.HideLock,
 			ModLock = x.ModLock,
-			Owner = new AsyncLazy<SharpPlayer>(_ => Task.FromResult(owner)),
+			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetChannelOwnerAsync(x.Id, ct)),
 			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
 				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(enumCt => GetChannelMembersAsync(x.Id, enumCt))),
 			Mogrifier = x.Mogrifier,
 			Buffer = x.Buffer
 		};
+
+	public IAsyncEnumerable<SharpChannel> GetChannelsOwnedByAsync(DBRef owner, CancellationToken ct = default)
+		=> arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(handle,
+				$"FOR v IN 1..1 INBOUND @{StartVertex} GRAPH {DatabaseConstants.GraphChannels} "
+				+ $"FILTER IS_SAME_COLLECTION('{DatabaseConstants.Channels}', v) RETURN v",
+				new Dictionary<string, object>
+				{
+					{ StartVertex, $"{DatabaseConstants.Objects}/{owner.Number}" }
+				}, cancellationToken: ct)
+			.Select(SharpChannelQueryToSharpChannel);
 
 	public async ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken ct = default)
 	{
@@ -147,20 +115,20 @@ public partial class ArangoDatabase
 				{ "@c", DatabaseConstants.Channels },
 				{ "name", name }
 			}, cancellationToken: ct);
-		var found = result?.FirstOrDefault();
-		if (found is null) return null;
-
-		return SharpChannelQueryToSharpChannel(found, await OwnerOrGodAsync(found.Id, ct));
+		return result?
+			.Select(SharpChannelQueryToSharpChannel)
+			.FirstOrDefault();
 	}
 
 	public IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj,
 		CancellationToken ct = default) =>
-		WithOwners(arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(handle,
-			$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN v",
-			new Dictionary<string, object>
-			{
-				{ StartVertex, obj.Object().Id! }
-			}, cancellationToken: ct), ct);
+		arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(handle,
+				$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN v",
+				new Dictionary<string, object>
+				{
+					{ StartVertex, obj.Object().Id! }
+				}, cancellationToken: ct)
+			.Select(SharpChannelQueryToSharpChannel);
 
 	public async ValueTask<ChannelCreationResult> CreateChannelAsync(MString channel, string[] privs,
 		SharpPlayer owner, CancellationToken ct = default)
@@ -284,23 +252,9 @@ public partial class ArangoDatabase
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e._key",
 			new Dictionary<string, object> { { StartVertex, channel.Id! } }, cancellationToken: ct);
-
-		// A channel with no owner edge is exactly the one that most needs re-owning, so create the edge
-		// rather than updating one that is not there. Giving an ownerless channel an owner is the repair
-		// for it -- @channel/chown and ObjectDestructionService both arrive here.
-		if (response.Count == 0)
-		{
-			await arangoDb.Graph.Edge.CreateAsync(
-				handle,
-				DatabaseConstants.GraphChannels,
-				DatabaseConstants.OwnerOfChannel,
-				new SharpEdgeCreateRequest(channel.Id!, newOwner.Id!),
-				cancellationToken: ct);
-			return;
-		}
-
+		var ownerEdgeKey = response.First();
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OwnerOfChannel,
-			response.First(), new { To = newOwner.Id }, cancellationToken: ct);
+			ownerEdgeKey, new { To = newOwner.Id }, cancellationToken: ct);
 	}
 
 	public async ValueTask DeleteChannelAsync(SharpChannel channel, CancellationToken ct = default) =>

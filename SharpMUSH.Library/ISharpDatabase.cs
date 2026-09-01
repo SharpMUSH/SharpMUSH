@@ -833,6 +833,17 @@ public interface ISharpDatabase
 
 	ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// The channels owned by <paramref name="owner"/>.
+	/// </summary>
+	/// <remarks>
+	/// Asked as one question because the callers only ever wanted the answer to it. Walking every channel
+	/// and resolving each owner to see which ones matched cost a round trip per channel — and
+	/// <c>SharpChannel.Owner</c> is an <see cref="DotNext.Threading.AsyncLazy{T}"/> that reads when it is
+	/// first awaited, so a channel deleted since the walk began took the whole command down with it.
+	/// </remarks>
+	IAsyncEnumerable<SharpChannel> GetChannelsOwnedByAsync(DBRef owner, CancellationToken cancellationToken = default);
+
 	IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, CancellationToken cancellationToken = default);
 
 	/// <summary>
