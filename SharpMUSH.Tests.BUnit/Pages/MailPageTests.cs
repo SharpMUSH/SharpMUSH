@@ -93,7 +93,7 @@ public class MailPageTests : TrackingBunitContext, IAsyncDisposable
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
-	[TUnit.Core.Test]
+	[Test]
 	public async Task SelectingAMessage_ShowsItsBodyInTheReadingPane()
 	{
 		Arrange();

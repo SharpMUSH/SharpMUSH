@@ -97,7 +97,7 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 		}
 	}
 
-	[TUnit.Core.Test]
+	[Test]
 	public async Task Render_LoggedIn_NormalState_DoesNotThrow()
 	{
 		SeedAuthState(loggedIn: true, mustChangePassword: false);
@@ -115,7 +115,7 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Markup).Contains("AuthProfile");
 	}
 
-	[TUnit.Core.Test]
+	[Test]
 	public async Task Render_LoggedIn_MustChangePassword_DoesNotThrow()
 	{
 		SeedAuthState(loggedIn: true, mustChangePassword: true);
@@ -139,7 +139,7 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 	/// page component directly, below AuthorizeRouteView — so the attribute itself is the thing to
 	/// assert, not a redirect the direct render can never perform.
 	/// </summary>
-	[TUnit.Core.Test]
+	[Test]
 	public async Task AccountPage_IsGatedByAuthorize()
 	{
 		var authorize = typeof(SharpMUSH.Client.Pages.Account)
@@ -159,7 +159,7 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 	/// intercepts anonymous visitors: a development DebugAuth principal whose debug-OTT never
 	/// produced an account session (here, because the fake API 404s <c>api/auth/debug-ott</c>).
 	/// </summary>
-	[TUnit.Core.Test]
+	[Test]
 	public async Task Render_DebugAuthWithoutAccountSession_ShowsDebugCard()
 	{
 		Auth.SetAuthorized("DebugAdmin");
@@ -180,7 +180,7 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 	/// The page must render its empty shell — not the removed "use the terminal login panel"
 	/// dead end, and not a stale Debug Mode alert.
 	/// </summary>
-	[TUnit.Core.Test]
+	[Test]
 	public async Task Render_LoggedOut_RendersNoCard()
 	{
 		SeedAuthState(loggedIn: false);

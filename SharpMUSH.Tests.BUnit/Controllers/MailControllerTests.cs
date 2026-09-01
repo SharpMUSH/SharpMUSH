@@ -52,7 +52,7 @@ public class MailControllerTests
 	private static MailController.SendMailRequest Request(string to = "someone", string subject = "Subject",
 		string body = "Body.", bool urgent = false) => new(to, subject, body, urgent);
 
-	[TUnit.Core.Test]
+	[Test]
 	public async Task UnresolvableRecipientIsNotFound()
 	{
 		var controller = CreateController(InvokerReturning(ErrorMessages.Returns.NoSuchPlayer));
@@ -63,7 +63,7 @@ public class MailControllerTests
 	}
 
 	/// <summary>The headline case: a recipient who refuses your mail exists, so this is not a 404.</summary>
-	[TUnit.Core.Test]
+	[Test]
 	public async Task MailLockedRecipientIsForbidden()
 	{
 		var controller = CreateController(InvokerReturning(ErrorMessages.Returns.RecipientDoesNotAcceptMail));
@@ -74,7 +74,7 @@ public class MailControllerTests
 		await Assert.That(((ObjectResult)result).StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);
 	}
 
-	[TUnit.Core.Test]
+	[Test]
 	public async Task DeliveredRecipientsAreASuccess()
 	{
 		var controller = CreateController(InvokerReturning("#7:1700000000"));
@@ -85,7 +85,7 @@ public class MailControllerTests
 	}
 
 	/// <summary>A command that did not run at all is this server's fault, not the caller's.</summary>
-	[TUnit.Core.Test]
+	[Test]
 	public async Task AnAbsentResultIsAServerError()
 	{
 		var controller = CreateController(InvokerReturning(null));
@@ -101,7 +101,7 @@ public class MailControllerTests
 	/// single <c>/</c>, so a slash the caller typed has to arrive doubled or the subject would be cut
 	/// in half (extmail.c:1337).
 	/// </summary>
-	[TUnit.Core.Test]
+	[Test]
 	public async Task ASlashInTheSubjectIsDoubledForTheCommand()
 	{
 		var invoker = InvokerReturning("#7:1700000000");
@@ -118,7 +118,7 @@ public class MailControllerTests
 	/// The send arm of @mail is chosen by the *last* switch, so NOEVAL — which is what keeps the
 	/// caller's text from being evaluated as softcode — must never be the one that ends the list.
 	/// </summary>
-	[TUnit.Core.Test]
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task SwitchesKeepNoEvalOffTheEnd(bool urgent)
