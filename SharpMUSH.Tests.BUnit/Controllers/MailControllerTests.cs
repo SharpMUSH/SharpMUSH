@@ -71,6 +71,22 @@ public class MailControllerTests
 		await Assert.That(((ObjectResult)result).StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);
 	}
 
+	/// <summary>
+	/// @mail's other <c>#-1</c> returns — TooManySwitches, BadArgumentsToMailCommand — describe a
+	/// call this endpoint built, so they are its fault and not the caller's. A blanket 403 sent the
+	/// caller looking in the wrong place.
+	/// </summary>
+	[Test]
+	public async Task AnUnexpectedEngineErrorIsAServerError()
+	{
+		var controller = CreateController(InvokerReturning(ErrorMessages.Returns.BadArgumentsToMailCommand));
+
+		var result = await controller.Send(Request(), CancellationToken.None);
+
+		await Assert.That(result).IsTypeOf<ObjectResult>();
+		await Assert.That(((ObjectResult)result).StatusCode).IsEqualTo(StatusCodes.Status500InternalServerError);
+	}
+
 	[Test]
 	public async Task DeliveredRecipientsAreASuccess()
 	{

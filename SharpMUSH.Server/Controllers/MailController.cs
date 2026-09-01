@@ -155,15 +155,19 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 			return NotFound(new { error = $"No such character: {request.To}" });
 		}
 
-		if (message.StartsWith("#-1", StringComparison.Ordinal))
+		if (message == ErrorMessages.Returns.RecipientDoesNotAcceptMail)
 		{
 			return StatusCode(StatusCodes.Status403Forbidden, new { error = message });
 		}
 
-		if (string.IsNullOrWhiteSpace(message))
+		// Only those two are the caller's doing. @mail can also return TooManySwitches or
+		// BadArgumentsToMailCommand, which this endpoint builds and so can only get wrong itself —
+		// blaming the caller with a 403 would send them looking in the wrong place.
+		if (string.IsNullOrWhiteSpace(message) || message.StartsWith("#-1", StringComparison.Ordinal))
 		{
+			logger.LogError("@MAIL refused a web send with {Result}.", message);
 			return StatusCode(StatusCodes.Status500InternalServerError,
-				new { error = "@MAIL returned no result." });
+				new { error = "@MAIL could not send the message." });
 		}
 
 		// The engine's list, not request.To: caller text with a newline in it would forge log lines.
