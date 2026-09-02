@@ -216,6 +216,53 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
+	/// Creating an object invalidates its container's contents, not every container in the game.
+	/// </summary>
+	/// <remarks>
+	/// The reason the contents tag is per container. Both a creation and a move need a <em>tag</em> rather
+	/// than a key, because only a tag invalidation is resolved against when the reading factory started —
+	/// but the only tag available was <c>ObjectContents</c>, which covers every container there is. So the
+	/// price of correctness was wiping the whole game's cached contents on every creation, and would have
+	/// been the same on every step of movement.
+	/// </remarks>
+	[Test]
+	public async Task CreatingAnObjectDoesNotInvalidateTheContentsOfUninvolvedRooms()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+		var options = WebAppFactory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+
+		async Task<Library.Models.DBRef> Dig(string prefix)
+		{
+			var dug = await Parser.CommandParse(1, ConnectionService,
+				MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
+		}
+
+		var elsewhere = await Dig("BreadthElsewhere");
+		var bystanders = new List<Library.Models.DBRef>();
+		for (var i = 0; i < 8; i++) bystanders.Add(await Dig($"BreadthBystander{i}"));
+
+		// Warm every bystander's contents so a later read is a hit unless something invalidated it.
+		foreach (var room in bystanders)
+			await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
+
+		await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
+			TestIsolationHelpers.GenerateUniqueName("BreadthNewcomer"), "TestPassword123",
+			elsewhere, elsewhere, (int)options.CurrentValue.Limit.StartingQuota));
+
+		var evicted = new List<Library.Models.DBRef>();
+		foreach (var room in bystanders)
+		{
+			var cached = await Cache.TryGetAsync<List<AnySharpContent>>(
+				SharpMUSH.Library.Definitions.CacheKeys.Contents(room));
+			if (!cached.HasValue) evicted.Add(room);
+		}
+
+		await Assert.That(evicted).IsEmpty()
+			.Because($"a creation touches one room; {evicted.Count} of {bystanders.Count} uninvolved rooms lost their contents");
+	}
+
+	/// <summary>
 	/// Every object moved into a room while that room's contents are being read must be in the room's
 	/// contents afterwards.
 	/// </summary>
