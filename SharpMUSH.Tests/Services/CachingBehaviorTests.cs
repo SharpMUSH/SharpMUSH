@@ -220,11 +220,11 @@ public class CachingBehaviorTests
 	/// contents afterwards.
 	/// </summary>
 	/// <remarks>
-	/// The movement counterpart of the creation race above. <c>MoveObjectCommand</c> invalidates the two
-	/// rooms' contents by key when the caller supplies <c>OldContainer</c>, and reaches for the
-	/// <c>ObjectContents</c> tag only when it does not — but a key removal cannot stop a read that began
-	/// before the move from storing its pre-move list afterwards. <c>MoveService</c> is the one caller
-	/// that supplies <c>OldContainer</c>, so the primary movement path is the exposed one.
+	/// The movement counterpart of the creation race above. <c>MoveObjectCommand</c> invalidates both
+	/// containers' contents by key and by <c>ContentsTag</c>; the tag is what this pins, because a key
+	/// removal alone cannot stop a read that began before the move from storing its pre-move list
+	/// afterwards. It used to invalidate by key alone on this path, and <c>MoveService</c> — the one
+	/// caller that supplies <c>OldContainer</c> — is the normal movement route, so it lost movers.
 	/// </remarks>
 	[Test]
 	public async Task ContentsCache_HoldsEveryObjectMovedInWhileItWasBeingRead()
