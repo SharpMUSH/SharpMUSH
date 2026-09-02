@@ -169,6 +169,13 @@ public class SceneSurfaceTests : TrackingBunitContext
 {
 	private readonly FakeSceneHub _hub = new();
 
+	/// <summary>
+	/// The command terminal MainLayout mounts on every page. It is the connection the compose box
+	/// sends through: it is already open as the character, and its input rides the websocket subject
+	/// the engine already consumes, so posing needs no second channel.
+	/// </summary>
+	private readonly ITerminalService _terminal = Substitute.For<ITerminalService>();
+
 	public SceneSurfaceTests()
 	{
 		var apiClient = Track(new HttpClient(new SceneApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
@@ -181,6 +188,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SceneService>.Instance))
 			.AddSingleton<IConnectionStateService>(_hub)
 			.AddSingleton<ISceneHubControl>(_hub)
+			.AddSingleton(_terminal)
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
@@ -192,6 +200,65 @@ public class SceneSurfaceTests : TrackingBunitContext
 	/// "not connected to the game" banner over a permanently disabled compose box while the sidebar
 	/// said the same character was online. The page needs the connection, so the page establishes it.
 	/// </summary>
+	/// <summary>
+	/// The field binds as the player types. It did not: MudTextField defaults to binding on change
+	/// (blur), so _composeText stayed empty through an entire typed pose and the Send button — gated
+	/// on it being non-empty — never became clickable. The compose box could not be used at all.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_EnablesSend_AsSoonAsSomethingIsTyped()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".scene-live-compose button").HasAttribute("disabled")).IsTrue();
+
+		cut.Find(".scene-live-compose textarea").Input("a raven settles on the well");
+
+		await Assert.That(cut.Find(".scene-live-compose button").HasAttribute("disabled")).IsFalse();
+	}
+
+	/// <summary>
+	/// Enter is a newline, not a send. A pose is prose — it is composed over several lines and edited
+	/// before it goes out — so the only thing that sends it is the send button.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_EnterDoesNotSend()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
+
+		var box = cut.Find(".scene-live-compose textarea");
+		box.Input("half a thought");
+		box.KeyDown(Key.Enter);
+
+		await _terminal.DidNotReceive().SendAsync(Arg.Any<string>());
+	}
+
+	/// <summary>
+	/// The send button issues a scene-targeted game command down the terminal websocket, defaulting to
+	/// emit — the mode that renders the author's words verbatim with no name glued to the front, which
+	/// is what a compose box on a scene's own page is for. Newlines go out as an escaped \%r, which
+	/// the verb converts back: a bare %r would be expanded into a real newline BEFORE the $-command
+	/// pattern is matched, so the pose would not match the verb at all.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_SendButton_SendsASceneEmitWithNewlinesAsPercentR()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-live-compose textarea").Input("line one\nline two");
+		cut.Find(".scene-live-compose button").Click();
+
+		await _terminal.Received().SendAsync("+scene/emit S1=line one\\%rline two");
+		// Never the hub: its SendCommand publishes onto a subject nothing subscribes to.
+		await Assert.That(_hub.SentCommands).IsEmpty();
+	}
+
 	[TUnit.Core.Test]
 	public async Task SceneLive_ConnectsTheHub_WhenItIsNotConnectedYet()
 	{
@@ -295,9 +362,22 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Assert.That(cut.Markup).DoesNotContain("says calm down"); // dialogue pose filtered out
 	}
 
+	/// <summary>
+	/// The editor joins the scene group and sends a game command rather than writing through the
+	/// scene service — still the contract. What changed is which command and down which channel: it
+	/// used to send a bare <c>:pose</c> on the game hub, whose SendCommand publishes onto a NATS
+	/// subject nothing subscribes to, so the pose never reached the engine at all. It now sends the
+	/// scene-targeted <c>+scene/emit</c> verb down the command terminal's websocket, which the engine
+	/// already consumes.
+	///
+	/// <para>The old assertion "never @emit" is preserved in spirit: a raw <c>@emit</c> would be
+	/// recorded only if the poser happened to be focused on this scene in this room.
+	/// <c>+scene/emit</c> names the scene, so it records unconditionally.</para>
+	/// </summary>
 	[TUnit.Core.Test]
-	public async Task SceneLive_Editor_SendsCommandNotServiceWrite_AndJoinsScene()
+	public async Task SceneLive_Editor_SendsASceneCommandOnTheTerminal_AndJoinsScene()
 	{
+		_terminal.IsConnected.Returns(true);
 		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
 
 		cut.WaitForAssertion(() =>
@@ -309,20 +389,11 @@ public class SceneSurfaceTests : TrackingBunitContext
 		// JoinScene was invoked for the scene group on init.
 		await Assert.That(_hub.Joined).Contains("S1");
 
-		// Type into the compose field and send.
-		var textarea = cut.Find("textarea");
-		textarea.Change("waves hello");
-		cut.Find("button.mud-icon-button").Click();
+		cut.Find(".scene-live-compose textarea").Input("waves hello");
+		cut.Find(".scene-live-compose button").Click();
 
-		cut.WaitForAssertion(() =>
-		{
-			if (_hub.SentCommands.Count == 0)
-				throw new InvalidOperationException("command not sent yet");
-		}, TimeSpan.FromSeconds(5));
-
-		// A normal pose command was sent on the hub — never @emit.
-		await Assert.That(_hub.SentCommands).Contains(":waves hello");
-		await Assert.That(_hub.SentCommands.Any(c => c.Contains("@emit"))).IsFalse();
+		await _terminal.Received().SendAsync("+scene/emit S1=waves hello");
+		await Assert.That(_hub.SentCommands).IsEmpty();
 
 		// No optimistic insert: the author's pose only appears after the round-trip event.
 		await Assert.That(cut.Markup).DoesNotContain("waves hello");

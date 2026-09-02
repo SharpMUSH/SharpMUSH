@@ -862,7 +862,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			var created = await GetPlotAsync($"scene_plot:{newId}");
 			return created.IsT0
 				? created.AsT0
-				: new ScenePlot($"scene_plot:{newId}", title ?? "", description ?? "", DbRefToString(ownerDbref), ownerName, now, now);
+				: new ScenePlot(BareKey($"scene_plot:{newId}"), title ?? "", description ?? "", DbRefToString(ownerDbref), ownerName, now, now);
 		}
 
 		var plotKey = PlotKey(plotId);
@@ -881,7 +881,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var updated = await GetPlotAsync(plotId);
 		return updated.IsT0
 			? updated.AsT0
-			: new ScenePlot(plotKey, title ?? "", description ?? "", DbRefToString(ownerDbref), ownerName, now, now);
+			: new ScenePlot(BareKey(plotKey), title ?? "", description ?? "", DbRefToString(ownerDbref), ownerName, now, now);
 	}
 
 	public async Task<OneOf<ScenePlot, NotFound>> GetPlotAsync(string plotId)
@@ -895,7 +895,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var rec = rows[0];
 		var plotKey = NormalizePlotId(rec.Id);
 		var (ownerDbref, _) = await ResolvePlotOwnerEdgeAsync(plotKey);
-		return new ScenePlot(plotKey, rec.title, rec.description, ownerDbref, rec.ownerName, rec.createdAt, rec.updatedAt);
+		return new ScenePlot(BareKey(plotKey), rec.title, rec.description, ownerDbref, rec.ownerName, rec.createdAt, rec.updatedAt);
 	}
 
 	public async Task<OneOf<OkNone, NotFound>> LinkSceneToPlotAsync(string plotId, string sceneId)
@@ -1022,6 +1022,24 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return i < 0
 			? new StringRecordId(normalizedKey)
 			: new StringRecordId($"{normalizedKey[..i]}:⟨{normalizedKey[(i + 1)..]}⟩");
+	}
+
+	/// <summary>
+	/// Strips the SurrealDB table prefix from an internal record id, giving the bare key that every
+	/// other provider already returns.
+	/// </summary>
+	/// <remarks>
+	/// Ids are not an internal detail here: a player types them (<c>+scene 1</c>, <c>+scene/join 1</c>),
+	/// they are a path segment in <c>/scenes/{id}/live</c>, and they are stored in player attributes.
+	/// Handing back <c>scene:1</c> made the id shape depend on which database the game runs on —
+	/// production (surrealdb) and the test suites' default (arangodb) disagreed — and put a colon in
+	/// every scene URL. Internal queries keep the prefixed form, which they parse with
+	/// <c>Split(':')</c>; only what leaves this class as a model <c>Id</c> is stripped.
+	/// </remarks>
+	private static string BareKey(string prefixedId)
+	{
+		var separator = prefixedId.IndexOf(':');
+		return separator < 0 ? prefixedId : prefixedId[(separator + 1)..];
 	}
 
 	private static string NormalizeSceneId(RecordId? id) => NormalizeRecordId(id, "scene");
@@ -1562,7 +1580,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	private static SceneModel ProjectScene(SceneDbRecord rec, string idKey,
 		string? ownerDbref, string? starterDbref, string? roomDbref) => new(
-		Id: idKey,
+		Id: BareKey(idKey),
 		Status: rec.status,
 		IsPublic: rec.isPublic,
 		IsTempRoom: rec.isTempRoom,
@@ -1611,8 +1629,8 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		}
 
 		return new ScenePose(
-			Id: idKey,
-			SceneId: sceneKey,
+			Id: BareKey(idKey),
+			SceneId: BareKey(sceneKey),
 			AuthorDbref: authorDbref,
 			AuthorName: rec.authorName,
 			ShowAsName: rec.showAsName,
@@ -1632,7 +1650,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	}
 
 	private static SceneMember ProjectMember(SceneMemberEdgeRecord rec, string sceneKey) => new(
-		SceneId: sceneKey,
+		SceneId: BareKey(sceneKey),
 		MemberDbref: rec.memberKey is null ? null : $"#{rec.memberKey.Value}",
 		MemberName: rec.memberName,
 		Role: rec.role,

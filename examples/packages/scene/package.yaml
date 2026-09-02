@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.6.0
+version: 1.7.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -17,9 +17,12 @@ requires_server: ">=0.1"
 # (re-)establish the three OVERRIDE hooks idempotently — immediate on install,
 # re-set on each boot (the hook registry is rebuilt from softcode policy).
 #
-# Capture is the ONLY pose-recording path: an @hook/override on POSE/SAY/SEMIPOSE
+# Capture is one of two pose-recording paths. An @hook/override on POSE/SAY/SEMIPOSE/@EMIT
 # reproduces the built-in room emit EXACTLY, then records the pose via the
-# @scene/addpose COMMAND. @EMIT is deliberately NOT hooked. Reads use the
+# @scene/addpose COMMAND -- that is the path a MU* client takes, and it records only
+# where the poser is standing. The other is the +scene/<mode> <id>=<text> verbs below,
+# which the web portal's live-scene compose box sends: they name the scene instead of
+# inferring it from the room. Reads use the
 # scene… functions; all data-writes use @scene/* commands (never side-effect fns).
 #
 # Attribute organization follows the project FUN`/CMD`/DATA`/INCLUDE` tree
@@ -159,6 +162,62 @@ objects:
         value: |-
           $(?i)^@emit (.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,emit,,%1; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=%1,%#/FORMAT`EMIT,%1,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
+
+      # ---- web compose ----------------------------------------------------------
+      # +scene/<mode> <id>=<text> -- what the portal's live-scene compose box sends.
+      #
+      # The capture hooks above answer "which scene am I in?" from the room the poser is standing in,
+      # which is the only question a MU* client can ask. The portal asks a different one: its compose
+      # box sits on ONE scene's page, so the pose has to reach THAT scene whether or not the character
+      # is standing in its room -- and before this existed, a pose typed there was emitted into
+      # whatever room the character happened to be in and silently never recorded.
+      #
+      # So these take the id explicitly and record regardless of focus or location. Three consequences,
+      # each deliberate:
+      #   * the poser is added to the cast (`@scene/member .../participant`) -- a recorded pose whose
+      #     author is not in the scene's cast would leave +scene/who lying about who was in it;
+      #   * the room emit is CONDITIONAL on the poser actually being there. Recording from anywhere is
+      #     the point; speaking into a room you are not standing in would put words in front of people
+      #     you are not with;
+      #   * they never call the built-in pose/say/semipose/@emit, because those are hooked above --
+      #     delegating would record the pose a second time.
+      #
+      # The rendered line matches its hook exactly, so a pose composed on the web and one typed in a
+      # terminal are indistinguishable in the archive. Note the two comma spellings, both required and
+      # for different reasons: `\,` inside @scene/addpose's argument list, and `[chr(44)]` inside
+      # @message's RHS, which is CB.RSArgs and splits on commas BEFORE evaluating each argument.
+      #
+      # The co-location test compares loc(%#) against scene(<id>,room) directly, which works because
+      # scene(...,room) answers with an objid -- the same spelling loc() uses. It did not always: it
+      # returned a bare dbref, so the comparison was quietly always false and the room emit never
+      # fired for anyone.
+      #
+      # Reading the scene at all is gated by the same visibility rule the REST and hub surfaces use
+      # (public, or the caller owns or belongs to it), because the existence guard goes through
+      # scene(). That is what stops these verbs being a way to write into a private scene by guessing
+      # an id -- and it costs the web nothing, since the compose box only exists on a page whose
+      # scene the reader could already see.
+      # Newlines arrive as a BACKSLASH-ESCAPED `\%r`, not a bare `%r`, and are converted back here.
+      # A bare `%r` cannot work: substitutions are expanded before $-command patterns are matched, so
+      # the newline it produces stops `$+scene/emit *=*` matching at all and the whole pose is
+      # answered with "Huh?" -- in a terminal the web player is not even looking at. `\%r` survives
+      # matching as literal text, and edit() turns it into a real newline in here.
+      #
+      # setr() rather than a second edit() in the @message: @message's RHS is CB.RSArgs and splits on
+      # commas BEFORE evaluating, so an inline `edit(%1,...)` there would be torn into three arguments.
+      # Doing the conversion inside @scene/addpose's content (which is the last argument, so its
+      # commas are absorbed) stashes the result in %q<body> for the emit to reuse comma-free.
+      CMD`WEB`EMIT: |-
+        $+scene/emit *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],emit,,[setr(body,edit(%1,\%r,%r))]; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=%q<body>,%#/FORMAT`EMIT,%q<body>,##}
+
+      CMD`WEB`POSE: |-
+        $+scene/pose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],pose,,[name(%#)] [setr(body,edit(%1,\%r,%r))]; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] %q<body>,%#/FORMAT`POSE,%q<body>,##}
+
+      CMD`WEB`SAY: |-
+        $+scene/say *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],say,,[name(%#)] says\, "[setr(body,edit(%1,\%r,%r))]"; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] says[chr(44)] "%q<body>",%#/FORMAT`SAY,%q<body>,##}
+
+      CMD`WEB`SEMIPOSE: |-
+        $+scene/semipose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],semipose,,[name(%#)][setr(body,edit(%1,\%r,%r))]; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)]%q<body>,%#/FORMAT`SEMIPOSE,%q<body>,##}
 
       # ---- create / lifecycle ---------------------------------------------------
       # NOTE: capture the new scene id into %q<SceneID> with @assert (it both sets the register and

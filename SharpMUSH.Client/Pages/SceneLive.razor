@@ -8,6 +8,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject SceneService SceneService
 @inject IConnectionStateService Hub
+@inject ITerminalService Terminal
 @inject ISceneHubControl SceneHub
 
 <PageTitle>@Loc["RolLiveScene"] — @Loc["AppTitle"]</PageTitle>
@@ -73,19 +74,24 @@ else
         <div class="scene-live-compose">
             <MudSelect T="string" @bind-Value="_mode" Dense="true" Margin="Margin.Dense"
                        Variant="Variant.Outlined" Style="max-width:130px;">
+                <MudSelectItem Value="@("emit")">@Loc["RolModeEmit"]</MudSelectItem>
                 <MudSelectItem Value="@("pose")">@Loc["RolModePose"]</MudSelectItem>
                 <MudSelectItem Value="@("say")">@Loc["RolModeSay"]</MudSelectItem>
                 <MudSelectItem Value="@("semipose")">@Loc["RolModeSemipose"]</MudSelectItem>
             </MudSelect>
+            @* Immediate: the button below is gated on this field being non-empty, and MudTextField
+               otherwise binds on blur — so the value stayed empty through an entire typed pose and
+               Send could never be clicked. Enter is deliberately NOT wired to send: a pose is prose,
+               composed over several lines and edited before it goes out. *@
             <MudTextField @bind-Value="_composeText" Placeholder="@Loc["RolComposePlaceholder"]"
                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Immediate="true"
                           Lines="2" MaxLines="4"
-                          Style="flex:1;background:var(--surface-2);"
-                          OnKeyDown="OnComposeKeyDown" />
+                          Style="flex:1;background:var(--surface-2);" />
             <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary"
                            Size="Size.Medium" Variant="Variant.Filled"
                            OnClick="SendPoseAsync"
-                           Disabled="@(string.IsNullOrWhiteSpace(_composeText) || !Hub.IsConnected || _liveUnavailable)" />
+                           Disabled="@(string.IsNullOrWhiteSpace(_composeText) || !Terminal.IsConnected || _liveUnavailable)" />
         </div>
     </div>
 }
@@ -99,7 +105,10 @@ else
     private bool _notFound;
     private bool _liveUnavailable;
     private string _composeText = string.Empty;
-    private string _mode = "pose";
+    // Emit by default: it renders the author's words verbatim, with no name glued to the front.
+    // That is what a compose box on one scene's own page is for — the other three modes stay
+    // available for the times a player wants the built-in framing.
+    private string _mode = "emit";
     private bool _subscribed;
     private string? _joinedSceneId;
 
@@ -255,29 +264,27 @@ else
         var text = _composeText.Trim();
         // _liveUnavailable means this connection is not in the scene's group. Nothing renders a pose but the
         // round-trip event, so posting from here would look like the command vanished.
-        if (text.Length == 0 || !Hub.IsConnected || _liveUnavailable) return;
+        if (text.Length == 0 || !Terminal.IsConnected || _liveUnavailable) return;
 
-        var command = _mode switch
-        {
-            "say"      => $"say {text}",
-            "semipose" => $";{text}",
-            _          => $":{text}",
-        };
+        // The scene is named, not inferred. The room-based verbs (: / say / ;) record through the
+        // capture hooks, which only fire when the character is focused on a scene in the room they
+        // are standing in — so posing from a page for a scene you are merely reading emitted into
+        // wherever you happened to be and was silently never recorded.
+        //
+        // Newlines are sent as an ESCAPED \%r, and the verb converts them back. A raw newline would
+        // end the command on this line-delimited channel; a bare %r is worse, because substitutions
+        // are expanded before $-command patterns are matched, so the newline it produces stops
+        // +scene/<mode> matching at all and the pose comes back "Huh?" in a terminal the player is
+        // not looking at. The backslash survives matching as literal text.
+        var command = $"+scene/{_mode} {Id}={text.Replace("\r\n", "\n").Replace("\n", "\\%r")}";
 
         _composeText = string.Empty;
 
-        // Send a normal game command — never @emit, never a scene-service write, and no
-        // optimistic insert. The author's pose renders once, when its SceneEventMessage
-        // round-trips back through HandleSceneEvent.
-        await Hub.SendCommandAsync(command);
-    }
-
-    private async Task OnComposeKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && !e.ShiftKey)
-        {
-            await SendPoseAsync();
-        }
+        // Sent down the command terminal's websocket, which is already open as this character and
+        // whose input the engine already consumes. The game hub's SendCommand publishes onto a
+        // subject nothing subscribes to, so a pose sent that way never arrived; the hub is kept for
+        // RECEIVING the round-tripped event, which is what renders the pose.
+        await Terminal.SendAsync(command);
     }
 
     public async ValueTask DisposeAsync()

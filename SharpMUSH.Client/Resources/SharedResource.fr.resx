@@ -2029,6 +2029,10 @@
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>En attente d'activité…</value>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Pose</value>
   </data>

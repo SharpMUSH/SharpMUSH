@@ -46,6 +46,42 @@ public class SceneServiceIntegrationTests
 		await Assert.That(await Eval($"scene({id}, ownername)")).IsNotEmpty();
 	}
 
+	/// <summary>
+	/// A scene id is a bare key on every provider. It is not an internal detail: players type it
+	/// (<c>+scene 1</c>, <c>+scene/join 1</c>), it is a path segment in <c>/scenes/{id}/live</c>, and
+	/// it is stored in player attributes. SurrealDB used to hand back its own record id verbatim, so
+	/// production (surrealdb) showed <c>scene:1</c> while this suite's default provider (arangodb)
+	/// showed <c>1</c> — the tests and the running game disagreed about the shape of the thing a
+	/// player is asked to type, and a colon rode into every scene URL.
+	/// </summary>
+	[Test]
+	public async Task CreateScene_AssignsAProviderNeutralId()
+	{
+		var id = await NewSceneAsync("IdShape");
+
+		await Assert.That(id).DoesNotContain(":");
+	}
+
+	/// <summary>
+	/// <c>scene(&lt;id&gt;, room)</c> answers with an objid, not a bare dbref, so it can be compared
+	/// against <c>loc()</c> — which is what any "is the poser standing in this scene's room?" test has
+	/// to do. The two spellings did not match: <c>loc()</c> carries the creation stamp and this did
+	/// not, so such a comparison was quietly always false. Objid is also the project's rule for a
+	/// stored reference, since a bare dbref number gets recycled.
+	///
+	/// <para>Note the deliberate asymmetry with <c>owner</c>/<c>starter</c>, which stay bare: the
+	/// package's own <c>FUN`OWNS</c> compares <c>scene(&lt;id&gt;,owner)</c> against <c>%#</c>, which
+	/// is the short form.</para>
+	/// </summary>
+	[Test]
+	public async Task GetScene_Room_IsAnObjid_ComparableToLoc()
+	{
+		var id = await Eval($"scenecreate(#0,{God},RoomObjid {Guid.NewGuid():N})");
+		await Eval($"sceneset({id},public,1)");
+
+		await Assert.That(await Eval($"scene({id}, room)")).IsEqualTo(await Eval("objid(#0)"));
+	}
+
 	[Test]
 	public async Task GetScene_RoundTrips()
 	{

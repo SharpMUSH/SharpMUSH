@@ -3068,6 +3068,10 @@
     <value>Slå opp</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Pose</value>
     <comment>MT — compose mode named after the MUSH 'pose' command; kept.</comment>

@@ -3068,6 +3068,10 @@
     <value>Wyszukaj</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Poza</value>
     <comment>MT — compose-mode label; noun to match RolModeSay</comment>

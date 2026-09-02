@@ -756,6 +756,14 @@
 
 /* ── Per-type scene line colours ── */
 
+/* A pose is prose: it is composed in a multi-line box and stored with real newlines, and HTML
+   collapses whitespace, so without pre-wrap every line of a pose ran together in the archive.
+   pre-wrap keeps the author's breaks and still wraps long lines. */
+.scene-pose-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .scene-line--pose {
     color: #c8c8c8;
     font-style: italic;

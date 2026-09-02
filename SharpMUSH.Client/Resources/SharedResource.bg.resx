@@ -3068,6 +3068,10 @@
     <value>Потърси</value>
     <comment>MT — plain imperative, button</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Емит</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Поза</value>
     <comment>MT — compose-mode label, noun to match RolModeSay</comment>

@@ -3068,6 +3068,10 @@
     <value>查找</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>旁白</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>姿态</value>
     <comment>MT</comment>

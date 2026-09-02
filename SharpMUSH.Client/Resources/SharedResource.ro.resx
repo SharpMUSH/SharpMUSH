@@ -3068,6 +3068,10 @@
     <value>Căutare</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Poză</value>
     <comment>MT — compose-mode label for the RP pose; the underlying game command stays `pose`</comment>

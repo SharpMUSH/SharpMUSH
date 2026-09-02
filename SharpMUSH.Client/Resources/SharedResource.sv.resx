@@ -3068,6 +3068,10 @@
     <value>Sök upp</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Pose</value>
     <comment>MT — compose mode named after the game command 'pose'; kept English, as de.resx does.</comment>

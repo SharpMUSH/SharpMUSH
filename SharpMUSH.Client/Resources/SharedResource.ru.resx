@@ -3068,6 +3068,10 @@
     <value>Найти</value>
     <comment>MT — imperative button next to the username field.</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Эмит</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Поза</value>
     <comment>MT — compose-mode label; pose → поза per the sheet.</comment>
