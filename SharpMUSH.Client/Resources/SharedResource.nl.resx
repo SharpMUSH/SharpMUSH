@@ -264,10 +264,6 @@
     <value>Spelers bekijken</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersComingSoon" xml:space="preserve">
-    <value>Spelersbeheer komt binnenkort.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPlayersTitle" xml:space="preserve">
     <value>Spelers</value>
     <comment>MT</comment>

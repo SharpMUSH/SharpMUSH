@@ -1,6 +1,9 @@
 @page "/admin/players"
 @attribute [Authorize(Policy = "players.view")]
+@using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
+@inject AdminGuestsService Guests
+@inject ISnackbar Snackbar
 
 <PageTitle>@Loc["AdmPlayersTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
@@ -10,8 +13,135 @@
         <h1 class="ph-title">@Loc["AdmPlayersTitle"]</h1>
     </div>
 
-    <div class="ph-empty">
-        <MudIcon Icon="@Icons.Material.Filled.Group" Class="ph-empty-icon" />
-        <div class="ph-empty-text">@Loc["AdmPlayersComingSoon"]</div>
+    <MudText Typo="Typo.h6" Class="mt-2">@Loc["AdmGuestsSection"]</MudText>
+    <MudText Typo="Typo.body2" Style="color:var(--text-dim);" Class="mb-3">@Loc["AdmGuestsBlurb"]</MudText>
+
+    @* The roster alone does not answer "can someone guest in right now?" — Net.Guests gates the
+       whole feature and MaxGuests caps how many of these characters are usable at once. Both are
+       reported here so an operator who has stocked guests and still sees them refused is not left
+       hunting through the config pages for the reason. *@
+    @if (_list is not null && !_list.GuestLoginsEnabled)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3" id="guests-disabled-warning">
+            @Loc["AdmGuestsDisabledWarning"]
+            <MudLink Href="/admin/config/network" Class="ml-1">@Loc["AdmGuestsDisabledWarningLink"]</MudLink>
+        </MudAlert>
+    }
+
+    <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;" class="mb-4">
+        <MudTextField @bind-Value="_newName" Label="@Loc["AdmGuestName"]" id="guest-name"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width:260px;" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy"
+                   id="guest-create" OnClick="CreateAsync">@Loc["AdmGuestCreate"]</MudButton>
+        @if (_list is not null)
+        {
+            <MudText Typo="Typo.caption" Style="color:var(--text-faint);">
+                @(_list.MaxGuests < 0 ? Loc["AdmGuestsMaxUnlimited"] : Loc["AdmGuestsMax", _list.MaxGuests])
+            </MudText>
+        }
     </div>
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@_error</MudAlert>
+    }
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_list is null || _list.Guests.Count == 0)
+    {
+        <div class="ph-empty">
+            <MudIcon Icon="@Icons.Material.Filled.Group" Class="ph-empty-icon" />
+            <div class="ph-empty-text">@Loc["AdmGuestsEmpty"]</div>
+        </div>
+    }
+    else
+    {
+        <MudTable Items="_list.Guests" Dense="true" Hover="true">
+            <HeaderContent>
+                <MudTh>@Loc["AdmGuestName"]</MudTh>
+                <MudTh>@Loc["AdmGuestDbref"]</MudTh>
+                <MudTh>@Loc["AdmGuestStatus"]</MudTh>
+                <MudTh />
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd data-label="@Loc["AdmGuestName"]">@context.Name</MudTd>
+                <MudTd data-label="@Loc["AdmGuestDbref"]">#@context.DbrefNumber</MudTd>
+                <MudTd data-label="@Loc["AdmGuestStatus"]">
+                    <MudChip T="string" Size="Size.Small" Color="@(context.InUse ? Color.Success : Color.Default)">
+                        @(context.InUse ? Loc["AdmGuestInUse"] : Loc["AdmGuestAvailable"])
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    @* Destroying a connected player is refused by the game itself, so the button that
+                       would fail is disabled rather than offered and then rejected. *@
+                    <MudButton Size="Size.Small" Color="Color.Error" data-testid="guest-delete"
+                               Disabled="@(_busy || context.InUse)"
+                               title="@(context.InUse ? Loc["AdmGuestDeleteInUse"].Value : null)"
+                               OnClick="@(() => DeleteAsync(context))">@Loc["AdmGuestDelete"]</MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
 </div>
+
+@code {
+    private AdminGuestsService.GuestListResponse? _list;
+    private string _newName = string.Empty;
+    private bool _loading = true;
+    private bool _busy;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var (list, error) = await Guests.ListAsync();
+        _error = error;
+        _list = list;
+        // Pre-fill with a name the server has confirmed is free, so the common case is one click.
+        // Only when the operator has not typed their own — reloading after a create must not
+        // overwrite something they are in the middle of.
+        if (list is not null && string.IsNullOrWhiteSpace(_newName))
+            _newName = list.NextFreeName;
+        _loading = false;
+    }
+
+    private async Task CreateAsync()
+    {
+        _busy = true;
+        _error = null;
+        var (created, error) = await Guests.CreateAsync(string.IsNullOrWhiteSpace(_newName) ? null : _newName.Trim());
+        _busy = false;
+
+        if (created is null)
+        {
+            _error = error;
+            return;
+        }
+
+        Snackbar.Add(Loc["AdmGuestCreated", created.Name], Severity.Success);
+        _newName = string.Empty;
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(AdminGuestsService.GuestRow guest)
+    {
+        _busy = true;
+        _error = null;
+        var (success, error) = await Guests.DeleteAsync(guest.DbrefNumber);
+        _busy = false;
+
+        if (!success)
+        {
+            _error = error;
+            return;
+        }
+
+        Snackbar.Add(Loc["AdmGuestDeleted", guest.Name], Severity.Success);
+        await LoadAsync();
+    }
+}

@@ -133,6 +133,16 @@ else
         _scene = scene;
         _poses.AddRange(await SceneService.GetPosesAsync(Id, count: 100));
 
+        // The hub is a per-page-load singleton and only the login/character-switch paths connect it,
+        // so a returning player arrives here with no connection at all: the banner below, and a
+        // compose box that can never send. This page is the one that needs the connection, so it is
+        // the one that establishes it. ConnectAsync is a no-op when a hub already exists, which
+        // matters — reconnecting would drop the scene groups other pages have joined.
+        if (!Hub.IsConnected)
+        {
+            await Hub.ConnectAsync();
+        }
+
         // Join the SignalR scene group so we receive realtime ReceiveSceneMessage events.
         if (!string.Equals(_joinedSceneId, Id, StringComparison.Ordinal))
         {

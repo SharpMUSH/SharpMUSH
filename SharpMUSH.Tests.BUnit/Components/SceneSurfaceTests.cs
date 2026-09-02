@@ -106,8 +106,17 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	/// <summary>Set to make <see cref="JoinSceneAsync"/> refuse, as the hub does for a caller with no character.</summary>
 	public HubException? JoinRefusal { get; set; }
 
-	public bool IsConnected => true;
-	public HubConnectionState ConnectionState => HubConnectionState.Connected;
+	/// <summary>
+	/// Starts connected, as most tests want. A test that sets this false is reproducing the state a
+	/// returning player is actually in: the hub singleton is fresh on every page load, and nothing on
+	/// a plain load logs in again, so the connection has to be established by whoever needs it.
+	/// </summary>
+	public bool IsConnected { get; set; } = true;
+
+	public int ConnectCalls { get; private set; }
+
+	public HubConnectionState ConnectionState =>
+		IsConnected ? HubConnectionState.Connected : HubConnectionState.Disconnected;
 
 	public event Action? OnConnectionStateChanged;
 	public event Action<GameOutputMessage>? OnOutputReceived;
@@ -115,9 +124,16 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	public event Action? OnPluginsChanged;
 	public event Action<SceneEventMessage>? OnSceneEventReceived;
 
-	public Task ConnectAsync() => Task.CompletedTask;
+	public Task ConnectAsync()
+	{
+		ConnectCalls++;
+		IsConnected = true;
+		OnConnectionStateChanged?.Invoke();
+		return Task.CompletedTask;
+	}
+
 	public Task DisconnectAsync() => Task.CompletedTask;
-	public Task ReconnectAsync() => Task.CompletedTask;
+	public Task ReconnectAsync() => ConnectAsync();
 
 	public Task SendCommandAsync(string command)
 	{
@@ -144,7 +160,6 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	// Keep the compiler from flagging the otherwise-unused events.
 	public void Touch()
 	{
-		OnConnectionStateChanged?.Invoke();
 		OnOutputReceived?.Invoke(null!);
 		OnRoomEventReceived?.Invoke(null!);
 	}
@@ -169,6 +184,46 @@ public class SceneSurfaceTests : TrackingBunitContext
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
+	}
+
+	/// <summary>
+	/// A returning player loads /scenes/{id}/live with a valid session and a fresh hub singleton —
+	/// nothing on that path logs in again, so nothing had connected the hub. The page rendered its
+	/// "not connected to the game" banner over a permanently disabled compose box while the sidebar
+	/// said the same character was online. The page needs the connection, so the page establishes it.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_ConnectsTheHub_WhenItIsNotConnectedYet()
+	{
+		_hub.IsConnected = false;
+
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (_hub.ConnectCalls == 0)
+				throw new InvalidOperationException("hub not connected yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(_hub.ConnectCalls).IsEqualTo(1);
+		await Assert.That(_hub.IsConnected).IsTrue();
+		// And with the connection up it joins the scene group, which is what delivers live poses.
+		await Assert.That(_hub.Joined).Contains("S1");
+	}
+
+	/// <summary>An already-connected hub is left alone — reconnecting would drop the group joins.</summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_DoesNotReconnectAnAlreadyConnectedHub()
+	{
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (_hub.Joined.Count == 0)
+				throw new InvalidOperationException("scene group not joined yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(_hub.ConnectCalls).IsEqualTo(0);
 	}
 
 	[TUnit.Core.Test]

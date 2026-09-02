@@ -27,6 +27,8 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 
 	private record SetupStatusResponse(bool NeedsSetup);
 	private record SetupCompleteRequest(string Username, string Password);
+	private record MushTokenRequest(string? PlayerName, string? Password, string? AccountSessionToken,
+		int? CharacterKey, long? CharacterCreationTime);
 
 	private const string Password = "Integration-Test-Pw-1!";
 
@@ -150,5 +152,40 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 		await Assert.That(linkedAfter!.Username).IsEqualTo(usernameBefore);
 
 		await db.SetServerSetupCompletedAsync(true); // leave the shared game claimed for other suites
+	}
+
+	/// <summary>
+	/// The seeded #1 ships with no password hash, and every password check treats an absent hash as
+	/// "anything authenticates" — PennMUSH parity (<c>password_check()</c> returns 1 for a player with
+	/// no password attribute, and <c>create_minimal_db</c> gives God none). PennMUSH closes that window
+	/// by telling the operator to <c>@newpassword</c> on their first connect; SharpMUSH's web wizard
+	/// already collects a password, so it must put it on the character too. Without that, a claimed
+	/// game answers <c>connect &lt;God&gt; anything-at-all</c> with a wizard session, over telnet and
+	/// through the portal terminal alike.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 6)]
+	public async Task Complete_SetsGodCharacterPassword_SoAWrongOneNoLongerAuthenticates()
+	{
+		var db = factory.Services.GetRequiredService<ISharpDatabase>();
+		await db.SetServerSetupCompletedAsync(false);
+
+		const string claimPassword = "god-character-password-6!";
+		var http = CreateClient();
+		var claim = await http.PostAsJsonAsync("api/setup/complete",
+			new SetupCompleteRequest(UniqueName("claimer"), claimPassword));
+		await Assert.That(claim.StatusCode).IsEqualTo(HttpStatusCode.OK);
+
+		var account = await claim.Content.ReadFromJsonAsync<AccountLoginResponse>();
+		var god = account!.Characters.Single(c => c.DbrefNumber == 1);
+
+		var wrong = await http.PostAsJsonAsync("api/auth/mush-token",
+			new MushTokenRequest(god.Name, "not-the-claim-password", null, null, null));
+		await Assert.That(wrong.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+
+		// ...and the password the claimer chose is the one that works, so setting it did not simply
+		// lock the operator out of their own game.
+		var right = await http.PostAsJsonAsync("api/auth/mush-token",
+			new MushTokenRequest(god.Name, claimPassword, null, null, null));
+		await Assert.That(right.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
 }

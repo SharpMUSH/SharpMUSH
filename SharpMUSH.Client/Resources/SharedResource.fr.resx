@@ -1418,9 +1418,6 @@
   <data name="AdmPlayersAction" xml:space="preserve">
     <value>Voir les joueurs</value>
   </data>
-  <data name="AdmPlayersComingSoon" xml:space="preserve">
-    <value>L'administration des joueurs arrive bientôt.</value>
-  </data>
   <data name="AdmAccountsTitle" xml:space="preserve">
     <value>Comptes</value>
   </data>
