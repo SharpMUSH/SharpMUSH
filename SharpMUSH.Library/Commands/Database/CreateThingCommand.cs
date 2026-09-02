@@ -14,6 +14,6 @@ public record CreateThingCommand(string Name, AnySharpContainer Where, SharpPlay
 		Definitions.CacheTags.ObjectList,
 		Definitions.CacheTags.ThingList,
 		Definitions.CacheTags.ObjectOwnership,
-		Definitions.CacheTags.ObjectContents
+		Definitions.CacheKeys.ContentsTag(Where.Object().DBRef.Number)
 	];
 }

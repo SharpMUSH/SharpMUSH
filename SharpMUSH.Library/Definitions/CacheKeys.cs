@@ -33,6 +33,15 @@ public static class CacheKeys
 	/// <summary>Tag on GetCertainLocationQuery (graph-id keyed); a move RemoveByTag's this.</summary>
 	public static string LocationTag(string id) => $"loc-id:{id}";
 
+	/// <summary>
+	/// A single container's contents. Tagged as well as keyed because removing a key cannot stop a read
+	/// that began before a write from storing its pre-write list afterwards — only a tag invalidation,
+	/// which FusionCache resolves against when the entry's factory started, can. This is the per-container
+	/// form so that a move or a creation invalidates the two containers it touches rather than every
+	/// container in the game, as <see cref="CacheTags.ObjectContents"/> does.
+	/// </summary>
+	public static string ContentsTag(int number) => $"contents:#{number}";
+
 	/// <summary>An object's flag SET, keyed by its stable graph _id. Invalidated on @set/@unset flag.</summary>
 	public static string ObjectFlags(string id) => $"object-flags:{id}";
 }
