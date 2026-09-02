@@ -556,13 +556,9 @@ public partial class Commands
 		}
 
 		// --- Channels: always chown to probate (PennMUSH chan_chownall) ---
-		var channels = Mediator.CreateStream(new GetChannelListQuery());
+		var channels = Mediator.CreateStream(new GetChannelsOwnedByQuery(playerObj.Object().DBRef));
 		await foreach (var channel in channels)
 		{
-			var channelOwner = await channel.Owner.WithCancellation(CancellationToken.None);
-			if (channelOwner.Object.DBRef.Number != playerDbRefNumber)
-				continue;
-
 			await Mediator.Send(new UpdateChannelOwnerCommand(channel, probatePlayer));
 		}
 

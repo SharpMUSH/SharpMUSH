@@ -833,6 +833,12 @@ public interface ISharpDatabase
 
 	ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// The channels owned by <paramref name="owner"/>. Callers used to walk every channel and resolve
+	/// each owner, which cost a round trip per channel.
+	/// </summary>
+	IAsyncEnumerable<SharpChannel> GetChannelsOwnedByAsync(DBRef owner, CancellationToken cancellationToken = default);
+
 	IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, CancellationToken cancellationToken = default);
 
 	/// <summary>

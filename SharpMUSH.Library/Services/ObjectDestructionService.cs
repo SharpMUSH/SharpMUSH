@@ -208,11 +208,9 @@ public class ObjectDestructionService(
 		{
 			var playerDbRefNumber = player.Object.DBRef.Number;
 
-			await foreach (var channel in mediator.CreateStream(new GetChannelListQuery(), ct))
+			await foreach (var channel in mediator.CreateStream(
+				new GetChannelsOwnedByQuery(player.Object.DBRef), ct))
 			{
-				var channelOwner = await channel.Owner.WithCancellation(ct);
-				if (channelOwner.Object.DBRef.Number != playerDbRefNumber) continue;
-
 				await mediator.Send(new UpdateChannelOwnerCommand(channel, probate), ct);
 			}
 

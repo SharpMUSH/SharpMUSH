@@ -14,3 +14,5 @@ public record GetChannelListQuery : IStreamQuery<SharpChannel>, ICacheable
 	public string CacheKey => "global:ChannelList";
 	public string[] CacheTags => [Definitions.CacheTags.ChannelList];
 }
+/// <summary>The channels owned by a given object, asked directly rather than by filtering every channel.</summary>
+public record GetChannelsOwnedByQuery(DBRef Owner) : IStreamQuery<SharpChannel>;

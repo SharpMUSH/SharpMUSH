@@ -21,19 +21,12 @@ namespace SharpMUSH.Tests.Commands;
 /// path so that regression cannot come back unnoticed.
 /// </para>
 /// <para>
-/// Marked <see cref="ExplicitAttribute"/> pending investigation (issue #838): both cases fail intermittently on the
-/// <b>Memgraph</b> leg under full-suite load, and pass there in isolation (2/2) and on ArangoDB and
-/// SurrealDB under the same load. No mechanism has been identified — the FOLLOWING write goes through
-/// <c>GetGod()</c>, and its gates are <c>IsGod</c> (a key comparison, no flag lookup) and
-/// <c>IsWizard</c> → <c>HasFlag("WIZARD")</c>, and WIZARD carries no aliases — so this is parked rather
-/// than diagnosed. Run explicitly to work on it:
-/// <code>
-/// SHARPMUSH_DATABASE_PROVIDER=memgraph dotnet run --project SharpMUSH.Tests -- \
-///   --treenode-filter "/*/*/FollowCommandTests/*"
-/// </code>
+/// These were <see cref="ExplicitAttribute"/> under issue #838, where they failed on the Memgraph leg
+/// under full-suite load. The FOLLOWING write was never the problem: the locate was, because
+/// <c>CreatePlayerCommand</c> invalidated the room's cached contents by key alone. See
+/// <c>CachingBehaviorTests.StraddlingRead_DoesNotOutliveTheWriteThatInvalidatedIt</c>.
 /// </para>
 /// </summary>
-[Explicit]
 public class FollowCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -114,25 +107,57 @@ public class FollowCommandTests
 			.Because("a mortal must be able to change who they follow: PennMUSH writes FOLLOWING as GOD");
 	}
 
+	/// <summary>
+	/// FOLLOW refuses a leader it cannot resolve, and writes nothing.
+	/// </summary>
 	/// <remarks>
-	/// This one would want [Explicit] on its own account even without the class-level one above: it flakes
-	/// on CI against Memgraph (issue #839), not because the behaviour it pins is in
-	/// doubt. The failure surfaces as FOLLOW failing to resolve the leader by name ("I can't see that
-	/// here"), with the stack landing in MemgraphDatabase.ExecuteWithRetryAsync after a burst of
-	/// "Memgraph transient conflict, retrying" — the provider's retry loop losing a race under
-	/// concurrent writes. It passes against Arango and SurrealDB in the same CI run, and the whole
-	/// suite passes against Memgraph locally, so the fault is in the provider's write contention
-	/// handling rather than in FOLLOW.
-	/// <para>
-	/// MortalFollow_OverwritesTheWizardFlaggedAttribute above goes through the same FollowAndReport
-	/// path and is equally exposed; it has not failed yet, so it is left enabled.
-	/// </para>
-	/// Run it by naming the method — a class-level wildcard filter does not pick up an [Explicit] test:
-	/// <c>dotnet run --project SharpMUSH.Tests --
-	/// --treenode-filter "/*/*/FollowCommandTests/MortalUnfollow_ClearsTheWizardFlaggedAttribute"</c>
+	/// A leader who genuinely is not there produces the same "I can't see that here." as one the cached
+	/// contents list had lost, so this pins the honest case.
 	/// </remarks>
-	// [Explicit] lives on the class (issue #838) and covers this method too; repeating it here is
-	// TUnit0017, which fails the build of the whole test project.
+	[Test]
+	public async ValueTask MortalFollow_RefusesALeaderItCannotResolve()
+	{
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowNoSuch");
+
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(follower.DbRef);
+
+		await Parser.CommandParse(follower.Handle, ConnectionService,
+			MModule.single($"follow {TestIsolationHelpers.GenerateUniqueName("NobodyHere")}"));
+
+		var report = recorder.For(follower.DbRef).Skip(before).ToArray();
+
+		await Assert.That(report.Any(m => m.Contains("can't see that here") || m.Contains("don't see that here")))
+			.IsTrue()
+			.Because($"FOLLOW must refuse a name that resolves to nothing; it said: {string.Join(" | ", report)}");
+
+		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse()
+			.Because("a refused FOLLOW writes no FOLLOWING at all");
+	}
+
+	/// <summary>
+	/// UNFOLLOW with nothing to unfollow leaves FOLLOWING absent rather than creating it.
+	/// </summary>
+	[Test]
+	public async ValueTask MortalUnfollow_WithNothingToUnfollowWritesNothing()
+	{
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "UnfollowNothing");
+
+		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse()
+			.Because("precondition: a fresh player follows nobody");
+
+		await Parser.CommandParse(follower.Handle, ConnectionService, MModule.single("unfollow"));
+
+		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse()
+			.Because("clearing an attribute that was never set must not create it");
+	}
+
+	/// <remarks>
+	/// The case that failed on CI (issue #839). It failed in the locate, not the write; the
+	/// "Memgraph transient conflict" noise around it was contention, not the cause.
+	/// </remarks>
 	[Test]
 	public async ValueTask MortalUnfollow_ClearsTheWizardFlaggedAttribute()
 	{

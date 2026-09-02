@@ -88,6 +88,16 @@ public partial class ArangoDatabase
 			Buffer = x.Buffer
 		};
 
+	public IAsyncEnumerable<SharpChannel> GetChannelsOwnedByAsync(DBRef owner, CancellationToken ct = default)
+		=> arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(handle,
+				$"FOR v IN 1..1 INBOUND @{StartVertex} GRAPH {DatabaseConstants.GraphChannels} "
+				+ $"FILTER IS_SAME_COLLECTION('{DatabaseConstants.Channels}', v) RETURN v",
+				new Dictionary<string, object>
+				{
+					{ StartVertex, $"{DatabaseConstants.Objects}/{owner.Number}" }
+				}, cancellationToken: ct)
+			.Select(SharpChannelQueryToSharpChannel);
+
 	public async ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken ct = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(

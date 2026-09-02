@@ -30,6 +30,18 @@ public partial class SurrealDatabase
 			yield return MapRecordToChannel(element);
 	}
 
+	public async IAsyncEnumerable<SharpChannel> GetChannelsOwnedByAsync(DBRef owner,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		var parameters = new Dictionary<string, object?> { ["key"] = owner.Number };
+		var response = await ExecuteAsync(
+			"SELECT VALUE in.* FROM owner_of_channel WHERE out = object:$key",
+			parameters, cancellationToken);
+
+		foreach (var record in response.GetValue<List<ChannelDbRecord>>(0) ?? [])
+			yield return MapRecordToChannel(record);
+	}
+
 	public async ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default)
 	{
 		var parameters = new Dictionary<string, object?> { ["name"] = name };

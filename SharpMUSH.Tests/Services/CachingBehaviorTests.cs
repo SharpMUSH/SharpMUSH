@@ -1,4 +1,8 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -153,5 +157,139 @@ public class CachingBehaviorTests
 		var obj = await mediator.Send(new GetObjectNodeQuery(newDbRef));
 		await Assert.That(obj.IsNone).IsFalse();
 		await Assert.That(obj.Object()!.Name).IsEqualTo("CacheInvalidation Visibility Test");
+	}
+
+
+	/// <summary>
+	/// Every object created in a room while that room's contents are being read must be in the room's
+	/// contents afterwards. This is issue #838 through the real pipeline rather than at the behavior.
+	/// </summary>
+	/// <remarks>
+	/// A stale contents entry does not heal: nothing re-invalidates the key, so the object stays missing
+	/// from the room for the entry's whole lifetime.
+	/// </remarks>
+	[Test]
+	public async Task ContentsCache_HoldsEveryObjectCreatedWhileItWasBeingRead()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+		var options = WebAppFactory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+
+		var digResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName("ContentsRace")}"));
+		var room = Library.Models.DBRef.Parse(digResult.Message!.ToPlainText()!);
+
+		async Task<Library.Models.DBRef> Populate() => await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
+			TestIsolationHelpers.GenerateUniqueName("ContentsRacer"), "TestPassword123",
+			room, room, (int)options.CurrentValue.Limit.StartingQuota));
+
+		// The window is as wide as the read is slow, and a contents read costs one round trip per occupant
+		// on Memgraph. An empty room is read faster than a creation commits and races nothing.
+		for (var i = 0; i < 60; i++) await Populate();
+
+		// One creation followed at once by a read of the room, which is what FOLLOW does.
+		using var readersRun = new CancellationTokenSource();
+		// The token stops the loop but is deliberately NOT handed to the stream: FusionCache keeps the
+		// token of whichever caller started a factory, and this cache is shared for the whole test
+		// session, so a test-scoped token outlives its `using` inside somebody else's in-flight read.
+		var readers = Enumerable.Range(0, 4).Select(_ => Task.Run(async () =>
+		{
+			while (!readersRun.IsCancellationRequested)
+			{
+				await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
+			}
+		})).ToArray();
+
+		const int newcomers = 40;
+		var missing = new List<Library.Models.DBRef>();
+		for (var i = 0; i < newcomers; i++)
+		{
+			var newcomer = await Populate();
+			var contents = await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
+			if (contents.All(c => c.Object().DBRef != newcomer)) missing.Add(newcomer);
+		}
+
+		await readersRun.CancelAsync();
+		await Task.WhenAll(readers);
+
+		await Assert.That(missing).IsEmpty()
+			.Because($"a read that straddled a creation cached a list without it; {missing.Count} of {newcomers} are missing");
+	}
+
+	/// <summary>
+	/// A read whose database query is issued <em>before</em> a write commits, but whose factory returns
+	/// <em>after</em> that write's invalidation, must not leave its pre-write answer in the cache —
+	/// whether the write names the entry by key or reaches it by tag.
+	/// </summary>
+	/// <remarks>
+	/// Issue #838, and the reason the create commands carry the <c>ObjectContents</c> tag.
+	/// <c>RemoveAsync</c> drops only what is in the cache at that instant, so a straddling read stores its
+	/// stale list on top of the invalidation and every later reader is served it. A tag invalidation is a
+	/// timestamp FusionCache compares against when the entry was created, so the late store loses.
+	/// <c>CreatePlayerCommand</c> invalidated <c>object-contents:#N</c> by key alone;
+	/// <c>MoveObjectCommand</c> was safe only because it fell back to the tag.
+	/// </remarks>
+	[Test]
+	[Arguments(false, true)]
+	[Arguments(true, true)]
+	public async Task StraddlingRead_DoesNotOutliveTheWriteThatInvalidatedIt(bool byKey, bool byTag)
+	{
+		using var cache = new FusionCache(new FusionCacheOptions());
+		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache);
+		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache);
+		var probe = new StaleReadProbe();
+		var write = new StaleReadWrite(byKey ? [probe.CacheKey] : [], byTag ? probe.CacheTags : []);
+
+		var readStarted = new TaskCompletionSource();
+		var writeCommitted = new TaskCompletionSource();
+
+		// A reader that queried the database before the write and has not stored its answer yet.
+		var straddlingRead = Materialize(reads, probe, (_, _) => Blocked(readStarted, writeCommitted.Task, "before"));
+		await readStarted.Task;
+
+		await writes.Handle(write, (_, _) => ValueTask.FromResult(true), CancellationToken.None);
+		writeCommitted.SetResult();
+
+		await Assert.That(await straddlingRead).IsEquivalentTo(new[] { "before" })
+			.Because("the straddling reader legitimately read a pre-write database; its own result is not the bug");
+
+		var afterWrite = await Materialize(reads, probe, (_, _) => Once("after"));
+
+		await Assert.That(afterWrite).IsEquivalentTo(new[] { "after" })
+			.Because("the pre-write answer landed in the cache after the invalidation, so it must not be served");
+	}
+
+	private sealed record StaleReadProbe(string Key = "stale-read-probe") : IStreamQuery<string>, ICacheable
+	{
+		public string CacheKey => Key;
+		public string[] CacheTags => ["stale-read-probe-tag"];
+	}
+
+	private sealed record StaleReadWrite(string[] CacheKeys, string[] CacheTags) : ICommand<bool>, ICacheInvalidating;
+
+	private static async IAsyncEnumerable<string> Blocked(TaskCompletionSource started, Task release, string value)
+	{
+		started.SetResult();
+		await release;
+		yield return value;
+	}
+
+	private static async IAsyncEnumerable<string> Once(string value)
+	{
+		await Task.CompletedTask;
+		yield return value;
+	}
+
+	private static async Task<List<string>> Materialize(
+		StreamQueryCachingBehavior<StaleReadProbe, string> behavior,
+		StaleReadProbe probe,
+		StreamHandlerDelegate<StaleReadProbe, string> next)
+	{
+		var result = new List<string>();
+		await foreach (var item in behavior.Handle(probe, next, CancellationToken.None))
+		{
+			result.Add(item);
+		}
+
+		return result;
 	}
 }

@@ -11,6 +11,13 @@ public class GetChannelQueryHandler(ISharpDatabase database) : IQueryHandler<Get
 		=> await database.GetChannelAsync(request.Name, cancellationToken);
 }
 
+public class GetChannelsOwnedByQueryHandler(ISharpDatabase database)
+	: IStreamQueryHandler<GetChannelsOwnedByQuery, SharpChannel>
+{
+	public IAsyncEnumerable<SharpChannel> Handle(GetChannelsOwnedByQuery request, CancellationToken cancellationToken)
+		=> database.GetChannelsOwnedByAsync(request.Owner, cancellationToken);
+}
+
 public class GetChannelListQueryHandler(ISharpDatabase database) : IStreamQueryHandler<GetChannelListQuery, SharpChannel>
 {
 	public IAsyncEnumerable<SharpChannel> Handle(GetChannelListQuery request, CancellationToken cancellationToken)

@@ -28,6 +28,18 @@ public partial class MemgraphDatabase
 			yield return MapNodeToChannel(record["c"].As<INode>());
 	}
 
+	public async IAsyncEnumerable<SharpChannel> GetChannelsOwnedByAsync(DBRef owner,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		var result = await ExecuteWithRetryAsync("""
+MATCH (c:Channel)-[:HAS_CHANNEL_OWNER]->(:Object {key: $key})
+RETURN c
+""", new { key = owner.Number }, cancellationToken);
+
+		foreach (var record in result.Result)
+			yield return MapNodeToChannel(record["c"].As<INode>());
+	}
+
 	public async ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default)
 	{
 		var result = await ExecuteWithRetryAsync("MATCH (c:Channel {name: $name}) RETURN c", new { name }, cancellationToken);

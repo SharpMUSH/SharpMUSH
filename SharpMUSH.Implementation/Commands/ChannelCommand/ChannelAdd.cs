@@ -57,11 +57,8 @@ public static class ChannelAdd
 			return new CallState(ErrorMessages.Returns.InvalidChannelName);
 		}
 
-		var allChannels = Mediator.CreateStream(new GetChannelListQuery());
-		var ownedChannels = await allChannels
-			.Where(async (x, _) =>
-				(await x.Owner.WithCancellation(CancellationToken.None)).Id == executorOwner.Id)
-			.CountAsync();
+		var ownedChannels = await Mediator.CreateStream(
+			new GetChannelsOwnedByQuery(executorOwner.Object.DBRef)).CountAsync();
 
 		if (!await executor.IsPriv() && ownedChannels >= Configuration.CurrentValue.Chat.MaxChannels)
 		{
