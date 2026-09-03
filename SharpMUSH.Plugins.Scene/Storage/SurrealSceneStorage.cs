@@ -668,22 +668,36 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var memberName = await ResolveObjectNameAsync(playerDbref) ?? "";
 
-		// At most one member edge per (player, scene): delete then RELATE.
-		await _accessor.ExecuteAsync(
-			"DELETE scene_member WHERE in = object:$pk AND out = scene:⟨$sid⟩",
-			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
+		// At most one member edge per (player, scene). This used to DELETE then RELATE, which is why it
+		// is now an UPDATE-or-RELATE: this edge does not only carry the role. `isCurrent` IS the
+		// player's focus and `showAs` is their +scene/as persona, so recreating the edge silently reset
+		// both — and the ArangoDB provider, which updates in place, kept them. The two providers
+		// disagreed about what re-roling somebody costs, and production is the one that lost the data.
+		// Losing focus is not cosmetic: nearly every owner verb acts on scenefocus(%#) and does nothing
+		// without one, and the capture hooks need it to record a pose at all.
+		var parameters = new Dictionary<string, object?>
+		{
+			["pk"] = playerKey.Value,
+			["sid"] = sceneKey.Split(':')[1],
+			["role"] = role ?? "",
+			["now"] = now,
+			["name"] = memberName
+		};
 
-		await _accessor.ExecuteAsync(
-			"RELATE object:$pk->scene_member->scene:⟨$sid⟩ SET " +
-			"role = $role, showAs = '', isCurrent = false, grantedAt = $now, memberName = $name",
-			new Dictionary<string, object?>
-			{
-				["pk"] = playerKey.Value,
-				["sid"] = sceneKey.Split(':')[1],
-				["role"] = role ?? "",
-				["now"] = now,
-				["name"] = memberName
-			});
+		var updated = await _accessor.ExecuteAsync(
+			"UPDATE scene_member SET role = $role, memberName = $name " +
+			"WHERE in = object:$pk AND out = scene:⟨$sid⟩ RETURN AFTER",
+			parameters);
+
+		// Nothing to update means this player is not in the cast yet; create the edge, and only then
+		// are the empty focus and persona correct — they are what a new member starts with.
+		if (updated.GetValue<List<SceneMemberEdgeRecord>>(0) is null or { Count: 0 })
+		{
+			await _accessor.ExecuteAsync(
+				"RELATE object:$pk->scene_member->scene:⟨$sid⟩ SET " +
+				"role = $role, showAs = '', isCurrent = false, grantedAt = $now, memberName = $name",
+				parameters);
+		}
 
 		return await GetMemberAsync(sceneId, playerDbref);
 	}

@@ -228,6 +228,77 @@ public class SceneWebComposeIntegrationTests
 			.Because("a wildcard must span the newline %r expands to, or the verb never matches");
 	}
 
+	/// <summary>
+	/// Posing from the web leaves an existing member's focus alone.
+	///
+	/// <para><c>@scene/member</c> clears the target's focus as a side effect, and these verbs add the
+	/// poser to the cast — so writing the membership on every pose silently de-focused anyone who used
+	/// the compose box. That is not cosmetic: nearly every other owner verb
+	/// (<c>+scene/public</c>, <c>/private</c>, <c>/finish</c>, <c>/pitch</c>, <c>/edit</c>) acts on
+	/// <c>scenefocus(%#)</c> and does nothing at all without one, and the capture hooks need the same
+	/// focus to record a pose typed in a MU* client. One pose on the web and a player's terminal
+	/// quietly stopped being recorded.</para>
+	/// </summary>
+	[Test]
+	public async Task WebCompose_LeavesAnExistingMembersFocusAlone()
+	{
+		const long handle = 9451;
+		await PutLoggerInMasterRoomAsync();
+
+		var player = await CreatePlayerAsync($"Gale{Tag}", handle);
+		await RunAs(handle, $"+scene/create Gale Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(player)})");
+		await Assert.That(sceneId).DoesNotStartWith("#-1")
+			.Because("+scene/create focuses its owner; that focus is the precondition here");
+
+		await RunAs(handle, $"+scene/emit {sceneId}=the lamp swings.");
+
+		await Assert.That(await Eval($"scenefocus({Num(player)})")).IsEqualTo(sceneId);
+	}
+
+	/// <summary>
+	/// Posing does not re-role someone already in the cast. The verb adds the poser as a participant
+	/// so the cast cannot omit an author, but an owner who poses into their own scene is still its
+	/// owner — and every ownership verb (<c>+scene/public</c>, <c>/finish</c>, <c>/pitch</c>) is gated
+	/// on <c>FUN`OWNS</c>, so a silent demotion would lock them out of the scene they started.
+	/// </summary>
+	[Test]
+	public async Task WebCompose_DoesNotDemoteAnOwnerWhoPoses()
+	{
+		const long handle = 9471;
+		await PutLoggerInMasterRoomAsync();
+
+		var owner = await CreatePlayerAsync($"Juno{Tag}", handle);
+		await RunAs(handle, $"+scene/create Juno Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(owner)})");
+		await Assert.That(await Eval($"scenemember({sceneId},{Num(owner)},role)")).IsEqualTo("owner");
+
+		await RunAs(handle, $"+scene/emit {sceneId}=the gate closes.");
+
+		await Assert.That(await Eval($"scenemember({sceneId},{Num(owner)},role)")).IsEqualTo("owner");
+	}
+
+	/// <summary>A pose still puts a poser who was NOT in the cast into it.</summary>
+	[Test]
+	public async Task WebCompose_StillAddsANewPoserToTheCast()
+	{
+		const long ownerHandle = 9461;
+		const long guestHandle = 9462;
+		await PutLoggerInMasterRoomAsync();
+
+		var owner = await CreatePlayerAsync($"Hale{Tag}", ownerHandle);
+		var newcomer = await CreatePlayerAsync($"Ivy{Tag}", guestHandle);
+		await RunAs(ownerHandle, $"+scene/create Hale Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(owner)})");
+		await RunAs(ownerHandle, "+scene/public");
+
+		await Assert.That(await Eval($"scenemember({sceneId},{Num(newcomer)},role)")).StartsWith("#-1");
+
+		await RunAs(guestHandle, $"+scene/emit {sceneId}=a door opens.");
+
+		await Assert.That(await Eval($"scenemember({sceneId},{Num(newcomer)},role)")).DoesNotStartWith("#-1");
+	}
+
 	[Test]
 	public async Task WebCompose_RefusesAnUnknownScene()
 	{

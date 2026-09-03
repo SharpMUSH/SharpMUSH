@@ -82,6 +82,33 @@ public class SceneServiceIntegrationTests
 		await Assert.That(await Eval($"scene({id}, room)")).IsEqualTo(await Eval("objid(#0)"));
 	}
 
+	/// <summary>
+	/// Setting a member's role leaves their focus and their persona alone.
+	///
+	/// <para>SurrealDB stores both ON the membership edge — focus as <c>isCurrent</c>, the
+	/// <c>+scene/as</c> persona as <c>showAs</c> — and its <c>SetMember</c> deleted and recreated that
+	/// edge, hard-setting both back to empty. ArangoDB updated in place and kept them, so the two
+	/// providers disagreed about what re-roling somebody costs, and production is the one that lost
+	/// data. Losing focus is not cosmetic: nearly every owner verb acts on <c>scenefocus(%#)</c> and
+	/// does nothing without one, and the capture hooks need it to record a pose at all.</para>
+	/// </summary>
+	[Test]
+	public async Task SetMember_KeepsFocusAndPersona()
+	{
+		var id = await NewSceneAsync("MemberRole");
+		await Eval($"sceneaddmember({id},{God},owner)");
+		await Eval($"scenesetfocus({God},{id})");
+		await Eval($"sceneshowas({id},{God},The Stranger)");
+
+		await Assert.That(await Eval($"scenefocus({God})")).IsEqualTo(id)
+			.Because("the focus set above is the precondition this test exists to protect");
+
+		await Eval($"sceneaddmember({id},{God},participant)");
+
+		await Assert.That(await Eval($"scenefocus({God})")).IsEqualTo(id);
+		await Assert.That(await Eval($"scenemember({id},{God},showas)")).IsEqualTo("The Stranger");
+	}
+
 	[Test]
 	public async Task GetScene_RoundTrips()
 	{
