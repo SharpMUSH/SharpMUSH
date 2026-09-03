@@ -335,12 +335,11 @@ public class CachingBehaviorTests
 	/// whether the write names the entry by key or reaches it by tag.
 	/// </summary>
 	/// <remarks>
-	/// Issue #838, and the reason the create commands carry the <c>ObjectContents</c> tag.
-	/// <c>RemoveAsync</c> drops only what is in the cache at that instant, so a straddling read stores its
-	/// stale list on top of the invalidation and every later reader is served it. A tag invalidation is a
-	/// timestamp FusionCache compares against when the entry was created, so the late store loses.
-	/// <c>CreatePlayerCommand</c> invalidated <c>object-contents:#N</c> by key alone;
-	/// <c>MoveObjectCommand</c> was safe only because it fell back to the tag.
+	/// Issue #838, and the reason a write that touches a container invalidates its
+	/// <c>ContentsTag</c> rather than only its key. <c>RemoveAsync</c> drops only what is in the cache at
+	/// that instant, so a straddling read stores its stale list on top of the invalidation and every later
+	/// reader is served it. A tag invalidation is a timestamp FusionCache compares against when the entry
+	/// was created, so the late store loses.
 	/// </remarks>
 	[Test]
 	[Arguments(false, true)]
