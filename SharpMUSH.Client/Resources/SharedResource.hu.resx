@@ -3408,6 +3408,10 @@
     <value>Hőm. (F)</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>A szerkesztőt nem sikerült betölteni.</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermAddAttribute" xml:space="preserve">
     <value>Attribútum hozzáadása</value>
     <comment>MT</comment>

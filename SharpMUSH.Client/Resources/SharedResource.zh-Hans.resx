@@ -3408,6 +3408,10 @@
     <value>温度（F）</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>无法加载编辑器。</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermAddAttribute" xml:space="preserve">
     <value>添加属性</value>
     <comment>MT</comment>

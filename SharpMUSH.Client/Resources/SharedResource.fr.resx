@@ -914,6 +914,10 @@
   <data name="PkgApplied" xml:space="preserve">
     <value>{0} {1} appliqué (révision {2}).</value>
   </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>L'éditeur n'a pas pu être chargé.</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermNotLoggedIn" xml:space="preserve">
     <value>non connecté</value>
   </data>

@@ -1772,6 +1772,9 @@
     <value>say hello   ·   pose waves   ·   look   ·   who</value>
     <comment>Example commands. The command verbs (say, pose, look, who) are game syntax and must stay in English; only their arguments may be localized.</comment>
   </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>The editor could not be loaded.</value>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Clear terminal</value>
   </data>

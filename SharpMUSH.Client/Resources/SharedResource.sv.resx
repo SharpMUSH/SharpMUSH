@@ -3408,6 +3408,10 @@
     <value>Temp. (F)</value>
     <comment>MT — unit label, identical to English.</comment>
   </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>Redigeraren kunde inte laddas.</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermAddAttribute" xml:space="preserve">
     <value>Lägg till attribut</value>
     <comment>MT — corpus term 'attribut'.</comment>

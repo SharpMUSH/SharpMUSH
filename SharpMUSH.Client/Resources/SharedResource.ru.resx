@@ -3408,6 +3408,10 @@
     <value>Темп. (F)</value>
     <comment>MT — unit letter kept as-is.</comment>
   </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>Не удалось загрузить редактор.</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermAddAttribute" xml:space="preserve">
     <value>Добавить атрибут</value>
     <comment>MT</comment>

@@ -3408,6 +3408,10 @@
     <value>Темп. (F)</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>Редакторът не можа да бъде зареден.</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermAddAttribute" xml:space="preserve">
     <value>Добави атрибут</value>
     <comment>MT</comment>

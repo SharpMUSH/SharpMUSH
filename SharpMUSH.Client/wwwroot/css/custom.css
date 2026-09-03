@@ -1,8 +1,6 @@
 @layer vendor, tokens, shell, utilities;
 
 @import url("../_content/MudBlazor/MudBlazor.min.css") layer(vendor);
-@import url("../_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css") layer(vendor);
-@import url("../_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css") layer(vendor);
 
 @import url("tokens.css") layer(tokens);
 @import url("shell.css") layer(shell);

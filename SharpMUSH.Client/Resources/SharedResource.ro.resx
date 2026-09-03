@@ -3408,6 +3408,10 @@
     <value>Temp. (F)</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>Editorul nu a putut fi încărcat.</value>
+    <comment>MT</comment>
+  </data>
   <data name="TermAddAttribute" xml:space="preserve">
     <value>Adăugare atribut</value>
     <comment>MT</comment>
