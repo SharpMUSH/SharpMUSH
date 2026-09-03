@@ -204,11 +204,11 @@ public class SceneWebComposeIntegrationTests
 	/// <summary>
 	/// A multi-line pose survives the round trip as real line breaks.
 	///
-	/// <para>This is the case that nearly shipped broken. The obvious encoding — newline as a bare
-	/// <c>%r</c> — cannot work: substitutions are expanded before <c>$</c>-command patterns are
-	/// matched, so the newline it produces stops <c>$+scene/emit *=*</c> from matching and the whole
-	/// pose is answered with "Huh?" in a terminal the web player never sees. The escaped
-	/// <c>\%r</c> survives matching as literal text and the verb converts it back.</para>
+	/// <para>This is the case that nearly shipped broken. <c>%r</c> is expanded before the
+	/// <c>$</c>-command pattern is matched, so the pose reaches the matcher already containing a real
+	/// newline — and a wildcard has to span it. It did not: <c>*</c> compiled to a <c>.</c> that
+	/// excluded <c>\n</c>, so a two-line pose matched no <c>$</c>-command at all and came back "Huh?"
+	/// in a terminal the web player never sees.</para>
 	/// </summary>
 	[Test]
 	public async Task WebCompose_MultiLinePose_ArrivesWithRealLineBreaks()
@@ -220,12 +220,12 @@ public class SceneWebComposeIntegrationTests
 		await RunAs(handle, $"+scene/create Fenn Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(player)})");
 
-		var sent = await RunAs(handle, $"+scene/emit {sceneId}=first line\\%rsecond line");
+		var sent = await RunAs(handle, $"+scene/emit {sceneId}=first line%rsecond line");
 
 		await Assert.That(await LastPoseAsync(sceneId, "content")).IsEqualTo("first line\nsecond line");
 		await Assert.That(sent.Any(m => m.Contains("Huh?", StringComparison.Ordinal)))
 			.IsFalse()
-			.Because("a bare %r would break $-command matching outright; the escape exists to prevent that");
+			.Because("a wildcard must span the newline %r expands to, or the verb never matches");
 	}
 
 	[Test]

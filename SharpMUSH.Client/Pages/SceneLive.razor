@@ -271,12 +271,10 @@ else
         // are standing in — so posing from a page for a scene you are merely reading emitted into
         // wherever you happened to be and was silently never recorded.
         //
-        // Newlines are sent as an ESCAPED \%r, and the verb converts them back. A raw newline would
-        // end the command on this line-delimited channel; a bare %r is worse, because substitutions
-        // are expanded before $-command patterns are matched, so the newline it produces stops
-        // +scene/<mode> matching at all and the pose comes back "Huh?" in a terminal the player is
-        // not looking at. The backslash survives matching as literal text.
-        var command = $"+scene/{_mode} {Id}={text.Replace("\r\n", "\n").Replace("\n", "\\%r")}";
+        // Newlines become %r because this is a line-delimited channel: a raw newline would end the
+        // command. The engine expands %r back to a newline before the verb's pattern is matched, and
+        // a wildcard spans newlines, so a multi-line pose arrives intact.
+        var command = $"+scene/{_mode} {Id}={text.Replace("\r\n", "\n").Replace("\n", "%r")}";
 
         _composeText = string.Empty;
 

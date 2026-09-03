@@ -197,27 +197,20 @@ objects:
       # scene(). That is what stops these verbs being a way to write into a private scene by guessing
       # an id -- and it costs the web nothing, since the compose box only exists on a page whose
       # scene the reader could already see.
-      # Newlines arrive as a BACKSLASH-ESCAPED `\%r`, not a bare `%r`, and are converted back here.
-      # A bare `%r` cannot work: substitutions are expanded before $-command patterns are matched, so
-      # the newline it produces stops `$+scene/emit *=*` matching at all and the whole pose is
-      # answered with "Huh?" -- in a terminal the web player is not even looking at. `\%r` survives
-      # matching as literal text, and edit() turns it into a real newline in here.
-      #
-      # setr() rather than a second edit() in the @message: @message's RHS is CB.RSArgs and splits on
-      # commas BEFORE evaluating, so an inline `edit(%1,...)` there would be torn into three arguments.
-      # Doing the conversion inside @scene/addpose's content (which is the last argument, so its
-      # commas are absorbed) stashes the result in %q<body> for the emit to reuse comma-free.
+      # Multi-line poses need nothing special here. The portal sends newlines as `%r`, which is
+      # expanded before the $-command pattern is matched, and a wildcard spans a newline -- so `*=*`
+      # matches a two-line pose and %1 arrives with real line breaks in it.
       CMD`WEB`EMIT: |-
-        $+scene/emit *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],emit,,[setr(body,edit(%1,\%r,%r))]; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=%q<body>,%#/FORMAT`EMIT,%q<body>,##}
+        $+scene/emit *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],emit,,%1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=%1,%#/FORMAT`EMIT,%1,##}
 
       CMD`WEB`POSE: |-
-        $+scene/pose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],pose,,[name(%#)] [setr(body,edit(%1,\%r,%r))]; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] %q<body>,%#/FORMAT`POSE,%q<body>,##}
+        $+scene/pose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],pose,,[name(%#)] %1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] %1,%#/FORMAT`POSE,%1,##}
 
       CMD`WEB`SAY: |-
-        $+scene/say *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],say,,[name(%#)] says\, "[setr(body,edit(%1,\%r,%r))]"; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] says[chr(44)] "%q<body>",%#/FORMAT`SAY,%q<body>,##}
+        $+scene/say *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],say,,[name(%#)] says\, "%1"; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] says[chr(44)] "%1",%#/FORMAT`SAY,%1,##}
 
       CMD`WEB`SEMIPOSE: |-
-        $+scene/semipose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],semipose,,[name(%#)][setr(body,edit(%1,\%r,%r))]; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)]%q<body>,%#/FORMAT`SEMIPOSE,%q<body>,##}
+        $+scene/semipose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @scene/member %0/participant=%#; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],semipose,,[name(%#)]%1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)]%1,%#/FORMAT`SEMIPOSE,%1,##}
 
       # ---- create / lifecycle ---------------------------------------------------
       # NOTE: capture the new scene id into %q<SceneID> with @assert (it both sets the register and

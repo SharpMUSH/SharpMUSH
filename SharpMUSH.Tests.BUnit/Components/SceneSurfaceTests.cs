@@ -240,9 +240,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 	/// <summary>
 	/// The send button issues a scene-targeted game command down the terminal websocket, defaulting to
 	/// emit — the mode that renders the author's words verbatim with no name glued to the front, which
-	/// is what a compose box on a scene's own page is for. Newlines go out as an escaped \%r, which
-	/// the verb converts back: a bare %r would be expanded into a real newline BEFORE the $-command
-	/// pattern is matched, so the pose would not match the verb at all.
+	/// is what a compose box on a scene's own page is for. Newlines go out as %r: the channel is
+	/// line-delimited, and the engine expands it back before matching the verb's pattern.
 	/// </summary>
 	[TUnit.Core.Test]
 	public async Task SceneLive_SendButton_SendsASceneEmitWithNewlinesAsPercentR()
@@ -254,7 +253,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		cut.Find(".scene-live-compose textarea").Input("line one\nline two");
 		cut.Find(".scene-live-compose button").Click();
 
-		await _terminal.Received().SendAsync("+scene/emit S1=line one\\%rline two");
+		await _terminal.Received().SendAsync("+scene/emit S1=line one%rline two");
 		// Never the hub: its SendCommand publishes onto a subject nothing subscribes to.
 		await Assert.That(_hub.SentCommands).IsEmpty();
 	}
