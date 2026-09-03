@@ -152,7 +152,13 @@ public class AdminGuestsController(
 				new ApiErrorDto($"'{name}' was created but the {GuestCharacters.GuestPower} power did not take."));
 		}
 
-		return Ok(new GuestRow(dbref.Number, dbref.CreationMilliseconds ?? 0, name,
+		// The creation time comes off the node rather than the parsed dbref. @PCREATE does return an
+		// objid today, so `dbref.CreationMilliseconds ?? 0` produced the right answer — but the
+		// sentinel is a silently wrong one, and a 0 here would have the panel build `#N:0` for a guest
+		// that does exist. The node is already loaded and is the authoritative value, which is also
+		// what List reports.
+		var player = node.AsPlayer;
+		return Ok(new GuestRow(player.Object.Key, player.Object.CreationTime, name,
 			await IsInUseAsync(dbref, ct)));
 	}
 

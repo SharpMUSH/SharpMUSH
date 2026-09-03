@@ -3216,6 +3216,10 @@
     <value>Смотреть архив</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Живые позы не приходят — переподключение. Всё, что вы отправите, всё равно записывается.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Ожидание активности…</value>
     <comment>MT</comment>

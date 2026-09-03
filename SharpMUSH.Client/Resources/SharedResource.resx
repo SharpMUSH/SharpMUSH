@@ -3007,6 +3007,9 @@
   <data name="RolNotConnected" xml:space="preserve">
     <value>Not connected to the game — connect to post and receive live poses.</value>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Live poses are not arriving — reconnecting. Anything you post is still recorded.</value>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Waiting for activity…</value>
   </data>

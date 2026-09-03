@@ -3216,6 +3216,10 @@
     <value>Visa arkivet</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Live-poserna kommer inte fram — återansluter. Det du skickar sparas ändå.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Väntar på aktivitet…</value>
     <comment>MT</comment>

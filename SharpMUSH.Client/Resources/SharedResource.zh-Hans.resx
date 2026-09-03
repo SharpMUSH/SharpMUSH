@@ -3216,6 +3216,10 @@
     <value>查看存档</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>实时姿态未能送达 — 正在重新连接。你发布的内容仍会被记录。</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>正在等待动态…</value>
     <comment>MT</comment>

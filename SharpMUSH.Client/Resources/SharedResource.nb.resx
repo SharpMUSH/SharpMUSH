@@ -3216,6 +3216,10 @@
     <value>Vis arkiv</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Sanntidsposene kommer ikke fram — kobler til på nytt. Det du legger ut, blir likevel lagret.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Venter på aktivitet…</value>
     <comment>MT</comment>

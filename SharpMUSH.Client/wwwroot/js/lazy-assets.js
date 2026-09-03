@@ -41,6 +41,10 @@
 
     function injectScript(url) {
         return new Promise((resolve, reject) => {
+            // Only a tag that actually loaded counts as done. A failed one is removed below rather
+            // than left in the document, because finding it here and resolving would hand the caller a
+            // script that never ran: ensure() would then sit in waitFor until it timed out, and the
+            // retry that a "try again" button exists to make would never reach the network.
             const existing = document.querySelector(`script[data-lazy-asset="${url}"]`);
             if (existing) { resolve(); return; }
             const el = document.createElement("script");
@@ -48,7 +52,10 @@
             el.async = false; // preserve execution order within a bundle
             el.dataset.lazyAsset = url;
             el.onload = () => resolve();
-            el.onerror = () => reject(new Error(`failed to load ${url}`));
+            el.onerror = () => {
+                el.remove();
+                reject(new Error(`failed to load ${url}`));
+            };
             document.head.appendChild(el);
         });
     }

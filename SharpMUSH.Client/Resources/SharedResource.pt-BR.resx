@@ -3216,6 +3216,10 @@
     <value>Ver arquivo</value>
     <comment>MT — assumed the archive of finished scenes</comment>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>As poses ao vivo não estão chegando — reconectando. O que você publicar será registrado mesmo assim.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Aguardando atividade…</value>
     <comment>MT</comment>

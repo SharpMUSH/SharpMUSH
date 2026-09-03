@@ -3216,6 +3216,10 @@
     <value>Archief bekijken</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Live-poses komen niet binnen — opnieuw verbinden. Wat je plaatst, wordt wel vastgelegd.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Wachten op activiteit…</value>
     <comment>MT</comment>

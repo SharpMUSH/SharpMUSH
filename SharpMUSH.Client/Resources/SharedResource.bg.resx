@@ -3216,6 +3216,10 @@
     <value>Виж архива</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Поточните пози не пристигат — свързваме се отново. Всичко, което публикувате, пак се записва.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Изчакване на активност…</value>
     <comment>MT</comment>

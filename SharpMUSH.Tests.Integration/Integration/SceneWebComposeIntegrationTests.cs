@@ -1,7 +1,6 @@
+using System.Collections.Concurrent;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
@@ -34,7 +33,6 @@ public class SceneWebComposeIntegrationTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	private static readonly string Tag = Guid.NewGuid().ToString("N")[..8];
@@ -52,27 +50,36 @@ public class SceneWebComposeIntegrationTests
 		return colon < 0 ? s : s[..colon];
 	}
 
-	private int NotificationCount() =>
-		NotifyService.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+	/// <summary>
+	/// What each recipient has been told, bucketed by dbref.
+	///
+	/// <para>These assertions used to enumerate the <see cref="INotifyService"/> substitute's
+	/// <c>ReceivedCalls()</c> and window it by a global count. Two things were wrong with that. The
+	/// substitute is a session singleton shared by every suite the session runs, so a global count is
+	/// not a window onto this test — another suite's notifications land inside it. And the filter
+	/// matched <c>Notify</c> alone, while a refusal can travel by <c>NotifyLocalized</c> instead, so a
+	/// message that did go out read as silence: exactly the direction that makes the negative
+	/// assertions below pass when they should fail.</para>
+	///
+	/// <para>The recorder has neither problem. It is fed by every <c>Notify</c> and
+	/// <c>NotifyLocalized</c> overload, and it keys by recipient, so a window on one player cannot see
+	/// another test's traffic.</para>
+	/// </summary>
+	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 
-	private static string? MessageText(ICall call)
-	{
-		var args = call.GetArguments();
-		return args.Length < 2 ? null : args[1]?.ToString();
-	}
+	/// <summary>The player each bound handle belongs to, so a command can be windowed on its actor.</summary>
+	private readonly ConcurrentDictionary<long, DBRef> _actors = new();
 
-	private IReadOnlyList<string> MessagesSince(int fromCount) =>
-		NotifyService.ReceivedCalls()
-			.Where(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Skip(fromCount)
-			.Select(c => MessageText(c) ?? string.Empty)
-			.ToList();
+	/// <summary>Everything <paramref name="who"/> was told after the first <paramref name="fromCount"/>.</summary>
+	private IReadOnlyList<string> HeardBy(DBRef who, int fromCount) =>
+		[.. Notifications.For(who).Skip(fromCount)];
 
 	private async Task<IReadOnlyList<string>> RunAs(long handle, string command)
 	{
-		var before = NotificationCount();
+		var actor = _actors[handle];
+		var before = Notifications.CountFor(actor);
 		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
-		return MessagesSince(before);
+		return HeardBy(actor, before);
 	}
 
 	private async Task<string> CreatePlayerAsync(string name, long handle)
@@ -86,6 +93,7 @@ public class SceneWebComposeIntegrationTests
 		await ConnectionService.Register(handle, "localhost", "localhost", "test",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await ConnectionService.Bind(handle, parsed.Value);
+		_actors[handle] = parsed.Value;
 		return dbref;
 	}
 
@@ -137,7 +145,13 @@ public class SceneWebComposeIntegrationTests
 
 		var posesBefore = await Eval($"words(sceneposes({sceneId}))");
 
-		var heard = await RunAs(remoteHandle, $"+scene/emit {sceneId}=A raven settles on the well.");
+		// Windowed on the witness, because the witness is who the claim is about: the assertion below
+		// says nobody standing in the yard heard this, and the only way to say that is to read what the
+		// person standing in the yard was told.
+		var witnessRef = DBRef.Parse(Num(witness));
+		var witnessHeardBefore = Notifications.CountFor(witnessRef);
+
+		await RunAs(remoteHandle, $"+scene/emit {sceneId}=A raven settles on the well.");
 
 		// Recorded, verbatim — an emit carries no name prefix, which is why it is the portal's default.
 		await Assert.That(await Eval($"words(sceneposes({sceneId}))"))
@@ -149,7 +163,8 @@ public class SceneWebComposeIntegrationTests
 		await Assert.That(await Eval($"scenemember({sceneId},{Num(remote)},role)")).IsNotEmpty();
 
 		// But nothing was said in a room the poser is not standing in.
-		await Assert.That(heard.Any(m => m.Contains("A raven settles on the well.", StringComparison.Ordinal)))
+		await Assert.That(HeardBy(witnessRef, witnessHeardBefore)
+				.Any(m => m.Contains("A raven settles on the well.", StringComparison.Ordinal)))
 			.IsFalse()
 			.Because("posing into a scene from elsewhere must not put words in front of the people in its room");
 	}

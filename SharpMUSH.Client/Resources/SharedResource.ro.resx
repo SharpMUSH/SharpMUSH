@@ -3216,6 +3216,10 @@
     <value>Vizualizare arhivă</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Pozele live nu ajung — se reconectează. Ceea ce publici este înregistrat oricum.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Se așteaptă activitate…</value>
     <comment>MT</comment>

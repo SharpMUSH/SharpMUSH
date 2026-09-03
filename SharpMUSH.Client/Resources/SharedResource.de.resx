@@ -3216,6 +3216,10 @@
     <value>Archiv ansehen</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Live-Posen kommen nicht an — es wird neu verbunden. Was du sendest, wird trotzdem aufgezeichnet.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Warten auf Aktivität…</value>
     <comment>MT</comment>

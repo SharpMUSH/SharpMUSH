@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
 using OneOf;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -28,23 +27,32 @@ public class MarkupSurvivesNotificationTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	private const char Escape = '';
 
-	[Before(Test)]
-	public void ResetNotifications() => NotifyService.ClearReceivedCalls();
+	private static readonly DBRef God = new(1);
 
-	/// <summary>Every message handed to Notify during this test, as it was handed over.</summary>
-	private IReadOnlyList<OneOf<MString, string>> NotifiedMessages() =>
-		NotifyService.ReceivedCalls()
-			.Where(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Select(c => c.GetArguments())
-			.Where(a => a.Length > 1 && a[1] is OneOf<MString, string>)
-			.Select(a => (OneOf<MString, string>)a[1]!)
-			.ToList();
+	/// <summary>
+	/// Read through the factory's recorder rather than off the substitute.
+	///
+	/// <para>This used to call <c>ClearReceivedCalls()</c> before each test and then enumerate
+	/// <c>ReceivedCalls()</c>. The substitute is a session singleton: clearing it discards calls that
+	/// belong to whatever else the session has run, and enumerating it while anything is still
+	/// recording is the access NSubstitute's threading contract rules out. The recorder is written for
+	/// exactly this — it keeps the unflattened payload, which is what these tests are about, and keys
+	/// it by recipient so a window is a window on one player.</para>
+	/// </summary>
+	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
+
+	/// <summary>Runs a command as God and returns only what it caused God to be told.</summary>
+	private async Task<IReadOnlyList<OneOf<MString, string>>> NotifiedByAsync(string command)
+	{
+		var before = Notifications.RawCountFor(God);
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		return [.. Notifications.RawFor(God).Skip(before)];
+	}
 
 	private static bool CarriesEscapes(OneOf<MString, string> message) =>
 		message.Match(markup => MModule.plainText(markup).Contains(Escape), text => text.Contains(Escape));
@@ -52,15 +60,10 @@ public class MarkupSurvivesNotificationTests
 	/// <summary>True when the message kept its markup rather than being flattened to a string.</summary>
 	private static bool IsMarkup(OneOf<MString, string> message) => message.IsT0;
 
-	private async Task RunAsGodAsync(string command) =>
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
-
 	[Test]
 	public async ValueTask Think_SendsMarkup_NotAnsiEscapes()
 	{
-		await RunAsGodAsync("think [ansi(r,Red)]tail");
-
-		var messages = NotifiedMessages();
+		var messages = await NotifiedByAsync("think [ansi(r,Red)]tail");
 		await Assert.That(messages).IsNotEmpty();
 		await Assert.That(messages.Any(CarriesEscapes)).IsFalse()
 			.Because("an escape character in the text means the colour was rendered away before the "
@@ -71,9 +74,7 @@ public class MarkupSurvivesNotificationTests
 	[Test]
 	public async ValueTask PrivateEmit_SendsMarkup_NotAnsiEscapes()
 	{
-		await RunAsGodAsync("@pemit me=[ansi(r,Red)]tail");
-
-		var messages = NotifiedMessages();
+		var messages = await NotifiedByAsync("@pemit me=[ansi(r,Red)]tail");
 		await Assert.That(messages).IsNotEmpty();
 		await Assert.That(messages.Any(CarriesEscapes)).IsFalse();
 		await Assert.That(messages.Any(IsMarkup)).IsTrue();
@@ -86,9 +87,7 @@ public class MarkupSurvivesNotificationTests
 	[Test]
 	public async ValueTask Emit_StillSendsMarkup()
 	{
-		await RunAsGodAsync("@emit [ansi(r,Red)]tail");
-
-		var messages = NotifiedMessages();
+		var messages = await NotifiedByAsync("@emit [ansi(r,Red)]tail");
 		await Assert.That(messages).IsNotEmpty();
 		await Assert.That(messages.Any(CarriesEscapes)).IsFalse();
 	}

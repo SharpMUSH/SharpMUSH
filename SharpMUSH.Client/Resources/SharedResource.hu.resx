@@ -3216,6 +3216,10 @@
     <value>Archívum megtekintése</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Az élő pózok nem érkeznek meg – újracsatlakozás folyamatban. Amit beküldesz, azt akkor is rögzítjük.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Várakozás tevékenységre…</value>
     <comment>MT</comment>

@@ -99,14 +99,22 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var (list, error) = await Guests.ListAsync();
-        _error = error;
-        _list = list;
-        // Pre-fill with a name the server has confirmed is free, so the common case is one click.
-        // Only when the operator has not typed their own — reloading after a create must not
-        // overwrite something they are in the middle of.
-        if (list is not null && string.IsNullOrWhiteSpace(_newName))
-            _newName = list.NextFreeName;
+        (await Guests.ListAsync()).Switch(
+            list =>
+            {
+                _error = null;
+                _list = list;
+                // Pre-fill with a name the server has confirmed is free, so the common case is one click.
+                // Only when the operator has not typed their own — reloading after a create must not
+                // overwrite something they are in the middle of.
+                if (string.IsNullOrWhiteSpace(_newName))
+                    _newName = list.NextFreeName;
+            },
+            failure =>
+            {
+                _error = failure.Message;
+                _list = null;
+            });
         _loading = false;
     }
 
@@ -114,12 +122,12 @@
     {
         _busy = true;
         _error = null;
-        var (created, error) = await Guests.CreateAsync(string.IsNullOrWhiteSpace(_newName) ? null : _newName.Trim());
+        var result = await Guests.CreateAsync(string.IsNullOrWhiteSpace(_newName) ? null : _newName.Trim());
         _busy = false;
 
-        if (created is null)
+        if (result.TryPickT1(out var failure, out var created))
         {
-            _error = error;
+            _error = failure.Message;
             return;
         }
 
@@ -132,12 +140,12 @@
     {
         _busy = true;
         _error = null;
-        var (success, error) = await Guests.DeleteAsync(guest.DbrefNumber);
+        var result = await Guests.DeleteAsync(guest.DbrefNumber);
         _busy = false;
 
-        if (!success)
+        if (result.TryPickT1(out var failure, out _))
         {
-            _error = error;
+            _error = failure.Message;
             return;
         }
 

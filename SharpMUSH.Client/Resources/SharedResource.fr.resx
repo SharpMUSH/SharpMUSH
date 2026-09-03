@@ -2030,6 +2030,10 @@
   <data name="RolNotConnected" xml:space="preserve">
     <value>Non connecté au jeu — connectez-vous pour publier et recevoir les poses en direct.</value>
   </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Les poses en direct n'arrivent pas — reconnexion en cours. Ce que vous publiez est tout de même enregistré.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>En attente d'activité…</value>
   </data>

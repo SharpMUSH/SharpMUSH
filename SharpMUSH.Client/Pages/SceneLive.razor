@@ -53,10 +53,22 @@ else
                 @Loc["RolSceneLiveUnavailable"]
             </MudAlert>
         }
+        else if (!Terminal.IsConnected)
+        {
+            @* Each banner is gated on the connection whose loss it actually describes. The two are
+               separate transports: posting goes over the terminal socket, live poses arrive on the hub.
+               Gating both on one predicate — the tempting simplification — would disable a Send button
+               that works whenever the live feed alone is down. What was wrong was the wording: this
+               message says you cannot post, and it was shown for a hub outage, which does not stop
+               posting at all. *@
+            <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
+                @Loc["RolNotConnected"]
+            </MudAlert>
+        }
         else if (!Hub.IsConnected)
         {
             <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
-                @Loc["RolNotConnected"]
+                @Loc["RolSceneLiveFeedDown"]
             </MudAlert>
         }
 

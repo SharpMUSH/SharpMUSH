@@ -104,9 +104,21 @@ public static class TestHelpers
 	{
 		private readonly ConcurrentDictionary<int, ConcurrentQueue<string>> _byRecipient = new();
 		private readonly ConcurrentDictionary<long, ConcurrentQueue<string>> _byHandle = new();
+		private readonly ConcurrentDictionary<int, ConcurrentQueue<OneOf<MString, string>>> _rawByRecipient = new();
 
 		internal void Record(int recipient, string message)
 			=> _byRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<string>()).Enqueue(message);
+
+		/// <summary>
+		/// Keeps the message exactly as the caller passed it, before it was flattened to text.
+		///
+		/// <para>Whether a notification arrived as an MString or as a plain string is itself the subject
+		/// of some tests — rendering colour to escape characters at the call site is what left browsers
+		/// printing <c>[31m</c> as literal text — and <see cref="For(DBRef)"/> cannot answer that,
+		/// because by then both look the same.</para>
+		/// </summary>
+		internal void RecordRaw(int recipient, OneOf<MString, string> message)
+			=> _rawByRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<OneOf<MString, string>>()).Enqueue(message);
 
 		/// <summary>
 		/// Records output aimed at a connection rather than at an object. Socket commands (INFO,
@@ -124,6 +136,14 @@ public static class TestHelpers
 		/// <summary>How many notifications <paramref name="who"/> has had, for windowing.</summary>
 		public int CountFor(DBRef who)
 			=> _byRecipient.TryGetValue(who.Number, out var queue) ? queue.Count : 0;
+
+		/// <summary>Every message <paramref name="who"/> was sent, in the form it was sent in.</summary>
+		public List<OneOf<MString, string>> RawFor(DBRef who)
+			=> _rawByRecipient.TryGetValue(who.Number, out var queue) ? [.. queue] : [];
+
+		/// <summary>How many such messages <paramref name="who"/> has had, for windowing.</summary>
+		public int RawCountFor(DBRef who)
+			=> _rawByRecipient.TryGetValue(who.Number, out var queue) ? queue.Count : 0;
 
 		/// <summary>Everything sent to connection <paramref name="handle"/> so far, in order.</summary>
 		public List<string> ForHandle(long handle)
@@ -159,23 +179,32 @@ public static class TestHelpers
 			recorder?.Record(recipient, message);
 		}
 
+		// Only the Notify overloads carry the union; NotifyLocalized formats a string before it ever
+		// reaches here, so there is no unflattened form of those to keep.
+		void DeliverRaw(int recipient, OneOf<MString, string> message)
+		{
+			capture.TryCapture(recipient, PlainText(message));
+			recorder?.Record(recipient, PlainText(message));
+			recorder?.RecordRaw(recipient, message);
+		}
+
 		void DeliverToHandle(long handle, string message) => recorder?.RecordHandle(handle, message);
 
 		notifier
 			.When(x => x.Notify(Arg.Any<DBRef>(), Arg.Any<OneOf<MString, string>>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
-			.Do(call => Deliver(
+			.Do(call => DeliverRaw(
 				call.ArgAt<DBRef>(0).Number,
-				PlainText(call.ArgAt<OneOf<MString, string>>(1))));
+				call.ArgAt<OneOf<MString, string>>(1)));
 
 		// The real service's AnySharpObject overload delegates to the DBRef overload; a substitute
 		// does not, so hook both.
 		notifier
 			.When(x => x.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
-			.Do(call => Deliver(
+			.Do(call => DeliverRaw(
 				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
-				PlainText(call.ArgAt<OneOf<MString, string>>(1))));
+				call.ArgAt<OneOf<MString, string>>(1)));
 
 		// Localized notifications (e.g. @include's "No such attribute: …") must also reach the
 		// HTTP capture, mirroring the real NotifyService — formatted with the neutral locale.

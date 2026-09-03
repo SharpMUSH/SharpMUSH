@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using OneOf;
+using OneOf.Types;
 
 namespace SharpMUSH.Client.Services;
 
@@ -24,53 +26,65 @@ public class AdminGuestsService(IHttpClientFactory httpClientFactory, AccountAut
 	}
 
 	// Every call here catches Exception on purpose, and narrowing it would be a regression. This runs
-	// in the browser, and its whole contract is to turn "the call did not work" into a string the admin
+	// in the browser, and its whole contract is to turn "the call did not work" into something the admin
 	// panel can render next to the guest list. An exception type nobody enumerated — a malformed base
 	// address, a handler an analyzer has not heard of — would otherwise escape into the render loop and
 	// take the page down, which is a worse outcome than showing the message. The catch is the boundary,
-	// not a swallow: the text reaches the operator either way.
-	public async Task<(GuestListResponse? List, string? Error)> ListAsync()
+	// not a swallow: the detail reaches the operator either way.
+	//
+	// The results are OneOf rather than a (value, error) tuple of nullables. A tuple has a fourth state
+	// nothing means — (null, null) — and it was reachable: a body that deserialises to null is a
+	// successful response with no value, which left the panel showing an empty roster and no
+	// explanation. There is no such arm here; every path names either a list or a reason.
+	public async Task<OneOf<GuestListResponse, ApiFailure>> ListAsync()
 	{
 		try
 		{
 			var response = await CreateClient().GetAsync("api/admin/guests");
 			if (!response.IsSuccessStatusCode)
-				return (null, await response.Content.ReadAsStringAsync());
-			return (await response.Content.ReadFromJsonAsync<GuestListResponse>(), null);
+				return ApiFailure.FromStatus(response.StatusCode, await response.Content.ReadAsStringAsync());
+
+			return await response.Content.ReadFromJsonAsync<GuestListResponse>()
+				?? (OneOf<GuestListResponse, ApiFailure>)new ApiFailure(
+					ApiFailureKind.Unexpected, "The server returned no guest list.", response.StatusCode);
 		}
 		catch (Exception ex)
 		{
-			return (null, ex.Message);
+			return ApiFailure.Transport(ex);
 		}
 	}
 
-	public async Task<(GuestRow? Created, string? Error)> CreateAsync(string? name)
+	public async Task<OneOf<GuestRow, ApiFailure>> CreateAsync(string? name)
 	{
 		try
 		{
 			var response = await CreateClient().PostAsJsonAsync("api/admin/guests", new CreateGuestRequest(name));
 			if (!response.IsSuccessStatusCode)
-				return (null, await response.Content.ReadAsStringAsync());
-			return (await response.Content.ReadFromJsonAsync<GuestRow>(), null);
+				return ApiFailure.FromStatus(response.StatusCode, await response.Content.ReadAsStringAsync());
+
+			return await response.Content.ReadFromJsonAsync<GuestRow>()
+				?? (OneOf<GuestRow, ApiFailure>)new ApiFailure(
+					ApiFailureKind.Unexpected, "The guest was created but the server described nothing.",
+					response.StatusCode);
 		}
 		catch (Exception ex)
 		{
-			return (null, ex.Message);
+			return ApiFailure.Transport(ex);
 		}
 	}
 
-	public async Task<(bool Success, string? Error)> DeleteAsync(int dbrefNumber)
+	public async Task<OneOf<Success, ApiFailure>> DeleteAsync(int dbrefNumber)
 	{
 		try
 		{
 			var response = await CreateClient().DeleteAsync($"api/admin/guests/{dbrefNumber}");
 			return response.IsSuccessStatusCode
-				? (true, null)
-				: (false, await response.Content.ReadAsStringAsync());
+				? new Success()
+				: ApiFailure.FromStatus(response.StatusCode, await response.Content.ReadAsStringAsync());
 		}
 		catch (Exception ex)
 		{
-			return (false, ex.Message);
+			return ApiFailure.Transport(ex);
 		}
 	}
 }
