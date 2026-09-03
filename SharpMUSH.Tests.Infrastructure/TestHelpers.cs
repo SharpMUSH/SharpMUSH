@@ -69,6 +69,19 @@ public static class TestHelpers
 	/// any object whose DBRef equals <paramref name="dbRef"/>.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	/// <summary>
+	/// Matches a notification by its TEXT, whichever form it arrived in.
+	///
+	/// <para>Passing a bare string to a <c>Received().Notify(...)</c> assertion pins more than the
+	/// test means to: it converts to <c>OneOf.FromT1</c> and can therefore only ever match a command
+	/// that sends a plain string. Commands that carry colour send <c>OneOf.FromT0</c> — an MString —
+	/// because rendering it to ANSI escapes at the call site is what left browsers printing
+	/// <c>[31m</c> as text. Use this where the message content is the subject and its representation
+	/// is not.</para>
+	/// </summary>
+	public static OneOf<MString, string> MatchingMessage(string expected) =>
+		Arg.Is<OneOf<MString, string>>(m => MessagePlainTextEquals(m, expected));
+
 	public static AnySharpObject MatchingObject(DBRef dbRef) =>
 		Arg.Is<AnySharpObject>(o => o.Object().DBRef == dbRef);
 
@@ -312,7 +325,10 @@ public static class TestHelpers
 		DBRef? senderDbRef = null) =>
 		notifyService.ReceivedCalls()
 			.Any(c =>
-				c.GetMethodInfo().Name == "NotifyLocalized" &&
+				// Both overloads: a command whose format ARGUMENTS carry markup (an emit echoing a
+				// coloured message back to its sender) routes through NotifyLocalizedMarkup, and the
+				// key it was given is the same either way.
+				c.GetMethodInfo().Name is "NotifyLocalized" or "NotifyLocalizedMarkup" &&
 				c.GetArguments().Length >= 2 &&
 				c.GetArguments()[1] is string k && k == key &&
 				(receiverDbRef == null ||
@@ -338,13 +354,22 @@ public static class TestHelpers
 
 		return notifyService.ReceivedCalls()
 			.Where(c =>
-				c.GetMethodInfo().Name == "NotifyLocalized" &&
+				// NotifyLocalizedMarkup too: a format argument that carries colour arrives as an
+				// MString, and the rendered sentence is what this asserts on either way.
+				c.GetMethodInfo().Name is "NotifyLocalized" or "NotifyLocalizedMarkup" &&
 				c.GetArguments().Length >= 2 &&
 				c.GetArguments()[1] is string k && k == key &&
 				(receiverDbRef == null ||
 				 (c.GetArguments()[0] is AnySharpObject obj && obj.Object().DBRef == receiverDbRef) ||
 				 (c.GetArguments()[0] is DBRef d && d == receiverDbRef)))
-			.Select(c => c.GetArguments()[^1] as object[] ?? [])
+			.Select(c => c.GetArguments()[^1] switch
+			{
+				// The markup overload's params array is MString[]; flatten each to its text so the
+				// formatted sentence compares the same as the string overload's.
+				MString[] markupArgs => markupArgs.Select(m => (object)MModule.plainText(m)).ToArray(),
+				object[] objectArgs => objectArgs,
+				_ => []
+			})
 			.Any(args => localization.Format(key, null, args) == expectedText);
 	}
 }

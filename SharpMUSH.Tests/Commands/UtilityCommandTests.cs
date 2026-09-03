@@ -366,7 +366,7 @@ public class UtilityCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "@search: Advanced database search", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("@search: Advanced database search"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -393,7 +393,7 @@ public class UtilityCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Database Statistics:", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("Database Statistics:"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH src/version.c do_version prints, in order: "You are connected to <MUDNAME>", "Address:

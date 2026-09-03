@@ -251,7 +251,10 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		await NotifyService!.Notify(executor, thought.Message!.ToString(), executor);
+		// The MString, NOT ToString(): rendering it here bakes the colour into the text as ANSI escape
+		// characters and hands a plain string onward, so the markup is gone before the transport sees
+		// it. A browser has no ANSI decoder and printed the escapes as literal text.
+		await NotifyService!.Notify(executor, thought.Message!, executor);
 		return thought;
 	}
 
@@ -1272,7 +1275,9 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		var notification = args["1"].Message!.ToString();
+		// Kept as markup — see the note in Think: ToString() renders the colour to escape characters
+		// and the recipient's client is left with nothing to style.
+		var notification = args["1"].Message!;
 		var targetListText = MModule.plainText(args["0"].Message!);
 		var nameListTargets = ArgHelpers.NameList(targetListText);
 
@@ -1298,7 +1303,7 @@ public partial class Commands
 	/// only to yourself says nothing, since you already saw the message.
 	/// </summary>
 	private static async ValueTask EchoEmitToSender(
-		AnySharpObject executor, IEnumerable<string> switches, IReadOnlyList<AnySharpObject> notified, string message)
+		AnySharpObject executor, IEnumerable<string> switches, IReadOnlyList<AnySharpObject> notified, MString message)
 	{
 		if (switches.Contains("SILENT") || notified.Count == 0)
 		{
@@ -1307,8 +1312,8 @@ public partial class Commands
 
 		if (notified.Count > 1)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouPemitToCountFormat),
-				executor, message, notified.Count);
+			await NotifyService!.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouPemitToCountFormat),
+				executor, message, MModule.single(notified.Count.ToString()));
 			return;
 		}
 
@@ -1318,8 +1323,8 @@ public partial class Commands
 			return;
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat),
-			executor, message, only.Object().Name);
+		await NotifyService!.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat),
+			executor, message, MModule.single(only.Object().Name));
 	}
 
 	/// <summary>
@@ -3305,7 +3310,9 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		var notification = args["1"].Message!.ToString();
+		// Kept as markup — see the note in Think: ToString() renders the colour to escape characters
+		// and the recipient's client is left with nothing to style.
+		var notification = args["1"].Message!;
 		var targetListText = MModule.plainText(args["0"].Message!);
 		var nameListTargets = ArgHelpers.NameList(targetListText);
 
@@ -6686,7 +6693,7 @@ public partial class Commands
 				});
 		}
 
-		await EchoEmitToSender(executor, switches, notified, message.ToPlainText());
+		await EchoEmitToSender(executor, switches, notified, message);
 
 		return CallState.Empty;
 	}
