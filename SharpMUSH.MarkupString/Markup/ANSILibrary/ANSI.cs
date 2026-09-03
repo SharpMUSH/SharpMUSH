@@ -130,12 +130,30 @@ public static class ANSI
 	/// Converts standard ANSI color codes (30–37, 40–47, 90–97, 100–107) to RGB.
 	/// Uses the standard VGA color palette.
 	/// </summary>
+	/// <summary>
+	/// Promotes a base colour to its bright twin: foregrounds 30-37 become 90-97, backgrounds 40-47
+	/// become 100-107. Anything else is returned unchanged — an xterm-256 index or an already-bright
+	/// code has no brighter form to move to, and shifting it would land on an unrelated colour.
+	/// </summary>
+	private static byte Brighten(byte code) => code switch
+	{
+		>= 30 and <= 37 => (byte)(code + 60),
+		>= 40 and <= 47 => (byte)(code + 60),
+		_ => code
+	};
+
 	public static Color AnsiToRgb(byte[] ansiBytes)
 	{
 		ReadOnlySpan<byte> codeSpan = ansiBytes;
+
+		// A two-byte sequence is ansi()'s "highlight + colour" pair (hb => [1, 34]). The leading 1 is
+		// the ANSI bold attribute, and on the base 16 colours that is what makes them BRIGHT: a
+		// terminal draws ESC[1;34m as bright blue, not blue. Keeping only the colour byte threw the
+		// highlight away, so every ansi(h<colour>,...) rendered identically to its dim twin.
 		var colorCode = codeSpan switch
 		{
 			[var code] => code,
+			[1, var code] => Brighten(code),
 			[_, var code] => code,
 			_ => (byte)0
 		};

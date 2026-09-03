@@ -80,6 +80,8 @@ public partial class Functions
 			.Matches(args["0"].Message!.ToString())
 			.Select(m => m.Value)
 			.ToArray();
+		// The highlight rides on the colour bytes: hb becomes [1, 34], the ANSI bold attribute followed
+		// by blue, which is what a terminal needs to draw it bright.
 		Func<bool, byte, byte[]> highlightFunc = (highlight, b) => highlight ? [1, b] : [b];
 		var colorsConfig = ColorConfiguration?.CurrentValue;
 
@@ -183,6 +185,12 @@ public partial class Functions
 						underline = false;
 						break;
 					case 'h':
+						// Deliberately NOT also setting `bold`: the highlight is folded into the colour
+						// bytes by highlightFunc ([1, 31] for hr), and the ANSI renderer emits those, so
+						// recording it on the structure as well makes it emit the bold attribute twice.
+						// The consequence is that a highlight with no colour to ride on — a bare
+						// ansi(h,text) — still carries nothing; fixing that means moving the highlight
+						// out of the colour bytes entirely, which changes the wire palette shape.
 						curHilight = true;
 						break;
 					case 'H':
