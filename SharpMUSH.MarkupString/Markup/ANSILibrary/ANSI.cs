@@ -127,10 +127,6 @@ public static class ANSI
 			$"\u001b]8;;{link}\a{text}\u001b]8;;\a";
 
 	/// <summary>
-	/// Converts standard ANSI color codes (30–37, 40–47, 90–97, 100–107) to RGB.
-	/// Uses the standard VGA color palette.
-	/// </summary>
-	/// <summary>
 	/// Promotes a base colour to its bright twin: foregrounds 30-37 become 90-97, backgrounds 40-47
 	/// become 100-107. Anything else is returned unchanged — an xterm-256 index or an already-bright
 	/// code has no brighter form to move to, and shifting it would land on an unrelated colour.
@@ -142,6 +138,10 @@ public static class ANSI
 		_ => code
 	};
 
+	/// <summary>
+	/// Converts standard ANSI color codes (30–37, 40–47, 90–97, 100–107) to RGB.
+	/// Uses the standard VGA color palette.
+	/// </summary>
 	public static Color AnsiToRgb(byte[] ansiBytes)
 	{
 		ReadOnlySpan<byte> codeSpan = ansiBytes;

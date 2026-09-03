@@ -65,11 +65,6 @@ public static class TestHelpers
 			s => s.StartsWith(expectedPrefix));
 
 	/// <summary>
-	/// Returns an NSubstitute argument matcher for <see cref="AnySharpObject"/> that matches
-	/// any object whose DBRef equals <paramref name="dbRef"/>.
-	/// </summary>
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	/// <summary>
 	/// Matches a notification by its TEXT, whichever form it arrived in.
 	///
 	/// <para>Passing a bare string to a <c>Received().Notify(...)</c> assertion pins more than the
@@ -82,6 +77,11 @@ public static class TestHelpers
 	public static OneOf<MString, string> MatchingMessage(string expected) =>
 		Arg.Is<OneOf<MString, string>>(m => MessagePlainTextEquals(m, expected));
 
+	/// <summary>
+	/// Returns an NSubstitute argument matcher for <see cref="AnySharpObject"/> that matches
+	/// any object whose DBRef equals <paramref name="dbRef"/>.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static AnySharpObject MatchingObject(DBRef dbRef) =>
 		Arg.Is<AnySharpObject>(o => o.Object().DBRef == dbRef);
 

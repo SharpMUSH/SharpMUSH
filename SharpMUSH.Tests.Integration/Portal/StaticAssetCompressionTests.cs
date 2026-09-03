@@ -34,7 +34,7 @@ public class StaticAssetCompressionTests(ServerWebAppFactory factory)
 	public async Task Responses_AreBrotliCompressed_WhenTheClientAsksForIt()
 	{
 		var http = CreateClient();
-		var request = new HttpRequestMessage(HttpMethod.Get, "api/health");
+		using var request = new HttpRequestMessage(HttpMethod.Get, "api/health");
 		request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("br"));
 
 		using var response = await http.SendAsync(request);
@@ -50,7 +50,7 @@ public class StaticAssetCompressionTests(ServerWebAppFactory factory)
 	public async Task Responses_FallBackToGzip_ForAClientThatCannotDoBrotli()
 	{
 		var http = CreateClient();
-		var request = new HttpRequestMessage(HttpMethod.Get, "api/health");
+		using var request = new HttpRequestMessage(HttpMethod.Get, "api/health");
 		request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
 
 		using var response = await http.SendAsync(request);
@@ -66,7 +66,7 @@ public class StaticAssetCompressionTests(ServerWebAppFactory factory)
 	public async Task Responses_AreUncompressed_WhenTheClientAsksForNothing()
 	{
 		var http = CreateClient();
-		var request = new HttpRequestMessage(HttpMethod.Get, "api/health");
+		using var request = new HttpRequestMessage(HttpMethod.Get, "api/health");
 
 		using var response = await http.SendAsync(request);
 

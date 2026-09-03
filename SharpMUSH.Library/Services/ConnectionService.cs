@@ -252,15 +252,18 @@ public class ConnectionService(
 		//     already logged in and the login token it sent next was dispatched as an ordinary game
 		//     command ("Huh?"). Its output function was the reconciled one too, pointing at a
 		//     transport that no longer exists. A real socket beats a remembered one.
-		var claimed = true;
-		_sessionState.AddOrUpdate(handle, newEntry, (_, existing) =>
-		{
-			if (existing.Metadata.ContainsKey(ReconciledMarker)) return newEntry;
-			claimed = false;
-			return existing;
-		});
+		// The outcome is read back from what the dictionary stored, not recorded by the delegate as it
+		// runs: AddOrUpdate may invoke the update factory more than once when a concurrent write makes
+		// its compare-and-swap fail, so a flag set inside it can describe an attempt that was thrown
+		// away. A Register racing ReconcileFromStateStoreAsync could see the entry as live (declining),
+		// retry after reconciliation replaced it, and store its entry with the flag still saying it had
+		// not — registering the connection in the table while skipping the state-store write and the
+		// handler notifications that make it a real session. The factory below is pure, so a discarded
+		// attempt costs nothing.
+		var stored = _sessionState.AddOrUpdate(handle, newEntry, (_, existing) =>
+			existing.Metadata.ContainsKey(ReconciledMarker) ? newEntry : existing);
 
-		if (!claimed) return;
+		if (!ReferenceEquals(stored, newEntry)) return;
 
 		if (stateStore != null)
 		{

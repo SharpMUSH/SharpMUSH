@@ -195,12 +195,6 @@ public class SceneSurfaceTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// A returning player loads /scenes/{id}/live with a valid session and a fresh hub singleton —
-	/// nothing on that path logs in again, so nothing had connected the hub. The page rendered its
-	/// "not connected to the game" banner over a permanently disabled compose box while the sidebar
-	/// said the same character was online. The page needs the connection, so the page establishes it.
-	/// </summary>
-	/// <summary>
 	/// The field binds as the player types. It did not: MudTextField defaults to binding on change
 	/// (blur), so _composeText stayed empty through an entire typed pose and the Send button — gated
 	/// on it being non-empty — never became clickable. The compose box could not be used at all.
@@ -258,6 +252,12 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Assert.That(_hub.SentCommands).IsEmpty();
 	}
 
+	/// <summary>
+	/// A returning player loads /scenes/{id}/live with a valid session and a fresh hub singleton —
+	/// nothing on that path logs in again, so nothing had connected the hub. The page rendered its
+	/// "not connected to the game" banner over a permanently disabled compose box while the sidebar
+	/// said the same character was online. The page needs the connection, so the page establishes it.
+	/// </summary>
 	[TUnit.Core.Test]
 	public async Task SceneLive_ConnectsTheHub_WhenItIsNotConnectedYet()
 	{

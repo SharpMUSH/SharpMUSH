@@ -23,6 +23,12 @@ public class AdminGuestsService(IHttpClientFactory httpClientFactory, AccountAut
 		return http;
 	}
 
+	// Every call here catches Exception on purpose, and narrowing it would be a regression. This runs
+	// in the browser, and its whole contract is to turn "the call did not work" into a string the admin
+	// panel can render next to the guest list. An exception type nobody enumerated — a malformed base
+	// address, a handler an analyzer has not heard of — would otherwise escape into the render loop and
+	// take the page down, which is a worse outcome than showing the message. The catch is the boundary,
+	// not a swallow: the text reaches the operator either way.
 	public async Task<(GuestListResponse? List, string? Error)> ListAsync()
 	{
 		try
