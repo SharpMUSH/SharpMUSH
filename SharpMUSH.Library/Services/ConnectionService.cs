@@ -12,6 +12,13 @@ public class ConnectionService(
 	IConnectionStateStore? stateStore = null,
 	ITelemetryService? telemetryService = null) : IConnectionService
 {
+	/// <summary>
+	/// Metadata key marking an entry this process did not register itself, but restored from the
+	/// state store on startup. It is the one thing that distinguishes a stale handle from a live one,
+	/// and it is dropped the moment a real connection claims the handle.
+	/// </summary>
+	private const string ReconciledMarker = "ReconciledFromStateStore";
+
 	private readonly ConcurrentDictionary<long, IConnectionService.ConnectionData> _sessionState = [];
 	private readonly List<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
@@ -230,11 +237,30 @@ public class ConnectionService(
 		var newEntry = new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected,
 			outputFunction, promptOutputFunction, encoding, metadata);
 
-		if (!_sessionState.TryAdd(handle, newEntry))
+		// A handle that is already known has two very different explanations, and they need opposite
+		// answers:
+		//
+		//   * a redelivered Register for a connection THIS process already owns (the state store is
+		//     at-least-once). Overwriting would silently log a live player out, so it is ignored.
+		//
+		//   * an entry restored by ReconcileFromStateStoreAsync. Connection state outlives the game
+		//     server, while the connection server restarts its descriptor numbering from the same
+		//     configured base — so after a restart a brand-new socket is handed a handle number the
+		//     store still describes, complete with the previous occupant's player binding and its
+		//     LoggedIn state. Ignoring THAT is what made the new connection inherit a dead player:
+		//     CommandParse takes the executor from Get(handle)?.Ref, so the connection was treated as
+		//     already logged in and the login token it sent next was dispatched as an ordinary game
+		//     command ("Huh?"). Its output function was the reconciled one too, pointing at a
+		//     transport that no longer exists. A real socket beats a remembered one.
+		var claimed = true;
+		_sessionState.AddOrUpdate(handle, newEntry, (_, existing) =>
 		{
-			// Duplicate registration (e.g. NATS at-least-once redelivery) — silently ignore.
-			return;
-		}
+			if (existing.Metadata.ContainsKey(ReconciledMarker)) return newEntry;
+			claimed = false;
+			return existing;
+		});
+
+		if (!claimed) return;
 
 		if (stateStore != null)
 		{
@@ -290,6 +316,8 @@ public class ConnectionService(
 			};
 
 			var metadata = new ConcurrentDictionary<string, string>(data.Metadata);
+			// Marked so Register can tell this remembered entry from a live one it owns; see Register.
+			metadata[ReconciledMarker] = "1";
 
 			_sessionState.TryAdd(handle, new IConnectionService.ConnectionData(
 				handle,
