@@ -263,6 +263,46 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
+	/// A move declares a contents TAG for both containers, not only their keys.
+	/// </summary>
+	/// <remarks>
+	/// The deterministic half of the pair. The end-to-end test below races a real move against real
+	/// readers and so depends on load to catch a regression; this pins the declaration that made the race
+	/// winnable, and fails immediately if either container drops back to key-only invalidation.
+	/// </remarks>
+	[Test]
+	public async Task AMoveDeclaresAContentsTagForBothContainers()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+		var options = WebAppFactory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+
+		async Task<Library.Models.DBRef> Dig(string prefix)
+		{
+			var dug = await Parser.CommandParse(1, ConnectionService,
+				MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
+		}
+
+		var source = await Dig("TagDeclFrom");
+		var destination = await Dig("TagDeclTo");
+
+		var mover = await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
+			TestIsolationHelpers.GenerateUniqueName("TagDeclMover"), "TestPassword123",
+			source, source, (int)options.CurrentValue.Limit.StartingQuota));
+
+		var moverContent = (await mediator.Send(new GetObjectNodeQuery(mover))).Known.AsContent;
+		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Known.AsContainer;
+
+		var command = new Library.Commands.Database.MoveObjectCommand(
+			moverContent, destinationContainer, OldContainer: source);
+
+		await Assert.That(command.CacheTags)
+			.Contains(SharpMUSH.Library.Definitions.CacheKeys.ContentsTag(source.Number))
+			.And.Contains(SharpMUSH.Library.Definitions.CacheKeys.ContentsTag(destination.Number))
+			.Because("a key removal cannot stop a read that began before the move from storing its pre-move list");
+	}
+
+	/// <summary>
 	/// Every object moved into a room while that room's contents are being read must be in the room's
 	/// contents afterwards.
 	/// </summary>
