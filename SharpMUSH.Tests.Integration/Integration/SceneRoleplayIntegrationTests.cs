@@ -414,12 +414,13 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(recap).DoesNotContain("eavesdropping")
 			.Because("Dave's uncaptured pose must never appear in the transcript");
 
-		// +scene/info <id> is the scene's card: the cast (distinct personas), the members with their
-		// roles, and where it is. It replaced +scene/who, which could answer only the first of those.
+		// +scene/info <id> is the scene's card. Its Players table is one row per member: what they are
+		// to the scene, the name they answer to, and how much they have posed. The personas that used
+		// to have a Cast line of their own now sit in the Name column beside the character.
 		var whoMsgs = await RunAndCollectAs(11L, $"+scene/info {sceneId}");
 		var who = string.Join("\n", whoMsgs);
 		Log($"[INFO]\n{who}");
-		await Assert.That(who).Contains("Cast").Because("the card prints a Cast line");
+		await Assert.That(who).Contains("Players").Because("the card prints the players table");
 		await Assert.That(who).Contains("Alice the Innkeeper");
 		await Assert.That(who).Contains("Bob the Bard");
 		await Assert.That(who).Contains("Carol the Cloaked");

@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.9.0
+version: 1.10.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -87,6 +87,10 @@ objects:
       #
       # Written inline at each verb, as bare @asserts, for the reason spelled out above DATA`DENY_APPROVAL:
       # an @assert inside an @include emits its message and then lets the caller continue anyway.
+      # Where this game publishes scene logs, if it does. The card appends the scene id and shows a
+      # URL line only when this is set, so a game that publishes nothing shows nothing.
+      DATA`SITE_URL: |-
+
       DATA`DENY_NO_FOCUS: |-
         You are not focused on a scene. Join one with +scene/join <id>, or see what is running with +scene.
       DATA`DENY_NOT_OWNER: |-
@@ -300,20 +304,13 @@ objects:
         $+scene/private: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/public=0; @pemit %#=Scene is now private.
 
       # ---- viewing --------------------------------------------------------------
-      # One cast member of the info card, rendered "Name (role)".
-      #
-      # This is a separate attribute because of where its parentheses sit. Written inline as the body
-      # of the iter() that builds the cast line, the closing paren was read as the one that ends the
-      # iter() itself — in SharpMUSH
-      # a bare ) closes the enclosing call rather than nesting — so every member came out as
-      # "Name (role" and the surplus paren was appended once, after the whole list. A one-member scene
-      # therefore read "Sable (owner)" and looked perfectly correct; the roster only broke visibly once
-      # somebody else joined, which is why it survived this long.
-      #
-      # At the top level of an attribute body there is no argument list to close, so here the same two
-      # characters are ordinary text and need no escaping.
+      # One row of the Players table: what they are to the scene, who they are, how much they have
+      # posed. Name carries the persona when there is one, which is where the separate Cast line of
+      # personas went: one reading now gives both the character and the name they answer to.
       FUN`CAST`ROW: |-
-        [name(%1)] ([scenemember(%0,%1,role)])
+        [align(<12 <40 <8,[capstr(scenemember(%0,%1,role))],[u(%!/FUN`CAST`NAME,%0,%1)],[words(sceneposes(%0,%1))])]
+      FUN`CAST`NAME: |-
+        [switch(setr(sa,scenemember(%0,%1,showas)),,[name(%1)],[name(%1)] as %q<sa>)]
 
 
       # sceneposes() returns a SPACE-separated id list, so iter() must use the default
@@ -391,10 +388,22 @@ objects:
       # @includes the shared display tail — no switch() picks the output.
       FUN`SCENE_FIELD: |-
         switch(setr(val,scene(%0,%1)),#-1*,%2,%q<val>)
+      # A labelled line: the label right-aligned into a fixed gutter, then its value.
       FUN`INFO_LINE: |-
-        align(>9 <[sub(%2,11)],ansi(h,%0),%1)
+        [ansi(h,[rjust(%0:,14)])] %1
+
+      # Scene timestamps are Unix MILLIseconds and div() is 32-bit, so 1788534443063 overflows it and
+      # answers #-1 ARGUMENTS MUST BE INTEGERS. Dropping the last three digits as text has no ceiling.
+      FUN`WHEN: |-
+        [timefmt($b $d $I:$M$p,left(%0,sub(strlen(%0),3)))]
+
+      # Each renders a whole line INCLUDING its %r, or nothing, so an absent value leaves no blank row.
+      FUN`SCHEDULED_LINE: |-
+        [switch(setr(sw,scene(%0,scheduledfor)),,,[u(%!/FUN`INFO_LINE,Scheduled,u(%!/FUN`WHEN,%q<sw>))]%r)]
+      FUN`URL_LINE: |-
+        [switch(setr(su,get(%!/DATA`SITE_URL)),,,[u(%!/FUN`INFO_LINE,URL,%q<su>%0)]%r)]
       INC`DISPLAY`INFO: |-
-        @pemit %#=[header(Scene %0,width(%#))]%r[u(%!/FUN`INFO_LINE,Title,u(%!/FUN`LIST_TITLE,%0),width(%#))]%r[u(%!/FUN`INFO_LINE,Pitch,u(%!/FUN`SCENE_FIELD,%0,summary,-),width(%#))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername),width(%#))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)),width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status),width(%#))]%r[u(%!/FUN`INFO_LINE,Poses,scene(%0,posecount),width(%#))]%r[u(%!/FUN`INFO_LINE,Cast,scenecast(%0),width(%#))]%r[u(%!/FUN`INFO_LINE,Members,[iter(scenemembers(%0),u(%!/FUN`CAST`ROW,%0,##))],width(%#))]%r[u(%!/FUN`INFO_LINE,Watchers,[switch(scene(%0,public),1,Anyone,Members only)],width(%#))]%r[footer(,width(%#))]
+        @pemit %#=[header(<< Scene %0: '[u(%!/FUN`LIST_TITLE,%0)]' >>,width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)))]%r[u(%!/FUN`INFO_LINE,Created,u(%!/FUN`WHEN,scene(%0,startedat)))]%r[u(%!/FUN`SCHEDULED_LINE,%0)][u(%!/FUN`INFO_LINE,Watchers,[switch(scene(%0,public),1,Anyone,Members only)])]%r[center(< Pitch >,width(%#),-)]%r[u(%!/FUN`SCENE_FIELD,%0,summary,-)]%r[u(%!/FUN`URL_LINE,%0)][center(< Players >,width(%#),=)]%r[ansi(h,[align(<12 <40 <8,Status,Name,Poses)])]%r[iter(scenemembers(%0),u(%!/FUN`CAST`ROW,%0,##),%b,%r)]%r[footer(,width(%#))]
       CMD`PITCH: |-
         $+scene/pitch *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/summary=%0; @pemit %#=Pitch set for scene %q<SceneID>.
       # Scene DETAILS card. `+scene <id>` and `+scene/info <id>` are the same question asked two

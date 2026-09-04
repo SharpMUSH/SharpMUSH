@@ -165,39 +165,6 @@ public class SceneVerbSurfaceIntegrationTests
 		await Assert.That(await Eval($"scene({sceneId},summary)")).IsNotEqualTo("Not mine to set.");
 	}
 
-	/// <summary>
-	/// The info card's cast renders each member as "Name (role)".
-	///
-	/// <para>It rendered <c>Wren (owner Thorne (participant)</c> — every closing bracket missing. The
-	/// body was <c>[name(##)] ([scenemember(...)])</c>, and in SharpMUSH a bare <c>)</c> closes the
-	/// enclosing function by design rather than nesting, so that paren terminated the <c>iter()</c>
-	/// itself and took the rest of the line with it. It has to be escaped.</para>
-	/// </summary>
-	[Test]
-	public async Task SceneInfo_ClosesTheParenthesisAroundEachRole()
-	{
-		await PutLoggerInMasterRoomAsync();
-		const long ownerHandle = 9504;
-		const long castHandle = 9505;
-		await CreatePlayerAsync($"Sable{Tag}", ownerHandle);
-		await CreatePlayerAsync($"Tam{Tag}", castHandle);
-
-		await RunAs(ownerHandle, $"+scene/create Sable Scene {Tag}");
-		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
-		await RunAs(ownerHandle, "+scene/public");
-		await RunAs(castHandle, $"+scene/join {sceneId}");
-
-		var said = await RunAs(ownerHandle, $"+scene/info {sceneId}");
-		var roster = string.Join(" ", said);
-
-		// Two members, deliberately. The stray paren closes iter() and then lands at the END of the
-		// whole rendered list, so a one-member roster reads "Sable (owner)" and looks perfect — the
-		// defect only shows once there is a second entry to strand the first one's bracket.
-		await Assert.That(roster).Contains("(owner)")
-			.Because("the role belongs in closed parentheses; a bare ) ended the iter() instead");
-		await Assert.That(roster).Contains("(participant)")
-			.Because("every entry needs its own closing paren, not one shared at the end of the line");
-	}
 
 	/// <summary>
 	/// <c>+scene/info &lt;id&gt;</c> is the scene's card, and <c>+scene &lt;id&gt;</c> is the same
@@ -226,8 +193,9 @@ public class SceneVerbSurfaceIntegrationTests
 
 		var card = string.Join(" ", await RunAs(ownerHandle, $"{verb} {sceneId}"));
 
-		await Assert.That(card).Contains("(owner)").Because("the card names who owns the scene");
-		await Assert.That(card).Contains("(participant)").Because("and who else is in it");
+		await Assert.That(card).Contains("Owner").Because("the card names who owns the scene");
+		await Assert.That(card).Contains("Participant").Because("and who else is in it");
+		await Assert.That(card).Contains("Players").Because("the cast is a table with its own heading");
 		await Assert.That(card).Contains("A lantern, a gate, a wait.").Because("the pitch is the description");
 		await Assert.That(card).Contains("Where").Because("where it is happening is part of asking about it");
 	}
@@ -264,5 +232,39 @@ public class SceneVerbSurfaceIntegrationTests
 		var said = string.Join(" ", await RunAs(handle, $"+scene/who {sceneId}"));
 
 		await Assert.That(said).Contains("Huh?").Because("+scene/who was replaced by +scene/info");
+	}
+
+	/// <summary>
+	/// One cast line, carrying who is in the scene, what they are to it, and the name they pose
+	/// under when that differs from their own.
+	///
+	/// <para>The card briefly had two: a Cast of personas and a Members list of characters with
+	/// roles. Two lines describing the same people is a puzzle for the reader, who has to work out
+	/// which name on the first line is which person on the second.</para>
+	/// </summary>
+	[Test]
+	public async Task SceneInfo_ShowsOneCastLine_CarryingPersonaAndRole()
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long ownerHandle = 9530;
+		const long castHandle = 9531;
+		var owner = await CreatePlayerAsync($"Mira{Tag}", ownerHandle);
+		await CreatePlayerAsync($"Nolan{Tag}", castHandle);
+
+		await RunAs(ownerHandle, $"+scene/create Mira Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(owner)})");
+		await RunAs(castHandle, $"+scene/join {sceneId}");
+		await RunAs(castHandle, "+scene/as The Cloaked Stranger");
+
+		var card = string.Join(" ", await RunAs(ownerHandle, $"+scene/info {sceneId}"));
+
+		await Assert.That(card).DoesNotContain("Cast")
+			.Because("one table describes the players; a second line of personas said it again");
+		await Assert.That(card).Contains($"Mira{Tag}")
+			.Because("a member with no persona is listed under their own name");
+		await Assert.That(card).Contains("The Cloaked Stranger")
+			.Because("the name a member poses under belongs in their row, not on a line of its own");
+		await Assert.That(card).Contains("Owner");
+		await Assert.That(card).Contains("Participant");
 	}
 }
