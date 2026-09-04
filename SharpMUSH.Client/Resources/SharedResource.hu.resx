@@ -3216,6 +3216,18 @@
     <value>Archívum megtekintése</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Bárki nézheti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Jelenet indítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>A jelenet címe</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Az élő pózok nem érkeznek meg – újracsatlakozás folyamatban. Amit beküldesz, azt akkor is rögzítjük.</value>
     <comment>MT</comment>

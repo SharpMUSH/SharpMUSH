@@ -1184,10 +1184,11 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 	private async Task<string> CreateEditAsync(string poseKey, string content, string? editorVertex,
 		string editorName, long now)
 	{
+		var split = ScenePoseContent.Split(content);
 		var doc = new
 		{
-			Content = content ?? string.Empty,
-			Markup = content ?? string.Empty,
+			Content = split.Plain,
+			Markup = split.Markup,
 			EditedAt = now,
 			EditorName = editorName
 		};

@@ -134,4 +134,25 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Markup).DoesNotContain("WidNoCharacterYet");
 		await Assert.That(cut.Markup).DoesNotContain("WidCreateYourCharacter");
 	}
+
+	/// <summary>
+	/// The panel headed "New here?" points an anonymous reader at the way in.
+	///
+	/// <para>It had an affordance for a signed-in account with no character, and a quieter one for an
+	/// account that already had characters, but nothing at all for the person the heading is actually
+	/// addressed to. A first-time visitor was offered the wiki, the character list and the scene
+	/// list — three ways to keep reading, and no way to join.</para>
+	/// </summary>
+	[Test]
+	public async Task AnonymousVisitor_IsOfferedAWayToJoin()
+	{
+		Services.AddSingleton(BuildAuth([]));
+
+		var cut = Render<QuickstartWidget>();
+
+		var hrefs = cut.FindAll("a").Select(a => a.GetAttribute("href") ?? string.Empty).ToList();
+		await Assert.That(hrefs.Any(h => h.Contains("/login", StringComparison.Ordinal)))
+			.IsTrue()
+			.Because($"a reader who is not signed in needs the on-ramp; saw only [{string.Join(", ", hrefs)}]");
+	}
 }

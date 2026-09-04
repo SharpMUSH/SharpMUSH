@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.7.0
+version: 1.8.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -76,6 +76,21 @@ objects:
         and(hastype(%0,PLAYER),isapproved(%0))
       DATA`DENY_APPROVAL: |-
         You are not approved to take part in scenes. You can still browse the schedule with +scene and +scene/upcoming, and read any scene with +scene <id>.
+
+      # ---- focus / ownership guards ---------------------------------------------
+      # scenefocus() answers "#-1 NOT FOUND" for anyone who has not joined a scene, and that string is
+      # non-empty and truthy — so every verb that read it and acted was acting on a scene that does not
+      # exist. The two arms failed differently and both were wrong. A wizard, whom FUN`OWNS deliberately
+      # treats as owning every scene, sailed through and was told "Pitch set for scene #-1 NOT FOUND."
+      # while nothing was written. Everyone else failed a bare @assert carrying no message, so the verb
+      # produced no output at all — indistinguishable from a command that does not exist.
+      #
+      # Written inline at each verb, as bare @asserts, for the reason spelled out above DATA`DENY_APPROVAL:
+      # an @assert inside an @include emits its message and then lets the caller continue anyway.
+      DATA`DENY_NO_FOCUS: |-
+        You are not focused on a scene. Join one with +scene/join <id>, or see what is running with +scene.
+      DATA`DENY_NOT_OWNER: |-
+        That scene is not yours to change. Its owner or a wizard can do it.
 
       # ---- capture hooks --------------------------------------------------------
       # Each hook RE-BROADCASTS its type-specific speech via @message/spoof, then records
@@ -231,13 +246,13 @@ objects:
       # not parse cleanly (the following line's leading `@scene…` leaks into it) and
       # q-registers do not cross newlines — the `;` form is robust on both counts.
       CMD`START: |-
-        $+scene/start: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=active; @pemit %#=Scene is now active.
+        $+scene/start: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/status=active; @pemit %#=Scene is now active.
 
       CMD`PAUSE: |-
-        $+scene/pause: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=paused; @pemit %#=Scene paused.
+        $+scene/pause: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/status=paused; @pemit %#=Scene paused.
 
       CMD`FINISH: |-
-        $+scene/finish: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
+        $+scene/finish: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
 
       # ---- membership / RSVP / focus --------------------------------------------
       CMD`JOIN: |-
@@ -247,7 +262,7 @@ objects:
       # Capture the focused scene id into %q<SceneID> BEFORE @scene/focus clears it (@assert sets the
       # register and no-ops cleanly when not focused), then drive the writes off %q<SceneID>.
       CMD`LEAVE: |-
-        $+scene/leave: @assert setr(SceneID,scenefocus(%#)); @scene/focus %#=; @if not(words(sceneposes(%q<SceneID>,%#)))={@scene/unmember %q<SceneID>=%#}; @pemit %#=Left the scene.; &MY.SID %#=%q<SceneID>
+        $+scene/leave: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @scene/focus %#=; @if not(words(sceneposes(%q<SceneID>,%#)))={@scene/unmember %q<SceneID>=%#}; @pemit %#=Left the scene.; &MY.SID %#=%q<SceneID>
 
       CMD`TAG: |-
         $+scene/tag *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/member %0/attending=%#; @pemit %#=RSVP'd to scene %0.
@@ -256,7 +271,7 @@ objects:
         $+scene/untag *: @scene/unmember %0=%#; @pemit %#=Removed RSVP from scene %0.
 
       CMD`AS: |-
-        $+scene/as *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/showas [scenefocus(%#)]/%#=%0; @pemit %#=Future poses show as: %0
+        $+scene/as *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @scene/showas %q<SceneID>/%#=%0; @pemit %#=Future poses show as: %0
 
       # ---- edit your own poses --------------------------------------------------
       # %1 is find^^^replace; author-only is enforced by @scene/editpose. Stash the poseId in %q<pid>
@@ -275,18 +290,32 @@ objects:
         $+scene/delete *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/delete %0
 
       CMD`MOVE: |-
-        $+scene/move *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/move %0=%1
+        $+scene/move *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/move %0=%1
 
       # ---- visibility -----------------------------------------------------------
       CMD`PUBLIC: |-
-        $+scene/public: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=1; @pemit %#=Scene is now public.
+        $+scene/public: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/public=1; @pemit %#=Scene is now public.
 
       CMD`PRIVATE: |-
-        $+scene/private: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=0; @pemit %#=Scene is now private.
+        $+scene/private: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/public=0; @pemit %#=Scene is now private.
 
       # ---- viewing --------------------------------------------------------------
+      # One cast member, rendered "Name (role)".
+      #
+      # This is a separate attribute because of where its parentheses sit. Written inline as the body
+      # of the iter() in CMD`WHO, the closing paren was read as the one that ends iter() — in SharpMUSH
+      # a bare ) closes the enclosing call rather than nesting — so every member came out as
+      # "Name (role" and the surplus paren was appended once, after the whole list. A one-member scene
+      # therefore read "Sable (owner)" and looked perfectly correct; the roster only broke visibly once
+      # somebody else joined, which is why it survived this long.
+      #
+      # At the top level of an attribute body there is no argument list to close, so here the same two
+      # characters are ordinary text and need no escaping.
+      FUN`WHO`ROW: |-
+        [name(%1)] ([scenemember(%0,%1,role)])
+
       CMD`WHO: |-
-        $+scene/who *: @pemit %#=Cast: [scenecast(%0)]%r[iter(scenemembers(%0),[name(##)] ([scenemember(%0,##,role)]))]
+        $+scene/who *: @pemit %#=Cast: [scenecast(%0)]%r[iter(scenemembers(%0),u(%!/FUN`WHO`ROW,%0,##),%b,%r)]
 
       # sceneposes() returns a SPACE-separated id list, so iter() must use the default
       # space input delimiter (an `@` input delim collapsed the whole list into one bogus
@@ -353,7 +382,7 @@ objects:
       # (and your existing poses); /activate re-focuses you so capture resumes. Softer
       # than join/leave, which add/remove membership.
       CMD`DEACTIVATE: |-
-        $+scene/deactivate: @assert setr(SceneID,scenefocus(%#)); @scene/focus %#=; @pemit %#=Deactivated scene %q<SceneID> - still a member, poses paused. +scene/activate %q<SceneID> to resume.
+        $+scene/deactivate: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @scene/focus %#=; @pemit %#=Deactivated scene %q<SceneID> - still a member, poses paused. +scene/activate %q<SceneID> to resume.
       CMD`ACTIVATE: |-
         $+scene/activate *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/member %0/participant=%#; @scene/focus %#=%0; @pemit %#=Activated scene %0 - your poses are recorded again.
 
@@ -368,7 +397,7 @@ objects:
       INC`DISPLAY`INFO: |-
         @pemit %#=[header(Scene %0,width(%#))]%r[u(%!/FUN`INFO_LINE,Title,u(%!/FUN`LIST_TITLE,%0),width(%#))]%r[u(%!/FUN`INFO_LINE,Pitch,u(%!/FUN`SCENE_FIELD,%0,summary,-),width(%#))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername),width(%#))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)),width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status),width(%#))]%r[u(%!/FUN`INFO_LINE,Poses,scene(%0,posecount),width(%#))]%r[u(%!/FUN`INFO_LINE,Cast,scenecast(%0),width(%#))]%r[footer(,width(%#))]
       CMD`PITCH: |-
-        $+scene/pitch *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/summary=%0; @pemit %#=Pitch set for scene [scenefocus(%#)].
+        $+scene/pitch *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/summary=%0; @pemit %#=Pitch set for scene %q<SceneID>.
       # Scene DETAILS card: `+scene <id>` (Volund-style; bare `+scene` is the active list).
       CMD`SHOW: |-
         $+scene *: @assert not(strmatch(scene(setr(SceneID,%0),status),#-1*))=@pemit %#=No such scene: %0; @include %!/INC`DISPLAY`INFO=%q<SceneID>

@@ -327,4 +327,38 @@ public class SceneWebComposeIntegrationTests
 			.IsTrue()
 			.Because($"saw instead: [{string.Join(" // ", said)}]");
 	}
+
+	/// <summary>
+	/// Colour typed into a pose survives into storage.
+	///
+	/// <para>The storage layer is built for this: it takes the caller's content as a SERIALISED
+	/// MString, keeps it in <c>markup</c>, and derives <c>content</c> from it with
+	/// <c>MModule.plainText(MModule.deserialize(...))</c>. The portal is built for it too —
+	/// <c>ScenePoseLine</c> renders <c>Pose.Markup</c> through the scene renderer. Only the command
+	/// boundary was not: <c>SceneCommandHelper.SplitFields</c> called <c>ToPlainText()</c>, so what
+	/// reached storage was already flat, <c>deserialize</c> fell through to its catch, and
+	/// <c>markup</c> held the same bare sentence as <c>content</c>. A pose written with <c>ansi()</c>
+	/// rendered coloured in a terminal and grey on the web.</para>
+	/// </summary>
+	[Test]
+	public async Task WebCompose_KeepsTheColourAPoseWasWrittenWith()
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long handle = 9410;
+		await CreatePlayerAsync($"Isolde{Tag}", handle);
+
+		await RunAs(handle, $"+scene/create Isolde Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(_actors[handle].ToString())})");
+		await Assert.That(sceneId).DoesNotStartWith("#-1");
+
+		await RunAs(handle, $"+scene/emit {sceneId}=A [ansi(hr,red)] ember.");
+
+		var content = await LastPoseAsync(sceneId, "content");
+		var markup = await LastPoseAsync(sceneId, "markup");
+
+		await Assert.That(content).IsEqualTo("A red ember.")
+			.Because("the plain projection is the words without the colour");
+		await Assert.That(markup).IsNotEqualTo(content)
+			.Because("markup identical to the plain text means the colour never reached storage");
+	}
 }

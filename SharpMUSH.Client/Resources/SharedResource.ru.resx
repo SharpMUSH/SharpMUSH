@@ -3216,6 +3216,18 @@
     <value>Смотреть архив</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Разрешить всем смотреть</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Начать сцену</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Название сцены</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Живые позы не приходят — переподключение. Всё, что вы отправите, всё равно записывается.</value>
     <comment>MT</comment>

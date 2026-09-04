@@ -3216,6 +3216,18 @@
     <value>Archief bekijken</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Laat iedereen meekijken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Start een scène</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Titel van de scène</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Live-poses komen niet binnen — opnieuw verbinden. Wat je plaatst, wordt wel vastgelegd.</value>
     <comment>MT</comment>

@@ -2030,6 +2030,18 @@
   <data name="RolNotConnected" xml:space="preserve">
     <value>Non connecté au jeu — connectez-vous pour publier et recevoir les poses en direct.</value>
   </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Ouvert à tous les spectateurs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Lancer une scène</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Titre de la scène</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Les poses en direct n'arrivent pas — reconnexion en cours. Ce que vous publiez est tout de même enregistré.</value>
     <comment>MT</comment>

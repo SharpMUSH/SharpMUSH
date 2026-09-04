@@ -486,4 +486,112 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 		await Assert.That(cut.Markup).Contains("waves hello");
 	}
+
+	/// <summary>
+	/// The scene browser can start a scene.
+	///
+	/// <para>It could not. <c>/scenes</c> listed what already existed and offered Read and Join, and
+	/// that was all — the only way to begin one was <c>+scene/create</c> typed into the terminal, which
+	/// nothing in the portal mentions. A player who arrived through the web, made a character and went
+	/// looking for roleplay reached the page named after it and found no way in.</para>
+	///
+	/// <para>It sends the same verb down the same websocket the compose box uses, because that
+	/// connection is already open as the character.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_StartsAScene_ThroughTheTerminal()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("The Lantern Room");
+		cut.Find(".scene-start-submit").Click();
+
+		await _terminal.Received().SendAsync("+scene/create The Lantern Room");
+	}
+
+	/// <summary>
+	/// With no open connection there is nothing to send the verb down, so the page does not pretend
+	/// otherwise — the same rule the compose box follows.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_DoesNotOfferToStartAScene_WithoutAConnection()
+	{
+		_terminal.IsConnected.Returns(false);
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scenes-page"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".scene-start button")).IsEmpty();
+	}
+
+	/// <summary>
+	/// The start button appears when the terminal connects, not only if it happened to be connected
+	/// already when the page rendered.
+	///
+	/// <para>This is how the first version of the affordance failed in a real browser: the page read
+	/// <c>IsConnected</c> once while rendering and never subscribed to the change, so a player who
+	/// navigated to /scenes while the websocket was still coming up saw a page with no way to start a
+	/// scene — and nothing ever brought it back. The stubbed connection in the test above hid it,
+	/// because there the state was already true before the first render.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ShowsTheStartButton_WhenTheTerminalConnectsAfterRender()
+	{
+		_terminal.IsConnected.Returns(false);
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scenes-page"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-start button")).IsEmpty();
+
+		_terminal.IsConnected.Returns(true);
+		_terminal.ConnectionStateChanged += Raise.Event<Action<bool>>(true);
+
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+	}
+
+	/// <summary>
+	/// A scene started from the public browser is offered to everyone by default.
+	///
+	/// <para>Scenes are created private, which is right for one begun at a terminal among people who
+	/// are already in the room. It is the wrong default for one begun on the page whose whole purpose
+	/// is browsing other people's scenes: the starter watched it appear in a list nobody else could
+	/// see, with no control anywhere in the portal to change that — <c>+scene/public</c> is a command
+	/// they have no way to learn about from here. The engine default is untouched; this is the form
+	/// making the choice explicit and sending the verb.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_StartedFromTheBrowser_AreVisibleToOthersByDefault()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("The Lantern Room");
+		cut.Find(".scene-start-submit").Click();
+
+		await _terminal.Received().SendAsync("+scene/create The Lantern Room");
+		await _terminal.Received().SendAsync("+scene/public");
+	}
+
+	/// <summary>Unticking it leaves the scene as the engine made it: private.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_StartedWithWatchingOff_StayPrivate()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("A quiet corner");
+		cut.Find(".scene-start-public input").Change(false);
+		cut.Find(".scene-start-submit").Click();
+
+		await _terminal.Received().SendAsync("+scene/create A quiet corner");
+		await _terminal.DidNotReceive().SendAsync("+scene/public");
+	}
 }

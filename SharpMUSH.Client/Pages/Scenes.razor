@@ -3,12 +3,45 @@
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject SceneService SceneService
+@inject ITerminalService Terminal
+@implements IDisposable
 
 <PageTitle>@Loc["SceneArchive"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="scenes-page">
     <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:0.25rem;">@Loc["SceneArchive"]</MudText>
     <MudText Style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.5rem;">@Loc["ResScenesSubtitle"]</MudText>
+
+    @* Starting a scene goes down the terminal websocket, which is already open as this character —
+       the same channel the live compose box posts through. Shown only when that connection exists,
+       because without it there is nothing to send the verb down. *@
+    @if (Terminal.IsConnected)
+    {
+        <div class="scene-start">
+            @if (!_starting)
+            {
+                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@(() => _starting = true)">@Loc["RolStartScene"]</MudButton>
+            }
+            else
+            {
+                <div class="scene-start-form">
+                    <MudTextField T="string" @bind-Value="_newTitle" Immediate="true"
+                                  Class="scene-start-title" Margin="Margin.Dense"
+                                  Variant="Variant.Outlined" Label="@Loc["RolSceneTitleLabel"]" />
+                    <MudCheckBox T="bool" @bind-Value="_newPublic" Dense="true"
+                                 Class="scene-start-public" Label="@Loc["RolSceneLetAnyoneWatch"]" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               Class="scene-start-submit"
+                               Disabled="@(string.IsNullOrWhiteSpace(_newTitle) || _busy)"
+                               OnClick="StartSceneAsync">@Loc["RolStartScene"]</MudButton>
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               OnClick="@(() => { _starting = false; _newTitle = string.Empty; })">@Loc["Cancel"]</MudButton>
+                </div>
+            }
+        </div>
+    }
 
     <MudTabs Elevation="0" Rounded="false" @bind-ActivePanelIndex="_tab">
         <MudTabPanel Text="@Loc["ResTabRecent"]" BadgeData="@(_recent?.Count)" BadgeColor="Color.Default">
@@ -23,8 +56,26 @@
 @code {
     private int _tab;
     private bool _loading = true;
+    private bool _starting;
+    private bool _busy;
+    private string _newTitle = string.Empty;
+
+    // Scenes are created private, which suits one begun at a terminal among people already in the
+    // room. On the page whose purpose is browsing other people's scenes it is the wrong default: the
+    // starter would watch it appear in a list nobody else can see, and +scene/public is not a command
+    // the portal ever mentions. The engine default is untouched — this just makes the choice visible.
+    private bool _newPublic = true;
     private IReadOnlyList<SceneSummary>? _recent;
     private IReadOnlyList<SceneSummary>? _active;
+
+    // The websocket may still be coming up when this page renders — MainLayout opens it, and a
+    // player can arrive here before it finishes. Reading IsConnected once and never listening left
+    // the start button permanently absent for exactly those arrivals.
+    protected override void OnInitialized() => Terminal.ConnectionStateChanged += OnConnectionChanged;
+
+    public void Dispose() => Terminal.ConnectionStateChanged -= OnConnectionChanged;
+
+    private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
 
     protected override async Task OnInitializedAsync()
     {
@@ -33,6 +84,37 @@
         _recent = await recentTask;
         _active = await activeTask;
         _loading = false;
+    }
+
+    private async Task StartSceneAsync()
+    {
+        var title = _newTitle.Trim();
+        if (title.Length == 0) return;
+
+        _busy = true;
+        await Terminal.SendAsync($"+scene/create {title}");
+        if (_newPublic)
+        {
+            // Creation focuses the new scene, so this lands on the one just made.
+            await Terminal.SendAsync("+scene/public");
+        }
+
+        // The verb travels to the engine and back over NATS, so the scene is not in the API the
+        // instant the send returns. Poll briefly for it rather than guessing at a sleep long enough
+        // to cover the round trip: whichever happens first, the page stops waiting.
+        var before = _active?.Count ?? 0;
+        for (var attempt = 0; attempt < 6; attempt++)
+        {
+            await Task.Delay(250);
+            _active = await SceneService.GetActiveScenesAsync();
+            if (_active is not null && _active.Count > before) break;
+        }
+
+        _recent = await SceneService.GetRecentScenesAsync(50);
+        _busy = false;
+        _starting = false;
+        _newTitle = string.Empty;
+        _newPublic = true;
     }
 
     private RenderFragment SceneList(IReadOnlyList<SceneSummary>? scenes) => __builder =>

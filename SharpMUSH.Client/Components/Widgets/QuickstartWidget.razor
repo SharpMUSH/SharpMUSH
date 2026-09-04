@@ -18,6 +18,19 @@
                 <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" Class="mr-2" /> @Loc["WidCreateYourCharacter"]
             </MudButton>
         }
+        else if (ShowJoinHero)
+        {
+            @* The state the heading is actually addressed to. It had no affordance of its own: a
+               first-time visitor was offered the wiki, the character list and the scene list — three
+               ways to keep reading, and no way to join. *@
+            <MudText Style="font-size:0.8125rem;color:var(--text-dim);margin-bottom:0.875rem;line-height:1.55;">
+                @Loc["WidQuickstartIntro"]
+            </MudText>
+            <MudButton Variant="Variant.Filled" Href="/login?tab=register" FullWidth="true" Size="Size.Small"
+                       Style="justify-content:flex-start;background:var(--accent);color:var(--accent-on);font-weight:600;text-transform:none;margin-bottom:0.875rem;">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" Class="mr-2" /> @Loc["AuthCreateAccount"]
+            </MudButton>
+        }
         else
         {
             <MudText Style="font-size:0.8125rem;color:var(--text-dim);margin-bottom:0.875rem;line-height:1.55;">
@@ -55,6 +68,7 @@
 
     private bool ShowCreateHero => AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0;
     private bool ShowQuietCreate => AccountAuth.IsLoggedIn && AccountAuth.Characters.Count > 0;
+    private bool ShowJoinHero => !AccountAuth.IsLoggedIn;
 
     protected override async Task OnInitializedAsync()
     {

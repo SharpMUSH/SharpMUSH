@@ -3216,6 +3216,18 @@
     <value>Vizualizare arhivă</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Oricine poate urmări</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Începe o scenă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Titlul scenei</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Pozele live nu ajung — se reconectează. Ceea ce publici este înregistrat oricum.</value>
     <comment>MT</comment>

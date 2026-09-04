@@ -3216,6 +3216,18 @@
     <value>Archiv ansehen</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Alle zusehen lassen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Szene starten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Titel der Szene</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Live-Posen kommen nicht an — es wird neu verbunden. Was du sendest, wird trotzdem aufgezeichnet.</value>
     <comment>MT</comment>

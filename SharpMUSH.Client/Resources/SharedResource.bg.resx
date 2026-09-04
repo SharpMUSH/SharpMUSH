@@ -3216,6 +3216,18 @@
     <value>Виж архива</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Позволете на всеки да гледа</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Започнете сцена</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Заглавие на сцената</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Поточните пози не пристигат — свързваме се отново. Всичко, което публикувате, пак се записва.</value>
     <comment>MT</comment>

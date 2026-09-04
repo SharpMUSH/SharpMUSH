@@ -3216,6 +3216,18 @@
     <value>Vis arkiv</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>La alle se på</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Start en scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Scenetittel</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Sanntidsposene kommer ikke fram — kobler til på nytt. Det du legger ut, blir likevel lagret.</value>
     <comment>MT</comment>

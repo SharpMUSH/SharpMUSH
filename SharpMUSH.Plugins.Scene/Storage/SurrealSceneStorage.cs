@@ -1564,19 +1564,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	// Content arrives as raw MString markup; Content (the plain projection) strips ANSI/markup.
 	// Falls back to the raw string if the input is not serialized markup.
-	private static string StripMarkup(string? content)
-	{
-		if (string.IsNullOrEmpty(content))
-			return "";
-		try
-		{
-			return MModule.plainText(MModule.deserialize(content));
-		}
-		catch
-		{
-			return content;
-		}
-	}
+	private static string StripMarkup(string? content) => ScenePoseContent.Split(content).Plain;
 
 	private async Task<IReadOnlyList<SceneModel>> ProjectScenesAsync(List<SceneDbRecord> rows)
 	{

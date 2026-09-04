@@ -3216,6 +3216,18 @@
     <value>Prikaži arhivu</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Dopusti svima da gledaju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Pokreni scenu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Naslov scene</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Poze uživo ne stižu — ponovno povezivanje. Sve što objavite i dalje se bilježi.</value>
     <comment>MT</comment>
