@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.10.0
+version: 1.11.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -87,10 +87,6 @@ objects:
       #
       # Written inline at each verb, as bare @asserts, for the reason spelled out above DATA`DENY_APPROVAL:
       # an @assert inside an @include emits its message and then lets the caller continue anyway.
-      # Where this game publishes scene logs, if it does. The card appends the scene id and shows a
-      # URL line only when this is set, so a game that publishes nothing shows nothing.
-      DATA`SITE_URL: |-
-
       DATA`DENY_NO_FOCUS: |-
         You are not focused on a scene. Join one with +scene/join <id>, or see what is running with +scene.
       DATA`DENY_NOT_OWNER: |-
@@ -400,8 +396,16 @@ objects:
       # Each renders a whole line INCLUDING its %r, or nothing, so an absent value leaves no blank row.
       FUN`SCHEDULED_LINE: |-
         [switch(setr(sw,scene(%0,scheduledfor)),,,[u(%!/FUN`INFO_LINE,Scheduled,u(%!/FUN`WHEN,%q<sw>))]%r)]
+      # The scene's page on this game's own website, worked out rather than stored: mud_url is the
+      # standard config for a game's web address, and the path follows from the id. A game that has
+      # not set one shows no URL line, because there is no address to guess.
       FUN`URL_LINE: |-
-        [switch(setr(su,get(%!/DATA`SITE_URL)),,,[u(%!/FUN`INFO_LINE,URL,%q<su>%0)]%r)]
+        [switch(setr(su,config(mud_url)),,,[u(%!/FUN`INFO_LINE,URL,[u(%!/FUN`NO_TRAILING_SLASH,%q<su>)]/scenes/%0)]%r)]
+
+      # mud_url is written both ways by different admins, and joining a trailing slash to a leading
+      # one gives a path no server answers.
+      FUN`NO_TRAILING_SLASH: |-
+        [switch(right(%0,1),/,[left(%0,sub(strlen(%0),1))],%0)]
       INC`DISPLAY`INFO: |-
         @pemit %#=[header(<< Scene %0: '[u(%!/FUN`LIST_TITLE,%0)]' >>,width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)))]%r[u(%!/FUN`INFO_LINE,Created,u(%!/FUN`WHEN,scene(%0,startedat)))]%r[u(%!/FUN`SCHEDULED_LINE,%0)][u(%!/FUN`INFO_LINE,Watchers,[switch(scene(%0,public),1,Anyone,Members only)])]%r[center(< Pitch >,width(%#),-)]%r[u(%!/FUN`SCENE_FIELD,%0,summary,-)]%r[u(%!/FUN`URL_LINE,%0)][center(< Players >,width(%#),=)]%r[ansi(h,[align(<12 <40 <8,Status,Name,Poses)])]%r[iter(scenemembers(%0),u(%!/FUN`CAST`ROW,%0,##),%b,%r)]%r[footer(,width(%#))]
       CMD`PITCH: |-

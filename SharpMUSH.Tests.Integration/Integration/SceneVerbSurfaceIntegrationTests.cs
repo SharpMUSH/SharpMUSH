@@ -76,14 +76,16 @@ public class SceneVerbSurfaceIntegrationTests
 		return dbref;
 	}
 
-	/// <summary>The Logger's $-commands only match from the master room; other suites move it.</summary>
-	private async Task PutLoggerInMasterRoomAsync()
+	/// <summary>The Scene Logger, which carries the package's attributes.</summary>
+	private async Task<string> LoggerAsync()
 	{
 		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var objects = await registry.GetPackageObjectsAsync("scene");
-		var logger = PackageInstallService.ParseObjid(objects.Single().Objid)!.Value.ToString();
-		await God1($"@teleport {logger}=#2");
+		return PackageInstallService.ParseObjid(objects.Single().Objid)!.Value.ToString();
 	}
+
+	/// <summary>The Logger's $-commands only match from the master room; other suites move it.</summary>
+	private async Task PutLoggerInMasterRoomAsync() => await God1($"@teleport {await LoggerAsync()}=#2");
 
 	/// <summary>
 	/// Every verb that acts on the focused scene, run by someone who has no focus. None of them may
@@ -266,5 +268,41 @@ public class SceneVerbSurfaceIntegrationTests
 			.Because("the name a member poses under belongs in their row, not on a line of its own");
 		await Assert.That(card).Contains("Owner");
 		await Assert.That(card).Contains("Participant");
+	}
+
+	/// <summary>
+	/// The card's link is the game's own web address with the scene's id appended, not a base an
+	/// admin has to retype into the package.
+	///
+	/// <para>The address comes from <c>mud_url</c>, the standard config for it. A game that has not
+	/// set one shows no URL line — there is no address to guess — and that is the state asserted here,
+	/// because it is the state the harness ships. The configured half cannot be driven from a test:
+	/// <c>@config/set</c> is not implemented and the option is read-only at runtime, so the only way
+	/// in is the admin config page, which is where it was checked by hand. What a test can decide is
+	/// the join, which is the part with something to get wrong, so it runs through the package's own
+	/// helper against both spellings of a base address.</para>
+	/// </summary>
+	[Test]
+	public async Task SceneInfo_BuildsItsLinkFromTheGamesAddressAndTheSceneId()
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long handle = 9540;
+		await CreatePlayerAsync($"Odile{Tag}", handle);
+
+		await RunAs(handle, $"+scene/create Odile Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(_actors[handle].ToString())})");
+
+		var card = string.Join(" ", await RunAs(handle, $"+scene/info {sceneId}"));
+		await Assert.That(card).DoesNotContain("URL")
+			.Because("a game with no address of its own has no link to offer");
+
+		var logger = await LoggerAsync();
+		foreach (var configured in new[] { "https://example.test", "https://example.test/" })
+		{
+			var joined = await Eval($"u({logger}/FUN`NO_TRAILING_SLASH,{configured})/scenes/{sceneId}");
+
+			await Assert.That(joined).IsEqualTo($"https://example.test/scenes/{sceneId}")
+				.Because($"'{configured}' must reach the scene's page without a doubled or missing slash");
+		}
 	}
 }
