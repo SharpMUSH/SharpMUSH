@@ -142,7 +142,9 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		var doc = new
 		{
 			Status = "new",
-			IsPublic = false,
+			// Public unless someone says otherwise: the portal is a browser of other people's scenes,
+			// and a scene nobody can find is one nobody can join. +scene/private is the exception.
+			IsPublic = true,
 			IsTempRoom = false,
 			ScheduledFor = (long?)null,
 			StartedAt = now,

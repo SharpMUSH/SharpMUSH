@@ -60,10 +60,9 @@
     private bool _busy;
     private string _newTitle = string.Empty;
 
-    // Scenes are created private, which suits one begun at a terminal among people already in the
-    // room. On the page whose purpose is browsing other people's scenes it is the wrong default: the
-    // starter would watch it appear in a list nobody else can see, and +scene/public is not a command
-    // the portal ever mentions. The engine default is untouched — this just makes the choice visible.
+    // Matches what the engine now does when nobody specifies. The box is not here to ask for the
+    // default; it is here so the choice is visible at the moment a scene is started, and so the
+    // exception can be made without knowing a command.
     private bool _newPublic = true;
     private IReadOnlyList<SceneSummary>? _recent;
     private IReadOnlyList<SceneSummary>? _active;
@@ -93,10 +92,11 @@
 
         _busy = true;
         await Terminal.SendAsync($"+scene/create {title}");
-        if (_newPublic)
+        if (!_newPublic)
         {
-            // Creation focuses the new scene, so this lands on the one just made.
-            await Terminal.SendAsync("+scene/public");
+            // Only the exception needs saying: the engine creates scenes watchable. Creation focuses
+            // the new scene, so this lands on the one just made.
+            await Terminal.SendAsync("+scene/private");
         }
 
         // The verb travels to the engine and back over NATS, so the scene is not in the API the

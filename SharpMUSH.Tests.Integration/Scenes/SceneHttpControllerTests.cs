@@ -116,8 +116,10 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	public async Task GetScene_PrivateSceneCallerIsMember_Returns200()
 	{
 		var http = CreateClient();
-		// Private (default IsPublic=false) scene; the DebugAuth caller (#1) is a member.
+		// Private scene; the DebugAuth caller (#1) is a member. Made private explicitly — scenes are
+		// created watchable now, so privacy is the case a test has to ask for.
 		var sceneId = await Eval($"scenecreate(,{God},PrivMember {Guid.NewGuid():N})");
+		await Eval($"sceneset({sceneId},public,0)");
 		await Assert.That(await Eval($"scene({sceneId}, public)")).IsEqualTo("0");
 		await Eval($"sceneaddmember({sceneId},{God},participant)");
 
@@ -134,6 +136,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		// only thing that can make it visible is the owner check. Creating a scene does not add its owner as
 		// a member, which is what isolates that path here.
 		var sceneId = await Eval($"scenecreate(,{God},PrivOwner {Guid.NewGuid():N})");
+		await Eval($"sceneset({sceneId},public,0)");
 		await Assert.That(await Eval($"scene({sceneId}, public)")).IsEqualTo("0");
 
 		var response = await http.GetAsync($"api/scenes/{sceneId}");
@@ -150,6 +153,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = CreateClient();
 		var sceneId = await Eval($"scenecreate(,{God},PrivOwnerList {Guid.NewGuid():N})");
+		await Eval($"sceneset({sceneId},public,0)");
 		await Assert.That(await Eval($"scene({sceneId}, public)")).IsEqualTo("0");
 
 		var scenes = await http.GetFromJsonAsync<List<SceneDto>>("api/scenes?filter=recent&count=200");
@@ -165,6 +169,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		// Owned by a non-existent object → OwnerDbref resolves to null, and #1 holds no
 		// membership, so #1 must not see it. Private + not owner + not member ⇒ 404.
 		var sceneId = await Eval($"scenecreate(,#99999,PrivHidden {Guid.NewGuid():N})");
+		await Eval($"sceneset({sceneId},public,0)");
 
 		var response = await http.GetAsync($"api/scenes/{sceneId}");
 
@@ -188,6 +193,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = CreateClient();
 		var hiddenId = await Eval($"scenecreate(,#99999,Leak {Guid.NewGuid():N})");
+		await Eval($"sceneset({hiddenId},public,0)");
 
 		var scenes = await http.GetFromJsonAsync<List<SceneDto>>("api/scenes?filter=recent&count=200");
 
@@ -217,6 +223,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = CreateClient();
 		var hiddenId = await Eval($"scenecreate(,#99999,PosesHidden {Guid.NewGuid():N})");
+		await Eval($"sceneset({hiddenId},public,0)");
 
 		var response = await http.GetAsync($"api/scenes/{hiddenId}/poses");
 

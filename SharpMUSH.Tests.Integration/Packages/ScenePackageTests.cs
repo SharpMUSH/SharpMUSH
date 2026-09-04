@@ -29,7 +29,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	{
 		var package = await Registry.GetInstalledPackageAsync("scene");
 		await Assert.That(package.IsT0).IsTrue();
-		await Assert.That(package.AsT0.Version).IsEqualTo("1.8.0");
+		await Assert.That(package.AsT0.Version).IsEqualTo("1.9.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		await Assert.That(objects.Count).IsEqualTo(1);
@@ -41,7 +41,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 		await Assert.That(attrs).Contains("CMD`CAPTURE`SAY");
 		await Assert.That(attrs).Contains("CMD`CAPTURE`SEMI");
 		await Assert.That(attrs).Contains("CMD`CREATE");
-		await Assert.That(attrs).Contains("CMD`WHO");
+		await Assert.That(attrs).Contains("CMD`INFO");
 		await Assert.That(attrs).Contains("FUN`OWNS");
 		await Assert.That(attrs).Contains("FUN`IS`APPROVED");
 		await Assert.That(attrs).Contains("DATA`DENY_APPROVAL");

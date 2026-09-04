@@ -10,7 +10,9 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
-/// What the scene verbs say when the player is not focused on a scene.
+/// What the scene verbs say: the guards that refuse, and the card that informs.
+///
+/// <para>The first half is about being unfocused.
 ///
 /// <para>Ten of them read <c>scenefocus(%#)</c> and act on the result without asking whether it is a
 /// scene. It is not, for anyone who has not joined one: it is the string <c>#-1 NOT FOUND</c>, which
@@ -25,7 +27,7 @@ namespace SharpMUSH.Tests.Integration;
 /// no output whatsoever — indistinguishable from a command that does not exist.</para>
 /// </summary>
 [NotInParallel]
-public class SceneFocusGuardIntegrationTests
+public class SceneVerbSurfaceIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -164,7 +166,7 @@ public class SceneFocusGuardIntegrationTests
 	}
 
 	/// <summary>
-	/// The cast roster renders each member as "Name (role)".
+	/// The info card's cast renders each member as "Name (role)".
 	///
 	/// <para>It rendered <c>Wren (owner Thorne (participant)</c> — every closing bracket missing. The
 	/// body was <c>[name(##)] ([scenemember(...)])</c>, and in SharpMUSH a bare <c>)</c> closes the
@@ -172,7 +174,7 @@ public class SceneFocusGuardIntegrationTests
 	/// itself and took the rest of the line with it. It has to be escaped.</para>
 	/// </summary>
 	[Test]
-	public async Task SceneWho_ClosesTheParenthesisAroundEachRole()
+	public async Task SceneInfo_ClosesTheParenthesisAroundEachRole()
 	{
 		await PutLoggerInMasterRoomAsync();
 		const long ownerHandle = 9504;
@@ -185,7 +187,7 @@ public class SceneFocusGuardIntegrationTests
 		await RunAs(ownerHandle, "+scene/public");
 		await RunAs(castHandle, $"+scene/join {sceneId}");
 
-		var said = await RunAs(ownerHandle, $"+scene/who {sceneId}");
+		var said = await RunAs(ownerHandle, $"+scene/info {sceneId}");
 		var roster = string.Join(" ", said);
 
 		// Two members, deliberately. The stray paren closes iter() and then lands at the END of the
@@ -195,5 +197,72 @@ public class SceneFocusGuardIntegrationTests
 			.Because("the role belongs in closed parentheses; a bare ) ended the iter() instead");
 		await Assert.That(roster).Contains("(participant)")
 			.Because("every entry needs its own closing paren, not one shared at the end of the line");
+	}
+
+	/// <summary>
+	/// <c>+scene/info &lt;id&gt;</c> is the scene's card, and <c>+scene &lt;id&gt;</c> is the same
+	/// thing — the id on its own has always meant "tell me about this scene".
+	///
+	/// <para>It replaces <c>+scene/who</c>, which could only ever answer one question. A player
+	/// asking about a scene wants where it is, what it is about and whether anyone may watch, not
+	/// just a list of names; splitting that across two verbs meant the roster was the only part with
+	/// a home of its own.</para>
+	/// </summary>
+	[Test]
+	[Arguments("+scene/info")]
+	[Arguments("+scene")]
+	public async Task SceneInfo_ShowsTheCastWithRolesAndWhereItIs(string verb)
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long ownerHandle = 9520;
+		const long castHandle = 9521;
+		await CreatePlayerAsync($"Ines{Tag}", ownerHandle);
+		await CreatePlayerAsync($"Joss{Tag}", castHandle);
+
+		await RunAs(ownerHandle, $"+scene/create Ines Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
+		await RunAs(ownerHandle, "+scene/pitch A lantern, a gate, a wait.");
+		await RunAs(castHandle, $"+scene/join {sceneId}");
+
+		var card = string.Join(" ", await RunAs(ownerHandle, $"{verb} {sceneId}"));
+
+		await Assert.That(card).Contains("(owner)").Because("the card names who owns the scene");
+		await Assert.That(card).Contains("(participant)").Because("and who else is in it");
+		await Assert.That(card).Contains("A lantern, a gate, a wait.").Because("the pitch is the description");
+		await Assert.That(card).Contains("Where").Because("where it is happening is part of asking about it");
+	}
+
+	/// <summary>Whether anyone may watch is now worth stating: private is the exception.</summary>
+	[Test]
+	public async Task SceneInfo_SaysWhetherAnyoneMayWatch()
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long ownerHandle = 9522;
+		await CreatePlayerAsync($"Kite{Tag}", ownerHandle);
+
+		await RunAs(ownerHandle, $"+scene/create Kite Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
+
+		var open = string.Join(" ", await RunAs(ownerHandle, $"+scene/info {sceneId}"));
+		await Assert.That(open).Contains("Anyone").Because("a new scene is watchable and should say so");
+
+		await RunAs(ownerHandle, "+scene/private");
+		var shut = string.Join(" ", await RunAs(ownerHandle, $"+scene/info {sceneId}"));
+		await Assert.That(shut).Contains("Members").Because("the card must reflect the exception once it is made");
+	}
+
+	/// <summary>The verb it replaces is gone rather than left as a second way to ask.</summary>
+	[Test]
+	public async Task SceneWho_IsNoLongerACommand()
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long handle = 9523;
+		await CreatePlayerAsync($"Lark{Tag}", handle);
+		await RunAs(handle, $"+scene/create Lark Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(_actors[handle].ToString())})");
+
+		var said = string.Join(" ", await RunAs(handle, $"+scene/who {sceneId}"));
+
+		await Assert.That(said).Contains("Huh?").Because("+scene/who was replaced by +scene/info");
 	}
 }

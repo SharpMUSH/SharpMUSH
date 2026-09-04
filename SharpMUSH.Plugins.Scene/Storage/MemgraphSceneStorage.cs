@@ -89,7 +89,7 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 				CREATE (s:{{SceneLabel}} {
 					sceneId: $sceneId,
 					status: $status,
-					isPublic: false,
+					isPublic: true,
 					isTempRoom: false,
 					scheduledFor: $noMillis,
 					startedAt: $now,

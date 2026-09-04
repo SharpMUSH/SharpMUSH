@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.8.0
+version: 1.9.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -190,7 +190,7 @@ objects:
       # So these take the id explicitly and record regardless of focus or location. Three consequences,
       # each deliberate:
       #   * a poser who is not in the cast is added to it -- a recorded pose whose author is missing
-      #     from +scene/who would leave that listing lying about who was in the scene. Guarded on
+      #     from the info card's cast would leave that card lying about who was in the scene. Guarded on
       #     them having no role YET, because @scene/member sets the role outright: writing it on
       #     every pose demoted an owner to participant in their own scene, and every ownership verb
       #     (+scene/public, /finish, /pitch) is gated on FUN`OWNS, so it locked them out of it;
@@ -300,10 +300,11 @@ objects:
         $+scene/private: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/public=0; @pemit %#=Scene is now private.
 
       # ---- viewing --------------------------------------------------------------
-      # One cast member, rendered "Name (role)".
+      # One cast member of the info card, rendered "Name (role)".
       #
       # This is a separate attribute because of where its parentheses sit. Written inline as the body
-      # of the iter() in CMD`WHO, the closing paren was read as the one that ends iter() — in SharpMUSH
+      # of the iter() that builds the cast line, the closing paren was read as the one that ends the
+      # iter() itself — in SharpMUSH
       # a bare ) closes the enclosing call rather than nesting — so every member came out as
       # "Name (role" and the surplus paren was appended once, after the whole list. A one-member scene
       # therefore read "Sable (owner)" and looked perfectly correct; the roster only broke visibly once
@@ -311,11 +312,9 @@ objects:
       #
       # At the top level of an attribute body there is no argument list to close, so here the same two
       # characters are ordinary text and need no escaping.
-      FUN`WHO`ROW: |-
+      FUN`CAST`ROW: |-
         [name(%1)] ([scenemember(%0,%1,role)])
 
-      CMD`WHO: |-
-        $+scene/who *: @pemit %#=Cast: [scenecast(%0)]%r[iter(scenemembers(%0),u(%!/FUN`WHO`ROW,%0,##),%b,%r)]
 
       # sceneposes() returns a SPACE-separated id list, so iter() must use the default
       # space input delimiter (an `@` input delim collapsed the whole list into one bogus
@@ -395,12 +394,24 @@ objects:
       FUN`INFO_LINE: |-
         align(>9 <[sub(%2,11)],ansi(h,%0),%1)
       INC`DISPLAY`INFO: |-
-        @pemit %#=[header(Scene %0,width(%#))]%r[u(%!/FUN`INFO_LINE,Title,u(%!/FUN`LIST_TITLE,%0),width(%#))]%r[u(%!/FUN`INFO_LINE,Pitch,u(%!/FUN`SCENE_FIELD,%0,summary,-),width(%#))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername),width(%#))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)),width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status),width(%#))]%r[u(%!/FUN`INFO_LINE,Poses,scene(%0,posecount),width(%#))]%r[u(%!/FUN`INFO_LINE,Cast,scenecast(%0),width(%#))]%r[footer(,width(%#))]
+        @pemit %#=[header(Scene %0,width(%#))]%r[u(%!/FUN`INFO_LINE,Title,u(%!/FUN`LIST_TITLE,%0),width(%#))]%r[u(%!/FUN`INFO_LINE,Pitch,u(%!/FUN`SCENE_FIELD,%0,summary,-),width(%#))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername),width(%#))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)),width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status),width(%#))]%r[u(%!/FUN`INFO_LINE,Poses,scene(%0,posecount),width(%#))]%r[u(%!/FUN`INFO_LINE,Cast,scenecast(%0),width(%#))]%r[u(%!/FUN`INFO_LINE,Members,[iter(scenemembers(%0),u(%!/FUN`CAST`ROW,%0,##))],width(%#))]%r[u(%!/FUN`INFO_LINE,Watchers,[switch(scene(%0,public),1,Anyone,Members only)],width(%#))]%r[footer(,width(%#))]
       CMD`PITCH: |-
         $+scene/pitch *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/summary=%0; @pemit %#=Pitch set for scene %q<SceneID>.
-      # Scene DETAILS card: `+scene <id>` (Volund-style; bare `+scene` is the active list).
+      # Scene DETAILS card. `+scene <id>` and `+scene/info <id>` are the same question asked two
+      # ways, so they run the same renderer: naming an id has always meant "tell me about this one".
+      #
+      # This replaced +scene/who, which could only answer who was in the cast. Somebody asking about a
+      # scene wants where it is, what it is about and whether anyone may watch as well — and once the
+      # card carries the roster there is nothing left for a second verb to say.
+      #
+      # Cast and Members are both here because they answer different questions: Cast is the personas
+      # that have spoken (scenecast, deduplicated, what a reader of the log sees) and Members is the
+      # characters with their roles. A persona is not a character, so one cannot stand in for the
+      # other — an actor posing under two names appears once per name in Cast and once in Members.
       CMD`SHOW: |-
         $+scene *: @assert not(strmatch(scene(setr(SceneID,%0),status),#-1*))=@pemit %#=No such scene: %0; @include %!/INC`DISPLAY`INFO=%q<SceneID>
+      CMD`INFO: |-
+        $+scene/info *: @assert not(strmatch(scene(setr(SceneID,%0),status),#-1*))=@pemit %#=No such scene: %0; @include %!/INC`DISPLAY`INFO=%q<SceneID>
 
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).

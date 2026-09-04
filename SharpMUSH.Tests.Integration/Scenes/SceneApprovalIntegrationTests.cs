@@ -339,7 +339,9 @@ public class SceneApprovalIntegrationTests
 		await God1("@set #1=WIZARD");
 		await CreatePlayerAsync($"Lister_{Tag}", 63L);
 
+		// Explicitly private: scenes are created watchable, so this is the case that must be asked for.
 		var privateScene = await Eval($"scenecreate(,#1,Private {Tag})");
+		await Eval($"sceneset({privateScene},public,0)");
 		await God1($"@scene/set {privateScene}/status=active");
 		var publicScene = await Eval($"scenecreate(,#1,Public {Tag})");
 		await God1($"@scene/set {publicScene}/status=active");

@@ -47,6 +47,27 @@ public class SceneServiceIntegrationTests
 	}
 
 	/// <summary>
+	/// A new scene is public.
+	///
+	/// <para>Every provider created them member-only. That suits a scene begun at a terminal among
+	/// people already in the room, and it is wrong everywhere else: the portal's whole scene surface
+	/// is a browser of other people's roleplay, and a starter watched their scene appear in a list
+	/// nobody else could see. The command to change it — <c>+scene/private</c>'s opposite — is not
+	/// one the portal mentions anywhere, so the state was both wrong and unreachable. Scenes that
+	/// should not be watched are now the case that asks for a command.</para>
+	/// </summary>
+	[Test]
+	public async Task CreateScene_IsPublic()
+	{
+		// Created raw, without NewSceneAsync's explicit sceneset — the point is what the provider
+		// chooses when nobody says.
+		var id = await Eval($"scenecreate(,{God},Public {Guid.NewGuid():N})");
+
+		await Assert.That(await Eval($"scene({id}, public)")).IsEqualTo("1")
+			.Because("a scene nobody can find is not a scene anyone can join");
+	}
+
+	/// <summary>
 	/// A scene id is a bare key on every provider. It is not an internal detail: players type it
 	/// (<c>+scene 1</c>, <c>+scene/join 1</c>), it is a path segment in <c>/scenes/{id}/live</c>, and
 	/// it is stored in player attributes. SurrealDB used to hand back its own record id verbatim, so

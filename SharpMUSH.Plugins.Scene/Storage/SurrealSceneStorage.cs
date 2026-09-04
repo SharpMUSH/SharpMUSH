@@ -137,7 +137,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		await _accessor.ExecuteAsync("""
 			CREATE scene:⟨$id⟩ SET
 				status = $status,
-				isPublic = false,
+				isPublic = true,
 				isTempRoom = false,
 				scheduledFor = NONE,
 				startedAt = $startedAt,

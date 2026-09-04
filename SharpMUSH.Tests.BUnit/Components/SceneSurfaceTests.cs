@@ -552,14 +552,9 @@ public class SceneSurfaceTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// A scene started from the public browser is offered to everyone by default.
-	///
-	/// <para>Scenes are created private, which is right for one begun at a terminal among people who
-	/// are already in the room. It is the wrong default for one begun on the page whose whole purpose
-	/// is browsing other people's scenes: the starter watched it appear in a list nobody else could
-	/// see, with no control anywhere in the portal to change that — <c>+scene/public</c> is a command
-	/// they have no way to learn about from here. The engine default is untouched; this is the form
-	/// making the choice explicit and sending the verb.</para>
+	/// A scene started from the browser is watchable by anyone, and says so without needing a verb:
+	/// that is now what the engine does when nobody specifies. The box is here so the choice is
+	/// visible at the moment it is made, not because the page has to ask for the default.
 	/// </summary>
 	[TUnit.Core.Test]
 	public async Task Scenes_StartedFromTheBrowser_AreVisibleToOthersByDefault()
@@ -574,10 +569,10 @@ public class SceneSurfaceTests : TrackingBunitContext
 		cut.Find(".scene-start-submit").Click();
 
 		await _terminal.Received().SendAsync("+scene/create The Lantern Room");
-		await _terminal.Received().SendAsync("+scene/public");
+		await _terminal.DidNotReceive().SendAsync("+scene/private");
 	}
 
-	/// <summary>Unticking it leaves the scene as the engine made it: private.</summary>
+	/// <summary>Unticking it is the case that needs a command, because it is the exception now.</summary>
 	[TUnit.Core.Test]
 	public async Task Scenes_StartedWithWatchingOff_StayPrivate()
 	{
@@ -592,6 +587,6 @@ public class SceneSurfaceTests : TrackingBunitContext
 		cut.Find(".scene-start-submit").Click();
 
 		await _terminal.Received().SendAsync("+scene/create A quiet corner");
-		await _terminal.DidNotReceive().SendAsync("+scene/public");
+		await _terminal.Received().SendAsync("+scene/private");
 	}
 }
