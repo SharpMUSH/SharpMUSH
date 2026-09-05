@@ -10,6 +10,7 @@ using SharpMUSH.ConnectionServer.Services;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.NATS;
 using SharpMUSH.Messaging.NATS.Strategy;
 
@@ -156,18 +157,18 @@ public class Program
 			},
 			x =>
 			{
-				x.AddConsumer<TelnetOutputConsumer>();
-				x.AddConsumer<TelnetPromptConsumer>();
-				x.AddConsumer<MarkupOutputConsumer>();
-				x.AddConsumer<MarkupPromptConsumer>();
-				x.AddConsumer<BroadcastConsumer>();
-				x.AddConsumer<DisconnectConnectionConsumer>();
-				x.AddConsumer<GMCPOutputConsumer>();
-				x.AddConsumer<UpdatePlayerPreferencesConsumer>();
-				x.AddConsumer<WebSocketOutputConsumer>();
-				x.AddConsumer<WebSocketPromptConsumer>();
-				x.AddConsumer<MainProcessReadyConsumer>();
-				x.AddConsumer<MainProcessShutdownConsumer>();
+				x.AddConsumer<TelnetOutputConsumer, TelnetOutputMessage>();
+				x.AddConsumer<TelnetPromptConsumer, TelnetPromptMessage>();
+				x.AddConsumer<MarkupOutputConsumer, MarkupOutputMessage>();
+				x.AddConsumer<MarkupPromptConsumer, MarkupPromptMessage>();
+				x.AddConsumer<BroadcastConsumer, BroadcastMessage>();
+				x.AddConsumer<DisconnectConnectionConsumer, DisconnectConnectionMessage>();
+				x.AddConsumer<GMCPOutputConsumer, GMCPOutputMessage>();
+				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdatePlayerPreferencesMessage>();
+				x.AddConsumer<WebSocketOutputConsumer, WebSocketOutputMessage>();
+				x.AddConsumer<WebSocketPromptConsumer, WebSocketPromptMessage>();
+				x.AddConsumer<MainProcessReadyConsumer, MainProcessReadyMessage>();
+				x.AddConsumer<MainProcessShutdownConsumer, MainProcessShutdownMessage>();
 			});
 
 		var keepAlive = KeepAliveOptions.FromConfiguration(builder.Configuration);
