@@ -104,7 +104,7 @@ public class SceneWebComposeIntegrationTests
 	{
 		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var objects = await registry.GetPackageObjectsAsync("scene");
-		var logger = PackageInstallService.ParseObjid(objects.Single().Objid)!.Value.ToString();
+		var logger = PackageInstallService.ParseObjid(objects.Single(o => o.Ref == "logger").Objid)!.Value.ToString();
 		await God1($"@teleport {logger}=#2");
 	}
 

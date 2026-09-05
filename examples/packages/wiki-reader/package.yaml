@@ -146,7 +146,7 @@ objects:
 
       # The staff gate is INLINE in CMD`AUDIT rather than an INC`IS`ADMIN step: `help @include`
       # documents an included @assert as breaking the including action list, but this engine
-      # contains the break, so the gate printed "Staff only." and then ran the audit anyway.
+      # contains the break, so the gate printed "Staff only." and then ran the audit anyway. See #863.
       INC`IS`PAGE:
         value: |-
           @@ no arguments — validates %q<ref>, which the calling command stages; @assert %q<ref>=@include %!/INC`DISPLAY`ERROR=Which page? Try +wiki/list.; @assert u(%!/FUN`IS`PAGE,%q<ref>)=@include %!/INC`DISPLAY`ERROR=No such wiki page: %q<ref>

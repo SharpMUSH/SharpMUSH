@@ -447,6 +447,12 @@ objects:
       CMD`INFO: |-
         $+scene/info *: @assert not(strmatch(scene(setr(SceneID,%0),status),#-1*))=@pemit %#=No such scene: %0; @include %!/INC`DISPLAY`INFO=%q<SceneID>
 
+      # +scene/help is the thing a player actually types when they are lost, and before +help
+      # existed it was a bare Huh? — issue #860 opens on exactly that transcript. It does not
+      # duplicate the topic; it hands the reader the one command that reads it.
+      CMD`HELP: |-
+        $+scene/help: @pemit %#=Scene help lives under +help. Try: +help scene
+
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).
       AINSTALL: |-

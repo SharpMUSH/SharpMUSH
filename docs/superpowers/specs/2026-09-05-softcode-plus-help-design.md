@@ -235,3 +235,42 @@ contribute nothing.
   claim the whole registry design rests on.
 - `BundledCatalogueTests` gains `plus-help`; the first-boot install order is
   asserted to put it before its dependents.
+
+---
+
+## What implementation changed
+
+The design above is what was built, with three corrections that only testing could
+have found. Each is recorded in the manifest at the place it matters.
+
+**Help lives on an ordinary object, not on the one that runs the commands.** The
+design said the librarian carries `See_All` and that this covers reading another
+package's `HELP` tree. It does — but *reading* and *evaluating* are separate
+gates, and no power opens the second one: `CanEval` refuses `u()` on a privileged
+object's attribute unless the evaluator is privileged too. `scene`'s object must
+be `WIZARD` to run `@hook` and `@scene`, so the librarian could enumerate its
+topics and then render none of them. `scene` therefore grows a plain `Scene Help`
+thing, and "put your help on an unflagged object" is now part of the contributor
+contract. The librarian keeps `See_All`, which is still what lets it enumerate and
+read a tree on an object it does not own — a hand-registered `+help/source` target
+can belong to anyone.
+
+**A registration leaf is evaluated, not read.** Installed softcode never contains
+a raw dbref: a manifest `{{ref}}` becomes a `[v(PM`REFS`NAME)]` recall against the
+object holding it. So `SRC` leaves are read with `u()`, and what comes back is an
+*objid* — which contains the `:` the record format uses as a field separator, and
+so is normalized with `num()` before it becomes a record.
+
+**Guards are inline, not factored behind `@include`.** The design assumed the
+documented `@include` guard idiom. `@include` contains the break instead of
+propagating it (#863), so a guard reached that way refuses, prints its message,
+and lets the command run anyway. Every gate in `plus-help` is written inline until
+that is fixed; `wiki-reader`'s `+wiki/audit` had the same hole and is closed the
+same way.
+
+One consequence of evaluating bodies deserves its own line: `[`, `(` and `)` are
+softcode syntax, so prose containing them ends the expression. Shipped topics keep
+clear of parentheses and escape a literal bracket, which is also how a
+cross-reference is spelled; and `FUN`GET`RTEXT` falls back to the stored text when
+evaluation fails, so a badly written topic degrades to plain markdown rather than
+handing the reader a `#-1`.

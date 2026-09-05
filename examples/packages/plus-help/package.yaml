@@ -318,7 +318,7 @@ objects:
       # @assert as breaking the INCLUDING action list — that is the whole reason /nobreak exists —
       # but this engine contains the break instead, so a guard reached through @include prints its
       # refusal and then lets the command run anyway. Written inline, @assert stops the list as
-      # documented. Restore the factoring once @include propagates a break.
+      # documented. Restore the factoring once #863 is fixed.
       INC`DO`LISTING:
         value: |-
           @@ %0 title · %1 records · %2 page · %3 paging stem; @assert %1=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%1))]; @assert lte(%2,%q<pages>)=@include %!/INC`DISPLAY`ERROR=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %2.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%0,%1,%2,%3)]
@@ -352,9 +352,14 @@ objects:
         value: |-
           $^\+help/sources$:@pemit %#=[u(%!/FUN`DISPLAY`SOURCES,u(%!/FUN`GET`RECORDS))]
         flags: [regexp, cmdsyntax]
-      # attrib_set(), not & or @set: both of those evaluate the value a second time when they run
-      # from inside an attribute, which would resolve a topic's own [code] at write time instead of
-      # storing it for the reader. A %1 substitution is not re-scanned, so this stores verbatim.
+      # attrib_set() rather than "&": the attribute NAME is computed here, and @set obj/attr= sets
+      # attribute FLAGS on this engine rather than a value, so it is not an option at all. The body
+      # arrives already evaluated once — the line staff typed was evaluated on its way in, exactly
+      # as it is for "&attr obj=..." — and a %q substitution is not re-scanned, so what lands in the
+      # attribute is what they typed. Staff escape anything meant for the reader; see HELP`WRITE.
+      #
+      # attrib_set() is a side-effect function, so a game that sets function_side_effects=no loses
+      # +help/write. That is the trade for a computed attribute name; nothing else here needs it.
       CMD`WRITE:
         value: |-
           $^\+help/write\s+(?<topic>[^=]+)=(?<body>.*)$:@assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.; think [setq(topic,ucstr(trim(r(topic,args))))]; @assert %q<topic>=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,^\[A-Z0-9_. -\]+$)=@include %!/INC`DISPLAY`ERROR=A topic name is words of letters, digits, and _ . or -.; think [setq(attr,LOCAL`[edit(squish(%q<topic>),%b,`)])]; @assert setr(body,r(body,args))=@include %!/INC`DISPLAY`ERROR=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%!/%q<attr>,%q<body>)]; @pemit %#=[ansi(hc,Help>)] Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].

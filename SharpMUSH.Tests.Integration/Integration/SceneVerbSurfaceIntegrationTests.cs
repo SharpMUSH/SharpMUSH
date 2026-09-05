@@ -76,7 +76,7 @@ public class SceneVerbSurfaceIntegrationTests
 	{
 		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var objects = await registry.GetPackageObjectsAsync("scene");
-		return PackageInstallService.ParseObjid(objects.Single().Objid)!.Value.ToString();
+		return PackageInstallService.ParseObjid(objects.Single(o => o.Ref == "logger").Objid)!.Value.ToString();
 	}
 
 	/// <summary>The Logger's $-commands only match from the master room; other suites move it.</summary>

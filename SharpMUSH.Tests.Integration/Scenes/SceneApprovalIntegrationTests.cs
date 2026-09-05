@@ -172,7 +172,7 @@ public class SceneApprovalIntegrationTests
 
 		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var packageObjects = await registry.GetPackageObjectsAsync("scene");
-		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single(o => o.Ref == "logger").Objid)!.Value.ToString();
 		// The Logger is game-wide, and a $-command only matches for objects in the caller's room — so
 		// moving it here takes +scene/* away from every OTHER test's players for the rest of the run.
 		// It was left in this room, and later suites saw their +scene commands silently do nothing:
