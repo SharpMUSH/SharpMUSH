@@ -145,7 +145,11 @@ public class ConfigurationController(
 				var converted = ConvertJsonElement(value, ConfigAccessor.GetPropertyType(property)!);
 				result = ConfigAccessor.WithValue(result, property, converted);
 			}
-			catch (Exception ex)
+			// Only what converting a JsonElement and assigning it can raise. Anything else — a null
+			// dereference, a missing switch arm in the generated setter — is a defect in this code, and
+			// reporting it to the caller as "Invalid value" would bury it in a 400.
+			catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException
+				or OverflowException or InvalidCastException or ArgumentException or NotSupportedException)
 			{
 				errors[path] = $"Invalid value: {ex.Message}";
 			}
