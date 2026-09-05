@@ -115,7 +115,12 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		var body = await response.Content.ReadAsStringAsync();
 
 		await Assert.That((int)response.StatusCode).IsEqualTo(200);
-		// A shredded row surfaces as a parse failure or an error string, not a usable array.
+		// A shredded row surfaces as a parse failure or an error string, not a usable array. Checked
+		// before parsing so the failure names what the route actually said: JsonDocument.Parse reports
+		// the offending byte and nothing else, which is not enough to tell a shredded row from an
+		// error string when this only ever fails somewhere you cannot attach a debugger.
+		await Assert.That(body.TrimStart()).StartsWith("[")
+			.Because($"the route must answer with a JSON array; it answered: {body}");
 		using var doc = JsonDocument.Parse(body);
 		await Assert.That(doc.RootElement.ValueKind).IsEqualTo(JsonValueKind.Array);
 
