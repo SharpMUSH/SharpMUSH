@@ -192,6 +192,11 @@ public static class SharpMUSHOptionsExtension
 		// the locally generated attribute is the fallback for a response that omitted the table.
 		var metadata = options.Metadata.GetValueOrDefault(propertyName) ?? generated;
 		var value = ConfigAccessor.GetValue(options.Configuration, propertyName);
+
+		// The owning property on SharpMUSHOptions ("Net"), not SharpConfigAttribute.Category. Those
+		// disagree: ConfigMetadataGenerator overwrites the declared Category with the containing record's
+		// type name ("NetOptions"), while SchemaBuilder reports the property name. Section and Category
+		// carried the same value before, so keep them agreeing on the spelling the schema also uses.
 		var section = ConfigAccessor.GetCategoryForProperty(propertyName) ?? metadata.Category;
 
 		return new AdminConfigService.ConfigItem
@@ -204,7 +209,7 @@ public static class SharpMUSHOptionsExtension
 			Type = ConfigAccessor.GetPropertyType(propertyName)?.Name ?? string.Empty,
 			RawValue = value,
 			Description = string.IsNullOrEmpty(metadata.Description) ? "No Description" : metadata.Description,
-			Category = metadata.Category
+			Category = section
 		};
 	}
 

@@ -170,6 +170,10 @@ public class AdminConfigServiceTests
 		await Assert.That(mudName.Value).IsEqualTo("SharpMUSH");
 		await Assert.That(mudName.Section).IsEqualTo("Net");
 		await Assert.That(mudName.Type).IsEqualTo(nameof(String));
+
+		// Section and Category are two names for the same thing on ConfigItem; they must not drift into
+		// the two different spellings the generated metadata and the schema use for a category.
+		await Assert.That(mudName.Category).IsEqualTo(mudName.Section);
 	}
 
 	/// <summary>
