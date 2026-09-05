@@ -16,20 +16,23 @@ public static partial class SchemaBuilder
 	/// </summary>
 	public static ConfigurationSchema BuildSchema()
 	{
-		var schema = new ConfigurationSchema();
+		// Kept as a list as well as a dictionary: category and group ordering breaks ties by first-seen
+		// property, and Dictionary<,> enumeration order is an implementation detail, not a guarantee.
+		var ordered = BuildProperties();
 
-		schema.Properties = BuildProperties();
-		schema.Categories = BuildCategoriesFromProperties(schema.Properties);
-
-		return schema;
+		return new ConfigurationSchema
+		{
+			Properties = ordered.ToDictionary(property => property.Path),
+			Categories = BuildCategoriesFromProperties(ordered)
+		};
 	}
 
-	private static List<CategoryMetadata> BuildCategoriesFromProperties(Dictionary<string, PropertyMetadata> properties)
+	private static List<CategoryMetadata> BuildCategoriesFromProperties(List<PropertyMetadata> properties)
 	{
 		var categories = new Dictionary<string, CategoryMetadata>();
 		var groups = new Dictionary<string, Dictionary<string, GroupMetadata>>();
 
-		foreach (var prop in properties.Values)
+		foreach (var prop in properties)
 		{
 			if (!categories.ContainsKey(prop.Category))
 			{
@@ -67,12 +70,11 @@ public static partial class SchemaBuilder
 		return categories.Values.OrderBy(c => c.Order).ToList();
 	}
 
-	private static Dictionary<string, PropertyMetadata> BuildProperties()
+	/// <summary>Every configured property, in the order its category and then its record declares it.</summary>
+	private static List<PropertyMetadata> BuildProperties()
 	{
-		var properties = new Dictionary<string, PropertyMetadata>();
+		var properties = new List<PropertyMetadata>(ConfigMetadata.PropertyNames.Length);
 
-		// Declaration order, not dictionary order: BuildCategoriesFromProperties records a group the first
-		// time it sees one, and orders tied groups by that encounter.
 		foreach (var propertyName in ConfigMetadata.PropertyNames)
 		{
 			var attr = ConfigMetadata.PropertyMetadata[propertyName];
@@ -80,7 +82,7 @@ public static partial class SchemaBuilder
 			var category = attr.Category;
 			var path = $"{category}.{propertyName}";
 
-			properties[path] = new PropertyMetadata
+			properties.Add(new PropertyMetadata
 			{
 				Name = propertyName,
 				DisplayName = FormatPropertyDisplayName(attr.Name),
@@ -98,7 +100,7 @@ public static partial class SchemaBuilder
 				Tooltip = attr.Tooltip,
 				ReadOnly = false,
 				Path = path
-			};
+			});
 		}
 
 		return properties;
