@@ -22,6 +22,21 @@ namespace SharpMUSH.Tests.Integration.Profile;
 /// characters are addressed by objid via a query parameter, and real HTTP statuses come from
 /// @respond — there is no JSON status envelope.
 /// </summary>
+/// <remarks>
+/// Exclusive because these routes enumerate every player in the database. Eight other suites create
+/// players, and a player that lsearch() already returns but whose creation has not finished is one
+/// whose name and objid cannot yet be resolved — so the row renders as #-1, json_array rejects the
+/// batch, and the locate failures land in the response body, because everything notified while an
+/// HTTP request is served becomes that body.
+///
+/// That is what CI kept failing on, and why nothing reproduced it: by the time anything could ask,
+/// the creations had finished and every stage of the route evaluated perfectly. It appeared when
+/// this branch added more player-creating suites and the interleaving got wider, on a runner slow
+/// enough to hold the window open.
+///
+/// A test that reads the whole database cannot run while other tests are writing to it.
+/// </remarks>
+[NotInParallel]
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class ProfileApiTests(ServerWebAppFactory factory)
 {
