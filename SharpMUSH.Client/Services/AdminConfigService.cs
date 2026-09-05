@@ -1,7 +1,9 @@
 ﻿using OneOf.Types;
 using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
+using System.Collections;
 using System.Net.Http.Json;
 
 namespace SharpMUSH.Client.Services;
@@ -153,99 +155,65 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 
 public static class SharpMUSHOptionsExtension
 {
+	/// <summary>
+	/// Flattens a configuration response into one row per configured property.
+	/// </summary>
+	/// <remarks>
+	/// The property list, each property's category, and its declared type all come from
+	/// <c>ConfigAccessor</c>/<c>ConfigMetadata</c>, which the config generators emit from the
+	/// <see cref="SharpConfigAttribute"/>-annotated members of <see cref="SharpMUSHOptions"/>. That is the
+	/// same table the server sends as <see cref="ConfigurationResponse.Metadata"/> (see
+	/// <c>OptionHelper.OptionsToConfigurationResponse</c>), so the two agree by construction and a property
+	/// added to an options record shows up here without any further wiring.
+	/// </remarks>
 	public static OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>> ToConfigItems(this ConfigurationResponse options)
 	{
-		var configItems = new List<AdminConfigService.ConfigItem>();
-
-		try
+		if (options.Configuration is null)
 		{
-			var optionsType = typeof(SharpMUSHOptions);
-			var properties = optionsType.GetProperties();
-
-			foreach (var prop in properties)
-			{
-				try
-				{
-					var sectionName = prop.Name;
-					var sectionValue = prop.GetValue(options);
-
-					if (sectionValue is null)
-					{
-						continue;
-					}
-
-					var sectionType = prop.PropertyType;
-					var sectionProperties = sectionType.GetProperties();
-
-					foreach (var sectionProp in sectionProperties)
-					{
-						try
-						{
-							var value = sectionProp.GetValue(sectionValue);
-							var valueString = value switch
-							{
-								null => "",
-								bool b => b.ToString(),
-								string s => s,
-								System.Collections.IEnumerable enumerable and not string =>
-									string.Join(", ", enumerable.Cast<object>().Select(x => x?.ToString() ?? "null")),
-								_ => value.ToString() ?? "null"
-							};
-
-							configItems.Add(new AdminConfigService.ConfigItem
-							{
-								Section = options.Metadata[sectionProp.Name].Category,
-								Key = sectionProp.Name,
-								Value = valueString,
-								Type = sectionProp.PropertyType.Name,
-								RawValue = value,
-								Description = options.Metadata[sectionProp.Name].Description ?? "No Description",
-								Category = options.Metadata[sectionProp.Name].Category
-							});
-						}
-						catch (Exception ex)
-						{
-							configItems.Add(new AdminConfigService.ConfigItem
-							{
-								Section = sectionName,
-								Key = sectionProp.Name,
-								Value = $"Error: {ex.Message}",
-								Type = sectionProp.PropertyType.Name,
-								Description = "Error loading property",
-								Category = sectionName
-							});
-						}
-					}
-				}
-				catch (Exception ex)
-				{
-					configItems.Add(new AdminConfigService.ConfigItem
-					{
-						Section = prop.Name,
-						Key = "Error",
-						Value = $"Failed to load section: {ex.Message}",
-						Type = "Error",
-						Description = "Error loading section",
-						Category = "Error"
-					});
-				}
-			}
-		}
-		catch (Exception ex)
-		{
-			return OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>>.FromT0([new AdminConfigService.ConfigItem
-			{
-				Section = "Error",
-				Key = "ConfigurationError",
-				Value = $"Failed to load configuration: {ex.Message}",
-				Type = "Error",
-				Description = "Critical configuration error",
-				Category = "Error"
-			}]);
+			return OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>>.FromT1(
+				new Error<string>("The configuration response carried no configuration."));
 		}
 
-		return OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>>.FromT0(configItems
+		var configItems = ConfigMetadata.PropertyMetadata
+			.Select(entry => ToConfigItem(options, entry.Key, entry.Value))
 			.OrderBy(x => x.Section)
-			.ThenBy(x => x.Key));
+			.ThenBy(x => x.Key)
+			.ToList();
+
+		return OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>>.FromT0(configItems);
 	}
+
+	private static AdminConfigService.ConfigItem ToConfigItem(
+		ConfigurationResponse options,
+		string propertyName,
+		SharpConfigAttribute generated)
+	{
+		// The server's metadata wins when it sent any, so a description it overrides survives the trip;
+		// the locally generated attribute is the fallback for a response that omitted the table.
+		var metadata = options.Metadata.GetValueOrDefault(propertyName) ?? generated;
+		var value = ConfigAccessor.GetValue(options.Configuration, propertyName);
+		var section = ConfigAccessor.GetCategoryForProperty(propertyName) ?? metadata.Category;
+
+		return new AdminConfigService.ConfigItem
+		{
+			Section = section,
+			Key = propertyName,
+			Value = Render(value),
+			// Nullable value types render as "Nullable`1" and dictionaries as "Dictionary`2"; ConfigItem's
+			// IsNullable/IsDictionary predicates are written against exactly those names.
+			Type = ConfigAccessor.GetPropertyType(propertyName)?.Name ?? string.Empty,
+			RawValue = value,
+			Description = string.IsNullOrEmpty(metadata.Description) ? "No Description" : metadata.Description,
+			Category = metadata.Category
+		};
+	}
+
+	private static string Render(object? value) => value switch
+	{
+		null => string.Empty,
+		bool b => b.ToString(),
+		string s => s,
+		IEnumerable enumerable => string.Join(", ", enumerable.Cast<object>().Select(x => x?.ToString() ?? "null")),
+		_ => value.ToString() ?? "null"
+	};
 }
