@@ -30,17 +30,25 @@ public partial class Functions
 	public static ValueTask<CallState> EndTag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(ErrorMessages.Returns.UseTagwrapInstead);
 
-	[SharpFunction(Name = "tagwrap", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["tag", "content"])]
+	/// <summary>
+	/// <c>tagwrap(&lt;name&gt;[, &lt;parameters&gt;], &lt;string&gt;)</c> — the wrapped STRING is the last
+	/// argument, with the optional tag parameters in the middle (<c>help tagwrap</c>, and PennMUSH).
+	/// The two were read the other way round, so a three-argument call put the parameters inside the
+	/// element and the text into the tag: <c>tagwrap(a,href="x",Link)</c> rendered
+	/// <c>&lt;a Link&gt;href="x"&lt;/a&gt;</c>. Two-argument calls are unaffected.
+	/// </summary>
+	[SharpFunction(Name = "tagwrap", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["tag", "parameters", "content"])]
 	public static ValueTask<CallState> TagWrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var tagName = args["0"].Message!.ToPlainText();
-		var content = args["1"].Message!;
+		var hasParameters = args.Count > 2;
+		var content = args[hasParameters ? "2" : "1"].Message!;
 
 		string? attributes = null;
-		if (args.Count > 2)
+		if (hasParameters)
 		{
-			var attrText = args["2"].Message!.ToPlainText();
+			var attrText = args["1"].Message!.ToPlainText();
 			if (!string.IsNullOrEmpty(attrText))
 			{
 				attributes = attrText;

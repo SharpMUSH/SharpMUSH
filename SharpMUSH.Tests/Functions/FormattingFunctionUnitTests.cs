@@ -27,6 +27,9 @@ public class FormattingFunctionUnitTests
 
 	[Test]
 	[Arguments("tagwrap(b,text)", "<b>text</b>")]
+	// help tagwrap: tagwrap(<name>[, <parameters>], <string>) — the wrapped string is LAST.
+	[Arguments("tagwrap(a,href=\"https://sharpmush.com\",SharpMUSH)", "<a href=\"https://sharpmush.com\">SharpMUSH</a>")]
+	[Arguments("tagwrap(a,xch_cmd=\"+help scene\",Read it)", "<a xch_cmd=\"+help scene\">Read it</a>")]
 	public async Task Tagwrap(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

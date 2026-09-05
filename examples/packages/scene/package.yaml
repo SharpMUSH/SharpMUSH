@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.14.0
+version: 1.15.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -421,7 +421,7 @@ objects:
       # <a href="..."> instead of the address. So the capability is asked for rather than assumed.
       # %0 is who is reading, %1 the address.
       FUN`URL_TEXT: |-
-        [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,%1,href="%1")],%1)]
+        [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,href="%1",%1)],%1)]
 
       # mud_url is written both ways by different admins, and joining a trailing slash to a leading
       # one gives a path no server answers.
@@ -470,7 +470,7 @@ objects:
   # Bodies are markdown and are EVALUATED when read, so a literal "[" is written "\[". That is
   # what makes \[scene join\] below a live cross-reference: u() leaves \[scene join\], and the
   # markdown renderer turns it into a +help command link.
-  - ref: help
+  - ref: scene_help
     type: thing
     name: Scene Help
     attributes:
@@ -560,4 +560,4 @@ objects:
     target: "{{plus-help/librarian}}"
     attributes:
       SRC`SCENE: |-
-        {{help}}
+        {{scene_help}}
