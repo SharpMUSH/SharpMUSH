@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -93,11 +94,84 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 		                        _ => null
 		                    };
 		                }
+		                
+		                /// <summary>The default declared on the property's primary-constructor parameter, or null when it declares none.</summary>
+		                public static object? GetDeclaredDefault(string propertyName)
+		                {
+		                    return propertyName switch
+		                    {
+		                        {{string.Join("\n                ", allProperties.Select(p => $"\"{p.Property.Name}\" => {DeclaredDefault(p.Category, p.Property)},"))}}
+		                        _ => null
+		                    };
+		                }
+		                
+		                /// <summary>
+		                /// True when every parameter of the category's record declares a default, so the record can be
+		                /// constructed with none supplied.
+		                /// </summary>
+		                public static bool IsCategoryDefaultConstructible(string categoryName)
+		                {
+		                    return categoryName switch
+		                    {
+		                        {{string.Join("\n                ", categories.Select(c => $"\"{c.Name}\" => {(IsDefaultConstructible(c) ? "true" : "false")},"))}}
+		                        _ => false
+		                    };
+		                }
 		            }
 		            """;
 
 		spc.AddSource("ConfigAccessor_Generated.g.cs", str);
 	}
+
+	private static IParameterSymbol? PrimaryConstructorParameter(IPropertySymbol category, IPropertySymbol property)
+		=> category.Type is not INamedTypeSymbol categoryType
+			? null
+			: categoryType.Constructors
+				.OrderByDescending(c => c.Parameters.Length)
+				.FirstOrDefault()
+				?.Parameters
+				.FirstOrDefault(param => param.Name == property.Name);
+
+	private static string DeclaredDefault(IPropertySymbol category, IPropertySymbol property)
+	{
+		var parameter = PrimaryConstructorParameter(category, property);
+
+		return parameter is { HasExplicitDefaultValue: true }
+			? Literal(parameter.ExplicitDefaultValue)
+			: "null";
+	}
+
+	private static bool IsDefaultConstructible(IPropertySymbol category)
+		=> category.Type is INamedTypeSymbol categoryType
+			&& categoryType.Constructors
+				.OrderByDescending(c => c.Parameters.Length)
+				.FirstOrDefault() is { } primary
+			&& primary.Parameters.All(param => param.HasExplicitDefaultValue);
+
+	/// <summary>
+	/// Re-emits a boxed constant with its own type. GetDeclaredDefault is typed object?, so a uint default
+	/// written as a bare number would come back an int and compare unequal to the property's real value.
+	/// </summary>
+	private static string Literal(object? value) => value switch
+	{
+		null => "null",
+		bool b => b ? "true" : "false",
+		string str => $"\"{EscapeString(str)}\"",
+		char c => $"'{(c == '\'' ? "\\'" : c == '\\' ? "\\\\" : c.ToString())}'",
+		int i => i.ToString(CultureInfo.InvariantCulture),
+		uint u => u.ToString(CultureInfo.InvariantCulture) + "u",
+		long l => l.ToString(CultureInfo.InvariantCulture) + "L",
+		ulong ul => ul.ToString(CultureInfo.InvariantCulture) + "UL",
+		short sh => "(short)" + sh.ToString(CultureInfo.InvariantCulture),
+		ushort us => "(ushort)" + us.ToString(CultureInfo.InvariantCulture),
+		double d => d.ToString("R", CultureInfo.InvariantCulture) + "d",
+		float f => f.ToString("R", CultureInfo.InvariantCulture) + "f",
+		decimal m => m.ToString(CultureInfo.InvariantCulture) + "m",
+		_ => "null"
+	};
+
+	private static string EscapeString(string str)
+		=> str.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
 	private static string GetTypeName(ITypeSymbol type)
 	{

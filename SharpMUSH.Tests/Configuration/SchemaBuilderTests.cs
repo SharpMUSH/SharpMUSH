@@ -12,9 +12,7 @@ public class SchemaBuilderTests
 {
 	private static ConfigurationSchema BuildSchema()
 	{
-		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
-		var options = ReadPennMushConfig.Create(configFile);
-		return SchemaBuilder.BuildSchema(options);
+		return SchemaBuilder.BuildSchema();
 	}
 
 	[Test]
@@ -70,6 +68,29 @@ public class SchemaBuilderTests
 		var costGroups = string.Join("|", schema.Categories.First(c => c.Name == "Cost").Groups.Select(g => g.Name));
 
 		await Assert.That(costGroups).IsEqualTo("Building Costs|Command Costs");
+	}
+
+	/// <summary>
+	/// Characterises how DefaultValue is populated today, so the move off reflection can be shown to
+	/// preserve it. The rule is all-or-nothing per category: the default comes from a default-constructed
+	/// instance of the category record, so a record with any parameter lacking a default cannot be
+	/// constructed at all and every one of its properties reports null — including the ones that do
+	/// declare a default. Only NetOptions and SitelockRulesOptions give every parameter one.
+	/// </summary>
+	[Test]
+	public async Task DefaultValue_IsPopulatedOnlyForFullyDefaultedCategories()
+	{
+		var schema = BuildSchema();
+
+		// NetOptions: every parameter has a default, so the record is default-constructible.
+		await Assert.That(schema.Properties["Net.MudName"].DefaultValue).IsEqualTo("SharpMUSH");
+		await Assert.That(schema.Properties["Net.Port"].DefaultValue).IsEqualTo(4201u);
+
+		// CommandOptions declares no defaults at all.
+		await Assert.That(schema.Properties["Command.NoisyWhisper"].DefaultValue).IsNull();
+
+		// DebugOptions is the mixed case: one parameter has a default, one does not, so neither reports one.
+		await Assert.That(schema.Properties["Debug.DebugSharpParser"].DefaultValue).IsNull();
 	}
 
 	[Test]

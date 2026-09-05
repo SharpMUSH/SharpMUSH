@@ -66,6 +66,14 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 		                    {{string.Join(",\n            ", metadata.Select(m => $"{{ \"{m.AttributeName}\", \"{m.PropertyName}\" }}"))}}
 		                }.ToImmutableDictionary();
 		                
+		                /// <summary>
+		                /// Every configured property, in the order its category and then its record declares it.
+		                /// The dictionaries below are unordered, and the config UI groups by first-seen order.
+		                /// </summary>
+		                public static readonly ImmutableArray<string> PropertyNames = [
+		                    {{string.Join(",\n            ", metadata.Select(m => $"\"{m.PropertyName}\""))}}
+		                ];
+		                
 		                public static readonly ImmutableDictionary<string, SharpConfigAttribute> PropertyMetadata = new Dictionary<string, SharpConfigAttribute>
 		                {
 		                    {{string.Join(",\n            ", metadataWithAttributes)}}

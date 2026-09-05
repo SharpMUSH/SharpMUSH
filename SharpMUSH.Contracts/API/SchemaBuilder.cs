@@ -1,6 +1,5 @@
 using SharpMUSH.Configuration;
-using SharpMUSH.Configuration.Options;
-using System.Reflection;
+using SharpMUSH.Configuration.Generated;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.API;
@@ -10,11 +9,16 @@ namespace SharpMUSH.Library.API;
 /// </summary>
 public static partial class SchemaBuilder
 {
-	public static ConfigurationSchema BuildSchema(SharpMUSHOptions options)
+	/// <summary>
+	/// Builds the configuration schema. It describes the shape of the options — names, types, groups,
+	/// declared defaults — none of which depends on the values currently loaded, so it takes no options
+	/// instance. Everything comes from the tables the config generators emit.
+	/// </summary>
+	public static ConfigurationSchema BuildSchema()
 	{
 		var schema = new ConfigurationSchema();
 
-		schema.Properties = BuildPropertiesFromReflection(options);
+		schema.Properties = BuildProperties();
 		schema.Categories = BuildCategoriesFromProperties(schema.Properties);
 
 		return schema;
@@ -63,54 +67,54 @@ public static partial class SchemaBuilder
 		return categories.Values.OrderBy(c => c.Order).ToList();
 	}
 
-	private static Dictionary<string, PropertyMetadata> BuildPropertiesFromReflection(SharpMUSHOptions options)
+	private static Dictionary<string, PropertyMetadata> BuildProperties()
 	{
 		var properties = new Dictionary<string, PropertyMetadata>();
-		var optionsType = typeof(SharpMUSHOptions);
 
-		foreach (var categoryProp in optionsType.GetProperties())
+		// Declaration order, not dictionary order: BuildCategoriesFromProperties records a group the first
+		// time it sees one, and orders tied groups by that encounter.
+		foreach (var propertyName in ConfigMetadata.PropertyNames)
 		{
-			var categoryValue = categoryProp.GetValue(options);
-			if (categoryValue == null) continue;
+			var attr = ConfigMetadata.PropertyMetadata[propertyName];
+			var type = ConfigAccessor.GetPropertyType(propertyName)!;
+			var category = attr.Category;
+			var path = $"{category}.{propertyName}";
 
-			var categoryType = categoryProp.PropertyType;
-			var categoryName = categoryProp.Name;
-
-			var defaultInstance = GetDefaultInstance(categoryType);
-
-			foreach (var prop in categoryType.GetProperties())
+			properties[path] = new PropertyMetadata
 			{
-				var attr = prop.GetCustomAttribute<SharpConfigAttribute>();
-				if (attr == null) continue;
-
-				var path = $"{categoryName}.{prop.Name}";
-				var currentValue = prop.GetValue(categoryValue);
-				var defaultValue = defaultInstance != null ? prop.GetValue(defaultInstance) : null;
-
-				properties[path] = new PropertyMetadata
-				{
-					Name = prop.Name,
-					DisplayName = FormatPropertyDisplayName(attr.Name),
-					Description = attr.Description,
-					Category = categoryName,
-					Group = attr.Group,
-					Order = attr.Order,
-					Type = GetPropertyTypeName(prop.PropertyType),
-					Component = InferComponentType(prop.PropertyType),
-					DefaultValue = defaultValue,
-					Min = attr.Min,
-					Max = attr.Max,
-					Pattern = attr.ValidationPattern,
-					Required = !IsNullable(prop.PropertyType),
-					Tooltip = attr.Tooltip,
-					ReadOnly = false,
-					Path = path
-				};
-			}
+				Name = propertyName,
+				DisplayName = FormatPropertyDisplayName(attr.Name),
+				Description = attr.Description,
+				Category = category,
+				Group = attr.Group,
+				Order = attr.Order,
+				Type = GetPropertyTypeName(type),
+				Component = InferComponentType(type),
+				DefaultValue = DefaultValueOf(propertyName, category),
+				Min = attr.Min,
+				Max = attr.Max,
+				Pattern = attr.ValidationPattern,
+				Required = !IsNullable(type),
+				Tooltip = attr.Tooltip,
+				ReadOnly = false,
+				Path = path
+			};
 		}
 
 		return properties;
 	}
+
+	/// <summary>
+	/// A default is reported only when the whole category record could be default-constructed, which is how
+	/// this read defaults when it built them from <c>Activator.CreateInstance</c>: a record with any
+	/// parameter lacking a default could not be constructed, so none of its properties reported one — not
+	/// even those declaring a default of their own. That rule is arbitrary, but changing which properties
+	/// advertise a default is a UI-visible decision and does not belong in a refactor.
+	/// </summary>
+	private static object? DefaultValueOf(string propertyName, string category)
+		=> ConfigAccessor.IsCategoryDefaultConstructible(category)
+			? ConfigAccessor.GetDeclaredDefault(propertyName)
+			: null;
 
 	private static string FormatPropertyDisplayName(string name)
 	{
@@ -128,18 +132,6 @@ public static partial class SchemaBuilder
 		}
 
 		return PascalCaseSplitRegex().Replace(name, " $1").Trim();
-	}
-
-	private static object? GetDefaultInstance(Type type)
-	{
-		try
-		{
-			return Activator.CreateInstance(type);
-		}
-		catch
-		{
-			return null;
-		}
 	}
 
 	private static string GetPropertyTypeName(Type type)
