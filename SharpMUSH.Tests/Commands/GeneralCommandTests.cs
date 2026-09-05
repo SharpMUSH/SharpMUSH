@@ -39,7 +39,7 @@ public class GeneralCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(executor),
-				expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -240,12 +240,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1a; @assert; think assert 2a; think assert 3a"));
 		await Parser.CommandListParse(MModule.single("think break 1a; @break; think break 2a; think break 3a"));
 
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "break 1a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "break 2a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "break 3a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "assert 1a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 3a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 1a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 2a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 3a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -255,12 +255,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
 		await Parser.CommandListParse(MModule.single("think break 1b; @break 1; think break 2b; think break 3b"));
 
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "assert 1b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "assert 2b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "assert 3b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "break 1b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 1b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 2b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 3b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 3b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -270,12 +270,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
 		await Parser.CommandListParse(MModule.single("think break 1c; @break 0; think break 2c; think break 3c"));
 
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "break 1c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "break 2c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "break 3c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "assert 1c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 3c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 1c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 2c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 3c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -285,10 +285,10 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(
 			MModule.single("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
 
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "break 1d", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2d", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3d", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "broken 1d", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1d"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2d"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 3d"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("broken 1d"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -298,11 +298,11 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(
 			MModule.single("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
 
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "break 1e", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2e", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3e", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "broken 1e", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), "broken 2e", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 3e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("broken 1e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("broken 2e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

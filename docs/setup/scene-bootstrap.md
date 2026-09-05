@@ -83,7 +83,7 @@ edit their own poses.
 | `+scene/recall [<n>]` | print the last `<n>` poses |
 | `+scene/edit <id>=<before>^^^<after>` | fix a typo in your pose |
 | `+scene/undo <id>` · `/redo <id>` · `/delete <id>` · `/move <id>=<after>` | pose management |
-| `+scene/who <id>` | cast list |
+| `+scene/info <id>` | the scene's card: pitch, where, status, cast, members with roles, who may watch (same as `+scene <id>`) |
 | `+scene/schedule <title>=<when>` | schedule a roomless future scene |
 | `+scene/reschedule <id>=<when>` · `/unschedule <id>` · `/upcoming` | manage / list scheduled |
 | `+pot` | pose tracker (turn order for the focused scene) |

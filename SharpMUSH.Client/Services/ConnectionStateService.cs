@@ -172,7 +172,17 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	/// <inheritdoc/>
 	public async Task ReconnectAsync()
 	{
-		if (_hub is null) return;
+		// A null hub means this session has never connected — the state EVERY caller arrives in the
+		// first time. Character creation, terminal login and character switch all come through here,
+		// and nothing calls ConnectAsync directly, so returning early left the game hub unconnected
+		// for the whole session: no live scene poses, no room events, and a compose box on
+		// /scenes/{id}/live that could never send. There is nothing to tear down first.
+		if (_hub is null)
+		{
+			await ConnectAsync();
+			return;
+		}
+
 		await DisconnectAsync();
 		await ConnectAsync();
 	}

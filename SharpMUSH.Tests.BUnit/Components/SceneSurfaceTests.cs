@@ -41,7 +41,7 @@ file sealed class SceneLiveHarness : ComponentBase
 /// timestamps). Active and recent lists carry one scene; the scene's poses include one
 /// edited pose carrying raw Markup and a distinct tag set for the chip filter.
 /// </summary>
-file sealed class SceneApiHandler : HttpMessageHandler
+internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 {
 	private const string SceneList = """
 	[
@@ -74,11 +74,39 @@ file sealed class SceneApiHandler : HttpMessageHandler
 	]
 	""";
 
+	/// <summary>
+	/// Whether a new scene shows up on reads after the first. Off is the refused case. Instance state:
+	/// these tests run in parallel and a static would leak the answer between them.
+	/// </summary>
+	public bool ASceneAppears { get; set; }
+
+	private int _activeListCalls;
+
+	private const string SceneListWithNewScene = """
+	[
+	  {"id":"S1","status":"active","isPublic":true,"isTempRoom":false,"scheduledFor":null,
+	   "startedAt":1700000000000,"lastActivityAt":1700000500000,"poseCount":2,
+	   "ownerDbref":"#1","ownerName":"Wizard","starterDbref":"#1","starterName":"Wizard",
+	   "roomDbref":"#7","roomName":"The Tavern","meta":{"title":"Barroom Brawl"}},
+	  {"id":"S2","status":"active","isPublic":true,"isTempRoom":false,"scheduledFor":null,
+	   "startedAt":1700000600000,"lastActivityAt":1700000600000,"poseCount":0,
+	   "ownerDbref":"#1","ownerName":"Wizard","starterDbref":"#1","starterName":"Wizard",
+	   "roomDbref":"#7","roomName":"The Tavern","meta":{"title":"A Quiet Corner"}}
+	]
+	""";
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var path = request.RequestUri!.AbsolutePath;
 		string? body = path switch
 		{
+			// Keyed on the ACTIVE list specifically: the page reads recent and active from this same
+			// path on load, so counting every read would have the scene appear before the form was
+			// even used. It shows up on the second active read — the page's first poll — which is
+			// what "a scene was created" looks like from out here.
+			"/api/scenes" when ASceneAppears
+				&& request.RequestUri.Query.Contains("filter=active", StringComparison.Ordinal)
+				&& ++_activeListCalls > 1 => SceneListWithNewScene,
 			"/api/scenes" => SceneList,
 			"/api/scenes/S1" => Scene,
 			"/api/scenes/S1/poses" => Poses,
@@ -106,8 +134,22 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	/// <summary>Set to make <see cref="JoinSceneAsync"/> refuse, as the hub does for a caller with no character.</summary>
 	public HubException? JoinRefusal { get; set; }
 
-	public bool IsConnected => true;
-	public HubConnectionState ConnectionState => HubConnectionState.Connected;
+	/// <summary>
+	/// Starts connected, as most tests want. False reproduces a returning player: the hub is fresh on
+	/// every page load and nothing on a plain load connects it.
+	/// </summary>
+	public bool IsConnected { get; set; } = true;
+
+	public int ConnectCalls { get; private set; }
+
+	/// <summary>
+	/// Counted apart from <see cref="ConnectCalls"/>: ConnectAsync returns early whenever a hub object
+	/// exists, connected or not, so only a reconnect can revive a dropped one.
+	/// </summary>
+	public int ReconnectCalls { get; private set; }
+
+	public HubConnectionState ConnectionState =>
+		IsConnected ? HubConnectionState.Connected : HubConnectionState.Disconnected;
 
 	public event Action? OnConnectionStateChanged;
 	public event Action<GameOutputMessage>? OnOutputReceived;
@@ -115,9 +157,20 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	public event Action? OnPluginsChanged;
 	public event Action<SceneEventMessage>? OnSceneEventReceived;
 
-	public Task ConnectAsync() => Task.CompletedTask;
+	public Task ConnectAsync()
+	{
+		ConnectCalls++;
+		IsConnected = true;
+		OnConnectionStateChanged?.Invoke();
+		return Task.CompletedTask;
+	}
+
 	public Task DisconnectAsync() => Task.CompletedTask;
-	public Task ReconnectAsync() => Task.CompletedTask;
+	public Task ReconnectAsync()
+	{
+		ReconnectCalls++;
+		return ConnectAsync();
+	}
 
 	public Task SendCommandAsync(string command)
 	{
@@ -144,7 +197,6 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	// Keep the compiler from flagging the otherwise-unused events.
 	public void Touch()
 	{
-		OnConnectionStateChanged?.Invoke();
 		OnOutputReceived?.Invoke(null!);
 		OnRoomEventReceived?.Invoke(null!);
 	}
@@ -153,10 +205,17 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 public class SceneSurfaceTests : TrackingBunitContext
 {
 	private readonly FakeSceneHub _hub = new();
+	private readonly SceneSurfaceApiHandler _api = new();
+
+	/// <summary>
+	/// The terminal MainLayout mounts on every page — already open as the character, and the channel
+	/// the compose box sends through.
+	/// </summary>
+	private readonly ITerminalService _terminal = Substitute.For<ITerminalService>();
 
 	public SceneSurfaceTests()
 	{
-		var apiClient = Track(new HttpClient(new SceneApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
+		var apiClient = Track(new HttpClient(_api) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 
@@ -166,9 +225,104 @@ public class SceneSurfaceTests : TrackingBunitContext
 			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SceneService>.Instance))
 			.AddSingleton<IConnectionStateService>(_hub)
 			.AddSingleton<ISceneHubControl>(_hub)
+			.AddSingleton(_terminal)
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
+	}
+
+	/// <summary>
+	/// The field binds as the player types. MudTextField binds on change (blur) by default, which left
+	/// the text empty through an entire pose and the Send button never clickable.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_EnablesSend_AsSoonAsSomethingIsTyped()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".scene-live-compose button").HasAttribute("disabled")).IsTrue();
+
+		cut.Find(".scene-live-compose textarea").Input("a raven settles on the well");
+
+		await Assert.That(cut.Find(".scene-live-compose button").HasAttribute("disabled")).IsFalse();
+	}
+
+	/// <summary>Enter is a newline. A pose is prose; only the button sends it.</summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_EnterDoesNotSend()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
+
+		var box = cut.Find(".scene-live-compose textarea");
+		box.Input("half a thought");
+		box.KeyDown(Key.Enter);
+
+		await _terminal.DidNotReceive().SendAsync(Arg.Any<string>());
+	}
+
+	/// <summary>
+	/// The send button issues a scene-targeted game command down the terminal websocket, defaulting to
+	/// emit — the mode that renders the author's words verbatim with no name glued to the front, which
+	/// is what a compose box on a scene's own page is for. Newlines go out as %r: the channel is
+	/// line-delimited, and the engine expands it back before matching the verb's pattern.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_SendButton_SendsASceneEmitWithNewlinesAsPercentR()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-live-compose textarea").Input("line one\nline two");
+		cut.Find(".scene-live-compose button").Click();
+
+		await _terminal.Received().SendAsync("+scene/emit S1=line one%rline two");
+		// Never the hub: its SendCommand publishes onto a subject nothing subscribes to.
+		await Assert.That(_hub.SentCommands).IsEmpty();
+	}
+
+	/// <summary>
+	/// A returning player loads /scenes/{id}/live with a valid session and a fresh hub singleton —
+	/// nothing on that path logs in again, so nothing had connected the hub. The page rendered its
+	/// "not connected to the game" banner over a permanently disabled compose box while the sidebar
+	/// said the same character was online. The page needs the connection, so the page establishes it.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_ConnectsTheHub_WhenItIsNotConnectedYet()
+	{
+		_hub.IsConnected = false;
+
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (_hub.ConnectCalls == 0)
+				throw new InvalidOperationException("hub not connected yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(_hub.ConnectCalls).IsEqualTo(1);
+		await Assert.That(_hub.IsConnected).IsTrue();
+		// And with the connection up it joins the scene group, which is what delivers live poses.
+		await Assert.That(_hub.Joined).Contains("S1");
+	}
+
+	/// <summary>An already-connected hub is left alone — reconnecting would drop the group joins.</summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_DoesNotReconnectAnAlreadyConnectedHub()
+	{
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (_hub.Joined.Count == 0)
+				throw new InvalidOperationException("scene group not joined yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(_hub.ConnectCalls).IsEqualTo(0);
 	}
 
 	[TUnit.Core.Test]
@@ -240,9 +394,22 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Assert.That(cut.Markup).DoesNotContain("says calm down"); // dialogue pose filtered out
 	}
 
+	/// <summary>
+	/// The editor joins the scene group and sends a game command rather than writing through the
+	/// scene service — still the contract. What changed is which command and down which channel: it
+	/// used to send a bare <c>:pose</c> on the game hub, whose SendCommand publishes onto a NATS
+	/// subject nothing subscribes to, so the pose never reached the engine at all. It now sends the
+	/// scene-targeted <c>+scene/emit</c> verb down the command terminal's websocket, which the engine
+	/// already consumes.
+	///
+	/// <para>The old assertion "never @emit" is preserved in spirit: a raw <c>@emit</c> would be
+	/// recorded only if the poser happened to be focused on this scene in this room.
+	/// <c>+scene/emit</c> names the scene, so it records unconditionally.</para>
+	/// </summary>
 	[TUnit.Core.Test]
-	public async Task SceneLive_Editor_SendsCommandNotServiceWrite_AndJoinsScene()
+	public async Task SceneLive_Editor_SendsASceneCommandOnTheTerminal_AndJoinsScene()
 	{
+		_terminal.IsConnected.Returns(true);
 		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
 
 		cut.WaitForAssertion(() =>
@@ -254,20 +421,11 @@ public class SceneSurfaceTests : TrackingBunitContext
 		// JoinScene was invoked for the scene group on init.
 		await Assert.That(_hub.Joined).Contains("S1");
 
-		// Type into the compose field and send.
-		var textarea = cut.Find("textarea");
-		textarea.Change("waves hello");
-		cut.Find("button.mud-icon-button").Click();
+		cut.Find(".scene-live-compose textarea").Input("waves hello");
+		cut.Find(".scene-live-compose button").Click();
 
-		cut.WaitForAssertion(() =>
-		{
-			if (_hub.SentCommands.Count == 0)
-				throw new InvalidOperationException("command not sent yet");
-		}, TimeSpan.FromSeconds(5));
-
-		// A normal pose command was sent on the hub — never @emit.
-		await Assert.That(_hub.SentCommands).Contains(":waves hello");
-		await Assert.That(_hub.SentCommands.Any(c => c.Contains("@emit"))).IsFalse();
+		await _terminal.Received().SendAsync("+scene/emit S1=waves hello");
+		await Assert.That(_hub.SentCommands).IsEmpty();
 
 		// No optimistic insert: the author's pose only appears after the round-trip event.
 		await Assert.That(cut.Markup).DoesNotContain("waves hello");
@@ -360,5 +518,169 @@ public class SceneSurfaceTests : TrackingBunitContext
 		}, TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Markup).Contains("waves hello");
+	}
+
+	/// <summary>
+	/// The scene browser can start a scene.
+	///
+	/// <para>It could not. <c>/scenes</c> listed what already existed and offered Read and Join, and
+	/// that was all — the only way to begin one was <c>+scene/create</c> typed into the terminal, which
+	/// nothing in the portal mentions. A player who arrived through the web, made a character and went
+	/// looking for roleplay reached the page named after it and found no way in.</para>
+	///
+	/// <para>It sends the same verb down the same websocket the compose box uses, because that
+	/// connection is already open as the character.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_StartsAScene_ThroughTheTerminal()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("The Lantern Room");
+		cut.Find(".scene-start-submit").Click();
+
+		await _terminal.Received().SendAsync("+scene/create The Lantern Room");
+	}
+
+	/// <summary>
+	/// With no open connection there is nothing to send the verb down, so the page does not pretend
+	/// otherwise — the same rule the compose box follows.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_DoesNotOfferToStartAScene_WithoutAConnection()
+	{
+		_terminal.IsConnected.Returns(false);
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scenes-page"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".scene-start button")).IsEmpty();
+	}
+
+	/// <summary>
+	/// The start button appears when the terminal connects, not only if it happened to be connected
+	/// already when the page rendered.
+	///
+	/// <para>This is how the first version of the affordance failed in a real browser: the page read
+	/// <c>IsConnected</c> once while rendering and never subscribed to the change, so a player who
+	/// navigated to /scenes while the websocket was still coming up saw a page with no way to start a
+	/// scene — and nothing ever brought it back. The stubbed connection in the test above hid it,
+	/// because there the state was already true before the first render.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ShowsTheStartButton_WhenTheTerminalConnectsAfterRender()
+	{
+		_terminal.IsConnected.Returns(false);
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scenes-page"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-start button")).IsEmpty();
+
+		_terminal.IsConnected.Returns(true);
+		_terminal.ConnectionStateChanged += Raise.Event<Action<bool>>(true);
+
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+	}
+
+	/// <summary>
+	/// A scene started from the browser is watchable by anyone, and says so without needing a verb:
+	/// that is now what the engine does when nobody specifies. The box is here so the choice is
+	/// visible at the moment it is made, not because the page has to ask for the default.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_StartedFromTheBrowser_AreVisibleToOthersByDefault()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("The Lantern Room");
+		cut.Find(".scene-start-submit").Click();
+
+		await _terminal.Received().SendAsync("+scene/create The Lantern Room");
+		await _terminal.DidNotReceive().SendAsync("+scene/private");
+	}
+
+	/// <summary>Unticking it is the case that needs a command, because it is the exception now.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_StartedWithWatchingOff_StayPrivate()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = true;
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("A quiet corner");
+		cut.Find(".scene-start-public input").Change(false);
+		cut.Find(".scene-start-submit").Click();
+
+		await _terminal.Received().SendAsync("+scene/create A quiet corner");
+		// Waited for: the form polls the roster before saying anything else, because it will not send
+		// this until it can see the scene exists.
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/private"),
+			TimeSpan.FromSeconds(10));
+	}
+
+	/// <summary>
+	/// A hub that exists but has dropped is revived, not left alone.
+	///
+	/// <para>The page asked for ConnectAsync, which returns the moment it sees a hub object —
+	/// connected or not. So a player whose connection dropped while they were reading arrived at a
+	/// live scene that could never reconnect: the banner stayed up and the compose box stayed dead
+	/// until they reloaded. ReconnectAsync tears the dead hub down first, and there are no scene
+	/// groups to preserve precisely because nothing is connected.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_RevivesAHubThatExistsButHasDropped()
+	{
+		_hub.IsConnected = false;
+
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(_hub.ReconnectCalls).IsGreaterThan(0)
+			.Because("ConnectAsync cannot revive a hub that already exists; only a reconnect can");
+	}
+
+	/// <summary>
+	/// A creation the engine refused does not turn somebody else's scene private.
+	///
+	/// <para>+scene/private acts on the scene the player is focused on, and the form used to send it
+	/// the instant after +scene/create without waiting to see whether anything had been created. A
+	/// refusal — an unapproved player, a name the engine would not take — leaves focus on whatever
+	/// scene the player already had, so the tick box would have made THAT one private instead. The
+	/// verb now goes only after the roster shows the scene exists.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_WhenTheEngineCreatesNothing_TouchesNoOtherScene()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = false;
+
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("Never Created");
+		cut.Find(".scene-start-public input").Change(false);
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/create Never Created"),
+			TimeSpan.FromSeconds(5));
+
+		// Long enough to outlast the roster poll, so this is "it never sent it" rather than "it had
+		// not got there yet" — the distinction the whole test rests on.
+		await Task.Delay(TimeSpan.FromSeconds(3));
+
+		await _terminal.DidNotReceive().SendAsync("+scene/private");
 	}
 }

@@ -264,10 +264,6 @@
     <value>Spieler anzeigen</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersComingSoon" xml:space="preserve">
-    <value>Spielerverwaltung folgt in Kürze.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPlayersTitle" xml:space="preserve">
     <value>Spieler</value>
     <comment>MT</comment>
@@ -3072,6 +3068,10 @@
     <value>Nachschlagen</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Pose</value>
     <comment>MT — mode button named after the pose command; kept English, matching the existing French.</comment>
@@ -3214,6 +3214,22 @@
   </data>
   <data name="RolViewArchive" xml:space="preserve">
     <value>Archiv ansehen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Alle zusehen lassen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Szene starten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Titel der Szene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Live-Posen kommen nicht an — es wird neu verbunden. Was du sendest, wird trotzdem aufgezeichnet.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -3406,6 +3422,10 @@
   </data>
   <data name="TempF" xml:space="preserve">
     <value>Temp. (F)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>Der Editor konnte nicht geladen werden.</value>
     <comment>MT</comment>
   </data>
   <data name="TermAddAttribute" xml:space="preserve">

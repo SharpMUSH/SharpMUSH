@@ -36,7 +36,7 @@ public class CommandUnitTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -56,7 +56,7 @@ public class CommandUnitTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

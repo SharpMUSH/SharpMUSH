@@ -12,6 +12,13 @@ public class ConnectionService(
 	IConnectionStateStore? stateStore = null,
 	ITelemetryService? telemetryService = null) : IConnectionService
 {
+	/// <summary>
+	/// Metadata key marking an entry this process did not register itself, but restored from the
+	/// state store on startup. It is the one thing that distinguishes a stale handle from a live one,
+	/// and it is dropped the moment a real connection claims the handle.
+	/// </summary>
+	private const string ReconciledMarker = "ReconciledFromStateStore";
+
 	private readonly ConcurrentDictionary<long, IConnectionService.ConnectionData> _sessionState = [];
 	private readonly List<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
@@ -230,11 +237,19 @@ public class ConnectionService(
 		var newEntry = new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected,
 			outputFunction, promptOutputFunction, encoding, metadata);
 
-		if (!_sessionState.TryAdd(handle, newEntry))
-		{
-			// Duplicate registration (e.g. NATS at-least-once redelivery) — silently ignore.
-			return;
-		}
+		// A known handle has two explanations needing opposite answers. A redelivered Register for a
+		// connection this process owns must be ignored — the store is at-least-once, and overwriting
+		// would log a live player out. An entry restored by ReconcileFromStateStoreAsync must be
+		// overwritten: descriptor numbering restarts from the same base, so a new socket can be handed
+		// a number the store still describes, and inheriting it gives the connection a dead player's
+		// binding and an output function pointing at a transport that no longer exists.
+		// Read back from what the dictionary stored rather than recorded inside the factory:
+		// AddOrUpdate may run that factory more than once when its compare-and-swap loses, so a flag
+		// set in it can describe a discarded attempt. The factory is pure, so a retry costs nothing.
+		var stored = _sessionState.AddOrUpdate(handle, newEntry, (_, existing) =>
+			existing.Metadata.ContainsKey(ReconciledMarker) ? newEntry : existing);
+
+		if (!ReferenceEquals(stored, newEntry)) return;
 
 		if (stateStore != null)
 		{
@@ -290,6 +305,8 @@ public class ConnectionService(
 			};
 
 			var metadata = new ConcurrentDictionary<string, string>(data.Metadata);
+			// Marked so Register can tell this remembered entry from a live one it owns; see Register.
+			metadata[ReconciledMarker] = "1";
 
 			_sessionState.TryAdd(handle, new IConnectionService.ConnectionData(
 				handle,

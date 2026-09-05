@@ -40,7 +40,7 @@ public class MiscCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Listening in ROOM:", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("Listening in ROOM:"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -53,7 +53,7 @@ public class MiscCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "No matching attributes found.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("No matching attributes found."), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -176,7 +176,7 @@ public class MiscCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("Huh?  (Type \"help\" for help.)"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

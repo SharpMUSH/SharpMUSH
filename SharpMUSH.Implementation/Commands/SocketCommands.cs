@@ -312,9 +312,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.GuestLoginsDisabled);
 		}
 
-		var guestPlayers = await Mediator!.CreateStream(new GetAllPlayersQuery())
-			.Where(async (player, _) => await player.Object.HasPower("Guest"))
-			.ToListAsync();
+		var guestPlayers = await GuestCharacters.AllAsync(Mediator!).ToListAsync();
 
 		if (guestPlayers.Count == 0)
 		{

@@ -264,10 +264,6 @@
     <value>Zobacz graczy</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersComingSoon" xml:space="preserve">
-    <value>Administracja graczami wkrótce.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPlayersTitle" xml:space="preserve">
     <value>Gracze</value>
     <comment>MT</comment>
@@ -3072,6 +3068,10 @@
     <value>Wyszukaj</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Poza</value>
     <comment>MT — compose-mode label; noun to match RolModeSay</comment>
@@ -3214,6 +3214,22 @@
   </data>
   <data name="RolViewArchive" xml:space="preserve">
     <value>Zobacz archiwum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Pozwól wszystkim oglądać</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Rozpocznij scenę</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Tytuł sceny</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Pozy na żywo nie docierają — trwa ponowne łączenie. To, co wyślesz, i tak zostanie zapisane.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -3407,6 +3423,10 @@
   <data name="TempF" xml:space="preserve">
     <value>Temp. (F)</value>
     <comment>MT — unit symbol unchanged</comment>
+  </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>Nie udało się załadować edytora.</value>
+    <comment>MT</comment>
   </data>
   <data name="TermAddAttribute" xml:space="preserve">
     <value>Dodaj atrybut</value>

@@ -173,6 +173,12 @@ public class SceneApprovalIntegrationTests
 		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var packageObjects = await registry.GetPackageObjectsAsync("scene");
 		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+		// The Logger is game-wide, and a $-command only matches for objects in the caller's room — so
+		// moving it here takes +scene/* away from every OTHER test's players for the rest of the run.
+		// It was left in this room, and later suites saw their +scene commands silently do nothing:
+		// no match, no "Huh?", no error, because an unmatched $-command on an absent object produces
+		// no output at all. Note where it came from and put it back at the end.
+		var loggerHome = await Eval($"loc({loggerDbref})");
 		await God1($"@tel {loggerDbref}={digOut}");
 		await Assert.That(await EvalNum($"loc({loggerDbref})")).IsEqualTo(roomDbref);
 
@@ -253,6 +259,10 @@ public class SceneApprovalIntegrationTests
 		Log($"[REVOKE] posecount before={posesBefore} approved={posesWhileApproved} after-revoke={posesAfterRevoke}");
 		await Assert.That(posesAfterRevoke).IsEqualTo(posesWhileApproved)
 			.Because("membership and focus survive revocation, so capture itself has to re-check approval");
+
+		// Hand the Logger back where it was, so the suites that run after this one still have
+		// +scene/* at all.
+		await God1($"@tel {loggerDbref}={loggerHome}");
 	}
 
 	[Test]
@@ -329,7 +339,9 @@ public class SceneApprovalIntegrationTests
 		await God1("@set #1=WIZARD");
 		await CreatePlayerAsync($"Lister_{Tag}", 63L);
 
+		// Explicitly private: scenes are created watchable, so this is the case that must be asked for.
 		var privateScene = await Eval($"scenecreate(,#1,Private {Tag})");
+		await Eval($"sceneset({privateScene},public,0)");
 		await God1($"@scene/set {privateScene}/status=active");
 		var publicScene = await Eval($"scenecreate(,#1,Public {Tag})");
 		await God1($"@scene/set {publicScene}/status=active");
@@ -343,6 +355,7 @@ public class SceneApprovalIntegrationTests
 			.Because("the storage filters carry no visibility clause, so the function layer must");
 		await Assert.That(await EvalAs(63L, $"scene({privateScene}, status)")).StartsWith("#-1")
 			.Because("and reading its fields stays refused, as it always was");
+
 	}
 
 	[Test]

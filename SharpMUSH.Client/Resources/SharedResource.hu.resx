@@ -264,10 +264,6 @@
     <value>Játékosok megtekintése</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersComingSoon" xml:space="preserve">
-    <value>A játékosadminisztráció hamarosan elérhető.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPlayersTitle" xml:space="preserve">
     <value>Játékosok</value>
     <comment>MT</comment>
@@ -3072,6 +3068,10 @@
     <value>Keresés</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Póz</value>
     <comment>MT</comment>
@@ -3214,6 +3214,22 @@
   </data>
   <data name="RolViewArchive" xml:space="preserve">
     <value>Archívum megtekintése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Bárki nézheti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Jelenet indítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>A jelenet címe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Az élő pózok nem érkeznek meg – újracsatlakozás folyamatban. Amit beküldesz, azt akkor is rögzítjük.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -3406,6 +3422,10 @@
   </data>
   <data name="TempF" xml:space="preserve">
     <value>Hőm. (F)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>A szerkesztőt nem sikerült betölteni.</value>
     <comment>MT</comment>
   </data>
   <data name="TermAddAttribute" xml:space="preserve">

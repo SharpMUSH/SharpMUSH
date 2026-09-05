@@ -264,10 +264,6 @@
     <value>查看玩家</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersComingSoon" xml:space="preserve">
-    <value>玩家管理功能即将推出。</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPlayersTitle" xml:space="preserve">
     <value>玩家</value>
     <comment>MT</comment>
@@ -3072,6 +3068,10 @@
     <value>查找</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>旁白</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>姿态</value>
     <comment>MT</comment>
@@ -3214,6 +3214,22 @@
   </data>
   <data name="RolViewArchive" xml:space="preserve">
     <value>查看存档</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>允许任何人观看</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>开始一个场景</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>场景标题</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>实时姿态未能送达 — 正在重新连接。你发布的内容仍会被记录。</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -3406,6 +3422,10 @@
   </data>
   <data name="TempF" xml:space="preserve">
     <value>温度（F）</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>无法加载编辑器。</value>
     <comment>MT</comment>
   </data>
   <data name="TermAddAttribute" xml:space="preserve">

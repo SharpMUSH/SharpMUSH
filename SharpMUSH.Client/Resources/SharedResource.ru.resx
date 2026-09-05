@@ -264,10 +264,6 @@
     <value>Просмотр игроков</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersComingSoon" xml:space="preserve">
-    <value>Администрирование игроков появится позже.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPlayersTitle" xml:space="preserve">
     <value>Игроки</value>
     <comment>MT</comment>
@@ -3072,6 +3068,10 @@
     <value>Найти</value>
     <comment>MT — imperative button next to the username field.</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Эмит</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Поза</value>
     <comment>MT — compose-mode label; pose → поза per the sheet.</comment>
@@ -3214,6 +3214,22 @@
   </data>
   <data name="RolViewArchive" xml:space="preserve">
     <value>Смотреть архив</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Разрешить всем смотреть</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Начать сцену</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Название сцены</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Живые позы не приходят — переподключение. Всё, что вы отправите, всё равно записывается.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -3407,6 +3423,10 @@
   <data name="TempF" xml:space="preserve">
     <value>Темп. (F)</value>
     <comment>MT — unit letter kept as-is.</comment>
+  </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>Не удалось загрузить редактор.</value>
+    <comment>MT</comment>
   </data>
   <data name="TermAddAttribute" xml:space="preserve">
     <value>Добавить атрибут</value>

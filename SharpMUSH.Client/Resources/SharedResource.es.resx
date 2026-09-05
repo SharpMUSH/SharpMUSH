@@ -264,10 +264,6 @@
     <value>Ver jugadores</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersComingSoon" xml:space="preserve">
-    <value>Administración de jugadores próximamente.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPlayersTitle" xml:space="preserve">
     <value>Jugadores</value>
     <comment>MT</comment>
@@ -3072,6 +3068,10 @@
     <value>Buscar</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Pose</value>
     <comment>MT</comment>
@@ -3214,6 +3214,22 @@
   </data>
   <data name="RolViewArchive" xml:space="preserve">
     <value>Ver archivo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Permitir que cualquiera lo vea</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Iniciar una escena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Título de la escena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Las poses en vivo no están llegando: reconectando. Lo que publiques se registra igualmente.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -3406,6 +3422,10 @@
   </data>
   <data name="TempF" xml:space="preserve">
     <value>Temp. (F)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>No se pudo cargar el editor.</value>
     <comment>MT</comment>
   </data>
   <data name="TermAddAttribute" xml:space="preserve">

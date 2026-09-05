@@ -22,6 +22,21 @@ namespace SharpMUSH.Tests.Integration.Profile;
 /// characters are addressed by objid via a query parameter, and real HTTP statuses come from
 /// @respond — there is no JSON status envelope.
 /// </summary>
+/// <remarks>
+/// Exclusive because these routes enumerate every player in the database. Eight other suites create
+/// players, and a player that lsearch() already returns but whose creation has not finished is one
+/// whose name and objid cannot yet be resolved — so the row renders as #-1, json_array rejects the
+/// batch, and the locate failures land in the response body, because everything notified while an
+/// HTTP request is served becomes that body.
+///
+/// That is what CI kept failing on, and why nothing reproduced it: by the time anything could ask,
+/// the creations had finished and every stage of the route evaluated perfectly. It appeared when
+/// this branch added more player-creating suites and the interleaving got wider, on a runner slow
+/// enough to hold the window open.
+///
+/// A test that reads the whole database cannot run while other tests are writing to it.
+/// </remarks>
+[NotInParallel]
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class ProfileApiTests(ServerWebAppFactory factory)
 {
@@ -115,7 +130,40 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		var body = await response.Content.ReadAsStringAsync();
 
 		await Assert.That((int)response.StatusCode).IsEqualTo(200);
-		// A shredded row surfaces as a parse failure or an error string, not a usable array.
+
+		// A shredded row surfaces as a parse failure or an error string, not a usable array, and
+		// JsonDocument.Parse reports only the offending byte — not enough to tell those apart
+		// somewhere no debugger can reach. So the body is checked first and, only when it is wrong,
+		// the route is taken apart to say which stage produced it: the route is a filter, an iter and
+		// a json_array on one line, and any of them fails identically from outside. The stages are
+		// evaluated as God while the route runs as #8, so the last probe asks which players #8 itself
+		// cannot see — the answer that distinguishes a broken route from an invisible player.
+		//
+		// Built only on the failing path. These are six extra evaluations and a green run should not
+		// pay for them.
+		if (!body.TrimStart().StartsWith('['))
+		{
+			async Task<string> Probe(string expression) =>
+				(await factory.FunctionParser.FunctionParse(MModule.single(expression)))!
+					.Message!.ToPlainText().Replace("\n", "\\n");
+
+			var players = await Probe("lsearch(all,type,player)");
+			var visible = await Probe("filter(#8/FN`CHARVIS,lsearch(all,type,player))");
+			var rows = await Probe(
+				"iter(filter(#8/FN`CHARVIS,lsearch(all,type,player)),u(#8/FN`CHARROW,%i0),,%r)");
+			var unseen = await Probe(
+				"objeval(#8,iter(lsearch(all,type,player),switch(name(##),#-1*,##,)))");
+			var unseenNames = await Probe(
+				"iter(objeval(#8,iter(lsearch(all,type,player),switch(name(##),#-1*,##,))),name(##))");
+
+			Assert.Fail($"the route must answer with a JSON array.\n"
+				+ $"  players = [{players}]\n"
+				+ $"  visible = [{visible}]\n"
+				+ $"  rows    = [{rows}]\n"
+				+ $"  unseen by #8 = [{unseen}] -> [{unseenNames}]\n"
+				+ $"  body    = [{body.Replace("\n", "\\n")}]");
+		}
+
 		using var doc = JsonDocument.Parse(body);
 		await Assert.That(doc.RootElement.ValueKind).IsEqualTo(JsonValueKind.Array);
 

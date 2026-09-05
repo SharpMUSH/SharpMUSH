@@ -46,6 +46,90 @@ public class SceneServiceIntegrationTests
 		await Assert.That(await Eval($"scene({id}, ownername)")).IsNotEmpty();
 	}
 
+	/// <summary>
+	/// A new scene is public.
+	///
+	/// <para>Every provider created them member-only. That suits a scene begun at a terminal among
+	/// people already in the room, and it is wrong everywhere else: the portal's whole scene surface
+	/// is a browser of other people's roleplay, and a starter watched their scene appear in a list
+	/// nobody else could see. The command to change it — <c>+scene/private</c>'s opposite — is not
+	/// one the portal mentions anywhere, so the state was both wrong and unreachable. Scenes that
+	/// should not be watched are now the case that asks for a command.</para>
+	/// </summary>
+	[Test]
+	public async Task CreateScene_IsPublic()
+	{
+		// Created raw, without NewSceneAsync's explicit sceneset — the point is what the provider
+		// chooses when nobody says.
+		var id = await Eval($"scenecreate(,{God},Public {Guid.NewGuid():N})");
+
+		await Assert.That(await Eval($"scene({id}, public)")).IsEqualTo("1")
+			.Because("a scene nobody can find is not a scene anyone can join");
+	}
+
+	/// <summary>
+	/// A scene id is a bare key on every provider. It is not an internal detail: players type it
+	/// (<c>+scene 1</c>, <c>+scene/join 1</c>), it is a path segment in <c>/scenes/{id}/live</c>, and
+	/// it is stored in player attributes. SurrealDB used to hand back its own record id verbatim, so
+	/// production (surrealdb) showed <c>scene:1</c> while this suite's default provider (arangodb)
+	/// showed <c>1</c> — the tests and the running game disagreed about the shape of the thing a
+	/// player is asked to type, and a colon rode into every scene URL.
+	/// </summary>
+	[Test]
+	public async Task CreateScene_AssignsAProviderNeutralId()
+	{
+		var id = await NewSceneAsync("IdShape");
+
+		await Assert.That(id).DoesNotContain(":");
+	}
+
+	/// <summary>
+	/// <c>scene(&lt;id&gt;, room)</c> answers with an objid, not a bare dbref, so it can be compared
+	/// against <c>loc()</c> — which is what any "is the poser standing in this scene's room?" test has
+	/// to do. The two spellings did not match: <c>loc()</c> carries the creation stamp and this did
+	/// not, so such a comparison was quietly always false. Objid is also the project's rule for a
+	/// stored reference, since a bare dbref number gets recycled.
+	///
+	/// <para>Note the deliberate asymmetry with <c>owner</c>/<c>starter</c>, which stay bare: the
+	/// package's own <c>FUN`OWNS</c> compares <c>scene(&lt;id&gt;,owner)</c> against <c>%#</c>, which
+	/// is the short form.</para>
+	/// </summary>
+	[Test]
+	public async Task GetScene_Room_IsAnObjid_ComparableToLoc()
+	{
+		var id = await Eval($"scenecreate(#0,{God},RoomObjid {Guid.NewGuid():N})");
+		await Eval($"sceneset({id},public,1)");
+
+		await Assert.That(await Eval($"scene({id}, room)")).IsEqualTo(await Eval("objid(#0)"));
+	}
+
+	/// <summary>
+	/// Setting a member's role leaves their focus and their persona alone.
+	///
+	/// <para>SurrealDB stores both ON the membership edge — focus as <c>isCurrent</c>, the
+	/// <c>+scene/as</c> persona as <c>showAs</c> — and its <c>SetMember</c> deleted and recreated that
+	/// edge, hard-setting both back to empty. ArangoDB updated in place and kept them, so the two
+	/// providers disagreed about what re-roling somebody costs, and production is the one that lost
+	/// data. Losing focus is not cosmetic: nearly every owner verb acts on <c>scenefocus(%#)</c> and
+	/// does nothing without one, and the capture hooks need it to record a pose at all.</para>
+	/// </summary>
+	[Test]
+	public async Task SetMember_KeepsFocusAndPersona()
+	{
+		var id = await NewSceneAsync("MemberRole");
+		await Eval($"sceneaddmember({id},{God},owner)");
+		await Eval($"scenesetfocus({God},{id})");
+		await Eval($"sceneshowas({id},{God},The Stranger)");
+
+		await Assert.That(await Eval($"scenefocus({God})")).IsEqualTo(id)
+			.Because("the focus set above is the precondition this test exists to protect");
+
+		await Eval($"sceneaddmember({id},{God},participant)");
+
+		await Assert.That(await Eval($"scenefocus({God})")).IsEqualTo(id);
+		await Assert.That(await Eval($"scenemember({id},{God},showas)")).IsEqualTo("The Stranger");
+	}
+
 	[Test]
 	public async Task GetScene_RoundTrips()
 	{

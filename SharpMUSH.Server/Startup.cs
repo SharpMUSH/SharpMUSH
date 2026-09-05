@@ -47,6 +47,8 @@ using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
+using Microsoft.AspNetCore.ResponseCompression;
+using System.IO.Compression;
 using SharpMUSH.Messaging.NATS;
 using Microsoft.Extensions.Caching.Memory;
 using ZiggyCreatures.Caching.Fusion;
@@ -67,6 +69,35 @@ public class Startup(
 
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
+		// Compress what we send. Only the Blazor _framework files arrived compressed before, because
+		// UseBlazorFrameworkFiles serves pre-brotlied copies of those and nothing else was covered —
+		// so a cold first visit pulled 15.0 MB, with Monaco's editor.api (3.67 MB), Mermaid (2.57 MB),
+		// MudBlazor's CSS and mush-defs.json all going out as raw bytes.
+		//
+		// Fastest, not Optimal: this compresses on the fly, and the largest asset here is several
+		// megabytes — paying maximum-ratio brotli per request would trade a download stall for a
+		// server stall. Fastest still takes those files down by roughly an order of magnitude.
+		// Responses that already carry a Content-Encoding (the pre-brotlied _framework files) are
+		// skipped by the middleware, so nothing is compressed twice.
+		services.AddResponseCompression(options =>
+		{
+			options.EnableForHttps = true;
+			options.Providers.Add<BrotliCompressionProvider>();
+			options.Providers.Add<GzipCompressionProvider>();
+			options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+			[
+				"application/javascript",
+				"text/javascript",
+				"application/json",
+				"image/svg+xml",
+				"application/manifest+json",
+				"font/ttf",
+				"application/wasm"
+			]);
+		});
+		services.Configure<BrotliCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
+		services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
+
 		services.AddCors(options =>
 		{
 			// C-4: Read allowed origins from Cors:AllowedOrigins config array.

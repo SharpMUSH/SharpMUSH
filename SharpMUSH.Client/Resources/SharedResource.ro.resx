@@ -264,10 +264,6 @@
     <value>Vizualizare jucători</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersComingSoon" xml:space="preserve">
-    <value>Administrarea jucătorilor va fi disponibilă în curând.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPlayersTitle" xml:space="preserve">
     <value>Jucători</value>
     <comment>MT</comment>
@@ -3072,6 +3068,10 @@
     <value>Căutare</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Poză</value>
     <comment>MT — compose-mode label for the RP pose; the underlying game command stays `pose`</comment>
@@ -3214,6 +3214,22 @@
   </data>
   <data name="RolViewArchive" xml:space="preserve">
     <value>Vizualizare arhivă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Oricine poate urmări</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Începe o scenă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Titlul scenei</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Pozele live nu ajung — se reconectează. Ceea ce publici este înregistrat oricum.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -3406,6 +3422,10 @@
   </data>
   <data name="TempF" xml:space="preserve">
     <value>Temp. (F)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>Editorul nu a putut fi încărcat.</value>
     <comment>MT</comment>
   </data>
   <data name="TermAddAttribute" xml:space="preserve">

@@ -5,6 +5,8 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -59,6 +61,21 @@ public static class SceneFunctions
 		return enactor.Object().DBRef.ToString();
 	}
 
+	/// <summary>
+	/// Expands a bare dbref into its objid (<c>#13:1788365739971</c>), the spelling the rest of the
+	/// engine uses for a reference that is stored or compared. Returns the input unchanged when it is
+	/// empty or names nothing — a missing reference is not an error to report here.
+	/// </summary>
+	private static async ValueTask<string> ObjIdAsync(IMUSHCodeParser parser, string? dbref)
+	{
+		if (string.IsNullOrWhiteSpace(dbref) || !DBRef.TryParse(dbref, out var parsed) || parsed is not { } reference)
+			return dbref ?? string.Empty;
+
+		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
+		var node = await mediator.Send(new GetObjectNodeQuery(reference));
+		return node.IsNone ? dbref : node.Known().Object().DBRef.ToString();
+	}
+
 	/// <summary>Guard for side-effect (write) functions: false ⇒ side effects are disabled in config.</summary>
 	private static bool SideEffectsEnabled(IMUSHCodeParser parser)
 		=> parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
@@ -108,7 +125,11 @@ public static class SceneFunctions
 			"ownername" => new CallState(scene.OwnerName),
 			"starter" => new CallState(scene.StarterDbref ?? string.Empty),
 			"startername" => new CallState(scene.StarterName),
-			"room" => new CallState(scene.RoomDbref ?? string.Empty),
+			// Objid, unlike owner/starter above. A caller asking where a scene is asks in order to
+			// compare against loc(), which carries the creation stamp — a bare dbref could never match
+			// it, so any such comparison was quietly always false. owner/starter stay bare because the
+			// scene package's FUN`OWNS compares them against %#, which is the short form.
+			"room" => new CallState(await ObjIdAsync(parser, scene.RoomDbref)),
 			"roomname" => new CallState(scene.RoomName),
 			_ => new CallState(scene.Meta.TryGetValue(field, out var metaVal)
 				? metaVal

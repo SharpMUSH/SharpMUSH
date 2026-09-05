@@ -79,14 +79,39 @@ public class ConnectionStateServiceReconnectTests
 		await Assert.That(factory.Hubs[1].StartCount).IsEqualTo(1);
 	}
 
+	/// <summary>
+	/// Every caller of <c>ReconnectAsync</c> — character creation, terminal login, character switch —
+	/// reaches it on a session that has never held a hub, and <c>ConnectAsync</c> has no other caller.
+	/// A reconnect that no-ops on a null hub therefore means the game hub is never connected at all:
+	/// no live scene poses, no room events, and a permanently disabled compose box on
+	/// <c>/scenes/{id}/live</c>. So "not connected yet" has to mean connect, not do nothing.
+	/// </summary>
 	[Test]
-	public async Task ReconnectAsync_WhenNotConnected_DoesNothing()
+	public async Task ReconnectAsync_WhenNeverConnected_ConnectsFresh()
 	{
 		var factory = new CountingHubFactory();
 		var service = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance);
 
 		await service.ReconnectAsync();
 
-		await Assert.That(factory.CreateCount).IsEqualTo(0);
+		await Assert.That(factory.CreateCount).IsEqualTo(1);
+		await Assert.That(factory.Hubs[0].StartCount).IsEqualTo(1);
+		await Assert.That(service.IsConnected).IsTrue();
+	}
+
+	/// <summary>
+	/// The first connect has nothing to tear down. Stopping a hub that was never started would push a
+	/// disposed/never-started connection through <c>StopAsync</c>, which SignalR answers with an
+	/// <see cref="InvalidOperationException"/> the service would then have to swallow.
+	/// </summary>
+	[Test]
+	public async Task ReconnectAsync_WhenNeverConnected_DoesNotStopAnything()
+	{
+		var factory = new CountingHubFactory();
+		var service = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance);
+
+		await service.ReconnectAsync();
+
+		await Assert.That(factory.Hubs[0].StopCount).IsEqualTo(0);
 	}
 }

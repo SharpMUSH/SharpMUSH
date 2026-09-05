@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.6.0
+version: 1.13.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -17,9 +17,12 @@ requires_server: ">=0.1"
 # (re-)establish the three OVERRIDE hooks idempotently — immediate on install,
 # re-set on each boot (the hook registry is rebuilt from softcode policy).
 #
-# Capture is the ONLY pose-recording path: an @hook/override on POSE/SAY/SEMIPOSE
+# Capture is one of two pose-recording paths. An @hook/override on POSE/SAY/SEMIPOSE/@EMIT
 # reproduces the built-in room emit EXACTLY, then records the pose via the
-# @scene/addpose COMMAND. @EMIT is deliberately NOT hooked. Reads use the
+# @scene/addpose COMMAND -- that is the path a MU* client takes, and it records only
+# where the poser is standing. The other is the +scene/<mode> <id>=<text> verbs below,
+# which the web portal's live-scene compose box sends: they name the scene instead of
+# inferring it from the room. Reads use the
 # scene… functions; all data-writes use @scene/* commands (never side-effect fns).
 #
 # Attribute organization follows the project FUN`/CMD`/DATA`/INCLUDE` tree
@@ -73,6 +76,21 @@ objects:
         and(hastype(%0,PLAYER),isapproved(%0))
       DATA`DENY_APPROVAL: |-
         You are not approved to take part in scenes. You can still browse the schedule with +scene and +scene/upcoming, and read any scene with +scene <id>.
+
+      # ---- focus / ownership guards ---------------------------------------------
+      # scenefocus() answers "#-1 NOT FOUND" for anyone who has not joined a scene, and that string is
+      # non-empty and truthy — so every verb that read it and acted was acting on a scene that does not
+      # exist. The two arms failed differently and both were wrong. A wizard, whom FUN`OWNS deliberately
+      # treats as owning every scene, sailed through and was told "Pitch set for scene #-1 NOT FOUND."
+      # while nothing was written. Everyone else failed a bare @assert carrying no message, so the verb
+      # produced no output at all — indistinguishable from a command that does not exist.
+      #
+      # Written inline at each verb, as bare @asserts, for the reason spelled out above DATA`DENY_APPROVAL:
+      # an @assert inside an @include emits its message and then lets the caller continue anyway.
+      DATA`DENY_NO_FOCUS: |-
+        You are not focused on a scene. Join one with +scene/join <id>, or see what is running with +scene.
+      DATA`DENY_NOT_OWNER: |-
+        That scene is not yours to change. Its owner or a wizard can do it.
 
       # ---- capture hooks --------------------------------------------------------
       # Each hook RE-BROADCASTS its type-specific speech via @message/spoof, then records
@@ -160,6 +178,58 @@ objects:
           $(?i)^@emit (.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,emit,,%1; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=%1,%#/FORMAT`EMIT,%1,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
+      # ---- web compose ----------------------------------------------------------
+      # +scene/<mode> <id>=<text> -- what the portal's live-scene compose box sends.
+      #
+      # The capture hooks above answer "which scene am I in?" from the room the poser is standing in,
+      # which is the only question a MU* client can ask. The portal asks a different one: its compose
+      # box sits on ONE scene's page, so the pose has to reach THAT scene whether or not the character
+      # is standing in its room -- and before this existed, a pose typed there was emitted into
+      # whatever room the character happened to be in and silently never recorded.
+      #
+      # So these take the id explicitly and record regardless of focus or location. Three consequences,
+      # each deliberate:
+      #   * a poser who is not in the cast is added to it -- a recorded pose whose author is missing
+      #     from the info card's cast would leave that card lying about who was in the scene. Guarded on
+      #     them having no role YET, because @scene/member sets the role outright: writing it on
+      #     every pose demoted an owner to participant in their own scene, and every ownership verb
+      #     (+scene/public, /finish, /pitch) is gated on FUN`OWNS, so it locked them out of it;
+      #   * the room emit is CONDITIONAL on the poser actually being there. Recording from anywhere is
+      #     the point; speaking into a room you are not standing in would put words in front of people
+      #     you are not with;
+      #   * they never call the built-in pose/say/semipose/@emit, because those are hooked above --
+      #     delegating would record the pose a second time.
+      #
+      # The rendered line matches its hook exactly, so a pose composed on the web and one typed in a
+      # terminal are indistinguishable in the archive. Note the two comma spellings, both required and
+      # for different reasons: `\,` inside @scene/addpose's argument list, and `[chr(44)]` inside
+      # @message's RHS, which is CB.RSArgs and splits on commas BEFORE evaluating each argument.
+      #
+      # The co-location test compares loc(%#) against scene(<id>,room) directly, which works because
+      # scene(...,room) answers with an objid -- the same spelling loc() uses. It did not always: it
+      # returned a bare dbref, so the comparison was quietly always false and the room emit never
+      # fired for anyone.
+      #
+      # Reading the scene at all is gated by the same visibility rule the REST and hub surfaces use
+      # (public, or the caller owns or belongs to it), because the existence guard goes through
+      # scene(). That is what stops these verbs being a way to write into a private scene by guessing
+      # an id -- and it costs the web nothing, since the compose box only exists on a page whose
+      # scene the reader could already see.
+      # Multi-line poses need nothing special here. The portal sends newlines as `%r`, which is
+      # expanded before the $-command pattern is matched, and a wildcard spans a newline -- so `*=*`
+      # matches a two-line pose and %1 arrives with real line breaks in it.
+      CMD`WEB`EMIT: |-
+        $+scene/emit *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],emit,,%1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=%1,%#/FORMAT`EMIT,%1,##}
+
+      CMD`WEB`POSE: |-
+        $+scene/pose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],pose,,[name(%#)] %1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] %1,%#/FORMAT`POSE,%1,##}
+
+      CMD`WEB`SAY: |-
+        $+scene/say *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],say,,[name(%#)] says\, "%1"; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] says[chr(44)] "%1",%#/FORMAT`SAY,%1,##}
+
+      CMD`WEB`SEMIPOSE: |-
+        $+scene/semipose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],semipose,,[name(%#)]%1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)]%1,%#/FORMAT`SEMIPOSE,%1,##}
+
       # ---- create / lifecycle ---------------------------------------------------
       # NOTE: capture the new scene id into %q<SceneID> with @assert (it both sets the register and
       # aborts cleanly if creation fails — the id is truthy), then drive the writes off %q<SceneID>.
@@ -176,13 +246,13 @@ objects:
       # not parse cleanly (the following line's leading `@scene…` leaks into it) and
       # q-registers do not cross newlines — the `;` form is robust on both counts.
       CMD`START: |-
-        $+scene/start: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=active; @pemit %#=Scene is now active.
+        $+scene/start: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/status=active; @pemit %#=Scene is now active.
 
       CMD`PAUSE: |-
-        $+scene/pause: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=paused; @pemit %#=Scene paused.
+        $+scene/pause: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/status=paused; @pemit %#=Scene paused.
 
       CMD`FINISH: |-
-        $+scene/finish: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
+        $+scene/finish: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
 
       # ---- membership / RSVP / focus --------------------------------------------
       CMD`JOIN: |-
@@ -192,7 +262,7 @@ objects:
       # Capture the focused scene id into %q<SceneID> BEFORE @scene/focus clears it (@assert sets the
       # register and no-ops cleanly when not focused), then drive the writes off %q<SceneID>.
       CMD`LEAVE: |-
-        $+scene/leave: @assert setr(SceneID,scenefocus(%#)); @scene/focus %#=; @if not(words(sceneposes(%q<SceneID>,%#)))={@scene/unmember %q<SceneID>=%#}; @pemit %#=Left the scene.; &MY.SID %#=%q<SceneID>
+        $+scene/leave: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @scene/focus %#=; @if not(words(sceneposes(%q<SceneID>,%#)))={@scene/unmember %q<SceneID>=%#}; @pemit %#=Left the scene.; &MY.SID %#=%q<SceneID>
 
       CMD`TAG: |-
         $+scene/tag *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/member %0/attending=%#; @pemit %#=RSVP'd to scene %0.
@@ -201,7 +271,7 @@ objects:
         $+scene/untag *: @scene/unmember %0=%#; @pemit %#=Removed RSVP from scene %0.
 
       CMD`AS: |-
-        $+scene/as *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/showas [scenefocus(%#)]/%#=%0; @pemit %#=Future poses show as: %0
+        $+scene/as *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @scene/showas %q<SceneID>/%#=%0; @pemit %#=Future poses show as: %0
 
       # ---- edit your own poses --------------------------------------------------
       # %1 is find^^^replace; author-only is enforced by @scene/editpose. Stash the poseId in %q<pid>
@@ -220,18 +290,24 @@ objects:
         $+scene/delete *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/delete %0
 
       CMD`MOVE: |-
-        $+scene/move *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/move %0=%1
+        $+scene/move *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/move %0=%1
 
       # ---- visibility -----------------------------------------------------------
       CMD`PUBLIC: |-
-        $+scene/public: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=1; @pemit %#=Scene is now public.
+        $+scene/public: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/public=1; @pemit %#=Scene is now public.
 
       CMD`PRIVATE: |-
-        $+scene/private: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=0; @pemit %#=Scene is now private.
+        $+scene/private: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/public=0; @pemit %#=Scene is now private.
 
       # ---- viewing --------------------------------------------------------------
-      CMD`WHO: |-
-        $+scene/who *: @pemit %#=Cast: [scenecast(%0)]%r[iter(scenemembers(%0),[name(##)] ([scenemember(%0,##,role)]))]
+      # One row of the Players table: what they are to the scene, who they are, how much they have
+      # posed. Name carries the persona when there is one, which is where the separate Cast line of
+      # personas went: one reading now gives both the character and the name they answer to.
+      FUN`CAST`ROW: |-
+        [align(<12 <40 <8,[capstr(scenemember(%0,%1,role))],[u(%!/FUN`CAST`NAME,%0,%1)],[words(sceneposes(%0,%1))])]
+      FUN`CAST`NAME: |-
+        [switch(setr(sa,scenemember(%0,%1,showas)),,[name(%1)],[name(%1)] as %q<sa>)]
+
 
       # sceneposes() returns a SPACE-separated id list, so iter() must use the default
       # space input delimiter (an `@` input delim collapsed the whole list into one bogus
@@ -298,7 +374,7 @@ objects:
       # (and your existing poses); /activate re-focuses you so capture resumes. Softer
       # than join/leave, which add/remove membership.
       CMD`DEACTIVATE: |-
-        $+scene/deactivate: @assert setr(SceneID,scenefocus(%#)); @scene/focus %#=; @pemit %#=Deactivated scene %q<SceneID> - still a member, poses paused. +scene/activate %q<SceneID> to resume.
+        $+scene/deactivate: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @scene/focus %#=; @pemit %#=Deactivated scene %q<SceneID> - still a member, poses paused. +scene/activate %q<SceneID> to resume.
       CMD`ACTIVATE: |-
         $+scene/activate *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/member %0/participant=%#; @scene/focus %#=%0; @pemit %#=Activated scene %0 - your poses are recorded again.
 
@@ -308,15 +384,58 @@ objects:
       # @includes the shared display tail — no switch() picks the output.
       FUN`SCENE_FIELD: |-
         switch(setr(val,scene(%0,%1)),#-1*,%2,%q<val>)
+      # A labelled line: the label right-aligned into a fixed gutter, then its value.
       FUN`INFO_LINE: |-
-        align(>9 <[sub(%2,11)],ansi(h,%0),%1)
+        [ansi(h,[rjust(%0:,14)])] %1
+
+      # Scene timestamps are Unix MILLIseconds; timefmt() wants seconds.
+      #
+      # This trimmed the last three digits as text for a while, because div() was 32-bit and answered
+      # #-1 ARGUMENTS MUST BE INTEGERS for any real timestamp. #857 made the integer functions 64-bit,
+      # so the arithmetic says what it means again.
+      FUN`WHEN: |-
+        [timefmt($b $d $I:$M$p,div(%0,1000))]
+
+      # Each renders a whole line INCLUDING its %r, or nothing, so an absent value leaves no blank row.
+      FUN`SCHEDULED_LINE: |-
+        [switch(setr(sw,scene(%0,scheduledfor)),,,[u(%!/FUN`INFO_LINE,Scheduled,u(%!/FUN`WHEN,%q<sw>))]%r)]
+      # The scene's page on this game's own website, worked out rather than stored: mud_url is the
+      # standard config for a game's web address, and the path follows from the id. A game that has
+      # not set one shows no URL line, because there is no address to guess.
+      FUN`URL_LINE: |-
+        [switch(setr(su,config(mud_url)),,,[u(%!/FUN`INFO_LINE,URL,[u(%!/FUN`URL_TEXT,%#,[u(%!/FUN`NO_TRAILING_SLASH,%q<su>)]/scenes/%0)])]%r)]
+
+      # A clickable link where the client can render one, the bare address everywhere else.
+      # tagwrap() writes the anchor inline as Pueblo/MXP markup: those clients turn it into a link,
+      # and every other client — including the web portal, which reports neither — shows the literal
+      # <a href="..."> instead of the address. So the capability is asked for rather than assumed.
+      # %0 is who is reading, %1 the address.
+      FUN`URL_TEXT: |-
+        [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,%1,href="%1")],%1)]
+
+      # mud_url is written both ways by different admins, and joining a trailing slash to a leading
+      # one gives a path no server answers.
+      FUN`NO_TRAILING_SLASH: |-
+        [switch(right(%0,1),/,[left(%0,sub(strlen(%0),1))],%0)]
       INC`DISPLAY`INFO: |-
-        @pemit %#=[header(Scene %0,width(%#))]%r[u(%!/FUN`INFO_LINE,Title,u(%!/FUN`LIST_TITLE,%0),width(%#))]%r[u(%!/FUN`INFO_LINE,Pitch,u(%!/FUN`SCENE_FIELD,%0,summary,-),width(%#))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername),width(%#))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)),width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status),width(%#))]%r[u(%!/FUN`INFO_LINE,Poses,scene(%0,posecount),width(%#))]%r[u(%!/FUN`INFO_LINE,Cast,scenecast(%0),width(%#))]%r[footer(,width(%#))]
+        @pemit %#=[header(<< Scene %0: '[u(%!/FUN`LIST_TITLE,%0)]' >>,width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)))]%r[u(%!/FUN`INFO_LINE,Created,u(%!/FUN`WHEN,scene(%0,startedat)))]%r[u(%!/FUN`SCHEDULED_LINE,%0)][u(%!/FUN`INFO_LINE,Watchers,[switch(scene(%0,public),1,Anyone,Members only)])]%r[center(< Pitch >,width(%#),-)]%r[u(%!/FUN`SCENE_FIELD,%0,summary,-)]%r[u(%!/FUN`URL_LINE,%0)][center(< Players >,width(%#),=)]%r[ansi(h,[align(<12 <40 <8,Status,Name,Poses)])]%r[iter(scenemembers(%0),u(%!/FUN`CAST`ROW,%0,##),%b,%r)]%r[footer(,width(%#))]
       CMD`PITCH: |-
-        $+scene/pitch *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/summary=%0; @pemit %#=Pitch set for scene [scenefocus(%#)].
-      # Scene DETAILS card: `+scene <id>` (Volund-style; bare `+scene` is the active list).
+        $+scene/pitch *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/summary=%0; @pemit %#=Pitch set for scene %q<SceneID>.
+      # Scene DETAILS card. `+scene <id>` and `+scene/info <id>` are the same question asked two
+      # ways, so they run the same renderer: naming an id has always meant "tell me about this one".
+      #
+      # This replaced +scene/who, which could only answer who was in the cast. Somebody asking about a
+      # scene wants where it is, what it is about and whether anyone may watch as well — and once the
+      # card carries the roster there is nothing left for a second verb to say.
+      #
+      # Cast and Members are both here because they answer different questions: Cast is the personas
+      # that have spoken (scenecast, deduplicated, what a reader of the log sees) and Members is the
+      # characters with their roles. A persona is not a character, so one cannot stand in for the
+      # other — an actor posing under two names appears once per name in Cast and once in Members.
       CMD`SHOW: |-
         $+scene *: @assert not(strmatch(scene(setr(SceneID,%0),status),#-1*))=@pemit %#=No such scene: %0; @include %!/INC`DISPLAY`INFO=%q<SceneID>
+      CMD`INFO: |-
+        $+scene/info *: @assert not(strmatch(scene(setr(SceneID,%0),status),#-1*))=@pemit %#=No such scene: %0; @include %!/INC`DISPLAY`INFO=%q<SceneID>
 
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).

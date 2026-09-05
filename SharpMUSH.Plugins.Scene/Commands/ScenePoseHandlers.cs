@@ -21,14 +21,16 @@ public static class ScenePoseHandlers
 	{
 		// @scene/addpose <sceneId>=<authorDbref>,<showAs>,<originDbref>,<source>,<tags>,<content>
 		var sceneId = SceneCommandHelper.Plain(sceneIdArg);
-		var fields = SceneCommandHelper.SplitFields(rest, 6);
+		// The content field keeps its markup: storage takes it as a serialised MString and derives the
+		// plain column from that. Everything before it is a dbref or a keyword, compared as text.
+		var (fields, contentMarkup) = SceneCommandHelper.SplitFieldsKeepingMarkup(rest, 6);
 		// author/origin resolve through the engine LocateService (here/me/name -> dbref).
 		var authorDbref = await SceneLocate.PlayerOrSelf(parser, fields[0]);
 		var showAs = fields[1];
 		var originDbref = await SceneLocate.ObjectOrSelf(parser, fields[2]);
 		var source = fields[3];
 		var tagsRaw = fields[4];
-		var content = fields[5];
+		var content = MModule.serialize(contentMarkup);
 
 		if (string.IsNullOrEmpty(authorDbref))
 		{
@@ -91,9 +93,9 @@ public static class ScenePoseHandlers
 	{
 		// @scene/editpose <poseId>=<editorDbref>,<content>
 		var poseId = SceneCommandHelper.Plain(poseIdArg);
-		var fields = SceneCommandHelper.SplitFields(rest, 2);
+		var (fields, contentMarkup) = SceneCommandHelper.SplitFieldsKeepingMarkup(rest, 2);
 		var editorDbref = await SceneLocate.PlayerOrSelf(parser, fields[0]);
-		var content = fields[1];
+		var content = MModule.serialize(contentMarkup);
 
 		if (string.IsNullOrEmpty(editorDbref))
 		{

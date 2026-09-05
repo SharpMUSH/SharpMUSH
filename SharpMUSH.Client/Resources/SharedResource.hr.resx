@@ -264,10 +264,6 @@
     <value>Prikaz igrača</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersComingSoon" xml:space="preserve">
-    <value>Administracija igrača uskoro dolazi.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPlayersTitle" xml:space="preserve">
     <value>Igrači</value>
     <comment>MT</comment>
@@ -3072,6 +3068,10 @@
     <value>Pretraži</value>
     <comment>MT</comment>
   </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Poza</value>
     <comment>MT — compose-mode label (noun), per the sheet's pose → poza</comment>
@@ -3214,6 +3214,22 @@
   </data>
   <data name="RolViewArchive" xml:space="preserve">
     <value>Prikaži arhivu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Dopusti svima da gledaju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Pokreni scenu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Naslov scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Poze uživo ne stižu — ponovno povezivanje. Sve što objavite i dalje se bilježi.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -3407,6 +3423,10 @@
   <data name="TempF" xml:space="preserve">
     <value>Temp. (F)</value>
     <comment>MT — unit symbol kept; "Temp." is the same abbreviation in Croatian</comment>
+  </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>Uređivač se nije mogao učitati.</value>
+    <comment>MT</comment>
   </data>
   <data name="TermAddAttribute" xml:space="preserve">
     <value>Dodaj atribut</value>

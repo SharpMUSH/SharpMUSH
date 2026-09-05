@@ -89,7 +89,7 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 				CREATE (s:{{SceneLabel}} {
 					sceneId: $sceneId,
 					status: $status,
-					isPublic: false,
+					isPublic: true,
 					isTempRoom: false,
 					scheduledFor: $noMillis,
 					startedAt: $now,
@@ -1421,11 +1421,8 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 	/// Splits an inbound content string into a plain (ANSI-stripped) projection and a
 	/// raw serialized MString markup, matching the model's Content/Markup contract.
 	/// </summary>
-	private static (string Plain, string Markup) SplitContent(string content)
-	{
-		var ms = MModule.single(content ?? "");
-		return (MModule.plainText(ms), MModule.serialize(ms));
-	}
+	private static (string Plain, string Markup) SplitContent(string content) =>
+		ScenePoseContent.Split(content);
 
 	private static Dictionary<string, string> DeserializeMeta(string json)
 	{

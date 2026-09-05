@@ -294,12 +294,34 @@
         }
 
         <div style="flex:1;min-height:0;">
-            <StandaloneCodeEditor @ref="_monacoEditor"
-                                  Id="mush-editor"
-                                  ConstructionOptions="BuildEditorOptions"
-                                  OnDidInit="OnEditorInitAsync"
-                                  OnDidChangeModelContent="OnEditorChanged"
-                                  CssClass="mush-editor-fill" />
+            @* Monaco is 3.67 MB and this is the only page that uses it, so it is fetched when this
+               page opens rather than by every visitor of the home page. The editor is not rendered
+               until the bundle is usable: BlazorMonaco's interop reaches for window.monaco as soon
+               as the component initialises, and Monaco's AMD loader defines that global some time
+               after its script finishes loading. *@
+            @if (_editorAssetsFailed)
+            {
+                <EmptyState>
+                    <MudText>@Loc["TermEditorAssetsUnavailable"]</MudText>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-2"
+                               OnClick="LoadEditorAssetsAsync">@Loc["NavTryAgain"]</MudButton>
+                </EmptyState>
+            }
+            else if (!_editorAssetsReady)
+            {
+                <div style="display:flex;align-items:center;justify-content:center;height:100%;">
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                </div>
+            }
+            else
+            {
+                <StandaloneCodeEditor @ref="_monacoEditor"
+                                      Id="mush-editor"
+                                      ConstructionOptions="BuildEditorOptions"
+                                      OnDidInit="OnEditorInitAsync"
+                                      OnDidChangeModelContent="OnEditorChanged"
+                                      CssClass="mush-editor-fill" />
+            }
         </div>
 
         @if (_evalLoading)
@@ -355,6 +377,36 @@
         : null;
 
     private StandaloneCodeEditor? _monacoEditor;
+
+    // Whether Monaco has been fetched and its globals are usable. Both start false so the editor is
+    // never rendered against a half-loaded bundle.
+    private bool _editorAssetsReady;
+    private bool _editorAssetsFailed;
+
+    /// <summary>
+    /// Fetches the Monaco bundle for this page. Idempotent on the JS side — the loader hands every
+    /// caller the same promise — so a retry after a failed network attempt costs one more try, not a
+    /// duplicate set of script tags.
+    /// </summary>
+    private async Task LoadEditorAssetsAsync()
+    {
+        _editorAssetsFailed = false;
+        StateHasChanged();
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("SharpMUSH.Assets.ensure", "monaco");
+            _editorAssetsReady = true;
+        }
+        catch (JSException)
+        {
+            // The asset did not load or did not initialise in time. Say so and offer a retry rather
+            // than rendering an editor that cannot work.
+            _editorAssetsFailed = true;
+        }
+
+        StateHasChanged();
+    }
     private ObjectBrowser? _objectBrowser;
     private HelpDrawer? _helpDrawer;
     private MushObject? _selectedObject;
@@ -431,11 +483,14 @@
         return v.Length > 60 ? v[..60] + "…" : v;
     }
 
+    protected override Task OnInitializedAsync() => LoadEditorAssetsAsync();
+
+    // No init on first render. SharpMUSH.Monaco lives in the Monaco bundle, which is fetched on
+    // demand now, so on the render where the editor is still loading — or the one where it failed to
+    // and is never shown — that global does not exist and the call throws. OnDidInit below does the
+    // same init at the only moment it can work: when the editor has actually mounted.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-            await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.initEditor", "mush-editor");
-
         if (_focusNewAttr)
         {
             _focusNewAttr = false;

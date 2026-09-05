@@ -7,8 +7,6 @@
     <title>SharpMUSH.Client</title>
     <base href="/" />
     <link rel="preload" as="style" href="_content/MudBlazor/MudBlazor.min.css" />
-    <link rel="preload" as="style" href="_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css" />
-    <link rel="preload" as="style" href="_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css" />
     <link rel="preload" id="webassembly" />
     <link rel="icon" type="image/svg" href="assets/Logo.svg" />
     <link rel="preload" href="/fonts/cascadia-mono.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
@@ -35,23 +33,19 @@
         <span class="dismiss">🗙</span>
     </div>
 
-    <!-- Third-party JS that Blazor components invoke via JSInterop must be loaded
-         BEFORE blazor.webassembly.js.  Blazor WASM boots asynchronously (WASM
-         fetch + compile), but OnAfterRenderAsync can fire before scripts placed
-         after the Blazor boot script are evaluated, causing ReferenceErrors. -->
-    <script src="/_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js"></script>
-    <script src="/_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js"></script>
-    <!-- Monaco Editor (BlazorMonaco) — must come before blazor.webassembly.js -->
-    <script src="_content/BlazorMonaco/jsInterop.js"></script>
-    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
-    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
-    <!-- SharpMUSH MUSH language definition for Monaco -->
-    <script src="js/mush-monaco.js"></script>
+    <!-- Third-party JS that Blazor components invoke via JSInterop must be loaded BEFORE
+         blazor.webassembly.js: Blazor WASM boots asynchronously (WASM fetch + compile), but
+         OnAfterRenderAsync can fire before scripts placed after the boot script are evaluated,
+         causing ReferenceErrors. That constraint is why the heavy editors used to be here too —
+         Monaco (3.67 MB) and Mermaid (2.57 MB) were fetched by every visitor of the home page,
+         who mostly never opens the softcode editor or a wiki diagram. They load on demand now,
+         through the loader below, and the pages that need them await it before rendering. -->
+    <script src="js/lazy-assets.js"></script>
     <!-- Terminal grid measurement and resize observer -->
     <script src="js/terminalMetrics.js"></script>
     <script src="js/layout.js"></script>
-    <!-- Mermaid (wiki diagram rendering) + the wiki post-render pass (mermaid run + anchor scroll) -->
-    <script src="js/mermaid.min.js"></script>
+    <!-- The wiki post-render pass (mermaid run + anchor scroll). Mermaid itself is fetched by this
+         script only when a page actually contains a diagram. -->
     <script src="js/wiki-render.js"></script>
     <!-- Manual start so the runtime knows the culture BEFORE boot: with sharded ICU (we ship no
          full globalization data), Blazor hard-errors if the culture changes during startup.

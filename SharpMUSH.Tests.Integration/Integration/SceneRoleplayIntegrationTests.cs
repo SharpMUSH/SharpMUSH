@@ -38,7 +38,7 @@ namespace SharpMUSH.Tests.Integration;
 ///   4. Capture     — each focused character pose/say/semiposes; assert in-order capture,
 ///                    correct author + showAs. A co-located but UNFOCUSED passer-by is NOT captured.
 ///   5. Edit/undo   — an author +scene/edit then +scene/undo; assert content versions.
-///   6. Recap/who   — +scene/recall transcript and +scene/who cast.
+///   6. Recap/info  — +scene/recall transcript and the +scene/info card.
 ///   7. Finish      — +scene/finish; assert status.
 /// </summary>
 [NotInParallel]
@@ -414,16 +414,18 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(recap).DoesNotContain("eavesdropping")
 			.Because("Dave's uncaptured pose must never appear in the transcript");
 
-		// +scene/who <id> lists the cast (distinct personas) and the members with roles.
-		var whoMsgs = await RunAndCollectAs(11L, $"+scene/who {sceneId}");
+		// +scene/info <id> is the scene's card. Its Players table is one row per member: what they are
+		// to the scene, the name they answer to, and how much they have posed. The personas that used
+		// to have a Cast line of their own now sit in the Name column beside the character.
+		var whoMsgs = await RunAndCollectAs(11L, $"+scene/info {sceneId}");
 		var who = string.Join("\n", whoMsgs);
-		Log($"[WHO]\n{who}");
-		await Assert.That(who).Contains("Cast:").Because("+scene/who prints a Cast line");
+		Log($"[INFO]\n{who}");
+		await Assert.That(who).Contains("Players").Because("the card prints the players table");
 		await Assert.That(who).Contains("Alice the Innkeeper");
 		await Assert.That(who).Contains("Bob the Bard");
 		await Assert.That(who).Contains("Carol the Cloaked");
 
-		// scenecast() (the data behind +scene/who) carries exactly the three personas.
+		// scenecast() (the data behind the card's Cast line) carries exactly the three personas.
 		var cast = await Eval($"scenecast({sceneId})");
 		Log($"[CAST] {cast}");
 		foreach (var persona in new[] { "Alice the Innkeeper", "Bob the Bard", "Carol the Cloaked" })

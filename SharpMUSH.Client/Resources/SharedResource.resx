@@ -1772,6 +1772,9 @@
     <value>say hello   ·   pose waves   ·   look   ·   who</value>
     <comment>Example commands. The command verbs (say, pose, look, who) are game syntax and must stay in English; only their arguments may be localized.</comment>
   </data>
+  <data name="TermEditorAssetsUnavailable" xml:space="preserve">
+    <value>The editor could not be loaded.</value>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Clear terminal</value>
   </data>
@@ -2353,8 +2356,56 @@
   <data name="AdmPlayersAction" xml:space="preserve">
     <value>View Players</value>
   </data>
-  <data name="AdmPlayersComingSoon" xml:space="preserve">
-    <value>Player administration coming soon.</value>
+  <data name="AdmGuestsSection" xml:space="preserve">
+    <value>Guest Characters</value>
+  </data>
+  <data name="AdmGuestsBlurb" xml:space="preserve">
+    <value>Characters that "connect guest" hands out to anonymous visitors. A game with none refuses every guest login, whatever the Guests setting says.</value>
+  </data>
+  <data name="AdmGuestsEmpty" xml:space="preserve">
+    <value>No guest characters yet. Create one and anonymous visitors can look around without registering.</value>
+  </data>
+  <data name="AdmGuestsDisabledWarning" xml:space="preserve">
+    <value>Guest logins are turned off, so these characters will not be handed out.</value>
+  </data>
+  <data name="AdmGuestsDisabledWarningLink" xml:space="preserve">
+    <value>Turn them on</value>
+  </data>
+  <data name="AdmGuestName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="AdmGuestDbref" xml:space="preserve">
+    <value>Dbref</value>
+  </data>
+  <data name="AdmGuestStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="AdmGuestInUse" xml:space="preserve">
+    <value>In use</value>
+  </data>
+  <data name="AdmGuestAvailable" xml:space="preserve">
+    <value>Available</value>
+  </data>
+  <data name="AdmGuestCreate" xml:space="preserve">
+    <value>Create guest</value>
+  </data>
+  <data name="AdmGuestDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="AdmGuestDeleteInUse" xml:space="preserve">
+    <value>Someone is connected as this guest. It can be deleted once they disconnect.</value>
+  </data>
+  <data name="AdmGuestCreated" xml:space="preserve">
+    <value>Created {0}.</value>
+  </data>
+  <data name="AdmGuestDeleted" xml:space="preserve">
+    <value>Deleted {0}.</value>
+  </data>
+  <data name="AdmGuestsMax" xml:space="preserve">
+    <value>Up to {0} guests at once.</value>
+  </data>
+  <data name="AdmGuestsMaxUnlimited" xml:space="preserve">
+    <value>No limit on simultaneous guests.</value>
   </data>
   <data name="AdmAccountsTitle" xml:space="preserve">
     <value>Accounts</value>
@@ -2956,8 +3007,23 @@
   <data name="RolNotConnected" xml:space="preserve">
     <value>Not connected to the game — connect to post and receive live poses.</value>
   </data>
+  <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
+    <value>Let anyone watch</value>
+  </data>
+  <data name="RolStartScene" xml:space="preserve">
+    <value>Start a scene</value>
+  </data>
+  <data name="RolSceneTitleLabel" xml:space="preserve">
+    <value>Scene title</value>
+  </data>
+  <data name="RolSceneLiveFeedDown" xml:space="preserve">
+    <value>Live poses are not arriving — reconnecting. Anything you post is still recorded.</value>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Waiting for activity…</value>
+  </data>
+  <data name="RolModeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="RolModePose" xml:space="preserve">
     <value>Pose</value>

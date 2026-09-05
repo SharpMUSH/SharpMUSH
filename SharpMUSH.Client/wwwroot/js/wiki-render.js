@@ -18,6 +18,7 @@
     window.SharpMUSH = window.SharpMUSH || {};
 
     let _initialised = false;
+    let _mermaidInitialised = false;
 
     function scrollToHash() {
         const raw = window.location.hash;
@@ -59,17 +60,8 @@
             if (_initialised) return;
             _initialised = true;
 
-            if (typeof window.mermaid !== "undefined") {
-                try {
-                    window.mermaid.initialize({
-                        startOnLoad: false,
-                        securityLevel: "strict", // no HTML labels / click handlers in diagrams
-                        theme: "dark"            // matches the portal's dark surfaces
-                    });
-                } catch (e) {
-                    console.warn("SharpMUSH.WikiRender: mermaid.initialize failed", e);
-                }
-            }
+            // Mermaid is NOT initialised here any more. It is 2.57 MB and most wiki pages carry no
+            // diagram at all, so it is fetched by render() below only once a page actually has one.
 
             // One global capture-phase listener handles every wiki page.
             document.addEventListener("click", onDocumentClick, true);
@@ -79,14 +71,27 @@
         // Called after every article render: turn any new mermaid blocks into SVG, then
         // honour a deep-link fragment once the content (and its ids) exist in the DOM.
         render: async function () {
-            if (typeof window.mermaid !== "undefined") {
+            // Only pay for mermaid on a page that has a diagram to draw. The selector is the same one
+            // that drives the run below, so "is there anything to render?" and "what do we render?"
+            // cannot disagree.
+            const selector = ".WikiContent .mermaid:not([data-processed])";
+            if (document.querySelector(selector)) {
                 try {
-                    // `:not([data-processed])` skips diagrams mermaid has already rendered.
-                    await window.mermaid.run({
-                        querySelector: ".WikiContent .mermaid:not([data-processed])"
-                    });
+                    await window.SharpMUSH.Assets.ensure("mermaid");
+                    if (!_mermaidInitialised) {
+                        _mermaidInitialised = true;
+                        window.mermaid.initialize({
+                            startOnLoad: false,
+                            securityLevel: "strict", // no HTML labels / click handlers in diagrams
+                            theme: "dark"            // matches the portal's dark surfaces
+                        });
+                    }
+                    await window.mermaid.run({ querySelector: selector });
                 } catch (e) {
-                    console.warn("SharpMUSH.WikiRender: mermaid.run failed", e);
+                    // A diagram that will not draw leaves its source visible as a code block, which is
+                    // the same thing an unsupported diagram type already does. The rest of the article
+                    // and the anchor scroll below must still work.
+                    console.warn("SharpMUSH.WikiRender: mermaid render failed", e);
                 }
             }
             scrollToHash();

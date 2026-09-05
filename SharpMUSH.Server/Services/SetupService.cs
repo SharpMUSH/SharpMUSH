@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library;
@@ -9,9 +10,14 @@ namespace SharpMUSH.Server.Services;
 /// <summary>
 /// First-run setup: while ServerState.SetupCompleted is false, the game is unclaimed and
 /// the web wizard may claim it — first visitor wins. Claiming renames the pre-generated
-/// #1-linked admin account, sets its password, and flips SetupCompleted.
+/// #1-linked admin account, sets its password AND the same password on character #1, and
+/// flips SetupCompleted.
 /// </summary>
-public class SetupService(ISharpDatabase database, IAccountService accountService)
+public class SetupService(
+	ISharpDatabase database,
+	IAccountService accountService,
+	IPasswordService passwordService,
+	ILogger<SetupService> logger)
 {
 	private readonly SemaphoreSlim _claimLock = new(1, 1);
 
@@ -56,6 +62,8 @@ public class SetupService(ISharpDatabase database, IAccountService accountServic
 			if (setPassword.IsT1)
 				return setPassword.AsT1;
 
+			await SetGodCharacterPasswordAsync(password, ct);
+
 			await database.SetServerSetupCompletedAsync(true, ct);
 
 			// Reload: ChangeUsernameAsync/SetPasswordAsync mutate the DB by accountId, not the
@@ -66,6 +74,56 @@ public class SetupService(ISharpDatabase database, IAccountService accountServic
 		finally
 		{
 			_claimLock.Release();
+		}
+	}
+
+	/// <summary>
+	/// Puts the claimer's password on character #1 as well as on their account.
+	/// </summary>
+	/// <remarks>
+	/// The seeded #1 has no password hash, and an absent hash means "any password authenticates" on
+	/// every login path — PennMUSH parity: <c>password_check()</c> returns 1 for a player with no
+	/// password attribute, and <c>create_minimal_db()</c> gives God none. PennMUSH closes the window
+	/// by telling the operator to <c>@newpassword</c> during their first connect. SharpMUSH replaces
+	/// that first connect with this wizard, which already asks for a password, so the wizard has to
+	/// close it instead — otherwise a claimed game still answers <c>connect &lt;God&gt; anything</c>
+	/// with a wizard session, on the telnet port and through the portal terminal alike.
+	///
+	/// <para>Deliberately not fatal to the claim: the account has already been renamed and given its
+	/// password by the time this runs, and refusing the claim here would leave the game unclaimable
+	/// with an admin account the claimer cannot reach. A #1 that is not a player is a broken database,
+	/// not a claim error — so it is logged loudly and the claim stands. The same goes for anything
+	/// thrown on the way: the promise above was only kept for the one case that was checked for, and
+	/// a hash or a write that threw took the claim down with it, at the point where the account had
+	/// already been renamed and the completion flag had not yet been set — the unclaimable state this
+	/// is written to avoid. Cancellation is not an error and still propagates.</para>
+	/// </remarks>
+	private async ValueTask SetGodCharacterPasswordAsync(string password, CancellationToken ct)
+	{
+		try
+		{
+			var god = await database.GetObjectNodeAsync(new DBRef(1), ct);
+			if (!god.IsT0)
+			{
+				logger.LogError(
+					"First-run setup: #1 is not a player, so no character password could be set on it. "
+					+ "Until an admin runs @password on it, any password will connect as #1.");
+				return;
+			}
+
+			var player = god.AsT0;
+			await passwordService.SetPassword(player,
+				passwordService.HashPassword($"#{player.Object.Key}:{player.Object.CreationTime}", password));
+		}
+		catch (OperationCanceledException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex,
+				"First-run setup: setting the character password on #1 failed, so the claim completed "
+				+ "without it. Until an admin runs @password on #1, any password will connect as #1.");
 		}
 	}
 }

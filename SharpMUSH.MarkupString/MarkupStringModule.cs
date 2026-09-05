@@ -949,13 +949,28 @@ public static partial class MarkupStringModule
 	[GeneratedRegex(@"\\\\\\\?")]
 	private static partial Regex KindPattern2Regex();
 
+	/// <summary>
+	/// Inline single-line mode, so the <c>.</c> that <c>*</c> and <c>?</c> compile to also matches a
+	/// newline.
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH's matcher (src/wild.c) walks characters and has no notion of a line, so a wildcard
+	/// spans a newline like any other character; .NET excludes <c>\n</c> from <c>.</c> unless told
+	/// otherwise, which quietly made every SharpMUSH wildcard line-bound. It rides in the pattern
+	/// STRING rather than as a <see cref="RegexOptions"/> flag because this is handed around as text
+	/// and compiled by callers that pass their own options — <c>CommandAttributeScanner</c> compiles
+	/// the <c>$</c>-command patterns itself, and that is the path where it showed: a multi-line
+	/// argument matched no <c>$</c>-command at all and the player got a bare "Huh?".
+	/// </remarks>
+	private const string SingleLineMode = "(?s)";
+
 	private static string ApplyRegexPattern(string pat)
 	{
 		pat = GlobPatternRegex().Replace(pat, @"(.*?)");
 		pat = QuestionPatternRegex().Replace(pat, @"(.)");
 		pat = KindPatternRegex().Replace(pat, @"\*");
 		pat = KindPattern2Regex().Replace(pat, @"\?");
-		return pat;
+		return SingleLineMode + pat;
 	}
 
 	public static string GetWildcardMatchAsRegex(MarkupString pattern) =>

@@ -8,6 +8,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject SceneService SceneService
 @inject IConnectionStateService Hub
+@inject ITerminalService Terminal
 @inject ISceneHubControl SceneHub
 
 <PageTitle>@Loc["RolLiveScene"] — @Loc["AppTitle"]</PageTitle>
@@ -52,10 +53,22 @@ else
                 @Loc["RolSceneLiveUnavailable"]
             </MudAlert>
         }
+        else if (!Terminal.IsConnected)
+        {
+            @* Each banner is gated on the connection whose loss it actually describes. The two are
+               separate transports: posting goes over the terminal socket, live poses arrive on the hub.
+               Gating both on one predicate — the tempting simplification — would disable a Send button
+               that works whenever the live feed alone is down. What was wrong was the wording: this
+               message says you cannot post, and it was shown for a hub outage, which does not stop
+               posting at all. *@
+            <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
+                @Loc["RolNotConnected"]
+            </MudAlert>
+        }
         else if (!Hub.IsConnected)
         {
             <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
-                @Loc["RolNotConnected"]
+                @Loc["RolSceneLiveFeedDown"]
             </MudAlert>
         }
 
@@ -73,19 +86,24 @@ else
         <div class="scene-live-compose">
             <MudSelect T="string" @bind-Value="_mode" Dense="true" Margin="Margin.Dense"
                        Variant="Variant.Outlined" Style="max-width:130px;">
+                <MudSelectItem Value="@("emit")">@Loc["RolModeEmit"]</MudSelectItem>
                 <MudSelectItem Value="@("pose")">@Loc["RolModePose"]</MudSelectItem>
                 <MudSelectItem Value="@("say")">@Loc["RolModeSay"]</MudSelectItem>
                 <MudSelectItem Value="@("semipose")">@Loc["RolModeSemipose"]</MudSelectItem>
             </MudSelect>
+            @* Immediate: the button below is gated on this field being non-empty, and MudTextField
+               otherwise binds on blur — so the value stayed empty through an entire typed pose and
+               Send could never be clicked. Enter is deliberately NOT wired to send: a pose is prose,
+               composed over several lines and edited before it goes out. *@
             <MudTextField @bind-Value="_composeText" Placeholder="@Loc["RolComposePlaceholder"]"
                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Immediate="true"
                           Lines="2" MaxLines="4"
-                          Style="flex:1;background:var(--surface-2);"
-                          OnKeyDown="OnComposeKeyDown" />
+                          Style="flex:1;background:var(--surface-2);" />
             <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary"
                            Size="Size.Medium" Variant="Variant.Filled"
                            OnClick="SendPoseAsync"
-                           Disabled="@(string.IsNullOrWhiteSpace(_composeText) || !Hub.IsConnected || _liveUnavailable)" />
+                           Disabled="@(string.IsNullOrWhiteSpace(_composeText) || !Terminal.IsConnected || _liveUnavailable)" />
         </div>
     </div>
 }
@@ -99,7 +117,10 @@ else
     private bool _notFound;
     private bool _liveUnavailable;
     private string _composeText = string.Empty;
-    private string _mode = "pose";
+    // Emit by default: it renders the author's words verbatim, with no name glued to the front.
+    // That is what a compose box on one scene's own page is for — the other three modes stay
+    // available for the times a player wants the built-in framing.
+    private string _mode = "emit";
     private bool _subscribed;
     private string? _joinedSceneId;
 
@@ -132,6 +153,14 @@ else
 
         _scene = scene;
         _poses.AddRange(await SceneService.GetPosesAsync(Id, count: 100));
+
+        // Only the login and character-switch paths connect the hub, so a returning player arrives
+        // here with none. Reconnect rather than connect: ConnectAsync returns the moment it sees a
+        // hub object, connected or not, so it cannot revive a dropped one.
+        if (!Hub.IsConnected)
+        {
+            await Hub.ReconnectAsync();
+        }
 
         // Join the SignalR scene group so we receive realtime ReceiveSceneMessage events.
         if (!string.Equals(_joinedSceneId, Id, StringComparison.Ordinal))
@@ -245,29 +274,20 @@ else
         var text = _composeText.Trim();
         // _liveUnavailable means this connection is not in the scene's group. Nothing renders a pose but the
         // round-trip event, so posting from here would look like the command vanished.
-        if (text.Length == 0 || !Hub.IsConnected || _liveUnavailable) return;
+        if (text.Length == 0 || !Terminal.IsConnected || _liveUnavailable) return;
 
-        var command = _mode switch
-        {
-            "say"      => $"say {text}",
-            "semipose" => $";{text}",
-            _          => $":{text}",
-        };
+        // The scene is named rather than inferred: the room-based verbs record through capture hooks
+        // that only fire for the scene you are focused on, in the room you are standing in.
+        //
+        // Newlines become %r because the channel is line-delimited and a raw one would end the
+        // command. The engine expands it back before matching the verb.
+        var command = $"+scene/{_mode} {Id}={text.Replace("\r\n", "\n").Replace("\n", "%r")}";
 
         _composeText = string.Empty;
 
-        // Send a normal game command — never @emit, never a scene-service write, and no
-        // optimistic insert. The author's pose renders once, when its SceneEventMessage
-        // round-trips back through HandleSceneEvent.
-        await Hub.SendCommandAsync(command);
-    }
-
-    private async Task OnComposeKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && !e.ShiftKey)
-        {
-            await SendPoseAsync();
-        }
+        // Down the terminal websocket, already open as this character. The hub's SendCommand
+        // publishes to a subject nothing consumes; the hub is kept for RECEIVING the pose back.
+        await Terminal.SendAsync(command);
     }
 
     public async ValueTask DisposeAsync()

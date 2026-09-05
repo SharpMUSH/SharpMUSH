@@ -738,4 +738,20 @@ public class ResponsiveConventionsTests
 		await Assert.That(offenders[0]).Contains("`.widget.widget`");
 		await Assert.That(offenders[0]).Contains("wrapper");
 	}
+
+	/// <summary>
+	/// A pose keeps its line breaks on screen. Poses are prose composed in a multi-line box and the
+	/// content is stored with real newlines, but HTML collapses whitespace — so without this the
+	/// archive silently ran every line of a pose together, and the newline handling that gets it
+	/// there intact was invisible to the reader. pre-wrap keeps the breaks and still wraps long lines.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task ScenePoseBody_PreservesLineBreaks()
+	{
+		var shell = File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
+		var rule = Regex.Match(shell, @"\.scene-pose-body\s*\{[^}]*\}", RegexOptions.Singleline);
+
+		await Assert.That(rule.Success).IsTrue().Because(".scene-pose-body needs a rule to hold the whitespace mode");
+		await Assert.That(rule.Value).Contains("pre-wrap");
+	}
 }

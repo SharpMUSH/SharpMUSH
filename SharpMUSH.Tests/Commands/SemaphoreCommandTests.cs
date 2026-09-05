@@ -44,7 +44,7 @@ public class SemaphoreCommandTests
 
 		await NotifyService.Received(1).Notify(
 			TestHelpers.MatchingObject(executor),
-			testMessage, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingMessage(testMessage), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -60,7 +60,7 @@ public class SemaphoreCommandTests
 		// Received(3) is the exact count: one for element "a", one for "b", one for "c".
 		await NotifyService.Received(3).Notify(
 			TestHelpers.MatchingObject(executor),
-			$"Inline{uniqueId}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingMessage($"Inline{uniqueId}"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test, Skip("Needs a better way of testing. This is too timing sensitive.")]
@@ -123,7 +123,7 @@ public class SemaphoreCommandTests
 
 		await NotifyService.Received(1).Notify(
 			TestHelpers.MatchingObject(executor),
-			$"QRegValue:{testValue}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingMessage($"QRegValue:{testValue}"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

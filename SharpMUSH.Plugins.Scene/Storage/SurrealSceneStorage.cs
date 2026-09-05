@@ -137,7 +137,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		await _accessor.ExecuteAsync("""
 			CREATE scene:⟨$id⟩ SET
 				status = $status,
-				isPublic = false,
+				isPublic = true,
 				isTempRoom = false,
 				scheduledFor = NONE,
 				startedAt = $startedAt,
@@ -668,22 +668,36 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var memberName = await ResolveObjectNameAsync(playerDbref) ?? "";
 
-		// At most one member edge per (player, scene): delete then RELATE.
-		await _accessor.ExecuteAsync(
-			"DELETE scene_member WHERE in = object:$pk AND out = scene:⟨$sid⟩",
-			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
+		// At most one member edge per (player, scene). This used to DELETE then RELATE, which is why it
+		// is now an UPDATE-or-RELATE: this edge does not only carry the role. `isCurrent` IS the
+		// player's focus and `showAs` is their +scene/as persona, so recreating the edge silently reset
+		// both — and the ArangoDB provider, which updates in place, kept them. The two providers
+		// disagreed about what re-roling somebody costs, and production is the one that lost the data.
+		// Losing focus is not cosmetic: nearly every owner verb acts on scenefocus(%#) and does nothing
+		// without one, and the capture hooks need it to record a pose at all.
+		var parameters = new Dictionary<string, object?>
+		{
+			["pk"] = playerKey.Value,
+			["sid"] = sceneKey.Split(':')[1],
+			["role"] = role ?? "",
+			["now"] = now,
+			["name"] = memberName
+		};
 
-		await _accessor.ExecuteAsync(
-			"RELATE object:$pk->scene_member->scene:⟨$sid⟩ SET " +
-			"role = $role, showAs = '', isCurrent = false, grantedAt = $now, memberName = $name",
-			new Dictionary<string, object?>
-			{
-				["pk"] = playerKey.Value,
-				["sid"] = sceneKey.Split(':')[1],
-				["role"] = role ?? "",
-				["now"] = now,
-				["name"] = memberName
-			});
+		var updated = await _accessor.ExecuteAsync(
+			"UPDATE scene_member SET role = $role, memberName = $name " +
+			"WHERE in = object:$pk AND out = scene:⟨$sid⟩ RETURN AFTER",
+			parameters);
+
+		// Nothing to update means this player is not in the cast yet; create the edge, and only then
+		// are the empty focus and persona correct — they are what a new member starts with.
+		if (updated.GetValue<List<SceneMemberEdgeRecord>>(0) is null or { Count: 0 })
+		{
+			await _accessor.ExecuteAsync(
+				"RELATE object:$pk->scene_member->scene:⟨$sid⟩ SET " +
+				"role = $role, showAs = '', isCurrent = false, grantedAt = $now, memberName = $name",
+				parameters);
+		}
 
 		return await GetMemberAsync(sceneId, playerDbref);
 	}
@@ -862,7 +876,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			var created = await GetPlotAsync($"scene_plot:{newId}");
 			return created.IsT0
 				? created.AsT0
-				: new ScenePlot($"scene_plot:{newId}", title ?? "", description ?? "", DbRefToString(ownerDbref), ownerName, now, now);
+				: new ScenePlot(BareKey($"scene_plot:{newId}"), title ?? "", description ?? "", DbRefToString(ownerDbref), ownerName, now, now);
 		}
 
 		var plotKey = PlotKey(plotId);
@@ -881,7 +895,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var updated = await GetPlotAsync(plotId);
 		return updated.IsT0
 			? updated.AsT0
-			: new ScenePlot(plotKey, title ?? "", description ?? "", DbRefToString(ownerDbref), ownerName, now, now);
+			: new ScenePlot(BareKey(plotKey), title ?? "", description ?? "", DbRefToString(ownerDbref), ownerName, now, now);
 	}
 
 	public async Task<OneOf<ScenePlot, NotFound>> GetPlotAsync(string plotId)
@@ -895,7 +909,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var rec = rows[0];
 		var plotKey = NormalizePlotId(rec.Id);
 		var (ownerDbref, _) = await ResolvePlotOwnerEdgeAsync(plotKey);
-		return new ScenePlot(plotKey, rec.title, rec.description, ownerDbref, rec.ownerName, rec.createdAt, rec.updatedAt);
+		return new ScenePlot(BareKey(plotKey), rec.title, rec.description, ownerDbref, rec.ownerName, rec.createdAt, rec.updatedAt);
 	}
 
 	public async Task<OneOf<OkNone, NotFound>> LinkSceneToPlotAsync(string plotId, string sceneId)
@@ -1022,6 +1036,24 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return i < 0
 			? new StringRecordId(normalizedKey)
 			: new StringRecordId($"{normalizedKey[..i]}:⟨{normalizedKey[(i + 1)..]}⟩");
+	}
+
+	/// <summary>
+	/// Strips the SurrealDB table prefix from an internal record id, giving the bare key that every
+	/// other provider already returns.
+	/// </summary>
+	/// <remarks>
+	/// Ids are not an internal detail here: a player types them (<c>+scene 1</c>, <c>+scene/join 1</c>),
+	/// they are a path segment in <c>/scenes/{id}/live</c>, and they are stored in player attributes.
+	/// Handing back <c>scene:1</c> made the id shape depend on which database the game runs on —
+	/// production (surrealdb) and the test suites' default (arangodb) disagreed — and put a colon in
+	/// every scene URL. Internal queries keep the prefixed form, which they parse with
+	/// <c>Split(':')</c>; only what leaves this class as a model <c>Id</c> is stripped.
+	/// </remarks>
+	private static string BareKey(string prefixedId)
+	{
+		var separator = prefixedId.IndexOf(':');
+		return separator < 0 ? prefixedId : prefixedId[(separator + 1)..];
 	}
 
 	private static string NormalizeSceneId(RecordId? id) => NormalizeRecordId(id, "scene");
@@ -1532,19 +1564,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	// Content arrives as raw MString markup; Content (the plain projection) strips ANSI/markup.
 	// Falls back to the raw string if the input is not serialized markup.
-	private static string StripMarkup(string? content)
-	{
-		if (string.IsNullOrEmpty(content))
-			return "";
-		try
-		{
-			return MModule.plainText(MModule.deserialize(content));
-		}
-		catch
-		{
-			return content;
-		}
-	}
+	private static string StripMarkup(string? content) => ScenePoseContent.Split(content).Plain;
 
 	private async Task<IReadOnlyList<SceneModel>> ProjectScenesAsync(List<SceneDbRecord> rows)
 	{
@@ -1562,7 +1582,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	private static SceneModel ProjectScene(SceneDbRecord rec, string idKey,
 		string? ownerDbref, string? starterDbref, string? roomDbref) => new(
-		Id: idKey,
+		Id: BareKey(idKey),
 		Status: rec.status,
 		IsPublic: rec.isPublic,
 		IsTempRoom: rec.isTempRoom,
@@ -1611,8 +1631,8 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		}
 
 		return new ScenePose(
-			Id: idKey,
-			SceneId: sceneKey,
+			Id: BareKey(idKey),
+			SceneId: BareKey(sceneKey),
 			AuthorDbref: authorDbref,
 			AuthorName: rec.authorName,
 			ShowAsName: rec.showAsName,
@@ -1632,7 +1652,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	}
 
 	private static SceneMember ProjectMember(SceneMemberEdgeRecord rec, string sceneKey) => new(
-		SceneId: sceneKey,
+		SceneId: BareKey(sceneKey),
 		MemberDbref: rec.memberKey is null ? null : $"#{rec.memberKey.Value}",
 		MemberName: rec.memberName,
 		Role: rec.role,

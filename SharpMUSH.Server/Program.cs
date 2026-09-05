@@ -110,6 +110,10 @@ public class Program
 		// default, so no header is trusted until an operator explicitly configures the proxy hop.
 		app.UseForwardedHeaders();
 
+		// Before the static-file and Blazor-framework middleware, so it can compress what they serve.
+		// The pre-brotlied _framework files already carry a Content-Encoding and are skipped.
+		app.UseResponseCompression();
+
 		app.UseRouting();
 		app.UseCors();
 
