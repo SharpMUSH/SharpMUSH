@@ -198,7 +198,9 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 
 	protected override MString RenderListItem(ListItemBlock listItem, int index = 0, bool isOrdered = false)
 	{
-		var content = base.RenderListItem(listItem, index, isOrdered);
+		// Content only: the template supplies the marker, and taking it from base.RenderListItem
+		// would prefix one as well.
+		var content = RenderListItemContent(listItem);
 		var args = new Dictionary<string, CallState>
 		{
 			{ "0", new CallState(MModule.single(isOrdered ? "1" : "0")) },
@@ -207,7 +209,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		};
 
 		var custom = TryEvaluateTemplate("LISTITEM", args).GetAwaiter().GetResult();
-		return custom ?? content;
+		return custom ?? MModule.concat(ListMarker(index, isOrdered), content);
 	}
 
 	protected override MString RenderQuote(QuoteBlock quote)

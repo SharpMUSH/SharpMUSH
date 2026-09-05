@@ -101,17 +101,25 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(result.ToString().Contains(Faint)).IsTrue();
 	}
 
+	/// <summary>
+	/// A bullet list renders one item per line with a faint marker, matching
+	/// <see cref="RenderOrderedList_ShouldHaveFaintNumbers"/> immediately below.
+	///
+	/// <para>It used to join the items with ", " and emit no marker, so a markdown bullet list came
+	/// out as "Item 1, Item 2" — in helpfiles, in <c>@wiki</c> pages, and in <c>+help</c> topics.
+	/// The old expectation was asserted here without a rationale, two lines from the ordered branch
+	/// that has always rendered one per line.</para>
+	/// </summary>
 	[Test]
-	public async Task RenderList_WithBullets_ShouldRenderAsCommaSeparated()
+	public async Task RenderList_WithBullets_RendersOnePerLine()
 	{
 		var markdown = "- Item 1\n- Item 2";
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// unordered lists are displayed as comma-separated values
-		await Assert.That(result.ToPlainText()).IsEqualTo("Item 1, Item 2");
-		await Assert.That(result.ToString().Contains("Item 1")).IsTrue();
-		await Assert.That(result.ToString().Contains("Item 2")).IsTrue();
+		await Assert.That(result.ToPlainText()).IsEqualTo("* Item 1\n* Item 2");
+		await Assert.That(result.ToString().Contains(Faint)).IsTrue()
+			.Because("the bullet is dim, like the ordered list's numbers");
 	}
 
 	[Test]

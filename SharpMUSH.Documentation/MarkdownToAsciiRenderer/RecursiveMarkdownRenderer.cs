@@ -24,7 +24,7 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 /// </summary>
 public partial class RecursiveMarkdownRenderer
 {
-	private readonly Ansi _dimStyle = Ansi.Create(faint: true);
+	protected readonly Ansi _dimStyle = Ansi.Create(faint: true);
 	private readonly Ansi _boldStyle = Ansi.Create(foreground: new AnsiColor.RGB(Color.White), bold: true);
 	private readonly Ansi _underlineStyle = Ansi.Create(underlined: true);
 	private readonly Ansi _headingStyle = Ansi.Create(foreground: new AnsiColor.RGB(Color.White), underlined: true, bold: true);

@@ -139,9 +139,13 @@ objects:
         flags: [funsyntax]
       # ** is the wildcard that crosses a backtick; * stops at one. The root itself is not matched,
       # which is what we want: it holds the source's description, not a topic.
+      #
+      # An attribute with an empty body is skipped. Writing a multi-word topic creates the branch
+      # above it -- +help/write "house rules" sets HELP`HOUSE`RULES, and the engine materializes an
+      # empty HELP`HOUSE -- which would otherwise list as a topic named "house" with nothing in it.
       FUN`GET`SRCRECORDS:
         value: |-
-          [@@(%0 a source — its topics as records)][iter(u(%!/FUN`GET`OBJECTS,%0),iter(lattr(%i0/HELP`**),%0:[num(%i1)]:%i0,%b,%b),%b,%b)]
+          [@@(%0 a source — its topics as records)][iter(u(%!/FUN`GET`OBJECTS,%0),iter(lattr(%i0/HELP`**),if(strlen(get(%i1/%i0)),%0:[num(%i1)]:%i0),%b,%b),%b,%b)]
         flags: [funsyntax]
       FUN`GET`RECORDS:
         value: |-
@@ -202,6 +206,12 @@ objects:
         value: |-
           [@@(%0 records · %1 a query — the records it resolves to)][u(%!/FUN`GET`RESOLVED,u(%!/FUN`GET`MATCHES,%0,u(%!/FUN`GET`NAMEATTR,%1),%1))]
         flags: [funsyntax]
+      # A source with no topics is not listed: the game's own is empty until someone writes a topic,
+      # and an empty row is worse than no row.
+      FUN`GET`LIVESOURCES:
+        value: |-
+          [@@(%0 records — the registered sources that actually have topics)][trim(squish(iter(u(%!/FUN`GET`SOURCES),if(words(u(%!/FUN`GET`OF,%0,%i0)),%i0),%b,%b)))]
+        flags: [funsyntax]
       FUN`GET`SEARCHED:
         value: |-
           [@@(%0 records · %1 the text — records whose name or body contains it)][trim(squish(iter(%0,if(cor(strmatch(u(%!/FUN`GET`RNAME,%i0),*%1*),strmatch(u(%!/FUN`GET`RBODY,%i0),*%1*)),%i0),%b,%b)))]
@@ -238,15 +248,15 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`SYNTAX:
         value: |-
-          [@@(no arguments — the one line that tells a reader what else to type)]+help <topic>%b%b·%b%b+help/list [<source>]%b%b·%b%b+help/search <text>%b%b·%b%b+help/sources
+          [@@(no arguments — the one line that tells a reader what else to type)]+help <topic>%b%b·%b%b+help/list \[<source>\]%b%b·%b%b+help/search <text>%b%b·%b%b+help/sources
         flags: [funsyntax]
       FUN`DISPLAY`INDEX:
         value: |-
-          [@@(%0 every record — the whole index)][header(Help,width(%#,78))]%r[iter(u(%!/FUN`GET`SOURCES),if(words(setr(r,u(%!/FUN`GET`OF,%0,%i0))),[u(%!/FUN`DISPLAY`SRCROW,%i0,words(%q<r>))]),%b,%r)]%r[line(,width(%#,78))]%r[u(%!/FUN`DISPLAY`SYNTAX)]%r[footer([words(%0)] topics,width(%#,78))]
+          [@@(%0 every record — the whole index)][header(Help,width(%#,78))]%r[iter(u(%!/FUN`GET`LIVESOURCES,%0),u(%!/FUN`DISPLAY`SRCROW,%i0,words(u(%!/FUN`GET`OF,%0,%i0))),%b,%r)]%r[line(,width(%#,78))]%r[u(%!/FUN`DISPLAY`SYNTAX)]%r[footer([words(%0)] topics,width(%#,78))]
         flags: [funsyntax]
       FUN`DISPLAY`LISTING:
         value: |-
-          [@@(%0 title · %1 records · %2 page · %3 paging stem — reads %q<pages>)][header(%0,width(%#,78))]%r[iter(u(%!/FUN`GET`SLICE,%1,%2),u(%!/FUN`DISPLAY`ROW,%i0),%b,%r)]%r[footer([words(%1)] topics%b-%b page %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b %3=[add(%2,1)])],width(%#,78))]
+          [@@(%0 title · %1 records · %2 page · %3 paging stem — reads %q<pages>)][header(%0,width(%#,78))]%r[iter(u(%!/FUN`GET`SLICE,%1,%2),u(%!/FUN`DISPLAY`ROW,%i0),%b,%r)]%r[footer([words(%1)] topics%b-%bpage %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b %3=[add(%2,1)])],width(%#,78))]
         flags: [funsyntax]
       # The body is markdown, rendered against this object's own RENDERMARKUP templates so a topic's
       # [cross-reference] becomes a live +help — see RENDERMARKUP`LINK.
@@ -438,7 +448,7 @@ objects:
 
           The line you type is evaluated once on its way in, exactly as `&attr obj=...` is, so you
           choose what happens when: leave code unescaped and it resolves as you type it, escape it
-          and it resolves for each reader instead. A backslash before a `[`, `(` or `)` shows the
+          and it resolves for each reader instead. A backslash before a `\[`, `\(` or `\)` shows the
           character; `%%` shows a `%`.
 
           Cross-references are written the same way — escape the brackets around a topic's name

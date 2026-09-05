@@ -326,6 +326,37 @@ public class PlusHelpIntegrationTests
 		await Assert.That(refused).Contains("No such help source");
 	}
 
+	/// <summary>
+	/// Every shipped topic must EVALUATE. A body is run through <c>u()</c>, so <c>[</c>, <c>(</c>
+	/// and <c>)</c> are softcode syntax in it — including inside a markdown code span, because
+	/// backticks are markdown and the parser has never heard of them. An unescaped one ends the
+	/// expression and the body fails to parse.
+	///
+	/// <para>Asserted here rather than left to the reader because <c>FUN`GET`RTEXT</c> falls back to
+	/// the stored text when evaluation fails, which is the right behaviour for a reader and a very
+	/// good way to not notice: the topic still renders, just without any of its evaluated content.
+	/// One shipped topic was broken exactly this way, and the only visible symptom was a
+	/// cross-reference elsewhere in it rendering as literal brackets.</para>
+	/// </summary>
+	[Test]
+	public async Task EveryShippedTopicEvaluates()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var librarian = await LibrarianAsync();
+
+		var report = (await God1(
+			$"think [iter(u({librarian}/FUN`GET`RECORDS),"
+			+ $"[u({librarian}/FUN`GET`RNAME,%i0)]=[if(strmatch(u([extract(%i0,2,1,:)]/[extract(%i0,3,1,:)]),#-1*),BROKEN,ok)]"
+			+ ",%b,%b)]")).Message!.ToPlainText();
+
+		var entries = report.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(entries.Length).IsGreaterThan(5).Because("there are topics to check");
+
+		var broken = entries.Where(e => e.EndsWith("=BROKEN", StringComparison.Ordinal)).ToList();
+		await Assert.That(broken).IsEmpty()
+			.Because($"these topic bodies do not evaluate: {string.Join(", ", broken)}");
+	}
+
 	// ── Writing ─────────────────────────────────────────────────────────────
 
 	[Test]

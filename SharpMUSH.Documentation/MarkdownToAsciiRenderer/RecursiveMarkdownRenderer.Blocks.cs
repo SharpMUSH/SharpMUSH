@@ -28,45 +28,44 @@ public partial class RecursiveMarkdownRenderer
 		return MModule.trim(content, " ", TrimType.TrimEnd);
 	}
 
+	/// <summary>
+	/// A list is one item per line, ordered or not. Unordered items used to be joined with ", " and
+	/// given no bullet at all, so a markdown bullet list rendered as a comma run — in helpfiles, in
+	/// <c>@wiki</c>, and anywhere <c>rendermarkdown()</c> was used.
+	/// </summary>
 	private MString RenderList(ListBlock list)
 	{
-		if (!list.IsOrdered)
-		{
-			var unorderedItems = list
-				.OfType<ListItemBlock>()
-				.Select(listItem => RenderListItem(listItem))
-				.ToList();
-			return MModule.multipleWithDelimiter(MModule.single(", "), unorderedItems);
-		}
-
-		var itemIndex = 1;
+		var itemIndex = 0;
 		var items = list
 			.OfType<ListItemBlock>()
-			.Select(listItem =>
-			{
-				var prefix = MModule.MarkupSingle(_dimStyle, $"{itemIndex}. ");
-
-				var content = RenderListItem(listItem, itemIndex - 1, list.IsOrdered);
-				itemIndex++;
-				return MModule.concat(prefix, content);
-			})
+			.Select(listItem => RenderListItem(listItem, itemIndex++, list.IsOrdered))
 			.ToList();
 
 		return MModule.multipleWithDelimiter(MModule.single("\n"), items);
 	}
 
-	protected virtual MString RenderListItem(ListItemBlock listItem, int index = 0, bool isOrdered = false)
+	/// <summary>The marker an item is introduced by: "1. " when ordered, a bullet when not.</summary>
+	protected MString ListMarker(int index, bool isOrdered)
+		=> MModule.MarkupSingle(_dimStyle, isOrdered ? $"{index + 1}. " : "* ");
+
+	/// <summary>
+	/// An item's rendered content, WITHOUT its marker. Split out so a renderer that replaces the
+	/// whole item — a <c>RENDERMARKUP`LISTITEM</c> template supplies its own marker — can reuse the
+	/// content without inheriting a marker it is about to add again. Prefixing in both places is
+	/// what made an ordered list under a custom template render "1. 1. alpha".
+	/// </summary>
+	protected MString RenderListItemContent(ListItemBlock listItem)
 	{
 		var parts = listItem
 			.Select(child => Render(child))
 			.Where(rendered => rendered.Length > 0)
 			.ToList();
 
-		var combined = MModule.multiple(parts);
-
-		var trimmed = MModule.trim(combined, " ", TrimType.TrimBoth);
-		return trimmed;
+		return MModule.trim(MModule.multiple(parts), " ", TrimType.TrimBoth);
 	}
+
+	protected virtual MString RenderListItem(ListItemBlock listItem, int index = 0, bool isOrdered = false)
+		=> MModule.concat(ListMarker(index, isOrdered), RenderListItemContent(listItem));
 
 	protected virtual MString RenderQuote(QuoteBlock quote)
 	{

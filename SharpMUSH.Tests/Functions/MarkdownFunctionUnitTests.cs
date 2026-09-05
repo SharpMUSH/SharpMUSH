@@ -165,11 +165,17 @@ public class MarkdownFunctionUnitTests
 	}
 
 	[Test]
+	/// <summary>
+	/// A bullet list is one item per line with a marker, the same shape the ordered case below
+	/// renders. It used to come back as "Item 1, Item 2, Item 3" — joined with ", " and given no
+	/// bullet at all — which made every bulleted list in a helpfile, a wiki page or a +help topic
+	/// read as a comma run.
+	/// </summary>
 	public async Task RenderMarkdown_UnorderedList_ExactMatch()
 	{
 		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(- Item 1%r- Item 2%r- Item 3)")))?.Message;
 		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.ToPlainText()).IsEqualTo("Item 1, Item 2, Item 3");
+		await Assert.That(result!.ToPlainText()).IsEqualTo("* Item 1\n* Item 2\n* Item 3");
 	}
 
 	[Test]
