@@ -237,29 +237,15 @@ public class ConnectionService(
 		var newEntry = new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected,
 			outputFunction, promptOutputFunction, encoding, metadata);
 
-		// A handle that is already known has two very different explanations, and they need opposite
-		// answers:
-		//
-		//   * a redelivered Register for a connection THIS process already owns (the state store is
-		//     at-least-once). Overwriting would silently log a live player out, so it is ignored.
-		//
-		//   * an entry restored by ReconcileFromStateStoreAsync. Connection state outlives the game
-		//     server, while the connection server restarts its descriptor numbering from the same
-		//     configured base — so after a restart a brand-new socket is handed a handle number the
-		//     store still describes, complete with the previous occupant's player binding and its
-		//     LoggedIn state. Ignoring THAT is what made the new connection inherit a dead player:
-		//     CommandParse takes the executor from Get(handle)?.Ref, so the connection was treated as
-		//     already logged in and the login token it sent next was dispatched as an ordinary game
-		//     command ("Huh?"). Its output function was the reconciled one too, pointing at a
-		//     transport that no longer exists. A real socket beats a remembered one.
-		// The outcome is read back from what the dictionary stored, not recorded by the delegate as it
-		// runs: AddOrUpdate may invoke the update factory more than once when a concurrent write makes
-		// its compare-and-swap fail, so a flag set inside it can describe an attempt that was thrown
-		// away. A Register racing ReconcileFromStateStoreAsync could see the entry as live (declining),
-		// retry after reconciliation replaced it, and store its entry with the flag still saying it had
-		// not — registering the connection in the table while skipping the state-store write and the
-		// handler notifications that make it a real session. The factory below is pure, so a discarded
-		// attempt costs nothing.
+		// A known handle has two explanations needing opposite answers. A redelivered Register for a
+		// connection this process owns must be ignored — the store is at-least-once, and overwriting
+		// would log a live player out. An entry restored by ReconcileFromStateStoreAsync must be
+		// overwritten: descriptor numbering restarts from the same base, so a new socket can be handed
+		// a number the store still describes, and inheriting it gives the connection a dead player's
+		// binding and an output function pointing at a transport that no longer exists.
+		// Read back from what the dictionary stored rather than recorded inside the factory:
+		// AddOrUpdate may run that factory more than once when its compare-and-swap loses, so a flag
+		// set in it can describe a discarded attempt. The factory is pure, so a retry costs nothing.
 		var stored = _sessionState.AddOrUpdate(handle, newEntry, (_, existing) =>
 			existing.Metadata.ContainsKey(ReconciledMarker) ? newEntry : existing);
 

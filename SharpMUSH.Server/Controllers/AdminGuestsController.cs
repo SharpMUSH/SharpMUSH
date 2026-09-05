@@ -19,13 +19,10 @@ namespace SharpMUSH.Server.Controllers;
 /// <summary>
 /// Guest-character administration, acting as the authenticated session's character.
 ///
-/// <para>A game ships with <c>Net.Guests</c> on and no guest characters, because the seeded database
-/// defines the <c>Guest</c> POWER but gives it to nobody. The portal offers "Play" to anonymous
-/// visitors on that setting alone, so every visitor of a fresh game reaches <c>/play</c>, watches it
-/// run <c>connect guest</c>, and is told there are no guest characters available. Stocking them was
-/// possible only from a MU* client (<c>@pcreate</c> then <c>@power &lt;name&gt;=Guest</c>) — a
-/// terminal round-trip for the one thing an operator has to do before anyone can look at their game.
-/// </para>
+/// <para>A game ships with <c>Net.Guests</c> on and no guest characters: the seeded database defines
+/// the <c>Guest</c> power and gives it to nobody, so a fresh game offers "Play" to anonymous visitors
+/// and then tells them no guest is available. Stocking them needed a MU* client
+/// (<c>@pcreate</c> then <c>@power &lt;name&gt;=Guest</c>).</para>
 ///
 /// <para>Work goes through the engine's own commands via <see cref="IEngineCommandInvoker"/>, never
 /// straight to the database: <c>@PCREATE</c> validates the name, applies the starting quota and
@@ -152,11 +149,8 @@ public class AdminGuestsController(
 				new ApiErrorDto($"'{name}' was created but the {GuestCharacters.GuestPower} power did not take."));
 		}
 
-		// The creation time comes off the node rather than the parsed dbref. @PCREATE does return an
-		// objid today, so `dbref.CreationMilliseconds ?? 0` produced the right answer — but the
-		// sentinel is a silently wrong one, and a 0 here would have the panel build `#N:0` for a guest
-		// that does exist. The node is already loaded and is the authoritative value, which is also
-		// what List reports.
+		// From the node, not the parsed dbref: a `?? 0` fallback would hand the panel `#N:0` for a
+		// guest that exists. The node is already loaded and is what List reports.
 		var player = node.AsPlayer;
 		return Ok(new GuestRow(player.Object.Key, player.Object.CreationTime, name,
 			await IsInUseAsync(dbref, ct)));

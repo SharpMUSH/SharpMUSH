@@ -75,10 +75,8 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	""";
 
 	/// <summary>
-	/// Whether a scene appears in the roster after the page has already read it once. The start form
-	/// treats a scene as created only when the roster grows, so a test wanting the created case opts
-	/// in here; leaving it off is the refused case, which is the one worth guarding. Instance state,
-	/// because these tests run in parallel and a static would leak the answer between them.
+	/// Whether a new scene shows up on reads after the first. Off is the refused case. Instance state:
+	/// these tests run in parallel and a static would leak the answer between them.
 	/// </summary>
 	public bool ASceneAppears { get; set; }
 
@@ -137,18 +135,16 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	public HubException? JoinRefusal { get; set; }
 
 	/// <summary>
-	/// Starts connected, as most tests want. A test that sets this false is reproducing the state a
-	/// returning player is actually in: the hub singleton is fresh on every page load, and nothing on
-	/// a plain load logs in again, so the connection has to be established by whoever needs it.
+	/// Starts connected, as most tests want. False reproduces a returning player: the hub is fresh on
+	/// every page load and nothing on a plain load connects it.
 	/// </summary>
 	public bool IsConnected { get; set; } = true;
 
 	public int ConnectCalls { get; private set; }
 
 	/// <summary>
-	/// Counted apart from <see cref="ConnectCalls"/> because the real service does not treat them
-	/// alike: ConnectAsync returns early whenever a hub OBJECT exists, connected or not, so it cannot
-	/// revive a dropped connection. Aliasing the two here hid that difference from the tests.
+	/// Counted apart from <see cref="ConnectCalls"/>: ConnectAsync returns early whenever a hub object
+	/// exists, connected or not, so only a reconnect can revive a dropped one.
 	/// </summary>
 	public int ReconnectCalls { get; private set; }
 
@@ -212,9 +208,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 	private readonly SceneSurfaceApiHandler _api = new();
 
 	/// <summary>
-	/// The command terminal MainLayout mounts on every page. It is the connection the compose box
-	/// sends through: it is already open as the character, and its input rides the websocket subject
-	/// the engine already consumes, so posing needs no second channel.
+	/// The terminal MainLayout mounts on every page — already open as the character, and the channel
+	/// the compose box sends through.
 	/// </summary>
 	private readonly ITerminalService _terminal = Substitute.For<ITerminalService>();
 
@@ -237,9 +232,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// The field binds as the player types. It did not: MudTextField defaults to binding on change
-	/// (blur), so _composeText stayed empty through an entire typed pose and the Send button — gated
-	/// on it being non-empty — never became clickable. The compose box could not be used at all.
+	/// The field binds as the player types. MudTextField binds on change (blur) by default, which left
+	/// the text empty through an entire pose and the Send button never clickable.
 	/// </summary>
 	[TUnit.Core.Test]
 	public async Task SceneLive_EnablesSend_AsSoonAsSomethingIsTyped()
@@ -255,10 +249,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Assert.That(cut.Find(".scene-live-compose button").HasAttribute("disabled")).IsFalse();
 	}
 
-	/// <summary>
-	/// Enter is a newline, not a send. A pose is prose — it is composed over several lines and edited
-	/// before it goes out — so the only thing that sends it is the send button.
-	/// </summary>
+	/// <summary>Enter is a newline. A pose is prose; only the button sends it.</summary>
 	[TUnit.Core.Test]
 	public async Task SceneLive_EnterDoesNotSend()
 	{

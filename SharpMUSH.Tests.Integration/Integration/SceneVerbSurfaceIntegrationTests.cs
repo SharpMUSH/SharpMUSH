@@ -12,19 +12,11 @@ namespace SharpMUSH.Tests.Integration;
 /// <summary>
 /// What the scene verbs say: the guards that refuse, and the card that informs.
 ///
-/// <para>The first half is about being unfocused.
-///
-/// <para>Ten of them read <c>scenefocus(%#)</c> and act on the result without asking whether it is a
-/// scene. It is not, for anyone who has not joined one: it is the string <c>#-1 NOT FOUND</c>, which
-/// is truthy and non-empty, so the guards passed and the work went ahead against a scene that does
-/// not exist. A wizard — whom <c>FUN`OWNS</c> deliberately treats as owning every scene — got the
-/// full success path, and was told <c>Pitch set for scene #-1 NOT FOUND.</c> while nothing was set.
-/// Reporting a write that did not happen as one that did is the serious half; leaking the sentinel
-/// into a sentence aimed at a player is the visible half.</para>
-///
-/// <para>The other arm was as bad in the opposite direction: a player who is not the owner failed an
-/// <c>@assert</c> that carries no message, so <c>+scene/public</c> typed by the wrong person produced
-/// no output whatsoever — indistinguishable from a command that does not exist.</para>
+/// <para>Ten verbs read <c>scenefocus(%#)</c> and acted on it without asking whether it named a
+/// scene. For anyone unfocused it is <c>#-1 NOT FOUND</c> — truthy and non-empty — so a wizard, whom
+/// <c>FUN`OWNS</c> treats as owning every scene, was told <c>Pitch set for scene #-1 NOT FOUND.</c>
+/// while nothing was written, and everyone else failed a message-less <c>@assert</c> and got no
+/// output at all.</para>
 /// </summary>
 [NotInParallel]
 public class SceneVerbSurfaceIntegrationTests
@@ -277,13 +269,10 @@ public class SceneVerbSurfaceIntegrationTests
 	/// The card's link is the game's own web address with the scene's id appended, not a base an
 	/// admin has to retype into the package.
 	///
-	/// <para>The address comes from <c>mud_url</c>, the standard config for it. A game that has not
-	/// set one shows no URL line — there is no address to guess — and that is the state asserted here,
-	/// because it is the state the harness ships. The configured half cannot be driven from a test:
-	/// <c>@config/set</c> is not implemented and the option is read-only at runtime, so the only way
-	/// in is the admin config page, which is where it was checked by hand. What a test can decide is
-	/// the join, which is the part with something to get wrong, so it runs through the package's own
-	/// helper against both spellings of a base address.</para>
+	/// <para>The address is <c>mud_url</c>; unset means no URL line, which is what the harness ships
+	/// and what is asserted here. The configured half cannot be driven from a test — <c>@config/set</c>
+	/// is unimplemented and the option is read-only at runtime — so only the join is, against both
+	/// spellings of a base address.</para>
 	/// </summary>
 	[Test]
 	public async Task SceneInfo_BuildsItsLinkFromTheGamesAddressAndTheSceneId()

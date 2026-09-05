@@ -154,15 +154,9 @@ else
         _scene = scene;
         _poses.AddRange(await SceneService.GetPosesAsync(Id, count: 100));
 
-        // The hub is a per-page-load singleton and only the login/character-switch paths connect it,
-        // so a returning player arrives here with no connection at all: the banner below, and a
-        // compose box that can never send. This page is the one that needs the connection, so it is
-        // the one that establishes it.
-        //
-        // Reconnect rather than connect. ConnectAsync returns the moment it sees a hub OBJECT,
-        // connected or not, so it cannot revive one whose connection has dropped — a player who lost
-        // theirs while reading sat in front of a dead compose box until they reloaded. There are no
-        // scene groups to preserve here by definition: nothing is connected to hold them.
+        // Only the login and character-switch paths connect the hub, so a returning player arrives
+        // here with none. Reconnect rather than connect: ConnectAsync returns the moment it sees a
+        // hub object, connected or not, so it cannot revive a dropped one.
         if (!Hub.IsConnected)
         {
             await Hub.ReconnectAsync();
@@ -282,22 +276,17 @@ else
         // round-trip event, so posting from here would look like the command vanished.
         if (text.Length == 0 || !Terminal.IsConnected || _liveUnavailable) return;
 
-        // The scene is named, not inferred. The room-based verbs (: / say / ;) record through the
-        // capture hooks, which only fire when the character is focused on a scene in the room they
-        // are standing in — so posing from a page for a scene you are merely reading emitted into
-        // wherever you happened to be and was silently never recorded.
+        // The scene is named rather than inferred: the room-based verbs record through capture hooks
+        // that only fire for the scene you are focused on, in the room you are standing in.
         //
-        // Newlines become %r because this is a line-delimited channel: a raw newline would end the
-        // command. The engine expands %r back to a newline before the verb's pattern is matched, and
-        // a wildcard spans newlines, so a multi-line pose arrives intact.
+        // Newlines become %r because the channel is line-delimited and a raw one would end the
+        // command. The engine expands it back before matching the verb.
         var command = $"+scene/{_mode} {Id}={text.Replace("\r\n", "\n").Replace("\n", "%r")}";
 
         _composeText = string.Empty;
 
-        // Sent down the command terminal's websocket, which is already open as this character and
-        // whose input the engine already consumes. The game hub's SendCommand publishes onto a
-        // subject nothing subscribes to, so a pose sent that way never arrived; the hub is kept for
-        // RECEIVING the round-tripped event, which is what renders the pose.
+        // Down the terminal websocket, already open as this character. The hub's SendCommand
+        // publishes to a subject nothing consumes; the hub is kept for RECEIVING the pose back.
         await Terminal.SendAsync(command);
     }
 

@@ -60,16 +60,14 @@
     private bool _busy;
     private string _newTitle = string.Empty;
 
-    // Matches what the engine now does when nobody specifies. The box is not here to ask for the
-    // default; it is here so the choice is visible at the moment a scene is started, and so the
-    // exception can be made without knowing a command.
+    // Matches the engine's default. Here so the choice is visible when a scene is started, and so
+    // the exception can be made without knowing a command.
     private bool _newPublic = true;
     private IReadOnlyList<SceneSummary>? _recent;
     private IReadOnlyList<SceneSummary>? _active;
 
-    // The websocket may still be coming up when this page renders — MainLayout opens it, and a
-    // player can arrive here before it finishes. Reading IsConnected once and never listening left
-    // the start button permanently absent for exactly those arrivals.
+    // MainLayout opens the websocket, and a player can arrive before it finishes; reading
+    // IsConnected once without listening leaves the start button permanently absent for them.
     protected override void OnInitialized() => Terminal.ConnectionStateChanged += OnConnectionChanged;
 
     public void Dispose() => Terminal.ConnectionStateChanged -= OnConnectionChanged;
@@ -93,7 +91,9 @@
         _busy = true;
         try
         {
-            var before = _active?.Count ?? 0;
+            // Ids, not a count: the list is capped, so on a game already at the cap a successful
+            // create would not change its length and the scene would look like it had never happened.
+            var before = _active?.Select(s => s.Id).ToHashSet() ?? [];
             await Terminal.SendAsync($"+scene/create {title}");
 
             // The verb travels to the engine and back over NATS, so the scene is not in the API the
@@ -104,13 +104,11 @@
             {
                 await Task.Delay(250);
                 _active = await SceneService.GetActiveScenesAsync();
-                created = _active is not null && _active.Count > before;
+                created = _active?.Any(s => !before.Contains(s.Id)) == true;
             }
 
-            // Only the exception needs saying, and only once there is something to say it about.
-            // +scene/private acts on the focused scene, and creation is what focuses the new one — so
-            // sending it before knowing a scene was created would, on a refusal, make whatever the
-            // player was already focused on private instead.
+            // +scene/private acts on the focused scene, and creation is what focuses the new one, so
+            // sending this before knowing one exists would make the player's previous scene private.
             if (created && !_newPublic)
             {
                 await Terminal.SendAsync("+scene/private");
@@ -127,8 +125,7 @@
         }
         finally
         {
-            // In a finally because a send that throws would otherwise leave the form disabled with no
-            // way back other than reloading the page.
+            // A send that throws would otherwise leave the form disabled until a page reload.
             _busy = false;
         }
     }

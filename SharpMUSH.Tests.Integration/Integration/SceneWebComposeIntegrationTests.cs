@@ -53,17 +53,10 @@ public class SceneWebComposeIntegrationTests
 	/// <summary>
 	/// What each recipient has been told, bucketed by dbref.
 	///
-	/// <para>These assertions used to enumerate the <see cref="INotifyService"/> substitute's
-	/// <c>ReceivedCalls()</c> and window it by a global count. Two things were wrong with that. The
-	/// substitute is a session singleton shared by every suite the session runs, so a global count is
-	/// not a window onto this test — another suite's notifications land inside it. And the filter
-	/// matched <c>Notify</c> alone, while a refusal can travel by <c>NotifyLocalized</c> instead, so a
-	/// message that did go out read as silence: exactly the direction that makes the negative
-	/// assertions below pass when they should fail.</para>
-	///
-	/// <para>The recorder has neither problem. It is fed by every <c>Notify</c> and
-	/// <c>NotifyLocalized</c> overload, and it keys by recipient, so a window on one player cannot see
-	/// another test's traffic.</para>
+	/// <para>Not <c>ReceivedCalls()</c> on the substitute: that is a session singleton, so a global
+	/// count is no window onto one test, and filtering it by <c>Notify</c> alone reads a refusal sent
+	/// via <c>NotifyLocalized</c> as silence — the direction that makes a negative assertion pass when
+	/// it should fail. The recorder is fed by every overload and keys by recipient.</para>
 	/// </summary>
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 
@@ -331,14 +324,9 @@ public class SceneWebComposeIntegrationTests
 	/// <summary>
 	/// Colour typed into a pose survives into storage.
 	///
-	/// <para>The storage layer is built for this: it takes the caller's content as a SERIALISED
-	/// MString, keeps it in <c>markup</c>, and derives <c>content</c> from it with
-	/// <c>MModule.plainText(MModule.deserialize(...))</c>. The portal is built for it too —
-	/// <c>ScenePoseLine</c> renders <c>Pose.Markup</c> through the scene renderer. Only the command
-	/// boundary was not: <c>SceneCommandHelper.SplitFields</c> called <c>ToPlainText()</c>, so what
-	/// reached storage was already flat, <c>deserialize</c> fell through to its catch, and
-	/// <c>markup</c> held the same bare sentence as <c>content</c>. A pose written with <c>ansi()</c>
-	/// rendered coloured in a terminal and grey on the web.</para>
+	/// <para>Storage takes the content as a serialised MString and derives the plain column from it;
+	/// the portal renders <c>Pose.Markup</c>. Only the command boundary was flattening it, which left
+	/// <c>markup</c> holding the same bare sentence as <c>content</c>.</para>
 	/// </summary>
 	[Test]
 	public async Task WebCompose_KeepsTheColourAPoseWasWrittenWith()
