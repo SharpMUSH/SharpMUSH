@@ -49,9 +49,14 @@ public class ListFunctionUnitTests
 	}
 
 	// TODO: Implement #@ token as shorthand for inum(0).
+	//
+	// inum(0) is the CURRENT iteration — the innermost one — so in the nested case it counts the
+	// inner list 1..3 while %i1 holds the outer element. The old expectation ("2 2 2-4 4 4-6 6 6")
+	// was inum(0) returning the OUTERMOST iteration, which is what itext()/inum() did before they
+	// were corrected to index the register stack the same way %i<n> does.
 	[Test, NotInParallel]
 	[Arguments("iter(5 6 7,inum(0))", "1 2 3")]
-	[Arguments("iter(1|2|3,iter(1 2 3,add(inum(0),%i1)),|,-)", "2 2 2-4 4 4-6 6 6")]
+	[Arguments("iter(1|2|3,iter(1 2 3,add(inum(0),%i1)),|,-)", "2 3 4-3 4 5-4 5 6")]
 	public async Task IterationNumber(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
