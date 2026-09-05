@@ -19,6 +19,13 @@
 	</PropertyGroup>
 
   <ItemGroup>
+    <!-- The config generators are Roslyn analyzers (IncludeBuildOutput=false), so their output cannot
+         be referenced. Link the emitter's source instead: EmitTests then covers the same code that runs
+         at build time, without disturbing how the analyzer is packaged. -->
+    <Compile Include="..\SharpMUSH.Configuration.Generated\Emit.cs" Link="Configuration\Generated\Emit.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

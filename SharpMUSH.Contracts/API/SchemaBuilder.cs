@@ -1,6 +1,5 @@
 using SharpMUSH.Configuration;
-using SharpMUSH.Configuration.Options;
-using System.Reflection;
+using SharpMUSH.Configuration.Generated;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.API;
@@ -10,22 +9,30 @@ namespace SharpMUSH.Library.API;
 /// </summary>
 public static partial class SchemaBuilder
 {
-	public static ConfigurationSchema BuildSchema(SharpMUSHOptions options)
+	/// <summary>
+	/// Builds the configuration schema. It describes the shape of the options — names, types, groups,
+	/// declared defaults — none of which depends on the values currently loaded, so it takes no options
+	/// instance. Everything comes from the tables the config generators emit.
+	/// </summary>
+	public static ConfigurationSchema BuildSchema()
 	{
-		var schema = new ConfigurationSchema();
+		// Kept as a list as well as a dictionary: category and group ordering breaks ties by first-seen
+		// property, and Dictionary<,> enumeration order is an implementation detail, not a guarantee.
+		var ordered = BuildProperties();
 
-		schema.Properties = BuildPropertiesFromReflection(options);
-		schema.Categories = BuildCategoriesFromProperties(schema.Properties);
-
-		return schema;
+		return new ConfigurationSchema
+		{
+			Properties = ordered.ToDictionary(property => property.Path),
+			Categories = BuildCategoriesFromProperties(ordered)
+		};
 	}
 
-	private static List<CategoryMetadata> BuildCategoriesFromProperties(Dictionary<string, PropertyMetadata> properties)
+	private static List<CategoryMetadata> BuildCategoriesFromProperties(List<PropertyMetadata> properties)
 	{
 		var categories = new Dictionary<string, CategoryMetadata>();
 		var groups = new Dictionary<string, Dictionary<string, GroupMetadata>>();
 
-		foreach (var prop in properties.Values)
+		foreach (var prop in properties)
 		{
 			if (!categories.ContainsKey(prop.Category))
 			{
@@ -63,50 +70,37 @@ public static partial class SchemaBuilder
 		return categories.Values.OrderBy(c => c.Order).ToList();
 	}
 
-	private static Dictionary<string, PropertyMetadata> BuildPropertiesFromReflection(SharpMUSHOptions options)
+	/// <summary>Every configured property, in the order its category and then its record declares it.</summary>
+	private static List<PropertyMetadata> BuildProperties()
 	{
-		var properties = new Dictionary<string, PropertyMetadata>();
-		var optionsType = typeof(SharpMUSHOptions);
+		var properties = new List<PropertyMetadata>(ConfigMetadata.PropertyNames.Length);
 
-		foreach (var categoryProp in optionsType.GetProperties())
+		foreach (var propertyName in ConfigMetadata.PropertyNames)
 		{
-			var categoryValue = categoryProp.GetValue(options);
-			if (categoryValue == null) continue;
+			var attr = ConfigMetadata.PropertyMetadata[propertyName];
+			var type = ConfigAccessor.GetPropertyType(propertyName)!;
+			var category = attr.Category;
+			var path = $"{category}.{propertyName}";
 
-			var categoryType = categoryProp.PropertyType;
-			var categoryName = categoryProp.Name;
-
-			var defaultInstance = GetDefaultInstance(categoryType);
-
-			foreach (var prop in categoryType.GetProperties())
+			properties.Add(new PropertyMetadata
 			{
-				var attr = prop.GetCustomAttribute<SharpConfigAttribute>();
-				if (attr == null) continue;
-
-				var path = $"{categoryName}.{prop.Name}";
-				var currentValue = prop.GetValue(categoryValue);
-				var defaultValue = defaultInstance != null ? prop.GetValue(defaultInstance) : null;
-
-				properties[path] = new PropertyMetadata
-				{
-					Name = prop.Name,
-					DisplayName = FormatPropertyDisplayName(attr.Name),
-					Description = attr.Description,
-					Category = categoryName,
-					Group = attr.Group,
-					Order = attr.Order,
-					Type = GetPropertyTypeName(prop.PropertyType),
-					Component = InferComponentType(prop.PropertyType),
-					DefaultValue = defaultValue,
-					Min = attr.Min,
-					Max = attr.Max,
-					Pattern = attr.ValidationPattern,
-					Required = !IsNullable(prop.PropertyType),
-					Tooltip = attr.Tooltip,
-					ReadOnly = false,
-					Path = path
-				};
-			}
+				Name = propertyName,
+				DisplayName = FormatPropertyDisplayName(attr.Name),
+				Description = attr.Description,
+				Category = category,
+				Group = attr.Group,
+				Order = attr.Order,
+				Type = GetPropertyTypeName(type),
+				Component = InferComponentType(type),
+				DefaultValue = ConfigAccessor.GetDeclaredDefault(propertyName),
+				Min = attr.Min,
+				Max = attr.Max,
+				Pattern = attr.ValidationPattern,
+				Required = !IsNullable(type),
+				Tooltip = attr.Tooltip,
+				ReadOnly = false,
+				Path = path
+			});
 		}
 
 		return properties;
@@ -128,18 +122,6 @@ public static partial class SchemaBuilder
 		}
 
 		return PascalCaseSplitRegex().Replace(name, " $1").Trim();
-	}
-
-	private static object? GetDefaultInstance(Type type)
-	{
-		try
-		{
-			return Activator.CreateInstance(type);
-		}
-		catch
-		{
-			return null;
-		}
 	}
 
 	private static string GetPropertyTypeName(Type type)

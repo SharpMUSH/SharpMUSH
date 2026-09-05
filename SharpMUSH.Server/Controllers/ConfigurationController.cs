@@ -1,10 +1,10 @@
-using System.Reflection;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
@@ -103,8 +103,8 @@ public class ConfigurationController(
 	}
 
 	/// <summary>
-	/// Apply partial updates to the immutable record hierarchy.
-	/// Updates are keyed by property path, e.g. "Net.Port" or "Limit.MaxLogins".
+	/// Applies partial updates to the immutable record hierarchy. Updates are keyed by property path,
+	/// e.g. "Net.Port" or "Limit.MaxLogins"; both halves match case-insensitively.
 	/// </summary>
 	private static SharpMUSHOptions ApplyUpdates(
 		SharpMUSHOptions current,
@@ -112,8 +112,8 @@ public class ConfigurationController(
 		out Dictionary<string, string> errors)
 	{
 		errors = new Dictionary<string, string>();
+		var result = current;
 
-		var grouped = new Dictionary<string, Dictionary<string, JsonElement>>(StringComparer.OrdinalIgnoreCase);
 		foreach (var (path, value) in updates)
 		{
 			var parts = path.Split('.', 2);
@@ -123,77 +123,41 @@ public class ConfigurationController(
 				continue;
 			}
 
-			if (!grouped.ContainsKey(parts[0]))
-				grouped[parts[0]] = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
-
-			grouped[parts[0]][parts[1]] = value;
-		}
-
-		var optionsType = typeof(SharpMUSHOptions);
-		var result = current;
-
-		foreach (var (categoryName, categoryUpdates) in grouped)
-		{
-			var categoryProp = optionsType.GetProperty(categoryName);
-			if (categoryProp == null)
+			var category = ConfigAccessor.ResolveCategoryName(parts[0]);
+			if (category is null)
 			{
-				foreach (var key in categoryUpdates.Keys)
-					errors[$"{categoryName}.{key}"] = $"Unknown category: '{categoryName}'";
+				errors[path] = $"Unknown category: '{parts[0]}'";
 				continue;
 			}
 
-			var categoryValue = categoryProp.GetValue(current);
-			if (categoryValue == null) continue;
+			// A property name alone identifies the property — they are unique across categories — so the
+			// category half is checked rather than used, and a path naming a property that lives in another
+			// category is rejected instead of being dropped on the floor.
+			var property = ConfigAccessor.ResolvePropertyName(parts[1]);
+			if (property is null || ConfigAccessor.GetCategoryForProperty(property) != category)
+			{
+				errors[path] = $"Unknown property: '{parts[1]}' in category '{category}'";
+				continue;
+			}
 
-			var categoryType = categoryProp.PropertyType;
-			var updatedCategory = ApplyCategoryUpdates(categoryValue, categoryType, categoryName, categoryUpdates, errors);
-
-			result = CloneRecordWithProperty(result, categoryProp, updatedCategory);
+			try
+			{
+				var converted = ConvertJsonElement(value, ConfigAccessor.GetPropertyType(property)!);
+				result = ConfigAccessor.WithValue(result, property, converted);
+			}
+			// Only what converting a JsonElement and assigning it can raise. Anything else — a null
+			// dereference, a missing switch arm in the generated setter — is a defect in this code, and
+			// reporting it to the caller as "Invalid value" would bury it in a 400.
+			catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException
+				or OverflowException or InvalidCastException or ArgumentException or NotSupportedException)
+			{
+				errors[path] = $"Invalid value: {ex.Message}";
+			}
 		}
 
 		return result;
 	}
 
-	private static object ApplyCategoryUpdates(
-		object categoryValue,
-		Type categoryType,
-		string categoryName,
-		Dictionary<string, JsonElement> updates,
-		Dictionary<string, string> errors)
-	{
-		var ctor = categoryType.GetConstructors()
-			.OrderByDescending(c => c.GetParameters().Length)
-			.First();
-
-		var ctorParams = ctor.GetParameters();
-		var args = new object?[ctorParams.Length];
-
-		for (var i = 0; i < ctorParams.Length; i++)
-		{
-			var param = ctorParams[i];
-			var prop = categoryType.GetProperty(param.Name!, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-			var currentVal = prop?.GetValue(categoryValue);
-
-			if (updates.TryGetValue(param.Name!, out var jsonVal))
-			{
-				try
-				{
-					args[i] = ConvertJsonElement(jsonVal, param.ParameterType);
-				}
-				catch (Exception ex)
-				{
-					errors[$"{categoryName}.{param.Name}"] = $"Invalid value: {ex.Message}";
-					args[i] = currentVal;
-				}
-			}
-			else
-			{
-				args[i] = currentVal;
-			}
-		}
-
-		return ctor.Invoke(args);
-	}
 
 	private static object? ConvertJsonElement(JsonElement element, Type targetType)
 	{
@@ -260,38 +224,6 @@ public class ConfigurationController(
 		}
 
 		return JsonSerializer.Deserialize(element.GetRawText(), targetType);
-	}
-
-	private static SharpMUSHOptions CloneRecordWithProperty(SharpMUSHOptions source, PropertyInfo prop, object? newValue)
-	{
-		// SharpMUSHOptions uses { get; init; } properties.
-		// Build a new instance by copying all properties, overriding the target one.
-		return new SharpMUSHOptions
-		{
-			Attribute = prop.Name == nameof(SharpMUSHOptions.Attribute) ? (AttributeOptions)newValue! : source.Attribute,
-			Chat = prop.Name == nameof(SharpMUSHOptions.Chat) ? (ChatOptions)newValue! : source.Chat,
-			Command = prop.Name == nameof(SharpMUSHOptions.Command) ? (CommandOptions)newValue! : source.Command,
-			Compatibility = prop.Name == nameof(SharpMUSHOptions.Compatibility) ? (CompatibilityOptions)newValue! : source.Compatibility,
-			Cosmetic = prop.Name == nameof(SharpMUSHOptions.Cosmetic) ? (CosmeticOptions)newValue! : source.Cosmetic,
-			Cost = prop.Name == nameof(SharpMUSHOptions.Cost) ? (CostOptions)newValue! : source.Cost,
-			Database = prop.Name == nameof(SharpMUSHOptions.Database) ? (DatabaseOptions)newValue! : source.Database,
-			Dump = prop.Name == nameof(SharpMUSHOptions.Dump) ? (DumpOptions)newValue! : source.Dump,
-			File = prop.Name == nameof(SharpMUSHOptions.File) ? (Configuration.Options.FileOptions)newValue! : source.File,
-			Flag = prop.Name == nameof(SharpMUSHOptions.Flag) ? (FlagOptions)newValue! : source.Flag,
-			Function = prop.Name == nameof(SharpMUSHOptions.Function) ? (FunctionOptions)newValue! : source.Function,
-			Limit = prop.Name == nameof(SharpMUSHOptions.Limit) ? (LimitOptions)newValue! : source.Limit,
-			Log = prop.Name == nameof(SharpMUSHOptions.Log) ? (LogOptions)newValue! : source.Log,
-			Message = prop.Name == nameof(SharpMUSHOptions.Message) ? (MessageOptions)newValue! : source.Message,
-			Net = prop.Name == nameof(SharpMUSHOptions.Net) ? (NetOptions)newValue! : source.Net,
-			Debug = prop.Name == nameof(SharpMUSHOptions.Debug) ? (DebugOptions)newValue! : source.Debug,
-			Alias = prop.Name == nameof(SharpMUSHOptions.Alias) ? (AliasOptions)newValue! : source.Alias,
-			Restriction = prop.Name == nameof(SharpMUSHOptions.Restriction) ? (RestrictionOptions)newValue! : source.Restriction,
-			BannedNames = prop.Name == nameof(SharpMUSHOptions.BannedNames) ? (BannedNamesOptions)newValue! : source.BannedNames,
-			SitelockRules = prop.Name == nameof(SharpMUSHOptions.SitelockRules) ? (SitelockRulesOptions)newValue! : source.SitelockRules,
-			Warning = prop.Name == nameof(SharpMUSHOptions.Warning) ? (WarningOptions)newValue! : source.Warning,
-			TextFile = prop.Name == nameof(SharpMUSHOptions.TextFile) ? (TextFileOptions)newValue! : source.TextFile,
-			Wiki = prop.Name == nameof(SharpMUSHOptions.Wiki) ? (WikiOptions)newValue! : source.Wiki
-		};
 	}
 
 	[HttpPost("import")]

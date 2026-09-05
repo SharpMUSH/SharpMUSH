@@ -93,11 +93,86 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 		                        _ => null
 		                    };
 		                }
+		                
+		                /// <summary>The default declared on the property's primary-constructor parameter, or null when it declares none.</summary>
+		                public static object? GetDeclaredDefault(string propertyName)
+		                {
+		                    return propertyName switch
+		                    {
+		                        {{string.Join("\n                ", allProperties.Select(p => $"\"{p.Property.Name}\" => {DeclaredDefault(p.Category, p.Property)},"))}}
+		                        _ => null
+		                    };
+		                }
+		                
+		                private static readonly ImmutableDictionary<string, string> CanonicalPropertyNames =
+		                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		                    {
+		                        {{string.Join("\n                ", allProperties.Select(p => $"{{ \"{p.Property.Name}\", \"{p.Property.Name}\" }},"))}}
+		                    }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+		                
+		                private static readonly ImmutableDictionary<string, string> CanonicalCategoryNames =
+		                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		                    {
+		                        {{string.Join("\n                ", categories.Select(c => $"{{ \"{c.Name}\", \"{c.Name}\" }},"))}}
+		                    }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+		                
+		                /// <summary>Canonical casing for a property name, or null when no such property exists.</summary>
+		                public static string? ResolvePropertyName(string propertyName)
+		                    => CanonicalPropertyNames.TryGetValue(propertyName, out var canonical) ? canonical : null;
+		                
+		                /// <summary>Canonical casing for a category name, or null when no such category exists.</summary>
+		                public static string? ResolveCategoryName(string categoryName)
+		                    => CanonicalCategoryNames.TryGetValue(categoryName, out var canonical) ? canonical : null;
+		                
+		                /// <summary>
+		                /// Returns a copy of <paramref name="options"/> with one property replaced, rebuilding only the
+		                /// records on the path to it. <paramref name="propertyName"/> must be canonical — resolve it with
+		                /// <see cref="ResolvePropertyName"/> first.
+		                /// </summary>
+		                public static SharpMUSHOptions WithValue(SharpMUSHOptions options, string propertyName, object? value)
+		                {
+		                    return propertyName switch
+		                    {
+		                        {{string.Join("\n                ", allProperties.Select(WithValueArm))}}
+		                        _ => throw new ArgumentOutOfRangeException(nameof(propertyName), propertyName,
+		                            "Not a configured property.")
+		                    };
+		                }
+		                
 		            }
 		            """;
 
 		spc.AddSource("ConfigAccessor_Generated.g.cs", str);
 	}
+
+	private static string WithValueArm((IPropertySymbol Category, IPropertySymbol Property) p)
+	{
+		var category = p.Category.Name;
+		var property = p.Property.Name;
+		var type = GetTypeName(p.Property.Type);
+
+		return $"\"{property}\" => options with {{ {category} = options.{category} with {{ {property} = ({type})value! }} }},";
+	}
+
+	private static IParameterSymbol? PrimaryConstructorParameter(IPropertySymbol category, IPropertySymbol property)
+		=> category.Type is not INamedTypeSymbol categoryType
+			? null
+			: categoryType.Constructors
+				.OrderByDescending(c => c.Parameters.Length)
+				.FirstOrDefault()
+				?.Parameters
+				.FirstOrDefault(param => param.Name == property.Name);
+
+	private static string DeclaredDefault(IPropertySymbol category, IPropertySymbol property)
+	{
+		var parameter = PrimaryConstructorParameter(category, property);
+
+		return parameter is { HasExplicitDefaultValue: true }
+			? Emit.Literal(parameter.ExplicitDefaultValue)
+			: "null";
+	}
+
+
 
 	private static string GetTypeName(ITypeSymbol type)
 	{

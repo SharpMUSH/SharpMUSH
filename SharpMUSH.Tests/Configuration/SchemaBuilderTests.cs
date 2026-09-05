@@ -12,9 +12,7 @@ public class SchemaBuilderTests
 {
 	private static ConfigurationSchema BuildSchema()
 	{
-		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
-		var options = ReadPennMushConfig.Create(configFile);
-		return SchemaBuilder.BuildSchema(options);
+		return SchemaBuilder.BuildSchema();
 	}
 
 	[Test]
@@ -70,6 +68,32 @@ public class SchemaBuilderTests
 		var costGroups = string.Join("|", schema.Categories.First(c => c.Name == "Cost").Groups.Select(g => g.Name));
 
 		await Assert.That(costGroups).IsEqualTo("Building Costs|Command Costs");
+	}
+
+	/// <summary>
+	/// A property reports the default its own declaration gives it, independently of its siblings. This
+	/// used to be all-or-nothing per category: defaults came from a default-constructed instance of the
+	/// category record, so a record with any parameter lacking a default could not be constructed at all
+	/// and every one of its properties reported null — including those declaring a default. Only NetOptions
+	/// and WikiOptions gave every parameter one, so only they reported defaults.
+	/// </summary>
+	[Test]
+	public async Task DefaultValue_ComesFromTheDeclarationOnTheProperty()
+	{
+		var schema = BuildSchema();
+
+		await Assert.That(schema.Properties["Net.MudName"].DefaultValue).IsEqualTo("SharpMUSH");
+		await Assert.That(schema.Properties["Net.Port"].DefaultValue).IsEqualTo(4201u);
+
+		// DebugOptions is the mixed case that used to report null for both: one parameter declares a
+		// default, the other does not, and each now answers for itself.
+		await Assert.That(schema.Properties["Debug.ParserPredictionMode"].DefaultValue).IsEqualTo(2);
+		await Assert.That(schema.Properties["Debug.DebugSharpParser"].DefaultValue).IsNull();
+
+		await Assert.That((bool?)schema.Properties["Database.AllowBrowserCode"].DefaultValue).IsFalse();
+
+		// CommandOptions declares no defaults at all, so its properties still have none to report.
+		await Assert.That(schema.Properties["Command.NoisyWhisper"].DefaultValue).IsNull();
 	}
 
 	[Test]

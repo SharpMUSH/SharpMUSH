@@ -206,6 +206,49 @@ public class ConfigurationControllerTests
 		await Assert.That((int)response.Configuration.Net.Port).IsEqualTo(9999);
 	}
 
+	/// <summary>
+	/// A path is matched case-insensitively in both halves. It used to disagree with itself: updates were
+	/// grouped by category with an OrdinalIgnoreCase dictionary but the category was then resolved with a
+	/// case-sensitive GetProperty, so "net.Port" reported an unknown category while "Net.port" applied.
+	/// </summary>
+	[TUnit.Core.Test]
+	[Arguments("net.Port")]
+	[Arguments("Net.port")]
+	[Arguments("NET.PORT")]
+	public async Task UpdateConfiguration_PathIsCaseInsensitive(string path)
+	{
+		var controller = CreateController();
+		var updates = new Dictionary<string, JsonElement>
+		{
+			[path] = JsonSerializer.SerializeToElement(9998)
+		};
+
+		var result = await controller.UpdateConfiguration(updates);
+		if (result.Result is BadRequestObjectResult bad)
+			throw new Exception("BadRequest: " + System.Text.Json.JsonSerializer.Serialize(bad.Value));
+
+		var ok = (OkObjectResult)result.Result!;
+		await Assert.That((int)((ConfigurationResponse)ok.Value!).Configuration.Net.Port).IsEqualTo(9998);
+	}
+
+	/// <summary>A property that does not exist in the named category is rejected, not silently ignored.</summary>
+	[TUnit.Core.Test]
+	public async Task UpdateConfiguration_PropertyFromAnotherCategory_ReturnsBadRequest()
+	{
+		var controller = CreateController();
+		var updates = new Dictionary<string, JsonElement>
+		{
+			["Net.PlayerStart"] = JsonSerializer.SerializeToElement(5)
+		};
+
+		var result = await controller.UpdateConfiguration(updates);
+
+		// Several paths return BadRequest, so assert which one: the property is real but lives in Database,
+		// and it used to match no NetOptions constructor parameter and be dropped with a 200 OK.
+		var bad = (BadRequestObjectResult)result.Result!;
+		await Assert.That(JsonSerializer.Serialize(bad.Value)).Contains("Unknown property");
+	}
+
 	[TUnit.Core.Test]
 	public async Task UpdateConfiguration_BooleanToggle_Works()
 	{

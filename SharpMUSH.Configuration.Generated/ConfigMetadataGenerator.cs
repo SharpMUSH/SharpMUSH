@@ -65,6 +65,14 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 		                    {{string.Join(",\n            ", metadata.Select(m => $"{{ \"{m.AttributeName}\", \"{m.PropertyName}\" }}"))}}
 		                }.ToImmutableDictionary();
 		                
+		                /// <summary>
+		                /// Every configured property, in the order its category and then its record declares it.
+		                /// The dictionaries below are unordered, and the config UI groups by first-seen order.
+		                /// </summary>
+		                public static readonly ImmutableArray<string> PropertyNames = [
+		                    {{string.Join(",\n            ", metadata.Select(m => $"\"{m.PropertyName}\""))}}
+		                ];
+		                
 		                public static readonly ImmutableDictionary<string, SharpConfigAttribute> PropertyMetadata = new Dictionary<string, SharpConfigAttribute>
 		                {
 		                    {{string.Join(",\n            ", metadataWithAttributes)}}
@@ -88,47 +96,55 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 		}
 	}
 
-	private static IEnumerable<(IPropertySymbol Property, AttributeData Attribute)> GetPropertyMetadataWithAttributes(INamedTypeSymbol optionsSymbol)
+	private static IEnumerable<(string CategoryName, IPropertySymbol Property, AttributeData Attribute)>
+		GetPropertyMetadataWithAttributes(INamedTypeSymbol optionsSymbol)
 	{
 		foreach (var category in SelectCategoryProperties(optionsSymbol))
 		{
-			var categoryName = category.Name;
 			foreach (var prop in SelectConfigProperties(category))
 			{
 				var attr = prop.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == SHARPATTRIBUTE);
 				if (attr is not null)
 				{
-					yield return (prop, attr);
+					yield return (category.Name, prop, attr);
 				}
 			}
 		}
 	}
 
-	private static string GeneratePropertyMetadataEntry((IPropertySymbol Property, AttributeData Attribute) metadata)
+	private static string GeneratePropertyMetadataEntry(
+		(string CategoryName, IPropertySymbol Property, AttributeData Attribute) metadata)
 	{
 		var prop = metadata.Property;
 		var attr = metadata.Attribute;
 
-		// Get the category from the containing property symbol
-		var category = "";
-		if (prop.ContainingType is INamedTypeSymbol containingType)
-		{
-			// The property's containing type is the category record (e.g., AttributeOptions)
-			category = containingType.Name;
-		}
+		// The property that owns this category on SharpMUSHOptions ("Net"), not the record's type name
+		// ("NetOptions"). That is the value every attribute declares, the value ConfigAccessor reports,
+		// and the value SchemaBuilder derives, so all three agree.
+		var category = metadata.CategoryName;
 
-		var name = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Name").Value.Value as string ?? "";
-		var description = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Description").Value.Value as string ?? "";
-		var validationPattern = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "ValidationPattern").Value.Value as string;
+		var name = Named(attr, "Name") as string ?? "";
+		var description = Named(attr, "Description") as string ?? "";
+		var group = Named(attr, "Group") as string;
+		var tooltip = Named(attr, "Tooltip") as string;
+		var validationPattern = Named(attr, "ValidationPattern") as string;
+		var order = Named(attr, "Order") is int o ? o : 0;
 
-		var validationPatternStr = validationPattern != null ? $"\"{EscapeString(validationPattern)}\"" : "null";
-		var descriptionStr = !string.IsNullOrEmpty(description) ? $"\"{EscapeString(description)}\"" : "\"\"";
-
-		return $"{{ \"{prop.Name}\", new SharpConfigAttribute {{ Name = \"{name}\", Description = {descriptionStr}, Category = \"{category}\", ValidationPattern = {validationPatternStr} }} }}";
+		return "{ \"" + prop.Name + "\", new SharpConfigAttribute { "
+			+ $"Name = \"{Emit.Escape(name)}\", "
+			+ $"Description = {Emit.Quote(description) ?? "\"\""}, "
+			+ $"Category = \"{Emit.Escape(category)}\", "
+			+ $"Group = {Emit.Quote(group) ?? "null"}, "
+			+ $"Order = {order}, "
+			+ $"Min = {Emit.Literal(Named(attr, "Min"))}, "
+			+ $"Max = {Emit.Literal(Named(attr, "Max"))}, "
+			+ $"Tooltip = {Emit.Quote(tooltip) ?? "null"}, "
+			+ $"ValidationPattern = {Emit.Quote(validationPattern) ?? "null"}"
+			+ " } }";
 	}
 
-	private static string EscapeString(string str)
-		=> str.Replace("\\", "\\\\").Replace("\"", "\\\"");
+	private static object? Named(AttributeData attr, string key)
+		=> attr.NamedArguments.FirstOrDefault(kv => kv.Key == key).Value.Value;
 
 	private static IEnumerable<IPropertySymbol> SelectCategoryProperties(INamedTypeSymbol optionsSymbol)
 		=> optionsSymbol.GetMembers().OfType<IPropertySymbol>().Where(x => x.Name is not "EqualityContract");

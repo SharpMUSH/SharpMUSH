@@ -4,6 +4,7 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Library.API
 @using System.Text.Json
+@using SharpMUSH.Configuration.Generated
 @inject AdminConfigService AdminConfigService
 @inject ConfigSchemaService SchemaService
 @inject ISnackbar Snackbar
@@ -223,7 +224,7 @@
 
             foreach (var prop in _categoryProperties.Values)
             {
-                var value = GetPropertyValue(configResponse.Configuration, prop.Path);
+                var value = ConfigAccessor.GetValue(configResponse.Configuration, prop.Name);
                 _currentValues[prop.Path] = value;
                 _originalValues[prop.Path] = value;
             }
@@ -425,24 +426,6 @@
     {
         return _categoryProperties.Values.Where(p => 
             (p.Group ?? "General").Equals(groupName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private object? GetPropertyValue(object obj, string propertyPath)
-    {
-        var parts = propertyPath.Split('.');
-        object? current = obj;
-        
-        foreach (var part in parts)
-        {
-            if (current == null) return null;
-            
-            var prop = current.GetType().GetProperty(part);
-            if (prop == null) return null;
-            
-            current = prop.GetValue(current);
-        }
-        
-        return current;
     }
 
     private bool GetBoolValue(PropertyMetadata prop)
