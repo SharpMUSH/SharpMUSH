@@ -105,6 +105,41 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 		                    };
 		                }
 		                
+		                private static readonly ImmutableDictionary<string, string> CanonicalPropertyNames =
+		                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		                    {
+		                        {{string.Join("\n                ", allProperties.Select(p => $"{{ \"{p.Property.Name}\", \"{p.Property.Name}\" }},"))}}
+		                    }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+		                
+		                private static readonly ImmutableDictionary<string, string> CanonicalCategoryNames =
+		                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		                    {
+		                        {{string.Join("\n                ", categories.Select(c => $"{{ \"{c.Name}\", \"{c.Name}\" }},"))}}
+		                    }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+		                
+		                /// <summary>Canonical casing for a property name, or null when no such property exists.</summary>
+		                public static string? ResolvePropertyName(string propertyName)
+		                    => CanonicalPropertyNames.TryGetValue(propertyName, out var canonical) ? canonical : null;
+		                
+		                /// <summary>Canonical casing for a category name, or null when no such category exists.</summary>
+		                public static string? ResolveCategoryName(string categoryName)
+		                    => CanonicalCategoryNames.TryGetValue(categoryName, out var canonical) ? canonical : null;
+		                
+		                /// <summary>
+		                /// Returns a copy of <paramref name="options"/> with one property replaced, rebuilding only the
+		                /// records on the path to it. <paramref name="propertyName"/> must be canonical — resolve it with
+		                /// <see cref="ResolvePropertyName"/> first.
+		                /// </summary>
+		                public static SharpMUSHOptions WithValue(SharpMUSHOptions options, string propertyName, object? value)
+		                {
+		                    return propertyName switch
+		                    {
+		                        {{string.Join("\n                ", allProperties.Select(WithValueArm))}}
+		                        _ => throw new ArgumentOutOfRangeException(nameof(propertyName), propertyName,
+		                            "Not a configured property.")
+		                    };
+		                }
+		                
 		                /// <summary>
 		                /// True when every parameter of the category's record declares a default, so the record can be
 		                /// constructed with none supplied.
@@ -121,6 +156,15 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 		            """;
 
 		spc.AddSource("ConfigAccessor_Generated.g.cs", str);
+	}
+
+	private static string WithValueArm((IPropertySymbol Category, IPropertySymbol Property) p)
+	{
+		var category = p.Category.Name;
+		var property = p.Property.Name;
+		var type = GetTypeName(p.Property.Type);
+
+		return $"\"{property}\" => options with {{ {category} = options.{category} with {{ {property} = ({type})value! }} }},";
 	}
 
 	private static IParameterSymbol? PrimaryConstructorParameter(IPropertySymbol category, IPropertySymbol property)
