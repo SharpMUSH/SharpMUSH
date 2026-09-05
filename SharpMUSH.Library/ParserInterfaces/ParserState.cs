@@ -196,6 +196,29 @@ public class IterationWrapper<T>
 }
 
 /// <summary>
+/// Lets one command list hand its <c>@break</c>/<c>@assert</c> up to the list that ran it.
+///
+/// <para><c>VisitCommandList</c> pops the break marker when the list it is visiting stops, which is
+/// right for an action list at the top of a queue entry: the break has done its job there. It is
+/// wrong for a list that is only nested because a command chose to run it — <c>@include</c> is
+/// documented to insert the included actions into the CALLING list, so a guard inside it must stop
+/// the caller too, and <c>/nobreak</c> exists precisely to suppress that (<c>help @include</c>).</para>
+///
+/// <para>Reference type, so the flags are shared across the immutable ParserState records made
+/// while the nested list runs. <see cref="PreserveNext"/> is a ONE-SHOT, consumed by the next
+/// command list to begin: lists nested deeper inside the included text see it already cleared and
+/// keep today's containment.</para>
+/// </summary>
+public class BreakPropagation
+{
+	/// <summary>Set by the caller before running a nested list; cleared by the first list that starts.</summary>
+	public bool PreserveNext { get; set; }
+
+	/// <summary>Set by that list if it stopped on a break, so the caller can re-raise it.</summary>
+	public bool Broke { get; set; }
+}
+
+/// <summary>
 /// A layer or Parser State
 /// </summary>
 /// <param name="Registers">The current standard registers (%0, %1, named arguments)</param>
@@ -224,6 +247,10 @@ public class IterationWrapper<T>
 /// Use <see cref="ParserStateFlags.DirectInput"/> (≙ <c>QUEUE_NOLIST</c>),
 /// <see cref="ParserStateFlags.Debug"/> (≙ <c>QUEUE_DEBUG</c>), and
 /// <see cref="ParserStateFlags.NoDebug"/> (≙ <c>QUEUE_NODEBUG</c>).
+/// </param>
+/// <param name="BreakPropagation">
+/// Shared, one-shot channel letting a nested command list hand its break to the list that ran it.
+/// Null everywhere except around a run that wants it (<c>@include</c>).
 /// </param>
 /// <param name="CallerArguments">
 /// Saves the caller's numbered arguments (%0-%9) from the enclosing scope before a command
@@ -256,7 +283,8 @@ public partial record ParserState(
 	LimitExceededFlag? LimitExceeded = null,
 	ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory = null,
 	ParserStateFlags Flags = ParserStateFlags.None,
-	Dictionary<string, CallState>? CallerArguments = null)
+	Dictionary<string, CallState>? CallerArguments = null,
+	BreakPropagation? BreakPropagation = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;

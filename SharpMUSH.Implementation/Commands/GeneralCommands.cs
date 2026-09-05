@@ -6412,10 +6412,14 @@ public partial class Commands
 				// attribute LongName. Recursion originating in a SINGLE link is caught independently of this
 				// key: a nested @include of that link runs through RunOne under the link's own LongName.
 				var chainRecursionKey = "@INCLUDE`CHAIN`" + string.Join("`", targets).ToUpperInvariant();
+				var chainPropagation = new BreakPropagation { PreserveNext = true };
 				lastResult = await ExecuteAttributeWithTracking(parser, chainRecursionKey, async () =>
 					await parser.With(
-						state => state with { EnvironmentRegisters = envArgs, Caller = state.Executor },
+						state => state with
+						{ EnvironmentRegisters = envArgs, Caller = state.Executor, BreakPropagation = chainPropagation },
 						p => p.CommandListParse(MModule.single(combined))) ?? CallState.Empty);
+
+				RaiseBreakForCaller(chainPropagation);
 
 				return lastResult;
 			}
@@ -6516,18 +6520,29 @@ public partial class Commands
 		{
 			return await ExecuteAttributeWithTracking(parser, attribute.LongName!.ToUpper(), async () =>
 			{
+				var propagation = new BreakPropagation { PreserveNext = true };
+
 				var execResult = await parser.With(
-					state => state with { EnvironmentRegisters = envArgs, Caller = state.Executor },
+					state => state with
+					{ EnvironmentRegisters = envArgs, Caller = state.Executor, BreakPropagation = propagation },
 					p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MModule.single(text))));
 
-				// /nobreak: contain an @break/@assert so it doesn't propagate to the calling action list.
-				if (hasNoBreak && parser.CurrentState.ExecutionStack.TryPeek(out var execution) && execution.CommandListBreak)
-				{
-					parser.CurrentState.ExecutionStack.TryPop(out _);
-				}
+				RaiseBreakForCaller(propagation);
 
 				return execResult ?? CallState.Empty;
 			});
+		}
+
+		// @include inserts the included actions into the CALLING list, so a guard inside them stops
+		// the caller as well -- that is the idiom `help @include` teaches, and /nobreak is the switch
+		// that suppresses it. The included list has already popped its own marker by the time we get
+		// here (VisitCommandList always does), so re-raise it for the list that ran the @include.
+		void RaiseBreakForCaller(BreakPropagation propagation)
+		{
+			if (propagation.Broke && !hasNoBreak)
+			{
+				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+			}
 		}
 	}
 
