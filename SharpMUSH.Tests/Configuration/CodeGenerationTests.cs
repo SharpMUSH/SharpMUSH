@@ -76,6 +76,56 @@ public class CodeGenerationTests
 		await Assert.That(propertyToAttr["PlayerStart"]).IsEqualTo("player_start");
 	}
 
+	/// <summary>
+	/// The generated Category must be the property that owns the category on SharpMUSHOptions ("Net"),
+	/// which is also the value every SharpConfigAttribute declares and the value SchemaBuilder derives.
+	/// It used to be the containing record's type name ("NetOptions"), so one API response described the
+	/// same property two ways: "NetOptions" under metadata and "Net" under schema.
+	/// </summary>
+	[Test]
+	public async Task ConfigMetadata_Category_IsTheOwningPropertyName()
+	{
+		await Assert.That(ConfigMetadata.PropertyMetadata["MudName"].Category).IsEqualTo("Net");
+		await Assert.That(ConfigMetadata.PropertyMetadata["PlayerStart"].Category).IsEqualTo("Database");
+		await Assert.That(ConfigMetadata.PropertyMetadata["NoisyWhisper"].Category).IsEqualTo("Command");
+	}
+
+	/// <summary>
+	/// Every generated Category must agree with ConfigAccessor — the two tables come from one walk of the
+	/// same members and must not drift.
+	/// </summary>
+	[Test]
+	public async Task ConfigMetadata_Category_AgreesWithConfigAccessor()
+	{
+		var mismatches = ConfigMetadata.PropertyMetadata
+			.Where(kv => kv.Value.Category != ConfigAccessor.GetCategoryForProperty(kv.Key))
+			.Select(kv => $"{kv.Key}: metadata={kv.Value.Category} accessor={ConfigAccessor.GetCategoryForProperty(kv.Key)}")
+			.ToList();
+
+		await Assert.That(mismatches).IsEmpty();
+	}
+
+	/// <summary>
+	/// The UI-shaping fields of SharpConfigAttribute have to survive generation, or SchemaBuilder cannot
+	/// stop reflecting for them.
+	/// </summary>
+	[Test]
+	public async Task ConfigMetadata_CarriesTheAttributesUiFields()
+	{
+		var mudName = ConfigMetadata.PropertyMetadata["MudName"];
+		await Assert.That(mudName.Group).IsEqualTo("General");
+		await Assert.That(mudName.Order).IsEqualTo(1);
+
+		var port = ConfigMetadata.PropertyMetadata["Port"];
+		await Assert.That(port.Group).IsEqualTo("Connection Settings");
+		await Assert.That(port.ValidationPattern).IsEqualTo(@"^\d+$");
+		await Assert.That(port.Min).IsEqualTo(1);
+		await Assert.That(port.Max).IsEqualTo(65535);
+
+		var sslPort = ConfigMetadata.PropertyMetadata["SslPort"];
+		await Assert.That(sslPort.Tooltip).IsEqualTo("Set to 0 to disable SSL");
+	}
+
 	#endregion
 
 	#region ConfigAccessor Tests

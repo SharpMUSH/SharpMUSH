@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -88,44 +89,77 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 		}
 	}
 
-	private static IEnumerable<(IPropertySymbol Property, AttributeData Attribute)> GetPropertyMetadataWithAttributes(INamedTypeSymbol optionsSymbol)
+	private static IEnumerable<(string CategoryName, IPropertySymbol Property, AttributeData Attribute)>
+		GetPropertyMetadataWithAttributes(INamedTypeSymbol optionsSymbol)
 	{
 		foreach (var category in SelectCategoryProperties(optionsSymbol))
 		{
-			var categoryName = category.Name;
 			foreach (var prop in SelectConfigProperties(category))
 			{
 				var attr = prop.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == SHARPATTRIBUTE);
 				if (attr is not null)
 				{
-					yield return (prop, attr);
+					yield return (category.Name, prop, attr);
 				}
 			}
 		}
 	}
 
-	private static string GeneratePropertyMetadataEntry((IPropertySymbol Property, AttributeData Attribute) metadata)
+	private static string GeneratePropertyMetadataEntry(
+		(string CategoryName, IPropertySymbol Property, AttributeData Attribute) metadata)
 	{
 		var prop = metadata.Property;
 		var attr = metadata.Attribute;
 
-		// Get the category from the containing property symbol
-		var category = "";
-		if (prop.ContainingType is INamedTypeSymbol containingType)
-		{
-			// The property's containing type is the category record (e.g., AttributeOptions)
-			category = containingType.Name;
-		}
+		// The property that owns this category on SharpMUSHOptions ("Net"), not the record's type name
+		// ("NetOptions"). That is the value every attribute declares, the value ConfigAccessor reports,
+		// and the value SchemaBuilder derives, so all three agree.
+		var category = metadata.CategoryName;
 
-		var name = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Name").Value.Value as string ?? "";
-		var description = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Description").Value.Value as string ?? "";
-		var validationPattern = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "ValidationPattern").Value.Value as string;
+		var name = Named(attr, "Name") as string ?? "";
+		var description = Named(attr, "Description") as string ?? "";
+		var group = Named(attr, "Group") as string;
+		var tooltip = Named(attr, "Tooltip") as string;
+		var validationPattern = Named(attr, "ValidationPattern") as string;
+		var order = Named(attr, "Order") is int o ? o : 0;
 
-		var validationPatternStr = validationPattern != null ? $"\"{EscapeString(validationPattern)}\"" : "null";
-		var descriptionStr = !string.IsNullOrEmpty(description) ? $"\"{EscapeString(description)}\"" : "\"\"";
-
-		return $"{{ \"{prop.Name}\", new SharpConfigAttribute {{ Name = \"{name}\", Description = {descriptionStr}, Category = \"{category}\", ValidationPattern = {validationPatternStr} }} }}";
+		return "{ \"" + prop.Name + "\", new SharpConfigAttribute { "
+			+ $"Name = \"{EscapeString(name)}\", "
+			+ $"Description = {Quote(description) ?? "\"\""}, "
+			+ $"Category = \"{EscapeString(category)}\", "
+			+ $"Group = {Quote(group) ?? "null"}, "
+			+ $"Order = {order}, "
+			+ $"Min = {Literal(Named(attr, "Min"))}, "
+			+ $"Max = {Literal(Named(attr, "Max"))}, "
+			+ $"Tooltip = {Quote(tooltip) ?? "null"}, "
+			+ $"ValidationPattern = {Quote(validationPattern) ?? "null"}"
+			+ " } }";
 	}
+
+	private static object? Named(AttributeData attr, string key)
+		=> attr.NamedArguments.FirstOrDefault(kv => kv.Key == key).Value.Value;
+
+	private static string? Quote(string? value)
+		=> value is null ? null : $"\"{EscapeString(value)}\"";
+
+	/// <summary>
+	/// Min and Max are declared as <c>object?</c>, so the boxed constant has to be re-emitted with its own
+	/// type or the round trip turns an int bound into something the UI compares wrongly.
+	/// </summary>
+	private static string Literal(object? value) => value switch
+	{
+		null => "null",
+		bool b => b ? "true" : "false",
+		string str => $"\"{EscapeString(str)}\"",
+		int i => i.ToString(CultureInfo.InvariantCulture),
+		uint u => u.ToString(CultureInfo.InvariantCulture) + "u",
+		long l => l.ToString(CultureInfo.InvariantCulture) + "L",
+		ulong ul => ul.ToString(CultureInfo.InvariantCulture) + "UL",
+		double d => d.ToString("R", CultureInfo.InvariantCulture) + "d",
+		float f => f.ToString("R", CultureInfo.InvariantCulture) + "f",
+		decimal m => m.ToString(CultureInfo.InvariantCulture) + "m",
+		_ => "null"
+	};
 
 	private static string EscapeString(string str)
 		=> str.Replace("\\", "\\\\").Replace("\"", "\\\"");
