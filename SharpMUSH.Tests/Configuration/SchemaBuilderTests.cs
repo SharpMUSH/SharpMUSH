@@ -71,26 +71,29 @@ public class SchemaBuilderTests
 	}
 
 	/// <summary>
-	/// Characterises how DefaultValue is populated today, so the move off reflection can be shown to
-	/// preserve it. The rule is all-or-nothing per category: the default comes from a default-constructed
-	/// instance of the category record, so a record with any parameter lacking a default cannot be
-	/// constructed at all and every one of its properties reports null — including the ones that do
-	/// declare a default. Only NetOptions and SitelockRulesOptions give every parameter one.
+	/// A property reports the default its own declaration gives it, independently of its siblings. This
+	/// used to be all-or-nothing per category: defaults came from a default-constructed instance of the
+	/// category record, so a record with any parameter lacking a default could not be constructed at all
+	/// and every one of its properties reported null — including those declaring a default. Only NetOptions
+	/// and WikiOptions gave every parameter one, so only they reported defaults.
 	/// </summary>
 	[Test]
-	public async Task DefaultValue_IsPopulatedOnlyForFullyDefaultedCategories()
+	public async Task DefaultValue_ComesFromThePropertysOwnDeclaration()
 	{
 		var schema = BuildSchema();
 
-		// NetOptions: every parameter has a default, so the record is default-constructible.
 		await Assert.That(schema.Properties["Net.MudName"].DefaultValue).IsEqualTo("SharpMUSH");
 		await Assert.That(schema.Properties["Net.Port"].DefaultValue).IsEqualTo(4201u);
 
-		// CommandOptions declares no defaults at all.
-		await Assert.That(schema.Properties["Command.NoisyWhisper"].DefaultValue).IsNull();
-
-		// DebugOptions is the mixed case: one parameter has a default, one does not, so neither reports one.
+		// DebugOptions is the mixed case that used to report null for both: one parameter declares a
+		// default, the other does not, and each now answers for itself.
+		await Assert.That(schema.Properties["Debug.ParserPredictionMode"].DefaultValue).IsEqualTo(2);
 		await Assert.That(schema.Properties["Debug.DebugSharpParser"].DefaultValue).IsNull();
+
+		await Assert.That((bool?)schema.Properties["Database.AllowBrowserCode"].DefaultValue).IsFalse();
+
+		// CommandOptions declares no defaults at all, so its properties still have none to report.
+		await Assert.That(schema.Properties["Command.NoisyWhisper"].DefaultValue).IsNull();
 	}
 
 	[Test]

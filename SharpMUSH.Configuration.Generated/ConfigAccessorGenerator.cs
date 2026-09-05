@@ -140,18 +140,6 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 		                    };
 		                }
 		                
-		                /// <summary>
-		                /// True when every parameter of the category's record declares a default, so the record can be
-		                /// constructed with none supplied.
-		                /// </summary>
-		                public static bool IsCategoryDefaultConstructible(string categoryName)
-		                {
-		                    return categoryName switch
-		                    {
-		                        {{string.Join("\n                ", categories.Select(c => $"\"{c.Name}\" => {(IsDefaultConstructible(c) ? "true" : "false")},"))}}
-		                        _ => false
-		                    };
-		                }
 		            }
 		            """;
 
@@ -184,13 +172,6 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 			? Literal(parameter.ExplicitDefaultValue)
 			: "null";
 	}
-
-	private static bool IsDefaultConstructible(IPropertySymbol category)
-		=> category.Type is INamedTypeSymbol categoryType
-			&& categoryType.Constructors
-				.OrderByDescending(c => c.Parameters.Length)
-				.FirstOrDefault() is { } primary
-			&& primary.Parameters.All(param => param.HasExplicitDefaultValue);
 
 	/// <summary>
 	/// Re-emits a boxed constant with its own type. GetDeclaredDefault is typed object?, so a uint default

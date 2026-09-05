@@ -90,7 +90,7 @@ public static partial class SchemaBuilder
 				Order = attr.Order,
 				Type = GetPropertyTypeName(type),
 				Component = InferComponentType(type),
-				DefaultValue = DefaultValueOf(propertyName, category),
+				DefaultValue = ConfigAccessor.GetDeclaredDefault(propertyName),
 				Min = attr.Min,
 				Max = attr.Max,
 				Pattern = attr.ValidationPattern,
@@ -103,18 +103,6 @@ public static partial class SchemaBuilder
 
 		return properties;
 	}
-
-	/// <summary>
-	/// A default is reported only when the whole category record could be default-constructed, which is how
-	/// this read defaults when it built them from <c>Activator.CreateInstance</c>: a record with any
-	/// parameter lacking a default could not be constructed, so none of its properties reported one — not
-	/// even those declaring a default of their own. That rule is arbitrary, but changing which properties
-	/// advertise a default is a UI-visible decision and does not belong in a refactor.
-	/// </summary>
-	private static object? DefaultValueOf(string propertyName, string category)
-		=> ConfigAccessor.IsCategoryDefaultConstructible(category)
-			? ConfigAccessor.GetDeclaredDefault(propertyName)
-			: null;
 
 	private static string FormatPropertyDisplayName(string name)
 	{
