@@ -216,17 +216,170 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
+	/// Creating an object invalidates its container's contents, not every container in the game.
+	/// </summary>
+	/// <remarks>
+	/// The reason the contents tag is per container. Both a creation and a move need a <em>tag</em> rather
+	/// than a key, because only a tag invalidation is resolved against when the reading factory started —
+	/// but the only tag available was <c>ObjectContents</c>, which covers every container there is. So the
+	/// price of correctness was wiping the whole game's cached contents on every creation, and would have
+	/// been the same on every step of movement.
+	/// </remarks>
+	[Test]
+	public async Task CreatingAnObjectDoesNotInvalidateTheContentsOfUninvolvedRooms()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+		var options = WebAppFactory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+
+		async Task<Library.Models.DBRef> Dig(string prefix)
+		{
+			var dug = await Parser.CommandParse(1, ConnectionService,
+				MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
+		}
+
+		var elsewhere = await Dig("BreadthElsewhere");
+		var bystanders = new List<Library.Models.DBRef>();
+		for (var i = 0; i < 8; i++) bystanders.Add(await Dig($"BreadthBystander{i}"));
+
+		// Warm every bystander's contents so a later read is a hit unless something invalidated it.
+		foreach (var room in bystanders)
+			await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
+
+		await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
+			TestIsolationHelpers.GenerateUniqueName("BreadthNewcomer"), "TestPassword123",
+			elsewhere, elsewhere, (int)options.CurrentValue.Limit.StartingQuota));
+
+		var evicted = new List<Library.Models.DBRef>();
+		foreach (var room in bystanders)
+		{
+			var cached = await Cache.TryGetAsync<List<AnySharpContent>>(
+				SharpMUSH.Library.Definitions.CacheKeys.Contents(room));
+			if (!cached.HasValue) evicted.Add(room);
+		}
+
+		await Assert.That(evicted).IsEmpty()
+			.Because($"a creation touches one room; {evicted.Count} of {bystanders.Count} uninvolved rooms lost their contents");
+	}
+
+	/// <summary>
+	/// A move declares a contents TAG for both containers, not only their keys.
+	/// </summary>
+	/// <remarks>
+	/// The deterministic half of the pair. The end-to-end test below races a real move against real
+	/// readers and so depends on load to catch a regression; this pins the declaration that made the race
+	/// winnable, and fails immediately if either container drops back to key-only invalidation.
+	/// </remarks>
+	[Test]
+	public async Task AMoveDeclaresAContentsTagForBothContainers()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+		var options = WebAppFactory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+
+		async Task<Library.Models.DBRef> Dig(string prefix)
+		{
+			var dug = await Parser.CommandParse(1, ConnectionService,
+				MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
+		}
+
+		var source = await Dig("TagDeclFrom");
+		var destination = await Dig("TagDeclTo");
+
+		var mover = await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
+			TestIsolationHelpers.GenerateUniqueName("TagDeclMover"), "TestPassword123",
+			source, source, (int)options.CurrentValue.Limit.StartingQuota));
+
+		var moverContent = (await mediator.Send(new GetObjectNodeQuery(mover))).Known.AsContent;
+		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Known.AsContainer;
+
+		var command = new Library.Commands.Database.MoveObjectCommand(
+			moverContent, destinationContainer, OldContainer: source);
+
+		await Assert.That(command.CacheTags)
+			.Contains(SharpMUSH.Library.Definitions.CacheKeys.ContentsTag(source.Number))
+			.And.Contains(SharpMUSH.Library.Definitions.CacheKeys.ContentsTag(destination.Number))
+			.Because("a key removal cannot stop a read that began before the move from storing its pre-move list");
+	}
+
+	/// <summary>
+	/// Every object moved into a room while that room's contents are being read must be in the room's
+	/// contents afterwards.
+	/// </summary>
+	/// <remarks>
+	/// The movement counterpart of the creation race above. <c>MoveObjectCommand</c> invalidates both
+	/// containers' contents by key and by <c>ContentsTag</c>; the tag is what this pins, because a key
+	/// removal alone cannot stop a read that began before the move from storing its pre-move list
+	/// afterwards. It used to invalidate by key alone on this path, and <c>MoveService</c> — the one
+	/// caller that supplies <c>OldContainer</c> — is the normal movement route, so it lost movers.
+	/// </remarks>
+	[Test]
+	public async Task ContentsCache_HoldsEveryObjectMovedInWhileItWasBeingRead()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+		var options = WebAppFactory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var moveService = WebAppFactory.Services.GetRequiredService<IMoveService>();
+
+		async Task<Library.Models.DBRef> Dig(string prefix)
+		{
+			var dug = await Parser.CommandParse(1, ConnectionService,
+				MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
+		}
+
+		var source = await Dig("MoveRaceFrom");
+		var destination = await Dig("MoveRaceTo");
+
+		async Task<Library.Models.DBRef> PopulateInto(Library.Models.DBRef where)
+			=> await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
+				TestIsolationHelpers.GenerateUniqueName("MoveRacer"), "TestPassword123",
+				where, where, (int)options.CurrentValue.Limit.StartingQuota));
+
+		// The window is as wide as the read is slow, so the destination has to be worth reading.
+		for (var i = 0; i < 60; i++) await PopulateInto(destination);
+
+		var movers = new List<Library.Models.DBRef>();
+		for (var i = 0; i < 25; i++) movers.Add(await PopulateInto(source));
+
+		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Known.AsContainer;
+
+		using var readersRun = new CancellationTokenSource();
+		var readers = Enumerable.Range(0, 4).Select(_ => Task.Run(async () =>
+		{
+			while (!readersRun.IsCancellationRequested)
+			{
+				await mediator.CreateStream(new GetContentsQuery(destination)).ToListAsync();
+			}
+		})).ToArray();
+
+		var missing = new List<Library.Models.DBRef>();
+		foreach (var mover in movers)
+		{
+			var moverObject = (await mediator.Send(new GetObjectNodeQuery(mover))).Known;
+			await moveService.ExecuteMoveAsync(Parser, moverObject.AsContent, destinationContainer, silent: true);
+
+			var contents = await mediator.CreateStream(new GetContentsQuery(destination)).ToListAsync();
+			if (contents.All(c => c.Object().DBRef != mover)) missing.Add(mover);
+		}
+
+		await readersRun.CancelAsync();
+		await Task.WhenAll(readers);
+
+		await Assert.That(missing).IsEmpty()
+			.Because($"a read that straddled a move cached a list without the mover; {missing.Count} of {movers.Count} are missing");
+	}
+
+	/// <summary>
 	/// A read whose database query is issued <em>before</em> a write commits, but whose factory returns
 	/// <em>after</em> that write's invalidation, must not leave its pre-write answer in the cache —
 	/// whether the write names the entry by key or reaches it by tag.
 	/// </summary>
 	/// <remarks>
-	/// Issue #838, and the reason the create commands carry the <c>ObjectContents</c> tag.
-	/// <c>RemoveAsync</c> drops only what is in the cache at that instant, so a straddling read stores its
-	/// stale list on top of the invalidation and every later reader is served it. A tag invalidation is a
-	/// timestamp FusionCache compares against when the entry was created, so the late store loses.
-	/// <c>CreatePlayerCommand</c> invalidated <c>object-contents:#N</c> by key alone;
-	/// <c>MoveObjectCommand</c> was safe only because it fell back to the tag.
+	/// Issue #838, and the reason a write that touches a container invalidates its
+	/// <c>ContentsTag</c> rather than only its key. <c>RemoveAsync</c> drops only what is in the cache at
+	/// that instant, so a straddling read stores its stale list on top of the invalidation and every later
+	/// reader is served it. A tag invalidation is a timestamp FusionCache compares against when the entry
+	/// was created, so the late store loses.
 	/// </remarks>
 	[Test]
 	[Arguments(false, true)]

@@ -33,6 +33,14 @@ public static class CacheKeys
 	/// <summary>Tag on GetCertainLocationQuery (graph-id keyed); a move RemoveByTag's this.</summary>
 	public static string LocationTag(string id) => $"loc-id:{id}";
 
+	/// <summary>
+	/// One container's contents. Tagged as well as keyed: removing a key drops only what is cached at
+	/// that instant, so a read that began before a write stores its pre-write list afterwards. Only a tag
+	/// invalidation is resolved against when the reading factory started. Per container rather than the
+	/// broad <see cref="CacheTags.ObjectContents"/>, because movement is the hot path.
+	/// </summary>
+	public static string ContentsTag(int number) => $"contents:#{number}";
+
 	/// <summary>An object's flag SET, keyed by its stable graph _id. Invalidated on @set/@unset flag.</summary>
 	public static string ObjectFlags(string id) => $"object-flags:{id}";
 }
