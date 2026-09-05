@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.13.0
+version: 1.12.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -400,16 +400,15 @@ objects:
       # standard config for a game's web address, and the path follows from the id. A game that has
       # not set one shows no URL line, because there is no address to guess.
       FUN`URL_LINE: |-
-        [switch(setr(su,config(mud_url)),,,[u(%!/FUN`INFO_LINE,URL,[u(%!/FUN`URL_TEXT,[u(%!/FUN`NO_TRAILING_SLASH,%q<su>)]/scenes/%0)])]%r)]
+        [switch(setr(su,config(mud_url)),,,[u(%!/FUN`INFO_LINE,URL,[u(%!/FUN`URL_TEXT,%#,[u(%!/FUN`NO_TRAILING_SLASH,%q<su>)]/scenes/%0)])]%r)]
 
-      # The address, carried as a link rather than as tags. tagwrap() is the other way to do this and
-      # puts the burden on the sender: its Pueblo/MXP tags travel as text, so the card would have to
-      # know what the reader's client can parse and show everyone else a literal <a href="...">.
-      # hyperlink() hands the renderer a markup link instead — an anchor in the portal, Pueblo for a
-      # Pueblo client, the plain address for a terminal with neither. It is the same mechanism the
-      # helpfiles' links have always used.
+      # A clickable link where the client can render one, the bare address everywhere else.
+      # tagwrap() writes the anchor inline as Pueblo/MXP markup: those clients turn it into a link,
+      # and every other client — including the web portal, which reports neither — shows the literal
+      # <a href="..."> instead of the address. So the capability is asked for rather than assumed.
+      # %0 is who is reading, %1 the address.
       FUN`URL_TEXT: |-
-        [hyperlink(%0,%0)]
+        [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,%1,href="%1")],%1)]
 
       # mud_url is written both ways by different admins, and joining a trailing slash to a leading
       # one gives a path no server answers.

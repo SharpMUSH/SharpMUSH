@@ -57,37 +57,6 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(wrappedContent.ToString());
 	}
 
-	/// <summary>
-	/// <c>hyperlink(&lt;text&gt;, &lt;url&gt;[, &lt;hint&gt;])</c> — text that leads somewhere, carried
-	/// as markup rather than as tags.
-	///
-	/// <para><see cref="TagWrap"/> is the other way to make a link and puts the burden in the wrong
-	/// place: it writes Pueblo/MXP tags into the text, so the sender has to know what the reader's
-	/// client can parse, and every client that cannot shows a literal <c>&lt;a href=…&gt;</c> where
-	/// the address should be. The web portal parses no such tags at all — it receives markup and
-	/// renders it, which is why the links in the helpfiles work there and nothing else did.</para>
-	///
-	/// <para>As markup the decision moves to where the client is actually known: the HTML renderer
-	/// writes an anchor, the Pueblo renderer writes Pueblo, and a plain terminal shows the text. The
-	/// helpfile renderer has always built its links this way; this is the same call from softcode.</para>
-	/// </summary>
-	[SharpFunction(Name = "hyperlink", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular,
-		ParameterNames = ["text", "url", "hint"])]
-	public static ValueTask<CallState> Hyperlink(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var text = args["0"].Message!;
-		var url = args["1"].Message!.ToPlainText();
-		var hint = args.Count > 2 ? args["2"].Message!.ToPlainText() : null;
-
-		var markup = Ansi.Create(
-			linkUrl: url,
-			linkKind: LinkKind.Url,
-			linkText: string.IsNullOrWhiteSpace(hint) ? null : hint);
-
-		return ValueTask.FromResult<CallState>(new CallState(MModule.MarkupSingle2(markup, text)));
-	}
-
 	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["message"])]
 	public static async ValueTask<CallState> websocket_json(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

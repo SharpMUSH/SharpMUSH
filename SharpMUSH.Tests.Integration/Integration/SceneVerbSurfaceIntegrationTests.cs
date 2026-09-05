@@ -310,32 +310,33 @@ public class SceneVerbSurfaceIntegrationTests
 	}
 
 	/// <summary>
-	/// The link is markup, so the address is never smuggled into the text a client shows.
+	/// The link is a real anchor for a client that can render one, and bare text for everyone else.
 	///
-	/// <para>It was briefly written with <c>tagwrap()</c>, gated on <c>pueblo()</c> or an mxp token,
-	/// because those tags travel as text and would otherwise appear raw. That gate is gone:
-	/// <c>hyperlink()</c> carries the link as markup, and the renderer for each client decides what to
-	/// do with it — an anchor in the portal, Pueblo for a Pueblo client, plain text for a terminal
-	/// that has neither. Nothing has to know what the reader can parse.</para>
+	/// <para><c>tagwrap()</c> emits the Pueblo/MXP markup inline, which those clients turn into a
+	/// clickable link and every other client shows as literal <c>&lt;a href=…&gt;</c> — so it has to
+	/// be asked for, not assumed. The test player here has no such capability, which is the ordinary
+	/// case and the one that would be spoiled by getting this wrong.</para>
 	/// </summary>
 	[Test]
-	public async Task SceneInfo_CarriesItsLinkAsMarkupRatherThanTags()
+	public async Task SceneInfo_LinksOnlyForAClientThatCanRenderOne()
 	{
 		await PutLoggerInMasterRoomAsync();
 		const long handle = 9541;
-		await CreatePlayerAsync($"Perrin{Tag}", handle);
+		var who = await CreatePlayerAsync($"Perrin{Tag}", handle);
 		var logger = await LoggerAsync();
 		const string url = "https://example.test/scenes/7";
 
-		// Only the plain reading is visible from here; that the markup renders as an anchor is pinned
-		// by HyperlinkFunctionTests, which can reach the renderer directly.
-		var text = await Eval($"u({logger}/FUN`URL_TEXT,{url})");
+		var plain = await Eval($"u({logger}/FUN`URL_TEXT,{Num(who)},{url})");
 
-		await Assert.That(text).IsEqualTo(url)
-			.Because("the plain reading is the address itself, with no tags wrapped around it");
+		await Assert.That(plain).IsEqualTo(url)
+			.Because("a client that cannot render an anchor must not be shown the markup for one");
 
-		var card = string.Join(" ", await RunAs(handle, "+scene/info 1"));
-		await Assert.That(card).DoesNotContain("<a ")
-			.Because("a client that cannot follow a link must not be shown the tags for one");
+		const long puebloHandle = 9542;
+		var capable = await CreatePlayerAsync($"Quen{Tag}", puebloHandle, pueblo: true);
+
+		var linked = await Eval($"u({logger}/FUN`URL_TEXT,{Num(capable)},{url})");
+
+		await Assert.That(linked).IsEqualTo($"<a href=\"{url}\">{url}</a>")
+			.Because("a Pueblo client is sent the anchor markup it knows how to render");
 	}
 }
