@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -169,34 +168,11 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 		var parameter = PrimaryConstructorParameter(category, property);
 
 		return parameter is { HasExplicitDefaultValue: true }
-			? Literal(parameter.ExplicitDefaultValue)
+			? Emit.Literal(parameter.ExplicitDefaultValue)
 			: "null";
 	}
 
-	/// <summary>
-	/// Re-emits a boxed constant with its own type. GetDeclaredDefault is typed object?, so a uint default
-	/// written as a bare number would come back an int and compare unequal to the property's real value.
-	/// </summary>
-	private static string Literal(object? value) => value switch
-	{
-		null => "null",
-		bool b => b ? "true" : "false",
-		string str => $"\"{EscapeString(str)}\"",
-		char c => $"'{(c == '\'' ? "\\'" : c == '\\' ? "\\\\" : c.ToString())}'",
-		int i => i.ToString(CultureInfo.InvariantCulture),
-		uint u => u.ToString(CultureInfo.InvariantCulture) + "u",
-		long l => l.ToString(CultureInfo.InvariantCulture) + "L",
-		ulong ul => ul.ToString(CultureInfo.InvariantCulture) + "UL",
-		short sh => "(short)" + sh.ToString(CultureInfo.InvariantCulture),
-		ushort us => "(ushort)" + us.ToString(CultureInfo.InvariantCulture),
-		double d => d.ToString("R", CultureInfo.InvariantCulture) + "d",
-		float f => f.ToString("R", CultureInfo.InvariantCulture) + "f",
-		decimal m => m.ToString(CultureInfo.InvariantCulture) + "m",
-		_ => "null"
-	};
 
-	private static string EscapeString(string str)
-		=> str.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
 	private static string GetTypeName(ITypeSymbol type)
 	{

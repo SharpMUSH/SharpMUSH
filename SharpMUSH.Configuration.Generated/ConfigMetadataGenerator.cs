@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -132,45 +131,20 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 		var order = Named(attr, "Order") is int o ? o : 0;
 
 		return "{ \"" + prop.Name + "\", new SharpConfigAttribute { "
-			+ $"Name = \"{EscapeString(name)}\", "
-			+ $"Description = {Quote(description) ?? "\"\""}, "
-			+ $"Category = \"{EscapeString(category)}\", "
-			+ $"Group = {Quote(group) ?? "null"}, "
+			+ $"Name = \"{Emit.Escape(name)}\", "
+			+ $"Description = {Emit.Quote(description) ?? "\"\""}, "
+			+ $"Category = \"{Emit.Escape(category)}\", "
+			+ $"Group = {Emit.Quote(group) ?? "null"}, "
 			+ $"Order = {order}, "
-			+ $"Min = {Literal(Named(attr, "Min"))}, "
-			+ $"Max = {Literal(Named(attr, "Max"))}, "
-			+ $"Tooltip = {Quote(tooltip) ?? "null"}, "
-			+ $"ValidationPattern = {Quote(validationPattern) ?? "null"}"
+			+ $"Min = {Emit.Literal(Named(attr, "Min"))}, "
+			+ $"Max = {Emit.Literal(Named(attr, "Max"))}, "
+			+ $"Tooltip = {Emit.Quote(tooltip) ?? "null"}, "
+			+ $"ValidationPattern = {Emit.Quote(validationPattern) ?? "null"}"
 			+ " } }";
 	}
 
 	private static object? Named(AttributeData attr, string key)
 		=> attr.NamedArguments.FirstOrDefault(kv => kv.Key == key).Value.Value;
-
-	private static string? Quote(string? value)
-		=> value is null ? null : $"\"{EscapeString(value)}\"";
-
-	/// <summary>
-	/// Min and Max are declared as <c>object?</c>, so the boxed constant has to be re-emitted with its own
-	/// type or the round trip turns an int bound into something the UI compares wrongly.
-	/// </summary>
-	private static string Literal(object? value) => value switch
-	{
-		null => "null",
-		bool b => b ? "true" : "false",
-		string str => $"\"{EscapeString(str)}\"",
-		int i => i.ToString(CultureInfo.InvariantCulture),
-		uint u => u.ToString(CultureInfo.InvariantCulture) + "u",
-		long l => l.ToString(CultureInfo.InvariantCulture) + "L",
-		ulong ul => ul.ToString(CultureInfo.InvariantCulture) + "UL",
-		double d => d.ToString("R", CultureInfo.InvariantCulture) + "d",
-		float f => f.ToString("R", CultureInfo.InvariantCulture) + "f",
-		decimal m => m.ToString(CultureInfo.InvariantCulture) + "m",
-		_ => "null"
-	};
-
-	private static string EscapeString(string str)
-		=> str.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
 	private static IEnumerable<IPropertySymbol> SelectCategoryProperties(INamedTypeSymbol optionsSymbol)
 		=> optionsSymbol.GetMembers().OfType<IPropertySymbol>().Where(x => x.Name is not "EqualityContract");
