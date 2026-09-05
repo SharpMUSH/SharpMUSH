@@ -78,7 +78,7 @@ public class SchemaBuilderTests
 	/// and WikiOptions gave every parameter one, so only they reported defaults.
 	/// </summary>
 	[Test]
-	public async Task DefaultValue_ComesFromThePropertysOwnDeclaration()
+	public async Task DefaultValue_ComesFromTheDeclarationOnTheProperty()
 	{
 		var schema = BuildSchema();
 
