@@ -109,7 +109,7 @@ public static partial class ArgHelpers
 		}
 
 		var result = integers.Aggregate(aggregateFunction);
-		return ValueTask.FromResult<CallState>(((long)result).ToString(CultureInfo.InvariantCulture));
+		return ValueTask.FromResult<CallState>(unchecked((long)result).ToString(CultureInfo.InvariantCulture));
 	}
 
 	/// <inheritdoc cref="AggregateUnsignedIntegers"/>
@@ -122,7 +122,7 @@ public static partial class ArgHelpers
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(((long)func(value)).ToString(CultureInfo.InvariantCulture));
+		return ValueTask.FromResult<CallState>(unchecked((long)func(value)).ToString(CultureInfo.InvariantCulture));
 	}
 
 	public static ValueTask<CallState> EvaluateDecimal(ImmutableSortedDictionary<string, CallState> args,

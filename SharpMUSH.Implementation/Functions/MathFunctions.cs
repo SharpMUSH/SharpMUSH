@@ -52,6 +52,10 @@ public partial class Functions
 	private static bool DivisionOverflows(long dividend, long divisor)
 		=> dividend == long.MinValue && divisor == -1;
 
+	/// <summary>
+	/// Division rounded towards negative infinity, which is what floordiv() means and what pairs
+	/// with modulo(). C# rounds towards zero, so a negative quotient with a remainder loses one.
+	/// </summary>
 	private static long FloorDivide(long dividend, long divisor)
 	{
 		var quotient = dividend / divisor;
@@ -60,6 +64,9 @@ public partial class Functions
 			: quotient;
 	}
 
+	/// <summary>
+	/// The argument values as plain text, in argument order, ready for one of the integer folds.
+	/// </summary>
 	private static IEnumerable<string> Operands(ImmutableSortedDictionary<string, CallState> args)
 		=> args.Select(arg => MModule.plainText(arg.Value.Message));
 
@@ -491,7 +498,7 @@ public partial class Functions
 				_ => unsigned.Aggregate((acc, val) => acc ^ val)
 			};
 
-			return new CallState(((long)bitwise).ToString(CultureInfo.InvariantCulture));
+			return new CallState(unchecked((long)bitwise).ToString(CultureInfo.InvariantCulture));
 		}
 
 		if (operation is "div" or "modulo" or "remainder")

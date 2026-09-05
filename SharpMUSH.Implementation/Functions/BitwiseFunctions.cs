@@ -116,10 +116,10 @@ public partial class Functions
 	[SharpFunction(Name = "shr", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer", "positions"])]
 	public static ValueTask<CallState> ShR(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x >> (int)y);
+		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x >> (int)(y & 63));
 
 	[SharpFunction(Name = "shl", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer", "positions"])]
 	public static ValueTask<CallState> ShL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x << (int)y);
+		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x << (int)(y & 63));
 }
