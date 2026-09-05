@@ -29,7 +29,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	{
 		var package = await Registry.GetInstalledPackageAsync("scene");
 		await Assert.That(package.IsT0).IsTrue();
-		await Assert.That(package.AsT0.Version).IsEqualTo("1.11.0");
+		await Assert.That(package.AsT0.Version).IsEqualTo("1.12.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		await Assert.That(objects.Count).IsEqualTo(1);

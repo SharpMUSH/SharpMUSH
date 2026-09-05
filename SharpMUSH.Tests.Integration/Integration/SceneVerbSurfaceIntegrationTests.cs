@@ -61,7 +61,7 @@ public class SceneVerbSurfaceIntegrationTests
 		return [.. Notifications.For(actor).Skip(before)];
 	}
 
-	private async Task<string> CreatePlayerAsync(string name, long handle)
+	private async Task<string> CreatePlayerAsync(string name, long handle, bool pueblo = false)
 	{
 		await God1($"@pcreate {name}=pw-{Tag}-1");
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
@@ -70,7 +70,10 @@ public class SceneVerbSurfaceIntegrationTests
 
 		await God1($"@set {dbref}=APPROVED");
 		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
+			pueblo
+				? new ConcurrentDictionary<string, string>(new Dictionary<string, string> { ["PUEBLO"] = "1" })
+				: null);
 		await ConnectionService.Bind(handle, parsed.Value);
 		_actors[handle] = parsed.Value;
 		return dbref;
@@ -304,5 +307,36 @@ public class SceneVerbSurfaceIntegrationTests
 			await Assert.That(joined).IsEqualTo($"https://example.test/scenes/{sceneId}")
 				.Because($"'{configured}' must reach the scene's page without a doubled or missing slash");
 		}
+	}
+
+	/// <summary>
+	/// The link is a real anchor for a client that can render one, and bare text for everyone else.
+	///
+	/// <para><c>tagwrap()</c> emits the Pueblo/MXP markup inline, which those clients turn into a
+	/// clickable link and every other client shows as literal <c>&lt;a href=…&gt;</c> — so it has to
+	/// be asked for, not assumed. The test player here has no such capability, which is the ordinary
+	/// case and the one that would be spoiled by getting this wrong.</para>
+	/// </summary>
+	[Test]
+	public async Task SceneInfo_LinksOnlyForAClientThatCanRenderOne()
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long handle = 9541;
+		var who = await CreatePlayerAsync($"Perrin{Tag}", handle);
+		var logger = await LoggerAsync();
+		const string url = "https://example.test/scenes/7";
+
+		var plain = await Eval($"u({logger}/FUN`URL_TEXT,{Num(who)},{url})");
+
+		await Assert.That(plain).IsEqualTo(url)
+			.Because("a client that cannot render an anchor must not be shown the markup for one");
+
+		const long puebloHandle = 9542;
+		var capable = await CreatePlayerAsync($"Quen{Tag}", puebloHandle, pueblo: true);
+
+		var linked = await Eval($"u({logger}/FUN`URL_TEXT,{Num(capable)},{url})");
+
+		await Assert.That(linked).IsEqualTo($"<a href=\"{url}\">{url}</a>")
+			.Because("a Pueblo client is sent the anchor markup it knows how to render");
 	}
 }
