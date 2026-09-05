@@ -115,38 +115,40 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		var body = await response.Content.ReadAsStringAsync();
 
 		await Assert.That((int)response.StatusCode).IsEqualTo(200);
-		// A shredded row surfaces as a parse failure or an error string, not a usable array. Checked
-		// before parsing so the failure names what the route actually said: JsonDocument.Parse reports
-		// the offending byte and nothing else, which is not enough to tell a shredded row from an
-		// error string when this only ever fails somewhere you cannot attach a debugger.
-		// The route is a filter, an iter and a json_array stacked on one line, and a failure in any of
-		// them reaches the body as the same wall of locate errors. Each stage is evaluated separately
-		// here so the failure says which one broke, rather than leaving it to be guessed at from the
-		// shape of the wreckage — this only ever fails where no debugger can reach.
-		async Task<string> Probe(string expression) =>
-			(await factory.FunctionParser.FunctionParse(MModule.single(expression)))!
-				.Message!.ToPlainText().Replace("\n", "\\n");
 
-		var players = await Probe("lsearch(all,type,player)");
-		var visible = await Probe("filter(#8/FN`CHARVIS,lsearch(all,type,player))");
-		var rows = await Probe("iter(filter(#8/FN`CHARVIS,lsearch(all,type,player)),u(#8/FN`CHARROW,%i0),,%r)");
+		// A shredded row surfaces as a parse failure or an error string, not a usable array, and
+		// JsonDocument.Parse reports only the offending byte — not enough to tell those apart
+		// somewhere no debugger can reach. So the body is checked first and, only when it is wrong,
+		// the route is taken apart to say which stage produced it: the route is a filter, an iter and
+		// a json_array on one line, and any of them fails identically from outside. The stages are
+		// evaluated as God while the route runs as #8, so the last probe asks which players #8 itself
+		// cannot see — the answer that distinguishes a broken route from an invisible player.
+		//
+		// Built only on the failing path. These are six extra evaluations and a green run should not
+		// pay for them.
+		if (!body.TrimStart().StartsWith('['))
+		{
+			async Task<string> Probe(string expression) =>
+				(await factory.FunctionParser.FunctionParse(MModule.single(expression)))!
+					.Message!.ToPlainText().Replace("\n", "\\n");
 
-		// Every stage above is evaluated as God and every stage above comes back correct, while the
-		// route — which runs as #8 — answers with locate failures. So the question is which players #8
-		// cannot see, and objeval() is the only way to ask that from here. Their names say which suite
-		// made them, which is the thing that has been missing.
-		var unseen = await Probe(
-			"objeval(#8,iter(lsearch(all,type,player),switch(name(##),#-1*,##,)))");
-		var unseenNames = await Probe(
-			"iter(objeval(#8,iter(lsearch(all,type,player),switch(name(##),#-1*,##,))),name(##))");
+			var players = await Probe("lsearch(all,type,player)");
+			var visible = await Probe("filter(#8/FN`CHARVIS,lsearch(all,type,player))");
+			var rows = await Probe(
+				"iter(filter(#8/FN`CHARVIS,lsearch(all,type,player)),u(#8/FN`CHARROW,%i0),,%r)");
+			var unseen = await Probe(
+				"objeval(#8,iter(lsearch(all,type,player),switch(name(##),#-1*,##,)))");
+			var unseenNames = await Probe(
+				"iter(objeval(#8,iter(lsearch(all,type,player),switch(name(##),#-1*,##,))),name(##))");
 
-		await Assert.That(body.TrimStart()).StartsWith("[")
-			.Because($"the route must answer with a JSON array.\n"
+			Assert.Fail($"the route must answer with a JSON array.\n"
 				+ $"  players = [{players}]\n"
 				+ $"  visible = [{visible}]\n"
 				+ $"  rows    = [{rows}]\n"
 				+ $"  unseen by #8 = [{unseen}] -> [{unseenNames}]\n"
 				+ $"  body    = [{body.Replace("\n", "\\n")}]");
+		}
+
 		using var doc = JsonDocument.Parse(body);
 		await Assert.That(doc.RootElement.ValueKind).IsEqualTo(JsonValueKind.Array);
 
