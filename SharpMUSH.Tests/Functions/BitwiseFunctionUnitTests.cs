@@ -99,6 +99,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("band(4294967296,4294967296)", "4294967296")]
 	[Arguments("bor(4294967296,1)", "4294967297")]
 	[Arguments("bxor(4294967296,1)", "4294967297")]
+	[Arguments("bxor(12884901888,4294967296)", "8589934592")]
 	[Arguments("shl(1,40)", "1099511627776")]
 	[Arguments("shl(1,62)", "4611686018427387904")]
 	[Arguments("shr(4294967296,32)", "1")]
@@ -133,6 +134,14 @@ public class BitwiseFunctionUnitTests
 	[Arguments("shl(1,4294967296)", "1")]
 	[Arguments("shr(1,64)", "1")]
 	public async Task ShiftCountsWrapAtSixtyFour(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("bnand(12,10,5)", "#-1 FUNCTION (BNAND) EXPECTS AT MOST 2 ARGUMENTS BUT GOT 3")]
+	public async Task BnandTakesExactlyTwoArguments(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);

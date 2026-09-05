@@ -93,7 +93,7 @@ public partial class Functions
 	public static ValueTask<CallState> BAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x & y);
 
-	[SharpFunction(Name = "bnand",
+	[SharpFunction(Name = "bnand", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer1", "integer2"])]
 	public static ValueTask<CallState> BNand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x & ~y);

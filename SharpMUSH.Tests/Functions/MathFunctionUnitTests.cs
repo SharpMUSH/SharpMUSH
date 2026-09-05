@@ -394,6 +394,61 @@ public class MathFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// The naive floor-mod, ((a % b) + b) % b, overflows when the remainder and divisor share a
+	/// sign. PennMUSH sign-normalises instead, and answers 5 here.
+	/// </summary>
+	[Test]
+	[Arguments("modulo(5,9223372036854775807)", "5")]
+	[Arguments("lmath(modulo,5 9223372036854775807)", "5")]
+	[Arguments("remainder(5,9223372036854775807)", "5")]
+	public async Task FloorModDoesNotOverflowOnLargeDivisors(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// The overflow check is pairwise, so a first operand that could not survive the last divisor
+	/// still folds when the intermediate result can. Both entry points share the fold.
+	/// </summary>
+	[Test]
+	[Arguments("div(-9223372036854775808,2,-1)", "4611686018427387904")]
+	[Arguments("lmath(div,-9223372036854775808 2 -1)", "4611686018427387904")]
+	public async Task DivisionOverflowIsCheckedPairwise(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// Converting a decimal outside the long range throws rather than wrapping, so the conversion
+	/// saturates. PennMUSH saturates too, at its own 32-bit bounds.
+	/// </summary>
+	[Test]
+	[Arguments("trunc(100000000000000000000)", "9223372036854775807")]
+	[Arguments("trunc(-100000000000000000000)", "-9223372036854775808")]
+	[Arguments("fraction(100000000000000000000.5,1)", "9223372036854775807 1/2")]
+	public async Task ConversionsOutsideInt64Saturate(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// PennMUSH negates the dividend to normalise the sign, which overflows at long.MinValue and
+	/// makes it answer 2 for modulo(-9223372036854775808,3). The floor-mod is 1.
+	/// </summary>
+	[Test]
+	[Arguments("modulo(-9223372036854775808,3)", "1")]
+	[Arguments("modulo(-9223372036854775808,2)", "0")]
+	[Arguments("modulo(-9223372036854775808,-1)", "0")]
+	public async Task FloorModIsExactAtTheSignedMinimum(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 	[Test]
 	[Arguments("lmath(div,9223372036854775807 1)", "9223372036854775807")]
 	[Arguments("lmath(modulo,9223372036854775807 10)", "7")]
@@ -401,6 +456,7 @@ public class MathFunctionUnitTests
 	[Arguments("lmath(band,4294967296 4294967296)", "4294967296")]
 	[Arguments("lmath(bor,4294967296 1)", "4294967297")]
 	[Arguments("lmath(bxor,4294967296 1)", "4294967297")]
+	[Arguments("lmath(bxor,12884901888 4294967296)", "8589934592")]
 	public async Task LMathIntegerOperationsAre64Bit(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
