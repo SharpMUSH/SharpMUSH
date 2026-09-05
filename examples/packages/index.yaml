@@ -25,7 +25,7 @@ packages:
     description: Inbound HTTP verb routers (attach mode)
   - path: profile-handler/
     package: profile-handler
-    version: 1.2.0
+    version: 1.3.0
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
@@ -45,7 +45,7 @@ packages:
     description: "Global UI-helper functions: header(), footer(), line()"
   - path: scene/
     package: scene
-    version: 1.6.0
+    version: 1.13.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: hello-ui/
     name: Hello UI
