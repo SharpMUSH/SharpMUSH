@@ -429,6 +429,7 @@ public class MathFunctionUnitTests
 	[Arguments("trunc(100000000000000000000)", "9223372036854775807")]
 	[Arguments("trunc(-100000000000000000000)", "-9223372036854775808")]
 	[Arguments("fraction(100000000000000000000.5,1)", "9223372036854775807 1/2")]
+	[Arguments("fraction(100000000000000000000.5)", "9223372036854775807")]
 	public async Task ConversionsOutsideInt64Saturate(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

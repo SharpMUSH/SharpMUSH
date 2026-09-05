@@ -397,8 +397,14 @@ public partial class Functions
 		}
 		else if (Math.Abs(wholePart) >= 1 && !showWhole)
 		{
-			numerator += TruncateToInt64(wholePart) * denominator;
-			return ValueTask.FromResult<CallState>($"{numerator}/{denominator}");
+			// Folding the whole part back in can exceed a long once wholePart has saturated, and the
+			// product would wrap silently. Widen to compute it, and fall back to the whole part.
+			var whole = TruncateToInt64(wholePart);
+			var improper = (Int128)whole * denominator + numerator;
+
+			return ValueTask.FromResult<CallState>(improper < long.MinValue || improper > long.MaxValue
+				? whole.ToString(CultureInfo.InvariantCulture)
+				: $"{(long)improper}/{denominator}");
 		}
 		else
 		{
