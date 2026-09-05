@@ -132,10 +132,11 @@ objects:
           [@@(%0 a source — the objects carrying its topics)][u(%!/SRC`[ucstr(%0)])]
         flags: [funsyntax]
       # "game" leads because a game's own help should read before the packages'; the rest sort so the
-      # index does not reorder itself as packages are installed.
+      # index does not reorder itself as packages are installed. A leaf with no value is skipped:
+      # +help/unsource clears the value, and attrib_set() leaves the attribute itself in place.
       FUN`GET`SOURCES:
         value: |-
-          [@@(no arguments — every registered source, the game's own first)][trim(squish(game%b[sort(iter(lattr(%!/SRC`*),if(strmatch(setr(n,lcstr(rest(%i0,`))),game),,%q<n>),%b,%b))]))]
+          [@@(no arguments — every registered source, the game's own first)][trim(squish(game%b[sort(iter(lattr(%!/SRC`*),if(cand(strlen(get(%!/%i0)),not(strmatch(setr(n,lcstr(rest(%i0,`))),game))),%q<n>),%b,%b))]))]
         flags: [funsyntax]
       # ** is the wildcard that crosses a backtick; * stops at one. The root itself is not matched,
       # which is what we want: it holds the source's description, not a topic.
@@ -266,7 +267,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`SRCLINE:
         value: |-
-          [@@(%0 a source · %1 its topic count — one registry row; a source whose object is gone shows no name and no topics)][ljust(%0,20)][ljust(num(first(u(%!/FUN`GET`OBJECTS,%0))),10)][ljust(name(first(u(%!/FUN`GET`OBJECTS,%0))),28)][rjust(%1,4)]
+          [@@(%0 a source · %1 its topic count — one registry row; a source whose object is gone is said to be missing rather than shown a #-1)][ljust(%0,20)][if(isdbref(setr(o,first(u(%!/FUN`GET`OBJECTS,%0)))),[ljust(num(%q<o>),10)][ljust(name(%q<o>),28)],[ljust(-,10)][ljust(object is missing,28)])][rjust(%1,4)]
         flags: [funsyntax]
       FUN`DISPLAY`SOURCES:
         value: |-
@@ -449,7 +450,7 @@ objects:
           The line you type is evaluated once on its way in, exactly as `&attr obj=...` is, so you
           choose what happens when: leave code unescaped and it resolves as you type it, escape it
           and it resolves for each reader instead. A backslash before a `\[`, `\(` or `\)` shows the
-          character; `%%` shows a `%`.
+          character; `%%` shows a `%%`.
 
           Cross-references are written the same way — escape the brackets around a topic's name
           \(like this\) and the reader gets a clickable link to it.
