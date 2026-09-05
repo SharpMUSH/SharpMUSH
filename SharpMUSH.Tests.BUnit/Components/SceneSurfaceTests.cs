@@ -41,7 +41,7 @@ file sealed class SceneLiveHarness : ComponentBase
 /// timestamps). Active and recent lists carry one scene; the scene's poses include one
 /// edited pose carrying raw Markup and a distinct tag set for the chip filter.
 /// </summary>
-file sealed class SceneApiHandler : HttpMessageHandler
+internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 {
 	private const string SceneList = """
 	[
@@ -74,11 +74,41 @@ file sealed class SceneApiHandler : HttpMessageHandler
 	]
 	""";
 
+	/// <summary>
+	/// Whether a scene appears in the roster after the page has already read it once. The start form
+	/// treats a scene as created only when the roster grows, so a test wanting the created case opts
+	/// in here; leaving it off is the refused case, which is the one worth guarding. Instance state,
+	/// because these tests run in parallel and a static would leak the answer between them.
+	/// </summary>
+	public bool ASceneAppears { get; set; }
+
+	private int _activeListCalls;
+
+	private const string SceneListWithNewScene = """
+	[
+	  {"id":"S1","status":"active","isPublic":true,"isTempRoom":false,"scheduledFor":null,
+	   "startedAt":1700000000000,"lastActivityAt":1700000500000,"poseCount":2,
+	   "ownerDbref":"#1","ownerName":"Wizard","starterDbref":"#1","starterName":"Wizard",
+	   "roomDbref":"#7","roomName":"The Tavern","meta":{"title":"Barroom Brawl"}},
+	  {"id":"S2","status":"active","isPublic":true,"isTempRoom":false,"scheduledFor":null,
+	   "startedAt":1700000600000,"lastActivityAt":1700000600000,"poseCount":0,
+	   "ownerDbref":"#1","ownerName":"Wizard","starterDbref":"#1","starterName":"Wizard",
+	   "roomDbref":"#7","roomName":"The Tavern","meta":{"title":"A Quiet Corner"}}
+	]
+	""";
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var path = request.RequestUri!.AbsolutePath;
 		string? body = path switch
 		{
+			// Keyed on the ACTIVE list specifically: the page reads recent and active from this same
+			// path on load, so counting every read would have the scene appear before the form was
+			// even used. It shows up on the second active read — the page's first poll — which is
+			// what "a scene was created" looks like from out here.
+			"/api/scenes" when ASceneAppears
+				&& request.RequestUri.Query.Contains("filter=active", StringComparison.Ordinal)
+				&& ++_activeListCalls > 1 => SceneListWithNewScene,
 			"/api/scenes" => SceneList,
 			"/api/scenes/S1" => Scene,
 			"/api/scenes/S1/poses" => Poses,
@@ -179,6 +209,7 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 public class SceneSurfaceTests : TrackingBunitContext
 {
 	private readonly FakeSceneHub _hub = new();
+	private readonly SceneSurfaceApiHandler _api = new();
 
 	/// <summary>
 	/// The command terminal MainLayout mounts on every page. It is the connection the compose box
@@ -189,7 +220,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 	public SceneSurfaceTests()
 	{
-		var apiClient = Track(new HttpClient(new SceneApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
+		var apiClient = Track(new HttpClient(_api) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 
@@ -588,6 +619,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 	public async Task Scenes_StartedWithWatchingOff_StayPrivate()
 	{
 		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = true;
 		var cut = Render<Scenes>();
 		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
 
@@ -598,7 +630,11 @@ public class SceneSurfaceTests : TrackingBunitContext
 		cut.Find(".scene-start-submit").Click();
 
 		await _terminal.Received().SendAsync("+scene/create A quiet corner");
-		await _terminal.Received().SendAsync("+scene/private");
+		// Waited for: the form polls the roster before saying anything else, because it will not send
+		// this until it can see the scene exists.
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/private"),
+			TimeSpan.FromSeconds(10));
 	}
 
 	/// <summary>
@@ -620,5 +656,40 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 		await Assert.That(_hub.ReconnectCalls).IsGreaterThan(0)
 			.Because("ConnectAsync cannot revive a hub that already exists; only a reconnect can");
+	}
+
+	/// <summary>
+	/// A creation the engine refused does not turn somebody else's scene private.
+	///
+	/// <para>+scene/private acts on the scene the player is focused on, and the form used to send it
+	/// the instant after +scene/create without waiting to see whether anything had been created. A
+	/// refusal — an unapproved player, a name the engine would not take — leaves focus on whatever
+	/// scene the player already had, so the tick box would have made THAT one private instead. The
+	/// verb now goes only after the roster shows the scene exists.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_WhenTheEngineCreatesNothing_TouchesNoOtherScene()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = false;
+
+		var cut = Render<Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("Never Created");
+		cut.Find(".scene-start-public input").Change(false);
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/create Never Created"),
+			TimeSpan.FromSeconds(5));
+
+		// Long enough to outlast the roster poll, so this is "it never sent it" rather than "it had
+		// not got there yet" — the distinction the whole test rests on.
+		await Task.Delay(TimeSpan.FromSeconds(3));
+
+		await _terminal.DidNotReceive().SendAsync("+scene/private");
 	}
 }

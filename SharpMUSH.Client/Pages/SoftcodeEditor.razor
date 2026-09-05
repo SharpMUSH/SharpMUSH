@@ -485,11 +485,12 @@
 
     protected override Task OnInitializedAsync() => LoadEditorAssetsAsync();
 
+    // No init on first render. SharpMUSH.Monaco lives in the Monaco bundle, which is fetched on
+    // demand now, so on the render where the editor is still loading — or the one where it failed to
+    // and is never shown — that global does not exist and the call throws. OnDidInit below does the
+    // same init at the only moment it can work: when the editor has actually mounted.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-            await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.initEditor", "mush-editor");
-
         if (_focusNewAttr)
         {
             _focusNewAttr = false;
