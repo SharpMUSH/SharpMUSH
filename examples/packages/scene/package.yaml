@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.12.0
+version: 1.13.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -388,10 +388,13 @@ objects:
       FUN`INFO_LINE: |-
         [ansi(h,[rjust(%0:,14)])] %1
 
-      # Scene timestamps are Unix MILLIseconds and div() is 32-bit, so 1788534443063 overflows it and
-      # answers #-1 ARGUMENTS MUST BE INTEGERS. Dropping the last three digits as text has no ceiling.
+      # Scene timestamps are Unix MILLIseconds; timefmt() wants seconds.
+      #
+      # This trimmed the last three digits as text for a while, because div() was 32-bit and answered
+      # #-1 ARGUMENTS MUST BE INTEGERS for any real timestamp. #857 made the integer functions 64-bit,
+      # so the arithmetic says what it means again.
       FUN`WHEN: |-
-        [timefmt($b $d $I:$M$p,left(%0,sub(strlen(%0),3)))]
+        [timefmt($b $d $I:$M$p,div(%0,1000))]
 
       # Each renders a whole line INCLUDING its %r, or nothing, so an absent value leaves no blank row.
       FUN`SCHEDULED_LINE: |-
