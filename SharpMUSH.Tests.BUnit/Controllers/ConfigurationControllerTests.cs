@@ -242,7 +242,11 @@ public class ConfigurationControllerTests
 		};
 
 		var result = await controller.UpdateConfiguration(updates);
-		await Assert.That(result.Result).IsTypeOf<BadRequestObjectResult>();
+
+		// Several paths return BadRequest, so assert which one: the property is real but lives in Database,
+		// and it used to match no NetOptions constructor parameter and be dropped with a 200 OK.
+		var bad = (BadRequestObjectResult)result.Result!;
+		await Assert.That(JsonSerializer.Serialize(bad.Value)).Contains("Unknown property");
 	}
 
 	[TUnit.Core.Test]
