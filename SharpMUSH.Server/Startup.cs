@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using SharpMUSH.CodeAnalysis;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Mcp;
@@ -469,15 +470,15 @@ public class Startup(
 			options => { options.Url = natsUrl; },
 			x =>
 			{
-				x.AddConsumer<Consumers.TelnetInputConsumer>();
-				x.AddConsumer<Consumers.WebSocketInputConsumer>();
-				x.AddConsumer<Consumers.GMCPSignalConsumer>();
-				x.AddConsumer<Consumers.MSDPUpdateConsumer>();
-				x.AddConsumer<Consumers.NAWSUpdateConsumer>();
-				x.AddConsumer<Consumers.ConnectionEstablishedConsumer>();
-				x.AddConsumer<Consumers.ConnectionClosedConsumer>();
-				x.AddConsumer<Consumers.PuebloNegotiatedConsumer>();
-				x.AddConsumer<Consumers.MxpNegotiatedConsumer>();
+				x.AddConsumer<Consumers.TelnetInputConsumer, TelnetInputMessage>();
+				x.AddConsumer<Consumers.WebSocketInputConsumer, WebSocketInputMessage>();
+				x.AddConsumer<Consumers.GMCPSignalConsumer, GMCPSignalMessage>();
+				x.AddConsumer<Consumers.MSDPUpdateConsumer, MSDPUpdateMessage>();
+				x.AddConsumer<Consumers.NAWSUpdateConsumer, NAWSUpdateMessage>();
+				x.AddConsumer<Consumers.ConnectionEstablishedConsumer, ConnectionEstablishedMessage>();
+				x.AddConsumer<Consumers.ConnectionClosedConsumer, ConnectionClosedMessage>();
+				x.AddConsumer<Consumers.PuebloNegotiatedConsumer, PuebloNegotiatedMessage>();
+				x.AddConsumer<Consumers.MxpNegotiatedConsumer, MxpNegotiatedMessage>();
 			});
 
 		services.AddFusionCache().TryWithAutoSetup();

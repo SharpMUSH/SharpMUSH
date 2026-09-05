@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Messaging.Abstractions;
-using System.Reflection;
 
 namespace SharpMUSH.Messaging.NATS;
 
@@ -126,11 +125,18 @@ public static class NatsMessagingExtensions
 public interface INatsConsumerConfigurator
 {
 	/// <summary>
-	/// Registers <typeparamref name="TConsumer"/> as the handler for its
-	/// <c>IMessageConsumer&lt;TMessage&gt;</c> interface and creates a durable
-	/// JetStream consumer for the corresponding NATS subject.
+	/// Registers <typeparamref name="TConsumer"/> as the handler for
+	/// <c>IMessageConsumer&lt;TMessage&gt;</c> and creates a durable JetStream consumer for
+	/// <typeparamref name="TMessage"/>'s subject.
 	/// </summary>
-	void AddConsumer<TConsumer>() where TConsumer : class;
+	/// <remarks>
+	/// C# cannot infer <typeparamref name="TMessage"/> from <typeparamref name="TConsumer"/>, so both are
+	/// spelled at the call site. That is deliberate: the constraint makes a consumer that does not handle
+	/// the named message a compile error, and it leaves nothing for the registration to discover at runtime.
+	/// </remarks>
+	void AddConsumer<TConsumer, TMessage>()
+		where TConsumer : class, IMessageConsumer<TMessage>
+		where TMessage : class;
 }
 
 /// <summary>
@@ -155,37 +161,18 @@ public sealed class NatsConsumerConfigurator : INatsConsumerConfigurator
 		_groupPrefix = groupPrefix;
 	}
 
-	public void AddConsumer<TConsumer>() where TConsumer : class
+	public void AddConsumer<TConsumer, TMessage>()
+		where TConsumer : class, IMessageConsumer<TMessage>
+		where TMessage : class
 	{
-		var consumerInterface = typeof(TConsumer).GetInterfaces()
-			.FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IMessageConsumer<>))
-			?? throw new InvalidOperationException(
-				$"{typeof(TConsumer).Name} does not implement IMessageConsumer<T>.");
-
-		var messageType = consumerInterface.GetGenericArguments()[0];
+		var messageType = typeof(TMessage);
 		var subject = GetSubjectForMessageType(messageType, _options.GetConsumeSubjectPrefix());
 		var durableName = GetDurableName(messageType);
 
-		_services.AddTransient(consumerInterface, typeof(TConsumer));
+		_services.AddTransient<IMessageConsumer<TMessage>, TConsumer>();
 
-		// Build a handler delegate that resolves the consumer from the DI scope and invokes it.
-		// The MethodInfo is closed once at registration time; calling the compiled delegate on every
-		// message avoids repeated MethodInfo.Invoke overhead.
-		var invokeHelper = typeof(NatsConsumerConfigurator)
-			.GetMethod(nameof(InvokeConsumerHelper), BindingFlags.Static | BindingFlags.NonPublic)!
-			.MakeGenericMethod(messageType);
-
-		var compiled = (Func<IServiceProvider, object, CancellationToken, Task>)
-			Delegate.CreateDelegate(typeof(Func<IServiceProvider, object, CancellationToken, Task>), invokeHelper);
-
-		_registry.Registrations.Add(new NatsConsumerRegistration(messageType, subject, durableName, compiled));
-	}
-
-	private static Task InvokeConsumerHelper<TMessage>(IServiceProvider sp, object msg, CancellationToken ct)
-		where TMessage : class
-	{
-		var consumer = sp.GetRequiredService<IMessageConsumer<TMessage>>();
-		return consumer.HandleAsync((TMessage)msg, ct);
+		_registry.Registrations.Add(new NatsConsumerRegistration(messageType, subject, durableName,
+			static (sp, msg, ct) => sp.GetRequiredService<IMessageConsumer<TMessage>>().HandleAsync((TMessage)msg, ct)));
 	}
 
 	private string GetDurableName(Type messageType)
