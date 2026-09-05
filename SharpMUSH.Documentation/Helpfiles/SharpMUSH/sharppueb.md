@@ -69,6 +69,7 @@ HTML Functions are used to output HTML tags to HTML capable users. These tags wi
 
 Available functions:
 - html()
+- hyperlink()
 - tag()
 - endtag()
 - tagwrap()
@@ -156,6 +157,30 @@ Will output (in HTML):
 
 **See Also:**
 - [- [tag()]
+- [tagwrap()]
+- [html()]
+
+# HYPERLINK()
+
+`hyperlink(<text>, <url>[, <hint>])`
+
+Outputs *<text>* as a link to *<url>*. The optional *<hint>* becomes the tooltip a client shows on
+hover.
+
+### Example
+```sharp
+think hyperlink(the scene log,https://example.org/scenes/12,Opens in a new tab)
+```
+
+Unlike [tagwrap()], this writes no tags into your output. The link travels as markup, and each
+client's renderer decides what to make of it: a web client shows an anchor, a Pueblo or MXP client
+gets its own form, and a plain terminal shows *<text>* with the address unchanged. You do not have to
+know what the reader's client can parse, and nobody is shown `<a href="...">` as literal text.
+
+Use [tagwrap()] when you need a specific HTML tag with specific parameters. Use this when what you
+want is a link.
+
+**See Also:**
 - [tagwrap()]
 - [html()]
 
