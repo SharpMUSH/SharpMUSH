@@ -31,14 +31,14 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	{
 		var package = await Registry.GetInstalledPackageAsync("scene");
 		await Assert.That(package.IsT0).IsTrue();
-		await Assert.That(package.AsT0.Version).IsEqualTo("1.14.0");
+		await Assert.That(package.AsT0.Version).IsEqualTo("1.15.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		// Two created objects: the WIZARD Logger that runs the verbs and the @hook overrides, and
 		// a plain Scene Help thing carrying the +help topics. They are separate because u() on a
 		// privileged object's attribute is refused unless the evaluator is privileged too, so the
 		// +help librarian could not render a topic that lived on the Logger.
-		await Assert.That(objects.Select(o => o.Ref).Order()).IsEquivalentTo(new[] { "help", "logger" });
+		await Assert.That(objects.Select(o => o.Ref).Order()).IsEquivalentTo(new[] { "logger", "scene_help" });
 
 		var attrs = (await Registry.GetManagedAttributesAsync("scene"))
 			.Select(m => m.Attribute).ToList();

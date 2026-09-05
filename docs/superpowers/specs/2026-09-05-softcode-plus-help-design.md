@@ -25,8 +25,8 @@ a small surface around them, drawing topics from two sources:
 1. **Topics packages carry.** A package holds its own help in a `HELP` attribute
    tree on one of its objects and registers that object with the librarian.
 2. **Topics the game writes.** House rules, policy, "how to apply" — content
-   belonging to no package — kept on the librarian's own `LOCAL` tree and edited
-   in-game with `+help/write`.
+   belonging to no package — kept on a Game Help object and edited in-game with
+   `+help/write`.
 
 ## Decisions
 
@@ -167,10 +167,6 @@ On the **librarian**:
 ```
 SRC                      branch, no_command — "Registered help sources"
 SRC`<SOURCE>             dbref(s) of the object(s) carrying that source's HELP tree
-LOCAL                    branch, no_command — "Game-authored topics"
-LOCAL`<TOPIC>            a game topic body (markdown)
-HELP                     the librarian's own topics, contributed like any package's
-HELP`WRITE               ...
 CMD`* FUN`* INC`*        the usual command / read / step split
 RENDERMARKUP`*           topic rendering, LINK rewritten to +help
 ```
@@ -201,11 +197,11 @@ The alternative, requiring every contributed `HELP` attribute to be `visual`, wa
 rejected: `visual` does not propagate down a tree, so it would have to be repeated
 on every leaf of every contributing package.
 
-**Write path.** `+help/write` stores under `LOCAL`, a different root from the
-manifest-managed `HELP` — so a staff-written topic never registers as drift
+**Write path.** `+help/write` stores on the Game Help object, whose `HELP` leaves
+the manifest does not manage — so a staff-written topic never registers as drift
 against the package baseline, and a `plus-help` upgrade never overwrites one.
 Topic words are validated against `^[A-Z0-9_-]+$` before becoming an attribute
-path. `LOCAL` carries `no_command` at the branch (restrictive flags propagate), so
+path. That object's `HELP` root carries `no_command` (restrictive flags propagate), so
 a topic body beginning with `$` cannot become an accidental `$`-command.
 
 ## Content shipped with this change

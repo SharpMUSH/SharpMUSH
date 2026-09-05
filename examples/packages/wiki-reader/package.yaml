@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -15,7 +15,7 @@ depends:
       path: examples/packages/plus-help/
       branch: main
   - package: common-functions
-    version: ">=1.1"
+    version: ">=1.2"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/common-functions/
@@ -65,7 +65,7 @@ objects:
       # can click one, and stays highlighted prose for everyone else.
       RENDERMARKUP`WIKILINK:
         value: |-
-          [if(pueblo(%#),[tagwrap(a,xch_cmd="+wiki %1" xch_hint="%2",%0)],[ansi(hc,%0)])]
+          [ansi(hc,[cmdtag(%#,%0,+wiki %1,%2)])]
         flags: [funsyntax]
 
       INC`DISPLAY`ERROR:
@@ -104,10 +104,9 @@ objects:
           not(wiki(%0,tags))
         flags: [funsyntax]
 
-      # xch_cmd requires the Send_OOB @power; without it the ref still prints.
       FUN`DISPLAY`REF:
         value: |-
-          [@@(%0 a page reference — clickable where the client can take a command)][if(pueblo(%#),[tagwrap(a,xch_cmd="+wiki %0" xch_hint="Read %0",%0)],%0)]
+          [@@(%0 a page reference — clickable where the client can take a command)][cmdtag(%#,%0,+wiki %0,Read %0)]
         flags: [funsyntax]
       FUN`DISPLAY`ROW:
         value: |-

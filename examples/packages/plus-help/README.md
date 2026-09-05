@@ -60,6 +60,10 @@ That is a declaration, not a runtime call. The package manager writes the `SRC` 
 clears it on uninstall, so the librarian's registry cannot drift from what is actually installed:
 install a package and its topics appear, uninstall it and they leave with it.
 
+The librarian itself carries **no content** — only the registry, the commands and the rendering.
+`+help`'s own topics and the game's are two more objects with `HELP` trees, registered the same way,
+so reading a topic is one code path whoever wrote it.
+
 `hello-world` is the smallest complete example; `scene` is a full one.
 
 ### Four things that will bite you
@@ -93,10 +97,11 @@ outright, so a game can always have the last word on a name.
 
 ## Topics the game writes
 
-`+help/write` keeps them on the librarian's `LOCAL` tree, deliberately a different root from the
-manifest-managed `HELP`, so a staff-written topic never registers as drift against the package
-baseline and an upgrade never overwrites one. The branch is `no_command`, which propagates, so a
-body beginning with `$` cannot become an accidental `$`-command.
+`+help/write` keeps them on the **Game Help** object, registered as the source `game` — an object
+with a `HELP` tree exactly like a package's. The manifest manages only that object's `HELP` root, so
+a staff-written leaf is never drift against the package baseline and an upgrade never overwrites
+one. The root is `no_command`, which propagates, so a body beginning with `$` cannot become an
+accidental `$`-command.
 
 The line staff type is evaluated once on the way in, exactly as `&attr obj=...` is. Anything meant
 for the *reader* is escaped: a backslash before each `[` and `]`, and `%%` for a `%`.

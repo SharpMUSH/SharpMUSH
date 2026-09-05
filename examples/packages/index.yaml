@@ -41,11 +41,11 @@ packages:
     description: Application package (Area 21) — registers chargen as a portal page (requires chargen)
   - path: common-functions/
     package: common-functions
-    version: 1.1.0
+    version: 1.2.0
     description: "Global UI-helper functions: header(), footer(), line()"
   - path: scene/
     package: scene
-    version: 1.14.0
+    version: 1.15.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -60,5 +60,5 @@ packages:
   - path: wiki-reader/
     name: Wiki Reader
     package: wiki-reader
-    version: 1.1.0
+    version: 1.2.0
     description: +wiki — paged listings, a rendered article view, and an editorial audit

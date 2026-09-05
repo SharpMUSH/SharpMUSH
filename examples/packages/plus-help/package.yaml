@@ -10,7 +10,7 @@ requires_server: ">=0.1"
 
 depends:
   - package: common-functions
-    version: ">=1.1"
+    version: ">=1.2"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/common-functions/
@@ -44,8 +44,12 @@ depends:
 #   uninstall it and they leave with it.
 #
 #   The game writes its own.  House rules, policy, how to apply — content belonging to no package —
-#   live on the librarian's own LOCAL tree, written in-game with +help/write rather than by editing
-#   a file in a source tree, which is the thing that keeps game help from being written at all.
+#   go on the Game Help object, written in-game with +help/write rather than by editing a file in a
+#   source tree, which is the thing that keeps game help from being written at all.
+#
+# EVERY SOURCE IS AN OBJECT WITH A HELP TREE, this package's own topics and the game's included.
+# The librarian holds no content at all: it is the registry, the commands, and the rendering. That
+# is what keeps the read path one code path instead of one plus a special case for the game.
 #
 # TOPIC NAMES.  A topic's name is its attribute path below the root with backticks read as spaces:
 # HELP`SCENE`JOIN is the topic "scene join". Every topic also has a qualified name, <source>/<topic>,
@@ -91,20 +95,21 @@ objects:
         value: |-
           Registered help sources. One leaf per source, naming the object(s) carrying its HELP tree.
         flags: [no_command]
-      # The librarian is a source like any other: its own topics live under HELP, below.
+      # A NOTE FOR CONTRIBUTORS. The ref you name in your SRC leaf must be unique across every
+      # package that registers here, not merely within your own manifest. An installed {{ref}} is a
+      # [v(PM`REFS`<REF>)] recall, and the PM`REFS tree it reads lives on the object the attribute
+      # landed on — this librarian — shared with every other contributor. PM`REFS namespaces only
+      # the cross-package {{pkg/ref}} form, so two packages that both call their object "help" get
+      # ONE PM`REFS`HELP between them and the later install silently steals the earlier's topics.
+      # Name it after your package: scene_help, ww_help, hello_help.
+      # This package's own topics, and the game's, are sources like any other — each an object with
+      # a HELP tree. "game" is the reserved name the collision rule gives the last word to.
       SRC`PLUS-HELP:
         value: |-
-          {{librarian}}
-
-      # ── Game-authored topics ────────────────────────────────────────────────
-      # Deliberately a DIFFERENT root from HELP. The manifest manages HELP, so a staff-written topic
-      # under LOCAL never registers as drift against the package baseline and a plus-help upgrade
-      # never overwrites one. no_command on the branch propagates to every leaf, so a topic body
-      # that happens to begin with "$" cannot become an accidental $-command.
-      LOCAL:
+          {{plus_help_own}}
+      SRC`GAME:
         value: |-
-          This game's own help: house rules, policy, and anything belonging to no package.
-        flags: [no_command]
+          {{game_help}}
 
       # ── Class branches ──────────────────────────────────────────────────────
       FUN:
@@ -122,25 +127,21 @@ objects:
       # colon can separate safely: a source name comes from an attribute name (no colons legal), an
       # object is a DBREF (an objid would not be safe here — it contains one), and an attribute path
       # is backticks and word characters.
-      FUN`GET`ROOT:
-        value: |-
-          [@@(%0 a source — the attribute root its topics live under)][if(strmatch(%0,game),LOCAL,HELP)]
-        flags: [funsyntax]
       FUN`GET`OBJECTS:
         value: |-
-          [@@(%0 a source — the objects carrying its topics)][if(strmatch(%0,game),%!,u(%!/SRC`[ucstr(%0)]))]
+          [@@(%0 a source — the objects carrying its topics)][u(%!/SRC`[ucstr(%0)])]
         flags: [funsyntax]
       # "game" leads because a game's own help should read before the packages'; the rest sort so the
       # index does not reorder itself as packages are installed.
       FUN`GET`SOURCES:
         value: |-
-          [@@(no arguments — every registered source, game first)][trim(squish(game%b[sort(iter(lattr(%!/SRC`*),lcstr(rest(%i0,`)),%b,%b))]))]
+          [@@(no arguments — every registered source, the game's own first)][trim(squish(game%b[sort(iter(lattr(%!/SRC`*),if(strmatch(setr(n,lcstr(rest(%i0,`))),game),,%q<n>),%b,%b))]))]
         flags: [funsyntax]
       # ** is the wildcard that crosses a backtick; * stops at one. The root itself is not matched,
       # which is what we want: it holds the source's description, not a topic.
       FUN`GET`SRCRECORDS:
         value: |-
-          [@@(%0 a source — its topics as records)][iter(u(%!/FUN`GET`OBJECTS,%0),iter(lattr(%i0/[u(%!/FUN`GET`ROOT,%0)]`**),%0:[num(%i1)]:%i0,%b,%b),%b,%b)]
+          [@@(%0 a source — its topics as records)][iter(u(%!/FUN`GET`OBJECTS,%0),iter(lattr(%i0/HELP`**),%0:[num(%i1)]:%i0,%b,%b),%b,%b)]
         flags: [funsyntax]
       FUN`GET`RECORDS:
         value: |-
@@ -174,7 +175,7 @@ objects:
         flags: [funsyntax]
       FUN`GET`SRCDESC:
         value: |-
-          [@@(%0 a source — the line describing it, from its root attribute)][get([first(u(%!/FUN`GET`OBJECTS,%0))]/[u(%!/FUN`GET`ROOT,%0)])]
+          [@@(%0 a source — the line describing it, from its root attribute)][get([first(u(%!/FUN`GET`OBJECTS,%0))]/HELP)]
         flags: [funsyntax]
 
       # ── Selection ───────────────────────────────────────────────────────────
@@ -221,15 +222,11 @@ objects:
         flags: [funsyntax]
 
       # ── Display ─────────────────────────────────────────────────────────────
-      # xch_cmd requires the Send_OOB @power; without it (or without a Pueblo client) the text still
-      # prints, so nothing is lost on a plain telnet session.
-      FUN`DISPLAY`LINK:
-        value: |-
-          [@@(%0 the text · %1 the command it runs — clickable where the client can take one)][if(pueblo(%#),[tagwrap(a,xch_cmd="%1" xch_hint="%1",%0)],%0)]
-        flags: [funsyntax]
+      # cmdtag() is common-functions'. It takes WHO IS READING rather than assuming %#, and asks the
+      # client whether it can render a command link at all before writing one.
       FUN`DISPLAY`REF:
         value: |-
-          [@@(%0 a record — its qualified name, clickable)][u(%!/FUN`DISPLAY`LINK,u(%!/FUN`GET`RNAME,%0),+help [u(%!/FUN`GET`RNAME,%0)])]
+          [@@(%0 a record — its qualified name, clickable)][cmdtag(%#,[u(%!/FUN`GET`RNAME,%0)],+help [u(%!/FUN`GET`RNAME,%0)])]
         flags: [funsyntax]
       FUN`DISPLAY`ROW:
         value: |-
@@ -237,7 +234,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`SRCROW:
         value: |-
-          [@@(%0 a source · %1 its topic count — one index row)][ljust(u(%!/FUN`DISPLAY`LINK,%0,+help/list %0),20)][rjust(%1,4)]%b%b[left(u(%!/FUN`GET`SRCDESC,%0),sub(width(%#,78),28))]
+          [@@(%0 a source · %1 its topic count — one index row)][ljust(cmdtag(%#,%0,+help/list %0),20)][rjust(%1,4)]%b%b[left(u(%!/FUN`GET`SRCDESC,%0),sub(width(%#,78),28))]
         flags: [funsyntax]
       FUN`DISPLAY`SYNTAX:
         value: |-
@@ -269,9 +266,9 @@ objects:
       # ── Markdown rendering ──────────────────────────────────────────────────
       # A RENDERMARKUP template is evaluated with the CALLER as executor, so %! is NOT this object
       # inside one — and a manifest {{ref}} is no help either, since it installs as a
-      # [v(PM`REFS`NAME)] recall that resolves against the executor too. So no template here calls
-      # back into the librarian at all; each one is self-contained. LINK below is inlined for that
-      # reason rather than deferring to FUN`DISPLAY`LINK.
+      # [v(PM`REFS`NAME)] recall that resolves against the executor too. So no template may reach
+      # back into the librarian by either route. A global @function is the way out: it runs as ITS
+      # backing object whoever calls it, which is why LINK below can use cmdtag().
       RENDERMARKUP`H1:
         value: |-
           [ansi(hw,%0)]
@@ -298,7 +295,7 @@ objects:
       # is a live "+help join". A topic that means the ENGINE's help says so in prose.
       RENDERMARKUP`LINK:
         value: |-
-          [if(%2,[if(pueblo(%#),[tagwrap(a,xch_cmd="[if(strmatch(%1,help *),+%1,%1)]" xch_hint="%0",%0)],[ansi(hc,%0)])],%0)]
+          [if(%2,[ansi(hc,[cmdtag(%#,%0,[if(strmatch(%1,help *),+%1,%1)],%0)])],%0)]
         flags: [funsyntax]
 
       # ── Shared command steps ────────────────────────────────────────────────
@@ -314,7 +311,7 @@ objects:
       # answer "does this GAME document this?", which a fallthrough would cost.
       INC`DISPLAY`MISS:
         value: |-
-          @@ %0 the query that matched nothing; @pemit %#=[ansi(hr,Help>)] No local topic '%0'.%b%bTry:%b%b[u(%!/FUN`DISPLAY`LINK,help %0,help %0)]
+          @@ %0 the query that matched nothing; @pemit %#=[ansi(hr,Help>)] No local topic '%0'.%b%bTry:%b%b[cmdtag(%#,help %0,help %0)]
         flags: [cmdsyntax]
       INC`IS`STAFF:
         value: |-
@@ -326,7 +323,7 @@ objects:
       # unescaped ^[A-Z]+$ reaches regmatch() with the class already eaten and matches nothing.
       INC`IS`TOPICNAME:
         value: |-
-          @@ no arguments — validates %q<topic>, which the calling command stages, and stages %q<attr>; @assert %q<topic>=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,^\[A-Z0-9_. -\]+$)=@include %!/INC`DISPLAY`ERROR=A topic name is words of letters, digits, and _ . or -.; think [setq(attr,LOCAL`[edit(squish(%q<topic>),%b,`)])]
+          @@ no arguments — validates %q<topic>, which the calling command stages, and stages %q<obj> and %q<attr>; @assert %q<topic>=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,^\[A-Z0-9_. -\]+$)=@include %!/INC`DISPLAY`ERROR=A topic name is words of letters, digits, and _ . or -.; think [setq(obj,u(%!/SRC`GAME),attr,HELP`[edit(squish(%q<topic>),%b,`)])]
         flags: [cmdsyntax]
       INC`DO`LISTING:
         value: |-
@@ -371,11 +368,11 @@ objects:
       # +help/write. That is the trade for a computed attribute name; nothing else here needs it.
       CMD`WRITE:
         value: |-
-          $^\+help/write\s+(?<topic>[^=]+)=(?<body>.*)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert setr(body,r(body,args))=@include %!/INC`DISPLAY`ERROR=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%!/%q<attr>,%q<body>)]; @pemit %#=[ansi(hc,Help>)] Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].
+          $^\+help/write\s+(?<topic>[^=]+)=(?<body>.*)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert setr(body,r(body,args))=@include %!/INC`DISPLAY`ERROR=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%q<obj>/%q<attr>,%q<body>)]; @pemit %#=[ansi(hc,Help>)] Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].
         flags: [regexp, cmdsyntax]
       CMD`DELETE:
         value: |-
-          $^\+help/delete\s+(?<topic>.+)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert strlen(get(%!/%q<attr>))=@include %!/INC`DISPLAY`ERROR=No game topic by that name.; think [attrib_set(%!/%q<attr>)]; @pemit %#=[ansi(hc,Help>)] Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].
+          $^\+help/delete\s+(?<topic>.+)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert strlen(get(%q<obj>/%q<attr>))=@include %!/INC`DISPLAY`ERROR=No game topic by that name.; think [attrib_set(%q<obj>/%q<attr>)]; @pemit %#=[ansi(hc,Help>)] Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].
         flags: [regexp, cmdsyntax]
       # The escape hatch for a system no package installed. A package that ships a manifest should
       # attach its SRC leaf instead, so that uninstalling it takes the registration with it.
@@ -388,9 +385,14 @@ objects:
           $^\+help/unsource\s+(?<name>.+)$:@include %!/INC`IS`STAFF; think [setq(name,ucstr(trim(r(name,args))))]; @assert strlen(get(%!/SRC`%q<name>))=@include %!/INC`DISPLAY`ERROR=No such help source: [lcstr(%q<name>)]; think [attrib_set(%!/SRC`%q<name>)]; @pemit %#=[ansi(hc,Help>)] Dropped help source [lcstr(%q<name>)].
         flags: [regexp, cmdsyntax]
 
-      # ── The librarian's own topics ──────────────────────────────────────────
-      # Contributed exactly the way a package's are: a HELP root describing the set, and one leaf per
-      # topic. SRC`PLUS-HELP above points at this object.
+  # ---- this package's own topics ---------------------------------------------
+  # A source like any other: an ordinary object with a HELP tree, pointed at by SRC`PLUS-HELP. It is
+  # deliberately NOT the librarian — the librarian carries the registry, the commands and the
+  # rendering, and no content at all, so that reading a topic is one code path whoever wrote it.
+  - ref: plus_help_own
+    type: thing
+    name: Help Librarian's Help
+    attributes:
       HELP:
         value: |-
           Reading and writing this game's help.
@@ -448,15 +450,29 @@ objects:
         value: |-
           Topics come from two places, and `+help/sources` shows both.
 
-          **Packages bring their own.** A package holds its topics in a `HELP` attribute tree on one
-          of its objects and registers that object with the librarian in its manifest. The package
+          **Every source is an object with a `HELP` tree**, including this package's own topics and
+          the game's. A package registers its object with the librarian in its manifest. The package
           manager writes that registration on install and clears it on uninstall, so a package's
           topics appear and disappear with the package itself.
 
           **The game keeps the rest.** House rules, policy, how to apply — anything belonging to no
-          package — live on the librarian and are written with \[write\].
+          package — live on the Game Help object and are written with \[write\].
 
           For a system no package installed, staff can register it by hand:
 
           - `+help/source <name>=<object>` — read `<object>`'s HELP tree as source `<name>`
           - `+help/unsource <name>` — stop reading it
+
+  # ---- the game's own topics --------------------------------------------------
+  # Ships empty but for its description: +help/write fills it in-game. The manifest manages only the
+  # HELP root, so a staff-written leaf is never drift against the package baseline and an upgrade
+  # never overwrites one. no_command propagates from the root, so a topic body that happens to begin
+  # with "$" cannot become an accidental $-command.
+  - ref: game_help
+    type: thing
+    name: Game Help
+    attributes:
+      HELP:
+        value: |-
+          This game's own help: house rules, policy, and anything belonging to no package.
+        flags: [no_command]

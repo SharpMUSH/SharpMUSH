@@ -1,16 +1,16 @@
 format: 1
 package: common-functions
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
-description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional title, justified center (default) / left / right."
+description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional title, justified center (default) / left / right — and cmdtag(), a clickable command link."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [ui, formatting, functions]
 requires_server: ">=0.1"
 
 # Create mode: a single owned thing carries the softcode the global functions evaluate. AINSTALL
-# registers header()/footer()/line() once at install; STARTUP re-registers them on every boot (the
-# global-function registry is in-memory).
+# registers them once at install; STARTUP re-registers them on every boot (the global-function
+# registry is in-memory). Adding one means adding its FUN` subtree AND a clause to STARTUP.
 #
 # Each function is self-describing via its FUN` attribute subtree:
 #   FUN`<NAME>                  — the function body (a dispatcher for justified variants)
@@ -68,6 +68,28 @@ objects:
       FUN`LINE`MAXARGS: |-
         2
 
+      # cmdtag(<person>, <visible>, <command>[, <hint>]) — text that runs <command> when clicked.
+      #
+      # <person> is WHO IS READING, passed rather than taken from %#, because the object rendering a
+      # line is often not the enactor: a global rendering one row per room occupant, an attribute
+      # evaluated on someone else's behalf, or a @pemit built for a target all have a viewer that %#
+      # does not name. Taking it as an argument makes the capability test ask about the right client.
+      #
+      # tagwrap() writes the anchor inline as Pueblo/MXP markup. A client that understands neither —
+      # the web portal reports neither — would show the literal <a xch_cmd="..."> instead of the
+      # text, so the capability is asked for rather than assumed, and everyone else gets the plain
+      # <visible> back. xch_cmd additionally needs the Send_OOB @power; without it the text still
+      # prints, so nothing is lost.
+      #
+      # No colour is applied: whether a link should stand out is the caller's decision, and wrapping
+      # the markup in ansi() here would force it on every caller.
+      FUN`CMDTAG: |-
+        [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,xch_cmd="%2" xch_hint="[if(strlen(%3),%3,%2)]",%1)],%1)]
+      FUN`CMDTAG`MINARGS: |-
+        3
+      FUN`CMDTAG`MAXARGS: |-
+        4
+
       # AINSTALL (once): just run STARTUP. The function body u()s its own object's FUN`<NAME>`DISPLAY`<TYPE>
       # leaf, which is safe for ANY caller: a global @function "runs as the backing object, with its
       # powers" (PennMUSH `help @function2`, and SharpMUSH matches this — SharpMUSHParserVisitor evaluates
@@ -78,4 +100,4 @@ objects:
       # STARTUP (every boot): re-establish the in-memory global-function registrations, reading each
       # function's arg counts from its MINARGS/MAXARGS leaf (one source of truth).
       STARTUP: |-
-        @function header=%!,FUN`HEADER,[get(%!/FUN`HEADER`MINARGS)],[get(%!/FUN`HEADER`MAXARGS)]; @function footer=%!,FUN`FOOTER,[get(%!/FUN`FOOTER`MINARGS)],[get(%!/FUN`FOOTER`MAXARGS)]; @function line=%!,FUN`LINE,[get(%!/FUN`LINE`MINARGS)],[get(%!/FUN`LINE`MAXARGS)]
+        @function header=%!,FUN`HEADER,[get(%!/FUN`HEADER`MINARGS)],[get(%!/FUN`HEADER`MAXARGS)]; @function footer=%!,FUN`FOOTER,[get(%!/FUN`FOOTER`MINARGS)],[get(%!/FUN`FOOTER`MAXARGS)]; @function line=%!,FUN`LINE,[get(%!/FUN`LINE`MINARGS)],[get(%!/FUN`LINE`MAXARGS)]; @function cmdtag=%!,FUN`CMDTAG,[get(%!/FUN`CMDTAG`MINARGS)],[get(%!/FUN`CMDTAG`MAXARGS)]

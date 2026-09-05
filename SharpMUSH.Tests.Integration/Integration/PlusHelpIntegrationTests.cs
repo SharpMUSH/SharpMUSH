@@ -73,12 +73,18 @@ public class PlusHelpIntegrationTests
 		return dbref;
 	}
 
-	/// <summary>The Help Librarian, which carries the package's attributes and its registry.</summary>
-	private async Task<string> LibrarianAsync()
+	/// <summary>
+	/// One of the three objects the package creates: the <c>librarian</c> carries the registry, the
+	/// commands and the rendering; <c>plus_help_own</c> carries +help's own topics and <c>game_help</c> the
+	/// game's, each a source with a HELP tree like any package's. The librarian holds no content.
+	/// </summary>
+	private async Task<string> ObjectAsync(string reference)
 	{
 		var objects = await Registry.GetPackageObjectsAsync("plus-help");
-		return PackageInstallService.ParseObjid(objects.Single().Objid)!.Value.ToString();
+		return PackageInstallService.ParseObjid(objects.Single(o => o.Ref == reference).Objid)!.Value.ToString();
 	}
+
+	private Task<string> LibrarianAsync() => ObjectAsync("librarian");
 
 	/// <summary>
 	/// $-commands match only from the enactor's room or the master room, and other suites move
@@ -179,6 +185,51 @@ public class PlusHelpIntegrationTests
 		await Assert.That(await SourcesAsync()).DoesNotContain("WIKI-READER")
 			.Because("uninstalling a contributor must take its registration with it, or the librarian "
 				+ "would keep offering topics that no longer exist");
+	}
+
+	/// <summary>
+	/// Every registered source must resolve to a DIFFERENT object.
+	///
+	/// <para>An installed <c>{{ref}}</c> is a <c>[v(PM`REFS`&lt;REF&gt;)]</c> recall, and the
+	/// <c>PM`REFS</c> tree it reads lives on the object the attribute landed on — this librarian —
+	/// shared by every package that registers here. <c>PM`REFS</c> namespaces only the cross-package
+	/// <c>{{pkg/ref}}</c> form, so two contributors that both name their object <c>help</c> get one
+	/// <c>PM`REFS`HELP</c> between them: the later install silently steals the earlier's topics and
+	/// its own object is orphaned. That is what happened when scene and plus-help both used
+	/// <c>help</c>, and the symptom was scene's topics vanishing while an unrelated bare name turned
+	/// ambiguous — a long way from the cause.</para>
+	/// </summary>
+	[Test]
+	public async Task EverySourceResolvesToItsOwnObject()
+	{
+		var librarian = await LibrarianAsync();
+
+		var sources = (await God1($"think [lattr({librarian}/SRC`*)]")).Message!.ToPlainText()
+			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(sources.Length).IsGreaterThan(1).Because("there are several contributors to collide");
+
+		var resolved = new Dictionary<string, string>(StringComparer.Ordinal);
+		var seen = 0;
+		foreach (var leaf in sources)
+		{
+			var obj = (await God1($"think [u({librarian}/{leaf})]")).Message!.ToPlainText().Trim();
+
+			// A leaf whose object is gone contributes nothing and is not an error — that is the
+			// documented degradation for a force-removed contributor, and another suite installs and
+			// uninstalls wiki-reader while this runs. Only what actually resolves is checked.
+			if (!obj.StartsWith('#'))
+			{
+				continue;
+			}
+
+			seen++;
+			await Assert.That(resolved.ContainsKey(obj)).IsFalse()
+				.Because($"{leaf} resolves to {obj}, which {resolved.GetValueOrDefault(obj)} already claims — "
+					+ "two packages have picked the same ref name and share one PM`REFS entry");
+			resolved[obj] = leaf;
+		}
+
+		await Assert.That(seen).IsGreaterThan(1).Because("the check is only meaningful with several live sources");
 	}
 
 	// ── Reading ─────────────────────────────────────────────────────────────
@@ -288,8 +339,7 @@ public class PlusHelpIntegrationTests
 
 		await Assert.That(said).Contains("Staff only");
 
-		var librarian = await LibrarianAsync();
-		var stored = (await God1($"think [get({librarian}/LOCAL`POLICY)]")).Message?.ToPlainText()?.Trim() ?? "";
+		var stored = (await God1($"think [get({await ObjectAsync("game_help")}/HELP`POLICY)]")).Message?.ToPlainText()?.Trim() ?? "";
 		await Assert.That(stored).IsEmpty().Because("the refusal must not have written anything");
 	}
 
@@ -314,8 +364,7 @@ public class PlusHelpIntegrationTests
 		var wrote = Joined(await RunAs(staffHandle, @"+help/write applying=Ask for \[name(%%#)\] at the gate."));
 		await Assert.That(wrote).Contains("Wrote game/applying");
 
-		var librarian = await LibrarianAsync();
-		var stored = (await God1($"think [get({librarian}/LOCAL`APPLYING)]")).Message?.ToPlainText() ?? string.Empty;
+		var stored = (await God1($"think [get({await ObjectAsync("game_help")}/HELP`APPLYING)]")).Message?.ToPlainText() ?? string.Empty;
 		await Assert.That(stored).Contains("[name(%#)]")
 			.Because("the escaped code must reach the attribute unresolved; resolving it at write time would freeze the writer's name into the topic");
 
