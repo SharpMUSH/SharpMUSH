@@ -144,9 +144,10 @@ objects:
           @@ %0 title · %1 refs · %2 page · %3 row attribute · %4 paging stem; @assert %1=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%1))]; @assert lte(%2,%q<pages>)=@include %!/INC`DISPLAY`ERROR=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %2.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%0,%1,%2,%3,%4)]
         flags: [cmdsyntax]
 
-      # The staff gate is INLINE in CMD`AUDIT rather than an INC`IS`ADMIN step: `help @include`
-      # documents an included @assert as breaking the including action list, but this engine
-      # contains the break, so the gate printed "Staff only." and then ran the audit anyway. See #863.
+      INC`IS`ADMIN:
+        value: |-
+          @@ no arguments — staff only, checked against the caller's flags; @assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.
+        flags: [cmdsyntax]
       INC`IS`PAGE:
         value: |-
           @@ no arguments — validates %q<ref>, which the calling command stages; @assert %q<ref>=@include %!/INC`DISPLAY`ERROR=Which page? Try +wiki/list.; @assert u(%!/FUN`IS`PAGE,%q<ref>)=@include %!/INC`DISPLAY`ERROR=No such wiki page: %q<ref>
@@ -186,7 +187,7 @@ objects:
       # Drafts never appear in wikilist(), so this audits published pages only.
       CMD`AUDIT:
         value: |-
-          $^\+wiki/audit$:@assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.; think [setq(published,wikilist())]; @assert %q<published>=@include %!/INC`DISPLAY`INFO=No published pages to audit yet.; think [setq(uncategorised,filterq(categorised,%!/FUN`IS`UNCATEGORISED,%q<published>),untagged,filterq(tagged,%!/FUN`IS`UNTAGGED,%q<published>))]; @pemit %#=[u(%!/FUN`DISPLAY`AUDIT,%q<published>,%q<uncategorised>,%q<untagged>)]
+          $^\+wiki/audit$:@include %!/INC`IS`ADMIN; think [setq(published,wikilist())]; @assert %q<published>=@include %!/INC`DISPLAY`INFO=No published pages to audit yet.; think [setq(uncategorised,filterq(categorised,%!/FUN`IS`UNCATEGORISED,%q<published>),untagged,filterq(tagged,%!/FUN`IS`UNTAGGED,%q<published>))]; @pemit %#=[u(%!/FUN`DISPLAY`AUDIT,%q<published>,%q<uncategorised>,%q<untagged>)]
         flags: [regexp, cmdsyntax]
 
       # ---- +help topics -------------------------------------------------------
@@ -195,8 +196,8 @@ objects:
       # refused unless the evaluator is privileged too, and the librarian is not. A package whose
       # command object must be WIZARD — scene's Logger, say — needs a plain object for its help.
       #
-      # Bodies are evaluated, so a literal "[" is written "\["; that is also how a
-      # \[cross-reference\] is spelled.
+      # Bodies are evaluated, so they are written like any other softcode: escape what should be
+      # shown, leave alone what should be run. That is also how a \[cross-reference\] is spelled.
       HELP: |-
         Reading the wiki from in-game.
       HELP`WIKI: |-

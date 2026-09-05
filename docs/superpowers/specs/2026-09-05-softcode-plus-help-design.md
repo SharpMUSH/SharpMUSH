@@ -261,12 +261,22 @@ object holding it. So `SRC` leaves are read with `u()`, and what comes back is a
 *objid* — which contains the `:` the record format uses as a field separator, and
 so is normalized with `num()` before it becomes a record.
 
-**Guards are inline, not factored behind `@include`.** The design assumed the
-documented `@include` guard idiom. `@include` contains the break instead of
-propagating it (#863), so a guard reached that way refuses, prints its message,
-and lets the command run anyway. Every gate in `plus-help` is written inline until
-that is fixed; `wiki-reader`'s `+wiki/audit` had the same hole and is closed the
-same way.
+**`@include` did not propagate a guard's break, and now does.** The design assumed
+the documented `@include` guard idiom — `@include me/CHECKS; <do the thing>`, where
+a failing `@assert` in `CHECKS` stops the caller. It did not: the break was
+contained at the `@include` boundary, so every guard written that way printed its
+refusal and then let the command run. `/nobreak`, whose whole job is to suppress
+the propagation, was a no-op for the same reason. `wiki-reader`'s `+wiki/audit`
+had shipped with an inert staff gate.
+
+Fixed here rather than worked around, so `plus-help` uses the documented factoring:
+`VisitCommandList` pops the break marker when the list it is visiting stops, which
+is right for an action list at the top of a queue entry and wrong for one that is
+nested only because a command chose to run it. `@include` now hands the nested list
+a one-shot `BreakPropagation` flag, claimed by that list before its children run,
+and re-raises the break for the caller unless `/nobreak` was given. Containment
+stays complete: a break a nested `/nobreak` swallowed does not resurface further
+out.
 
 One consequence of evaluating bodies deserves its own line: `[`, `(` and `)` are
 softcode syntax, so prose containing them ends the expression. Shipped topics keep

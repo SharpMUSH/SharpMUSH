@@ -59,9 +59,10 @@ depends:
 # reading with get() governs PLAYER-authored values; no part of this is that. +help/write is gated
 # on the writer being staff, and that gate is the security boundary.
 #
-# The cost of evaluating is that "[" is softcode syntax, so a literal one is written "\[". That is
-# how a cross-reference is spelled: "\[write\]" survives u() as "[write]", which the markdown
-# renderer turns into a +help command link. An unescaped "[write]" is simply eaten.
+# A body is therefore written like any other softcode: what should be evaluated is left alone, and
+# what should be shown is escaped -- "\[", "\)", "%%". That is also how a cross-reference is
+# spelled: "\[write\]" evaluates to [write], which the markdown renderer turns into a +help
+# command link.
 #
 # UNINSTALLING.  Packages that contribute help attach to the librarian, and the attachment guard
 # refuses to destroy an object another package is attached to. So uninstalling plus-help while any
@@ -164,10 +165,9 @@ objects:
           [@@(%0 a record — its body as stored, unevaluated)][get([extract(%0,2,1,:)]/[extract(%0,3,1,:)])]
         flags: [funsyntax]
       # Evaluated, for reading. See the header on why u() is right here.
-      # Evaluation can fail on a body that was written as plain prose: "[", "(" and ")" are all
-      # softcode syntax, so an unescaped pair of brackets in a sentence ends the expression. Rather
-      # than hand the reader a #-1, fall back to the stored text — a badly written topic degrades to
-      # plain markdown instead of disappearing.
+      # A body with an escape missing is an authoring mistake like any other, and it stops the
+      # expression. Fall back to the stored text so the reader still gets something readable and
+      # the author can see what they wrote, rather than the whole topic becoming a #-1.
       FUN`GET`RTEXT:
         value: |-
           [@@(%0 a record — its body, evaluated, or as stored when evaluating it fails)][if(strmatch(setr(t,u([extract(%0,2,1,:)]/[extract(%0,3,1,:)])),#-1*),u(%!/FUN`GET`RBODY,%0),%q<t>)]
@@ -313,12 +313,18 @@ objects:
         value: |-
           @@ %0 the query that matched nothing; @pemit %#=[ansi(hr,Help>)] No local topic '%0'.%b%bTry:%b%b[u(%!/FUN`DISPLAY`LINK,help %0,help %0)]
         flags: [cmdsyntax]
-      # NOTE ON GUARDS. Every gate below is written INLINE in the command it protects, rather than
-      # factored into an INC`IS`* step reached with @include. `help @include` documents an included
-      # @assert as breaking the INCLUDING action list — that is the whole reason /nobreak exists —
-      # but this engine contains the break instead, so a guard reached through @include prints its
-      # refusal and then lets the command run anyway. Written inline, @assert stops the list as
-      # documented. Restore the factoring once #863 is fixed.
+      INC`IS`STAFF:
+        value: |-
+          @@ no arguments — writing help is a staff verb, checked against the caller's flags; @assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.
+        flags: [cmdsyntax]
+      # Topic words become attribute-path segments, so they are checked before they become one.
+      # %q<topic> is the caller's staged, trimmed, upper-cased name; this leaves %q<attr> set.
+      # A regex character class escapes its brackets: "[" opens an evaluation bracket, so an
+      # unescaped ^[A-Z]+$ reaches regmatch() with the class already eaten and matches nothing.
+      INC`IS`TOPICNAME:
+        value: |-
+          @@ no arguments — validates %q<topic>, which the calling command stages, and stages %q<attr>; @assert %q<topic>=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,^\[A-Z0-9_. -\]+$)=@include %!/INC`DISPLAY`ERROR=A topic name is words of letters, digits, and _ . or -.; think [setq(attr,LOCAL`[edit(squish(%q<topic>),%b,`)])]
+        flags: [cmdsyntax]
       INC`DO`LISTING:
         value: |-
           @@ %0 title · %1 records · %2 page · %3 paging stem; @assert %1=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%1))]; @assert lte(%2,%q<pages>)=@include %!/INC`DISPLAY`ERROR=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %2.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%0,%1,%2,%3)]
@@ -362,21 +368,21 @@ objects:
       # +help/write. That is the trade for a computed attribute name; nothing else here needs it.
       CMD`WRITE:
         value: |-
-          $^\+help/write\s+(?<topic>[^=]+)=(?<body>.*)$:@assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.; think [setq(topic,ucstr(trim(r(topic,args))))]; @assert %q<topic>=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,^\[A-Z0-9_. -\]+$)=@include %!/INC`DISPLAY`ERROR=A topic name is words of letters, digits, and _ . or -.; think [setq(attr,LOCAL`[edit(squish(%q<topic>),%b,`)])]; @assert setr(body,r(body,args))=@include %!/INC`DISPLAY`ERROR=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%!/%q<attr>,%q<body>)]; @pemit %#=[ansi(hc,Help>)] Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].
+          $^\+help/write\s+(?<topic>[^=]+)=(?<body>.*)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert setr(body,r(body,args))=@include %!/INC`DISPLAY`ERROR=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%!/%q<attr>,%q<body>)]; @pemit %#=[ansi(hc,Help>)] Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].
         flags: [regexp, cmdsyntax]
       CMD`DELETE:
         value: |-
-          $^\+help/delete\s+(?<topic>.+)$:@assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.; think [setq(topic,ucstr(trim(r(topic,args))))]; @assert %q<topic>=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,^\[A-Z0-9_. -\]+$)=@include %!/INC`DISPLAY`ERROR=A topic name is words of letters, digits, and _ . or -.; think [setq(attr,LOCAL`[edit(squish(%q<topic>),%b,`)])]; @assert strlen(get(%!/%q<attr>))=@include %!/INC`DISPLAY`ERROR=No game topic by that name.; think [attrib_set(%!/%q<attr>)]; @pemit %#=[ansi(hc,Help>)] Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].
+          $^\+help/delete\s+(?<topic>.+)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert strlen(get(%!/%q<attr>))=@include %!/INC`DISPLAY`ERROR=No game topic by that name.; think [attrib_set(%!/%q<attr>)]; @pemit %#=[ansi(hc,Help>)] Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].
         flags: [regexp, cmdsyntax]
       # The escape hatch for a system no package installed. A package that ships a manifest should
       # attach its SRC leaf instead, so that uninstalling it takes the registration with it.
       CMD`SOURCE:
         value: |-
-          $^\+help/source\s+(?<name>[^=]+)=(?<obj>.+)$:@assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.; think [setq(name,ucstr(trim(r(name,args))))]; @assert regmatch(%q<name>,^\[A-Z0-9_.-\]+$)=@include %!/INC`DISPLAY`ERROR=A source name is letters, digits, and _ . or -.; @assert isdbref(setr(o,locate(%#,trim(r(obj,args)),*)))=@include %!/INC`DISPLAY`ERROR=I cannot find that object.; think [attrib_set(%!/SRC`%q<name>,%q<o>)]; @pemit %#=[ansi(hc,Help>)] [lcstr(%q<name>)] now reads help from [name(%q<o>)] - [words(lattr(%q<o>/HELP`**))] topics.
+          $^\+help/source\s+(?<name>[^=]+)=(?<obj>.+)$:@include %!/INC`IS`STAFF; think [setq(name,ucstr(trim(r(name,args))))]; @assert regmatch(%q<name>,^\[A-Z0-9_.-\]+$)=@include %!/INC`DISPLAY`ERROR=A source name is letters, digits, and _ . or -.; @assert isdbref(setr(o,locate(%#,trim(r(obj,args)),*)))=@include %!/INC`DISPLAY`ERROR=I cannot find that object.; think [attrib_set(%!/SRC`%q<name>,%q<o>)]; @pemit %#=[ansi(hc,Help>)] [lcstr(%q<name>)] now reads help from [name(%q<o>)] - [words(lattr(%q<o>/HELP`**))] topics.
         flags: [regexp, cmdsyntax]
       CMD`UNSOURCE:
         value: |-
-          $^\+help/unsource\s+(?<name>.+)$:@assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.; think [setq(name,ucstr(trim(r(name,args))))]; @assert strlen(get(%!/SRC`%q<name>))=@include %!/INC`DISPLAY`ERROR=No such help source: [lcstr(%q<name>)]; think [attrib_set(%!/SRC`%q<name>)]; @pemit %#=[ansi(hc,Help>)] Dropped help source [lcstr(%q<name>)].
+          $^\+help/unsource\s+(?<name>.+)$:@include %!/INC`IS`STAFF; think [setq(name,ucstr(trim(r(name,args))))]; @assert strlen(get(%!/SRC`%q<name>))=@include %!/INC`DISPLAY`ERROR=No such help source: [lcstr(%q<name>)]; think [attrib_set(%!/SRC`%q<name>)]; @pemit %#=[ansi(hc,Help>)] Dropped help source [lcstr(%q<name>)].
         flags: [regexp, cmdsyntax]
 
       # ── The librarian's own topics ──────────────────────────────────────────
@@ -425,13 +431,13 @@ objects:
           colour or the reader's own name: `[ansi(hc,...)]` and `[name(%#)]` both work. Because it
           is evaluated, writing help is a staff verb.
 
-          The line you type is evaluated once on its way in, exactly as `&attr obj=...` is, so
-          anything meant for the READER is escaped: a backslash before each `[` and `]`, and `%%`
-          for a `%`. Unescaped, it resolves as you type it and the topic keeps the answer instead
-          of the question.
+          The line you type is evaluated once on its way in, exactly as `&attr obj=...` is, so you
+          choose what happens when: leave code unescaped and it resolves as you type it, escape it
+          and it resolves for each reader instead. A backslash before a `[`, `(` or `)` shows the
+          character; `%%` shows a `%`.
 
-          Cross-references work the same way: escape the brackets around a topic's name and the
-          reader gets a clickable link to it.
+          Cross-references are written the same way — escape the brackets around a topic's name
+          \(like this\) and the reader gets a clickable link to it.
 
           Game-authored topics live in the source `game`, and a `game` topic outranks a package's
           when both claim the same name. See also \[sources\].

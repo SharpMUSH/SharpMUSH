@@ -526,14 +526,14 @@ objects:
         `+scene/pitch <text>` sets the one-line summary shown beside a scene in `+scene` and on its
         card. It is how someone browsing decides whether to come.
 
-        Only the scene's owner, or staff, can set it. See also \[scene\] and \[scene privacy\].
+        Only the scene's owner \(or staff\) can set it. See also \[scene\] and \[scene privacy\].
       HELP`SCENE`PRIVACY: |-
         Scenes are **public** by default: they appear in `+scene` and their log is readable.
 
         - `+scene/private` — hide the focused scene and its log from everyone but its members
         - `+scene/public` — put it back
 
-        Only the scene's owner, or staff, can change this. Privacy is about who may *read*; who may
+        Only the scene's owner \(or staff\) can change this. Privacy is about who may *read*; who may
         *pose* is decided by who has joined. See also \[scene\] and \[scene join\].
       HELP`SCENE`SCHEDULE: |-
         A scene can be announced before it happens, so people can plan around it.

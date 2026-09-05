@@ -74,12 +74,12 @@ exactly this reason.
 topic `scene join`. The `HELP` root itself is not a topic: it is the one-line description shown in
 the index, and it has to be set or `lattr()` will not enumerate the branch.
 
-**Bodies are evaluated.** They are run through `u()`, not read with `get()`, so a topic can carry
-colour, the current configuration, or the reader's own name. The cost is that `[`, `(` and `)` are
-softcode syntax: a bare pair of parentheses in a sentence ends the expression. Keep prose free of
-them, and write a literal bracket as `\[`. That is also how a cross-reference is spelled —
-`\[scene join\]` survives evaluation as `[scene join]`, which the markdown renderer turns into a
-clickable `+help scene join`.
+**Bodies are evaluated**, so write them like any other softcode. They are run through `u()`, not
+read with `get()`, which is what lets a topic carry colour, the current configuration, or the
+reader's own name. Anything that should be *shown* rather than *run* is escaped — `\[`, `\)`,
+`%%` — exactly as it would be in any attribute. A cross-reference is spelled the same way:
+`\[scene join\]` evaluates to `[scene join]`, which the markdown renderer turns into a clickable
+`+help scene join`.
 
 **Uninstalling plus-help needs `--force`** while any contributor is attached to the librarian, or
 the contributors uninstalled first. That is the attachment guard doing its job.

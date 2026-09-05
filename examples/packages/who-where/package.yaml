@@ -39,7 +39,8 @@ objects:
   # ---- +help topics ---------------------------------------------------------
   # On the function object, which is unflagged: u() on a privileged object's attribute is refused
   # unless the evaluator is privileged too, and the librarian is not. Bodies are evaluated, so a
-  # literal "[" is written "\[" — which is also how a \[cross-reference\] is spelled.
+  # character that should be shown rather than run is escaped — "\[", "\)" — which is also how a
+  # \[cross-reference\] is spelled.
   - ref: ww_help
     type: thing
     name: Who-Where Help

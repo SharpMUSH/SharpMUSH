@@ -36,7 +36,7 @@ objects:
         `+hello` says hello. That is the entire package.
 
         It exists to show the smallest thing a package can be: one object, one command — and, with
-        this topic, one entry in \[help\].
+        this topic, one entry in \[help\] \(escaped, like any other softcode\).
 
   - ref: hello_help_registration
     target: "{{plus-help/librarian}}"
