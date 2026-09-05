@@ -1,6 +1,6 @@
 format: 1
 package: profile-handler
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "Read-only character directory, online list, and profile API, served through the HTTP verb routers."
 license: MIT
@@ -43,8 +43,19 @@ objects:
       # package_manager system principal — it is seeded as a real PLAYER because it owns
       # softcode-package objects, so a type search finds it, but nobody plays it. Matched by
       # config ref, not a literal dbref: the seed numbering is config-driven and has moved.
+      # The second half compares the player against the package manager. It used to do that with
+      # num() on both sides, and num() given an empty argument does two things: it returns
+      # #-1 NO MATCH, and it NOTIFIES "I can't see that here." The ref installs empty, so listing
+      # characters emitted one of those per player — and everything notified while an HTTP request is
+      # being served becomes the response body, so the route answered with a stack of locate failures
+      # and then fed them to json_array. It only broke where the timing let those notifications land
+      # inside the captured scope, which is why it showed in CI and in no local run.
+      #
+      # switch() evaluates only the arm it selects, so an empty ref means the comparison is never
+      # reached rather than reached with nothing in it. A game whose ref does resolve compares exactly
+      # as before.
       FN`CHARVIS: |-
-        cand(not(strmatch(u(FN`CHARCAT,%0),Guest)),not(strmatch(num(%0),num({{$package_manager}}))))
+        cand(not(strmatch(u(FN`CHARCAT,%0),Guest)),switch(setr(pm,{{$package_manager}}),,1,not(strmatch(num(%0),num(%q<pm>)))))
       # Online visibility predicate (%0): the character-directory rules. mwho() already hides DARK,
       # so the DARK guard here is just a belt-and-suspenders default. Redefine to suit.
       FN`ONLINEVIS: |-
