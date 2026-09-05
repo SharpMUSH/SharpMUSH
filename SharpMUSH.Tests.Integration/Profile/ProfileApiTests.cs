@@ -131,11 +131,21 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		var visible = await Probe("filter(#8/FN`CHARVIS,lsearch(all,type,player))");
 		var rows = await Probe("iter(filter(#8/FN`CHARVIS,lsearch(all,type,player)),u(#8/FN`CHARROW,%i0),,%r)");
 
+		// Every stage above is evaluated as God and every stage above comes back correct, while the
+		// route — which runs as #8 — answers with locate failures. So the question is which players #8
+		// cannot see, and objeval() is the only way to ask that from here. Their names say which suite
+		// made them, which is the thing that has been missing.
+		var unseen = await Probe(
+			"objeval(#8,iter(lsearch(all,type,player),switch(name(##),#-1*,##,)))");
+		var unseenNames = await Probe(
+			"iter(objeval(#8,iter(lsearch(all,type,player),switch(name(##),#-1*,##,))),name(##))");
+
 		await Assert.That(body.TrimStart()).StartsWith("[")
 			.Because($"the route must answer with a JSON array.\n"
 				+ $"  players = [{players}]\n"
 				+ $"  visible = [{visible}]\n"
 				+ $"  rows    = [{rows}]\n"
+				+ $"  unseen by #8 = [{unseen}] -> [{unseenNames}]\n"
 				+ $"  body    = [{body.Replace("\n", "\\n")}]");
 		using var doc = JsonDocument.Parse(body);
 		await Assert.That(doc.RootElement.ValueKind).IsEqualTo(JsonValueKind.Array);
