@@ -267,8 +267,11 @@ objects:
         flags: [funsyntax]
 
       # ── Markdown rendering ──────────────────────────────────────────────────
-      # A RENDERMARKUP template is evaluated with the CALLER as executor, so me/%! is not this object
-      # inside one. Everything here addresses the librarian by the dbref the manifest substitutes.
+      # A RENDERMARKUP template is evaluated with the CALLER as executor, so %! is NOT this object
+      # inside one — and a manifest {{ref}} is no help either, since it installs as a
+      # [v(PM`REFS`NAME)] recall that resolves against the executor too. So no template here calls
+      # back into the librarian at all; each one is self-contained. LINK below is inlined for that
+      # reason rather than deferring to FUN`DISPLAY`LINK.
       RENDERMARKUP`H1:
         value: |-
           [ansi(hw,%0)]
