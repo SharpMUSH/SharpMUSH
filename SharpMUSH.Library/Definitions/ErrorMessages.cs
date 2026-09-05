@@ -51,7 +51,7 @@ public static class ErrorMessages
 		public const string UIntegers = "#-1 ARGUMENTS MUST BE POSITIVE INTEGERS";
 		public const string Number = "#-1 ARGUMENT MUST BE NUMBER";
 		public const string Numbers = "#-1 ARGUMENTS MUST BE NUMBERS";
-		public const string DivideByZero = "#-1 DIVIDE BY ZERO";
+		public const string DomainError = "#-1 DOMAIN ERROR";
 		public const string InvalidPassword = "#-1 INVALID PASSWORD";
 		public const string InvalidFlag = "#-1 INVALID FLAG";
 		public const string ObjectAttributeString = "#-1 INVALID OBJECT/ATTRIBUTE VALUE";
