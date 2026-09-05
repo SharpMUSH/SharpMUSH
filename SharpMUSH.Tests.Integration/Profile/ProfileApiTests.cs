@@ -119,15 +119,24 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		// before parsing so the failure names what the route actually said: JsonDocument.Parse reports
 		// the offending byte and nothing else, which is not enough to tell a shredded row from an
 		// error string when this only ever fails somewhere you cannot attach a debugger.
-		// The route's visibility predicate compares every player against the package manager, reached
-		// through a ref the installer substitutes. An unresolved ref fails that comparison once per
-		// player, which is what a body of repeated locate failures looks like — so the ref is worth
-		// naming here rather than inferring it from the shape of the wreckage.
-		var packageManagerRef = (await factory.FunctionParser.FunctionParse(
-			MModule.single("v(#8/PM`REFS`PACKAGE_MANAGER)")))!.Message!.ToPlainText().Trim();
+		// The route is a filter, an iter and a json_array stacked on one line, and a failure in any of
+		// them reaches the body as the same wall of locate errors. Each stage is evaluated separately
+		// here so the failure says which one broke, rather than leaving it to be guessed at from the
+		// shape of the wreckage — this only ever fails where no debugger can reach.
+		async Task<string> Probe(string expression) =>
+			(await factory.FunctionParser.FunctionParse(MModule.single(expression)))!
+				.Message!.ToPlainText().Replace("\n", "\\n");
+
+		var players = await Probe("lsearch(all,type,player)");
+		var visible = await Probe("filter(#8/FN`CHARVIS,lsearch(all,type,player))");
+		var rows = await Probe("iter(filter(#8/FN`CHARVIS,lsearch(all,type,player)),u(#8/FN`CHARROW,%i0),,%r)");
+
 		await Assert.That(body.TrimStart()).StartsWith("[")
-			.Because($"the route must answer with a JSON array; PM`REFS`PACKAGE_MANAGER was "
-				+ $"'{packageManagerRef}' and it answered: {body}");
+			.Because($"the route must answer with a JSON array.\n"
+				+ $"  players = [{players}]\n"
+				+ $"  visible = [{visible}]\n"
+				+ $"  rows    = [{rows}]\n"
+				+ $"  body    = [{body.Replace("\n", "\\n")}]");
 		using var doc = JsonDocument.Parse(body);
 		await Assert.That(doc.RootElement.ValueKind).IsEqualTo(JsonValueKind.Array);
 
