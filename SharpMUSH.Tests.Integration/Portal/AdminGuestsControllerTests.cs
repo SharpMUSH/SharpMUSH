@@ -129,7 +129,7 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 		var row = Body<AdminGuestsController.GuestRow>(await ControllerAs(wizard)
 			.Create(new AdminGuestsController.CreateGuestRequest(name), CancellationToken.None));
 
-		var deleted = await ControllerAs(wizard).Delete(row.DbrefNumber, CancellationToken.None);
+		var deleted = await ControllerAs(wizard).Delete(row.DbrefNumber, row.CreationTime, CancellationToken.None);
 		await Assert.That(deleted).IsTypeOf<NoContentResult>();
 
 		// PennMUSH destroys in two stages — @nuke marks GOING, and only a second pass frees the
@@ -150,5 +150,35 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 		// Whatever it suggests must not already be taken, or the create it pre-fills fails.
 		var clash = await Mediator.CreateStream(new GetPlayerQuery(listed.NextFreeName)).FirstOrDefaultAsync();
 		await Assert.That(clash).IsNull();
+	}
+
+	/// <summary>
+	/// A delete aimed at a number whose character has changed underneath it is refused.
+	///
+	/// <para>Dbref numbers are reused after a nuke, and this endpoint is the thing that nukes them —
+	/// remove one guest, create another, and the new one may hold the old number. A panel left open
+	/// across that would aim its delete button at whichever guest holds the number now. The number
+	/// alone stopped identifying a character the moment the roster went stale, so the row's creation
+	/// stamp is sent with it and checked here.</para>
+	/// </summary>
+	[Test]
+	public async Task Delete_WithACreationStampThatNoLongerMatches_IsRefused()
+	{
+		var wizard = await NewWizardAsync("GuestAdminStale");
+		var name = $"GuestS{Guid.NewGuid():N}"[..14];
+
+		var row = Body<AdminGuestsController.GuestRow>(await ControllerAs(wizard)
+			.Create(new AdminGuestsController.CreateGuestRequest(name), CancellationToken.None));
+
+		var refused = await ControllerAs(wizard)
+			.Delete(row.DbrefNumber, row.CreationTime + 1, CancellationToken.None);
+
+		await Assert.That(refused).IsTypeOf<ConflictObjectResult>()
+			.Because("the stamp names a different character than the one that holds the number now");
+
+		var stillThere = await Mediator.Send(
+			new GetObjectNodeQuery(new DBRef(row.DbrefNumber, row.CreationTime)));
+		await Assert.That(stillThere.IsNone).IsFalse()
+			.Because("a refused delete must not have removed anything");
 	}
 }

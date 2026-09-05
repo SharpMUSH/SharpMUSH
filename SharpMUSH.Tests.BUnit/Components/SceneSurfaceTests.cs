@@ -115,6 +115,13 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 
 	public int ConnectCalls { get; private set; }
 
+	/// <summary>
+	/// Counted apart from <see cref="ConnectCalls"/> because the real service does not treat them
+	/// alike: ConnectAsync returns early whenever a hub OBJECT exists, connected or not, so it cannot
+	/// revive a dropped connection. Aliasing the two here hid that difference from the tests.
+	/// </summary>
+	public int ReconnectCalls { get; private set; }
+
 	public HubConnectionState ConnectionState =>
 		IsConnected ? HubConnectionState.Connected : HubConnectionState.Disconnected;
 
@@ -133,7 +140,11 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	}
 
 	public Task DisconnectAsync() => Task.CompletedTask;
-	public Task ReconnectAsync() => ConnectAsync();
+	public Task ReconnectAsync()
+	{
+		ReconnectCalls++;
+		return ConnectAsync();
+	}
 
 	public Task SendCommandAsync(string command)
 	{
@@ -588,5 +599,26 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 		await _terminal.Received().SendAsync("+scene/create A quiet corner");
 		await _terminal.Received().SendAsync("+scene/private");
+	}
+
+	/// <summary>
+	/// A hub that exists but has dropped is revived, not left alone.
+	///
+	/// <para>The page asked for ConnectAsync, which returns the moment it sees a hub object —
+	/// connected or not. So a player whose connection dropped while they were reading arrived at a
+	/// live scene that could never reconnect: the banner stayed up and the compose box stayed dead
+	/// until they reloaded. ReconnectAsync tears the dead hub down first, and there are no scene
+	/// groups to preserve precisely because nothing is connected.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_RevivesAHubThatExistsButHasDropped()
+	{
+		_hub.IsConnected = false;
+
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(_hub.ReconnectCalls).IsGreaterThan(0)
+			.Because("ConnectAsync cannot revive a hub that already exists; only a reconnect can");
 	}
 }

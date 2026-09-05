@@ -73,11 +73,17 @@ public class AdminGuestsService(IHttpClientFactory httpClientFactory, AccountAut
 		}
 	}
 
-	public async Task<OneOf<Success, ApiFailure>> DeleteAsync(int dbrefNumber)
+	/// <param name="creationTime">
+	/// From the row the operator clicked. A dbref number on its own stops identifying a character the
+	/// moment one is nuked and another created, which is exactly what this panel does, so the number
+	/// is sent with the stamp that pins it to one guest.
+	/// </param>
+	public async Task<OneOf<Success, ApiFailure>> DeleteAsync(int dbrefNumber, long creationTime)
 	{
 		try
 		{
-			var response = await CreateClient().DeleteAsync($"api/admin/guests/{dbrefNumber}");
+			var response = await CreateClient()
+				.DeleteAsync($"api/admin/guests/{dbrefNumber}?created={creationTime}");
 			return response.IsSuccessStatusCode
 				? new Success()
 				: ApiFailure.FromStatus(response.StatusCode, await response.Content.ReadAsStringAsync());

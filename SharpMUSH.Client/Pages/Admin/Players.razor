@@ -140,7 +140,7 @@
     {
         _busy = true;
         _error = null;
-        var result = await Guests.DeleteAsync(guest.DbrefNumber);
+        var result = await Guests.DeleteAsync(guest.DbrefNumber, guest.CreationTime);
         _busy = false;
 
         if (result.TryPickT1(out var failure, out _))

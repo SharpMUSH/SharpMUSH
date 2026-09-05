@@ -162,8 +162,15 @@ public class AdminGuestsController(
 			await IsInUseAsync(dbref, ct)));
 	}
 
+	/// <param name="created">
+	/// The guest's creation stamp, as <see cref="GuestRow.CreationTime"/> reported it. A dbref number
+	/// alone does not identify a character for as long as a panel stays open: numbers are reused after
+	/// a nuke, and this endpoint is the thing that nukes them. Deleting one guest and creating another
+	/// hands the new one the old number, so a stale roster would aim a delete at whichever guest holds
+	/// it now. Optional, because a caller that cannot supply it is no worse off than before.
+	/// </param>
 	[HttpDelete("{dbref:int}")]
-	public async Task<IActionResult> Delete(int dbref, CancellationToken ct)
+	public async Task<IActionResult> Delete(int dbref, [FromQuery] long? created, CancellationToken ct)
 	{
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
 		if (!await executor.IsWizard())
@@ -174,6 +181,11 @@ public class AdminGuestsController(
 		if (node.IsNone || !node.Known.IsPlayer) return NotFound();
 
 		var player = node.AsPlayer;
+		if (created is { } stamp && player.Object.CreationTime != stamp)
+			return Conflict(new ApiErrorDto(
+				$"#{dbref} is not the guest you asked to remove — that number now belongs to a "
+				+ "different character. Reload the roster and try again."));
+
 		// Scoped to guests deliberately. This endpoint exists to manage the guest roster; letting it
 		// delete arbitrary players would make it a second, less-guarded @nuke reachable over HTTP.
 		if (!await GuestCharacters.IsGuestAsync(player))

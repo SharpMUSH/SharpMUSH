@@ -92,21 +92,38 @@ public class SetupService(
 	/// <para>Deliberately not fatal to the claim: the account has already been renamed and given its
 	/// password by the time this runs, and refusing the claim here would leave the game unclaimable
 	/// with an admin account the claimer cannot reach. A #1 that is not a player is a broken database,
-	/// not a claim error — so it is logged loudly and the claim stands.</para>
+	/// not a claim error — so it is logged loudly and the claim stands. The same goes for anything
+	/// thrown on the way: the promise above was only kept for the one case that was checked for, and
+	/// a hash or a write that threw took the claim down with it, at the point where the account had
+	/// already been renamed and the completion flag had not yet been set — the unclaimable state this
+	/// is written to avoid. Cancellation is not an error and still propagates.</para>
 	/// </remarks>
 	private async ValueTask SetGodCharacterPasswordAsync(string password, CancellationToken ct)
 	{
-		var god = await database.GetObjectNodeAsync(new DBRef(1), ct);
-		if (!god.IsT0)
+		try
 		{
-			logger.LogError(
-				"First-run setup: #1 is not a player, so no character password could be set on it. "
-				+ "Until an admin runs @password on it, any password will connect as #1.");
-			return;
-		}
+			var god = await database.GetObjectNodeAsync(new DBRef(1), ct);
+			if (!god.IsT0)
+			{
+				logger.LogError(
+					"First-run setup: #1 is not a player, so no character password could be set on it. "
+					+ "Until an admin runs @password on it, any password will connect as #1.");
+				return;
+			}
 
-		var player = god.AsT0;
-		await passwordService.SetPassword(player,
-			passwordService.HashPassword($"#{player.Object.Key}:{player.Object.CreationTime}", password));
+			var player = god.AsT0;
+			await passwordService.SetPassword(player,
+				passwordService.HashPassword($"#{player.Object.Key}:{player.Object.CreationTime}", password));
+		}
+		catch (OperationCanceledException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex,
+				"First-run setup: setting the character password on #1 failed, so the claim completed "
+				+ "without it. Until an admin runs @password on #1, any password will connect as #1.");
+		}
 	}
 }

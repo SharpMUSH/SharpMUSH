@@ -157,11 +157,15 @@ else
         // The hub is a per-page-load singleton and only the login/character-switch paths connect it,
         // so a returning player arrives here with no connection at all: the banner below, and a
         // compose box that can never send. This page is the one that needs the connection, so it is
-        // the one that establishes it. ConnectAsync is a no-op when a hub already exists, which
-        // matters — reconnecting would drop the scene groups other pages have joined.
+        // the one that establishes it.
+        //
+        // Reconnect rather than connect. ConnectAsync returns the moment it sees a hub OBJECT,
+        // connected or not, so it cannot revive one whose connection has dropped — a player who lost
+        // theirs while reading sat in front of a dead compose box until they reloaded. There are no
+        // scene groups to preserve here by definition: nothing is connected to hold them.
         if (!Hub.IsConnected)
         {
-            await Hub.ConnectAsync();
+            await Hub.ReconnectAsync();
         }
 
         // Join the SignalR scene group so we receive realtime ReceiveSceneMessage events.
