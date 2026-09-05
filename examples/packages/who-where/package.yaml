@@ -1,6 +1,6 @@
 format: 1
 package: who-where
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+who and +where commands with a shared formatting object."
 license: MIT
@@ -8,6 +8,14 @@ homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [who, where, social]
 convention_prefix: WW_
 requires_server: ">=0.1"
+
+depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
 
 objects:
   - ref: ww_global
@@ -27,3 +35,34 @@ objects:
     attributes:
       WW_FN_HEADER: |-
         [repeat(=,5)]%b%0%b[repeat(=,70)]
+
+  # ---- +help topics ---------------------------------------------------------
+  # On the function object, which is unflagged: u() on a privileged object's attribute is refused
+  # unless the evaluator is privileged too, and the librarian is not. Bodies are evaluated, so a
+  # literal "[" is written "\[" — which is also how a \[cross-reference\] is spelled.
+  - ref: ww_help
+    type: thing
+    name: Who-Where Help
+    attributes:
+      HELP: |-
+        Seeing who is connected and where they are.
+      HELP`WHO: |-
+        `+who` lists everyone connected and how long each has been idle.
+
+        It shows what a mortal may see, so anyone hiding from the who list is absent from yours as
+        well as from theirs.
+
+        See also \[where\].
+      HELP`WHERE: |-
+        `+where` lists everyone connected and the room each is standing in.
+
+        A player in an unfindable room, or one who has made themselves unfindable, is listed without
+        a location rather than being hidden outright.
+
+        See also \[who\].
+
+  - ref: ww_help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`WHO-WHERE: |-
+        {{ww_help}}

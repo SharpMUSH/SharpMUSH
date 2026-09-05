@@ -1,10 +1,18 @@
 format: 1
 package: hello-world
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Minimal example package: one object, one command."
 license: MIT
 keywords: [example, greeting]
+
+depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
 
 objects:
   - ref: hello_global
@@ -13,3 +21,25 @@ objects:
     attributes:
       CMD_+HELLO: |-
         $+hello:@pemit %#=Hello, [name(%#)]!
+
+  # ---- +help, in the smallest form it takes ---------------------------------
+  # A HELP root describing the set, one leaf per topic, and one attach object telling the librarian
+  # where to look. That is the whole contract: nothing registers at runtime, and uninstalling this
+  # package takes the SRC leaf with it.
+  - ref: hello_help
+    type: thing
+    name: Hello Help
+    attributes:
+      HELP: |-
+        The example package.
+      HELP`HELLO: |-
+        `+hello` says hello. That is the entire package.
+
+        It exists to show the smallest thing a package can be: one object, one command — and, with
+        this topic, one entry in \[help\].
+
+  - ref: hello_help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`HELLO-WORLD: |-
+        {{hello_help}}

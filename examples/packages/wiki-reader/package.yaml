@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -8,6 +8,12 @@ keywords: [wiki, help, navigation, ui]
 requires_server: ">=0.1"
 
 depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
   - package: common-functions
     version: ">=1.1"
     source:
@@ -138,10 +144,9 @@ objects:
           @@ %0 title · %1 refs · %2 page · %3 row attribute · %4 paging stem; @assert %1=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%1))]; @assert lte(%2,%q<pages>)=@include %!/INC`DISPLAY`ERROR=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %2.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%0,%1,%2,%3,%4)]
         flags: [cmdsyntax]
 
-      INC`IS`ADMIN:
-        value: |-
-          @@ no arguments — staff only, checked against the caller's flags; @assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.
-        flags: [cmdsyntax]
+      # The staff gate is INLINE in CMD`AUDIT rather than an INC`IS`ADMIN step: `help @include`
+      # documents an included @assert as breaking the including action list, but this engine
+      # contains the break, so the gate printed "Staff only." and then ran the audit anyway.
       INC`IS`PAGE:
         value: |-
           @@ no arguments — validates %q<ref>, which the calling command stages; @assert %q<ref>=@include %!/INC`DISPLAY`ERROR=Which page? Try +wiki/list.; @assert u(%!/FUN`IS`PAGE,%q<ref>)=@include %!/INC`DISPLAY`ERROR=No such wiki page: %q<ref>
@@ -181,5 +186,47 @@ objects:
       # Drafts never appear in wikilist(), so this audits published pages only.
       CMD`AUDIT:
         value: |-
-          $^\+wiki/audit$:@include %!/INC`IS`ADMIN; think [setq(published,wikilist())]; @assert %q<published>=@include %!/INC`DISPLAY`INFO=No published pages to audit yet.; think [setq(uncategorised,filterq(categorised,%!/FUN`IS`UNCATEGORISED,%q<published>),untagged,filterq(tagged,%!/FUN`IS`UNTAGGED,%q<published>))]; @pemit %#=[u(%!/FUN`DISPLAY`AUDIT,%q<published>,%q<uncategorised>,%q<untagged>)]
+          $^\+wiki/audit$:@assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.; think [setq(published,wikilist())]; @assert %q<published>=@include %!/INC`DISPLAY`INFO=No published pages to audit yet.; think [setq(uncategorised,filterq(categorised,%!/FUN`IS`UNCATEGORISED,%q<published>),untagged,filterq(tagged,%!/FUN`IS`UNTAGGED,%q<published>))]; @pemit %#=[u(%!/FUN`DISPLAY`AUDIT,%q<published>,%q<uncategorised>,%q<untagged>)]
         flags: [regexp, cmdsyntax]
+
+      # ---- +help topics -------------------------------------------------------
+      # These sit on wiki_global itself rather than on a separate storage object, which is fine
+      # BECAUSE wiki_global carries no privileged flag: u() on a privileged object's attribute is
+      # refused unless the evaluator is privileged too, and the librarian is not. A package whose
+      # command object must be WIZARD — scene's Logger, say — needs a plain object for its help.
+      #
+      # Bodies are evaluated, so a literal "[" is written "\["; that is also how a
+      # \[cross-reference\] is spelled.
+      HELP: |-
+        Reading the wiki from in-game.
+      HELP`WIKI: |-
+        The wiki holds this game's longer-form writing — setting, theme, policy — and `+wiki` reads
+        it without leaving the game. Staff edit it with `@wiki` or through the portal.
+
+        - `+wiki` — what is there, by namespace
+        - `+wiki <page>` — read one, rendered
+        - `+wiki/list [<namespace>]` — every published page, or one namespace's
+        - `+wiki/search <text>` — pages matching the text
+        - `+wiki/recent [<n>]` — what changed lately
+        - `+wiki/info <page>` — a page's title, category, tags and revision
+
+        A page is named `<namespace>:<category>:<slug>`, and long listings page with `=<n>`:
+        `+wiki/list main=2`.
+
+        Drafts are invisible here — a page appears once it is published.
+
+        See also \[wiki audit\].
+      HELP`WIKI`AUDIT: |-
+        `+wiki/audit` is a staff verb. It counts the published pages and lists the ones missing a
+        category or tags, which is what makes a wiki hard to navigate as it grows.
+
+        It sees published pages only. For drafts, use `@wiki/list`.
+
+        See also \[wiki\].
+
+  # ---- +help registration -----------------------------------------------------
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`WIKI-READER: |-
+        {{wiki_global}}

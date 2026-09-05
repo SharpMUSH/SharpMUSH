@@ -1,0 +1,448 @@
+format: 1
+package: plus-help
+version: 1.0.0
+authors: [SharpMUSH]
+description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [help, docs, navigation, ui]
+requires_server: ">=0.1"
+
+depends:
+  - package: common-functions
+    version: ">=1.1"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/common-functions/
+      branch: main
+
+# `help` is the engine's own corpus — markdown files indexed at startup, correct for the built-in
+# commands and not somewhere a game or a package can write. `+help` is the other half: what THIS
+# game installed and what THIS game's staff wrote. The two never merge, and a +help miss points
+# across rather than falling through, so +help can always answer "does this game document this?".
+#
+# TWO SOURCES OF CONTENT
+#
+#   Packages carry their own.  A package holds its topics in a HELP attribute tree on one of its
+#   objects — an ORDINARY, unflagged one; u() on a WIZARD or ROYALTY object's attribute is refused
+#   unless the evaluator is privileged too, so a package whose command object must be WIZARD keeps
+#   its help on a separate storage object — and registers that object here by ATTACHING one SRC
+#   leaf to the librarian:
+#
+#       depends:
+#         - package: plus-help
+#           version: ">=1.0 <2.0"
+#       objects:
+#         - ref: help_registration
+#           target: "{{plus-help/librarian}}"
+#           attributes:
+#             SRC`MY-PACKAGE: "{{my_object}}"
+#
+#   That is a declaration, not a runtime call: the package manager writes the leaf at install and
+#   clears it at uninstall (cross-package managed attributes are cleared by UninstallAsync), so the
+#   registry cannot drift from what is installed. Install a package and its topics appear;
+#   uninstall it and they leave with it.
+#
+#   The game writes its own.  House rules, policy, how to apply — content belonging to no package —
+#   live on the librarian's own LOCAL tree, written in-game with +help/write rather than by editing
+#   a file in a source tree, which is the thing that keeps game help from being written at all.
+#
+# TOPIC NAMES.  A topic's name is its attribute path below the root with backticks read as spaces:
+# HELP`SCENE`JOIN is the topic "scene join". Every topic also has a qualified name, <source>/<topic>,
+# and a bare name resolves when it is unique. When it is not, +help lists the qualified candidates
+# in the engine's own words for an ambiguous topic — except that a game-authored topic (source
+# "game") outranks any package's, because the game's own word should win.
+#
+# TOPICS ARE EVALUATED.  A body is run through u(), not read with get(). Topic authors are package
+# authors and staff — trusted content — and evaluating lets a topic carry colour, the current
+# configuration, or the reader's own name instead of being a frozen block of text. The rule about
+# reading with get() governs PLAYER-authored values; no part of this is that. +help/write is gated
+# on the writer being staff, and that gate is the security boundary.
+#
+# The cost of evaluating is that "[" is softcode syntax, so a literal one is written "\[". That is
+# how a cross-reference is spelled: "\[write\]" survives u() as "[write]", which the markdown
+# renderer turns into a +help command link. An unescaped "[write]" is simply eaten.
+#
+# UNINSTALLING.  Packages that contribute help attach to the librarian, and the attachment guard
+# refuses to destroy an object another package is attached to. So uninstalling plus-help while any
+# contributor is installed needs --force, or the contributors uninstalled first.
+objects:
+  - ref: librarian
+    type: thing
+    name: Help Librarian
+    location: "{{$master_room}}"
+    # See_All, not WIZARD: the librarian ENUMERATES and READS HELP trees on objects it does not
+    # own — a hand-registered +help/source target can belong to anyone — and See_All is exactly
+    # what skips the attribute-read check. It deliberately does not go further, because reading is
+    # a different gate from evaluating: u() on a WIZARD or ROYALTY object's attribute is refused
+    # unless the evaluator is privileged too, and no power fixes that. That is why a contributing
+    # package puts its HELP tree on an ORDINARY object rather than on whatever object happens to
+    # run its commands — see the header.
+    powers: [See_All]
+    attributes:
+
+      # ── The registry ────────────────────────────────────────────────────────
+      # One leaf per source, naming the object(s) whose HELP tree it contributes. Written by the
+      # package manager for a package that attaches (see the header), or by hand with +help/source
+      # for a system no package installed. A leaf whose object no longer exists contributes nothing
+      # and is not an error — a force-removed contributor degrades to missing topics.
+      SRC:
+        value: |-
+          Registered help sources. One leaf per source, naming the object(s) carrying its HELP tree.
+        flags: [no_command]
+      # The librarian is a source like any other: its own topics live under HELP, below.
+      SRC`PLUS-HELP:
+        value: |-
+          {{librarian}}
+
+      # ── Game-authored topics ────────────────────────────────────────────────
+      # Deliberately a DIFFERENT root from HELP. The manifest manages HELP, so a staff-written topic
+      # under LOCAL never registers as drift against the package baseline and a plus-help upgrade
+      # never overwrites one. no_command on the branch propagates to every leaf, so a topic body
+      # that happens to begin with "$" cannot become an accidental $-command.
+      LOCAL:
+        value: |-
+          This game's own help: house rules, policy, and anything belonging to no package.
+        flags: [no_command]
+
+      # ── Class branches ──────────────────────────────────────────────────────
+      FUN:
+        value: |-
+          Reads. GET lookups, IS predicates, DISPLAY formatting.
+        flags: [no_command]
+      INC:
+        value: |-
+          Reusable command steps. IS assertions, DO effects, DISPLAY output.
+        flags: [no_command]
+
+      # ── Records ─────────────────────────────────────────────────────────────
+      # Every read below works on a flat record list, built once per command and passed down, rather
+      # than re-asking the game per topic. A record is <source>:<object>:<attribute>, three fields a
+      # colon can separate safely: a source name comes from an attribute name (no colons legal), an
+      # object is a DBREF (an objid would not be safe here — it contains one), and an attribute path
+      # is backticks and word characters.
+      FUN`GET`ROOT:
+        value: |-
+          [@@(%0 a source — the attribute root its topics live under)][if(strmatch(%0,game),LOCAL,HELP)]
+        flags: [funsyntax]
+      FUN`GET`OBJECTS:
+        value: |-
+          [@@(%0 a source — the objects carrying its topics)][if(strmatch(%0,game),%!,u(%!/SRC`[ucstr(%0)]))]
+        flags: [funsyntax]
+      # "game" leads because a game's own help should read before the packages'; the rest sort so the
+      # index does not reorder itself as packages are installed.
+      FUN`GET`SOURCES:
+        value: |-
+          [@@(no arguments — every registered source, game first)][trim(squish(game%b[sort(iter(lattr(%!/SRC`*),lcstr(rest(%i0,`)),%b,%b))]))]
+        flags: [funsyntax]
+      # ** is the wildcard that crosses a backtick; * stops at one. The root itself is not matched,
+      # which is what we want: it holds the source's description, not a topic.
+      FUN`GET`SRCRECORDS:
+        value: |-
+          [@@(%0 a source — its topics as records)][iter(u(%!/FUN`GET`OBJECTS,%0),iter(lattr(%i0/[u(%!/FUN`GET`ROOT,%0)]`**),%0:[num(%i1)]:%i0,%b,%b),%b,%b)]
+        flags: [funsyntax]
+      FUN`GET`RECORDS:
+        value: |-
+          [@@(no arguments — every topic in the game, as records)][trim(squish(iter(u(%!/FUN`GET`SOURCES),u(%!/FUN`GET`SRCRECORDS,%i0),%b,%b)))]
+        flags: [funsyntax]
+
+      FUN`GET`RSOURCE:
+        value: |-
+          [@@(%0 a record — its source)][extract(%0,1,1,:)]
+        flags: [funsyntax]
+      FUN`GET`RTOPIC:
+        value: |-
+          [@@(%0 a record — its bare topic name, backticks read as spaces)][lcstr(edit(rest(extract(%0,3,1,:),`),`,%b))]
+        flags: [funsyntax]
+      FUN`GET`RNAME:
+        value: |-
+          [@@(%0 a record — its qualified name, <source>/<topic>)][extract(%0,1,1,:)]/[u(%!/FUN`GET`RTOPIC,%0)]
+        flags: [funsyntax]
+      # Raw, for searching and for +help/write to round-trip. Never u() a body to search it.
+      FUN`GET`RBODY:
+        value: |-
+          [@@(%0 a record — its body as stored, unevaluated)][get([extract(%0,2,1,:)]/[extract(%0,3,1,:)])]
+        flags: [funsyntax]
+      # Evaluated, for reading. See the header on why u() is right here.
+      # Evaluation can fail on a body that was written as plain prose: "[", "(" and ")" are all
+      # softcode syntax, so an unescaped pair of brackets in a sentence ends the expression. Rather
+      # than hand the reader a #-1, fall back to the stored text — a badly written topic degrades to
+      # plain markdown instead of disappearing.
+      FUN`GET`RTEXT:
+        value: |-
+          [@@(%0 a record — its body, evaluated, or as stored when evaluating it fails)][if(strmatch(setr(t,u([extract(%0,2,1,:)]/[extract(%0,3,1,:)])),#-1*),u(%!/FUN`GET`RBODY,%0),%q<t>)]
+        flags: [funsyntax]
+      FUN`GET`SRCDESC:
+        value: |-
+          [@@(%0 a source — the line describing it, from its root attribute)][get([first(u(%!/FUN`GET`OBJECTS,%0))]/[u(%!/FUN`GET`ROOT,%0)])]
+        flags: [funsyntax]
+
+      # ── Selection ───────────────────────────────────────────────────────────
+      # strmatch() glob-matches case-insensitively, so "+help scene*" wildcards for free, the way
+      # the engine's own help does.
+      FUN`GET`OF:
+        value: |-
+          [@@(%0 records · %1 a source — the ones belonging to it)][trim(squish(iter(%0,if(strmatch(extract(%i0,1,1,:),%1),%i0),%b,%b)))]
+        flags: [funsyntax]
+      FUN`GET`MATCHES:
+        value: |-
+          [@@(%0 records · %1 the name attribute to match on · %2 the query)][trim(squish(iter(%0,if(strmatch(u(%!/%1,%i0),%2),%i0),%b,%b)))]
+        flags: [funsyntax]
+      FUN`GET`NAMEATTR:
+        value: |-
+          [@@(%0 a query — qualified queries match the qualified name, bare ones the bare name)][if(strmatch(%0,*/*),FUN`GET`RNAME,FUN`GET`RTOPIC)]
+        flags: [funsyntax]
+      # One game-authored topic outranks any number of package ones — the game's own word wins.
+      FUN`GET`RESOLVED:
+        value: |-
+          [@@(%0 the matches — narrowed to the game's own topic when it claims the same name)][if(cand(gt(words(%0),1),words(setr(g,u(%!/FUN`GET`OF,%0,game)))),%q<g>,%0)]
+        flags: [funsyntax]
+      FUN`GET`FOUND:
+        value: |-
+          [@@(%0 records · %1 a query — the records it resolves to)][u(%!/FUN`GET`RESOLVED,u(%!/FUN`GET`MATCHES,%0,u(%!/FUN`GET`NAMEATTR,%1),%1))]
+        flags: [funsyntax]
+      FUN`GET`SEARCHED:
+        value: |-
+          [@@(%0 records · %1 the text — records whose name or body contains it)][trim(squish(iter(%0,if(cor(strmatch(u(%!/FUN`GET`RNAME,%i0),*%1*),strmatch(u(%!/FUN`GET`RBODY,%i0),*%1*)),%i0),%b,%b)))]
+        flags: [funsyntax]
+
+      # ── Paging ──────────────────────────────────────────────────────────────
+      FUN`GET`ROWS:
+        value: |-
+          [@@(no arguments — listing rows that fit the reader's screen)][max(5,sub(height(%#,24),6))]
+        flags: [funsyntax]
+      FUN`GET`NPAGES:
+        value: |-
+          [@@(%0 records — how many pages the reader's screen splits them into)][add(1,div(sub(max(1,words(%0)),1),u(%!/FUN`GET`ROWS)))]
+        flags: [funsyntax]
+      FUN`GET`SLICE:
+        value: |-
+          [@@(%0 records · %1 page number — the records shown on that page)][extract(%0,add(1,mul(sub(%1,1),u(%!/FUN`GET`ROWS))),u(%!/FUN`GET`ROWS))]
+        flags: [funsyntax]
+
+      # ── Display ─────────────────────────────────────────────────────────────
+      # xch_cmd requires the Send_OOB @power; without it (or without a Pueblo client) the text still
+      # prints, so nothing is lost on a plain telnet session.
+      FUN`DISPLAY`LINK:
+        value: |-
+          [@@(%0 the text · %1 the command it runs — clickable where the client can take one)][if(pueblo(%#),[tagwrap(a,xch_cmd="%1" xch_hint="%1",%0)],%0)]
+        flags: [funsyntax]
+      FUN`DISPLAY`REF:
+        value: |-
+          [@@(%0 a record — its qualified name, clickable)][u(%!/FUN`DISPLAY`LINK,u(%!/FUN`GET`RNAME,%0),+help [u(%!/FUN`GET`RNAME,%0)])]
+        flags: [funsyntax]
+      FUN`DISPLAY`ROW:
+        value: |-
+          [@@(%0 a record — one listing row)][ljust(u(%!/FUN`DISPLAY`REF,%0),36)][left(squish(edit(u(%!/FUN`GET`RBODY,%0),%r,%b)),sub(width(%#,78),38))]
+        flags: [funsyntax]
+      FUN`DISPLAY`SRCROW:
+        value: |-
+          [@@(%0 a source · %1 its topic count — one index row)][ljust(u(%!/FUN`DISPLAY`LINK,%0,+help/list %0),20)][rjust(%1,4)]%b%b[left(u(%!/FUN`GET`SRCDESC,%0),sub(width(%#,78),28))]
+        flags: [funsyntax]
+      FUN`DISPLAY`SYNTAX:
+        value: |-
+          [@@(no arguments — the one line that tells a reader what else to type)]+help <topic>%b%b·%b%b+help/list [<source>]%b%b·%b%b+help/search <text>%b%b·%b%b+help/sources
+        flags: [funsyntax]
+      FUN`DISPLAY`INDEX:
+        value: |-
+          [@@(%0 every record — the whole index)][header(Help,width(%#,78))]%r[iter(u(%!/FUN`GET`SOURCES),if(words(setr(r,u(%!/FUN`GET`OF,%0,%i0))),[u(%!/FUN`DISPLAY`SRCROW,%i0,words(%q<r>))]),%b,%r)]%r[line(,width(%#,78))]%r[u(%!/FUN`DISPLAY`SYNTAX)]%r[footer([words(%0)] topics,width(%#,78))]
+        flags: [funsyntax]
+      FUN`DISPLAY`LISTING:
+        value: |-
+          [@@(%0 title · %1 records · %2 page · %3 paging stem — reads %q<pages>)][header(%0,width(%#,78))]%r[iter(u(%!/FUN`GET`SLICE,%1,%2),u(%!/FUN`DISPLAY`ROW,%i0),%b,%r)]%r[footer([words(%1)] topics%b-%b page %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b %3=[add(%2,1)])],width(%#,78))]
+        flags: [funsyntax]
+      # The body is markdown, rendered against this object's own RENDERMARKUP templates so a topic's
+      # [cross-reference] becomes a live +help — see RENDERMARKUP`LINK.
+      FUN`DISPLAY`TOPIC:
+        value: |-
+          [@@(%0 a record — the whole topic between chrome)][header(u(%!/FUN`GET`RNAME,%0),width(%#,78))]%r[rendermarkdowncustom(u(%!/FUN`GET`RTEXT,%0),%!,width(%#,78))]%r[footer(+help/list [u(%!/FUN`GET`RSOURCE,%0)],width(%#,78))]
+        flags: [funsyntax]
+      FUN`DISPLAY`SRCLINE:
+        value: |-
+          [@@(%0 a source · %1 its topic count — one registry row; a source whose object is gone shows no name and no topics)][ljust(%0,20)][ljust(num(first(u(%!/FUN`GET`OBJECTS,%0))),10)][ljust(name(first(u(%!/FUN`GET`OBJECTS,%0))),28)][rjust(%1,4)]
+        flags: [funsyntax]
+      FUN`DISPLAY`SOURCES:
+        value: |-
+          [@@(%0 every record — the registry and what each entry contributes)][header(Help sources,width(%#,78))]%r[iter(u(%!/FUN`GET`SOURCES),u(%!/FUN`DISPLAY`SRCLINE,%i0,words(u(%!/FUN`GET`OF,%0,%i0))),%b,%r)]%r[footer(+help/source <name>=<object>,width(%#,78))]
+        flags: [funsyntax]
+
+      # ── Markdown rendering ──────────────────────────────────────────────────
+      # A RENDERMARKUP template is evaluated with the CALLER as executor, so me/%! is not this object
+      # inside one. Everything here addresses the librarian by the dbref the manifest substitutes.
+      RENDERMARKUP`H1:
+        value: |-
+          [ansi(hw,%0)]
+        flags: [funsyntax]
+      RENDERMARKUP`H2:
+        value: |-
+          [ansi(hc,%0)]
+        flags: [funsyntax]
+      RENDERMARKUP`H3:
+        value: |-
+          [ansi(hb,%0)]
+        flags: [funsyntax]
+      RENDERMARKUP`LISTITEM:
+        value: |-
+          [if(%0,[ansi(hc,%1.)],[ansi(hc,*)])] %2
+        flags: [funsyntax]
+      RENDERMARKUP`QUOTE:
+        value: |-
+          [ansi(hy,%0)]
+        flags: [funsyntax]
+      # The engine renders a bare [topic] as a command link running "help <topic>" — right for the
+      # engine's corpus, wrong inside +help, where a cross-reference means the game's own topic. %1
+      # is that command and %2 says it is one, so the prefix is rewritten and [join] in a topic body
+      # is a live "+help join". A topic that means the ENGINE's help says so in prose.
+      RENDERMARKUP`LINK:
+        value: |-
+          [if(%2,[if(pueblo(%#),[tagwrap(a,xch_cmd="[if(strmatch(%1,help *),+%1,%1)]" xch_hint="%0",%0)],[ansi(hc,%0)])],%0)]
+        flags: [funsyntax]
+
+      # ── Shared command steps ────────────────────────────────────────────────
+      INC`DISPLAY`ERROR:
+        value: |-
+          @@ %0 the message — every refusal in this package reports through here; @pemit %#=[ansi(hr,Help>)] %0
+        flags: [cmdsyntax]
+      INC`DISPLAY`INFO:
+        value: |-
+          @@ %0 the message — for an empty result, which is not a failure; @pemit %#=[ansi(hc,Help>)] %0
+        flags: [cmdsyntax]
+      # The miss points at the engine's corpus rather than silently rendering it: +help stays able to
+      # answer "does this GAME document this?", which a fallthrough would cost.
+      INC`DISPLAY`MISS:
+        value: |-
+          @@ %0 the query that matched nothing; @pemit %#=[ansi(hr,Help>)] No local topic '%0'.%b%bTry:%b%b[u(%!/FUN`DISPLAY`LINK,help %0,help %0)]
+        flags: [cmdsyntax]
+      # NOTE ON GUARDS. Every gate below is written INLINE in the command it protects, rather than
+      # factored into an INC`IS`* step reached with @include. `help @include` documents an included
+      # @assert as breaking the INCLUDING action list — that is the whole reason /nobreak exists —
+      # but this engine contains the break instead, so a guard reached through @include prints its
+      # refusal and then lets the command run anyway. Written inline, @assert stops the list as
+      # documented. Restore the factoring once @include propagates a break.
+      INC`DO`LISTING:
+        value: |-
+          @@ %0 title · %1 records · %2 page · %3 paging stem; @assert %1=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%1))]; @assert lte(%2,%q<pages>)=@include %!/INC`DISPLAY`ERROR=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %2.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%0,%1,%2,%3)]
+        flags: [cmdsyntax]
+      # One topic renders; none reports the miss; several list the qualified candidates, in the
+      # engine's own words for an ambiguous topic.
+      INC`DO`SHOW:
+        value: |-
+          @@ %0 the query as typed; think [setq(q,lcstr(trim(%0)))]; @assert %q<q>=@include %!/INC`DISPLAY`ERROR=Which topic? Try +help for the index.; think [setq(m,u(%!/FUN`GET`FOUND,u(%!/FUN`GET`RECORDS),%q<q>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS=%q<q>; @break gt(words(%q<m>),1)={@pemit %#=[ansi(hc,Help>)] Here are the entries which match '%q<q>':;@pemit %#=[iter(%q<m>,u(%!/FUN`DISPLAY`REF,%i0),%b,%b)]}; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<m>)]
+        flags: [cmdsyntax]
+
+      # ── Commands ────────────────────────────────────────────────────────────
+      # Regex patterns: a non-capturing group is written "(?\:" — a bare colon would end the pattern.
+      CMD`INDEX:
+        value: |-
+          $^\+help$:@pemit %#=[u(%!/FUN`DISPLAY`INDEX,u(%!/FUN`GET`RECORDS))]
+        flags: [regexp, cmdsyntax]
+      CMD`TOPIC:
+        value: |-
+          $^\+help\s+(?<q>.+)$:@include %!/INC`DO`SHOW=[trim(r(q,args))]
+        flags: [regexp, cmdsyntax]
+      CMD`LIST:
+        value: |-
+          $^\+help/list(?\:\s+(?<src>\S+))?(?\:=(?<page>\d+))?$:think [setq(src,lcstr(r(src,args)),page,strfirstof(r(page,args),1))]; think [setq(recs,u(%!/FUN`GET`RECORDS))]; @assert cor(not(%q<src>),words(u(%!/FUN`GET`OF,%q<recs>,%q<src>)))=@include %!/INC`DISPLAY`ERROR=No such help source: %q<src>. Try +help/sources.; @include %!/INC`DO`LISTING=Topics[if(%q<src>,: %q<src>)],[if(%q<src>,u(%!/FUN`GET`OF,%q<recs>,%q<src>),%q<recs>)],%q<page>,[trim(+help/list %q<src>)]
+        flags: [regexp, cmdsyntax]
+      CMD`SEARCH:
+        value: |-
+          $^\+help/search\s+(?<q>.+?)(?\:=(?<page>\d+))?$:think [setq(q,lcstr(trim(r(q,args))),page,strfirstof(r(page,args),1))]; think [setq(recs,u(%!/FUN`GET`SEARCHED,u(%!/FUN`GET`RECORDS),%q<q>))]; @include %!/INC`DO`LISTING=Search: %q<q>,%q<recs>,%q<page>,+help/search %q<q>
+        flags: [regexp, cmdsyntax]
+      CMD`SOURCES:
+        value: |-
+          $^\+help/sources$:@pemit %#=[u(%!/FUN`DISPLAY`SOURCES,u(%!/FUN`GET`RECORDS))]
+        flags: [regexp, cmdsyntax]
+      # attrib_set(), not & or @set: both of those evaluate the value a second time when they run
+      # from inside an attribute, which would resolve a topic's own [code] at write time instead of
+      # storing it for the reader. A %1 substitution is not re-scanned, so this stores verbatim.
+      CMD`WRITE:
+        value: |-
+          $^\+help/write\s+(?<topic>[^=]+)=(?<body>.*)$:@assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.; think [setq(topic,ucstr(trim(r(topic,args))))]; @assert %q<topic>=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,^\[A-Z0-9_. -\]+$)=@include %!/INC`DISPLAY`ERROR=A topic name is words of letters, digits, and _ . or -.; think [setq(attr,LOCAL`[edit(squish(%q<topic>),%b,`)])]; @assert setr(body,r(body,args))=@include %!/INC`DISPLAY`ERROR=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%!/%q<attr>,%q<body>)]; @pemit %#=[ansi(hc,Help>)] Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].
+        flags: [regexp, cmdsyntax]
+      CMD`DELETE:
+        value: |-
+          $^\+help/delete\s+(?<topic>.+)$:@assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.; think [setq(topic,ucstr(trim(r(topic,args))))]; @assert %q<topic>=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,^\[A-Z0-9_. -\]+$)=@include %!/INC`DISPLAY`ERROR=A topic name is words of letters, digits, and _ . or -.; think [setq(attr,LOCAL`[edit(squish(%q<topic>),%b,`)])]; @assert strlen(get(%!/%q<attr>))=@include %!/INC`DISPLAY`ERROR=No game topic by that name.; think [attrib_set(%!/%q<attr>)]; @pemit %#=[ansi(hc,Help>)] Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].
+        flags: [regexp, cmdsyntax]
+      # The escape hatch for a system no package installed. A package that ships a manifest should
+      # attach its SRC leaf instead, so that uninstalling it takes the registration with it.
+      CMD`SOURCE:
+        value: |-
+          $^\+help/source\s+(?<name>[^=]+)=(?<obj>.+)$:@assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.; think [setq(name,ucstr(trim(r(name,args))))]; @assert regmatch(%q<name>,^\[A-Z0-9_.-\]+$)=@include %!/INC`DISPLAY`ERROR=A source name is letters, digits, and _ . or -.; @assert isdbref(setr(o,locate(%#,trim(r(obj,args)),*)))=@include %!/INC`DISPLAY`ERROR=I cannot find that object.; think [attrib_set(%!/SRC`%q<name>,%q<o>)]; @pemit %#=[ansi(hc,Help>)] [lcstr(%q<name>)] now reads help from [name(%q<o>)] - [words(lattr(%q<o>/HELP`**))] topics.
+        flags: [regexp, cmdsyntax]
+      CMD`UNSOURCE:
+        value: |-
+          $^\+help/unsource\s+(?<name>.+)$:@assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.; think [setq(name,ucstr(trim(r(name,args))))]; @assert strlen(get(%!/SRC`%q<name>))=@include %!/INC`DISPLAY`ERROR=No such help source: [lcstr(%q<name>)]; think [attrib_set(%!/SRC`%q<name>)]; @pemit %#=[ansi(hc,Help>)] Dropped help source [lcstr(%q<name>)].
+        flags: [regexp, cmdsyntax]
+
+      # ── The librarian's own topics ──────────────────────────────────────────
+      # Contributed exactly the way a package's are: a HELP root describing the set, and one leaf per
+      # topic. SRC`PLUS-HELP above points at this object.
+      HELP:
+        value: |-
+          Reading and writing this game's help.
+      HELP`HELP:
+        value: |-
+          `+help` is this game's own help: the topics its installed packages carry, and the ones its
+          staff have written. The engine's built-in commands are documented separately, under `help`.
+
+          ## Reading
+
+          - `+help` — the index: every source and what it covers
+          - `+help <topic>` — a topic; `*` and `?` wildcard, so `+help scene*` works
+          - `+help <source>/<topic>` — when two sources claim the same name
+          - `+help/list [<source>]` — every topic, or one source's
+          - `+help/search <text>` — topic names and bodies containing the text
+          - `+help/sources` — where the topics come from
+
+          A topic name can be several words: `+help scene join`.
+
+          See also \[write\] and \[sources\].
+      HELP`SEARCH:
+        value: |-
+          `+help/search <text>` lists every topic whose name or body contains `<text>`, as stored —
+          the search reads bodies without evaluating them, so it matches what an author typed rather
+          than what a reader would see.
+
+          `<text>` may contain `*` and `?`. Long results page: `+help/search combat=2`.
+
+          To narrow by source instead, use `+help/list <source>`.
+      HELP`WRITE:
+        value: |-
+          Staff write this game's own topics in-game, rather than by editing a file:
+
+          - `+help/write <topic>=<text>` — create or replace a topic
+          - `+help/delete <topic>` — remove one
+
+          A topic name is words of letters, digits, and `_ . -`. Several words make a multi-word
+          topic: `+help/write house rules=...` is then read by `+help house rules`.
+
+          `<text>` is markdown, and it is **evaluated when it is read** — so a topic can carry
+          colour or the reader's own name: `[ansi(hc,...)]` and `[name(%#)]` both work. Because it
+          is evaluated, writing help is a staff verb.
+
+          The line you type is evaluated once on its way in, exactly as `&attr obj=...` is, so
+          anything meant for the READER is escaped: a backslash before each `[` and `]`, and `%%`
+          for a `%`. Unescaped, it resolves as you type it and the topic keeps the answer instead
+          of the question.
+
+          Cross-references work the same way: escape the brackets around a topic's name and the
+          reader gets a clickable link to it.
+
+          Game-authored topics live in the source `game`, and a `game` topic outranks a package's
+          when both claim the same name. See also \[sources\].
+      HELP`SOURCES:
+        value: |-
+          Topics come from two places, and `+help/sources` shows both.
+
+          **Packages bring their own.** A package holds its topics in a `HELP` attribute tree on one
+          of its objects and registers that object with the librarian in its manifest. The package
+          manager writes that registration on install and clears it on uninstall, so a package's
+          topics appear and disappear with the package itself.
+
+          **The game keeps the rest.** House rules, policy, how to apply — anything belonging to no
+          package — live on the librarian and are written with \[write\].
+
+          For a system no package installed, staff can register it by hand:
+
+          - `+help/source <name>=<object>` — read `<object>`'s HELP tree as source `<name>`
+          - `+help/unsource <name>` — stop reading it

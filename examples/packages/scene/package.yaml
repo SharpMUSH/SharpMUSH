@@ -1,12 +1,22 @@
 format: 1
 package: scene
-version: 1.13.0
+version: 1.14.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [scene, rp, logging, capture, hooks]
 requires_server: ">=0.1"
+
+# +help carries the topics below. The dependency is what makes {{plus-help/librarian}} a legal
+# attach target, and it is what makes uninstalling scene take its help registration with it.
+depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
 
 # Create mode: a single owned WIZARD thing carries the capture hooks and the
 # +scene/* verbs. It MUST be WIZARD — it is the @hook/override target, runs the
@@ -443,3 +453,105 @@ objects:
         @teleport %!=#2; @trigger %!/STARTUP
       STARTUP: |-
         @hook/override POSE=%!,CMD`CAPTURE`POSE; @hook/override SAY=%!,CMD`CAPTURE`SAY; @hook/override SEMIPOSE=%!,CMD`CAPTURE`SEMI; @hook/override @EMIT=%!,CMD`CAPTURE`EMIT
+
+  # ---- help storage -------------------------------------------------------
+  # An ordinary, unflagged thing whose only job is to hold the +help topics. It is deliberately
+  # NOT the Scene Logger: the Logger must be WIZARD to run @hook and @scene, and u() on a
+  # privileged object's attribute is refused unless the evaluator is privileged too — so the
+  # librarian could enumerate the Logger's topics and then fail to render any of them. Help is
+  # not privileged content; keeping it on a plain object is what makes it readable by anyone.
+  #
+  # Bodies are markdown and are EVALUATED when read, so a literal "[" is written "\[". That is
+  # what makes \[scene join\] below a live cross-reference: u() leaves \[scene join\], and the
+  # markdown renderer turns it into a +help command link.
+  - ref: help
+    type: thing
+    name: Scene Help
+    attributes:
+      HELP: |-
+        Shared scenes: joining one, posing in it, and reading the log.
+      HELP`SCENE: |-
+        A **scene** is a shared, logged piece of roleplay. Anyone in the room can be in one; the log
+        is readable afterwards, in-game and in the portal.
+
+        ## Getting in
+
+        - `+scene` — the scenes running now
+        - `+scene <id>` — what a scene is, where it is, and who is in it
+        - `+scene/join <id>` — join it and make it your focus
+        - `+scene/leave` — stop posing into it
+
+        Once you have joined, ordinary `pose`, `say` and `@emit` in that room are recorded. You do
+        not have to use a special command to speak.
+
+        ## Running one
+
+        - `+scene/create <title>` — start one here and focus it
+        - `+scene/pitch <text>` — say what it is about, so people can decide to come
+        - `+scene/finish` — close it
+
+        See also \[scene pose\], \[scene privacy\], \[scene schedule\] and \[pot\].
+      HELP`SCENE`JOIN: |-
+        `+scene/join <id>` puts you in a scene and makes it your **focus** — the scene your poses are
+        recorded into. `+scene` lists the ids.
+
+        - `+scene/tag <id>` — RSVP to a scheduled scene without joining it yet
+        - `+scene/untag <id>` — withdraw the RSVP
+        - `+scene/leave` — leave the focused scene; if you never posed, you leave no trace
+        - `+scene/deactivate` — stay a member but stop recording; `+scene/activate <id>` resumes
+
+        Joining needs an approved character. See also \[scene\] and \[scene pose\].
+      HELP`SCENE`POSE: |-
+        With a scene focused, ordinary `pose`, `say`, `semipose` and `@emit` in its room are captured
+        as you write them — nothing extra to type.
+
+        The explicit forms name the scene instead of inferring it from the room, which is what the
+        portal's compose box sends:
+
+        - `+scene/pose <id>=<text>` · `+scene/say <id>=<text>` · `+scene/semipose <id>=<text>`
+        - `+scene/emit <id>=<text>`
+        - `+scene/as <name>` — pose under a different name from here on
+        - `+scene/edit <id>=<old>^^^<new>` — fix a typo in your own pose
+        - `+scene/undo <id>` · `+scene/redo <id>`
+        - `+scene/recall <n>` — the last `<n>` poses of your focused scene
+
+        See also \[scene join\].
+      HELP`SCENE`PITCH: |-
+        `+scene/pitch <text>` sets the one-line summary shown beside a scene in `+scene` and on its
+        card. It is how someone browsing decides whether to come.
+
+        Only the scene's owner, or staff, can set it. See also \[scene\] and \[scene privacy\].
+      HELP`SCENE`PRIVACY: |-
+        Scenes are **public** by default: they appear in `+scene` and their log is readable.
+
+        - `+scene/private` — hide the focused scene and its log from everyone but its members
+        - `+scene/public` — put it back
+
+        Only the scene's owner, or staff, can change this. Privacy is about who may *read*; who may
+        *pose* is decided by who has joined. See also \[scene\] and \[scene join\].
+      HELP`SCENE`SCHEDULE: |-
+        A scene can be announced before it happens, so people can plan around it.
+
+        - `+scene/schedule <title>=<when>` — announce one
+        - `+scene/upcoming` — what is scheduled, and how many have RSVP'd
+        - `+scene/tag <id>` — RSVP
+        - `+scene/reschedule <id>=<when>` · `+scene/unschedule <id>`
+
+        A scheduled scene records nothing until someone starts it. See also \[scene join\].
+      HELP`POT: |-
+        `+pot` — "pose tracker" — shows who is in your focused scene and how long since each of them
+        last posed, so a table can tell whose turn it is.
+
+        It needs a focused scene: `+scene/join <id>` or `+scene/create <title>` first.
+
+        See also \[scene\] and \[scene pose\].
+
+  # ---- +help registration ---------------------------------------------------
+  # Attach mode: one leaf on the librarian saying "scene's topics live on the Scene Logger". The
+  # package manager writes it at install and clears it at uninstall, so the librarian's registry
+  # cannot drift from what is actually installed — there is nothing to keep in sync by hand.
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`SCENE: |-
+        {{help}}

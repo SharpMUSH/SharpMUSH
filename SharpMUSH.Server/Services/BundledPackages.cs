@@ -61,6 +61,10 @@ public static class BundledPackages
 		new("profile-handler", BundledPackageHandler.Http, InstallAtFirstBoot: true),
 		new("room-contents", BundledPackageHandler.Event, InstallAtFirstBoot: true),
 		new("common-functions", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		// +help before its contributors: scene and wiki-reader attach their SRC registration to the
+		// librarian, so it has to exist first. The stock helpfiles already promise players a +help,
+		// which is why this installs at first boot rather than shipping available-and-unenabled.
+		new("plus-help", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		new("scene", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		// Available, not installed: +wiki lands an object in the master room, and a game that
 		// never asked for a wiki front end should not find one there after an upgrade.
