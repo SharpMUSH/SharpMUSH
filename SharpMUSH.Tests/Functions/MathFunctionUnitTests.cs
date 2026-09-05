@@ -296,4 +296,114 @@ public class MathFunctionUnitTests
 		var result = await Parser.FunctionParse(MModule.single(expr));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
+
+	/// <summary>
+	/// div(), floordiv(), modulo() and remainder() operate on 64-bit signed integers,
+	/// matching PennMUSH's IVAL. Expected values were read off a live PennMUSH 1.8.8 oracle.
+	/// </summary>
+	[Test]
+	[Arguments("div(9223372036854775807,1)", "9223372036854775807")]
+	[Arguments("div(100,7,2)", "7")]
+	[Arguments("floordiv(9223372036854775807,1)", "9223372036854775807")]
+	[Arguments("modulo(9223372036854775807,10)", "7")]
+	[Arguments("remainder(9223372036854775807,10)", "7")]
+	[Arguments("remainder(7,-2)", "1")]
+	[Arguments("remainder(-7,-2)", "-1")]
+	public async Task IntegerMathIs64Bit(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("div(1,0)", "#-1 DIVISION BY ZERO")]
+	[Arguments("floordiv(1,0)", "#-1 DIVISION BY ZERO")]
+	[Arguments("modulo(1,0)", "#-1 DIVISION BY ZERO")]
+	[Arguments("remainder(1,0)", "#-1 DIVISION BY ZERO")]
+	[Arguments("div(7.5,2)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	[Arguments("floordiv(7.5,2)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	[Arguments("modulo(7.5,2)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	[Arguments("remainder(7.5,2)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	public async Task IntegerMathRejectsBadArguments(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// Dividing long.MinValue by -1 overflows. PennMUSH returns #-1 DOMAIN ERROR from div(),
+	/// but its floordiv() guards against INT_MIN rather than INT64_MIN and dies with SIGFPE;
+	/// SharpMUSH returns the domain error from both.
+	/// </summary>
+	[Test]
+	[Arguments("div(-9223372036854775808,-1)", "#-1 DOMAIN ERROR")]
+	[Arguments("floordiv(-9223372036854775808,-1)", "#-1 DOMAIN ERROR")]
+	public async Task IntegerDivisionOverflowIsADomainError(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// A deliberate divergence from PennMUSH, which parses these with a 32-bit parse_integer():
+	/// inc(2147483647) wraps to -2147483648 there and trunc() clamps to the int32 range.
+	/// </summary>
+	[Test]
+	[Arguments("inc(2147483647)", "2147483648")]
+	[Arguments("dec(-2147483648)", "-2147483649")]
+	[Arguments("trunc(9223372036854775807)", "9223372036854775807")]
+	[Arguments("trunc(-9999999999)", "-9999999999")]
+	public async Task IncDecTruncAre64Bit(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// Dividing by zero used to throw out of the decimal fold rather than return an error.
+	/// </summary>
+	[Test]
+	[Arguments("fdiv(1,0)", "#-1 DIVISION BY ZERO")]
+	[Arguments("fmod(1,0)", "#-1 DIVISION BY ZERO")]
+	public async Task FloatingDivisionByZeroIsAnError(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// The whole part of a fraction is 64-bit. PennMUSH prints it through a 32-bit conversion,
+	/// so its fraction(3000000000.5,1) overflows to -2147483648.
+	/// </summary>
+	[Test]
+	[Arguments("fraction(3000000000.5)", "6000000001/2")]
+	[Arguments("fraction(3000000000.5,1)", "3000000000 1/2")]
+	public async Task FractionWholePartIs64Bit(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("lmath(band,-1 1)", "#-1 ARGUMENTS MUST BE POSITIVE INTEGERS")]
+	[Arguments("lmath(div,7.5 2)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	[Arguments("lmath(div,1 0)", "#-1 DIVISION BY ZERO")]
+	public async Task LMathIntegerOperationsRejectBadArguments(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("lmath(div,9223372036854775807 1)", "9223372036854775807")]
+	[Arguments("lmath(modulo,9223372036854775807 10)", "7")]
+	[Arguments("lmath(remainder,-7 2)", "-1")]
+	[Arguments("lmath(band,4294967296 4294967296)", "4294967296")]
+	[Arguments("lmath(bor,4294967296 1)", "4294967297")]
+	[Arguments("lmath(bxor,4294967296 1)", "4294967297")]
+	public async Task LMathIntegerOperationsAre64Bit(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }

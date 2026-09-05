@@ -89,60 +89,40 @@ public static partial class ArgHelpers
 		return value.ToString("0.##########", CultureInfo.InvariantCulture);
 	}
 
-	public static ValueTask<CallState> AggregateIntegers(ImmutableSortedDictionary<string, CallState> args,
-		Func<int, int, int> aggregateFunction)
+	/// <summary>
+	/// Aggregates arguments as 64-bit unsigned integers, matching PennMUSH's UIVAL. The result is
+	/// rendered signed, because PennMUSH renders it that way too: bnot(0) is -1, not 18446744073709551615.
+	/// </summary>
+	public static ValueTask<CallState> AggregateUnsignedIntegers(ImmutableSortedDictionary<string, CallState> args,
+		Func<ulong, ulong, ulong> aggregateFunction)
 	{
-		var integers = new List<int>();
+		var integers = new List<ulong>();
 
 		foreach (var arg in args)
 		{
 			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message));
-			if (!int.TryParse(text, out var value))
+			if (!ulong.TryParse(text, out var value))
 			{
-				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UIntegers);
 			}
 			integers.Add(value);
 		}
 
 		var result = integers.Aggregate(aggregateFunction);
-		return ValueTask.FromResult<CallState>(result.ToString(CultureInfo.InvariantCulture));
+		return ValueTask.FromResult<CallState>(((long)result).ToString(CultureInfo.InvariantCulture));
 	}
 
-	public static ValueTask<CallState> ValidateIntegerAndEvaluate(ImmutableSortedDictionary<string, CallState> args,
-		Func<IEnumerable<int>, MString> aggregateFunction)
+	/// <inheritdoc cref="AggregateUnsignedIntegers"/>
+	public static ValueTask<CallState> EvaluateUnsignedInteger(ImmutableSortedDictionary<string, CallState> args,
+		Func<ulong, ulong> func)
 	{
-		var integers = new List<int>();
-
-		foreach (var arg in args)
+		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
+		if (!ulong.TryParse(text, out var value))
 		{
-			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message!));
-			if (!int.TryParse(text, out var value))
-			{
-				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
-			}
-			integers.Add(value);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(aggregateFunction(integers));
-	}
-
-	public static ValueTask<CallState> AggregateDecimalToInt(ImmutableSortedDictionary<string, CallState> args,
-		Func<decimal, decimal, decimal> aggregateFunction)
-	{
-		var decimals = new List<decimal>();
-
-		foreach (var arg in args)
-		{
-			var text = string.Join(string.Empty, EmptyStringToZero(MModule.plainText(arg.Value.Message)));
-			if (!decimal.TryParse(text, out var value))
-			{
-				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
-			}
-			decimals.Add(value);
-		}
-
-		var result = Math.Floor(decimals.Aggregate(aggregateFunction));
-		return ValueTask.FromResult<CallState>(result.ToString(CultureInfo.InvariantCulture));
+		return ValueTask.FromResult<CallState>(((long)func(value)).ToString(CultureInfo.InvariantCulture));
 	}
 
 	public static ValueTask<CallState> EvaluateDecimal(ImmutableSortedDictionary<string, CallState> args,
@@ -159,7 +139,7 @@ public static partial class ArgHelpers
 	}
 
 	public static ValueTask<CallState> EvaluateDecimalToInteger(ImmutableSortedDictionary<string, CallState> args,
-		Func<decimal, int> func)
+		Func<decimal, long> func)
 	{
 		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
 		if (!decimal.TryParse(text, out var value))
@@ -177,18 +157,6 @@ public static partial class ArgHelpers
 		if (!double.TryParse(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
-		}
-
-		return ValueTask.FromResult<CallState>(func(value));
-	}
-
-	public static ValueTask<CallState> EvaluateInteger(ImmutableSortedDictionary<string, CallState> args,
-		Func<int, int> func)
-	{
-		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
-		if (!int.TryParse(text, out var value))
-		{
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integer);
 		}
 
 		return ValueTask.FromResult<CallState>(func(value));

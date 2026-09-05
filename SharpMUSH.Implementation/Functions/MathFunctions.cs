@@ -5,6 +5,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Numerics;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
@@ -27,19 +28,80 @@ public partial class Functions
 
 	[SharpFunction(Name = "div", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor"])]
 	public static ValueTask<CallState> Div(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		parser.CurrentState.Arguments.Skip(1).Any(x
-				=> decimal.TryParse(MModule.plainText(x.Value.Message), out var num) && num == 0)
-			? ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivideByZero))
-			: ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc / sub);
+		AggregateIntegerDivision(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc / sub, DivisionOverflows);
 
 	[SharpFunction(Name = "fdiv", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["dividend", "divisor"])]
 	public static ValueTask<CallState> FDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc / sub);
+		parser.CurrentState.ArgumentsOrdered.Skip(1).Any(x
+				=> decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(x.Value.Message)), out var num) && num == 0)
+			? ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivisionByZero))
+			: ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc / sub);
 
 	[SharpFunction(Name = "floordiv", MinArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["dividend", "divisor"])]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor"])]
 	public static ValueTask<CallState> FloorDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ArgHelpers.AggregateDecimalToInt(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc / sub);
+		AggregateIntegerDivision(parser.CurrentState.ArgumentsOrdered, FloorDivide, DivisionOverflows);
+
+	/// <summary>
+	/// long.MinValue / -1 has no representable result. PennMUSH's div() reports this as a domain
+	/// error; its floordiv() tests against INT_MIN rather than INT64_MIN and dies on SIGFPE instead,
+	/// so both report the domain error here.
+	/// </summary>
+	private static bool DivisionOverflows(long dividend, long divisor)
+		=> dividend == long.MinValue && divisor == -1;
+
+	private static long FloorDivide(long dividend, long divisor)
+	{
+		var quotient = dividend / divisor;
+		return dividend % divisor != 0 && (dividend < 0) != (divisor < 0)
+			? quotient - 1
+			: quotient;
+	}
+
+	/// <summary>
+	/// Folds the arguments as 64-bit signed integers, matching PennMUSH's IVAL. A zero divisor
+	/// yields #-1 DIVISION BY ZERO, and any pair accepted by <paramref name="overflows"/> yields
+	/// #-1 DOMAIN ERROR.
+	/// </summary>
+	private static ValueTask<CallState> AggregateIntegerDivision(
+		ImmutableSortedDictionary<string, CallState> args,
+		Func<long, long, long> operation,
+		Func<long, long, bool>? overflows = null)
+	{
+		var values = new List<long>();
+
+		foreach (var arg in args)
+		{
+			if (!long.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
+			{
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
+			}
+			values.Add(value);
+		}
+
+		if (values.Count == 0)
+		{
+			return ValueTask.FromResult<CallState>("0");
+		}
+
+		var result = values[0];
+		foreach (var divisor in values.Skip(1))
+		{
+			if (divisor == 0)
+			{
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.DivisionByZero);
+			}
+
+			if (overflows is not null && overflows(result, divisor))
+			{
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.DomainError);
+			}
+
+			result = operation(result, divisor);
+		}
+
+		return ValueTask.FromResult<CallState>(result.ToString(CultureInfo.InvariantCulture));
+	}
 
 	[SharpFunction(Name = "max", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
 	public static ValueTask<CallState> Max(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
@@ -83,9 +145,9 @@ public partial class Functions
 	{
 		var text = MModule.plainText(parser.CurrentState.ArgumentsOrdered["0"].Message);
 
-		if (int.TryParse(text, out var intVal))
+		if (long.TryParse(text, out var parsed))
 		{
-			return ValueTask.FromResult<CallState>((intVal - 1).ToString(CultureInfo.InvariantCulture));
+			return ValueTask.FromResult<CallState>((parsed - 1).ToString(CultureInfo.InvariantCulture));
 		}
 
 		if (string.IsNullOrEmpty(text))
@@ -113,7 +175,7 @@ public partial class Functions
 		var prefix = text[..numStart];
 		var numPart = text[numStart..];
 
-		if (!int.TryParse(numPart, out var num))
+		if (!long.TryParse(numPart, out var num))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgMustEndInInteger));
 		}
@@ -274,7 +336,7 @@ public partial class Functions
 
 		if (fractionalPart < 0.000001m)
 		{
-			return ValueTask.FromResult<CallState>(((int)wholePart).ToString());
+			return ValueTask.FromResult<CallState>(((long)wholePart).ToString(CultureInfo.InvariantCulture));
 		}
 
 		// PennMUSH uses continued fraction approximation with a max denominator limit
@@ -287,7 +349,7 @@ public partial class Functions
 
 		if (Math.Abs(wholePart) >= 1 && showWhole)
 		{
-			return ValueTask.FromResult<CallState>($"{(int)wholePart} {numerator}/{denominator}");
+			return ValueTask.FromResult<CallState>($"{(long)wholePart} {numerator}/{denominator}");
 		}
 		else if (Math.Abs(wholePart) >= 1 && !showWhole)
 		{
@@ -305,9 +367,9 @@ public partial class Functions
 	{
 		var text = MModule.plainText(parser.CurrentState.ArgumentsOrdered["0"].Message);
 
-		if (int.TryParse(text, out var intVal))
+		if (long.TryParse(text, out var parsed))
 		{
-			return ValueTask.FromResult<CallState>((intVal + 1).ToString(CultureInfo.InvariantCulture));
+			return ValueTask.FromResult<CallState>((parsed + 1).ToString(CultureInfo.InvariantCulture));
 		}
 
 		if (string.IsNullOrEmpty(text))
@@ -335,7 +397,7 @@ public partial class Functions
 		var prefix = text[..numStart];
 		var numPart = text[numStart..];
 
-		if (!int.TryParse(numPart, out var num))
+		if (!long.TryParse(numPart, out var num))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgMustEndInInteger));
 		}
@@ -353,6 +415,72 @@ public partial class Functions
 		var delimiter = args.Count == 3 ? args["2"].Message : MModule.single(" ");
 		var list = MModule.splitList(delimiter, args["1"].Message).ToList();
 
+		// The integer operations are 64-bit, matching PennMUSH's IVAL and UIVAL, so they are
+		// folded before the list is reinterpreted as decimals for everything else.
+		if (operation is "band" or "bor" or "bxor")
+		{
+			var unsigned = new List<ulong>();
+			foreach (var item in list)
+			{
+				if (!ulong.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(item)), out var parsed))
+				{
+					return ErrorMessages.Returns.UIntegers;
+				}
+				unsigned.Add(parsed);
+			}
+
+			if (unsigned.Count == 0)
+			{
+				return new CallState("0");
+			}
+
+			var bitwise = operation switch
+			{
+				"band" => unsigned.Aggregate((acc, val) => acc & val),
+				"bor" => unsigned.Aggregate((acc, val) => acc | val),
+				_ => unsigned.Aggregate((acc, val) => acc ^ val)
+			};
+
+			return new CallState(((long)bitwise).ToString(CultureInfo.InvariantCulture));
+		}
+
+		if (operation is "div" or "modulo" or "remainder")
+		{
+			var signed = new List<long>();
+			foreach (var item in list)
+			{
+				if (!long.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(item)), out var parsed))
+				{
+					return ErrorMessages.Returns.Integers;
+				}
+				signed.Add(parsed);
+			}
+
+			if (signed.Count == 0)
+			{
+				return new CallState("0");
+			}
+
+			if (signed.Skip(1).Any(v => v == 0))
+			{
+				return ErrorMessages.Returns.DivisionByZero;
+			}
+
+			if (operation == "div" && signed[0] == long.MinValue && signed.Skip(1).Any(v => v == -1))
+			{
+				return ErrorMessages.Returns.DomainError;
+			}
+
+			var integer = operation switch
+			{
+				"div" => signed.Aggregate((acc, val) => acc / val),
+				"modulo" => signed.Aggregate((acc, val) => val == -1 ? 0 : ((acc % val) + val) % val),
+				_ => signed.Aggregate((acc, val) => val == -1 ? 0 : acc % val)
+			};
+
+			return new CallState(integer.ToString(CultureInfo.InvariantCulture));
+		}
+
 		var values = new List<decimal>();
 		foreach (var item in list)
 		{
@@ -368,10 +496,9 @@ public partial class Functions
 			return new CallState("0");
 		}
 
-		if ((operation == "div" || operation == "fdiv" || operation == "modulo" || operation == "remainder")
-				&& values.Skip(1).Any(v => v == 0))
+		if (operation == "fdiv" && values.Skip(1).Any(v => v == 0))
 		{
-			return ErrorMessages.Returns.DivideByZero;
+			return ErrorMessages.Returns.DivisionByZero;
 		}
 
 		string result = operation switch
@@ -379,10 +506,7 @@ public partial class Functions
 			"add" => values.Sum().ToString(CultureInfo.InvariantCulture),
 			"sub" => values.Aggregate((acc, val) => acc - val).ToString(CultureInfo.InvariantCulture),
 			"mul" => values.Aggregate((acc, val) => acc * val).ToString(CultureInfo.InvariantCulture),
-			"div" => values.Aggregate((acc, val) => acc / val).ToString(CultureInfo.InvariantCulture),
 			"fdiv" => values.Aggregate((acc, val) => acc / val).ToString(CultureInfo.InvariantCulture),
-			"modulo" => values.Aggregate((acc, val) => ((acc % val) + val) % val).ToString(CultureInfo.InvariantCulture),
-			"remainder" => values.Aggregate((acc, val) => acc % val).ToString(CultureInfo.InvariantCulture),
 
 			"max" => values.Max().ToString(CultureInfo.InvariantCulture),
 			"min" => values.Min().ToString(CultureInfo.InvariantCulture),
@@ -399,11 +523,6 @@ public partial class Functions
 			"xor" => (values.Count(v => v != 0) == 1 ? 1 : 0).ToString(),
 			"nand" => (!values.All(v => v != 0) ? 1 : 0).ToString(),
 			"nor" => (!values.Any(v => v != 0) ? 1 : 0).ToString(),
-
-			// Bitwise operations (convert to int)
-			"band" => values.Select(v => (int)v).Aggregate((acc, val) => acc & val).ToString(),
-			"bor" => values.Select(v => (int)v).Aggregate((acc, val) => acc | val).ToString(),
-			"bxor" => values.Select(v => (int)v).Aggregate((acc, val) => acc ^ val).ToString(),
 
 			"mean" => values.Average().ToString(CultureInfo.InvariantCulture),
 			"median" => CalculateMedian(values).ToString(CultureInfo.InvariantCulture),
@@ -578,56 +697,20 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "modulo", MinArgs = 2, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["dividend", "divisor..."])]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor..."])]
 	public static ValueTask<CallState> Modulo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var values = new List<int>();
+		// PennMUSH modulo() uses floor-mod: result = ((a % b) + b) % b. A divisor of -1 always
+		// yields 0, and short-circuiting it keeps long.MinValue % -1 off the hardware trap.
+		=> AggregateIntegerDivision(parser.CurrentState.ArgumentsOrdered,
+			(acc, val) => val == -1 ? 0 : ((acc % val) + val) % val);
 
-		foreach (var arg in args)
-		{
-			if (!int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
-			{
-				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
-			}
-
-			if (values.Count > 0 && value == 0)
-			{
-				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivideByZero));
-			}
-
-			values.Add(value);
-		}
-
-		// PennMUSH modulo() uses floor-mod: result = ((a % b) + b) % b
-		var result = values.Aggregate((acc, val) => ((acc % val) + val) % val);
-		return ValueTask.FromResult<CallState>(result.ToString(CultureInfo.InvariantCulture));
-	}
-
-	[SharpFunction(Name = "remainder", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["dividend", "divisor..."])]
+	[SharpFunction(Name = "remainder", MinArgs = 2, MaxArgs = int.MaxValue,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor..."])]
 	public static ValueTask<CallState> Remainder(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var values = new List<double>();
-
-		foreach (var arg in args)
-		{
-			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
-			{
-				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
-			}
-
-			if (values.Count > 0 && value == 0)
-			{
-				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivideByZero));
-			}
-
-			values.Add(value);
-		}
-
-		var result = values.Aggregate((acc, val) => acc % val);
-		return ValueTask.FromResult<CallState>(result);
-	}
+		// PennMUSH's remainder() dies on SIGFPE for long.MinValue % -1; 0 is the answer it would
+		// have produced, and is what its modulo() returns for the same operands.
+		=> AggregateIntegerDivision(parser.CurrentState.ArgumentsOrdered,
+			(acc, val) => val == -1 ? 0 : acc % val);
 
 	[SharpFunction(Name = "root", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "n"])]
 	public static ValueTask<CallState> Root(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -663,11 +746,11 @@ public partial class Functions
 
 	[SharpFunction(Name = "sign", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
 	public static ValueTask<CallState> Sign(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.EvaluateDecimalToInteger(parser.CurrentState.ArgumentsOrdered, Math.Sign);
+		=> ArgHelpers.EvaluateDecimalToInteger(parser.CurrentState.ArgumentsOrdered, x => Math.Sign(x));
 
 	[SharpFunction(Name = "trunc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
 	public static ValueTask<CallState> Truncate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.EvaluateDecimalToInteger(parser.CurrentState.ArgumentsOrdered, x => (int)Math.Truncate(x));
+		=> ArgHelpers.EvaluateDecimalToInteger(parser.CurrentState.ArgumentsOrdered, x => (long)Math.Truncate(x));
 
 	[SharpFunction(Name = "acos", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["cosine", "angle-type"])]
 	public static async ValueTask<CallState> ACos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -814,7 +897,7 @@ public partial class Functions
 
 		if (arg1 == 0)
 		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivideByZero));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivisionByZero));
 		}
 
 		return ValueTask.FromResult<CallState>(arg0 % arg1);
