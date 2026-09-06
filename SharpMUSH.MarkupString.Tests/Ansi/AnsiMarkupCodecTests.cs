@@ -100,6 +100,21 @@ public class AnsiMarkupCodecTests
 			.IsEqualTo(new AnsiColor.Standard(3, true));
 	}
 
+	/// <summary>
+	/// The consequence of <see cref="Read_LowIntegerIndexes_BecomeStandardColours"/> for a caller who
+	/// built the colour as an xterm index: the wire has one integer for both spellings, so the first
+	/// sixteen come back as standard colours. The colour is the same — both resolve to #ff55ff — but
+	/// the ANSI bytes are not (<c>1;35</c> rather than <c>38;5;13</c>), which is why
+	/// <c>RoundTripProperties</c> generates xterm indices from 16 up.
+	/// </summary>
+	[Test]
+	public async Task RoundTrip_XtermIndexUnderSixteen_ComesBackAsTheStandardColour()
+	{
+		await Assert.That(RoundTrip(AnsiMarkup.Create(foreground: new AnsiColor.Xterm(13))).Foreground)
+			.IsEqualTo(new AnsiColor.Standard(5, true));
+		await Assert.That(new AnsiColor.Xterm(13).ToHex()).IsEqualTo(new AnsiColor.Standard(5, true).ToHex());
+	}
+
 	[Test]
 	public async Task Read_LegacyRgbaString_DropsTheAlpha()
 	{

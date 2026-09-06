@@ -1,0 +1,28 @@
+﻿01 plain              | plain text
+02 bold               | <span class="ms-bold">bold</span>
+03 faint              | <span class="ms-faint">faint</span>
+04 italic             | <span class="ms-italic">italic</span>
+05 underlined         | <span class="ms-underline">underlined</span>
+06 overlined          | <span class="ms-overline">overlined</span>
+07 blink              | <span class="ms-blink">blink</span>
+08 inverted           | inverted
+09 strikethrough      | <span class="ms-strike">strikethrough</span>
+10 fg-standard        | <span style="color: #aa0000">red</span>
+11 fg-bright          | <span style="color: #ff5555">bright red</span>
+12 fg-xterm-200       | <span style="color: #ff00d7">xterm 200</span>
+13 fg-rgb             | <span style="color: #123456">rgb</span>
+14 fg-default         | default fg
+15 bg-standard        | <span style="background-color: #0000aa">on blue</span>
+16 bg-bright          | <span style="background-color: #5555ff">on bright blue</span>
+17 bg-xterm-24        | <span style="background-color: #005f87">on xterm 24</span>
+18 bg-rgb             | <span style="background-color: #008040">on rgb</span>
+19 bg-default         | default bg
+20 link-url           | <a href="https://example.com/a?b=1&amp;c=2" target="_blank" rel="noopener noreferrer">example</a>
+21 link-command       | <a class="ms-cmd-link" role="button" tabindex="0" xch_cmd="+who" title="Who is on?">who</a>
+22 nested-three-deep  | <span style="color: #aa0000" class="ms-bold ms-underline">deep</span>
+23 adjacent-runs      | <span style="color: #aa0000">red</span>-<span style="color: #00aa00" class="ms-bold">bold green</span><span class="ms-underline">under</span>
+24 html-send          | <send href="north" hint="Go north">north</send>
+25 html-b-in-colour   | <b><span style="color: #00aa00">bold green</span></b>
+26 unicode            | <span style="color: #aa0000">日本語 😀 café</span>
+27 needs-encoding     | <span class="ms-bold">&lt;a href=&quot;x&quot;&gt; &amp; &#39;y&#39; &lt;/a&gt;</span>
+28 clear-after-colour | <span style="color: #aa0000">red</span>cleared

@@ -429,3 +429,7 @@ surrealdb-data/
 
 # Responsive sweep screenshots — regenerated per run, not build output worth tracking
 tools/responsive-sweep/out/
+
+# Verify snapshot output: *.received.* is a failing test's actual result, never committed.
+# The reviewed *.verified.* files are.
+*.received.*
