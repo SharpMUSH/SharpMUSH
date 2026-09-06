@@ -7,7 +7,8 @@ namespace MarkupString.Ansi;
 public sealed record AnsiMarkup(AnsiStyle Style) : IMarkup, IAnsiStyleSource
 {
 	/// <inheritdoc/>
-	public bool TryGetAnsiStyle(out AnsiStyle style)
+	/// <remarks>This layer is terminal formatting and nothing else, so it folds in every format.</remarks>
+	public bool TryGetAnsiStyle(MarkupFormat format, out AnsiStyle style)
 	{
 		style = Style;
 		return true;

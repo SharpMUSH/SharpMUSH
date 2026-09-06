@@ -23,16 +23,30 @@ internal static class AnsiEmitterSupport
 	private const string Bel = "\u0007";
 
 	/// <summary>
-	/// Folds every layer that offers a style into one, outermost first, so an inner layer's
-	/// settings win. Layers that offer none are left for <see cref="WriteWrapped"/>.
+	/// Whether this package folds <paramref name="layer"/> into the run's style for
+	/// <paramref name="format"/>, rather than delegating it to its own emitter. The one place that
+	/// question is answered: <see cref="Fold"/> takes the layers it says yes to and
+	/// <see cref="WriteWrapped"/> takes exactly the rest, so no layer is rendered twice or dropped.
 	/// </summary>
-	internal static AnsiStyle Fold(MarkupSet? set)
+	internal static bool ClaimsStyle(IMarkup layer, MarkupFormat format, out AnsiStyle style)
+	{
+		if (layer is IAnsiStyleSource source) return source.TryGetAnsiStyle(format, out style);
+		style = AnsiStyle.None;
+		return false;
+	}
+
+	/// <summary>
+	/// Folds every layer that offers a style in <paramref name="format"/> into one, outermost
+	/// first, so an inner layer's settings win. Layers that offer none are left for
+	/// <see cref="WriteWrapped"/>.
+	/// </summary>
+	internal static AnsiStyle Fold(MarkupSet? set, MarkupFormat format)
 	{
 		if (set is null) return AnsiStyle.None;
 
 		var effective = AnsiStyle.None;
 		for (var i = set.Count - 1; i >= 0; i--)
-			if (set[i] is IAnsiStyleSource source && source.TryGetAnsiStyle(out var style))
+			if (ClaimsStyle(set[i], format, out var style))
 				effective = effective.Combine(style);
 
 		return effective;
@@ -40,7 +54,9 @@ internal static class AnsiEmitterSupport
 
 	/// <summary>
 	/// Writes <paramref name="core"/> — the run as this package rendered it — wrapped by the layers
-	/// this package does not own, innermost first, each through its own emitter for the format.
+	/// this package does not own in <see cref="EmitContext.Format"/>, innermost first, each through
+	/// its own emitter for that format. A layer with no emitter registered for the format wraps in
+	/// nothing: its body passes through.
 	/// </summary>
 	internal static void WriteWrapped(
 		MarkupSet set,
@@ -55,7 +71,7 @@ internal static class AnsiEmitterSupport
 			for (var i = 0; i < set.Count; i++)
 			{
 				var layer = set[i];
-				if (layer is IAnsiStyleSource source && source.TryGetAnsiStyle(out _)) continue;
+				if (ClaimsStyle(layer, context.Format, out _)) continue;
 
 				var emitter = context.Registry.FindEmitter(layer.GetType(), context.Format);
 				if (emitter is null) continue;
@@ -116,7 +132,7 @@ internal static class AnsiEmitterSupport
 		IBufferWriter<char> output,
 		TagFlavour flavour)
 	{
-		var style = Fold(set);
+		var style = Fold(set, context.Format);
 
 		using var core = new PooledCharWriter(body.Length + 64);
 		var styled = SgrWriter.Transition(AnsiStyle.None, style, core);

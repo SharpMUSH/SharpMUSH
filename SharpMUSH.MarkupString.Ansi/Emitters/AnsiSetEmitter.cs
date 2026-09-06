@@ -18,8 +18,8 @@ public sealed class AnsiSetEmitter : IMarkupSetEmitter
 		ArgumentNullException.ThrowIfNull(set);
 		ArgumentNullException.ThrowIfNull(output);
 
-		var effective = AnsiEmitterSupport.Fold(set);
-		var previous = AnsiEmitterSupport.Fold(context.Previous);
+		var effective = AnsiEmitterSupport.Fold(set, context.Format);
+		var previous = AnsiEmitterSupport.Fold(context.Previous, context.Format);
 
 		using var core = new PooledCharWriter(body.Length + 32);
 		SgrWriter.Transition(previous, effective, core);

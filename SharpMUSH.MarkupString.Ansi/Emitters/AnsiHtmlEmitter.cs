@@ -19,7 +19,7 @@ public sealed class AnsiHtmlEmitter : IMarkupSetEmitter
 		ArgumentNullException.ThrowIfNull(set);
 		ArgumentNullException.ThrowIfNull(output);
 
-		var style = AnsiEmitterSupport.Fold(set);
+		var style = AnsiEmitterSupport.Fold(set, context.Format);
 
 		// Reverse video swaps the two colours rather than asking the browser to.
 		var (foreground, background) = style.Inverted

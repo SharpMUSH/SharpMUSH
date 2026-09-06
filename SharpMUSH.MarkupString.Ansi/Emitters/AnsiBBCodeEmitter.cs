@@ -17,7 +17,7 @@ public sealed class AnsiBBCodeEmitter : IMarkupSetEmitter
 		ArgumentNullException.ThrowIfNull(set);
 		ArgumentNullException.ThrowIfNull(output);
 
-		var style = AnsiEmitterSupport.Fold(set);
+		var style = AnsiEmitterSupport.Fold(set, context.Format);
 
 		// Reverse video has no BBCode form either, so the colour that would show as the text colour
 		// is the one written.
