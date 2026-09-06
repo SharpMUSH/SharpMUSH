@@ -180,12 +180,11 @@ public partial class Functions
 						underline = false;
 						break;
 					case 'h':
-						// Deliberately NOT also setting `bold`: the highlight is folded into the colour
-						// bytes by highlightFunc ([1, 31] for hr), and the ANSI renderer emits those, so
-						// recording it on the structure as well makes it emit the bold attribute twice.
-						// The consequence is that a highlight with no colour to ride on — a bare
-						// ansi(h,text) — still carries nothing; fixing that means moving the highlight
-						// out of the colour bytes entirely, which changes the wire palette shape.
+						// A per-token modifier that raises the FOLLOWING foreground letter to its bright
+						// variant (hr is AnsiColor.Standard(1, bright: true)); a background has no bright
+						// variant, so there it means bold instead. On its own it carries nothing, which
+						// matches AnsiCodeParser — the two must agree, or ansi() and the parsed form of
+						// the same code produce different markup.
 						curHilight = true;
 						break;
 					case 'H':
