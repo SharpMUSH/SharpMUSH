@@ -302,14 +302,22 @@ the order it pays off.
    keeps the container free of blocking work and makes first-resolve ordering explicit.
 4. **Close the remaining coherence window with versions, not more invalidation.** A read that
    issues its query before a commit and stores after the second invalidation caches a pre-write
-   answer. The tags already say which objects a result embeds. A per-object version counter bumped
-   on invalidation and captured at factory start, with the store dropped if any embedded object's
-   version moved, closes it inside the behaviour. This pairs with #868 item 3, since dbref-only
-   lists shrink what a version has to cover.
-5. **Keep the single-process assumptions named.** `AsyncRelation`, the snapshot rule and the
-   in-memory tag index all assume one engine process. FusionCache's backplane carries key and tag
-   removals across nodes, so the design survives a multi-node deployment without changing shape,
-   but the version counter in point 4 would need to live in the distributed cache.
+   answer. Tagged entries do not have this window: FusionCache stamps a foreground factory's entry
+   at factory start, so a tag removed mid-read expires the result (section 5). The key-invalidated
+   object node does, because a key removal during the factory says nothing about the entry stored
+   after it. A per-object version counter bumped on every invalidation closes it, but not as a
+   check before the store: an invalidation can land between that check and FusionCache's set.
+   The behaviour captures the version before the factory runs and compares again *after*
+   `GetOrSet` returns, removing the key if it moved. The removal then happens after the store,
+   whichever order the write and the read interleaved, so a stale entry never outlives the
+   comparison. This pairs with #868 item 3, since dbref-only lists shrink what a version covers.
+5. **Keep the single-process assumptions named.** The design is single-process today: Startup
+   registers the in-memory FusionCache only, with no distributed cache and no backplane, so a
+   write on a second engine node would leave the first node's entries stale. `AsyncRelation`, the
+   snapshot rule and the in-memory tag index share that assumption. The path to more than one
+   node is a configured backplane, which carries key and tag removals between nodes and keeps the
+   design's shape, plus the version counter in point 4 moved into the distributed cache. Until
+   that is configured, run one engine process per database.
 
 Two smaller fences belong with these: the create handlers remove the new object's key themselves
 because `ICacheInvalidating.CacheKeys` cannot name a dbref the write allocates, so the contract wants
