@@ -91,7 +91,7 @@ public sealed class ProfileHarness : BaseBenchmark
 		var god = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer!;
 		var one = god.Object.DBRef;
 		var baseParser = _server!.Services.GetRequiredService<IMUSHCodeParser>();
-		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MModule.single("[mul(%0,2)]"), god);
+		await _database!.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MModule.single("[mul(%0,2)]"), god);
 
 		using var http = new HttpClient { BaseAddress = new Uri(ArangoBaseAddress!) };
 		http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
