@@ -14,12 +14,12 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 		CancellationToken cancellationToken
 	)
 	{
-		return message.CacheTags.Length > 0
-			? await cache.GetOrSetAsync(message.CacheKey,
-				async _ => await next(message, cancellationToken),
-				tags: message.CacheTags, token: cancellationToken)
-			: await cache.GetOrSetAsync(message.CacheKey,
-				async _ => await next(message, cancellationToken),
-				token: cancellationToken);
+		// The factory runs under FusionCache's token, which carries the profile's hard timeout, so
+		// a hung database call is cut loose from the command rather than holding its key lock.
+		return await cache.GetOrSetAsync<TResponse>(message.CacheKey,
+			async (_, ct) => await next(message, ct),
+			options: CacheEntryProfiles.For(message.Profile),
+			tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
+			token: cancellationToken);
 	}
 }

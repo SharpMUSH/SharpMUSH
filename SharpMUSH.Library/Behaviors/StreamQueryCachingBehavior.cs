@@ -1,6 +1,6 @@
-using System.Runtime.CompilerServices;
 using Mediator;
 using SharpMUSH.Library.Attributes;
+using System.Runtime.CompilerServices;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Library.Behaviors;
@@ -20,13 +20,18 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 		[EnumeratorCancellation] CancellationToken cancellationToken
 	)
 	{
-		var list = message.CacheTags.Length > 0
-			? await cache.GetOrSetAsync(message.CacheKey,
-				async _ => await MaterializeAsync(message, next, cancellationToken),
-				tags: message.CacheTags, token: cancellationToken)
-			: await cache.GetOrSetAsync(message.CacheKey,
-				async _ => await MaterializeAsync(message, next, cancellationToken),
-				token: cancellationToken);
+		var list = await cache.GetOrSetAsync<List<TResponse>>(message.CacheKey,
+			async (ctx, ct) =>
+			{
+				var result = await MaterializeAsync(message, next, ct);
+				// A list weighs what it holds against the memory cache's size limit: a room with three
+				// hundred things in it is not the same cost as an empty one.
+				ctx.Options.Size = Math.Max(1, result.Count);
+				return result;
+			},
+			options: CacheEntryProfiles.For(message.Profile),
+			tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
+			token: cancellationToken);
 
 		foreach (var item in list)
 		{

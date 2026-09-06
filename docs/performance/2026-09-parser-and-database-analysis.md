@@ -114,7 +114,44 @@ return `MERGE(v, { FlagDocs: (sub-query over edge_has_attribute_flag) })`, and t
 three attributes went from 11 to 8 requests, and write plus uncached `get()` from 8.8 to 6.9; the
 remaining ~6 are the write.
 
-### 5. `cache: true` on AQL queries is a no-op (database)
+### 5. Cache entry profiles (database cache)
+
+The engine cache ran on FusionCache's defaults: every entry lived 30 s, no fail-safe, no factory
+timeouts, no memory bound. Invalidation is explicit (every write is a command that removes its keys
+or tags), so the lifetime is a safety net, not the freshness mechanism, and can be minutes.
+
+Each cached query now carries a `CacheEntryProfile`, derived from its tags unless overridden:
+
+| profile | when | lifetime | fail-safe | refresh | priority / size |
+|---|---|---|---|---|---|
+| Object | invalidated by key only (object nodes, command/listen caches, lock delegates) | 10 min, 60 s jitter | on: 1 h max, 15 s throttle, 150 ms soft timeout | eager at 85% | normal, 1 |
+| Tagged | any tag (contents, location, attributes, flag/power sets, definition lists) | 10 min, 60 s jitter | **off** | **none** | normal, 1 per element |
+| Scan | large, rarely read listings (zone members, log pages) | 60 s | off | none | low, 1 per element |
+
+Why fail-safe is off for tagged entries: FusionCache's `RemoveByTag` is an expire, not a delete, and
+the documentation is explicit that tag removal "does not interfere with the fail-safe mechanism". A
+contents entry with fail-safe on would come back as a stale fallback while the database was slow or
+down, showing a room's pre-move contents, which is the exact loss the per-container contents tag
+(#854) exists to prevent. A key removal deletes the entry outright, so the key-only shapes can have
+fail-safe safely; no write can leave one behind. `CacheEntryProfileTests` pins both behaviours
+against a real FusionCache instance, and checks that no query declares tags while asking for the
+Object profile.
+
+A second FusionCache detail, read from its source rather than its documentation: a foreground
+factory's entry is stamped when the factory *starts* (which is what lets a tag removed mid-read
+expire the result, the mechanism #854 relies on), but an entry stored by a background completion,
+an eager refresh or a timed-out factory allowed to finish, is stamped when it is *stored*. Such an
+entry outlives a tag removed while its factory ran, holding pre-write data. So tagged entries get no
+eager refresh, and no profile lets a timed-out factory complete in the background
+(`AllowTimedOutFactoryBackgroundCompletion = false`); a timed-out read is discarded and the next
+read retries.
+
+The memory cache is bounded at 250,000 units (one per document, one per element of a cached list,
+compacting the least recently used tenth), so a full-database sweep fills the cache instead of
+growing the process without limit. Every factory runs under FusionCache's token with a 5 s hard
+timeout, so a hung database call is cut loose from the command and from the per-key lock it holds.
+
+### 6. `cache: true` on AQL queries is a no-op (database)
 
 The provider passes `cache: true` on 20 queries. ArangoDB's `--query.cache-mode` defaults to `off`
 (confirmed against the running container: `/_api/query-cache/properties` → `"mode":"off"`), and in
@@ -166,12 +203,10 @@ the baseline run was stopped as too slow to wait on.
    is a streaming transaction with one request per step (begin, path lookup, entry and flag lookups,
    document create, two edge creates, commit). A single AQL statement or a JavaScript transaction
    would make it one. Writes are rarer than reads, which is why it was not done in this pass.
-2. **FusionCache entry lifetime is the 30 s default** (`AddFusionCache().TryWithAutoSetup()`, no
-   `DefaultEntryOptions`). Every object, flag set, and attribute is refetched 30 s after it was last
-   loaded, so a busy object costs a round trip every 30 s per cached shape. Invalidation is explicit
-   everywhere, so a much longer default is safe once the team is confident no writer bypasses the
-   commands; the 30 s TTL currently masks any that do. Raise it deliberately, with a grep for direct
-   `database.*Async` writes in `SharpMUSH.Library/Services` first.
+2. **Cache lifetimes now mask nothing.** With entries living 10 minutes, a writer that bypasses the
+   commands leaves a stale entry for 10 minutes rather than 30 seconds. Two such writers were found
+   and fixed in this pass (flags and powers in the package installer). Any new direct
+   `database.*Async` write outside `Handlers/Database` is a bug; a grep for them belongs in review.
 3. **`Core.Arango` was archived on 2026-08-02; 3.12.3 is the final release.** Not a performance
    problem today, but a maintenance cliff. Two config-only wins while it lasts: inject an `HttpClient`
    with `DefaultRequestVersion = HttpVersion.Version20` (the driver speaks HTTP/1.1 otherwise) and

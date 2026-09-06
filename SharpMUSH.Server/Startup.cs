@@ -483,7 +483,17 @@ public class Startup(
 				x.AddConsumer<Consumers.MxpNegotiatedConsumer, MxpNegotiatedMessage>();
 			});
 
-		services.AddFusionCache().TryWithAutoSetup();
+		// The engine cache. Its own bounded memory cache rather than the registered one (which the
+		// prerender service shares), default options from the Object profile, and the per-query
+		// profiles applied by the caching behaviours - see CacheEntryProfile for the fail-safe rule.
+		services.AddFusionCache()
+			.TryWithAutoSetup()
+			.WithMemoryCache(_ => new MemoryCache(new MemoryCacheOptions
+			{
+				SizeLimit = CacheEntryProfiles.MemoryCacheSizeLimit,
+				CompactionPercentage = CacheEntryProfiles.MemoryCacheCompactionPercentage,
+			}))
+			.WithDefaultEntryOptions(CacheEntryProfiles.Object);
 
 		// Dedicated cache for compiled boolean-lock expressions.
 		// Uses a size-limited memory cache (max 1024 entries, 25% compaction) so rarely-used

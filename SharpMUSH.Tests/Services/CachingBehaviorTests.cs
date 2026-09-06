@@ -38,6 +38,20 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
+	/// The engine cache's defaults are the Object profile: ad-hoc Set/GetOrSet callers (the lock
+	/// service, account claims) inherit its size unit, which the bounded memory cache requires, and
+	/// its fail-safe, which is safe for them because they are all invalidated by key.
+	/// </summary>
+	[Test]
+	public async Task FusionCache_DefaultsAreTheObjectProfile()
+	{
+		var defaults = Cache.DefaultEntryOptions;
+		await Assert.That(defaults.Size).IsEqualTo(1);
+		await Assert.That(defaults.IsFailSafeEnabled).IsTrue();
+		await Assert.That(defaults.Duration).IsEqualTo(Library.Behaviors.CacheEntryProfiles.Object.Duration);
+	}
+
+	/// <summary>
 	/// Verifies that querying GetObjectNodeQuery twice with the same DBRef returns
 	/// a result from cache on the second call (the cache key should be populated).
 	/// Uses a freshly created object to avoid interference from concurrent tests that
