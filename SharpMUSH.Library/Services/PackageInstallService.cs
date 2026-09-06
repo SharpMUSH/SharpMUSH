@@ -796,12 +796,13 @@ public class PackageInstallService(
 		List<string> notes,
 		CancellationToken cancellationToken)
 	{
-		var dbref = ParseObjid(objid);
-		if (dbref is null)
+		var parsed = ParseObjid(objid);
+		if (parsed is null)
 		{
 			return $"Internal error: invalid objid '{objid}'.";
 		}
 
+		var target = parsed.Value;
 		var path = change.Attribute.Split('`');
 
 		async Task WriteAsync(string value)
@@ -811,7 +812,7 @@ public class PackageInstallService(
 				preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue));
 			}
 
-			await attributeStore.SetAttributeAsync(dbref.Value, path, MModule.single(value), pmWizard, cancellationToken);
+			await attributeStore.SetAttributeAsync(target, path, MModule.single(value), pmWizard, cancellationToken);
 		}
 
 		async Task BaselineAsync(string packageValue, string? effectiveValue)
@@ -846,7 +847,7 @@ public class PackageInstallService(
 
 			case PackageAttributeAction.Delete:
 				preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue!));
-				await attributeStore.ClearAttributeAsync(dbref.Value, path, cancellationToken);
+				await attributeStore.ClearAttributeAsync(target, path, cancellationToken);
 				await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
 				return null;
 
@@ -862,7 +863,7 @@ public class PackageInstallService(
 						case PackageConflictResolution.TakeTheirs when change.Conflict == PackageConflictKind.ModifyDelete:
 							// "Theirs" is the deletion.
 							preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue!));
-							await attributeStore.ClearAttributeAsync(dbref.Value, path, cancellationToken);
+							await attributeStore.ClearAttributeAsync(target, path, cancellationToken);
 							await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
 							return null;
 						case PackageConflictResolution.TakeTheirs:
