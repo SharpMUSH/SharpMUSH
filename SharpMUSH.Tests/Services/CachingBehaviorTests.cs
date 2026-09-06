@@ -1,4 +1,5 @@
 using Mediator;
+using NSubstitute;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -112,6 +113,34 @@ public class CachingBehaviorTests
 
 		await Assert.That(await embedded.Object().HasFlag("DARK")).IsTrue()
 			.Because("the contents list carried the object's tag, so the flag write expired it");
+	}
+
+	/// <summary>
+	/// A contents list is stored as the dbrefs it names and resolved through the object node cache,
+	/// so the object it hands out is the object cache's instance, not a second snapshot.
+	/// </summary>
+	[Test]
+	public async Task AContentsListHandsOutTheObjectCachesInstance()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@dig OneInstance Room"))).Message!.ToPlainText()!);
+		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@create OneInstance Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel #{thing.Number}=#{room.Number}"));
+
+		var listed = (await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync())
+			.Single(c => c.Object().DBRef.Number == thing.Number);
+		var node = (await mediator.Send(new GetObjectNodeQuery(thing))).Known();
+
+		await Assert.That(ReferenceEquals(listed.Object(), node.Object())).IsTrue()
+			.Because("there is one instance of an object in the process: the node cache's");
+
+		var located = await node.Where();
+		var roomNode = (await mediator.Send(new GetObjectNodeQuery(room))).Known();
+		await Assert.That(ReferenceEquals(located.Object(), roomNode.Object())).IsTrue()
+			.Because("a location answer is stored as a dbref and resolved through the same cache");
 	}
 
 	/// <summary>
@@ -250,8 +279,8 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
-	/// Verifies that StreamQueryCachingBehavior caches GetContentsQuery results.
-	/// The second invocation with the same container should serve from cache.
+	/// Verifies that StreamQueryCachingBehavior caches GetContentsQuery results, stored as the dbrefs
+	/// the list names. The second invocation with the same container should serve from cache.
 	/// Uses a freshly created room to avoid interference from concurrent tests.
 	/// </summary>
 	[Test]
@@ -276,7 +305,7 @@ public class CachingBehaviorTests
 		// don't supply OldContainer (GeneralCommands, MoreCommands, UtilityFunctions) and is
 		// common under parallel CI load.
 		var cacheKey = SharpMUSH.Library.Definitions.CacheKeys.Contents(dbRef);
-		var cached = await Cache.TryGetAsync<List<AnySharpContent>>(cacheKey);
+		var cached = await Cache.TryGetAsync<CachedObjectRefs>(cacheKey);
 		for (var retry = 0; !cached.HasValue && retry < 10; retry++)
 		{
 			result1.Clear();
@@ -284,7 +313,7 @@ public class CachingBehaviorTests
 			{
 				result1.Add(item);
 			}
-			cached = await Cache.TryGetAsync<List<AnySharpContent>>(cacheKey);
+			cached = await Cache.TryGetAsync<CachedObjectRefs>(cacheKey);
 		}
 
 		await Assert.That(cached.HasValue).IsTrue();
@@ -436,7 +465,7 @@ public class CachingBehaviorTests
 		var evicted = new List<Library.Models.DBRef>();
 		foreach (var room in bystanders)
 		{
-			var cached = await Cache.TryGetAsync<List<AnySharpContent>>(
+			var cached = await Cache.TryGetAsync<CachedObjectRefs>(
 				SharpMUSH.Library.Definitions.CacheKeys.Contents(room));
 			if (!cached.HasValue) evicted.Add(room);
 		}
@@ -570,7 +599,7 @@ public class CachingBehaviorTests
 	public async Task StraddlingRead_DoesNotOutliveTheWriteThatInvalidatedIt(bool byKey, bool byTag)
 	{
 		using var cache = new FusionCache(new FusionCacheOptions());
-		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache);
+		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache, Substitute.For<Mediator.IMediator>());
 		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache, new ObjectVersions());
 		var probe = new StaleReadProbe();
 		var write = new StaleReadWrite(byKey ? [probe.CacheKey] : [], byTag ? probe.CacheTags : []);

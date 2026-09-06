@@ -33,6 +33,11 @@ public sealed class ProfileHarness : BaseBenchmark
 		new("ufun", "[u(me/PROFILE_FN,5)]", false),
 		new("get", "[get(me/PROFILE_FN)]", false),
 		new("haspower", "[haspower(me,see_all)]", false),
+		// Object-shaped cached results: a location answer, and a contents list of the fifty things
+		// the setup creates in the executor's inventory, with and without a per-object read.
+		new("loc", "[loc(me)]", false),
+		new("lcon", "[lcon(me)]", false),
+		new("lcon-names", "[iter(lcon(me),name(##))]", false),
 		// A write invalidates the attribute caches, so the read that follows is a cache miss: this
 		// scenario counts what one uncached attribute listing costs on the wire.
 		new("set", "&PROFILE_X me=x", true),
@@ -92,6 +97,10 @@ public sealed class ProfileHarness : BaseBenchmark
 		var one = god.Object.DBRef;
 		var baseParser = _server!.Services.GetRequiredService<IMUSHCodeParser>();
 		await _database!.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MModule.single("[mul(%0,2)]"), god);
+		for (var i = 0; i < 50; i++)
+		{
+			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MModule.single($"@create Profile Thing {i}"));
+		}
 
 		using var http = new HttpClient { BaseAddress = new Uri(ArangoBaseAddress!) };
 		http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",

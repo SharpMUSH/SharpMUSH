@@ -23,10 +23,15 @@ and `CacheInvalidationBehavior`. No handler holds an `IFusionCache`. Anything th
 aggregate through the Mediator writes it only through the Mediator; a direct store write leaves
 the cache stale for the entry's whole lifetime.
 
-The object is the cache unit. Flags, powers and locks load with the object, and every cached
-result carries an `obj:#N` tag per object it embeds, so a write to `object:#N` expires every
-snapshot of that object anywhere in the cache. A loaded `SharpObject` is a snapshot; a handler
-that mutates one calls its `With…`/`Without…` methods and invalidates the key.
+The object is the cache unit, and there is one instance of it in the process. Flags, powers and
+locks load with the object node. Every other object-shaped result (a contents list, a location
+answer, an owner, parent, zone or home, a lookup by name) is stored as the dbref it names
+(`ObjectShapes`, `CachedObjectRef`, `CachedObjectRefs`) and resolved back through the object node
+cache on each read, so it hands out the node cache's instance and nothing needs re-pointing when
+that instance is mutated. Such a result still carries an `obj:#N` tag per object it names, because
+the result itself can change when that object is written (a rename changes which player a name
+finds). A loaded `SharpObject` is a snapshot; a handler that mutates one calls its
+`With…`/`Without…` methods and invalidates the key.
 
 **Why not decorators or per-method policy:** a caching decorator over the provider surface puts
 keys and tags on 174 methods instead of 21 request types, and the audit that pins the fail-safe

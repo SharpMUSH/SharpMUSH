@@ -125,8 +125,25 @@ were `f` and `p`, so any query that had already bound `p` - the player queries b
 Player node - got an empty power list, and `connect guest` on Memgraph found no guests);
 the snapshot rule lives on `SharpObject` as `WithFlag`/`WithoutFlag`/`WithPower`/`WithoutPower`/
 `WithLock`/`WithoutLock`, which the handlers call; and the unused per-object flags query, its key
-and its tag are gone. What remains open there is list-shaped results caching object instances
-rather than dbrefs.
+and its tag are gone.
+
+The last item of #868 closed the shape: an object-shaped cached result (a contents list, a
+location answer, an owner, parent, zone or home, a lookup by name) is stored as the dbref it
+names (`ObjectShapes`) and resolved through the object node cache on each read, so there is one
+instance of an object in the process and nothing is re-pointed after a write. The result keeps
+its `obj:#N` tags, since a rename still changes which player a name finds. The price is one
+node-cache hit per named object on each read, measured with the `loc`, `lcon` and `lcon-names`
+scenarios added to the harness (fifty things in the executor's inventory):
+
+| scenario | before µs/op | after µs/op | KB/op before → after |
+|---|---|---|---|
+| `loc(me)` | 5.0 | 6.0 | 11.2 → 12.0 |
+| `lcon(me)` | 24.2 | 39.2 | 44.1 → 67.7 |
+| `iter(lcon(me),name(##))` | 252.5 | 291.9 | 582 → 622 |
+
+About 0.3 µs and half a kilobyte per object per read, zero database requests either way. An
+object that is gone since the list was stored is skipped on read; a single answer whose object is
+gone or has changed type drops its entry and answers from the source.
 
 `[add(1,2)]`: 389 µs → 7.6 µs, 1 → 0 requests. Ten nested calls: 2.55 ms → 48 µs.
 

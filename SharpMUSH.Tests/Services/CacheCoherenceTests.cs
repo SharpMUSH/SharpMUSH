@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Caching.Memory;
+using NSubstitute;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
@@ -37,7 +38,7 @@ public class CacheCoherenceTests
 	{
 		using var cache = NewCache();
 		var versions = new ObjectVersions();
-		var behaviour = new QueryCachingBehavior<ObjectProbeQuery, string>(cache, versions);
+		var behaviour = new QueryCachingBehavior<ObjectProbeQuery, string>(cache, versions, Substitute.For<IMediator>());
 
 		var served = await behaviour.Handle(new ObjectProbeQuery(7), (_, _) =>
 		{
@@ -56,7 +57,7 @@ public class CacheCoherenceTests
 	public async Task AnUndisturbedFactoryKeepsItsEntry()
 	{
 		using var cache = NewCache();
-		var behaviour = new QueryCachingBehavior<ObjectProbeQuery, string>(cache, new ObjectVersions());
+		var behaviour = new QueryCachingBehavior<ObjectProbeQuery, string>(cache, new ObjectVersions(), Substitute.For<IMediator>());
 
 		await behaviour.Handle(new ObjectProbeQuery(7), (_, _) => ValueTask.FromResult("current"), CancellationToken.None);
 

@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Queries.Database;
 using System.Runtime.CompilerServices;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -7,19 +8,51 @@ namespace SharpMUSH.Library.Behaviors;
 
 /// <summary>
 /// Caches <see cref="IStreamQuery{TResponse}"/> results that implement <see cref="ICacheable"/>.
-/// On cache miss the stream is materialized to a list, stored in FusionCache, and yielded.
-/// On cache hit the stored list is yielded directly.
+/// On cache miss the stream is materialized, stored in FusionCache, and yielded; on cache hit the
+/// stored list is yielded directly.
 /// </summary>
-public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
+public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, IMediator mediator)
 	: IStreamPipelineBehavior<TRequest, TResponse>
 	where TRequest : IStreamQuery<TResponse>, ICacheable
 {
+	// An object-shaped stream is stored as the dbrefs it names and resolved through the object node
+	// cache on each read, so every result hands out the one instance per object (see ObjectShapes).
+	private static readonly IObjectShape<TResponse>? Shape = ObjectShapes.For<TResponse>();
+
 	public async IAsyncEnumerable<TResponse> Handle(
 		TRequest message,
 		StreamHandlerDelegate<TRequest, TResponse> next,
 		[EnumeratorCancellation] CancellationToken cancellationToken
 	)
 	{
+		if (Shape is { } shape)
+		{
+			var stored = await cache.GetOrSetAsync<CachedObjectRefs>(message.CacheKey,
+				async (ctx, ct) =>
+				{
+					var result = await MaterializeAsync(message, next, ct);
+					var numbers = result.Select(shape.NumberOf).OfType<int>().ToArray();
+					ctx.Options.Size = Math.Clamp(numbers.Length, 1, CacheEntryProfiles.MaxEntrySize);
+					EmbeddedObjectTags.Apply(ctx, message, numbers);
+					return new CachedObjectRefs(numbers);
+				},
+				options: CacheEntryProfiles.For(message.Profile),
+				tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
+				token: cancellationToken);
+
+			foreach (var number in stored.Numbers)
+			{
+				// An object that is gone since the list was stored is simply not in it any more.
+				var node = await mediator.Send(new GetObjectNodeByNumberQuery(number), cancellationToken);
+				if (shape.TryFromNode(node, out var value))
+				{
+					yield return value;
+				}
+			}
+
+			yield break;
+		}
+
 		var list = await cache.GetOrSetAsync<List<TResponse>>(message.CacheKey,
 			async (ctx, ct) =>
 			{
