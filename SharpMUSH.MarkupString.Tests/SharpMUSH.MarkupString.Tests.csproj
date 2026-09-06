@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsTestProject>true</IsTestProject>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>TUnit0038;TUnitAssertions0002</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TUnit" Version="1.19.16" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
+  </ItemGroup>
+</Project>
