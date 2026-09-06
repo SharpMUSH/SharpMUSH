@@ -1,6 +1,6 @@
 format: 1
 package: common-functions
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional title, justified center (default) / left / right — and cmdtag(), a clickable command link."
 license: MIT
@@ -109,7 +109,11 @@ objects:
       # Adding a function is therefore adding its subtree. Nothing in this attribute changes, and a
       # function cannot be half-added — declared as a subtree but forgotten in the registration list.
       #
-      # after(##,FUN`) rather than rest(##,`): the backtick is not a list delimiter here, it is part
-      # of a single attribute name, so the name is cut at a known prefix instead of split on it.
+      # after(%iL,FUN`) rather than rest(%iL,`): the backtick is not a list delimiter here, it is
+      # part of a single attribute name, so the name is cut at a known prefix instead of split on it.
+      #
+      # %iL, not ##: ## is spliced into the body as TEXT before evaluation, so an element carrying
+      # softcode would be evaluated; %iL substitutes the value. They are the same for attribute
+      # names, and ## is only still there for backwards compatibility.
       STARTUP: |-
-        @dolist [lattr(%!/FUN`*)]={@function [lcstr(after(##,FUN`))]=%!,##,[get(%!/##`MINARGS)],[get(%!/##`MAXARGS)]}
+        @dolist [lattr(%!/FUN`*)]={@function [lcstr(after(%iL,FUN`))]=%!,%iL,[get(%!/%iL`MINARGS)],[get(%!/%iL`MAXARGS)]}

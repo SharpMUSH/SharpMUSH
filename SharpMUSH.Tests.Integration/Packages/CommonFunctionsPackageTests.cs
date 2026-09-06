@@ -69,7 +69,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	{
 		var package = await Registry.GetInstalledPackageAsync("common-functions");
 		await Assert.That(package.IsT0).IsTrue();
-		await Assert.That(package.AsT0.Version).IsEqualTo("1.3.0");
+		await Assert.That(package.AsT0.Version).IsEqualTo("1.4.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("common-functions");
 		await Assert.That(objects.Count).IsEqualTo(1);

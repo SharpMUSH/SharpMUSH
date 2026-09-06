@@ -414,6 +414,31 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(recap).DoesNotContain("eavesdropping")
 			.Because("Dave's uncaptured pose must never appear in the transcript");
 
+		// The pose tracker and the scene browser are the two tables whose rows come out of an iter()
+		// over a list — a nested one, in the tracker's case, sorting members by how long since each
+		// last posed. Both name their element with %iL rather than ##; an empty table body is what a
+		// substitution that resolved to nothing would look like.
+		var potMsgs = await RunAndCollectAs(11L, "+pot");
+		var pot = string.Join("\n", potMsgs);
+		Log($"[POT]\n{pot}");
+		await Assert.That(pot).Contains("Pose Tracker").Because("the tracker prints its header");
+		await Assert.That(pot).Contains("Alice the Innkeeper")
+			.Because("one row per member, named by the element the nested iter() yields");
+		await Assert.That(pot).Contains("Bob the Bard");
+		await Assert.That(pot).Contains("Carol the Cloaked");
+		await Assert.That(pot).DoesNotContain("#-1")
+			.Because("every Idle cell used to read '#-1 ARGUMENT MUST BE INTEGER': msecs() is an OBJECT's "
+				+ "modification time in seconds, not the clock in milliseconds");
+		await Assert.That(pot).DoesNotContain("I can't see that here")
+			.Because("and msecs() with no argument tried to locate an object named '', once per member");
+
+		var browseMsgs = await RunAndCollectAs(11L, "+scene");
+		var browse = string.Join("\n", browseMsgs);
+		Log($"[BROWSE]\n{browse}");
+		await Assert.That(browse).Contains("Scenes:").Because("the browser prints its header");
+		await Assert.That(browse).Contains(sceneId)
+			.Because("the running scene is a row, built from the id the iter() yields");
+
 		// +scene/info <id> is the scene's card. Its Players table is one row per member: what they are
 		// to the scene, the name they answer to, and how much they have posed. The personas that used
 		// to have a Cast line of their own now sit in the Name column beside the character.
