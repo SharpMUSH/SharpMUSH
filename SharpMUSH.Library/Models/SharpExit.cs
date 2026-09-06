@@ -19,7 +19,7 @@ public class SharpExit
 	/// up in that container's contents.
 	/// </summary>
 	[JsonIgnore]
-	public required AsyncLazy<AnySharpContainer> Location { get; set; }
+	public required AsyncRelation<AnySharpContainer> Location { get; set; }
 
 	/// <summary>
 	/// Where the exit leads — PennMUSH's <c>Destination()</c>. Backed by the HasHome edge, which

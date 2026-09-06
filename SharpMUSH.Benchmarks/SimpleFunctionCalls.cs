@@ -5,13 +5,6 @@ namespace SharpMUSH.Benchmarks;
 [BenchmarkCategory("Non-DB Function Evaluation")]
 public class SimpleFunctionCalls : BaseBenchmark
 {
-	private IMUSHCodeParser? _parser;
-
-	public override async ValueTask Setup()
-	{
-		await base.Setup().ConfigureAwait(false);
-		_parser = await TestParser().ConfigureAwait(false);
-	}
 
 	[Benchmark]
 	[Arguments(1)]
@@ -28,6 +21,6 @@ public class SimpleFunctionCalls : BaseBenchmark
 		foreach (var _ in Enumerable.Range(0, depth))
 			sb.Append(")]");
 
-		await _parser!.FunctionParse(MModule.single(sb.ToString()));
+		await FreshParser().FunctionParse(MModule.single(sb.ToString()));
 	}
 }

@@ -176,6 +176,11 @@ public class Startup(
 		var pluginMigrationSources = pluginCatalog.MigrationSources;
 		var pluginFlags = pluginCatalog.AllFlags;
 
+		// Relations a provider cannot own - an object's location changes under other actors - resolve
+		// through the Mediator's cached queries; the providers ask through this seam and know nothing
+		// of the cache.
+		services.AddSingleton<IObjectRelationLoader, Implementation.Services.MediatorObjectRelationLoader>();
+
 		if (databaseProvider == DatabaseProvider.Memgraph)
 		{
 			services.AddSingleton<IDriver>(_ =>
@@ -187,7 +192,8 @@ public class Startup(
 				var dbLogger = x.GetRequiredService<ILogger<MemgraphDatabase>>();
 				var neo4JDriver = x.GetRequiredService<IDriver>();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password, pluginMigrationSources, pluginFlags);
+				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password,
+					x.GetRequiredService<IObjectRelationLoader>(), pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -215,7 +221,8 @@ public class Startup(
 				var surrealClient = x.GetRequiredService<ISurrealDbClient>();
 				surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new SurrealDatabase(dbLogger, surrealClient, password, pluginMigrationSources, pluginFlags);
+				var db = new SurrealDatabase(dbLogger, surrealClient, password,
+					x.GetRequiredService<IObjectRelationLoader>(), pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -229,9 +236,9 @@ public class Startup(
 				var dbLogger = x.GetRequiredService<ILogger<ArangoDatabase>>();
 				var context = x.GetRequiredService<IArangoContext>();
 				var handle = x.GetRequiredService<ArangoHandle>();
-				var mediator = x.GetRequiredService<IMediator>();
+				var relations = x.GetRequiredService<IObjectRelationLoader>();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new ArangoDatabase(dbLogger, context, handle, mediator, password, pluginMigrationSources, pluginFlags);
+				var db = new ArangoDatabase(dbLogger, context, handle, relations, password, pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -481,7 +488,21 @@ public class Startup(
 				x.AddConsumer<Consumers.MxpNegotiatedConsumer, MxpNegotiatedMessage>();
 			});
 
-		services.AddFusionCache().TryWithAutoSetup();
+		// The engine cache. Its own bounded memory cache rather than the registered one (which the
+		// prerender service shares), and the per-query profiles applied by the caching behaviours -
+		// see CacheEntryProfile for the fail-safe rule. The registered default is the Tagged profile,
+		// the one that can never serve stale: an ad-hoc caller that only sets a duration (the account
+		// claims cache, invalidated by tag when a ban or role change lands) inherits everything else
+		// from here, and must not inherit fail-safe. Only the caching behaviour hands out the Object
+		// profile, and only to queries whose invalidation is by key.
+		services.AddFusionCache()
+			.TryWithAutoSetup()
+			.WithMemoryCache(_ => new MemoryCache(new MemoryCacheOptions
+			{
+				SizeLimit = CacheEntryProfiles.MemoryCacheSizeLimit,
+				CompactionPercentage = CacheEntryProfiles.MemoryCacheCompactionPercentage,
+			}))
+			.WithDefaultEntryOptions(CacheEntryProfiles.Tagged);
 
 		// Dedicated cache for compiled boolean-lock expressions.
 		// Uses a size-limited memory cache (max 1024 entries, 25% compaction) so rarely-used

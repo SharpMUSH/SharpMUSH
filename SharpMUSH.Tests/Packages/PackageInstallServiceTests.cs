@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
@@ -640,7 +641,8 @@ public class PackageInstallServiceTests
 				WebAppFactoryArg.Services.GetRequiredService<IPackagePlanService>(),
 				WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>(),
 				WebAppFactoryArg.Services.GetRequiredService<IPackageLifecycleRunner>(),
-				managedInstaller);
+				managedInstaller,
+				WebAppFactoryArg.Services.GetRequiredService<IMediator>());
 
 			var refused = await installer.ApplyAsync(
 				manifest,

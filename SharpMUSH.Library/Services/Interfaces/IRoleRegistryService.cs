@@ -19,7 +19,7 @@ public interface IRoleRegistryService
 	Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug);
 
 	/// <summary>Lists all roles, ordered by <see cref="SharpRole.Priority"/> descending then slug.</summary>
-	Task<IReadOnlyList<SharpRole>> GetRolesAsync();
+	Task<IReadOnlyList<SharpRole>> GetRolesAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>Removes a role by slug. Does not error if absent. (Callers must guard system roles.)</summary>
 	Task RemoveRoleAsync(string slug);
@@ -31,7 +31,7 @@ public interface IRoleRegistryService
 	Task RemoveRoleFromAccountAsync(string accountId, string roleSlug);
 
 	/// <summary>The roles explicitly assigned to an account (excludes flag-derived built-ins).</summary>
-	Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId);
+	Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId, CancellationToken cancellationToken = default);
 
 	/// <summary>The account ids a role is assigned to.</summary>
 	Task<IReadOnlyList<string>> GetAccountIdsForRoleAsync(string roleSlug);

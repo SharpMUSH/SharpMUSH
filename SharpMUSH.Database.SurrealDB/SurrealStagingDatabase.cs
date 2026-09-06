@@ -25,11 +25,12 @@ public sealed class SurrealStagingDatabase : SurrealDatabase, IStagingDatabase
 		ILogger<SurrealDatabase> logger,
 		ISurrealDbClient stagingClient,
 		IPasswordService passwordService,
+		IObjectRelationLoader relations,
 		SurrealDatabase liveDatabase,
 		ISurrealDbClient liveClient,
 		string stagingDbName,
 		string stagingId)
-		: base(logger, stagingClient, passwordService)
+		: base(logger, stagingClient, passwordService, relations)
 	{
 		_liveDatabase = liveDatabase;
 		_liveClient = liveClient;

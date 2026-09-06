@@ -463,7 +463,7 @@ public partial class ArangoDatabase
 			$"FILTER obj != null " +
 			$"LET typed = FIRST(FOR v IN 1..1 INBOUND obj GRAPH {DatabaseConstants.GraphObjects} RETURN v) " +
 			$"FILTER typed != null " +
-			$"FOR item IN [obj, typed] RETURN item",
+			$"FOR item IN [{ObjectWithRelations("obj")}, typed] RETURN item",
 			new Dictionary<string, object> { { "key", dbref.Number.ToString() } },
 			cache: true, cancellationToken: cancellationToken);
 
@@ -486,7 +486,7 @@ public partial class ArangoDatabase
 			{
 				Id = id,
 				Object = convertObject,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.TypePlayer => new SharpPlayer
@@ -494,7 +494,7 @@ public partial class ArangoDatabase
 				Id = id,
 				Object = convertObject,
 				Aliases = res.Aliases,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
 				PasswordHash = res.PasswordHash,
 				PasswordSalt = res.PasswordSalt,
@@ -511,7 +511,7 @@ public partial class ArangoDatabase
 				Id = id,
 				Object = convertObject,
 				Aliases = res.Aliases,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetExitDestinationAsync(id, ct))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'")
@@ -525,15 +525,17 @@ public partial class ArangoDatabase
 		if (dbId.StartsWith(DatabaseConstants.Objects))
 		{
 			query = await arangoDb.Query.ExecuteAsync<System.Text.Json.JsonElement>(handle,
-				$"FOR v IN 0..1 INBOUND {dbId} GRAPH {DatabaseConstants.GraphObjects} RETURN v",
+				$"FOR v IN 0..1 INBOUND @start GRAPH {DatabaseConstants.GraphObjects} RETURN {ObjectWithRelations("v")}",
+				new Dictionary<string, object> { { "start", dbId } },
 				cache: true, cancellationToken: cancellationToken);
 			query.Reverse();
 		}
 		else
 		{
 			query = await arangoDb.Query.ExecuteAsync<System.Text.Json.JsonElement>(handle,
-				$"FOR v IN 0..1 OUTBOUND {dbId} GRAPH {DatabaseConstants.GraphObjects} RETURN v", cache: true,
-				cancellationToken: cancellationToken);
+				$"FOR v IN 0..1 OUTBOUND @start GRAPH {DatabaseConstants.GraphObjects} RETURN {ObjectWithRelations("v")}",
+				new Dictionary<string, object> { { "start", dbId } },
+				cache: true, cancellationToken: cancellationToken);
 		}
 
 		if (query.Count < 2) return new None();
@@ -551,13 +553,13 @@ public partial class ArangoDatabase
 			DatabaseConstants.Things => new SharpThing
 			{
 				Id = id, Object = convertObject,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.Players => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
 				PasswordHash = res.GetProperty("PasswordHash").GetString()!,
 				PasswordSalt = res.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
@@ -572,16 +574,65 @@ public partial class ArangoDatabase
 			DatabaseConstants.Exits => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetExitDestinationAsync(id, ct))
 			},
 			_ => new None(),
 		};
 	}
 
+	/// <summary>
+	/// AQL: the Objects document <paramref name="variable"/> with its flag and power documents
+	/// attached, so an object arrives with its relations in the round trip that loads it. Every
+	/// <c>HasFlag</c> / <c>HasPower</c> then answers from the object; nothing re-reads storage
+	/// through a loaded instance.
+	/// </summary>
+	private static string ObjectWithRelations(string variable) =>
+		$"MERGE({variable}, {{ FlagDocs: (FOR f IN 1..1 OUTBOUND {variable} GRAPH {DatabaseConstants.GraphFlags} RETURN f), " +
+		$"PowerDocs: (FOR p IN 1..1 OUTBOUND {variable} GRAPH {DatabaseConstants.GraphPowers} RETURN p) }})";
+
+	private static readonly System.Text.Json.JsonSerializerOptions ArangoJson = new()
+	{
+		PropertyNamingPolicy = new Core.Arango.Serialization.Json.ArangoJsonDefaultPolicy()
+	};
+
+	/// <summary>
+	/// The object's flags: materialised from the documents that rode along with the object when the
+	/// query projected them, else a read of their own for the construction paths that still return
+	/// a bare document.
+	/// </summary>
+	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(string id, string type, SharpObjectFlagQueryResult[]? docs)
+	{
+		var upperType = type.ToUpper();
+		if (docs is null)
+		{
+			return new(() => new FreshAsyncEnumerable<SharpObjectFlag>(ct => GetObjectFlagsAsync(id, upperType, ct)));
+		}
+
+		var flags = docs.Select(SharpObjectFlagQueryToSharpFlag).Append(ObjectTypeFlag.For(upperType)).ToArray();
+		return new(() => flags.ToAsyncEnumerable());
+	}
+
+	private Lazy<IAsyncEnumerable<SharpPower>> PowersOf(string id, SharpPowerQueryResult[]? docs)
+	{
+		if (docs is null)
+		{
+			return new(() => new FreshAsyncEnumerable<SharpPower>(ct => GetPowersAsync(id, ct)));
+		}
+
+		var powers = docs.Select(SharpPowerQueryToSharpPower).ToArray();
+		return new(() => powers.ToAsyncEnumerable());
+	}
+
+	private static T[]? RelationDocs<T>(System.Text.Json.JsonElement obj, string property)
+		=> obj.TryGetProperty(property, out var el) && el.ValueKind == System.Text.Json.JsonValueKind.Array
+			? System.Text.Json.JsonSerializer.Deserialize<T[]>(el.GetRawText(), ArangoJson)
+			: null;
+
 	private SharpObject SharpObjectQueryToSharpObject(System.Text.Json.JsonElement obj)
 	{
 		var id = obj.GetProperty("_id").GetString()!;
+		var key = int.Parse(obj.GetProperty("_key").GetString()!);
 		var type = obj.GetProperty("Type").GetString()!;
 		WarningType warnings = WarningType.None;
 		if (obj.TryGetProperty("Warnings", out var warningsProp))
@@ -591,7 +642,7 @@ public partial class ArangoDatabase
 		return new SharpObject
 		{
 			Id = id,
-			Key = int.Parse(obj.GetProperty("_key").GetString()!),
+			Key = key,
 			Name = obj.GetProperty("Name").GetString()!,
 			Type = type,
 			CreationTime = obj.GetProperty("CreationTime").GetInt64(),
@@ -600,15 +651,15 @@ public partial class ArangoDatabase
 			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty,
 			// FreshAsyncEnumerable, not the iterator directly: the Lazy caches one instance that every
 			// call site enumerates, and an async iterator's state machine is not safe to share. See #798.
-			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => GetObjectFlagsAsync(id, type.ToUpper(), enumCt))),
-			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(enumCt => GetPowersAsync(id, enumCt))),
+			Flags = FlagsOf(id, type, RelationDocs<SharpObjectFlagQueryResult>(obj, "FlagDocs")),
+			Powers = PowersOf(id, RelationDocs<SharpPowerQueryResult>(obj, "PowerDocs")),
 			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),
 			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
 			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesAsync(id, enumCt))),
 			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesAsync(id, enumCt))),
-			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
-			Parent = new(async ct => await GetParentAsync(id, ct)),
-			Zone = new(async ct => await GetZoneAsync(id, ct)),
+			Owner = new(ct => relations.OwnerOf(id, key, ct)),
+			Parent = new(ct => relations.ParentOf(id, key, ct)),
+			Zone = new(ct => relations.ZoneOf(id, key, ct)),
 			Children = new(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(id, enumCt)!))
 		};
 	}
@@ -621,7 +672,7 @@ public partial class ArangoDatabase
 		// and GetObjectsByZoneAsync both branch on — was unreachable, and asking about a dbref that
 		// does not exist threw instead of answering. The other two providers already return null.
 		var result = await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
-			$"LET obj = DOCUMENT('{DatabaseConstants.Objects}', @key) FILTER obj != null RETURN obj",
+			$"LET obj = DOCUMENT('{DatabaseConstants.Objects}', @key) FILTER obj != null RETURN {ObjectWithRelations("obj")}",
 			bindVars: new Dictionary<string, object> { { "key", dbref.Number.ToString() } },
 			cache: true, cancellationToken: cancellationToken);
 
@@ -668,15 +719,15 @@ public partial class ArangoDatabase
 			Warnings = obj.Warnings,
 			// FreshAsyncEnumerable, not the iterator directly: the Lazy caches one instance that every
 			// call site enumerates, and an async iterator's state machine is not safe to share. See #798.
-			Flags = new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => GetObjectFlagsAsync(obj.Id, obj.Type.ToUpper(), enumCt))),
-			Powers = new Lazy<IAsyncEnumerable<SharpPower>>(() => new FreshAsyncEnumerable<SharpPower>(enumCt => GetPowersAsync(obj.Id, enumCt))),
+			Flags = FlagsOf(obj.Id, obj.Type, obj.FlagDocs),
+			Powers = PowersOf(obj.Id, obj.PowerDocs),
 			Attributes = new Lazy<IAsyncEnumerable<SharpAttribute>>(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(obj.Id, enumCt))),
 			LazyAttributes = new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(obj.Id, enumCt))),
 			AllAttributes = new Lazy<IAsyncEnumerable<SharpAttribute>>(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesAsync(obj.Id, enumCt))),
 			LazyAllAttributes = new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesAsync(obj.Id, enumCt))),
-			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetObjectOwnerAsync(obj.Id, ct)),
-			Parent = new AsyncLazy<AnyOptionalSharpObject>(async ct => await GetParentAsync(obj.Id, ct)),
-			Zone = new AsyncLazy<AnyOptionalSharpObject>(async ct => await GetZoneAsync(obj.Id, ct)),
+			Owner = new(ct => relations.OwnerOf(obj.Id, int.Parse(obj.Key), ct)),
+			Parent = new(ct => relations.ParentOf(obj.Id, int.Parse(obj.Key), ct)),
+			Zone = new(ct => relations.ZoneOf(obj.Id, int.Parse(obj.Key), ct)),
 			Children = new Lazy<IAsyncEnumerable<SharpObject>?>(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(obj.Id, enumCt)!))
 		};
 	public async ValueTask SetLockAsync(SharpObject target, string lockName, Library.Models.SharpLockData lockData,

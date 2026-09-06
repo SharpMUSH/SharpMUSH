@@ -1,3 +1,4 @@
+using NSubstitute;
 using System.Threading;
 using DotNext.Threading;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,7 +37,7 @@ public class SurrealAttributeEnumerationTests
 			.AddInMemoryProvider();
 		var client = services.BuildServiceProvider().GetRequiredService<ISurrealDbClient>();
 		await client.Connect();
-		var db = new SurrealDatabase(NullLogger<SurrealDatabase>.Instance, client, new NoopPasswordService());
+		var db = new SurrealDatabase(NullLogger<SurrealDatabase>.Instance, client, new NoopPasswordService(), Substitute.For<IObjectRelationLoader>());
 		await db.Migrate();
 		return (db, client);
 	}

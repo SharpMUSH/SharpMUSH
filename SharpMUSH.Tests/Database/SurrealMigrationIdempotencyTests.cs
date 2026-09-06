@@ -1,3 +1,4 @@
+using NSubstitute;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Database.SurrealDB;
@@ -44,7 +45,7 @@ public class SurrealMigrationIdempotencyTests
 
 	/// <summary>A fresh instance over the same client — what a server restart effectively is.</summary>
 	private static SurrealDatabase NewDatabase(ISurrealDbClient client) =>
-		new(NullLogger<SurrealDatabase>.Instance, client, new NoopPasswordService());
+		new(NullLogger<SurrealDatabase>.Instance, client, new NoopPasswordService(), Substitute.For<IObjectRelationLoader>());
 
 	private sealed record CountRow
 	{

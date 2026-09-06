@@ -22,10 +22,25 @@ public partial class MemgraphDatabase(
 ILogger<MemgraphDatabase> logger,
 IDriver driver,
 IPasswordService passwordService,
+IObjectRelationLoader relations,
 IReadOnlyList<IMigrationSource>? migrationSources = null,
 IReadOnlyList<PluginFlag>? pluginFlags = null
 ) : ISharpDatabase
 {
+	/// <summary>
+	/// Cypher: the columns that carry an object's flag and power nodes alongside the object node
+	/// <paramref name="variable"/>, so an object arrives with its relations in the round trip that
+	/// loads it and no <c>HasFlag</c> / <c>HasPower</c> re-reads storage through a loaded instance.
+	/// Append to a RETURN clause; read back with <see cref="RelationsOf"/>.
+	/// </summary>
+	private static string RelationColumns(string variable)
+		=> $", [({variable})-[:HAS_FLAG]->(f:ObjectFlag) | f] AS flags, [({variable})-[:HAS_POWER]->(p:Power) | p] AS powers";
+
+	private static (IReadOnlyList<INode>? Flags, IReadOnlyList<INode>? Powers) RelationsOf(IRecord record)
+		=> record.Keys.Contains("flags")
+			? (record["flags"].As<List<INode>>(), record["powers"].As<List<INode>>())
+			: (null, null);
+
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
 	private static volatile bool _migrated;
 
@@ -188,10 +203,15 @@ RETURN c.value AS nextKey
 	private SharpObject MapRecordToSharpObject(IRecord record, string prefix = "o")
 	{
 		var node = record[prefix].As<INode>();
-		return MapNodeToSharpObject(node);
+		return MapNodeToSharpObject(node, RelationsOf(record));
 	}
 
-	private SharpObject MapNodeToSharpObject(INode node)
+	/// <summary>
+	/// Maps an object node; with <paramref name="preloaded"/> from a query that returned
+	/// <see cref="RelationColumns"/> the flags and powers are materialised, else they are read on
+	/// first use (the cold construction paths).
+	/// </summary>
+	private SharpObject MapNodeToSharpObject(INode node, (IReadOnlyList<INode>? Flags, IReadOnlyList<INode>? Powers) preloaded = default)
 	{
 		var key = node["key"].As<int>();
 		var name = node["name"].As<string>();
@@ -214,24 +234,48 @@ RETURN c.value AS nextKey
 			ModifiedTime = modifiedTime,
 			Warnings = warnings,
 			Locks = DeserializeLocks(locksJson),
-			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => GetObjectFlagsForIdAsync(id, type.ToUpper(), enumCt))),
-			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(enumCt => GetPowersForIdAsync(id, enumCt))),
+			Flags = FlagsOf(id, type, preloaded.Flags),
+			Powers = PowersOf(id, preloaded.Powers),
 			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),
 			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
 			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesForIdAsync(id, enumCt))),
 			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesForIdAsync(id, enumCt))),
-			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
-			Parent = new(async ct => await GetParentAsync(id, ct)),
-			Zone = new(async ct => await GetZoneAsync(id, ct)),
+			Owner = new(ct => relations.OwnerOf(id, key, ct)),
+			Parent = new(ct => relations.ParentOf(id, key, ct)),
+			Zone = new(ct => relations.ZoneOf(id, key, ct)),
 			Children = new(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(id, enumCt)!))
 		};
 	}
 
-	private async ValueTask<AnyOptionalSharpObject> BuildTypedObjectFromObjectNode(INode objNode, CancellationToken ct)
+	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(string id, string type, IReadOnlyList<INode>? flagNodes)
+	{
+		var upperType = type.ToUpper();
+		if (flagNodes is null)
+		{
+			return new(() => new FreshAsyncEnumerable<SharpObjectFlag>(ct => GetObjectFlagsForIdAsync(id, upperType, ct)));
+		}
+
+		var flags = flagNodes.Select(MapNodeToFlag).Append(ObjectTypeFlag.For(upperType)).ToArray();
+		return new(() => flags.ToAsyncEnumerable());
+	}
+
+	private Lazy<IAsyncEnumerable<SharpPower>> PowersOf(string id, IReadOnlyList<INode>? powerNodes)
+	{
+		if (powerNodes is null)
+		{
+			return new(() => new FreshAsyncEnumerable<SharpPower>(ct => GetPowersForIdAsync(id, ct)));
+		}
+
+		var powers = powerNodes.Select(MapNodeToPower).ToArray();
+		return new(() => powers.ToAsyncEnumerable());
+	}
+
+	private async ValueTask<AnyOptionalSharpObject> BuildTypedObjectFromObjectNode(INode objNode, CancellationToken ct,
+		(IReadOnlyList<INode>? Flags, IReadOnlyList<INode>? Powers) preloaded = default)
 	{
 		var key = objNode["key"].As<int>();
 		var type = objNode["type"].As<string>();
-		var sharpObj = MapNodeToSharpObject(objNode);
+		var sharpObj = MapNodeToSharpObject(objNode, preloaded);
 
 		var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed, labels(typed) AS lbl", new { key }, ct);
 
@@ -273,7 +317,7 @@ RETURN c.value AS nextKey
 			PasswordHash = typedNode["passwordHash"].As<string>(),
 			PasswordSalt = typedNode.Properties.ContainsKey("passwordSalt") ? typedNode["passwordSalt"].As<string?>() : null,
 			Quota = typedNode["quota"].As<int>(),
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetHomeAsync(id, ct))
 		};
 	}
@@ -294,7 +338,7 @@ RETURN c.value AS nextKey
 		{
 			Id = id,
 			Object = sharpObj,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetHomeAsync(id, ct))
 		};
 	}
@@ -309,7 +353,7 @@ RETURN c.value AS nextKey
 			Id = id,
 			Object = sharpObj,
 			Aliases = aliases,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetExitDestinationAsync(id, ct))
 		};
 	}
@@ -409,7 +453,7 @@ RETURN destObj
 		_ => new None());
 	}
 
-	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct)
+	public async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
 		var result = await ExecuteWithRetryAsync("""
@@ -438,17 +482,7 @@ RETURN ownerObj, ownerTyped
 			yield return MapNodeToFlag(record["f"].As<INode>());
 		}
 
-		yield return new SharpObjectFlag
-		{
-			Name = type,
-			SetPermissions = [],
-			TypeRestrictions = [],
-			Symbol = type[0].ToString(),
-			System = true,
-			UnsetPermissions = [],
-			Id = null,
-			Aliases = []
-		};
+		yield return ObjectTypeFlag.For(type);
 	}
 
 	private async IAsyncEnumerable<SharpPower> GetPowersForIdAsync(string objectId, [EnumeratorCancellation] CancellationToken ct = default)
@@ -729,23 +763,23 @@ RETURN o, p
 	private async IAsyncEnumerable<SharpObject> GetChildrenAsyncInner(string objectId, [EnumeratorCancellation] CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
-		var result = await ExecuteWithRetryAsync("MATCH (child:Object)-[:HAS_PARENT]->(parent:Object {key: $key}) RETURN child", new { key }, ct);
+		var result = await ExecuteWithRetryAsync("MATCH (child:Object)-[:HAS_PARENT]->(parent:Object {key: $key}) RETURN child" + RelationColumns("child"), new { key }, ct);
 
 		foreach (var record in result.Result)
 		{
-			yield return MapNodeToSharpObject(record["child"].As<INode>());
+			yield return MapNodeToSharpObject(record["child"].As<INode>(), RelationsOf(record));
 		}
 	}
 
-	private async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct)
+	public async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
-		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_ZONE]->(z:Object) RETURN z", new { key }, ct);
+		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_ZONE]->(z:Object) RETURN z" + RelationColumns("z"), new { key }, ct);
 
 		if (result.Result.Count == 0) return new None();
 
 		var zoneObjNode = result.Result[0]["z"].As<INode>();
-		return await BuildTypedObjectFromObjectNode(zoneObjNode, ct);
+		return await BuildTypedObjectFromObjectNode(zoneObjNode, ct, RelationsOf(result.Result[0]));
 	}
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]

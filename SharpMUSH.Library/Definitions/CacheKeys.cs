@@ -19,6 +19,22 @@ public static class CacheKeys
 	public static string Object(int number) => $"object:#{number}";
 	public static string Object(DBRef dbref) => Object(dbref.Number);
 
+	/// <summary>
+	/// Tag carried by every cached result that embeds object <paramref name="number"/> - a contents
+	/// list, a location answer, a player-by-name lookup - stamped by the caching behaviours from the
+	/// value itself. Removed whenever a command invalidates the object's own key, so a write to an
+	/// object expires every entry holding a snapshot of it, not only its node.
+	/// </summary>
+	public static string ObjectTag(int number) => $"obj:#{number}";
+
+	/// <summary>The object number an <see cref="Object(int)"/> key names, if it is one.</summary>
+	public static bool TryParseObjectNumber(string key, out int number)
+	{
+		number = 0;
+		return key.StartsWith("object:#", StringComparison.Ordinal)
+			&& int.TryParse(key.AsSpan("object:#".Length), out number);
+	}
+
 	public static string Contents(int number) => $"object-contents:#{number}";
 	public static string Contents(DBRef dbref) => Contents(dbref.Number);
 

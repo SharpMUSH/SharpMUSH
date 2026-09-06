@@ -28,9 +28,10 @@ public sealed class MemgraphStagingDatabase : MemgraphDatabase, IStagingDatabase
 		ILogger<MemgraphDatabase> logger,
 		IDriver driver,
 		IPasswordService passwordService,
+		IObjectRelationLoader relations,
 		string backupPath,
 		string stagingId)
-		: base(logger, driver, passwordService)
+		: base(logger, driver, passwordService, relations)
 	{
 		_driver = driver;
 		_logger = logger;

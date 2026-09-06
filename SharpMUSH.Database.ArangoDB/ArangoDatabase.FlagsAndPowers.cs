@@ -145,17 +145,7 @@ public partial class ArangoDatabase
 			yield return SharpObjectFlagQueryToSharpFlag(item);
 		}
 
-		yield return new SharpObjectFlag()
-		{
-			Name = type,
-			SetPermissions = [],
-			TypeRestrictions = [],
-			Symbol = type[0].ToString(),
-			System = true,
-			UnsetPermissions = [],
-			Id = null,
-			Aliases = []
-		};
+		yield return ObjectTypeFlag.For(type);
 	}
 	private SharpObjectFlag SharpObjectFlagQueryToSharpFlag(SharpObjectFlagQueryResult x) =>
 		new()

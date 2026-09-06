@@ -23,10 +23,42 @@ public partial class SurrealDatabase(
 	ILogger<SurrealDatabase> logger,
 	ISurrealDbClient db,
 	IPasswordService passwordService,
+	IObjectRelationLoader relations,
 	IReadOnlyList<IMigrationSource>? migrationSources = null,
 	IReadOnlyList<PluginFlag>? pluginFlags = null
 ) : ISharpDatabase
 {
+	/// <summary>
+	/// SurrealQL: the object fields plus its flag and power records, so an object arrives with its
+	/// relations in the round trip that loads it and no <c>HasFlag</c> / <c>HasPower</c> re-reads
+	/// storage through a loaded instance. Deserialised into <see cref="ObjectRecord.flags"/> and
+	/// <see cref="ObjectRecord.powers"/>.
+	/// </summary>
+	private const string ObjectWithRelations = "*, ->has_flags->object_flag.* AS flags, ->has_powers->power.* AS powers";
+
+	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(string id, string type, List<FlagRecord>? records)
+	{
+		var upperType = type.ToUpper();
+		if (records is null)
+		{
+			return new(() => new FreshAsyncEnumerable<SharpObjectFlag>(ct => GetObjectFlagsForIdAsync(id, upperType, ct)));
+		}
+
+		var flags = records.Select(MapRecordToFlag).Append(ObjectTypeFlag.For(upperType)).ToArray();
+		return new(() => flags.ToAsyncEnumerable());
+	}
+
+	private Lazy<IAsyncEnumerable<SharpPower>> PowersOf(string id, List<PowerRecord>? records)
+	{
+		if (records is null)
+		{
+			return new(() => new FreshAsyncEnumerable<SharpPower>(ct => GetPowersForIdAsync(id, ct)));
+		}
+
+		var powers = records.Select(MapRecordToPower).ToArray();
+		return new(() => powers.ToAsyncEnumerable());
+	}
+
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
 
 	// Per-instance: each SurrealDatabase owns one database (live, staging, or a test's private
@@ -299,15 +331,15 @@ public partial class SurrealDatabase(
 			ModifiedTime = modifiedTime,
 			Warnings = warnings,
 			Locks = DeserializeLocks(locksJson),
-			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => GetObjectFlagsForIdAsync(id, type.ToUpper(), enumCt))),
-			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(enumCt => GetPowersForIdAsync(id, enumCt))),
+			Flags = FlagsOf(id, type, record.flags),
+			Powers = PowersOf(id, record.powers),
 			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),
 			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
 			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesForIdAsync(id, enumCt))),
 			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesForIdAsync(id, enumCt))),
-			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
-			Parent = new(async ct => await GetParentForObjectAsync(id, ct)),
-			Zone = new(async ct => await GetZoneAsync(id, ct)),
+			Owner = new(ct => relations.OwnerOf(id, record.key, ct)),
+			Parent = new(ct => relations.ParentOf(id, record.key, ct)),
+			Zone = new(ct => relations.ZoneOf(id, record.key, ct)),
 			Children = new(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(id, enumCt)!))
 		};
 	}
@@ -345,7 +377,7 @@ public partial class SurrealDatabase(
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var objResult = await ExecuteAsync(
-			"SELECT * FROM object:$key",
+			$"SELECT {ObjectWithRelations} FROM object:$key",
 			parameters, ct);
 
 		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
@@ -386,7 +418,7 @@ public partial class SurrealDatabase(
 			PasswordHash = playerRecord.passwordHash,
 			PasswordSalt = playerRecord.passwordSalt,
 			Quota = playerRecord.quota,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetHomeAsync(id, ct))
 		};
 	}
@@ -407,7 +439,7 @@ public partial class SurrealDatabase(
 		{
 			Id = id,
 			Object = sharpObj,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetHomeAsync(id, ct))
 		};
 	}
@@ -419,7 +451,7 @@ public partial class SurrealDatabase(
 			Id = id,
 			Object = sharpObj,
 			Aliases = exitRecord.aliases,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetExitDestinationAsync(id, ct))
 		};
 	}
@@ -518,7 +550,7 @@ public partial class SurrealDatabase(
 			_ => new None());
 	}
 
-	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct)
+	public async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
@@ -535,7 +567,7 @@ public partial class SurrealDatabase(
 
 		var ownerObjParams = new Dictionary<string, object?> { ["key"] = ownerKey };
 		var ownerObjResult = await ExecuteAsync(
-			"SELECT * FROM object:$key",
+			$"SELECT {ObjectWithRelations} FROM object:$key",
 			ownerObjParams, ct);
 		var ownerObjRecords = ownerObjResult.GetValue<List<ObjectRecord>>(0)!;
 		if (ownerObjRecords.Count == 0)
@@ -550,7 +582,7 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT * FROM object:$key->has_parent->object",
+			$"SELECT {ObjectWithRelations} FROM object:$key->has_parent->object",
 			parameters, ct);
 
 		var records = result.GetValue<List<ObjectRecord>>(0)!;
@@ -559,12 +591,12 @@ public partial class SurrealDatabase(
 		return await BuildTypedObjectFromObjectRecord(records[0], ct);
 	}
 
-	private async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct)
+	public async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT * FROM object:$key->has_zone->object",
+			$"SELECT {ObjectWithRelations} FROM object:$key->has_zone->object",
 			parameters, ct);
 
 		var records = result.GetValue<List<ObjectRecord>>(0)!;
@@ -587,17 +619,7 @@ public partial class SurrealDatabase(
 			yield return MapRecordToFlag(record);
 		}
 
-		yield return new SharpObjectFlag
-		{
-			Name = type,
-			SetPermissions = [],
-			TypeRestrictions = [],
-			Symbol = type[0].ToString(),
-			System = true,
-			UnsetPermissions = [],
-			Id = null,
-			Aliases = []
-		};
+		yield return ObjectTypeFlag.For(type);
 	}
 
 	private async IAsyncEnumerable<SharpPower> GetPowersForIdAsync(string objectId, [EnumeratorCancellation] CancellationToken ct = default)
@@ -687,7 +709,7 @@ public partial class SurrealDatabase(
 		var pKey = playerRecord.key;
 
 		var objParams = new Dictionary<string, object?> { ["key"] = pKey };
-		var objResult = await ExecuteAsync("SELECT * FROM object:$key", objParams, ct);
+		var objResult = await ExecuteAsync($"SELECT {ObjectWithRelations} FROM object:$key", objParams, ct);
 		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
 		if (objRecords.Count == 0) return null;
 
@@ -912,7 +934,7 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT * FROM object:$key<-has_parent<-object",
+			$"SELECT {ObjectWithRelations} FROM object:$key<-has_parent<-object",
 			parameters, ct);
 
 		var records = result.GetValue<List<ObjectRecord>>(0)!;
@@ -938,6 +960,10 @@ public partial class SurrealDatabase(
 		public long modifiedTime { get; set; }
 		public string locks { get; set; } = "{}";
 		public int warnings { get; set; }
+
+		// Present only when the query projected ObjectWithRelations; null means load on first use.
+		public List<FlagRecord>? flags { get; set; }
+		public List<PowerRecord>? powers { get; set; }
 	}
 
 	internal record PlayerRecord

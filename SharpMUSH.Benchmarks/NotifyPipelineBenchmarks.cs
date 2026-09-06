@@ -12,8 +12,6 @@ namespace SharpMUSH.Benchmarks;
 public class NotifyPipelineBenchmarks : BaseBenchmark
 {
 	private INotifyService? _notifyService;
-	private IMUSHCodeParser? _parser;
-
 	private static readonly MString ShortMsg = MModule.single("Hello World");
 	private static readonly MString LongMsg = MModule.single(new string('x', 1000));
 	private static readonly MString ThinkCmd = MModule.single("think Hello World");
@@ -23,7 +21,6 @@ public class NotifyPipelineBenchmarks : BaseBenchmark
 	{
 		await base.Setup().ConfigureAwait(false);
 		_notifyService = _server!.Services.GetRequiredService<INotifyService>();
-		_parser = await TestParser().ConfigureAwait(false);
 	}
 
 	[Benchmark(Description = "INotifyService.Notify — single short message")]
@@ -50,9 +47,9 @@ public class NotifyPipelineBenchmarks : BaseBenchmark
 
 	[Benchmark(Description = "CommandParse think — full output path")]
 	public async Task ThinkThroughPipeline() =>
-		await _parser!.CommandParse(ThinkCmd);
+		await FreshParser().CommandParse(ThinkCmd);
 
 	[Benchmark(Description = "CommandParse @pemit — full output path")]
 	public async Task PemitThroughPipeline() =>
-		await _parser!.CommandParse(PemitCmd);
+		await FreshParser().CommandParse(PemitCmd);
 }

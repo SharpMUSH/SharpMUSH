@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Library.Behaviors;
@@ -77,6 +78,14 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache)
 		foreach (var key in message.CacheKeys)
 		{
 			await cache.RemoveAsync(key, token: cancellationToken);
+
+			// A write to an object reaches every cached result holding a snapshot of it, not only
+			// its node: the contents list it sits in, an occupant's location answer, a lookup by
+			// name. Those carry the object's tag (see EmbeddedObjects); expire them with the key.
+			if (CacheKeys.TryParseObjectNumber(key, out var number))
+			{
+				await cache.RemoveByTagAsync(CacheKeys.ObjectTag(number), token: cancellationToken);
+			}
 		}
 
 		if (message.CacheTags.Length != 0)
