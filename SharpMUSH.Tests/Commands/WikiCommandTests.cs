@@ -1119,7 +1119,7 @@ public class WikiCommandTests
 	/// <c>ToString()</c> as <see cref="ExpectNotify"/> does could never see this: the ANSI form of a
 	/// command link is plain underlined text, because OSC 8 can only navigate to a URL.
 	/// </summary>
-	private async Task ExpectNotifyRendered(SharpMUSH.Library.Models.DBRef player, string format, string contains)
+	private async Task ExpectNotifyRendered(SharpMUSH.Library.Models.DBRef player, MarkupFormat format, string contains)
 	{
 		await NotifyService
 			.Received(1)
@@ -1160,8 +1160,8 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single($"@wiki {page.Slug}"));
 
-		await ExpectNotifyRendered(player.DbRef, "html", "xch_cmd=\"@wiki help:general:markdown_guide\"");
-		await ExpectNotifyRendered(player.DbRef, "pueblo", "XCH_CMD=\"@wiki help:general:markdown_guide\"");
+		await ExpectNotifyRendered(player.DbRef, MarkupFormat.Html, "xch_cmd=\"@wiki help:general:markdown_guide\"");
+		await ExpectNotifyRendered(player.DbRef, MarkupFormat.Pueblo, "XCH_CMD=\"@wiki help:general:markdown_guide\"");
 		// The display text is the page title, never the raw target, and the brackets never leak.
 		await ExpectNotifyPlainText(player.DbRef, "See Markdown Guide for details.");
 	}

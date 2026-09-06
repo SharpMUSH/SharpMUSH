@@ -1,10 +1,9 @@
-﻿using MarkupString;
-using MarkupString.MarkupImplementation;
+using MarkupString;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using Serilog;
 using SharpMUSH.Library.ParserInterfaces;
-using System.Text;
 using A = MarkupString.MarkupStringModule;
-using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -15,36 +14,26 @@ public class StringFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
+	// The colour is a palette index plus a brightness flag now, not a byte stream, and the
+	// comparison is on the rendered ANSI rather than on ToString() — which is plain text.
 	[Test]
-	[Arguments("ansi(r,red)", "red", (byte)31, null)]
-	[Arguments("ansi(hr,red)", "red", (byte)1, (byte)31)]
-	[Arguments("ansi(y,yellow)", "yellow", (byte)33, null)]
-	[Arguments("ansi(hy,yellow)", "yellow", (byte)1, (byte)33)]
-	public async Task ANSI(string str, string expectedText, byte expectedByte1, byte? expectedByte2)
+	[Arguments("ansi(r,red)", "red", (byte)1, false)]
+	[Arguments("ansi(hr,red)", "red", (byte)1, true)]
+	[Arguments("ansi(y,yellow)", "yellow", (byte)3, false)]
+	[Arguments("ansi(hy,yellow)", "yellow", (byte)3, true)]
+	public async Task ANSI(string str, string expectedText, byte paletteIndex, bool bright)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var expectedBytes = expectedByte2 is null
-			? new[] { expectedByte1 }
-			: new[] { expectedByte1, expectedByte2.Value };
 
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 
-		var color = StringExtensions.AnsiBytes(expectedBytes);
-		var markup = AnsiMarkup.Create(foreground: color);
+		var markup = AnsiMarkup.Create(foreground: new AnsiColor.Standard(paletteIndex, bright));
 		var markedUpString = A.MarkupSingle2(markup, A.single(expectedText));
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine,
 			markedUpString);
 
-		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
-		var nextExpectedBytes = Encoding.Unicode.GetBytes(markedUpString.ToString());
-
-		foreach (var bt in resultBytes.Zip(nextExpectedBytes))
-		{
-			await Assert
-				.That(bt.First)
-				.IsEqualTo(bt.Second);
-		}
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo(markedUpString.Render(MarkupFormat.Ansi));
 	}
 
 	[Test]
@@ -83,37 +72,26 @@ public class StringFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
+	// A background has no bright variant, so `h` in front of one is the bold attribute — see
+	// AnsiCodeParser. Compared on the rendered ANSI, since ToString() is now plain text.
 	[Test]
-	[Arguments("ansi(R,red)", "red", (byte)41, null)]
-	[Arguments("ansi(hR,red)", "red", (byte)1, (byte)41)]
-	[Arguments("ansi(Y,yellow)", "yellow", (byte)43, null)]
-	[Arguments("ansi(hY,yellow)", "yellow", (byte)1, (byte)43)]
-	public async Task ANSIBackground(string str, string expectedText, byte expectedByte1, byte? expectedByte2)
+	[Arguments("ansi(R,red)", "red", (byte)1, false)]
+	[Arguments("ansi(hR,red)", "red", (byte)1, true)]
+	[Arguments("ansi(Y,yellow)", "yellow", (byte)3, false)]
+	[Arguments("ansi(hY,yellow)", "yellow", (byte)3, true)]
+	public async Task ANSIBackground(string str, string expectedText, byte paletteIndex, bool bold)
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var expectedBytes = expectedByte2 is null
-			? new[] { expectedByte1 }
-			: new[] { expectedByte1, expectedByte2.Value };
-
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 
-		var color = StringExtensions.AnsiBytes(expectedBytes);
-		var markup = AnsiMarkup.Create(background: color);
+		var markup = AnsiMarkup.Create(background: new AnsiColor.Standard(paletteIndex, false), bold: bold);
 		var markedUpString = A.MarkupSingle2(markup, A.single(expectedText));
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine,
 			markedUpString);
 
-		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
-		var nextExpectedBytes = Encoding.Unicode.GetBytes(markedUpString.ToString());
-
-		foreach (var bt in resultBytes.Zip(nextExpectedBytes))
-		{
-			await Assert
-				.That(bt.First)
-				.IsEqualTo(bt.Second);
-		}
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo(markedUpString.Render(MarkupFormat.Ansi));
 	}
 
 	[Test]

@@ -29,6 +29,14 @@
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
+		<ProjectReference Include="..\..\..\SharpMUSH.MarkupString.Ansi\SharpMUSH.MarkupString.Ansi.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+				</ProjectReference>
+		<ProjectReference Include="..\..\..\SharpMUSH.MarkupString.Html\SharpMUSH.MarkupString.Html.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+				</ProjectReference>
 		<!-- The source generator referenced as an analyzer: the plugin's [SharpCommand]/[SharpFunction]
 		     methods produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
 		     FunctionLibrary.Functions inside THIS assembly. ReferenceOutputAssembly=false because we only

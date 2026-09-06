@@ -222,7 +222,7 @@ else
         try
         {
             // Fully qualified: in a .razor file the bare "MarkupString" binds to Blazor's type.
-            return global::MarkupString.MarkupStringModule.deserialize(value).Render("html");
+            return global::MarkupString.MarkupStringModule.deserialize(value).Render(MarkupFormat.Html);
         }
         catch (Exception)
         {

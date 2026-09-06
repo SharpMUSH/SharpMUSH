@@ -1,4 +1,5 @@
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -26,7 +27,7 @@ public class BracketDepthColouringTests
 	private MString Format(string src, IReadOnlyList<ParseError>? errors = null)
 		=> SoftcodeFormatter.Format(MModule.single(src), TestLexer.Lex(src), [], errors ?? [], 78, Parser);
 
-	private static AnsiStructure? StyleAt(MString ms, int offset)
+	private static AnsiStyle? StyleAt(MString ms, int offset)
 	{
 		foreach (var run in ms.Runs)
 		{
@@ -34,7 +35,7 @@ public class BracketDepthColouringTests
 				continue;
 			foreach (var markup in run.Markups)
 				if (markup is AnsiMarkup ansi)
-					return ansi.Details;
+					return ansi.Style;
 			return null;
 		}
 
@@ -44,15 +45,15 @@ public class BracketDepthColouringTests
 	[Test]
 	public async Task AdjacentDepths_GetDifferentColours()
 	{
-		await Assert.That(SemanticTokenAnsiPalette.GetBracketDepthStyle(0).Details)
-			.IsNotEqualTo(SemanticTokenAnsiPalette.GetBracketDepthStyle(1).Details);
+		await Assert.That(SemanticTokenAnsiPalette.GetBracketDepthStyle(0).Style)
+			.IsNotEqualTo(SemanticTokenAnsiPalette.GetBracketDepthStyle(1).Style);
 	}
 
 	[Test]
 	public async Task DepthsCycle_SoArbitrarilyDeepNestingStillHasAColour()
 	{
-		var first = SemanticTokenAnsiPalette.GetBracketDepthStyle(0).Details;
-		var cycled = SemanticTokenAnsiPalette.GetBracketDepthStyle(SemanticTokenAnsiPalette.BracketDepthColorCount).Details;
+		var first = SemanticTokenAnsiPalette.GetBracketDepthStyle(0).Style;
+		var cycled = SemanticTokenAnsiPalette.GetBracketDepthStyle(SemanticTokenAnsiPalette.BracketDepthColorCount).Style;
 
 		await Assert.That(cycled).IsEqualTo(first);
 	}

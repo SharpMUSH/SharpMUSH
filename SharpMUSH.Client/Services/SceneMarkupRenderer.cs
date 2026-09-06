@@ -18,7 +18,7 @@ public static class SceneMarkupRenderer
 
 		try
 		{
-			return global::MarkupString.MarkupStringModule.deserialize(markup).Render("html");
+			return global::MarkupString.MarkupStringModule.deserialize(markup).Render(MarkupFormat.Html);
 		}
 		catch (Exception)
 		{

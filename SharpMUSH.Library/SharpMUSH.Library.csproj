@@ -143,6 +143,8 @@
 	  <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" PrivateAssets="all" />
 	  <ProjectReference Include="..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" PrivateAssets="all" />
 	  <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" PrivateAssets="all" />
+	  <ProjectReference Include="..\SharpMUSH.MarkupString.Ansi\SharpMUSH.MarkupString.Ansi.csproj" PrivateAssets="all" />
+	  <ProjectReference Include="..\SharpMUSH.MarkupString.Html\SharpMUSH.MarkupString.Html.csproj" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

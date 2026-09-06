@@ -1,5 +1,5 @@
 using Serilog;
-using SharpMUSH.MarkupString.TextAlignerModule;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Tests.Markup.Data;
 using A = MarkupString.MarkupStringModule;
 
@@ -9,7 +9,7 @@ public class AlignUnitTests
 {
 	private static MString CallAlign(string widths, MString[] columns, MString filler, MString columnSeparator, MString rowSeparator)
 	{
-		return TextAlignerModule.align(widths, columns, filler, columnSeparator, rowSeparator);
+		return TextAligner.Align(widths, columns, filler, columnSeparator, rowSeparator);
 	}
 
 	[Test]

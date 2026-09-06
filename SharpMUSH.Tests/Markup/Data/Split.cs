@@ -1,7 +1,7 @@
-﻿using System.Drawing;
+using System.Drawing;
 using A = MarkupString.MarkupStringModule;
-using M = MarkupString.MarkupImplementation.AnsiMarkup;
-using StringExtensions = ANSILibrary.StringExtensions;
+using M = MarkupString.Ansi.AnsiMarkup;
+using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Tests.Markup.Data;
 
@@ -66,20 +66,20 @@ internal static class Split
 			}
 		),
 		() => new (
-			A.concat(A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "red"), A.single(";cat")), ";",
+			A.concat(A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "red"), A.single(";cat")), ";",
 			new[]
 			{
-				A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "red"),
+				A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "red"),
 				A.single("cat")
 			}
 		),
 		() => new (
-			A.concat(A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "r;e;d"), A.single("c;at")), ";",
+			A.concat(A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "r;e;d"), A.single("c;at")), ";",
 			new[]
 			{
-				A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "r"),
-				A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "e"),
-				A.multiple([A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "d"), A.single("c")]),
+				A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "r"),
+				A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "e"),
+				A.multiple([A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "d"), A.single("c")]),
 				A.single("at")
 			}
 		)

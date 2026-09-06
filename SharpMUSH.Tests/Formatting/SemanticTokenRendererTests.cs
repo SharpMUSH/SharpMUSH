@@ -1,4 +1,5 @@
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using Range = SharpMUSH.Library.Models.Range;
@@ -37,7 +38,7 @@ public class SemanticTokenRendererTests
 		var src = MModule.single("add(1,2)");
 		var styled = SemanticTokenRenderer.Render(src, [Tok(0, "add(", SemanticTokenType.Function)]);
 
-		await Assert.That(MModule.render("ansi", styled)).IsNotEqualTo(MModule.render("ansi", src));
+		await Assert.That(styled.Render(MarkupFormat.Ansi)).IsNotEqualTo(src.Render(MarkupFormat.Ansi));
 	}
 
 	/// <summary>
@@ -51,12 +52,12 @@ public class SemanticTokenRendererTests
 	public async Task OverrideStillAppliesWhenThereAreNoSemanticTokensAtAll()
 	{
 		var src = MModule.single("add(1,2)");
-		var red = AnsiCodeParser.ParseCodes("r");
+		var red = AnsiCodeParser.Parse("r");
 
 		var result = SemanticTokenRenderer.Render(src, [], offset => offset < 3 ? red : null);
 
 		await Assert.That(MModule.plainText(result)).IsEqualTo("add(1,2)");
-		await Assert.That(StyleDetailsAt(result, 0)).IsEqualTo(red.Details);
+		await Assert.That(StyleDetailsAt(result, 0)).IsEqualTo(red.Style);
 		await Assert.That(StyleDetailsAt(result, 3)).IsNull();
 	}
 
@@ -64,13 +65,13 @@ public class SemanticTokenRendererTests
 	public async Task OverrideTakesPrecedenceOverPalette()
 	{
 		var src = MModule.single("add(1,2)");
-		var red = AnsiCodeParser.ParseCodes("r");
+		var red = AnsiCodeParser.Parse("r");
 		var withOverride = SemanticTokenRenderer.Render(src,
 			[Tok(0, "add(", SemanticTokenType.Function)], offset => offset < 4 ? red : null);
 		var withoutOverride = SemanticTokenRenderer.Render(src,
 			[Tok(0, "add(", SemanticTokenType.Function)]);
 
-		await Assert.That(MModule.render("ansi", withOverride)).IsNotEqualTo(MModule.render("ansi", withoutOverride));
+		await Assert.That(withOverride.Render(MarkupFormat.Ansi)).IsNotEqualTo(withoutOverride.Render(MarkupFormat.Ansi));
 		await Assert.That(MModule.plainText(withOverride)).IsEqualTo("add(1,2)");
 	}
 
@@ -80,9 +81,9 @@ public class SemanticTokenRendererTests
 	private static readonly AnsiMarkup NumberStyle =
 		SemanticTokenAnsiPalette.GetStyle(SemanticTokenType.Number, SemanticTokenModifier.None)!;
 
-	/// <summary>The <see cref="AnsiStructure"/> of the first <see cref="AnsiMarkup"/> covering
+	/// <summary>The <see cref="AnsiStyle"/> of the first <see cref="AnsiMarkup"/> covering
 	/// <paramref name="offset"/>, or null if that offset carries no ansi markup.</summary>
-	private static AnsiStructure? StyleDetailsAt(MString ms, int offset)
+	private static AnsiStyle? StyleDetailsAt(MString ms, int offset)
 	{
 		foreach (var run in ms.Runs)
 		{
@@ -90,7 +91,7 @@ public class SemanticTokenRendererTests
 				continue;
 			foreach (var markup in run.Markups)
 				if (markup is AnsiMarkup ansi)
-					return ansi.Details;
+					return ansi.Style;
 			return null;
 		}
 		return null;
@@ -100,23 +101,23 @@ public class SemanticTokenRendererTests
 	public async Task OverrideAppliesToSubRangeOfSingleToken()
 	{
 		var src = MModule.single("add(1,2)");
-		var red = AnsiCodeParser.ParseCodes("r");
+		var red = AnsiCodeParser.Parse("r");
 		// Override only the middle 'd' (offset 1) of the "add(" Function token (offsets 0-3).
 		var result = SemanticTokenRenderer.Render(src,
 			[Tok(0, "add(", SemanticTokenType.Function)], offset => offset == 1 ? red : null);
 
 		await Assert.That(MModule.plainText(result)).IsEqualTo("add(1,2)");
-		await Assert.That(StyleDetailsAt(result, 0)).IsEqualTo(FunctionStyle.Details);
-		await Assert.That(StyleDetailsAt(result, 1)).IsEqualTo(red.Details);
-		await Assert.That(StyleDetailsAt(result, 2)).IsEqualTo(FunctionStyle.Details);
-		await Assert.That(StyleDetailsAt(result, 3)).IsEqualTo(FunctionStyle.Details);
+		await Assert.That(StyleDetailsAt(result, 0)).IsEqualTo(FunctionStyle.Style);
+		await Assert.That(StyleDetailsAt(result, 1)).IsEqualTo(red.Style);
+		await Assert.That(StyleDetailsAt(result, 2)).IsEqualTo(FunctionStyle.Style);
+		await Assert.That(StyleDetailsAt(result, 3)).IsEqualTo(FunctionStyle.Style);
 	}
 
 	[Test]
 	public async Task OverrideAppliesToGapBetweenTokens()
 	{
 		var src = MModule.single("add(1,2)");
-		var red = AnsiCodeParser.ParseCodes("r");
+		var red = AnsiCodeParser.Parse("r");
 		// Tokens cover [0,4) and [6,7); the gap [4,6) is "1,". Override only the comma (offset 5).
 		var result = SemanticTokenRenderer.Render(src,
 			[Tok(0, "add(", SemanticTokenType.Function), Tok(6, "2", SemanticTokenType.Number)],
@@ -124,15 +125,15 @@ public class SemanticTokenRendererTests
 
 		await Assert.That(MModule.plainText(result)).IsEqualTo("add(1,2)");
 		await Assert.That(StyleDetailsAt(result, 4)).IsNull(); // '1' — untouched gap text
-		await Assert.That(StyleDetailsAt(result, 5)).IsEqualTo(red.Details); // ',' — overridden gap text
-		await Assert.That(StyleDetailsAt(result, 6)).IsEqualTo(NumberStyle.Details); // '2' — palette still applies
+		await Assert.That(StyleDetailsAt(result, 5)).IsEqualTo(red.Style); // ',' — overridden gap text
+		await Assert.That(StyleDetailsAt(result, 6)).IsEqualTo(NumberStyle.Style); // '2' — palette still applies
 	}
 
 	[Test]
 	public async Task OverrideStraddlesTokenBoundary()
 	{
 		var src = MModule.single("add(1,2)");
-		var red = AnsiCodeParser.ParseCodes("r");
+		var red = AnsiCodeParser.Parse("r");
 		// Tokens are adjacent: [0,4) Function, [4,5) Number. Override offsets 3 and 4, which
 		// straddles the boundary between the two tokens.
 		var result = SemanticTokenRenderer.Render(src,
@@ -140,9 +141,9 @@ public class SemanticTokenRendererTests
 			offset => offset is 3 or 4 ? red : null);
 
 		await Assert.That(MModule.plainText(result)).IsEqualTo("add(1,2)");
-		await Assert.That(StyleDetailsAt(result, 2)).IsEqualTo(FunctionStyle.Details);
-		await Assert.That(StyleDetailsAt(result, 3)).IsEqualTo(red.Details);
-		await Assert.That(StyleDetailsAt(result, 4)).IsEqualTo(red.Details);
+		await Assert.That(StyleDetailsAt(result, 2)).IsEqualTo(FunctionStyle.Style);
+		await Assert.That(StyleDetailsAt(result, 3)).IsEqualTo(red.Style);
+		await Assert.That(StyleDetailsAt(result, 4)).IsEqualTo(red.Style);
 	}
 
 	[Test]
@@ -164,10 +165,10 @@ public class SemanticTokenRendererTests
 		await Assert.That(MModule.plainText(result)).IsEqualTo("add(1,2)");
 		// Offsets 2-3 stay owned by the first token; only the clamped remainder (4-5) of the
 		// overlapping token is emitted, with its own style.
-		await Assert.That(StyleDetailsAt(result, 2)).IsEqualTo(FunctionStyle.Details);
-		await Assert.That(StyleDetailsAt(result, 3)).IsEqualTo(FunctionStyle.Details);
-		await Assert.That(StyleDetailsAt(result, 4)).IsEqualTo(NumberStyle.Details);
-		await Assert.That(StyleDetailsAt(result, 5)).IsEqualTo(NumberStyle.Details);
+		await Assert.That(StyleDetailsAt(result, 2)).IsEqualTo(FunctionStyle.Style);
+		await Assert.That(StyleDetailsAt(result, 3)).IsEqualTo(FunctionStyle.Style);
+		await Assert.That(StyleDetailsAt(result, 4)).IsEqualTo(NumberStyle.Style);
+		await Assert.That(StyleDetailsAt(result, 5)).IsEqualTo(NumberStyle.Style);
 	}
 
 	[Test]
@@ -181,7 +182,7 @@ public class SemanticTokenRendererTests
 		// write it" for a caller like Task 5's error-span override. If run-merging depended on
 		// ReferenceEquals (round 1) or on AnsiColor.ANSI's pre-fix reference-equal array field, every
 		// character here would re-fragment into its own run despite being visually identical.
-		Func<int, AnsiMarkup?> freshRedEachCall = _ => AnsiCodeParser.ParseCodes("r");
+		Func<int, AnsiMarkup?> freshRedEachCall = _ => AnsiCodeParser.Parse("r");
 		var result = SemanticTokenRenderer.Render(src,
 			[Tok(0, "add(", SemanticTokenType.Function)], freshRedEachCall);
 
@@ -190,7 +191,7 @@ public class SemanticTokenRendererTests
 		// Four structurally-identical-but-distinct-instance styles across four characters must still
 		// collapse into a single AttributeRun.
 		await Assert.That(result.Runs.Length).IsEqualTo(1);
-		await Assert.That(StyleDetailsAt(result, 0)).IsEqualTo(AnsiCodeParser.ParseCodes("r").Details);
-		await Assert.That(StyleDetailsAt(result, 3)).IsEqualTo(AnsiCodeParser.ParseCodes("r").Details);
+		await Assert.That(StyleDetailsAt(result, 0)).IsEqualTo(AnsiCodeParser.Parse("r").Style);
+		await Assert.That(StyleDetailsAt(result, 3)).IsEqualTo(AnsiCodeParser.Parse("r").Style);
 	}
 }

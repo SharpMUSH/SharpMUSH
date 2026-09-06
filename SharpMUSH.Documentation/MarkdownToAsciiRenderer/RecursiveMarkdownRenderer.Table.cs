@@ -1,6 +1,6 @@
 using Markdig.Extensions.Tables;
-using SharpMUSH.MarkupString;
-using SharpMUSH.MarkupString.TextAlignerModule;
+using MarkupString;
+using SharpMUSH.Library.Markup;
 using System.Text;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -48,7 +48,7 @@ public partial class RecursiveMarkdownRenderer
 
 			var borderlessRows = allRows
 				.Where(r => !r.IsHeader)
-				.Select(r => TextAlignerModule.align(
+				.Select(r => TextAligner.Align(
 					borderlessSpecs.ToString(),
 					r.Cells,
 					MModule.single(" "),
@@ -90,7 +90,7 @@ public partial class RecursiveMarkdownRenderer
 		{
 			var (isHeader, cells) = allRows[rowIndex];
 
-			var alignedRow = TextAlignerModule.align(
+			var alignedRow = TextAligner.Align(
 				columnSpecs.ToString(),
 				cells,
 				MModule.single(" "),

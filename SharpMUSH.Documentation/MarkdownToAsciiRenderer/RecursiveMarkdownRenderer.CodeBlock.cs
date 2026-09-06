@@ -1,12 +1,12 @@
-using ANSILibrary;
 using ColorCode;
 using ColorCode.Common;
 using ColorCode.Parsing;
 using Markdig.Syntax;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
-using SharpMUSH.MarkupString;
-using SharpMUSH.MarkupString.TextAlignerModule;
+using MarkupString;
+using SharpMUSH.Library.Markup;
 using System.Drawing;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -69,7 +69,7 @@ public partial class RecursiveMarkdownRenderer
 	{
 		var contentWidth = Math.Max(1, _maxWidth - 2); // 1 (gutter col) + 1 (separator)
 		var allContent = MModule.multipleWithDelimiter(MModule.single("\n"), lineContents);
-		return TextAlignerModule.align(
+		return TextAligner.Align(
 			$"1 <{contentWidth}",
 			[MModule.empty(), allContent],
 			MModule.single(" "),    // filler = space
@@ -139,7 +139,7 @@ public partial class RecursiveMarkdownRenderer
 				var color = style?.Foreground is not null ? ParseArgbHex(style.Foreground) : null;
 				if (color is not null && scope.Name != ScopeName.PlainText)
 				{
-					var ansiStyle = Ansi.Create(foreground: new AnsiColor.RGB(color.Value), bold: style!.Bold);
+					var ansiStyle = Ansi.Create(foreground: color.Value.ToAnsiColor(), bold: style!.Bold);
 					parts.Add(MModule.MarkupSingle(ansiStyle, scopeText));
 				}
 				else
@@ -207,7 +207,7 @@ public partial class RecursiveMarkdownRenderer
 		var styledLines = sourceLines.Select(line =>
 		{
 			var content = BuildSharpLineContent(line);
-			var aligned = TextAlignerModule.align(
+			var aligned = TextAligner.Align(
 				$"1 <{contentWidth}",
 				[MModule.empty(), content],
 				MModule.single(" "),

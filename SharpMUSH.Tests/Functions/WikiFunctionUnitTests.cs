@@ -323,9 +323,9 @@ public class WikiFunctionUnitTests
 		var text = (await Parser.FunctionParse(MModule.single($"wiki({page.Slug})")))!.Message!;
 		var markdown = (await Parser.FunctionParse(MModule.single($"wiki({page.Slug},markdown)")))!.Message!;
 
-		await Assert.That(text.Render("html")).DoesNotContain("xch_cmd");
-		await Assert.That(text.Render("pueblo")).DoesNotContain("XCH_CMD");
-		await Assert.That(markdown.Render("html")).DoesNotContain("xch_cmd");
+		await Assert.That(text.Render(MarkupFormat.Html)).DoesNotContain("xch_cmd");
+		await Assert.That(text.Render(MarkupFormat.Pueblo)).DoesNotContain("XCH_CMD");
+		await Assert.That(markdown.Render(MarkupFormat.Html)).DoesNotContain("xch_cmd");
 		await Assert.That(markdown.ToPlainText())
 			.Contains("[[Getting Started]]")
 			.Because("the markdown field is the source as authored, not a rendering of it");

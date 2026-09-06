@@ -1,8 +1,8 @@
-using ANSILibrary;
 using DotNext.Collections.Generic;
 using Humanizer;
 using MarkupString;
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Implementation.Tools;
@@ -14,15 +14,13 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
-using SharpMUSH.MarkupString;
-using SharpMUSH.MarkupString.TextAlignerModule;
+using SharpMUSH.Library.Markup;
 using System.Drawing;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
-using static ANSILibrary.ANSI;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -510,7 +508,7 @@ public partial class Functions
 			.Select(x => x.Value.Message!)
 			.ToArray();
 
-		return TextAlignerModule.align(widths,
+		return TextAligner.Align(widths,
 			columnArguments,
 			filler: remainder.Skip(0).FirstOrDefault(MModule.single(" ")),
 			columnSeparator: remainder.Skip(1).FirstOrDefault(MModule.single(" ")),
@@ -536,7 +534,7 @@ public partial class Functions
 			return ErrorMessages.Returns.InvalidAlignString;
 		}
 
-		return TextAlignerModule.align(widths, MModule.split2(colDelim, cols), filler, columnSeparator, rowSeparator);
+		return TextAligner.Align(widths, MModule.split2(colDelim, cols), filler, columnSeparator, rowSeparator);
 	}
 
 	[SharpFunction(Name = "alphamax", MinArgs = 1, MaxArgs = int.MaxValue,
@@ -1040,7 +1038,7 @@ public partial class Functions
 				=> markupType switch
 				{
 					Ansi ansiMarkup
-						=> ReconstructWebCall(ansiMarkup.Details, WebEncodeAngleBrackets(innerText)),
+						=> ReconstructWebCall(ansiMarkup.Style, WebEncodeAngleBrackets(innerText)),
 					_ => WebEncodeAngleBrackets(innerText)
 				},
 				parser.CurrentState.Arguments["0"].Message!));
@@ -1058,7 +1056,7 @@ public partial class Functions
 			return markupType switch
 			{
 				Ansi ansiMarkup
-					=> ReconstructAnsiCall(ansiMarkup.Details, innerText),
+					=> ReconstructAnsiCall(ansiMarkup.Style, innerText),
 				_ => innerText
 			};
 		}, input);
@@ -1119,9 +1117,9 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Reconstructs an ansi() function call from AnsiStructure and inner text
+	/// Reconstructs an ansi() function call from AnsiStyle and inner text
 	/// </summary>
-	internal static string ReconstructAnsiCall(AnsiStructure ansiDetails, string innerText)
+	internal static string ReconstructAnsiCall(AnsiStyle ansiDetails, string innerText)
 	{
 		var attributes = new List<string>();
 
@@ -1133,7 +1131,7 @@ public partial class Functions
 		if (ansiDetails.Inverted) formatPrefix += "i";
 
 		// Add foreground color (with formatting prefix if any)
-		if (!ansiDetails.Foreground.Equals(AnsiColor.NoAnsi.Instance))
+		if (ansiDetails.Foreground is not null)
 		{
 			var colorCode = ConvertAnsiColorToCode(ansiDetails.Foreground);
 			if (!string.IsNullOrEmpty(colorCode))
@@ -1171,7 +1169,7 @@ public partial class Functions
 		}
 
 		// Add background color
-		if (!ansiDetails.Background.Equals(AnsiColor.NoAnsi.Instance))
+		if (ansiDetails.Background is not null)
 		{
 			var colorCode = ConvertAnsiColorToCode(ansiDetails.Background, isBackground: true);
 			if (!string.IsNullOrEmpty(colorCode))
@@ -1196,19 +1194,19 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Reconstructs an ansi() function call from AnsiStructure and inner text
+	/// Reconstructs an ansi() function call from AnsiStyle and inner text
 	/// </summary>
-	private static string ReconstructWebCall(AnsiStructure ansiDetails, string innerText)
+	private static string ReconstructWebCall(AnsiStyle ansiDetails, string innerText)
 	{
 		Color foregroundColor = Color.Empty;
 		Color backgroundColor = Color.Empty;
 
-		if (!ansiDetails.Foreground.Equals(AnsiColor.NoAnsi.Instance))
+		if (ansiDetails.Foreground is not null)
 		{
 			foregroundColor = ConvertAnsiColorToRGB(ansiDetails.Foreground);
 		}
 
-		if (!ansiDetails.Background.Equals(AnsiColor.NoAnsi.Instance))
+		if (ansiDetails.Background is not null)
 		{
 			backgroundColor = ConvertAnsiColorToRGB(ansiDetails.Background);
 		}
@@ -1224,99 +1222,34 @@ public partial class Functions
 				: "inherit")}\">{innerText}</span>";
 	}
 
-	/// <summary>
-	/// Converts AnsiColor to PennMUSH color code
-	/// </summary>
-	internal static string ConvertAnsiColorToCode(AnsiColor color, bool isBackground = false)
-	{
-		return color switch
-		{
-			AnsiColor.RGB rgb => isBackground
-				? $"/{rgb.Value.R:X2}{rgb.Value.G:X2}{rgb.Value.B:X2}"
-				: $"{rgb.Value.R:X2}{rgb.Value.G:X2}{rgb.Value.B:X2}",
-			AnsiColor.ANSI ansi
-				=> ansi.Value switch
-				{
-					// Background colors use uppercase, foreground uses lowercase
-					// Handle both single-element [34] and two-element [0, 34] arrays
-					[30] or [0, 30] or [0, 40] => isBackground ? "X" : "x", // black
-					[31] or [0, 31] or [0, 41] => isBackground ? "R" : "r", // red
-					[32] or [0, 32] or [0, 42] => isBackground ? "G" : "g", // green
-					[33] or [0, 33] or [0, 43] => isBackground ? "Y" : "y", // yellow
-					[34] or [0, 34] or [0, 44] => isBackground ? "B" : "b", // blue
-					[35] or [0, 35] or [0, 45] => isBackground ? "M" : "m", // magenta
-					[36] or [0, 36] or [0, 46] => isBackground ? "C" : "c", // cyan
-					[37] or [0, 37] or [0, 47] => isBackground ? "W" : "w", // white
-					[40] => isBackground ? "X" : "x", // background black (when used as single element)
-					[41] => isBackground ? "R" : "r", // background red
-					[42] => isBackground ? "G" : "g", // background green
-					[43] => isBackground ? "Y" : "y", // background yellow
-					[44] => isBackground ? "B" : "b", // background blue
-					[45] => isBackground ? "M" : "m", // background magenta
-					[46] => isBackground ? "C" : "c", // background cyan
-					[47] => isBackground ? "W" : "w", // background white
-					[1, 30] or [1, 40] => isBackground ? "hX" : "hx", // bright black
-					[1, 31] or [1, 41] => isBackground ? "hR" : "hr", // bright red
-					[1, 32] or [1, 42] => isBackground ? "hG" : "hg", // bright green
-					[1, 33] or [1, 43] => isBackground ? "hY" : "hy", // bright yellow
-					[1, 34] or [1, 44] => isBackground ? "hB" : "hb", // bright blue
-					[1, 35] or [1, 45] => isBackground ? "hM" : "hm", // bright magenta
-					[1, 36] or [1, 46] => isBackground ? "hC" : "hc", // bright cyan
-					[1, 37] or [1, 47] => isBackground ? "hW" : "hw", // bright white
-					[.., 90] or [.., 100] => isBackground ? "hX" : "hx", // bright black
-					[.., 91] or [.., 101] => isBackground ? "hR" : "hr", // bright red
-					[.., 92] or [.., 102] => isBackground ? "hG" : "hg", // bright green
-					[.., 93] or [.., 103] => isBackground ? "hY" : "hy", // bright yellow
-					[.., 94] or [.., 104] => isBackground ? "hB" : "hb", // bright blue
-					[.., 95] or [.., 105] => isBackground ? "hM" : "hm", // bright magenta
-					[.., 96] or [.., 106] => isBackground ? "hC" : "hc", // bright cyan
-					[.., 97] or [.., 107] => isBackground ? "hW" : "hw", // bright white
-					_ => ""
-				},
-			_ => ""
-		};
-	}
+	/// <summary>The <c>ansi()</c> letter for each standard palette index, foreground and background.</summary>
+	private const string ForegroundLetters = "xrgybmcw";
+	private const string BackgroundLetters = "XRGYBMCW";
 
 	/// <summary>
-	/// Converts AnsiColor to PennMUSH color code
+	/// Converts an <see cref="AnsiColor"/> back to the PennMUSH <c>ansi()</c> code that produces it.
+	/// The terminal default has no code — it is the absence of one — so it converts to nothing.
 	/// </summary>
-	private static Color ConvertAnsiColorToRGB(AnsiColor color)
+	internal static string ConvertAnsiColorToCode(AnsiColor? color, bool isBackground = false) => color switch
 	{
-		return color switch
-		{
-			AnsiColor.RGB rgb => rgb.Value,
-			AnsiColor.ANSI ansi
-				=> ansi.Value switch
-				{
-					[0, 30] => Color.Black, // black
-					[0, 31] => Color.DarkRed, // red  
-					[0, 32] => Color.DarkGreen, // green
-					[0, 33] => Color.DarkGoldenrod, // yellow
-					[0, 34] => Color.DarkBlue, // blue
-					[0, 35] => Color.DarkMagenta, // magenta
-					[0, 36] => Color.DarkCyan, // cyan
-					[0, 37] => Color.Gray, // white
-					[1, 30] => Color.LightGray, // bright black
-					[1, 31] => Color.Red, // bright red  
-					[1, 32] => Color.Green, // bright green
-					[1, 33] => Color.Yellow, // bright yellow
-					[1, 34] => Color.Blue, // bright blue
-					[1, 35] => Color.Magenta, // bright magenta
-					[1, 36] => Color.Cyan, // bright cyan
-					[1, 37] => Color.White, // bright white
-					[.., 90] => Color.LightGray, // bright black
-					[.., 91] => Color.Red, // bright red
-					[.., 92] => Color.Green, // bright green
-					[.., 93] => Color.Yellow, // bright yellow
-					[.., 94] => Color.Blue, // bright blue
-					[.., 95] => Color.Magenta, // bright magenta
-					[.., 96] => Color.Cyan, // bright cyan
-					[.., 97] => Color.White, // bright white
-					_ => Color.Empty
-				},
-			_ => Color.Empty
-		};
-	}
+		AnsiColor.Rgb rgb => isBackground
+			? $"/{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}"
+			: $"{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}",
+		AnsiColor.Standard standard when standard.Index < 8 =>
+			(standard.Bright ? "h" : string.Empty)
+			+ (isBackground ? BackgroundLetters[standard.Index] : ForegroundLetters[standard.Index]),
+		AnsiColor.Xterm xterm => isBackground ? $"/+xterm{xterm.Index}" : $"+xterm{xterm.Index}",
+		_ => string.Empty
+	};
+
+	/// <summary>
+	/// Resolves an <see cref="AnsiColor"/> to 24-bit RGB for the web renderer.
+	/// <see cref="Color.Empty"/> when the colour is unset or the terminal default, neither of which
+	/// has a value the server knows.
+	/// </summary>
+	private static Color ConvertAnsiColorToRGB(AnsiColor? color) =>
+		color?.ToRgb() is { } rgb ? Color.FromArgb(rgb.R, rgb.G, rgb.B) : Color.Empty;
+
 
 	[SharpFunction(Name = "formdecode", MinArgs = 1, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]

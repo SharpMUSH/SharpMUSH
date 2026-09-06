@@ -1,5 +1,6 @@
 using MarkupString;
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
@@ -94,6 +95,6 @@ public class NotifyServiceTests
 		await messageBus.Received(1).HandlePublish(
 			Arg.Is<MarkupOutputMessage>(msg =>
 				msg.Handle == 7 &&
-				MModule.deserialize(msg.Markup).Render("pueblo").Contains("<send href=\"North\">North</send> to Room Zero")));
+				MModule.deserialize(msg.Markup).Render(MarkupFormat.Pueblo).Contains("<send href=\"North\">North</send> to Room Zero")));
 	}
 }

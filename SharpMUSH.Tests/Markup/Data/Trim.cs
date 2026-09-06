@@ -1,8 +1,8 @@
 using A = MarkupString.MarkupStringModule;
-using M = MarkupString.MarkupImplementation.AnsiMarkup;
+using M = MarkupString.Ansi.AnsiMarkup;
 using System.Drawing;
 using MarkupString;
-using StringExtensions = ANSILibrary.StringExtensions;
+using SharpMUSH.Library.Extensions;
 using static MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Markup.Data;
@@ -15,26 +15,26 @@ public static class Trim
 	[
 			() => new(A.single("  test  "), A.single(" "), TrimType.TrimStart, A.single("test  ")),
 				() => new(
-						A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "  test  "),
+						A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "  test  "),
 						A.single(" "),
 						TrimType.TrimStart,
-						A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "test  ")),
+						A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "test  ")),
 				() => new(A.single("test"), A.single(" "), TrimType.TrimStart, A.single("test")),
 
 				() => new(A.single("  test  "), A.single(" "), TrimType.TrimEnd, A.single("  test")),
 				() => new(
-						A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "  test  "),
+						A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "  test  "),
 						A.single(" "),
 						TrimType.TrimEnd,
-						A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "  test")),
+						A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "  test")),
 				() => new(A.single("test"), A.single(" "), TrimType.TrimEnd, A.single("test")),
 
 				() => new(A.single("  test  "), A.single(" "), TrimType.TrimBoth, A.single("test")),
 				() => new(
-						A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "  test  "),
+						A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "  test  "),
 						A.single(" "),
 						TrimType.TrimBoth,
-						A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "test")),
+						A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "test")),
 				() => new(A.single("test"), A.single(" "), TrimType.TrimBoth, A.single("test")),
 
 				() => new(A.single("--test--"), A.single("-"), TrimType.TrimBoth, A.single("test")),
@@ -47,8 +47,8 @@ public static class Trim
 
 				() => new(
 						A.concat(
-								A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "-"),
-								A.concat(A.single("test"), A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "-"))),
+								A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "-"),
+								A.concat(A.single("test"), A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "-"))),
 						A.single("-"),
 						TrimType.TrimBoth,
 						A.single("test")),

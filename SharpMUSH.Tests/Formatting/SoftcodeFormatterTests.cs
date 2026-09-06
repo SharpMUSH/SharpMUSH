@@ -1,4 +1,5 @@
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -95,7 +96,7 @@ public class SoftcodeFormatterTests
 	/// wider than it is. The behaviour under test never changed; the proxy for it did.
 	/// </para>
 	/// </summary>
-	private static readonly AnsiStructure ErrorStyleDetails = AnsiCodeParser.ParseCodes("i r").Details;
+	private static readonly AnsiStyle ErrorStyleDetails = AnsiCodeParser.Parse("i r").Style;
 
 	/// <summary>
 	/// Whether <paramref name="offset"/> carries the error highlight — the same walk as
@@ -114,7 +115,7 @@ public class SoftcodeFormatterTests
 				continue;
 			}
 
-			return run.Markups.Any(markup => markup is AnsiMarkup ansi && Equals(ansi.Details, ErrorStyleDetails));
+			return run.Markups.Any(markup => markup is AnsiMarkup ansi && Equals(ansi.Style, ErrorStyleDetails));
 		}
 
 		return false;

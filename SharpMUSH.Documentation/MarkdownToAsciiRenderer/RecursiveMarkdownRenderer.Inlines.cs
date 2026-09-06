@@ -1,6 +1,7 @@
 using Markdig.Extensions.TaskLists;
 using Markdig.Syntax.Inlines;
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;

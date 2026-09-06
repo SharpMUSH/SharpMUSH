@@ -434,7 +434,7 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("See newbie2 for more.");
 
 		// It is a command link: HTML renders xch_cmd (not href), ANSI has no OSC 8 link.
-		await Assert.That(result.Render("html")).Contains("xch_cmd=\"help newbie2\"");
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("xch_cmd=\"help newbie2\"");
 		await Assert.That(result.ToString()).DoesNotContain("]8;;");
 	}
 
@@ -446,9 +446,9 @@ public class RecursiveMarkdownRendererTests
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		await Assert.That(result.Render("html")).Contains("href=\"https://example.com\"");
-		await Assert.That(result.Render("html")).Contains("target=\"_blank\"");
-		await Assert.That(result.Render("html")).DoesNotContain("xch_cmd");
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("href=\"https://example.com\"");
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("target=\"_blank\"");
+		await Assert.That(result.Render(MarkupFormat.Html)).DoesNotContain("xch_cmd");
 	}
 
 	[Test]
@@ -459,7 +459,7 @@ public class RecursiveMarkdownRendererTests
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		await Assert.That(result.Render("html")).Contains("title=\"Open the site\"");
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("title=\"Open the site\"");
 	}
 
 	[Test]
@@ -688,13 +688,13 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("See Getting Started for details.");
 
 		// Command link, not navigation: xch_cmd rather than href, and no OSC 8 in the ANSI.
-		await Assert.That(result.Render("html")).Contains("xch_cmd=\"@wiki main:general:getting_started\"");
-		await Assert.That(result.Render("html")).DoesNotContain("href=");
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("xch_cmd=\"@wiki main:general:getting_started\"");
+		await Assert.That(result.Render(MarkupFormat.Html)).DoesNotContain("href=");
 		await Assert.That(result.ToString()).DoesNotContain("]8;;");
 
 		// Pueblo and MXP carry the same command; a plain telnet client still just sees underline.
-		await Assert.That(result.Render("pueblo")).Contains("XCH_CMD=\"@wiki main:general:getting_started\"");
-		await Assert.That(result.Render("mxp")).Contains("HREF=\"@wiki main:general:getting_started\"");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).Contains("XCH_CMD=\"@wiki main:general:getting_started\"");
+		await Assert.That(result.Render(MarkupFormat.Mxp)).Contains("HREF=\"@wiki main:general:getting_started\"");
 		await Assert.That(result.ToString()).Contains(Underlined);
 	}
 
@@ -710,12 +710,12 @@ public class RecursiveMarkdownRendererTests
 		var namespaced = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown("[[Help:Markdown Guide]]", renderer);
 		await Assert.That(namespaced.ToPlainText()).IsEqualTo("Markdown Guide");
-		await Assert.That(namespaced.Render("html"))
+		await Assert.That(namespaced.Render(MarkupFormat.Html))
 			.Contains("xch_cmd=\"@wiki help:general:markdown_guide\"");
 
 		var categorised = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown("[[Help:Guides:Getting Started]]", renderer);
-		await Assert.That(categorised.Render("html"))
+		await Assert.That(categorised.Render(MarkupFormat.Html))
 			.Contains("xch_cmd=\"@wiki help:guides:getting_started\"");
 	}
 
@@ -732,7 +732,7 @@ public class RecursiveMarkdownRendererTests
 			.RenderMarkdown("[[Click here|Help:Markdown Guide]]", renderer);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Click here");
-		await Assert.That(result.Render("html"))
+		await Assert.That(result.Render(MarkupFormat.Html))
 			.Contains("xch_cmd=\"@wiki help:general:markdown_guide\"");
 	}
 
@@ -748,9 +748,9 @@ public class RecursiveMarkdownRendererTests
 			.RenderMarkdown("See [[Getting Started]] for details.");
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("See Getting Started for details.");
-		await Assert.That(result.Render("html")).DoesNotContain("xch_cmd");
-		await Assert.That(result.Render("html")).DoesNotContain("@wiki");
-		await Assert.That(result.Render("pueblo")).DoesNotContain("XCH_CMD");
+		await Assert.That(result.Render(MarkupFormat.Html)).DoesNotContain("xch_cmd");
+		await Assert.That(result.Render(MarkupFormat.Html)).DoesNotContain("@wiki");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).DoesNotContain("XCH_CMD");
 		await Assert.That(result.ToString()).Contains(Underlined);
 	}
 

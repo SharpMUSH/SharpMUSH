@@ -4,12 +4,13 @@ using System.Drawing;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using ANSILibrary;
 using MarkupString;
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -124,7 +125,7 @@ public partial class MarkupOutputRendererTests
 	public async Task Ansi_KeepsAnsiMarkupAlongsideStrippedHtml()
 	{
 		var send = HtmlMarkup.Create("send", "href=\"north\"");
-		var red = AnsiMarkup.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var red = AnsiMarkup.Create(foreground: Color.Red.ToAnsiColor());
 		var line = MModule.MarkupSingleMulti(ImmutableArray.Create<IMarkup>(red, send), "north");
 
 		var result = new MarkupOutputRenderer().Render(MModule.serialize(line), Connection(OutputFormat.Ansi));

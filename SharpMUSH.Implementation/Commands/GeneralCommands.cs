@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration;
@@ -30,12 +30,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
 using MarkupString;
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using static MarkupString.MStringInterpolation;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
-using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -5424,7 +5424,7 @@ public partial class Commands
 			return markupType switch
 			{
 				Ansi ansiMarkup
-					=> Functions.Functions.ReconstructAnsiCall(ansiMarkup.Details, innerText),
+					=> Functions.Functions.ReconstructAnsiCall(ansiMarkup.Style, innerText),
 				_ => innerText
 			};
 		}, input);

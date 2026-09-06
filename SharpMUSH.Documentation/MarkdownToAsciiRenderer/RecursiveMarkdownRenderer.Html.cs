@@ -1,6 +1,6 @@
-using ANSILibrary;
 using System.Drawing;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -14,7 +14,7 @@ public partial class RecursiveMarkdownRenderer
 	{
 		return tagName switch
 		{
-			"b" or "strong" => Ansi.Create(foreground: new AnsiColor.RGB(Color.White), bold: true),
+			"b" or "strong" => Ansi.Create(foreground: Color.White.ToAnsiColor(), bold: true),
 			"i" or "em" => Ansi.Create(italic: true),
 			"u" => Ansi.Create(underlined: true),
 			"s" or "strike" or "del" => Ansi.Create(strikeThrough: true),
@@ -44,7 +44,7 @@ public partial class RecursiveMarkdownRenderer
 			var color = ParseColorValue(colorMatch.Groups[1].Value);
 			if (color.HasValue)
 			{
-				return Ansi.Create(foreground: new AnsiColor.RGB(color.Value));
+				return Ansi.Create(foreground: color.Value.ToAnsiColor());
 			}
 		}
 		return null;
@@ -69,11 +69,11 @@ public partial class RecursiveMarkdownRenderer
 
 		if (fg.HasValue && bg.HasValue)
 			return Ansi.Create(
-				foreground: new AnsiColor.RGB(fg.Value),
-				background: new AnsiColor.RGB(bg.Value));
+				foreground: fg.Value.ToAnsiColor(),
+				background: bg.Value.ToAnsiColor());
 		if (fg.HasValue)
-			return Ansi.Create(foreground: new AnsiColor.RGB(fg.Value));
-		return Ansi.Create(background: new AnsiColor.RGB(bg!.Value));
+			return Ansi.Create(foreground: fg.Value.ToAnsiColor());
+		return Ansi.Create(background: bg!.Value.ToAnsiColor());
 	}
 
 	private Ansi? ParseColorTagToAnsi(string tag)
@@ -83,7 +83,7 @@ public partial class RecursiveMarkdownRenderer
 		{
 			var color = ParseColorValue(match.Groups[1].Value.Trim());
 			if (color.HasValue)
-				return Ansi.Create(foreground: new AnsiColor.RGB(color.Value));
+				return Ansi.Create(foreground: color.Value.ToAnsiColor());
 		}
 		return null;
 	}

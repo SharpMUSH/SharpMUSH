@@ -1,7 +1,8 @@
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using Ansi = MarkupString.MarkupImplementation.AnsiMarkup;
+using Ansi = global::MarkupString.Ansi.AnsiMarkup;
 
 namespace SharpMUSH.Library.Services;
 
@@ -20,7 +21,7 @@ public static class SoftcodeFormatter
 	/// inverse video plus a red foreground, so a syntax error reads as a highlighted block rather than
 	/// blending into ordinary syntax colouring.
 	/// </summary>
-	private static readonly Ansi ErrorStyle = AnsiCodeParser.ParseCodes("i r");
+	private static readonly Ansi ErrorStyle = AnsiCodeParser.Parse("i r");
 
 	/// <summary>
 	/// Formats <paramref name="source"/> for display: colours it by <paramref name="semanticTokens"/>

@@ -49,6 +49,14 @@
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
+		<ProjectReference Include="..\..\..\SharpMUSH.MarkupString.Ansi\SharpMUSH.MarkupString.Ansi.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+				</ProjectReference>
+		<ProjectReference Include="..\..\..\SharpMUSH.MarkupString.Html\SharpMUSH.MarkupString.Html.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+				</ProjectReference>
 		<!-- The source generator referenced AS AN ANALYZER: any [SharpCommand]/[SharpFunction] methods in
 		     THIS assembly produce SharpMUSH.Implementation.Generated.CommandLibrary/FunctionLibrary that
 		     PluginBase reflects. Authoring is identical to in-tree engine code. -->

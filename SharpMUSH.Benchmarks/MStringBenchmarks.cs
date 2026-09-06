@@ -1,4 +1,4 @@
-using SharpMUSH.MarkupString.TextAlignerModule;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Benchmarks;
 
@@ -59,13 +59,13 @@ public class MStringBenchmarks
 
 	[Benchmark(Description = "TextAlignerModule.align — 3 columns 20/20/20")]
 	public MString Align3Columns() =>
-		TextAlignerModule.align("20 20 20", [ColA, ColB, ColC], Filler, ColSep, RowSep);
+		TextAligner.Align("20 20 20", [ColA, ColB, ColC], Filler, ColSep, RowSep);
 
 	[Benchmark(Description = "TextAlignerModule.align — 3 columns with multi-line content")]
 	public MString AlignMultiLine()
 	{
 		var content = MModule.single("line1\nline2\nline3");
-		return TextAlignerModule.align("30", [content], Filler, ColSep, RowSep);
+		return TextAligner.Align("30", [content], Filler, ColSep, RowSep);
 	}
 
 	[Benchmark(Description = "MString.ToPlainText — plain 1000-char string")]

@@ -26,7 +26,7 @@ public readonly record struct TerminalFrame(TerminalFrameKind Kind, string Plain
 /// <summary>
 /// Interprets a raw WebSocket text frame. Game output now arrives as an out-of-band JSON envelope
 /// <c>{ "type": "markup", "data": &lt;serialized MString&gt; }</c>; this deserializes the markup and
-/// renders it to HTML with the MarkupString library (<c>MString.Render("html")</c> →
+/// renders it to HTML with the MarkupString library (<c>MString.Render(MarkupFormat.Html)</c> →
 /// <c>AnsiMarkup.WrapAsHtmlClass</c>). Non-envelope frames (banners, pre-markup server text) fall
 /// back to plain-text handling.
 /// </summary>
@@ -53,7 +53,7 @@ public static class TerminalFrameRenderer
 					{
 						var data = GetStringProperty(root, "data");
 						var ms = MModule.deserialize(data);
-						return new TerminalFrame(TerminalFrameKind.Markup, ms.ToPlainText(), ms.Render("html"), string.Empty, string.Empty);
+						return new TerminalFrame(TerminalFrameKind.Markup, ms.ToPlainText(), ms.Render(MarkupFormat.Html), string.Empty, string.Empty);
 					}
 				case "html":
 					{

@@ -1,8 +1,8 @@
 using DotNext;
 using DotNext.Collections.Generic;
-using ANSILibrary;
 using MarkupString;
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Library;
@@ -18,8 +18,6 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Drawing;
 using System.Text.RegularExpressions;
-using static ANSILibrary.ANSI;
-using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -63,8 +61,8 @@ public partial class Functions
 
 		// TODO: Move ANSI color processing to AnsiMarkup module for better integration.
 		// This would allow align() and other markup functions to work directly with parsed ANSI structures.
-		AnsiColor foreground = AnsiColor.NoAnsi.Instance;
-		AnsiColor background = AnsiColor.NoAnsi.Instance;
+		AnsiColor? foreground = null;
+		AnsiColor? background = null;
 		var blink = false;
 		var bold = false;
 		var clear = false;
@@ -80,9 +78,6 @@ public partial class Functions
 			.Matches(args["0"].Message!.ToString())
 			.Select(m => m.Value)
 			.ToArray();
-		// The highlight rides on the colour bytes: hb becomes [1, 34], the ANSI bold attribute followed
-		// by blue, which is what a terminal needs to draw it bright.
-		Func<bool, byte, byte[]> highlightFunc = (highlight, b) => highlight ? [1, b] : [b];
 		var colorsConfig = ColorConfiguration?.CurrentValue;
 
 		foreach (var cde in ansiCodes)
@@ -100,7 +95,7 @@ public partial class Functions
 			if (code.StartsWith("#"))
 			{
 				// Handle RGB color (hex code)
-				var color = new AnsiColor.RGB(ColorTranslator.FromHtml(code.ToString()));
+				var color = ColorTranslator.FromHtml(code.ToString()).ToAnsiColor();
 				if (isBackground)
 					background = color;
 				else
@@ -115,7 +110,7 @@ public partial class Functions
 				if (colorsConfig != null && colorsConfig.ColorsByName.TryGetValue(colorName, out var colorIdentity))
 				{
 					var hexColor = colorIdentity.rgb;
-					var color = new AnsiColor.RGB(ColorTranslator.FromHtml(hexColor));
+					var color = ColorTranslator.FromHtml(hexColor).ToAnsiColor();
 					if (isBackground)
 						background = color;
 					else
@@ -133,7 +128,7 @@ public partial class Functions
 				if (colorsConfig != null && colorsConfig.ColorsByXterm.TryGetValue(xterm.ToString(), out var xtermColors) && xtermColors.Length > 0)
 				{
 					var hexColor = xtermColors[0].rgb;
-					var color = new AnsiColor.RGB(ColorTranslator.FromHtml(hexColor));
+					var color = ColorTranslator.FromHtml(hexColor).ToAnsiColor();
 					if (isBackground)
 						background = color;
 					else
@@ -151,7 +146,7 @@ public partial class Functions
 					int.TryParse(rgbValues[1], out var g) && g >= 0 && g <= 255 &&
 					int.TryParse(rgbValues[2], out var b) && b >= 0 && b <= 255)
 				{
-					var color = new AnsiColor.RGB(Color.FromArgb(r, g, b));
+					var color = Color.FromArgb(r, g, b).ToAnsiColor();
 					if (isBackground)
 						background = color;
 					else
@@ -201,8 +196,8 @@ public partial class Functions
 						// Setting clear=true adds a clear ANSI code to the output,
 						// while resetting the fields ensures the structure has no formatting.
 						clear = true;
-						foreground = AnsiColor.NoAnsi.Instance;
-						background = AnsiColor.NoAnsi.Instance;
+						foreground = null;
+						background = null;
 						blink = false;
 						bold = false;
 						invert = false;
@@ -210,58 +205,66 @@ public partial class Functions
 						curHilight = false;
 						break;
 					case 'd':
-						foreground = StringExtensions.AnsiBytes(highlightFunc(curHilight, 39));
+						foreground = AnsiColor.Default.Instance;
 						break;
 					case 'x':
-						foreground = StringExtensions.AnsiBytes(highlightFunc(curHilight, 30));
+						foreground = new AnsiColor.Standard(0, curHilight);
 						break;
 					case 'r':
-						foreground = StringExtensions.AnsiBytes(highlightFunc(curHilight, 31));
+						foreground = new AnsiColor.Standard(1, curHilight);
 						break;
 					case 'g':
-						foreground = StringExtensions.AnsiBytes(highlightFunc(curHilight, 32));
+						foreground = new AnsiColor.Standard(2, curHilight);
 						break;
 					case 'y':
-						foreground = StringExtensions.AnsiBytes(highlightFunc(curHilight, 33));
+						foreground = new AnsiColor.Standard(3, curHilight);
 						break;
 					case 'b':
-						foreground = StringExtensions.AnsiBytes(highlightFunc(curHilight, 34));
+						foreground = new AnsiColor.Standard(4, curHilight);
 						break;
 					case 'm':
-						foreground = StringExtensions.AnsiBytes(highlightFunc(curHilight, 35));
+						foreground = new AnsiColor.Standard(5, curHilight);
 						break;
 					case 'c':
-						foreground = StringExtensions.AnsiBytes(highlightFunc(curHilight, 36));
+						foreground = new AnsiColor.Standard(6, curHilight);
 						break;
 					case 'w':
-						foreground = StringExtensions.AnsiBytes(highlightFunc(curHilight, 37));
+						foreground = new AnsiColor.Standard(7, curHilight);
 						break;
 					case 'D':
-						background = StringExtensions.AnsiByte(49);
+						background = AnsiColor.Default.Instance;
 						break;
 					case 'X':
-						background = StringExtensions.AnsiBytes(highlightFunc(curHilight, 40));
+						background = new AnsiColor.Standard(0, false);
+						bold |= curHilight;
 						break;
 					case 'R':
-						background = StringExtensions.AnsiBytes(highlightFunc(curHilight, 41));
+						background = new AnsiColor.Standard(1, false);
+						bold |= curHilight;
 						break;
 					case 'G':
-						background = StringExtensions.AnsiBytes(highlightFunc(curHilight, 42));
+						background = new AnsiColor.Standard(2, false);
+						bold |= curHilight;
 						break;
 					case 'Y':
-						background = StringExtensions.AnsiBytes(highlightFunc(curHilight, 43));
+						background = new AnsiColor.Standard(3, false);
+						bold |= curHilight;
 						break;
 					case 'B':
-						background = StringExtensions.AnsiBytes(highlightFunc(curHilight, 44));
+						background = new AnsiColor.Standard(4, false);
+						bold |= curHilight;
 						break;
 					case 'M':
-						background = StringExtensions.AnsiBytes(highlightFunc(curHilight, 45));
+						background = new AnsiColor.Standard(5, false);
+						bold |= curHilight;
 						break;
 					case 'C':
-						background = StringExtensions.AnsiBytes(highlightFunc(curHilight, 46));
+						background = new AnsiColor.Standard(6, false);
+						bold |= curHilight;
 						break;
 					case 'W':
-						background = StringExtensions.AnsiBytes(highlightFunc(curHilight, 47));
+						background = new AnsiColor.Standard(7, false);
+						bold |= curHilight;
 						break;
 					default:
 						// Do nothing. Just skip.
@@ -271,7 +274,7 @@ public partial class Functions
 			}
 		}
 
-		var details = new AnsiStructure
+		var details = new AnsiStyle
 		{
 			Foreground = foreground,
 			Background = background,

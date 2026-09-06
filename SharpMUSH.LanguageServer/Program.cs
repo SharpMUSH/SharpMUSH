@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Server;
 using Serilog;
@@ -10,6 +10,13 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+
+// The markup layers this app can render: MarkupText resolves emitters and codecs through
+// MarkupRegistry.Default, which throws until something sets it.
+if (!MarkupRegistry.IsConfigured)
+{
+	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
+}
 
 var logPath = Path.Combine(
 	Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

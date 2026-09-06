@@ -601,9 +601,9 @@ public class MarkdownFunctionUnitTests
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result.ToPlainText()).IsEqualTo("See Getting Started for details.");
-		await Assert.That(result.Render("html")).DoesNotContain("xch_cmd");
-		await Assert.That(result.Render("html")).DoesNotContain("@wiki");
-		await Assert.That(result.Render("pueblo")).DoesNotContain("XCH_CMD");
+		await Assert.That(result.Render(MarkupFormat.Html)).DoesNotContain("xch_cmd");
+		await Assert.That(result.Render(MarkupFormat.Html)).DoesNotContain("@wiki");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).DoesNotContain("XCH_CMD");
 
 		// Still underlined, so nothing about the terminal rendering changed.
 		await Assert.That(result.ToString()).Contains(Underlined);

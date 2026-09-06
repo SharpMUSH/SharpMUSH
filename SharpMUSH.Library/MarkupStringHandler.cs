@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 
 namespace MarkupString;
 
@@ -279,7 +280,7 @@ public ref struct MarkupStringHandler
 	private static MString ApplyColor(MString value, string codes)
 	{
 		if (string.IsNullOrEmpty(codes)) return value;
-		var markup = AnsiCodeParser.ParseCodes(codes);
+		var markup = AnsiCodeParser.Parse(codes);
 		return MModule.MarkupSingle2(markup, value);
 	}
 }

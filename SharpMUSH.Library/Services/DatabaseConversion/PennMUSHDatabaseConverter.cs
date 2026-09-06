@@ -607,7 +607,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					try
 					{
-						var value = AnsiEscapeParser.ConvertAnsiToMarkupString(pennAttr.Value);
+						var value = MarkupString.Ansi.AnsiEscapeParser.Parse(pennAttr.Value);
 
 						if (pennAttr.Value != null && pennAttr.Value.Contains('\x1b'))
 						{

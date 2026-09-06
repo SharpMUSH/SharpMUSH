@@ -12,6 +12,8 @@
     <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
     <ProjectReference Include="..\SharpMUSH.Implementation\SharpMUSH.Implementation.csproj" />
     <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
+    <ProjectReference Include="..\SharpMUSH.MarkupString.Ansi\SharpMUSH.MarkupString.Ansi.csproj" />
+    <ProjectReference Include="..\SharpMUSH.MarkupString.Html\SharpMUSH.MarkupString.Html.csproj" />
   </ItemGroup>
 
 </Project>
