@@ -10,7 +10,7 @@ requires_server: ">=0.1"
 
 # Create mode: a single owned thing carries the softcode the global functions evaluate. AINSTALL
 # registers them once at install; STARTUP re-registers them on every boot (the global-function
-# registry is in-memory). Adding one means adding its FUN` subtree AND a clause to STARTUP.
+# registry is in-memory) by walking the FUN` tree, so adding one is adding its subtree.
 #
 # Each function is self-describing via its FUN` attribute subtree:
 #   FUN`<NAME>                  — the function body (a dispatcher for justified variants)
@@ -75,19 +75,13 @@ objects:
       # evaluated on someone else's behalf, or a @pemit built for a target all have a viewer that %#
       # does not name. Taking it as an argument makes the capability test ask about the right client.
       #
-      # tagwrap() writes the anchor inline as Pueblo/MXP markup. A client that understands neither —
-      # the web portal reports neither — would show the literal <a xch_cmd="..."> instead of the
-      # text, so the capability is asked for rather than assumed, and everyone else gets the plain
-      # <visible> back. xch_cmd additionally needs the Send_OOB @power; without it the text still
-      # prints, so nothing is lost.
+      # tagwrap() writes the anchor as Pueblo/MXP markup, which a client understanding neither would
+      # show literally, so the capability is asked for rather than assumed and everyone else gets
+      # plain <visible> back. No colour is applied: that is the caller's decision.
       #
-      # No colour is applied: whether a link should stand out is the caller's decision, and wrapping
-      # the markup in ansi() here would force it on every caller.
-      #
-      # The command and hint go into QUOTED markup attributes, so both are entity-encoded through
-      # FUN`CMDTAG`ATTR first: a bare quote in `say "hi"` would close xch_cmd early and hand the
-      # client `xch_cmd="say "` with the rest loose inside the tag. & is encoded before ", or the
-      # ampersand of &quot; would be encoded again.
+      # Command and hint go into QUOTED attributes, so both are entity-encoded through
+      # FUN`CMDTAG`ATTR — a bare quote in `say "hi"` would close xch_cmd early. & before ", or the
+      # ampersand of &quot; is encoded again.
       FUN`CMDTAG: |-
         [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,xch_cmd="[u(%!/FUN`CMDTAG`ATTR,%2)]" xch_hint="[u(%!/FUN`CMDTAG`ATTR,if(strlen(%3),%3,%2))]",%1)],%1)]
       FUN`CMDTAG`ATTR: |-
@@ -104,7 +98,18 @@ objects:
       # OWN attribute regardless of who called header()/footer().
       AINSTALL: |-
         @trigger %!/STARTUP
-      # STARTUP (every boot): re-establish the in-memory global-function registrations, reading each
-      # function's arg counts from its MINARGS/MAXARGS leaf (one source of truth).
+      # STARTUP (every boot): re-establish the in-memory global-function registrations by WALKING the
+      # FUN` tree, not by naming each function again here.
+      #
+      # lattr(FUN`*) lists the branch heads only — "*" does not cross a backtick — so FUN`HEADER is
+      # listed while FUN`HEADER`MINARGS and FUN`HEADER`DISPLAY`CENTER underneath it are not. That is
+      # exactly the set of functions, and each head's own MINARGS/MAXARGS leaves carry its arg counts.
+      # The registered name is the branch head lower-cased: FUN`HEADER -> header.
+      #
+      # Adding a function is therefore adding its subtree. Nothing in this attribute changes, and a
+      # function cannot be half-added — declared as a subtree but forgotten in the registration list.
+      #
+      # after(##,FUN`) rather than rest(##,`): the backtick is not a list delimiter here, it is part
+      # of a single attribute name, so the name is cut at a known prefix instead of split on it.
       STARTUP: |-
-        @function header=%!,FUN`HEADER,[get(%!/FUN`HEADER`MINARGS)],[get(%!/FUN`HEADER`MAXARGS)]; @function footer=%!,FUN`FOOTER,[get(%!/FUN`FOOTER`MINARGS)],[get(%!/FUN`FOOTER`MAXARGS)]; @function line=%!,FUN`LINE,[get(%!/FUN`LINE`MINARGS)],[get(%!/FUN`LINE`MAXARGS)]; @function cmdtag=%!,FUN`CMDTAG,[get(%!/FUN`CMDTAG`MINARGS)],[get(%!/FUN`CMDTAG`MAXARGS)]
+        @dolist [lattr(%!/FUN`*)]={@function [lcstr(after(##,FUN`))]=%!,##,[get(%!/##`MINARGS)],[get(%!/##`MAXARGS)]}

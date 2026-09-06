@@ -127,11 +127,9 @@ public static partial class Substitutions
 	/// rewrite <c>##</c> to <c>%iL</c>, and PennMUSH's <c>##</c> is spliced textually before
 	/// evaluation, so a nested one names the outermost loop — the documented
 	/// <c>iter(red blue green, iter(fish shoe, #@:##))</c> answers red red blue blue green green.
-	/// TryPeek here took the stack TOP, which is the innermost.
 	///
-	/// <para>The register is returned as-is, the way <c>%i&lt;n&gt;</c> does. Interpolating it into a
-	/// string instead flattened the <c>MString</c>, baking any colour it carried into the plain text
-	/// as literal escape bytes.</para>
+	/// <para>The register is returned as-is, the way <c>%i&lt;n&gt;</c> does; interpolating it into a
+	/// string flattens the <c>MString</c> and bakes any colour into the plain text.</para>
 	/// </summary>
 	private static CallState HandleITextOutermost(CallState symbol, IMUSHCodeParser parser) =>
 		parser.CurrentState.IterationRegisters.IsEmpty

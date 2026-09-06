@@ -33,9 +33,6 @@ public partial class Functions
 	/// <summary>
 	/// <c>tagwrap(&lt;name&gt;[, &lt;parameters&gt;], &lt;string&gt;)</c> — the wrapped STRING is the last
 	/// argument, with the optional tag parameters in the middle (<c>help tagwrap</c>, and PennMUSH).
-	/// The two were read the other way round, so a three-argument call put the parameters inside the
-	/// element and the text into the tag: <c>tagwrap(a,href="x",Link)</c> rendered
-	/// <c>&lt;a Link&gt;href="x"&lt;/a&gt;</c>. Two-argument calls are unaffected.
 	/// </summary>
 	[SharpFunction(Name = "tagwrap", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["tag", "parameters", "content"])]
 	public static ValueTask<CallState> TagWrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)

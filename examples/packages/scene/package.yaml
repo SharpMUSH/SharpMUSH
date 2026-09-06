@@ -461,15 +461,9 @@ objects:
         @hook/override POSE=%!,CMD`CAPTURE`POSE; @hook/override SAY=%!,CMD`CAPTURE`SAY; @hook/override SEMIPOSE=%!,CMD`CAPTURE`SEMI; @hook/override @EMIT=%!,CMD`CAPTURE`EMIT
 
   # ---- help storage -------------------------------------------------------
-  # An ordinary, unflagged thing whose only job is to hold the +help topics. It is deliberately
-  # NOT the Scene Logger: the Logger must be WIZARD to run @hook and @scene, and u() on a
-  # privileged object's attribute is refused unless the evaluator is privileged too — so the
-  # librarian could enumerate the Logger's topics and then fail to render any of them. Help is
-  # not privileged content; keeping it on a plain object is what makes it readable by anyone.
-  #
-  # Bodies are markdown and are EVALUATED when read, so a literal "[" is written "\[". That is
-  # what makes \[scene join\] below a live cross-reference: u() leaves \[scene join\], and the
-  # markdown renderer turns it into a +help command link.
+  # An ordinary, unflagged thing holding the +help topics, deliberately NOT the Scene Logger: the
+  # Logger must be WIZARD, and the librarian cannot u() a privileged object's attribute. See
+  # plus-help's README for that rule and for how an evaluated body is escaped.
   - ref: scene_help
     type: thing
     name: Scene Help

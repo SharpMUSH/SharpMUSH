@@ -28,16 +28,7 @@ public partial class RecursiveMarkdownRenderer
 		return MModule.trim(content, " ", TrimType.TrimEnd);
 	}
 
-	/// <summary>
-	/// A list is one item per line, ordered or not. Unordered items used to be joined with ", " and
-	/// given no bullet at all, so a markdown bullet list rendered as a comma run — in helpfiles, in
-	/// <c>@wiki</c>, and anywhere <c>rendermarkdown()</c> was used.
-	///
-	/// <para>An ordered list numbers from the first item's own number, which markdown records on the
-	/// list as <see cref="ListBlock.OrderedStart"/>; counting from 1 regardless renumbered a list
-	/// that deliberately started elsewhere — "3. Third" came back as "1. Third", and a
-	/// <c>RENDERMARKUP`LISTITEM</c> template was handed the same wrong number.</para>
-	/// </summary>
+	/// <summary>One item per line, each with a marker; an ordered list numbers from its own start.</summary>
 	private MString RenderList(ListBlock list)
 	{
 		var itemIndex = FirstItemIndex(list);
@@ -50,22 +41,18 @@ public partial class RecursiveMarkdownRenderer
 	}
 
 	/// <summary>
-	/// The zero-based index the first item counts from, so that the 1-based number every consumer
-	/// derives as <c>index + 1</c> is the one the source asked for. Unordered lists and an absent or
-	/// unparsable start both fall back to the usual 1.
+	/// The zero-based index the first item counts from, so the 1-based number every consumer derives
+	/// as <c>index + 1</c> is the one the source asked for. Falls back to 1.
 	/// </summary>
 	private static int FirstItemIndex(ListBlock list)
 		=> list.IsOrdered && int.TryParse(list.OrderedStart, out var start) ? start - 1 : 0;
 
-	/// <summary>The marker an item is introduced by: "1. " when ordered, a bullet when not.</summary>
 	protected MString ListMarker(int index, bool isOrdered)
 		=> MModule.MarkupSingle(_dimStyle, isOrdered ? $"{index + 1}. " : "* ");
 
 	/// <summary>
-	/// An item's rendered content, WITHOUT its marker. Split out so a renderer that replaces the
-	/// whole item — a <c>RENDERMARKUP`LISTITEM</c> template supplies its own marker — can reuse the
-	/// content without inheriting a marker it is about to add again. Prefixing in both places is
-	/// what made an ordered list under a custom template render "1. 1. alpha".
+	/// An item's rendered content, WITHOUT its marker, so a renderer that supplies its own marker —
+	/// a <c>RENDERMARKUP`LISTITEM</c> template — does not end up prefixing two.
 	/// </summary>
 	protected MString RenderListItemContent(ListItemBlock listItem)
 	{

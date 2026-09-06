@@ -64,10 +64,8 @@ public partial class Functions
 
 				var setResult = await AttributeService!.SetAttributeAsync(executor, realLocated, attribute, contents);
 
-				// Silent: a side-effect FUNCTION reports through its return value, not by notifying.
-				// It emitted "<object>/<attr> - Set." to the enactor, which is @set's confirmation --
-				// so softcode that stored an attribute mid-expression printed a line at whoever ran
-				// the command, and a failure was reported twice.
+				// Deliberately silent: a side-effect function reports through its return value. Notifying
+				// here printed @set's "<object>/<attr> - Set." at whoever ran the command.
 				return new CallState(setResult.Match(
 					_ => string.Empty,
 					failure => failure.Value));
@@ -103,10 +101,8 @@ public partial class Functions
 
 				var setResult = await AttributeService!.SetAttributeAsync(executor, realLocated, attribute, contents);
 
-				// Silent: a side-effect FUNCTION reports through its return value, not by notifying.
-				// It emitted "<object>/<attr> - Set." to the enactor, which is @set's confirmation --
-				// so softcode that stored an attribute mid-expression printed a line at whoever ran
-				// the command, and a failure was reported twice.
+				// Deliberately silent: a side-effect function reports through its return value. Notifying
+				// here printed @set's "<object>/<attr> - Set." at whoever ran the command.
 				return new CallState(setResult.Match(
 					_ => $"{realLocated.Object().Name}/{args["0"].Message}",
 					failure => failure.Value));

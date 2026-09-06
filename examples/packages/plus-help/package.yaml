@@ -16,73 +16,34 @@ depends:
       path: examples/packages/common-functions/
       branch: main
 
-# `help` is the engine's own corpus — markdown files indexed at startup, correct for the built-in
-# commands and not somewhere a game or a package can write. `+help` is the other half: what THIS
-# game installed and what THIS game's staff wrote. The two never merge, and a +help miss points
-# across rather than falling through, so +help can always answer "does this game document this?".
+# `+help` is the game's own help: what THIS game installed and what THIS game's staff wrote.
+# `help` is the engine's corpus — markdown files indexed at startup, which a game cannot write to.
+# The two never merge, and a +help miss points across rather than falling through, so +help stays
+# able to answer "does this GAME document this?".
 #
-# TWO SOURCES OF CONTENT
+# README.md is the contributor's guide: how a package attaches its topics, how names collide, and
+# the four things that bite. What follows is why this file is shaped the way it is.
 #
-#   Packages carry their own.  A package holds its topics in a HELP attribute tree on one of its
-#   objects — an ORDINARY, unflagged one; u() on a WIZARD or ROYALTY object's attribute is refused
-#   unless the evaluator is privileged too, so a package whose command object must be WIZARD keeps
-#   its help on a separate storage object — and registers that object here by ATTACHING one SRC
-#   leaf to the librarian:
+# Every source — a package's topics, this package's own, the game's — is an ordinary object with a
+# HELP attribute tree, registered by one SRC leaf here. The librarian holds no content at all: the
+# registry, the commands and the rendering, nothing else. That is what keeps reading a topic one
+# code path whoever wrote it, and it is why a source object must be UNFLAGGED: u() on a WIZARD or
+# ROYALTY object's attribute is refused unless the evaluator is privileged too.
 #
-#       depends:
-#         - package: plus-help
-#           version: ">=1.0 <2.0"
-#       objects:
-#         - ref: help_registration
-#           target: "{{plus-help/librarian}}"
-#           attributes:
-#             SRC`MY-PACKAGE: "{{my_object}}"
-#
-#   That is a declaration, not a runtime call: the package manager writes the leaf at install and
-#   clears it at uninstall (cross-package managed attributes are cleared by UninstallAsync), so the
-#   registry cannot drift from what is installed. Install a package and its topics appear;
-#   uninstall it and they leave with it.
-#
-#   The game writes its own.  House rules, policy, how to apply — content belonging to no package —
-#   go on the Game Help object, written in-game with +help/write rather than by editing a file in a
-#   source tree, which is the thing that keeps game help from being written at all.
-#
-# EVERY SOURCE IS AN OBJECT WITH A HELP TREE, this package's own topics and the game's included.
-# The librarian holds no content at all: it is the registry, the commands, and the rendering. That
-# is what keeps the read path one code path instead of one plus a special case for the game.
-#
-# TOPIC NAMES.  A topic's name is its attribute path below the root with backticks read as spaces:
-# HELP`SCENE`JOIN is the topic "scene join". Every topic also has a qualified name, <source>/<topic>,
-# and a bare name resolves when it is unique. When it is not, +help lists the qualified candidates
-# in the engine's own words for an ambiguous topic — except that a game-authored topic (source
-# "game") outranks any package's, because the game's own word should win.
-#
-# TOPICS ARE EVALUATED.  A body is run through u(), not read with get(). Topic authors are package
-# authors and staff — trusted content — and evaluating lets a topic carry colour, the current
-# configuration, or the reader's own name instead of being a frozen block of text. The rule about
-# reading with get() governs PLAYER-authored values; no part of this is that. +help/write is gated
-# on the writer being staff, and that gate is the security boundary.
-#
-# A body is therefore written like any other softcode: what should be evaluated is left alone, and
-# what should be shown is escaped -- "\[", "\)", "%%". That is also how a cross-reference is
-# spelled: "\[write\]" evaluates to [write], which the markdown renderer turns into a +help
-# command link.
-#
-# UNINSTALLING.  Packages that contribute help attach to the librarian, and the attachment guard
-# refuses to destroy an object another package is attached to. So uninstalling plus-help while any
-# contributor is installed needs --force, or the contributors uninstalled first.
+# A topic's name is its attribute path below the root with backticks read as spaces, so
+# HELP`SCENE`JOIN is the topic "scene join". Bodies are run through u(), not read with get(), which
+# is what lets one carry colour, the current configuration or the reader's own name; what should be
+# shown rather than run is escaped, as in any other attribute. Topic authors are package authors and
+# staff, and +help/write is gated on staff — that gate is the security boundary.
 objects:
   - ref: librarian
     type: thing
     name: Help Librarian
     location: "{{$master_room}}"
-    # See_All, not WIZARD: the librarian ENUMERATES and READS HELP trees on objects it does not
-    # own — a hand-registered +help/source target can belong to anyone — and See_All is exactly
-    # what skips the attribute-read check. It deliberately does not go further, because reading is
-    # a different gate from evaluating: u() on a WIZARD or ROYALTY object's attribute is refused
-    # unless the evaluator is privileged too, and no power fixes that. That is why a contributing
-    # package puts its HELP tree on an ORDINARY object rather than on whatever object happens to
-    # run its commands — see the header.
+    # See_All, not WIZARD: the librarian reads HELP trees on objects it does not own — a
+    # hand-registered +help/source target can belong to anyone — and See_All is what skips the
+    # attribute-read check. It deliberately goes no further, because reading is a different gate
+    # from evaluating and no power lifts the second one.
     powers: [See_All]
     attributes:
 
@@ -95,12 +56,11 @@ objects:
         value: |-
           Registered help sources. One leaf per source, naming the object(s) carrying its HELP tree.
         flags: [no_command]
-      # A NOTE FOR CONTRIBUTORS. The ref you name in your SRC leaf must be unique across every
-      # package that registers here, not merely within your own manifest. An installed {{ref}} is a
-      # [v(PM`REFS`<REF>)] recall, and the PM`REFS tree it reads lives on the object the attribute
-      # landed on — this librarian — shared with every other contributor. PM`REFS namespaces only
-      # the cross-package {{pkg/ref}} form, so two packages that both call their object "help" get
-      # ONE PM`REFS`HELP between them and the later install silently steals the earlier's topics.
+      # CONTRIBUTORS: the ref you name in your SRC leaf must be unique across every package that
+      # registers here, not merely within your own manifest. An installed {{ref}} is a
+      # [v(PM`REFS`<REF>)] recall against the object the attribute landed on — this librarian —
+      # and PM`REFS namespaces only the cross-package {{pkg/ref}} form, so two packages that both
+      # call their object "help" share one leaf and the later install steals the earlier's topics.
       # Name it after your package: scene_help, ww_help, hello_help.
       # This package's own topics, and the game's, are sources like any other — each an object with
       # a HELP tree. "game" is the reserved name the collision rule gives the last word to.
@@ -184,14 +144,11 @@ objects:
         flags: [funsyntax]
 
       # ── Navigation ──────────────────────────────────────────────────────────
-      # A topic's SUBTOPICS are derived, never declared: HELP`SCENE`JOIN is already a child of
-      # HELP`SCENE, so the tree knows the relationship and it cannot drift when a topic is added or
-      # renamed. A child is a record in the same source whose attribute path is this one plus
-      # exactly one segment.
-      # A child is a record in the same source whose path is the parent's plus ONE segment: what is
-      # left after stripping "<parent>`" is non-empty and contains no further backtick. Written with
-      # after() rather than by counting segments, because words() does not split on a backtick --
-      # words(HELP`SCENE`JOIN,`) is 1, though last() on the same input does give JOIN.
+      # SUBTOPICS are derived, never declared: HELP`SCENE`JOIN is already a child of HELP`SCENE, so
+      # the tree knows the relationship and it cannot drift. A child is a record in the same source
+      # whose path is the parent's plus ONE segment — what is left after stripping "<parent>`" is
+      # non-empty and holds no further backtick. Written with after() rather than by counting
+      # segments, because words() does not split on a backtick: words(HELP`SCENE`JOIN,`) is 1.
       FUN`GET`CHILDREN:
         value: |-
           [@@(%0 records · %1 a record — its direct subtopics, in order)][trim(squish(iter(%0,if(cand(strmatch(extract(%i0,1,1,:),[extract(%1,1,1,:)]),cand(strlen(setr(r,after(extract(%i0,3,1,:),[extract(%1,3,1,:)]`))),not(strmatch(%q<r>,*`*)))),%i0),%b,%b)))]
@@ -377,13 +334,20 @@ objects:
         value: |-
           @@ no arguments — writing help is a staff verb, checked against the caller's flags; @assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.
         flags: [cmdsyntax]
-      # Topic words become attribute-path segments, so they are checked before they become one.
+      # Two checks, in the order the name is transformed. First what +help reserves: "/" separates
+      # source from topic and "*" and "?" are its wildcards, so a name carrying one would be stored
+      # and then be unaddressable. Then whether the derived PATH can be stored at all, asked of
+      # valid(attrname) — the engine's own rule, rather than a character class here that would have
+      # to re-derive the backtick rules the space-to-backtick conversion can trip.
+      #
+      # regmatch() matches the WHOLE string (help REGMATCH: the regexp-equivalent of strmatch), so
+      # the reserved test is written as what a name may be made OF. Its brackets are escaped because
+      # "[" would otherwise open an evaluation bracket and be eaten before regmatch() saw it.
+      #
       # %q<topic> is the caller's staged, trimmed, upper-cased name; this leaves %q<attr> set.
-      # A regex character class escapes its brackets: "[" opens an evaluation bracket, so an
-      # unescaped ^[A-Z]+$ reaches regmatch() with the class already eaten and matches nothing.
       INC`IS`TOPICNAME:
         value: |-
-          @@ no arguments — validates %q<topic>, which the calling command stages, and stages %q<obj> and %q<attr>; @assert %q<topic>=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,^\[A-Z0-9_. -\]+$)=@include %!/INC`DISPLAY`ERROR=A topic name is words of letters, digits, and _ . or -.; think [setq(obj,u(%!/SRC`GAME),attr,HELP`[edit(squish(%q<topic>),%b,`)])]
+          @@ no arguments — validates %q<topic>, which the calling command stages, and stages %q<obj> and %q<attr>; @assert strlen(%q<topic>)=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,\[^*?/\]+)=@include %!/INC`DISPLAY`ERROR=A topic name cannot contain * ? or / — +help reads those as wildcards and the source separator.; think [setq(attr,HELP`[edit(trim(squish(%q<topic>)),%b,`)])]; @assert valid(attrname,%q<attr>)=@include %!/INC`DISPLAY`ERROR=A topic name has to be storable as an attribute name.; think [setq(obj,u(%!/SRC`GAME))]
         flags: [cmdsyntax]
       INC`DO`LISTING:
         value: |-
@@ -428,7 +392,7 @@ objects:
       # +help/write. That is the trade for a computed attribute name; nothing else here needs it.
       CMD`WRITE:
         value: |-
-          $^\+help/write\s+(?<topic>[^=]+)=(?<body>.*)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert setr(body,r(body,args))=@include %!/INC`DISPLAY`ERROR=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%q<obj>/%q<attr>,%q<body>)]; @pemit %#=[ansi(hc,Help>)] Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].
+          $^\+help/write\s+(?<topic>[^=]+)=(?<body>.*)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert strlen(setr(body,r(body,args)))=@include %!/INC`DISPLAY`ERROR=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%q<obj>/%q<attr>,%q<body>)]; @pemit %#=[ansi(hc,Help>)] Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].
         flags: [regexp, cmdsyntax]
       CMD`DELETE:
         value: |-

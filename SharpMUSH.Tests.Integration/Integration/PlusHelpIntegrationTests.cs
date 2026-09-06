@@ -156,10 +156,7 @@ public class PlusHelpIntegrationTests
 			.Because("the librarian reads HELP trees on other packages' objects, scene's WIZARD one included");
 	}
 
-	/// <summary>
-	/// The claim the whole registry design rests on: a package registers by attaching one SRC leaf,
-	/// so the librarian's registry is maintained by the package manager rather than by hand.
-	/// </summary>
+	/// <summary>A package's topics are readable without anything registering them at runtime.</summary>
 	[Test]
 	public async Task ContributingPackages_RegisterThemselvesByAttachingASourceLeaf()
 	{
@@ -235,14 +232,11 @@ public class PlusHelpIntegrationTests
 	/// <summary>
 	/// Every registered source must resolve to a DIFFERENT object.
 	///
-	/// <para>An installed <c>{{ref}}</c> is a <c>[v(PM`REFS`&lt;REF&gt;)]</c> recall, and the
-	/// <c>PM`REFS</c> tree it reads lives on the object the attribute landed on — this librarian —
-	/// shared by every package that registers here. <c>PM`REFS</c> namespaces only the cross-package
-	/// <c>{{pkg/ref}}</c> form, so two contributors that both name their object <c>help</c> get one
-	/// <c>PM`REFS`HELP</c> between them: the later install silently steals the earlier's topics and
-	/// its own object is orphaned. That is what happened when scene and plus-help both used
-	/// <c>help</c>, and the symptom was scene's topics vanishing while an unrelated bare name turned
-	/// ambiguous — a long way from the cause.</para>
+	/// <para>An installed <c>{{ref}}</c> is a <c>[v(PM`REFS`&lt;REF&gt;)]</c> recall against this
+	/// librarian, and <c>PM`REFS</c> namespaces only the cross-package <c>{{pkg/ref}}</c> form — so
+	/// two contributors that both name their object <c>help</c> share one leaf and the later install
+	/// steals the earlier's topics. Scene and plus-help did exactly that, and the symptom was scene's
+	/// topics vanishing while an unrelated bare name turned ambiguous.</para>
 	/// </summary>
 	[Test]
 	public async Task EverySourceResolvesToItsOwnObject()
@@ -359,11 +353,9 @@ public class PlusHelpIntegrationTests
 	/// backticks are markdown and the parser has never heard of them. An unescaped one ends the
 	/// expression and the body fails to parse.
 	///
-	/// <para>Asserted here rather than left to the reader because <c>FUN`GET`RTEXT</c> falls back to
-	/// the stored text when evaluation fails, which is the right behaviour for a reader and a very
-	/// good way to not notice: the topic still renders, just without any of its evaluated content.
-	/// One shipped topic was broken exactly this way, and the only visible symptom was a
-	/// cross-reference elsewhere in it rendering as literal brackets.</para>
+	/// <para>Asserted here because <c>FUN`GET`RTEXT</c> falls back to the stored text when evaluation
+	/// fails — right for a reader, and a very good way not to notice: the topic still renders, just
+	/// without any of its evaluated content.</para>
 	/// </summary>
 	[Test]
 	public async Task EveryShippedTopicEvaluates()
@@ -541,27 +533,51 @@ public class PlusHelpIntegrationTests
 		await RunAs(await StaffAsync(), "+help/delete applying");
 	}
 
+	/// <summary>A topic named "0" is a topic, and so is a body of "0".</summary>
+	[Test]
+	public async Task Write_AcceptsZeroAsATopicNameAndAsABody()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var wrote = Joined(await RunAs(await StaffAsync(), "+help/write 0=0"));
+
+		await Assert.That(wrote).Contains("Wrote game/0");
+
+		var stored = (await God1($"think [get({await ObjectAsync("game_help")}/HELP`0)]")).Message?.ToPlainText()?.Trim() ?? "";
+		await Assert.That(stored).IsEqualTo("0");
+
+		await RunAs(await StaffAsync(), "+help/delete 0");
+	}
+
 	/// <summary>
-	/// A topic name is constrained to letters, digits and <c>_ . -</c>, because the name becomes an
-	/// attribute path with spaces read as backticks — a <c>`</c>, a <c>*</c> or a <c>/</c> in it would
-	/// name a different attribute, or a whole branch, than the one the writer typed.
-	///
-	/// <para>The guard's character class is written <c>\[A-Z0-9_. -\]</c>: softcode consumes both
-	/// backslashes, so the regex engine sees a properly closed <c>[A-Z0-9_. -]</c>. Leaving the
-	/// opening bracket bare would have the evaluator eat the class before regmatch() ever saw it.
-	/// This pair of cases pins that down — an accepted name proves the class closes, a rejected one
-	/// proves it still constrains.</para>
+	/// A topic name becomes an attribute path, so the PATH is checked — by asking
+	/// <c>valid(attrname,…)</c> rather than by restating the engine's rule in a character class here.
+	/// A doubled or leading backtick is what a local whitelist would have to re-derive.
 	/// </summary>
 	[Test]
-	[Arguments("bad*name", "a wildcard would match a branch rather than name one topic")]
-	[Arguments("bad`name", "a backtick would reach into the attribute tree")]
-	[Arguments("bad/name", "a slash reads as the source qualifier")]
-	public async Task Write_RefusesATopicNameThatIsNotWordCharacters(string topic, string why)
+	[Arguments("bad``name", "a doubled backtick is not an attribute name")]
+	[Arguments("`leading", "nor is a leading one")]
+	public async Task Write_RefusesATopicNameAnAttributeCannotBeCalled(string topic, string why)
 	{
 		await PutLibrarianInMasterRoomAsync();
 		var said = Joined(await RunAs(await StaffAsync(), $"+help/write {topic}=Should never be stored."));
 
-		await Assert.That(said).Contains("A topic name is").Because(why);
+		await Assert.That(said).Contains("storable as an attribute name").Because(why);
+	}
+
+	/// <summary>
+	/// Storability is not the whole rule: <c>+help</c> reserves three characters of its own, and a
+	/// name carrying one would be written and then be unreachable by the syntax that reads it.
+	/// </summary>
+	[Test]
+	[Arguments("bad*name", "* is the wildcard +help <topic> matches on")]
+	[Arguments("bad?name", "so is ?")]
+	[Arguments("bad/name", "/ separates the source from the topic")]
+	public async Task Write_RefusesATopicNameUsingACharacterHelpReserves(string topic, string why)
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = Joined(await RunAs(await StaffAsync(), $"+help/write {topic}=Should never be stored."));
+
+		await Assert.That(said).Contains("cannot contain").Because(why);
 	}
 
 	/// <summary>

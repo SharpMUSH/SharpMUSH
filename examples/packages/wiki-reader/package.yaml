@@ -190,13 +190,9 @@ objects:
         flags: [regexp, cmdsyntax]
 
       # ---- +help topics -------------------------------------------------------
-      # These sit on wiki_global itself rather than on a separate storage object, which is fine
-      # BECAUSE wiki_global carries no privileged flag: u() on a privileged object's attribute is
-      # refused unless the evaluator is privileged too, and the librarian is not. A package whose
-      # command object must be WIZARD — scene's Logger, say — needs a plain object for its help.
-      #
-      # Bodies are evaluated, so they are written like any other softcode: escape what should be
-      # shown, leave alone what should be run. That is also how a \[cross-reference\] is spelled.
+      # These sit on wiki_global itself, which is fine because it carries no privileged flag — the
+      # librarian cannot u() a privileged object's attribute, so a package whose command object must
+      # be WIZARD (scene's Logger) needs a plain one for its help instead.
       HELP: |-
         Reading the wiki from in-game.
       SEE: |-

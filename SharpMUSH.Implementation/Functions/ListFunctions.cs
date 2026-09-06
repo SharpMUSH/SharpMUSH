@@ -655,8 +655,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 		}
 
-		// Level 0 = current, 1 = parent, etc. The stack enumerates innermost-first, so the level
-		// IS the index; reversing it here returned the outermost for inum(0). See itext().
+		// The stack enumerates innermost-first, so the level IS the index: 0 = current, 1 = parent.
 		var iteration = parser.CurrentState.IterationRegisters.ElementAt(level).Iteration;
 		return ValueTask.FromResult(new CallState(iteration));
 	}

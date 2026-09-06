@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
@@ -135,6 +136,27 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Length).IsEqualTo(40)
 			.Because("a long title must be truncated to fit, never wrapping past the width");
+	}
+
+	/// <summary>
+	/// STARTUP walks the FUN` tree rather than listing the functions again, so every branch head must
+	/// come back registered. An unregistered name evaluates to its own call text — that is what a
+	/// missed registration would look like, and it is what this rules out for every head at once.
+	/// </summary>
+	[Test]
+	public async Task EveryFunctionInTheTree_IsRegistered()
+	{
+		var objid = (await Registry.GetPackageObjectsAsync("common-functions")).Single().Objid;
+		var dbref = PackageInstallService.ParseObjid(objid)!.Value;
+
+		var heads = (await Eval($"lattr({dbref}/FUN`*)")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(heads.Length).IsGreaterThan(0);
+
+		foreach (var name in heads.Select(head => head["FUN`".Length..].ToLowerInvariant()))
+		{
+			await Assert.That(await Eval($"{name}()")).IsNotEqualTo($"{name}()")
+				.Because($"FUN`{name.ToUpperInvariant()} is in the tree, so {name}() must be registered");
+		}
 	}
 
 	/// <summary>

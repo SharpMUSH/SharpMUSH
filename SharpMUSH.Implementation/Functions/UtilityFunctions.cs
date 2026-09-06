@@ -817,9 +817,8 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 		}
 
-		// IterationRegisters is a stack pushed on entry, so enumeration is innermost-first and
-		// level 0 — the current iteration — is simply element 0. The "L" branch above takes the
-		// other end for the outermost, which is also what itext(ilev()) resolves to.
+		// The stack enumerates innermost-first, so the level IS the index: 0 = current, 1 = parent.
+		// The "L" branch above takes the other end, which is what itext(ilev()) resolves to.
 		var value = parser.CurrentState.IterationRegisters.ElementAt(level).Value;
 		return ValueTask.FromResult(new CallState(value));
 	}
