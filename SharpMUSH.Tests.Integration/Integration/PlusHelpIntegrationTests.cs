@@ -37,6 +37,39 @@ public class PlusHelpIntegrationTests
 		(IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	private static readonly string Tag = Guid.NewGuid().ToString("N")[..8];
+
+	private const long ReaderHandle = 9600;
+	private const long StaffHandle = 9601;
+	private const long PuebloHandle = 9602;
+
+	private string? _reader;
+	private string? _staff;
+	private string? _pueblo;
+
+	/// <summary>
+	/// A plain mortal. Reading help has to work for one, so every READING test drives this rather
+	/// than a wizard — and never God, who is root here: #1 passes every lock, so a permission
+	/// regression in +help would render perfectly and the test would still pass.
+	/// </summary>
+	private async Task<long> ReaderAsync()
+	{
+		_reader ??= await CreatePlayerAsync($"Read{Tag}", ReaderHandle);
+		return ReaderHandle;
+	}
+
+	/// <summary>A wizard, for the staff verbs. Still not God — a wizard is what a game actually has.</summary>
+	private async Task<long> StaffAsync()
+	{
+		_staff ??= await CreatePlayerAsync($"Staff{Tag}", StaffHandle, wizard: true);
+		return StaffHandle;
+	}
+
+	/// <summary>A reader whose client announces Pueblo, for the one test that asserts link markup.</summary>
+	private async Task<long> PuebloAsync()
+	{
+		_pueblo ??= await CreatePlayerAsync($"Pueb{Tag}", PuebloHandle, pueblo: true);
+		return PuebloHandle;
+	}
 	private readonly ConcurrentDictionary<long, DBRef> _actors = new();
 
 	private async Task<CallState> God1(string command) =>
@@ -47,13 +80,13 @@ public class PlusHelpIntegrationTests
 	/// the CallState from CommandParse is empty and the output has to be read out of the
 	/// notification recorder.
 	///
-	/// <para>Handle 1 is God, bound by the factory, so the tests that assert RENDERING rather than
-	/// permission drive it through here instead of creating a player. Every player a suite creates
-	/// widens the window ProfileApiTests' whole-database read has to survive.</para>
+	/// <para>The suite shares three characters — see <see cref="ReaderAsync"/> — rather than making
+	/// one per test: every player a suite creates widens the window ProfileApiTests' whole-database
+	/// read has to survive.</para>
 	/// </summary>
 	private async Task<IReadOnlyList<string>> RunAs(long handle, string command)
 	{
-		var actor = handle == 1 ? WebAppFactoryArg.ExecutorDBRef : _actors[handle];
+		var actor = _actors[handle];
 		var before = Notifications.CountFor(actor);
 		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
 		return [.. Notifications.For(actor).Skip(before)];
@@ -250,10 +283,7 @@ public class PlusHelpIntegrationTests
 	public async Task TheIndex_ListsEverySourceThatHasTopics()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		const long handle = 9700;
-		await CreatePlayerAsync($"Idx{Tag}", handle);
-
-		var said = Joined(await RunAs(handle, "+help"));
+		var said = Joined(await RunAs(await ReaderAsync(), "+help"));
 
 		await Assert.That(said).Contains("plus-help").Because("the librarian's own topics are a source like any other");
 		await Assert.That(said).Contains("scene").Because("scene contributes topics and must appear in the index");
@@ -266,10 +296,7 @@ public class PlusHelpIntegrationTests
 	public async Task APackagesTopic_IsReadableWithNoRegistrationStep()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		const long handle = 9701;
-		await CreatePlayerAsync($"Pkg{Tag}", handle);
-
-		var said = Joined(await RunAs(handle, "+help scene"));
+		var said = Joined(await RunAs(await ReaderAsync(), "+help scene"));
 
 		await Assert.That(said).Contains("+scene/join")
 			.Because("the scene topic is what tells a player the verb exists");
@@ -281,11 +308,8 @@ public class PlusHelpIntegrationTests
 	public async Task AQualifiedName_ReadsTheSameTopicAsTheBareOne()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		const long handle = 9702;
-		await CreatePlayerAsync($"Qual{Tag}", handle);
-
-		var bare = Joined(await RunAs(handle, "+help write"));
-		var qualified = Joined(await RunAs(handle, "+help plus-help/write"));
+		var bare = Joined(await RunAs(await ReaderAsync(), "+help write"));
+		var qualified = Joined(await RunAs(await ReaderAsync(), "+help plus-help/write"));
 
 		await Assert.That(bare).Contains("+help/write");
 		await Assert.That(qualified).Contains("+help/write");
@@ -299,10 +323,7 @@ public class PlusHelpIntegrationTests
 	public async Task AMiss_PointsAtTheEnginesHelpInsteadOfRenderingIt()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		const long handle = 9703;
-		await CreatePlayerAsync($"Miss{Tag}", handle);
-
-		var said = Joined(await RunAs(handle, "+help @pemit"));
+		var said = Joined(await RunAs(await ReaderAsync(), "+help @pemit"));
 
 		await Assert.That(said).Contains("No local topic");
 		await Assert.That(said).Contains("help @pemit").Because("the miss has to name the command that would work");
@@ -314,10 +335,7 @@ public class PlusHelpIntegrationTests
 	public async Task Search_MatchesTopicBodiesAsWellAsNames()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		const long handle = 9704;
-		await CreatePlayerAsync($"Srch{Tag}", handle);
-
-		var said = Joined(await RunAs(handle, "+help/search markdown"));
+		var said = Joined(await RunAs(await ReaderAsync(), "+help/search markdown"));
 
 		await Assert.That(said).Contains("plus-help/write")
 			.Because("the write topic's body says its text is markdown, and search reads bodies");
@@ -327,14 +345,11 @@ public class PlusHelpIntegrationTests
 	public async Task List_NarrowsToOneSource_AndRefusesOneThatIsNotRegistered()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		const long handle = 9705;
-		await CreatePlayerAsync($"Lst{Tag}", handle);
-
-		var listed = Joined(await RunAs(handle, "+help/list plus-help"));
+		var listed = Joined(await RunAs(await ReaderAsync(), "+help/list plus-help"));
 		await Assert.That(listed).Contains("plus-help/sources");
 		await Assert.That(listed).DoesNotContain("scene/");
 
-		var refused = Joined(await RunAs(handle, "+help/list nosuchsource"));
+		var refused = Joined(await RunAs(await ReaderAsync(), "+help/list nosuchsource"));
 		await Assert.That(refused).Contains("No such help source");
 	}
 
@@ -380,7 +395,7 @@ public class PlusHelpIntegrationTests
 	public async Task ATopicWithSubtopics_ListsThemFromTheTree()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = Joined(await RunAs(1, "+help scene"));
+		var said = Joined(await RunAs(await ReaderAsync(), "+help scene"));
 
 		await Assert.That(said).Contains("Subtopics:");
 		foreach (var child in new[] { "join", "pitch", "pose", "privacy", "schedule" })
@@ -394,7 +409,7 @@ public class PlusHelpIntegrationTests
 	public async Task ALeafTopic_HasNoSubtopicsLine()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = Joined(await RunAs(1, "+help scene join"));
+		var said = Joined(await RunAs(await ReaderAsync(), "+help scene join"));
 
 		await Assert.That(said).DoesNotContain("Subtopics:");
 		await Assert.That(said).Contains("See also:").Because("it declares cross-references instead");
@@ -408,8 +423,7 @@ public class PlusHelpIntegrationTests
 	public async Task ASubtopicLink_RunsTheFullTopicName()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		const long handle = 9732;
-		await CreatePlayerAsync($"Click{Tag}", handle, pueblo: true);
+		var handle = await PuebloAsync();
 
 		// Read the RAW notification: For() has already flattened the MString to text, and the MXP
 		// markup a command link is made of only exists in the unflattened form.
@@ -433,7 +447,7 @@ public class PlusHelpIntegrationTests
 	public async Task SeeAlso_ComesFromTheDeclaredSeeTree()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = Joined(await RunAs(1, "+help pot"));
+		var said = Joined(await RunAs(await ReaderAsync(), "+help pot"));
 
 		await Assert.That(said).Contains("See also:");
 		await Assert.That(said).Contains("scene pose").Because("a multi-word name survives the | split");
@@ -450,7 +464,7 @@ public class PlusHelpIntegrationTests
 	public async Task TheIndex_RendersTheIndexTopic_AndCountsNothing()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = Joined(await RunAs(1, "+help"));
+		var said = Joined(await RunAs(await ReaderAsync(), "+help"));
 
 		await Assert.That(said).Contains("Available help");
 		await Assert.That(said).Contains("this game's own help").Because("the index topic is rendered");
@@ -468,8 +482,8 @@ public class PlusHelpIntegrationTests
 		await PutLibrarianInMasterRoomAsync();
 		try
 		{
-			await God1("+help/write index=Welcome to the game. Ask staff anything.");
-			var said = Joined(await RunAs(1, "+help"));
+			await RunAs(await StaffAsync(), "+help/write index=Welcome to the game. Ask staff anything.");
+			var said = Joined(await RunAs(await ReaderAsync(), "+help"));
 
 			await Assert.That(said).Contains("Welcome to the game");
 			await Assert.That(said).DoesNotContain("this game's own help")
@@ -477,10 +491,10 @@ public class PlusHelpIntegrationTests
 		}
 		finally
 		{
-			await God1("+help/delete index");
+			await RunAs(await StaffAsync(), "+help/delete index");
 		}
 
-		var restored = Joined(await RunAs(1, "+help"));
+		var restored = Joined(await RunAs(await ReaderAsync(), "+help"));
 		await Assert.That(restored).Contains("this game's own help")
 			.Because("deleting the override hands the front page back to the package");
 	}
@@ -491,10 +505,7 @@ public class PlusHelpIntegrationTests
 	public async Task Write_IsRefusedForAMortal()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		const long handle = 9706;
-		await CreatePlayerAsync($"Mort{Tag}", handle);
-
-		var said = Joined(await RunAs(handle, "+help/write policy=Mortals may not write help."));
+		var said = Joined(await RunAs(await ReaderAsync(), "+help/write policy=Mortals may not write help."));
 
 		await Assert.That(said).Contains("Staff only");
 
@@ -513,25 +524,21 @@ public class PlusHelpIntegrationTests
 	public async Task Write_StoresTheBodyVerbatim_AndItEvaluatesForTheReader()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		const long staffHandle = 9707;
-		const long readerHandle = 9708;
-		var staff = $"Staf{Tag}";
-		var reader = $"Read{Tag}";
-		await CreatePlayerAsync(staff, staffHandle, wizard: true);
-		await CreatePlayerAsync(reader, readerHandle);
+		var readerName = $"Read{Tag}";
+		await ReaderAsync();
 
-		var wrote = Joined(await RunAs(staffHandle, @"+help/write applying=Ask for \[name(%%#)\] at the gate."));
+		var wrote = Joined(await RunAs(await StaffAsync(), @"+help/write applying=Ask for \[name(%%#)\] at the gate."));
 		await Assert.That(wrote).Contains("Wrote game/applying");
 
 		var stored = (await God1($"think [get({await ObjectAsync("game_help")}/HELP`APPLYING)]")).Message?.ToPlainText() ?? string.Empty;
 		await Assert.That(stored).Contains("[name(%#)]")
 			.Because("the escaped code must reach the attribute unresolved; resolving it at write time would freeze the writer's name into the topic");
 
-		var read = Joined(await RunAs(readerHandle, "+help applying"));
-		await Assert.That(read).Contains(reader)
+		var read = Joined(await RunAs(await ReaderAsync(), "+help applying"));
+		await Assert.That(read).Contains(readerName)
 			.Because("a topic is evaluated for the reader, so [name(%#)] is the reader's own name");
 
-		await RunAs(staffHandle, "+help/delete applying");
+		await RunAs(await StaffAsync(), "+help/delete applying");
 	}
 
 	/// <summary>
@@ -543,29 +550,27 @@ public class PlusHelpIntegrationTests
 	public async Task ACollision_ListsCandidates_UnlessTheGameOwnsOneOfThem()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		const long staffHandle = 9709;
-		await CreatePlayerAsync($"Coll{Tag}", staffHandle, wizard: true);
 
 		// A second source claiming a name plus-help already uses.
 		var rival = (await God1($"@create Rival Help {Tag}")).Message?.ToPlainText()?.Trim();
 		await God1($"&HELP {rival}=A rival source.");
 		await God1($"&HELP`SOURCES {rival}=The rival's own take on sources.");
-		await RunAs(staffHandle, $"+help/source rival={rival}");
+		await RunAs(await StaffAsync(), $"+help/source rival={rival}");
 
-		var ambiguous = Joined(await RunAs(staffHandle, "+help sources"));
+		var ambiguous = Joined(await RunAs(await StaffAsync(), "+help sources"));
 		await Assert.That(ambiguous).Contains("match")
 			.Because("two sources claim 'sources', so neither may be picked silently");
 		await Assert.That(ambiguous).Contains("plus-help/sources");
 		await Assert.That(ambiguous).Contains("rival/sources");
 
 		// The game's own word wins outright.
-		await RunAs(staffHandle, "+help/write sources=The game has the last word.");
-		var resolved = Joined(await RunAs(staffHandle, "+help sources"));
+		await RunAs(await StaffAsync(), "+help/write sources=The game has the last word.");
+		var resolved = Joined(await RunAs(await StaffAsync(), "+help sources"));
 		await Assert.That(resolved).Contains("last word")
 			.Because("a game-authored topic outranks any number of package ones");
 
-		await RunAs(staffHandle, "+help/delete sources");
-		await RunAs(staffHandle, "+help/unsource rival");
+		await RunAs(await StaffAsync(), "+help/delete sources");
+		await RunAs(await StaffAsync(), "+help/unsource rival");
 		await God1($"@destroy {rival}");
 	}
 }
