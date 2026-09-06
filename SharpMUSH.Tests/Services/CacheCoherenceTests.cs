@@ -29,7 +29,7 @@ public class CacheCoherenceTests
 	{
 		public string[] CacheKeys => [];
 		public string[] CacheTags => [];
-		public string[] CacheKeysFor(int created) => [Library.Definitions.CacheKeys.Object(created)];
+		public string[] CacheKeysFor(int created) => [SharpMUSH.Library.Definitions.CacheKeys.Object(created)];
 	}
 
 	[Test]

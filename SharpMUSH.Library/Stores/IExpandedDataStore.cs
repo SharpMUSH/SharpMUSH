@@ -20,7 +20,7 @@ public interface IExpandedDataStore
 	/// Gets the Expanded Object Data for a SharpObject. 
 	/// </summary>
 	/// <param name="sharpObjectId">Database Id</param>
-	/// <param name="dataType">Type being queried. Each Type gets its ow n storage.</param>
+	/// <param name="dataType">Type being queried. Each Type gets its own storage.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>A Json String with the data stored within.</returns>
 	ValueTask<T?> GetExpandedObjectData<T>(string sharpObjectId, string dataType, CancellationToken cancellationToken = default);
@@ -36,7 +36,7 @@ public interface IExpandedDataStore
 	/// <summary>
 	/// Gets the Expanded Object Data for the server as a whole. 
 	/// </summary>
-	/// <param name="dataType">Type being queried. Each Type gets its ow n storage.</param>
+	/// <param name="dataType">Type being queried. Each Type gets its own storage.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>A Json String with the data stored within.</returns>
 	ValueTask<T?> GetExpandedServerData<T>(string dataType, CancellationToken cancellationToken = default);
