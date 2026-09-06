@@ -13,9 +13,9 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, Objec
 	where TRequest : IQuery<TResponse>, ICacheable
 {
 	// The object node query is the object cache itself; every other object-shaped result is stored
-	// as the dbref it names and resolved through that cache on each read (see ObjectShapes).
-	private static readonly IObjectShape<TResponse>? Shape =
-		typeof(TRequest) == typeof(GetObjectNodeByNumberQuery) ? null : ObjectShapes.For<TResponse>();
+	// as the dbref it names and resolved through that cache on each read (see IObjectShaped).
+	private static readonly bool Shaped =
+		typeof(TRequest) != typeof(GetObjectNodeByNumberQuery) && ObjectShaped<TResponse>.Supported;
 
 	public async ValueTask<TResponse> Handle(
 		TRequest message,
@@ -23,9 +23,9 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, Objec
 		CancellationToken cancellationToken
 	)
 	{
-		if (Shape is not null)
+		if (Shaped)
 		{
-			return await HandleShapedAsync(message, next, Shape, cancellationToken);
+			return await HandleShapedAsync(message, next, cancellationToken);
 		}
 
 		// A key-invalidated object entry carries no tag stamp, so a write that lands while the factory
@@ -58,24 +58,26 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, Objec
 	}
 
 	private async ValueTask<TResponse> HandleShapedAsync(TRequest message, MessageHandlerDelegate<TRequest, TResponse> next,
-		IObjectShape<TResponse> shape, CancellationToken cancellationToken)
+		CancellationToken cancellationToken)
 	{
 		var stored = await cache.GetOrSetAsync<CachedObjectRef>(message.CacheKey,
 			async (ctx, ct) =>
 			{
 				var result = await next(message, ct);
-				var number = shape.NumberOf(result);
-				EmbeddedObjectTags.Apply(ctx, message, number is null ? [] : [number.Value]);
-				return new CachedObjectRef(number);
+				var reference = ObjectShaped<TResponse>.RefOf(result);
+				EmbeddedObjectTags.Apply(ctx, message, reference is { } named ? [named.Number] : []);
+				return new CachedObjectRef(reference);
 			},
 			options: CacheEntryProfiles.For(message.Profile),
 			tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
 			token: cancellationToken);
 
-		var node = stored.Number is { } known
-			? await mediator.Send(new GetObjectNodeByNumberQuery(known), cancellationToken)
+		// The full object id: a number recycled since the entry was stored resolves to nothing rather
+		// than to the object that took its place. A ref without milliseconds is a bare number lookup.
+		var node = stored.Ref is { } known
+			? await mediator.Send(new GetObjectNodeQuery(known), cancellationToken)
 			: new None();
-		if (shape.TryFromNode(node, out var value))
+		if (ObjectShaped<TResponse>.TryFromNode(node, out var value))
 		{
 			return value;
 		}
@@ -90,7 +92,7 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, Objec
 /// <summary>
 /// Stamps a cached result with one <see cref="Definitions.CacheKeys.ObjectTag"/> per object it
 /// names, so a write to any of them expires it (see <see cref="EmbeddedObjects"/> and
-/// <see cref="ObjectShapes"/>). The object node's own query is left alone: its key is what a write
+/// <see cref="IObjectShaped{TSelf}"/>). The object node's own query is left alone: its key is what a write
 /// removes, and a tag on it would cost it the fail-safe that key-only entries are allowed. Any
 /// entry that does gain tags loses fail-safe and eager refresh, the same rule the Tagged profile
 /// encodes statically.

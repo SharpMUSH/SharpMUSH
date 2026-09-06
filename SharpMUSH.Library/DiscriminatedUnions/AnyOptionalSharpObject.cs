@@ -1,11 +1,12 @@
-﻿using OneOf;
+﻿using SharpMUSH.Library.Extensions;
+using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [GenerateOneOf]
-public class AnyOptionalSharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>
+public class AnyOptionalSharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>, IObjectShaped<AnyOptionalSharpObject>
 {
 	public AnyOptionalSharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> input) : base(input) { }
 	public static implicit operator AnyOptionalSharpObject(SharpPlayer x) => new(x);
@@ -31,4 +32,12 @@ public class AnyOptionalSharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExi
 		thing => new AnySharpObject(thing),
 		_ => throw new ArgumentOutOfRangeException()
 		);
+
+	public static DBRef? RefOf(AnyOptionalSharpObject value) => value.IsNone ? null : value.Known.Object().DBRef;
+
+	public static bool TryFromNode(AnyOptionalSharpObject node, out AnyOptionalSharpObject value)
+	{
+		value = node;
+		return true;
+	}
 }

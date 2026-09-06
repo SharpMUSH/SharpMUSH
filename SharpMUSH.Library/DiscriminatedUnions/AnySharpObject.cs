@@ -6,7 +6,7 @@ namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [GenerateOneOf]
 public class AnySharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> input)
-	: OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing>(input)
+	: OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing>(input), IObjectShaped<AnySharpObject>
 {
 	protected bool Equals(AnySharpObject other) => this.Object().DBRef == other.Object().DBRef;
 
@@ -87,4 +87,12 @@ public class AnySharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>
 	public SharpRoom AsRoom => AsT1;
 	public SharpExit AsExit => AsT2;
 	public SharpThing AsThing => AsT3;
+
+	public static DBRef? RefOf(AnySharpObject value) => value.Object().DBRef;
+
+	public static bool TryFromNode(AnyOptionalSharpObject node, out AnySharpObject value)
+	{
+		value = node.IsNone ? null! : node.Known;
+		return !node.IsNone;
+	}
 }

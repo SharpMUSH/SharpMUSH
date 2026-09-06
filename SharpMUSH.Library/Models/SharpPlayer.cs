@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.Models;
 
-public class SharpPlayer
+public class SharpPlayer : IObjectShaped<SharpPlayer>
 {
 	[JsonIgnore]
 	public string? Id { get; set; }
@@ -27,4 +27,12 @@ public class SharpPlayer
 	/// The player's build quota - maximum number of objects they can own.
 	/// </summary>
 	public required int Quota { get; set; }
+
+	public static DBRef? RefOf(SharpPlayer value) => value.Object.DBRef;
+
+	public static bool TryFromNode(AnyOptionalSharpObject node, out SharpPlayer value)
+	{
+		value = node.IsPlayer ? node.AsPlayer : null!;
+		return node.IsPlayer;
+	}
 }

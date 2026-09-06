@@ -128,8 +128,8 @@ the snapshot rule lives on `SharpObject` as `WithFlag`/`WithoutFlag`/`WithPower`
 and its tag are gone.
 
 The last item of #868 closed the shape: an object-shaped cached result (a contents list, a
-location answer, an owner, parent, zone or home, a lookup by name) is stored as the dbref it
-names (`ObjectShapes`) and resolved through the object node cache on each read, so there is one
+location answer, an owner, parent, zone or home, a lookup by name) is stored as the full object id it
+names, number and creation milliseconds (each such type implements `IObjectShaped<T>`) and resolved through the object node cache on each read, so there is one
 instance of an object in the process and nothing is re-pointed after a write. The result keeps
 its `obj:#N` tags, since a rename still changes which player a name finds. The price is one
 node-cache hit per named object on each read, measured with the `loc`, `lcon` and `lcon-names`

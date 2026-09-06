@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using System.Runtime.CompilerServices;
 using ZiggyCreatures.Caching.Fusion;
@@ -16,8 +17,8 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache,
 	where TRequest : IStreamQuery<TResponse>, ICacheable
 {
 	// An object-shaped stream is stored as the dbrefs it names and resolved through the object node
-	// cache on each read, so every result hands out the one instance per object (see ObjectShapes).
-	private static readonly IObjectShape<TResponse>? Shape = ObjectShapes.For<TResponse>();
+	// cache on each read, so every result hands out the one instance per object (see IObjectShaped).
+	private static readonly bool Shaped = ObjectShaped<TResponse>.Supported;
 
 	public async IAsyncEnumerable<TResponse> Handle(
 		TRequest message,
@@ -25,26 +26,27 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache,
 		[EnumeratorCancellation] CancellationToken cancellationToken
 	)
 	{
-		if (Shape is { } shape)
+		if (Shaped)
 		{
 			var stored = await cache.GetOrSetAsync<CachedObjectRefs>(message.CacheKey,
 				async (ctx, ct) =>
 				{
 					var result = await MaterializeAsync(message, next, ct);
-					var numbers = result.Select(shape.NumberOf).OfType<int>().ToArray();
-					ctx.Options.Size = Math.Clamp(numbers.Length, 1, CacheEntryProfiles.MaxEntrySize);
-					EmbeddedObjectTags.Apply(ctx, message, numbers);
-					return new CachedObjectRefs(numbers);
+					var refs = result.Select(ObjectShaped<TResponse>.RefOf).OfType<DBRef>().ToArray();
+					ctx.Options.Size = Math.Clamp(refs.Length, 1, CacheEntryProfiles.MaxEntrySize);
+					EmbeddedObjectTags.Apply(ctx, message, refs.Select(r => r.Number).ToArray());
+					return new CachedObjectRefs(refs);
 				},
 				options: CacheEntryProfiles.For(message.Profile),
 				tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
 				token: cancellationToken);
 
-			foreach (var number in stored.Numbers)
+			foreach (var reference in stored.Refs)
 			{
-				// An object that is gone since the list was stored is simply not in it any more.
-				var node = await mediator.Send(new GetObjectNodeByNumberQuery(number), cancellationToken);
-				if (shape.TryFromNode(node, out var value))
+				// An object gone since the list was stored is simply not in it any more, and the full
+				// object id means a recycled number is gone too, not the object that took its place.
+				var node = await mediator.Send(new GetObjectNodeQuery(reference), cancellationToken);
+				if (ObjectShaped<TResponse>.TryFromNode(node, out var value))
 				{
 					yield return value;
 				}
