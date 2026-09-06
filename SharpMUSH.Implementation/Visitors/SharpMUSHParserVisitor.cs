@@ -41,8 +41,6 @@ namespace SharpMUSH.Implementation.Visitors;
 /// <item><description>ANTLR4 ParserRuleContext objects are reused when possible to reduce allocations</description></item>
 /// <item><description>String operations use MString/Span-based methods to avoid allocations</description></item>
 /// </list>
-/// 
-/// <para>For details on optimization patterns, see PARSER_OPTIMIZATION_ANALYSIS.md</para>
 /// </summary>
 /// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
 /// <param name="source">The original MarkupString. A plain GetText is not good enough to get the proper value back.</param>
@@ -803,17 +801,27 @@ public class SharpMUSHParserVisitor(
 			}
 			else if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
 			{
-				refinedArguments = await args
-					.ToAsyncEnumerable()
-					.Select<EvaluationStringContext?, CallState>(async (x, _) =>
+				// Arguments evaluate left to right, one at a time. A plain loop rather than async LINQ:
+				// the enumerable adapters and a state machine per argument were a twelfth of the bytes
+				// a nested call allocated.
+				refinedArguments = new List<CallState>(Math.Max(args.Length, 1));
+				foreach (var x in args)
+				{
+					if (x is null)
 					{
-						if (x == null) return CallState.Empty;
-						var msg = (await visitor.VisitChildren(x))?.Message ?? MModule.empty();
-						if (stripAnsi) msg = MModule.plainText2(msg);
-						return new CallState(msg, x.Depth());
-					})
-					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
-					.ToListAsync();
+						refinedArguments.Add(CallState.Empty);
+						continue;
+					}
+
+					var msg = (await visitor.VisitChildren(x))?.Message ?? MModule.empty();
+					if (stripAnsi) msg = MModule.plainText2(msg);
+					refinedArguments.Add(new CallState(msg, x.Depth()));
+				}
+
+				if (refinedArguments.Count == 0)
+				{
+					refinedArguments.Add(new CallState(MModule.empty(), context.Depth()));
+				}
 			}
 			else if (attribute.Flags.HasFlag(FunctionFlags.NoParse) && attribute.MaxArgs == 1)
 			{
@@ -1065,22 +1073,17 @@ public class SharpMUSHParserVisitor(
 				ConnectionService.IncrementMetadata(parser.CurrentState.Handle.Value, "CommandCount");
 			}
 
-			// Use AlternativeLookup for zero-allocation case-insensitive lookup
-			var socketCommandPattern = parser.CommandLibrary.Where(x
-				=> parser.CurrentState.Handle is not null
-					 && x.Value.IsSystem
-					 && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
-					 && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET)).ToList();
-
-			if (socketCommandPattern.Any())
+			// The library is keyed case-insensitively, so an exact-name match is one lookup. Scanning
+			// every registered command for it - twice, here and for the single-token check below - was
+			// a sixth of all bytes a plain `think` allocated.
+			if (parser.CurrentState.Handle is not null
+					&& parser.CommandLibrary.TryGetValue(command, out var socketCandidate)
+					&& socketCandidate.IsSystem
+					&& socketCandidate.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET))
 			{
-				// Use AlternativeLookup to avoid string allocation from command.ToUpper()
-				var lookup = parser.CommandLibrary.GetAlternateLookup<ReadOnlySpan<char>>();
-				if (lookup.TryGetValue(command.AsSpan(), out var librarySocketCommandDefinition))
-				{
-					return await HandleSocketCommandPattern(parser, src, context, command, socketCommandPattern,
-						librarySocketCommandDefinition.LibraryInformation);
-				}
+				return await HandleSocketCommandPattern(parser, src, context, command,
+					[new KeyValuePair<string, (CommandDefinition, bool)>(command, socketCandidate)],
+					socketCandidate.LibraryInformation);
 			}
 
 			// PennMUSH-style unambiguous prefix abbreviation for pre-login SOCKET commands
@@ -1088,7 +1091,7 @@ public class SharpMUSHParserVisitor(
 			// above, and only while the connection has not logged in yet. If the typed token is
 			// a prefix of more than one system SOCKET command name, it's ambiguous and we fall
 			// through to the same "no such command" handling as an unknown command.
-			if (socketCommandPattern.Count == 0 && parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
+			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 			{
 				var socketPrefixMatches = parser.CommandLibrary.Where(x
 					=> x.Value.IsSystem
@@ -1191,14 +1194,13 @@ public class SharpMUSHParserVisitor(
 				}
 			}
 
-			var singleTokenCommandPattern = parser.CommandLibrary.Where(x
-				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase)
-					 && x.Value.IsSystem
-					 && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken)).ToList();
-
-			if (singleTokenCommandPattern.Count != 0)
+			var singleTokenLookup = parser.CommandLibrary.GetAlternateLookup<ReadOnlySpan<char>>();
+			if (singleTokenLookup.TryGetValue(command.AsSpan(0, 1), out var singleTokenCandidate)
+					&& singleTokenCandidate.IsSystem
+					&& singleTokenCandidate.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken))
 			{
-				return await HandleSingleTokenCommandPattern(parser, src, context, command, singleTokenCommandPattern);
+				return await HandleSingleTokenCommandPattern(parser, src, context, command,
+					[new KeyValuePair<string, (CommandDefinition, bool)>(command[..1], singleTokenCandidate)]);
 			}
 
 			var executorObject = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();

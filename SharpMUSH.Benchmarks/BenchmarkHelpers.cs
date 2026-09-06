@@ -36,32 +36,53 @@ internal static class BenchmarkHelpers
 	/// <summary>
 	/// Creates a fully configured <see cref="IMUSHCodeParser"/> bound to connection handle 1 (#1).
 	/// </summary>
+	/// <remarks>
+	/// The state carries the invocation and call-depth counters, so evaluate with a parser built from
+	/// <see cref="FreshState"/> per operation: the counters are cumulative for the life of a state, and a
+	/// parser reused across thousands of iterations crosses the function-invocation limit and thereafter
+	/// measures only the limit-exceeded short-circuit.
+	/// </remarks>
 	public static async Task<IMUSHCodeParser?> CreateTestParser(
 		ISharpDatabase database,
 		IServiceProvider services)
 	{
-		var realOne = await database.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false);
-		var one = realOne.Object()!.DBRef;
-
+		var one = await ExecutorDbRef(database).ConfigureAwait(false);
 		var parser = services.GetRequiredService<IMUSHCodeParser>();
-		return parser.FromState(new ParserState(
-			Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
-			IterationRegisters: new ConcurrentStack<IterationWrapper<MString>>(),
-			RegexRegisters: new ConcurrentStack<Dictionary<string, MString>>(),
-			SwitchStack: new ConcurrentStack<MString>(),
-			ExecutionStack: new ConcurrentStack<Execution>(),
-			EnvironmentRegisters: [],
-			CurrentEvaluation: null,
-			ParserFunctionDepth: 0,
-			Function: null,
-			Command: "think",
-			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-			Switches: [],
-			Arguments: [],
-			Executor: one,
-			Enactor: one,
-			Caller: one,
-			Handle: 1
-		));
+		return parser.FromState(FreshState(one));
 	}
+
+	/// <summary>The dbref (with creation time) of #1, the executor every benchmark runs as.</summary>
+	public static async Task<DBRef> ExecutorDbRef(ISharpDatabase database)
+	{
+		var realOne = await database.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false);
+		return realOne.Object()!.DBRef;
+	}
+
+	/// <summary>
+	/// A new top-level parser state for <paramref name="executor"/> on handle 1, with fresh tracking
+	/// counters - what <c>CommandParse(handle, ...)</c> builds for every command a player types.
+	/// </summary>
+	public static ParserState FreshState(DBRef executor) => new(
+		Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
+		IterationRegisters: new ConcurrentStack<IterationWrapper<MString>>(),
+		RegexRegisters: new ConcurrentStack<Dictionary<string, MString>>(),
+		SwitchStack: new ConcurrentStack<MString>(),
+		ExecutionStack: new ConcurrentStack<Execution>(),
+		EnvironmentRegisters: [],
+		CurrentEvaluation: null,
+		ParserFunctionDepth: 0,
+		Function: null,
+		Command: "think",
+		CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
+		Switches: [],
+		Arguments: [],
+		Executor: executor,
+		Enactor: executor,
+		Caller: executor,
+		Handle: 1,
+		CallDepth: new InvocationCounter(),
+		FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+		TotalInvocations: new InvocationCounter(),
+		LimitExceeded: new LimitExceededFlag(),
+		Flags: ParserStateFlags.DirectInput);
 }

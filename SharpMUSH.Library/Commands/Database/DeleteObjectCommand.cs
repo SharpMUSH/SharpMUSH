@@ -30,6 +30,7 @@ public record DeleteObjectCommand(DBRef Target) : ICommand<bool>, ICacheInvalida
 		Definitions.CacheTags.ObjectAttributes,
 		Definitions.CacheTags.ObjectOwnership,
 		Definitions.CacheTags.ObjectFlags,
+		Definitions.CacheTags.ObjectPowers,
 		Definitions.CacheTags.ObjectLocks,
 		Definitions.CacheTags.ChannelList,
 		Definitions.CacheTags.ZoneObjects

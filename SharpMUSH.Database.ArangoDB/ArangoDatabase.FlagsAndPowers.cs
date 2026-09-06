@@ -132,6 +132,9 @@ public partial class ArangoDatabase
 		return true;
 	}
 
+	public IAsyncEnumerable<SharpPower> GetObjectPowersAsync(string id, CancellationToken cancellationToken = default)
+		=> GetPowersAsync(id, cancellationToken);
+
 	private IAsyncEnumerable<SharpPower> GetPowersAsync(string id, CancellationToken ct = default) =>
 		arangoDb.Query.ExecuteStreamAsync<SharpPowerQueryResult>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphPowers} RETURN v", cancellationToken: ct)

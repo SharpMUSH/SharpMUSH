@@ -29,13 +29,12 @@ namespace SharpMUSH.Implementation;
 /// <para><b>Performance Optimizations:</b></para>
 /// <list type="bullet">
 /// <item><description>Services are resolved once at construction and cached to avoid repeated DI lookups</description></item>
-/// <item><description>CommandTrie provides O(m) prefix matching where m is the length of the search string</description></item>
+/// <item><description>CommandTrie provides O(m) prefix matching where m is the length of the search string; one trie is shared per command library</description></item>
 /// <item><description>ParseInternal() consolidates parser/lexer creation to reduce code duplication</description></item>
 /// <item><description>Custom span-based streams and token factory (BufferedTokenSpanStream, StringSpanInputStream, OptimizedTokenFactory) minimize allocations</description></item>
 /// <item><description>Prediction mode can be configured (SLL vs LL) for performance vs accuracy tradeoff</description></item>
 /// </list>
 /// 
-/// <para>For detailed optimization analysis, see PARSER_OPTIMIZATION_ANALYSIS.md</para>
 /// </summary>
 public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	LibraryService<string, FunctionDefinition> FunctionLibrary,
@@ -55,37 +54,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	private static readonly IVocabulary LexerVocabulary =
 		new SharpMUSHLexer(new StringSpanInputStream(string.Empty, string.Empty)).Vocabulary;
 
-	private readonly CommandTrie _commandTrie = BuildCommandTrie(CommandLibrary);
-
 	/// <summary>
-	/// Gets the command trie for efficient prefix-based command lookups.
+	/// The command trie for prefix lookups. Shared by every parser derived from the same command
+	/// library and rebuilt only when that library changes (see <see cref="CommandTrie.Invalidate"/>).
 	/// </summary>
-	public CommandTrie CommandTrie => _commandTrie;
-
-	/// <summary>
-	/// Builds a trie from the command library for efficient prefix matching.
-	/// </summary>
-	private static CommandTrie BuildCommandTrie(LibraryService<string, CommandDefinition> commandLibrary)
-	{
-		var trie = new CommandTrie();
-
-		foreach (var (commandName, commandInfo) in commandLibrary)
-		{
-			// SOCKET commands (CONNECT/WHO/QUIT/REGISTER/LOGIN/MAKE/PLAY) are dispatched exclusively
-			// by the dedicated pre-login SOCKET blocks in the visitor (exact match for any Handle,
-			// unambiguous-prefix abbreviation only while pre-login). They must NOT enter the general
-			// in-game command trie: FindShortestMatch would otherwise abbreviate them for a logged-in
-			// player (e.g. bare "q" -> QUIT), silently disconnecting them. The trie is only ever
-			// consulted post-login, so SOCKET commands never belong here.
-			if (commandInfo.IsSystem
-					&& !commandInfo.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET))
-			{
-				trie.Add(commandName, commandInfo.LibraryInformation);
-			}
-		}
-
-		return trie;
-	}
+	public CommandTrie CommandTrie => CommandTrie.For(CommandLibrary);
 
 	public ParserState CurrentState => State.Peek();
 
@@ -99,7 +72,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
-	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, FunctionLibrary, CommandLibrary, Configuration, ServiceProvider, state);
+	/// <summary>
+	/// A parser over a single fresh state. A record copy, not a new construction: the services this
+	/// record resolves in its field initialisers are singletons, and re-resolving them for every
+	/// command a player types bought nothing.
+	/// </summary>
+	public IMUSHCodeParser FromState(ParserState state) => this with { State = ImmutableStack.Create(state) };
 
 	public Option<ParserState> StateHistory(uint index)
 	{
@@ -702,14 +680,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 
-		var tokenArray = bufferedTokenSpanStream.TokenArray;
-		if (tokenArray is null || tokenArray.Length <= 1)
+		var tokenArray = bufferedTokenSpanStream.tokens;
+		if (tokenArray.Count <= 1)
 		{
 			return [];
 		}
 
-		var tokens = new List<TokenInfo>(tokenArray.Length - 1);
-		for (var i = 0; i < tokenArray.Length - 1; i++)
+		var tokens = new List<TokenInfo>(tokenArray.Count - 1);
+		for (var i = 0; i < tokenArray.Count - 1; i++)
 		{
 			var token = tokenArray[i];
 			var tokenInfo = new TokenInfo
@@ -923,8 +901,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		BufferedTokenSpanStream tokenStream,
 		string sourceText)
 	{
-		var tokenArray = tokenStream.TokenArray;
-		var tokenCount = tokenArray is not null ? tokenArray.Length - 1 : 0;
+		var tokenArray = tokenStream.tokens;
+		var tokenCount = Math.Max(tokenArray.Count - 1, 0);
 
 		// Single tree walk: classify every terminal by its immediate parse-tree parent context.
 		// This is the canonical correct approach — it handles all tokens that appear in multiple
@@ -938,9 +916,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Use the pre-built TokenArray (set when Fill() reaches EOF) to avoid the LINQ
 		// enumerator allocation from tokenStream.tokens.Where(...). EOF is always the
 		// last element in TokenArray, so iterate all-but-last.
-		if (tokenArray is not null)
+		if (tokenArray.Count > 0)
 		{
-			for (var i = 0; i < tokenArray.Length - 1; i++)
+			for (var i = 0; i < tokenArray.Count - 1; i++)
 			{
 				var token = tokenArray[i];
 				if (!classifications.TryGetValue(token.TokenIndex, out var info))

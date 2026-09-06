@@ -7,8 +7,6 @@ namespace SharpMUSH.Benchmarks;
 [BenchmarkCategory("Command Dispatch")]
 public class CommandParseBenchmarks : BaseBenchmark
 {
-	private IMUSHCodeParser? _parser;
-
 	private static readonly MString ThinkSimpleInput = MModule.single("think Hello World");
 	private static readonly MString ThinkSubstInput = MModule.single("think %#");
 	private static readonly MString ThinkNameSubstInput = MModule.single("think %N");
@@ -16,33 +14,28 @@ public class CommandParseBenchmarks : BaseBenchmark
 	private static readonly MString SetAttrInput = MModule.single("@set me=SAFE");
 	private static readonly MString PemitWithFunctionInput = MModule.single("@pemit me=[add(1,2)]");
 
-	public override async ValueTask Setup()
-	{
-		await base.Setup().ConfigureAwait(false);
-		_parser = await TestParser().ConfigureAwait(false);
-	}
 
 	[Benchmark(Description = "think with literal text")]
 	public async Task ThinkSimple() =>
-		await _parser!.CommandParse(ThinkSimpleInput);
+		await FreshParser().CommandParse(ThinkSimpleInput);
 
 	[Benchmark(Description = "think with %# (executor dbref)")]
 	public async Task ThinkWithDbRefSubstitution() =>
-		await _parser!.CommandParse(ThinkSubstInput);
+		await FreshParser().CommandParse(ThinkSubstInput);
 
 	[Benchmark(Description = "think with %N (executor name)")]
 	public async Task ThinkWithNameSubstitution() =>
-		await _parser!.CommandParse(ThinkNameSubstInput);
+		await FreshParser().CommandParse(ThinkNameSubstInput);
 
 	[Benchmark(Description = "@pemit me=Hello World")]
 	public async Task PemitSelf() =>
-		await _parser!.CommandParse(PemitSelfInput);
+		await FreshParser().CommandParse(PemitSelfInput);
 
 	[Benchmark(Description = "@pemit me=[add(1,2)] (function call in command argument)")]
 	public async Task PemitWithFunctionInArgument() =>
-		await _parser!.CommandParse(PemitWithFunctionInput);
+		await FreshParser().CommandParse(PemitWithFunctionInput);
 
 	[Benchmark(Description = "@set me=SAFE (flag toggle)")]
 	public async Task SetFlag() =>
-		await _parser!.CommandParse(SetAttrInput);
+		await FreshParser().CommandParse(SetAttrInput);
 }

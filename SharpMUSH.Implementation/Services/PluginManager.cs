@@ -229,12 +229,14 @@ public sealed class PluginManager(
 
 		// Remove only the entries this plugin actually added (collision-skipped names were never recorded),
 		// and only if they still point at this plugin's definitions — never clobber a built-in or another
-		// plugin that has since taken the name. The per-parse command trie rebuilds from the live library,
-		// so removing these entries is all that is needed; no trie surgery.
+		// plugin that has since taken the name. The shared command trie is rebuilt from the live library
+		// on its next lookup once invalidated.
 		foreach (var name in tracked.CommandNames)
 		{
 			commandLibrary.Remove(name);
 		}
+
+		CommandTrie.Invalidate(commandLibrary);
 
 		foreach (var name in tracked.FunctionNames)
 		{
@@ -282,6 +284,11 @@ public sealed class PluginManager(
 					"Plugin '{Id}' command '{Name}' collides with an existing command; keeping the existing definition.",
 					plugin.Id, name);
 			}
+		}
+
+		if (added > 0)
+		{
+			CommandTrie.Invalidate(commandLibrary);
 		}
 
 		return added;

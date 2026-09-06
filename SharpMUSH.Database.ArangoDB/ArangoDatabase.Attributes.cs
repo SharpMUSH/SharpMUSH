@@ -25,21 +25,43 @@ public partial class ArangoDatabase
 {
 	#region Attributes
 
+	/// <summary>
+	/// The AQL projection every attribute reader returns: the attribute document with its flag
+	/// documents attached as <c>FlagDocs</c>. One round trip per attribute set, rather than one
+	/// per attribute on top - an uncached <c>lattr()</c> on an object with N attributes was N+1
+	/// queries, and every attribute read is a cache miss after any write to that object. The
+	/// SurrealDB provider fetches flags inline the same way.
+	/// </summary>
+	private const string AttributeWithFlags =
+		$"MERGE(v, {{ FlagDocs: (FOR fe IN {DatabaseConstants.HasAttributeFlag} FILTER fe._from == v._id " +
+		"LET f = DOCUMENT(fe._to) FILTER f != null RETURN f) })";
+
+	private static SharpAttributeFlag ToAttributeFlag(SharpAttributeFlagQueryResult x) =>
+		new()
+		{
+			Name = x.Name,
+			Symbol = x.Symbol,
+			System = x.System,
+			Inheritable = x.Inheritable,
+			Id = x.Id
+		};
+
+	/// <summary>
+	/// The flags for an attribute row: the ones that rode along with the query when the projection
+	/// carried them, else a lookup of their own for the readers that return bare documents.
+	/// </summary>
+	private async ValueTask<SharpAttributeFlag[]> AttributeFlagsOf(SharpAttributeQueryResult x, CancellationToken ct)
+		=> x.FlagDocs is { } docs
+			? Array.ConvertAll(docs, ToAttributeFlag)
+			: await GetAttributeFlagsAsync(x.Id, ct).ToArrayAsync(ct);
+
 	private IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsAsync(string id,
 		CancellationToken ct = default) =>
 		arangoDb.Query.ExecuteStreamAsync<SharpAttributeFlagQueryResult>(handle,
 				$"FOR e IN {DatabaseConstants.HasAttributeFlag} FILTER e._from == @startVertex " +
 				$"LET v = DOCUMENT(e._to) FILTER v != null RETURN v",
 				new Dictionary<string, object> { { StartVertex, id } }, cancellationToken: ct)
-			.Select(x =>
-				new SharpAttributeFlag()
-				{
-					Name = x.Name,
-					Symbol = x.Symbol,
-					System = x.System,
-					Inheritable = x.Inheritable,
-					Id = x.Id
-				});
+			.Select(ToAttributeFlag);
 	private IAsyncEnumerable<SharpAttribute> GetAllAttributesAsync(string id, CancellationToken ct = default)
 	{
 		// This only works for when we get a non-attribute as our ID.
@@ -48,13 +70,13 @@ public partial class ArangoDatabase
 		if (id.StartsWith(DatabaseConstants.Attributes))
 		{
 			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
-				$"FOR v IN 1..999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				$"FOR v IN 1..999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN {AttributeWithFlags}",
 				new Dictionary<string, object>() { { StartVertex, id } }, cancellationToken: ct);
 		}
 		else
 		{
 			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
-				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..999 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..999 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN {AttributeWithFlags}",
 				new Dictionary<string, object> { { "startVertex", id } }, cancellationToken: ct);
 		}
 
@@ -70,13 +92,13 @@ public partial class ArangoDatabase
 		if (id.StartsWith(DatabaseConstants.Attributes))
 		{
 			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
-				$"FOR v IN 1..999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				$"FOR v IN 1..999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN {AttributeWithFlags}",
 				new Dictionary<string, object>() { { StartVertex, id } }, cancellationToken: ct);
 		}
 		else
 		{
 			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
-				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..999 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..999 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN {AttributeWithFlags}",
 				new Dictionary<string, object> { { "startVertex", id } }, cancellationToken: ct);
 		}
 
@@ -167,13 +189,13 @@ public partial class ArangoDatabase
 		if (id.StartsWith(DatabaseConstants.Attributes))
 		{
 			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
-				$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN {AttributeWithFlags}",
 				new Dictionary<string, object> { { StartVertex, id } }, cancellationToken: ct);
 		}
 		else
 		{
 			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
-				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN {AttributeWithFlags}",
 				new Dictionary<string, object> { { StartVertex, id } }, cancellationToken: ct);
 		}
 
@@ -206,7 +228,7 @@ public partial class ArangoDatabase
 			x.Id,
 			x.Key,
 			x.Name,
-			await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken),
+			await AttributeFlagsOf(x, cancellationToken),
 			null,
 			x.LongName,
 			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult<IAsyncEnumerable<SharpAttribute>>(
@@ -226,13 +248,13 @@ public partial class ArangoDatabase
 		if (id.StartsWith(DatabaseConstants.Attributes))
 		{
 			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
-				$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN {AttributeWithFlags}",
 				new Dictionary<string, object> { { StartVertex, id } }, cancellationToken: cancellationToken);
 		}
 		else
 		{
 			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
-				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN {AttributeWithFlags}",
 				new Dictionary<string, object> { { StartVertex, id } }, cancellationToken: cancellationToken);
 		}
 
@@ -242,7 +264,7 @@ public partial class ArangoDatabase
 					x.Id,
 					x.Key,
 					x.Name,
-					await GetAttributeFlagsAsync(x.Id, ctOuter).ToArrayAsync(ctOuter),
+					await AttributeFlagsOf(x, ctOuter),
 					null,
 					x.LongName,
 					new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
@@ -278,7 +300,7 @@ public partial class ArangoDatabase
 
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN {AttributeWithFlags}";
 
 		var queryResult = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
@@ -328,7 +350,7 @@ public partial class ArangoDatabase
 
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern  RETURN v";
+			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern  RETURN {AttributeWithFlags}";
 
 		var queryResult = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
@@ -378,7 +400,7 @@ public partial class ArangoDatabase
 
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern SORT v.LongName ASC RETURN v";
+			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern SORT v.LongName ASC RETURN {AttributeWithFlags}";
 
 		var queryResult = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
@@ -418,7 +440,7 @@ public partial class ArangoDatabase
 		// This doesn't seem like it can be done on a GRAPH query?
 		var pattern = $"(?i){attributePattern}"; // Add case-insensitive flag
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern SORT v.LongName ASC RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern SORT v.LongName ASC RETURN {AttributeWithFlags}";
 
 		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
@@ -439,7 +461,7 @@ public partial class ArangoDatabase
 			x.Id,
 			x.Key,
 			x.Name,
-			await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken),
+			await AttributeFlagsOf(x, cancellationToken),
 			null,
 			x.LongName,
 			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
@@ -474,7 +496,7 @@ public partial class ArangoDatabase
 		}
 
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN {AttributeWithFlags}";
 
 		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>()
@@ -496,7 +518,7 @@ public partial class ArangoDatabase
 		const string let =
 			$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)";
 		const string query =
-			$"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v";
+			$"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN {AttributeWithFlags}";
 
 		var result = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>()
@@ -537,7 +559,7 @@ public partial class ArangoDatabase
 		const string let =
 			$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)";
 		const string query =
-			$"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v";
+			$"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN {AttributeWithFlags}";
 
 		var result = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
@@ -1031,7 +1053,7 @@ public partial class ArangoDatabase
 	private async ValueTask<SharpAttribute> SharpAttributeQueryToSharpAttributeSimple(SharpAttributeQueryResult x,
 		CancellationToken cancellationToken = default)
 	{
-		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
+		var flags = await AttributeFlagsOf(x, cancellationToken);
 
 		return new SharpAttribute(
 			x.Id,
@@ -1240,7 +1262,7 @@ public partial class ArangoDatabase
 	private async ValueTask<LazySharpAttribute> SharpAttributeQueryToLazySharpAttributeSimple(SharpAttributeQueryResult x,
 		CancellationToken cancellationToken = default)
 	{
-		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
+		var flags = await AttributeFlagsOf(x, cancellationToken);
 
 		return new LazySharpAttribute(
 			x.Id,

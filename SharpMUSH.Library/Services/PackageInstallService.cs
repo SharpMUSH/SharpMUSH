@@ -1,3 +1,5 @@
+using Mediator;
+using SharpMUSH.Library.Commands.Database;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -28,7 +30,8 @@ public class PackageInstallService(
 	IPackagePlanService planner,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
 	IPackageLifecycleRunner lifecycle,
-	IManagedPackageInstaller managedInstaller) : IPackageInstallService
+	IManagedPackageInstaller managedInstaller,
+	IMediator mediator) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 
@@ -941,13 +944,15 @@ public class PackageInstallService(
 					{
 						notes.Add($"{change.TargetRef}: unknown flag '{change.Element}' skipped.");
 					}
+					// Through the commands, not the database: the flag set is cached per object, and the
+					// commands are what invalidate it.
 					else if (change.Action == PackageStructureAction.Add)
 					{
-						await database.SetObjectFlagAsync(node, flag, cancellationToken);
+						await mediator.Send(new SetObjectFlagCommand(node, flag), cancellationToken);
 					}
 					else
 					{
-						await database.UnsetObjectFlagAsync(node, flag, cancellationToken);
+						await mediator.Send(new UnsetObjectFlagCommand(node, flag), cancellationToken);
 					}
 				}
 
@@ -964,11 +969,11 @@ public class PackageInstallService(
 					}
 					else if (change.Action == PackageStructureAction.Add)
 					{
-						await database.SetObjectPowerAsync(node, power, cancellationToken);
+						await mediator.Send(new SetObjectPowerCommand(node, power), cancellationToken);
 					}
 					else
 					{
-						await database.UnsetObjectPowerAsync(node, power, cancellationToken);
+						await mediator.Send(new UnsetObjectPowerCommand(node, power), cancellationToken);
 					}
 				}
 
@@ -1354,7 +1359,7 @@ public class PackageInstallService(
 			return;
 		}
 
-		await database.SetObjectFlagAsync(node, going, cancellationToken);
+		await mediator.Send(new SetObjectFlagCommand(node, going), cancellationToken);
 		notes.Add($"{objid}: marked GOING for garbage collection.");
 	}
 

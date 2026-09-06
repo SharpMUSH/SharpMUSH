@@ -5,6 +5,7 @@ using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
 using Testcontainers.ArangoDb;
 
 namespace SharpMUSH.Benchmarks;
@@ -66,6 +67,30 @@ public class BaseBenchmark
 		Environment.SetEnvironmentVariable("NATS_URL", null);
 	}
 
+	/// <summary>Base address of the ArangoDB container, for the profile harness's request counter.</summary>
+	protected string? ArangoBaseAddress =>
+		_arangoContainer?.GetTransportAddress();
+
 	protected async Task<IMUSHCodeParser?> TestParser() =>
 		await BenchmarkHelpers.CreateTestParser(_database!, _server!.Services).ConfigureAwait(false);
+
+	private IMUSHCodeParser? _baseParser;
+	private DBRef _executor;
+
+	/// <summary>
+	/// A parser over a fresh top-level state, as every player command gets one. Call this per
+	/// operation rather than caching one parser: the invocation and call-depth counters live on the
+	/// state and are cumulative, so a parser reused across a benchmark's thousands of iterations
+	/// crosses the function-invocation limit and thereafter times only the short-circuit.
+	/// </summary>
+	protected IMUSHCodeParser FreshParser()
+	{
+		if (_baseParser is null)
+		{
+			_baseParser = _server!.Services.GetRequiredService<IMUSHCodeParser>();
+			_executor = BenchmarkHelpers.ExecutorDbRef(_database!).ConfigureAwait(false).GetAwaiter().GetResult();
+		}
+
+		return _baseParser.FromState(BenchmarkHelpers.FreshState(_executor));
+	}
 }

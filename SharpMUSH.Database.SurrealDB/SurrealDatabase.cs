@@ -1,4 +1,5 @@
 using DotNext.Threading;
+using Mediator;
 using MarkupString;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
@@ -9,6 +10,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net;
 using SurrealDb.Net.Models.Response;
@@ -24,9 +26,29 @@ public partial class SurrealDatabase(
 	ISurrealDbClient db,
 	IPasswordService passwordService,
 	IReadOnlyList<IMigrationSource>? migrationSources = null,
-	IReadOnlyList<PluginFlag>? pluginFlags = null
+	IReadOnlyList<PluginFlag>? pluginFlags = null,
+	IMediator? mediator = null
 ) : ISharpDatabase
 {
+	/// <summary>
+	/// The object's flags via the cached <see cref="GetObjectFlagsQuery"/> when a mediator is present
+	/// (the host), else straight from the store (bare tests). <c>HasFlag</c> runs on every function
+	/// call and most permission checks; uncached, each was a round trip.
+	/// </summary>
+	private IAsyncEnumerable<SharpObjectFlag> CachedObjectFlags(string id, string type, CancellationToken ct)
+		=> mediator is null
+			? GetObjectFlagsForIdAsync(id, type.ToUpper(), ct)
+			: mediator.CreateStream(new GetObjectFlagsQuery(id, type.ToUpper()), ct);
+
+	/// <summary>The object's powers via the cached <see cref="GetObjectPowersQuery"/>; same reasoning as flags.</summary>
+	private IAsyncEnumerable<SharpPower> CachedObjectPowers(string id, CancellationToken ct)
+		=> mediator is null
+			? GetPowersForIdAsync(id, ct)
+			: mediator.CreateStream(new GetObjectPowersQuery(id), ct);
+
+	public IAsyncEnumerable<SharpPower> GetObjectPowersAsync(string id, CancellationToken cancellationToken = default)
+		=> GetPowersForIdAsync(id, cancellationToken);
+
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
 
 	// Per-instance: each SurrealDatabase owns one database (live, staging, or a test's private
@@ -299,8 +321,8 @@ public partial class SurrealDatabase(
 			ModifiedTime = modifiedTime,
 			Warnings = warnings,
 			Locks = DeserializeLocks(locksJson),
-			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => GetObjectFlagsForIdAsync(id, type.ToUpper(), enumCt))),
-			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(enumCt => GetPowersForIdAsync(id, enumCt))),
+			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => CachedObjectFlags(id, type, enumCt))),
+			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(enumCt => CachedObjectPowers(id, enumCt))),
 			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),
 			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
 			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesForIdAsync(id, enumCt))),

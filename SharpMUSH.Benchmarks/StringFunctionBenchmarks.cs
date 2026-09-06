@@ -7,8 +7,6 @@ namespace SharpMUSH.Benchmarks;
 [BenchmarkCategory("String Functions")]
 public class StringFunctionBenchmarks : BaseBenchmark
 {
-	private IMUSHCodeParser? _parser;
-
 	private static readonly MString MidInput = MModule.single("mid(abcdefghij,2,5)");
 	private static readonly MString LjustInput = MModule.single("ljust(hello,20)");
 	private static readonly MString RjustInput = MModule.single("rjust(hello,20)");
@@ -27,15 +25,10 @@ public class StringFunctionBenchmarks : BaseBenchmark
 	private static readonly MString Cat26 = MModule.single(
 		$"cat({string.Join(",", Enumerable.Range('a', 26).Select(c => ((char)c).ToString()))})");
 
-	public override async ValueTask Setup()
-	{
-		await base.Setup().ConfigureAwait(false);
-		_parser = await TestParser().ConfigureAwait(false);
-	}
 
 	[Benchmark(Description = "mid(abcdefghij,2,5)")]
 	public async Task Mid() =>
-		await _parser!.FunctionParse(MidInput);
+		await FreshParser().FunctionParse(MidInput);
 
 	[Benchmark(Description = "left(Nx,5) — vary input length")]
 	[Arguments(10)]
@@ -44,7 +37,7 @@ public class StringFunctionBenchmarks : BaseBenchmark
 	public async Task Left(int length)
 	{
 		var input = length switch { 10 => Left10, 100 => Left100, _ => Left1000 };
-		await _parser!.FunctionParse(input);
+		await FreshParser().FunctionParse(input);
 	}
 
 	[Benchmark(Description = "strlen(Nx) — vary input length")]
@@ -54,24 +47,24 @@ public class StringFunctionBenchmarks : BaseBenchmark
 	public async Task Strlen(int length)
 	{
 		var input = length switch { 10 => Strlen10, 100 => Strlen100, _ => Strlen1000 };
-		await _parser!.FunctionParse(input);
+		await FreshParser().FunctionParse(input);
 	}
 
 	[Benchmark(Description = "ljust(hello,20)")]
 	public async Task Ljust() =>
-		await _parser!.FunctionParse(LjustInput);
+		await FreshParser().FunctionParse(LjustInput);
 
 	[Benchmark(Description = "rjust(hello,20)")]
 	public async Task Rjust() =>
-		await _parser!.FunctionParse(RjustInput);
+		await FreshParser().FunctionParse(RjustInput);
 
 	[Benchmark(Description = "center(hi,20)")]
 	public async Task Center() =>
-		await _parser!.FunctionParse(CenterInput);
+		await FreshParser().FunctionParse(CenterInput);
 
 	[Benchmark(Description = "trim(  hello world  )")]
 	public async Task Trim() =>
-		await _parser!.FunctionParse(TrimInput);
+		await FreshParser().FunctionParse(TrimInput);
 
 	[Benchmark(Description = "cat(N args) — vary arg count")]
 	[Arguments(5)]
@@ -79,6 +72,6 @@ public class StringFunctionBenchmarks : BaseBenchmark
 	public async Task Cat(int count)
 	{
 		var input = count == 5 ? Cat5 : Cat26;
-		await _parser!.FunctionParse(input);
+		await FreshParser().FunctionParse(input);
 	}
 }

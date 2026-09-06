@@ -187,7 +187,8 @@ public class Startup(
 				var dbLogger = x.GetRequiredService<ILogger<MemgraphDatabase>>();
 				var neo4JDriver = x.GetRequiredService<IDriver>();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password, pluginMigrationSources, pluginFlags);
+				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password, pluginMigrationSources, pluginFlags,
+					x.GetRequiredService<IMediator>());
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -215,7 +216,8 @@ public class Startup(
 				var surrealClient = x.GetRequiredService<ISurrealDbClient>();
 				surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new SurrealDatabase(dbLogger, surrealClient, password, pluginMigrationSources, pluginFlags);
+				var db = new SurrealDatabase(dbLogger, surrealClient, password, pluginMigrationSources, pluginFlags,
+					x.GetRequiredService<IMediator>());
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});

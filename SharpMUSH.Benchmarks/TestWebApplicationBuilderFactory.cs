@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using NSubstitute;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration;
@@ -71,12 +70,19 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		// Only override services that benchmarks specifically need to differ from production.
 		builder.ConfigureTestServices(sc =>
 		{
-			var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-			substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));
+			// A plain object, not an NSubstitute proxy: the parser reads Configuration.CurrentValue on
+			// every function call, and the proxy's interception showed up at 5% of a benchmark's
+			// allocations - cost that production never pays.
+			var options = new FixedOptions(ReadPennMushConfig.Create(configFile));
 
 			sc.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
-			sc.AddSingleton(x => substitute);
+			sc.AddSingleton<IOptionsWrapper<SharpMUSHOptions>>(options);
 		});
+	}
+
+	private sealed class FixedOptions(SharpMUSHOptions value) : IOptionsWrapper<SharpMUSHOptions>
+	{
+		public SharpMUSHOptions CurrentValue => value;
 	}
 
 	protected override void Dispose(bool disposing)

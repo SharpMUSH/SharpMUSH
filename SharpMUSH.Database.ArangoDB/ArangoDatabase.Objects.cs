@@ -579,6 +579,18 @@ public partial class ArangoDatabase
 		};
 	}
 
+	/// <summary>
+	/// The object's flags via the cached <see cref="GetObjectFlagsQuery"/> rather than a traversal per
+	/// read. <c>HasFlag</c> runs on every function call (the DEBUG check) and on most permission
+	/// checks; uncached, each was a database round trip.
+	/// </summary>
+	private IAsyncEnumerable<SharpObjectFlag> CachedObjectFlags(string id, string type, CancellationToken ct)
+		=> mediator.CreateStream(new GetObjectFlagsQuery(id, type.ToUpper()), ct);
+
+	/// <summary>The object's powers via the cached <see cref="GetObjectPowersQuery"/>; same reasoning as flags.</summary>
+	private IAsyncEnumerable<SharpPower> CachedObjectPowers(string id, CancellationToken ct)
+		=> mediator.CreateStream(new GetObjectPowersQuery(id), ct);
+
 	private SharpObject SharpObjectQueryToSharpObject(System.Text.Json.JsonElement obj)
 	{
 		var id = obj.GetProperty("_id").GetString()!;
@@ -600,8 +612,8 @@ public partial class ArangoDatabase
 			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty,
 			// FreshAsyncEnumerable, not the iterator directly: the Lazy caches one instance that every
 			// call site enumerates, and an async iterator's state machine is not safe to share. See #798.
-			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => GetObjectFlagsAsync(id, type.ToUpper(), enumCt))),
-			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(enumCt => GetPowersAsync(id, enumCt))),
+			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => CachedObjectFlags(id, type, enumCt))),
+			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(enumCt => CachedObjectPowers(id, enumCt))),
 			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),
 			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
 			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesAsync(id, enumCt))),
@@ -668,8 +680,8 @@ public partial class ArangoDatabase
 			Warnings = obj.Warnings,
 			// FreshAsyncEnumerable, not the iterator directly: the Lazy caches one instance that every
 			// call site enumerates, and an async iterator's state machine is not safe to share. See #798.
-			Flags = new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => GetObjectFlagsAsync(obj.Id, obj.Type.ToUpper(), enumCt))),
-			Powers = new Lazy<IAsyncEnumerable<SharpPower>>(() => new FreshAsyncEnumerable<SharpPower>(enumCt => GetPowersAsync(obj.Id, enumCt))),
+			Flags = new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => CachedObjectFlags(obj.Id, obj.Type, enumCt))),
+			Powers = new Lazy<IAsyncEnumerable<SharpPower>>(() => new FreshAsyncEnumerable<SharpPower>(enumCt => CachedObjectPowers(obj.Id, enumCt))),
 			Attributes = new Lazy<IAsyncEnumerable<SharpAttribute>>(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(obj.Id, enumCt))),
 			LazyAttributes = new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(obj.Id, enumCt))),
 			AllAttributes = new Lazy<IAsyncEnumerable<SharpAttribute>>(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesAsync(obj.Id, enumCt))),
