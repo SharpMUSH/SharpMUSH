@@ -4,6 +4,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Behaviors;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -169,6 +170,33 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
+	/// Home is resolved through a cached relation query, never memoised on the instance, so a flag
+	/// set on the home room is seen through the object immediately.
+	/// </summary>
+	[Test]
+	public async Task AFlagSetOnAHomeIsSeenThroughTheObjectsHome()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var home = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@dig FlagThroughHome Room"))).Message!.ToPlainText()!);
+		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@create FlagThroughHome Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@link #{thing.Number}=#{home.Number}"));
+
+		var node = (await mediator.Send(new GetObjectNodeQuery(thing))).Known().AsThing;
+		var before = await node.Home.WithCancellation(CancellationToken.None);
+		await Assert.That(before.Object().DBRef.Number).IsEqualTo(home.Number);
+		await Assert.That(await before.Object().HasFlag("DARK")).IsFalse();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set #{home.Number}=DARK"));
+
+		var after = await node.Home.WithCancellation(CancellationToken.None);
+		await Assert.That(await after.Object().HasFlag("DARK")).IsTrue()
+			.Because("the same instance resolves its home afresh through the cache, which the flag write expired");
+	}
+
+	/// <summary>
 	/// A lookup by name is cached with the player embedded. A flag set on the player must reach it:
 	/// otherwise a de-wizarded player stays a wizard for whoever finds them by name.
 	/// </summary>
@@ -188,6 +216,37 @@ public class CachingBehaviorTests
 		var after = await mediator.CreateStream(new GetPlayerQuery(name)).ToListAsync();
 		await Assert.That(await after.Single().Object.HasFlag("DARK")).IsTrue()
 			.Because("the name lookup embeds the player and carries their tag");
+	}
+
+	/// <summary>
+	/// Powers ride with the object the same way flags do. The Memgraph projection once bound its
+	/// pattern-comprehension variables as <c>f</c> and <c>p</c>, and any query that had already bound
+	/// <c>p</c> (a player lookup binds it to the Player node) got an empty power list back, so no
+	/// player ever had a power when found by name or listed - <c>connect guest</c> found no guests.
+	/// </summary>
+	[Test]
+	public async Task APowerSetOnAPlayerIsSeenThroughLookupByNameAndTheAllPlayersStream()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactory.Services, mediator, ConnectionService, "PowerThroughName");
+		var name = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known().Object().Name;
+		var builder = await mediator.Send(new GetPowerQuery("Builder"));
+		await Assert.That(builder).IsNotNull();
+
+		var before = await mediator.CreateStream(new GetPlayerQuery(name)).SingleAsync();
+		await Assert.That(await before.Object.HasPower("Builder")).IsFalse();
+
+		await Assert.That(await mediator.Send(new SetObjectPowerCommand(new AnySharpObject(before), builder!))).IsTrue();
+
+		var byName = await mediator.CreateStream(new GetPlayerQuery(name)).SingleAsync();
+		await Assert.That(await byName.Object.HasPower("Builder")).IsTrue()
+			.Because("a player found by name arrives with the powers the provider stored");
+
+		var listed = await mediator.CreateStream(new GetAllPlayersQuery())
+			.SingleAsync(p => p.Object.Key == player.DbRef.Number);
+		await Assert.That(await listed.Object.HasPower("Builder")).IsTrue()
+			.Because("the all-players stream is what connect guest filters by power");
 	}
 
 	/// <summary>

@@ -430,12 +430,12 @@ RETURN o, p
 		}
 
 		var cypher = $"MATCH (o:Object) {string.Join(" ", joins)} {whereClause} "
-			+ $"{string.Join(" ", stages)} RETURN DISTINCT o {limitClause}";
+			+ $"{string.Join(" ", stages)} RETURN DISTINCT o{RelationColumns("o")} {limitClause}";
 		var result = await ExecuteWithRetryAsync(cypher, parameters, cancellationToken);
 
 		foreach (var record in result.Result)
 		{
-			yield return MapNodeToSharpObject(record["o"].As<INode>());
+			yield return MapNodeToSharpObject(record["o"].As<INode>(), RelationsOf(record));
 		}
 	}
 
@@ -444,13 +444,13 @@ RETURN o, p
 		var result = await ExecuteWithRetryAsync("""
 MATCH (p:Player)-[:IS_OBJECT]->(o:Object {type: 'PLAYER'})
 RETURN o, p
-""", ct: cancellationToken);
+""" + RelationColumns("o"), ct: cancellationToken);
 
 		foreach (var record in result.Result)
 		{
 			var objNode = record["o"].As<INode>();
 			var playerNode = record["p"].As<INode>();
-			var sharpObj = MapNodeToSharpObject(objNode);
+			var sharpObj = MapNodeToSharpObject(objNode, RelationsOf(record));
 			var key = objNode["key"].As<int>();
 			yield return BuildPlayer(PlayerId(key), playerNode, sharpObj);
 		}

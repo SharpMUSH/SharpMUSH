@@ -132,21 +132,6 @@ public partial class ArangoDatabase
 		return true;
 	}
 
-	private IAsyncEnumerable<SharpPower> GetPowersAsync(string id, CancellationToken ct = default) =>
-		arangoDb.Query.ExecuteStreamAsync<SharpPowerQueryResult>(handle,
-				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphPowers} RETURN v", cancellationToken: ct)
-			.Select(SharpPowerQueryToSharpPower);
-
-	public async IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, string type, [EnumeratorCancellation] CancellationToken ct = default)
-	{
-		await foreach (var item in arangoDb.Query.ExecuteStreamAsync<SharpObjectFlagQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v", cancellationToken: ct))
-		{
-			yield return SharpObjectFlagQueryToSharpFlag(item);
-		}
-
-		yield return ObjectTypeFlag.For(type);
-	}
 	private SharpObjectFlag SharpObjectFlagQueryToSharpFlag(SharpObjectFlagQueryResult x) =>
 		new()
 		{

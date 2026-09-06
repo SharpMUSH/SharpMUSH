@@ -33,11 +33,3 @@ public class GetObjectFlagQueryHandler(ISharpDatabase database)
 				cancellationToken);
 	}
 }
-
-public class GetObjectFlagsQueryHandler(ISharpDatabase database)
-	: IStreamQueryHandler<GetObjectFlagsQuery, SharpObjectFlag>
-{
-	public IAsyncEnumerable<SharpObjectFlag> Handle(GetObjectFlagsQuery request,
-		CancellationToken cancellationToken) =>
-		database.GetObjectFlagsAsync(request.Id, request.Type.ToUpper(), cancellationToken);
-}

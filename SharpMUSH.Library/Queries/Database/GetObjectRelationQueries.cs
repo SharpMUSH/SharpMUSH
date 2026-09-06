@@ -34,3 +34,22 @@ public record GetZoneOfQuery(string Id, int Number) : IQuery<AnyOptionalSharpObj
 	public string CacheKey => $"zone-of:{Id}";
 	public string[] CacheTags => [CacheKeys.ObjectTag(Number)];
 }
+
+/// <summary>The home of a player or thing; <paramref name="TypedId"/> drives the traversal, <paramref name="Id"/> is the cache identity.</summary>
+public record GetHomeOfQuery(string TypedId, string Id, int Number) : IQuery<AnySharpContainer>, ICacheable
+{
+	public string CacheKey => $"home-of:{Id}";
+	public string[] CacheTags => [CacheKeys.ObjectTag(Number)];
+}
+
+public record GetDropToOfQuery(string TypedId, string Id, int Number) : IQuery<AnyOptionalSharpContainer>, ICacheable
+{
+	public string CacheKey => $"dropto-of:{Id}";
+	public string[] CacheTags => [CacheKeys.ObjectTag(Number)];
+}
+
+public record GetExitDestinationOfQuery(string TypedId, string Id, int Number) : IQuery<AnyOptionalSharpContainer>, ICacheable
+{
+	public string CacheKey => $"exit-destination-of:{Id}";
+	public string[] CacheTags => [CacheKeys.ObjectTag(Number)];
+}

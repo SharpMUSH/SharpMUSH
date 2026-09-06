@@ -116,6 +116,18 @@ the answer, and with the embedded object so a write to the parent does too). Pro
 the seam and know nothing of the cache; `ArangoDatabase` no longer takes an `IMediator`. Every
 `Where()` is now a cache hit that follows invalidation, rather than a memo that ignores it.
 
+The follow-up (#868) finished the shape: `Home`, a room's drop-to and an exit's destination go
+through the same seam (`GetHomeOfQuery`, `GetDropToOfQuery`, `GetExitDestinationOfQuery`), so no
+provider-built object memoises another object anywhere; the cold Memgraph construction paths
+return their relation columns too, and a bare document is now an error rather than a slow path
+(which surfaced a bug the fallback had hidden: the Cypher projection's comprehension variables
+were `f` and `p`, so any query that had already bound `p` - the player queries bind it to the
+Player node - got an empty power list, and `connect guest` on Memgraph found no guests);
+the snapshot rule lives on `SharpObject` as `WithFlag`/`WithoutFlag`/`WithPower`/`WithoutPower`/
+`WithLock`/`WithoutLock`, which the handlers call; and the unused per-object flags query, its key
+and its tag are gone. What remains open there is list-shaped results caching object instances
+rather than dbrefs.
+
 `[add(1,2)]`: 389 µs → 7.6 µs, 1 → 0 requests. Ten nested calls: 2.55 ms → 48 µs.
 
 ### 3. Parser internals (parser)
@@ -175,10 +187,6 @@ entry outlives a tag removed while its factory ran, holding pre-write data. So t
 eager refresh, and no profile lets a timed-out factory complete in the background
 (`AllowTimedOutFactoryBackgroundCompletion = false`); a timed-out read is discarded and the next
 read retries.
-
-(The per-object flag and power *queries* an earlier revision of this branch added were removed
-once relations loaded with the object; `GetObjectFlagsQuery` remains as the pre-existing, still
-unused, cached read.)
 
 The cache's *registered* default is the Tagged profile, so an ad-hoc caller that only sets a
 duration (the account-claims cache, tag-invalidated on bans and role changes) can never inherit
@@ -270,6 +278,53 @@ the baseline run was stopped as too slow to wait on.
 8. **FusionCache 2.5.0 → 2.7.2** and **Mediator 3.0.2** are fine as they are: the newer FusionCache
    releases carry no performance changes, and Mediator's pipeline chain is built once under the
    Singleton lifetime this app uses.
+
+## Architecture: what the data trunk still needs
+
+The Mediator is the data trunk: every read and write of game state is a request type that carries
+its own cache policy, and the caching and invalidation behaviours apply it. #867 and #869 made the
+providers pure storage behind that trunk. What follows is the structural work that fences it, in
+the order it pays off.
+
+1. **Split `ISharpDatabase` along its existing seams.** The provider files are already partitioned
+   into objects, navigation, mail, channels, flags and powers. Per-aggregate interfaces registered
+   explicitly replace the casts in Startup and let a handler depend on the store it uses. Two
+   vocabularies, request types and provider methods, are kept in sync by hand today. Smaller
+   interfaces make the drift visible.
+2. **Retire the static service locator in `Commands` and `Functions`.** DI constructs each class
+   once and copies 27 services into static properties, which is why `Mediator!` appears everywhere
+   and why an optional `IMediator? mediator = null` felt natural in a provider. Every command
+   already receives the parser. A services context carried by the parser or `CallState` lets
+   commands take what they need as a parameter and removes the null-forgiving operators. Migrate
+   one command file at a time.
+3. **Move migration out of the DI factory.** The provider singleton runs `Migrate()` with
+   sync-over-async inside the factory lambda. A hosted service that migrates before the app serves
+   keeps the container free of blocking work and makes first-resolve ordering explicit.
+4. **Close the remaining coherence window with versions, not more invalidation.** A read that
+   issues its query before a commit and stores after the second invalidation caches a pre-write
+   answer. Tagged entries do not have this window: FusionCache stamps a foreground factory's entry
+   at factory start, so a tag removed mid-read expires the result (section 5). The key-invalidated
+   object node does, because a key removal during the factory says nothing about the entry stored
+   after it. A per-object version counter bumped on every invalidation closes it, but not as a
+   check before the store: an invalidation can land between that check and FusionCache's set.
+   The behaviour captures the version before the factory runs and compares again *after*
+   `GetOrSet` returns, removing the key if it moved. The removal then happens after the store,
+   whichever order the write and the read interleaved, so a stale entry never outlives the
+   comparison. This pairs with #868 item 3, since dbref-only lists shrink what a version covers.
+5. **Keep the single-process assumptions named.** The design is single-process today: Startup
+   registers the in-memory FusionCache only, with no distributed cache and no backplane, so a
+   write on a second engine node would leave the first node's entries stale. `AsyncRelation`, the
+   snapshot rule and the in-memory tag index share that assumption. The path to more than one
+   node is a configured backplane, which carries key and tag removals between nodes and keeps the
+   design's shape, plus the version counter in point 4 moved into the distributed cache. Until
+   that is configured, run one engine process per database.
+
+Two smaller fences belong with these: the create handlers remove the new object's key themselves
+because `ICacheInvalidating.CacheKeys` cannot name a dbref the write allocates, so the contract wants
+a result-derived hook and no handler should hold an `IFusionCache`; and the four service-shaped
+requests (`GetAttributeServiceQuery`, `LocateObjectQuery`, `EvaluateLockQuery`,
+`EvaluateAttributeForLockQuery`) exist only to reach across the attribute/permission/lock
+constructor cycle, which lazy injection or a passed evaluator dissolves without a bus.
 
 ## Reproducing
 

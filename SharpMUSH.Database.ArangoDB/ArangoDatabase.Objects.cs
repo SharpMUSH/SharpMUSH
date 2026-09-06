@@ -487,7 +487,7 @@ public partial class ArangoDatabase
 				Id = id,
 				Object = convertObject,
 				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct))
+				Home = new(ct => relations.HomeOf(id, convertObject.Id!, convertObject.Key, ct))
 			},
 			DatabaseConstants.TypePlayer => new SharpPlayer
 			{
@@ -495,7 +495,7 @@ public partial class ArangoDatabase
 				Object = convertObject,
 				Aliases = res.Aliases,
 				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct)),
+				Home = new(ct => relations.HomeOf(id, convertObject.Id!, convertObject.Key, ct)),
 				PasswordHash = res.PasswordHash,
 				PasswordSalt = res.PasswordSalt,
 				Quota = res.Quota
@@ -504,7 +504,7 @@ public partial class ArangoDatabase
 			{
 				Id = id,
 				Object = convertObject,
-				Location = new(async ct => await GetDropToAsync(id, ct))
+				Location = new(ct => relations.DropToOf(id, convertObject.Id!, convertObject.Key, ct))
 			},
 			DatabaseConstants.TypeExit => new SharpExit
 			{
@@ -512,7 +512,7 @@ public partial class ArangoDatabase
 				Object = convertObject,
 				Aliases = res.Aliases,
 				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
-				Home = new(async ct => await GetExitDestinationAsync(id, ct))
+				Home = new(ct => relations.ExitDestinationOf(id, convertObject.Id!, convertObject.Key, ct))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'")
 		};
@@ -554,13 +554,13 @@ public partial class ArangoDatabase
 			{
 				Id = id, Object = convertObject,
 				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct))
+				Home = new(ct => relations.HomeOf(id, convertObject.Id!, convertObject.Key, ct))
 			},
 			DatabaseConstants.Players => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
 				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct)),
+				Home = new(ct => relations.HomeOf(id, convertObject.Id!, convertObject.Key, ct)),
 				PasswordHash = res.GetProperty("PasswordHash").GetString()!,
 				PasswordSalt = res.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
 				Quota = res.GetProperty("Quota").GetInt32()
@@ -569,13 +569,13 @@ public partial class ArangoDatabase
 			{
 				Id = id,
 				Object = convertObject,
-				Location = new(async ct => await GetDropToAsync(id, ct))
+				Location = new(ct => relations.DropToOf(id, convertObject.Id!, convertObject.Key, ct))
 			},
 			DatabaseConstants.Exits => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
 				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
-				Home = new(async ct => await GetExitDestinationAsync(id, ct))
+				Home = new(ct => relations.ExitDestinationOf(id, convertObject.Id!, convertObject.Key, ct))
 			},
 			_ => new None(),
 		};
@@ -597,16 +597,16 @@ public partial class ArangoDatabase
 	};
 
 	/// <summary>
-	/// The object's flags: materialised from the documents that rode along with the object when the
-	/// query projected them, else a read of their own for the construction paths that still return
-	/// a bare document.
+	/// The object's flags, materialised from the documents that rode along with the object. Every
+	/// query that builds an object projects them (<see cref="ObjectWithRelations"/>); one that does
+	/// not is a bug, not a slow path.
 	/// </summary>
 	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(string id, string type, SharpObjectFlagQueryResult[]? docs)
 	{
 		var upperType = type.ToUpper();
 		if (docs is null)
 		{
-			return new(() => new FreshAsyncEnumerable<SharpObjectFlag>(ct => GetObjectFlagsAsync(id, upperType, ct)));
+			throw new InvalidOperationException("Object loaded without its flags: every query that builds an object must project its relations.");
 		}
 
 		var flags = docs.Select(SharpObjectFlagQueryToSharpFlag).Append(ObjectTypeFlag.For(upperType)).ToArray();
@@ -617,7 +617,7 @@ public partial class ArangoDatabase
 	{
 		if (docs is null)
 		{
-			return new(() => new FreshAsyncEnumerable<SharpPower>(ct => GetPowersAsync(id, ct)));
+			throw new InvalidOperationException("Object loaded without its powers: every query that builds an object must project its relations.");
 		}
 
 		var powers = docs.Select(SharpPowerQueryToSharpPower).ToArray();

@@ -56,7 +56,4 @@ public static class CacheKeys
 	/// broad <see cref="CacheTags.ObjectContents"/>, because movement is the hot path.
 	/// </summary>
 	public static string ContentsTag(int number) => $"contents:#{number}";
-
-	/// <summary>An object's flag SET, keyed by its stable graph _id. Invalidated on @set/@unset flag.</summary>
-	public static string ObjectFlags(string id) => $"object-flags:{id}";
 }

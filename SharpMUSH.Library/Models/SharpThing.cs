@@ -1,5 +1,4 @@
-﻿using DotNext.Threading;
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.Models;
@@ -19,5 +18,5 @@ public class SharpThing
 	public required AsyncRelation<AnySharpContainer> Location { get; set; }
 
 	[JsonIgnore]
-	public required AsyncLazy<AnySharpContainer> Home { get; set; }
+	public required AsyncRelation<AnySharpContainer> Home { get; set; }
 }

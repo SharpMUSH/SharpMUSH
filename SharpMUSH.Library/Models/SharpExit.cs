@@ -1,5 +1,4 @@
-﻿using DotNext.Threading;
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.Models;
@@ -27,5 +26,5 @@ public class SharpExit
 	/// exit has none.
 	/// </summary>
 	[JsonIgnore]
-	public required AsyncLazy<AnyOptionalSharpContainer> Home { get; set; }
+	public required AsyncRelation<AnyOptionalSharpContainer> Home { get; set; }
 }

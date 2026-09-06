@@ -21,4 +21,13 @@ public interface IObjectRelationLoader
 	Task<AnyOptionalSharpObject> ParentOf(string objectId, int number, CancellationToken cancellationToken);
 
 	Task<AnyOptionalSharpObject> ZoneOf(string objectId, int number, CancellationToken cancellationToken);
+
+	/// <summary>The home of the typed player or thing <paramref name="typedId"/>.</summary>
+	Task<AnySharpContainer> HomeOf(string typedId, string objectId, int number, CancellationToken cancellationToken);
+
+	/// <summary>The drop-to of the room <paramref name="roomTypedId"/>, if it has one.</summary>
+	Task<AnyOptionalSharpContainer> DropToOf(string roomTypedId, string objectId, int number, CancellationToken cancellationToken);
+
+	/// <summary>The destination of the exit <paramref name="exitTypedId"/>, if it is linked.</summary>
+	Task<AnyOptionalSharpContainer> ExitDestinationOf(string exitTypedId, string objectId, int number, CancellationToken cancellationToken);
 }

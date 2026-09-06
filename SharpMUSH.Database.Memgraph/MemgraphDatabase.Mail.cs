@@ -206,11 +206,11 @@ SET m.folder = $newFolder
 
 	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string mailKey, CancellationToken ct)
 	{
-		var result = await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key})-[:SENT_MAIL]->(o:Object) RETURN o", new { key = mailKey }, ct);
+		var result = await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key})-[:SENT_MAIL]->(o:Object) RETURN o" + RelationColumns("o"), new { key = mailKey }, ct);
 
 		if (result.Result.Count == 0) return new None();
 		var objNode = result.Result[0]["o"].As<INode>();
-		return await BuildTypedObjectFromObjectNode(objNode, ct);
+		return await BuildTypedObjectFromObjectNode(objNode, ct, RelationsOf(result.Result[0]));
 	}
 
 	#endregion
