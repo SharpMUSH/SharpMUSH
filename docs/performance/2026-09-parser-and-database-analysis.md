@@ -279,6 +279,45 @@ the baseline run was stopped as too slow to wait on.
    releases carry no performance changes, and Mediator's pipeline chain is built once under the
    Singleton lifetime this app uses.
 
+## Architecture: what the data trunk still needs
+
+The Mediator is the data trunk: every read and write of game state is a request type that carries
+its own cache policy, and the caching and invalidation behaviours apply it. #867 and #869 made the
+providers pure storage behind that trunk. What follows is the structural work that fences it, in
+the order it pays off.
+
+1. **Split `ISharpDatabase` along its existing seams.** The provider files are already partitioned
+   into objects, navigation, mail, channels, flags and powers. Per-aggregate interfaces registered
+   explicitly replace the casts in Startup and let a handler depend on the store it uses. Two
+   vocabularies, request types and provider methods, are kept in sync by hand today. Smaller
+   interfaces make the drift visible.
+2. **Retire the static service locator in `Commands` and `Functions`.** DI constructs each class
+   once and copies 27 services into static properties, which is why `Mediator!` appears everywhere
+   and why an optional `IMediator? mediator = null` felt natural in a provider. Every command
+   already receives the parser. A services context carried by the parser or `CallState` lets
+   commands take what they need as a parameter and removes the null-forgiving operators. Migrate
+   one command file at a time.
+3. **Move migration out of the DI factory.** The provider singleton runs `Migrate()` with
+   sync-over-async inside the factory lambda. A hosted service that migrates before the app serves
+   keeps the container free of blocking work and makes first-resolve ordering explicit.
+4. **Close the remaining coherence window with versions, not more invalidation.** A read that
+   issues its query before a commit and stores after the second invalidation caches a pre-write
+   answer. The tags already say which objects a result embeds. A per-object version counter bumped
+   on invalidation and captured at factory start, with the store dropped if any embedded object's
+   version moved, closes it inside the behaviour. This pairs with #868 item 3, since dbref-only
+   lists shrink what a version has to cover.
+5. **Keep the single-process assumptions named.** `AsyncRelation`, the snapshot rule and the
+   in-memory tag index all assume one engine process. FusionCache's backplane carries key and tag
+   removals across nodes, so the design survives a multi-node deployment without changing shape,
+   but the version counter in point 4 would need to live in the distributed cache.
+
+Two smaller fences belong with these: the create handlers remove the new object's key themselves
+because `ICacheInvalidating.CacheKeys` cannot name a dbref the write allocates, so the contract wants
+a result-derived hook and no handler should hold an `IFusionCache`; and the four service-shaped
+requests (`GetAttributeServiceQuery`, `LocateObjectQuery`, `EvaluateLockQuery`,
+`EvaluateAttributeForLockQuery`) exist only to reach across the attribute/permission/lock
+constructor cycle, which lazy injection or a passed evaluator dissolves without a bus.
+
 ## Reproducing
 
 ```bash
