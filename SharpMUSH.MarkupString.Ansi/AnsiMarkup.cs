@@ -4,8 +4,15 @@ namespace MarkupString.Ansi;
 /// A markup layer carrying terminal formatting. Value-equal through <see cref="Style"/>, so two
 /// identically styled spans coalesce.
 /// </summary>
-public sealed record AnsiMarkup(AnsiStyle Style) : IMarkup
+public sealed record AnsiMarkup(AnsiStyle Style) : IMarkup, IAnsiStyleSource
 {
+	/// <inheritdoc/>
+	public bool TryGetAnsiStyle(out AnsiStyle style)
+	{
+		style = Style;
+		return true;
+	}
+
 	/// <summary>
 	/// Builds a markup from individual attributes. A <see langword="null"/> colour means the span
 	/// does not set that colour.
