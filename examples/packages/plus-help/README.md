@@ -22,7 +22,8 @@ game installed and what *this* game's staff wrote. The two never merge.
 | `+help/source <name>=<object>` | staff | Register a source by hand |
 | `+help/unsource <name>` | staff | Drop a hand-registered source |
 
-A topic name can be several words: `+help scene join`.
+A topic name can be several words: `+help scene join`. `+help` itself renders the `index` topic —
+which a game replaces by writing its own, since the `game` source outranks a package's.
 
 ## Contributing topics from a package
 
@@ -47,7 +48,11 @@ objects:
       HELP`MYTHING: |-
         What `+mything` does.
       HELP`MYTHING`ADVANCED: |-
-        The topic "mything advanced".
+        The topic "mything advanced" — and a subtopic of "mything", automatically.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`MYTHING: |-
+        scene|game/applying
 
   - ref: my_help_registration
     target: "{{plus-help/librarian}}"
@@ -77,6 +82,13 @@ exactly this reason.
 **A topic name is its attribute path, with backticks read as spaces.** `` HELP`SCENE`JOIN `` is the
 topic `scene join`. The `HELP` root itself is not a topic: it is the one-line description shown in
 the index, and it has to be set or `lattr()` will not enumerate the branch.
+
+**Subtopics are free; cross-references are declared.** Because `` HELP`SCENE`JOIN `` sits under
+`` HELP`SCENE ``, `+help scene` lists `join` as a subtopic on its own — nothing declares it, and it
+cannot drift when you add or rename one. A pointer at *another* source can't be derived, so those go
+in a parallel `SEE` tree at the same path as the topic, holding a `|`-separated list of topic names,
+bare or qualified. Both render as clickable links. Don't list subtopics in `SEE` — the tree already
+has them.
 
 **Bodies are evaluated**, so write them like any other softcode. They are run through `u()`, not
 read with `get()`, which is what lets a topic carry colour, the current configuration, or the

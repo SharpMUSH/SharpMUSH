@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.15.0
+version: 1.16.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -476,6 +476,26 @@ objects:
     attributes:
       HELP: |-
         Shared scenes: joining one, posing in it, and reading the log.
+
+      # Cross-references, declared: one SEE leaf per topic at the path it sits at under HELP, a
+      # "|"-separated list of topic names. Subtopics are not listed -- HELP`SCENE`JOIN is already a
+      # child of HELP`SCENE and +help derives that from the tree.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`SCENE: |-
+        pot
+      SEE`SCENE`JOIN: |-
+        scene pose|pot
+      SEE`SCENE`POSE: |-
+        scene join
+      SEE`SCENE`PITCH: |-
+        scene privacy
+      SEE`SCENE`PRIVACY: |-
+        scene join|scene pitch
+      SEE`SCENE`SCHEDULE: |-
+        scene join
+      SEE`POT: |-
+        scene pose|scene join
       HELP`SCENE: |-
         A **scene** is a shared, logged piece of roleplay. Anyone in the room can be in one; the log
         is readable afterwards, in-game and in the portal.
@@ -495,8 +515,6 @@ objects:
         - `+scene/create <title>` — start one here and focus it
         - `+scene/pitch <text>` — say what it is about, so people can decide to come
         - `+scene/finish` — close it
-
-        See also \[scene pose\], \[scene privacy\], \[scene schedule\] and \[pot\].
       HELP`SCENE`JOIN: |-
         `+scene/join <id>` puts you in a scene and makes it your **focus** — the scene your poses are
         recorded into. `+scene` lists the ids.
@@ -506,7 +524,7 @@ objects:
         - `+scene/leave` — leave the focused scene; if you never posed, you leave no trace
         - `+scene/deactivate` — stay a member but stop recording; `+scene/activate <id>` resumes
 
-        Joining needs an approved character. See also \[scene\] and \[scene pose\].
+        Joining needs an approved character.
       HELP`SCENE`POSE: |-
         With a scene focused, ordinary `pose`, `say`, `semipose` and `@emit` in its room are captured
         as you write them — nothing extra to type.
@@ -520,13 +538,11 @@ objects:
         - `+scene/edit <id>=<old>^^^<new>` — fix a typo in your own pose
         - `+scene/undo <id>` · `+scene/redo <id>`
         - `+scene/recall <n>` — the last `<n>` poses of your focused scene
-
-        See also \[scene join\].
       HELP`SCENE`PITCH: |-
         `+scene/pitch <text>` sets the one-line summary shown beside a scene in `+scene` and on its
         card. It is how someone browsing decides whether to come.
 
-        Only the scene's owner \(or staff\) can set it. See also \[scene\] and \[scene privacy\].
+        Only the scene's owner \(or staff\) can set it.
       HELP`SCENE`PRIVACY: |-
         Scenes are **public** by default: they appear in `+scene` and their log is readable.
 
@@ -534,7 +550,7 @@ objects:
         - `+scene/public` — put it back
 
         Only the scene's owner \(or staff\) can change this. Privacy is about who may *read*; who may
-        *pose* is decided by who has joined. See also \[scene\] and \[scene join\].
+        *pose* is decided by who has joined.
       HELP`SCENE`SCHEDULE: |-
         A scene can be announced before it happens, so people can plan around it.
 
@@ -543,14 +559,12 @@ objects:
         - `+scene/tag <id>` — RSVP
         - `+scene/reschedule <id>=<when>` · `+scene/unschedule <id>`
 
-        A scheduled scene records nothing until someone starts it. See also \[scene join\].
+        A scheduled scene records nothing until someone starts it.
       HELP`POT: |-
         `+pot` — "pose tracker" — shows who is in your focused scene and how long since each of them
         last posed, so a table can tell whose turn it is.
 
         It needs a focused scene: `+scene/join <id>` or `+scene/create <title>` first.
-
-        See also \[scene\] and \[scene pose\].
 
   # ---- +help registration ---------------------------------------------------
   # Attach mode: one leaf on the librarian saying "scene's topics live on the Scene Logger". The

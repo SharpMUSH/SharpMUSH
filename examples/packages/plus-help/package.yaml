@@ -183,6 +183,35 @@ objects:
           [@@(%0 a source — the line describing it, from its root attribute)][get([first(u(%!/FUN`GET`OBJECTS,%0))]/HELP)]
         flags: [funsyntax]
 
+      # ── Navigation ──────────────────────────────────────────────────────────
+      # A topic's SUBTOPICS are derived, never declared: HELP`SCENE`JOIN is already a child of
+      # HELP`SCENE, so the tree knows the relationship and it cannot drift when a topic is added or
+      # renamed. A child is a record in the same source whose attribute path is this one plus
+      # exactly one segment.
+      # A child is a record in the same source whose path is the parent's plus ONE segment: what is
+      # left after stripping "<parent>`" is non-empty and contains no further backtick. Written with
+      # after() rather than by counting segments, because words() does not split on a backtick --
+      # words(HELP`SCENE`JOIN,`) is 1, though last() on the same input does give JOIN.
+      FUN`GET`CHILDREN:
+        value: |-
+          [@@(%0 records · %1 a record — its direct subtopics, in order)][trim(squish(iter(%0,if(cand(strmatch(extract(%i0,1,1,:),[extract(%1,1,1,:)]),cand(strlen(setr(r,after(extract(%i0,3,1,:),[extract(%1,3,1,:)]`))),not(strmatch(%q<r>,*`*)))),%i0),%b,%b)))]
+        flags: [funsyntax]
+      # A topic's own last segment, which is what a subtopic is called under its parent: the child
+      # of "scene" called "scene join" lists as "join".
+      FUN`GET`LEAFNAME:
+        value: |-
+          [@@(%0 a record — its name relative to its parent)][lcstr(edit(last(extract(%0,3,1,:),`),`,%b))]
+        flags: [funsyntax]
+
+      # SEE ALSO is declared, because a pointer at ANOTHER source cannot be derived from the tree.
+      # It lives in a parallel SEE tree on the same object, at the same path as the topic, holding a
+      # "|"-separated list of topic names — bare or qualified. A separate root keeps HELP purely
+      # topics: a SEE leaf must never itself become one.
+      FUN`GET`SEE:
+        value: |-
+          [@@(%0 a record — the topics it points at, as written)][get([extract(%0,2,1,:)]/SEE`[rest(extract(%0,3,1,:),`)])]
+        flags: [funsyntax]
+
       # ── Selection ───────────────────────────────────────────────────────────
       # strmatch() glob-matches case-insensitively, so "+help scene*" wildcards for free, the way
       # the engine's own help does.
@@ -245,25 +274,45 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`SRCROW:
         value: |-
-          [@@(%0 a source · %1 its topic count — one index row)][ljust(cmdtag(%#,%0,+help/list %0),20)][rjust(%1,4)]%b%b[left(u(%!/FUN`GET`SRCDESC,%0),sub(width(%#,78),28))]
+          [@@(%0 a source — one index row: what it is called, and what it covers)][ljust(cmdtag(%#,%0,+help/list %0),18)][left(u(%!/FUN`GET`SRCDESC,%0),sub(width(%#,78),20))]
         flags: [funsyntax]
       FUN`DISPLAY`SYNTAX:
         value: |-
           [@@(no arguments — the one line that tells a reader what else to type)]+help <topic>%b%b·%b%b+help/list \[<source>\]%b%b·%b%b+help/search <text>%b%b·%b%b+help/sources
         flags: [funsyntax]
+      # The front page is a TOPIC, not a string in here: "index", resolved the ordinary way, so a
+      # game overrides the shipped text by writing its own with +help/write and nothing new is
+      # needed to let it. Below it, what this game actually has installed — no counts, because a
+      # reader choosing where to look is not helped by knowing one source has four topics.
       FUN`DISPLAY`INDEX:
         value: |-
-          [@@(%0 every record — the whole index)][header(Help,width(%#,78))]%r[iter(u(%!/FUN`GET`LIVESOURCES,%0),u(%!/FUN`DISPLAY`SRCROW,%i0,words(u(%!/FUN`GET`OF,%0,%i0))),%b,%r)]%r[line(,width(%#,78))]%r[u(%!/FUN`DISPLAY`SYNTAX)]%r[footer([words(%0)] topics,width(%#,78))]
+          [@@(%0 every record — the whole front page)][header(Help,width(%#,78))]%r[if(words(setr(i,u(%!/FUN`GET`FOUND,%0,index))),[rendermarkdowncustom(u(%!/FUN`GET`RTEXT,%q<i>),%!,width(%#,78))]%r)][line(Available help,width(%#,78))]%r[iter(u(%!/FUN`GET`LIVESOURCES,%0),u(%!/FUN`DISPLAY`SRCROW,%i0),%b,%r)]%r[line(,width(%#,78))]%r[u(%!/FUN`DISPLAY`SYNTAX)]%r[footer(,width(%#,78))]
         flags: [funsyntax]
       FUN`DISPLAY`LISTING:
         value: |-
           [@@(%0 title · %1 records · %2 page · %3 paging stem — reads %q<pages>)][header(%0,width(%#,78))]%r[iter(u(%!/FUN`GET`SLICE,%1,%2),u(%!/FUN`DISPLAY`ROW,%i0),%b,%r)]%r[footer([words(%1)] topics%b-%bpage %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b %3=[add(%2,1)])],width(%#,78))]
         flags: [funsyntax]
+      # One subtopic, named as it is known under its parent, running the full +help for it.
+      FUN`DISPLAY`CHILD:
+        value: |-
+          [@@(%0 a child record — its short name, clickable)][cmdtag(%#,[u(%!/FUN`GET`LEAFNAME,%0)],+help [u(%!/FUN`GET`RNAME,%0)])]
+        flags: [funsyntax]
+      # One see-also entry. The name is as the author wrote it — bare or qualified — and is shown
+      # that way; a name nothing resolves to is still listed, because saying so is more use to a
+      # reader than dropping it silently.
+      FUN`DISPLAY`SEEONE:
+        value: |-
+          [@@(%0 a topic name as written)][cmdtag(%#,%0,+help %0)]
+        flags: [funsyntax]
+      FUN`DISPLAY`NAV:
+        value: |-
+          [@@(%0 records · %1 a record — the subtopic and see-also lines, each omitted when empty)][if(words(setr(kids,u(%!/FUN`GET`CHILDREN,%0,%1))),%r[ansi(hc,Subtopics:)] [iter(%q<kids>,u(%!/FUN`DISPLAY`CHILD,%i0),%b,[ansi(h,%b·%b)])]%r)][if(strlen(setr(see,u(%!/FUN`GET`SEE,%1))),[ansi(hc,See also:)] [iter(%q<see>,u(%!/FUN`DISPLAY`SEEONE,%i0),|,[ansi(h,%b·%b)])]%r)]
+        flags: [funsyntax]
       # The body is markdown, rendered against this object's own RENDERMARKUP templates so a topic's
       # [cross-reference] becomes a live +help — see RENDERMARKUP`LINK.
       FUN`DISPLAY`TOPIC:
         value: |-
-          [@@(%0 a record — the whole topic between chrome)][header(u(%!/FUN`GET`RNAME,%0),width(%#,78))]%r[rendermarkdowncustom(u(%!/FUN`GET`RTEXT,%0),%!,width(%#,78))]%r[footer(+help/list [u(%!/FUN`GET`RSOURCE,%0)],width(%#,78))]
+          [@@(%0 records · %1 a record — the whole topic between chrome)][header(u(%!/FUN`GET`RNAME,%1),width(%#,78))]%r[rendermarkdowncustom(u(%!/FUN`GET`RTEXT,%1),%!,width(%#,78))]%r[u(%!/FUN`DISPLAY`NAV,%0,%1)][footer(+help/list [u(%!/FUN`GET`RSOURCE,%1)],width(%#,78))]
         flags: [funsyntax]
       FUN`DISPLAY`SRCLINE:
         value: |-
@@ -344,7 +393,7 @@ objects:
       # engine's own words for an ambiguous topic.
       INC`DO`SHOW:
         value: |-
-          @@ %0 the query as typed; think [setq(q,lcstr(trim(%0)))]; @assert %q<q>=@include %!/INC`DISPLAY`ERROR=Which topic? Try +help for the index.; think [setq(m,u(%!/FUN`GET`FOUND,u(%!/FUN`GET`RECORDS),%q<q>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS=%q<q>; @break gt(words(%q<m>),1)={@pemit %#=[ansi(hc,Help>)] Here are the entries which match '%q<q>':;@pemit %#=[iter(%q<m>,u(%!/FUN`DISPLAY`REF,%i0),%b,%b)]}; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<m>)]
+          @@ %0 the query as typed; think [setq(q,lcstr(trim(%0)))]; @assert %q<q>=@include %!/INC`DISPLAY`ERROR=Which topic? Try +help for the index.; think [setq(recs,u(%!/FUN`GET`RECORDS))]; think [setq(m,u(%!/FUN`GET`FOUND,%q<recs>,%q<q>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS=%q<q>; @break gt(words(%q<m>),1)={@pemit %#=[ansi(hc,Help>)] Here are the entries which match '%q<q>':;@pemit %#=[iter(%q<m>,u(%!/FUN`DISPLAY`REF,%i0),%b,%b)]}; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<recs>,%q<m>)]
         flags: [cmdsyntax]
 
       # ── Commands ────────────────────────────────────────────────────────────
@@ -407,6 +456,20 @@ objects:
       HELP:
         value: |-
           Reading and writing this game's help.
+      # The front page +help renders above the source list. A game replaces it wholesale with
+      # `+help/write index=...`: the game source outranks a package's, so its own "index" wins the
+      # name and no other mechanism is needed.
+      HELP`INDEX:
+        value: |-
+          **`+help` is this game's own help** — what the systems installed here do, and whatever
+          its staff have written down. The server's own commands are documented separately, under
+          `help`.
+
+          Everything below is what this game actually has installed. Read a topic by name:
+          `+help scene`, or `+help scene join` for a topic several words long.
+
+          Staff: this page is itself a topic. Replace it with `+help/write index=<text>`, and add
+          your own with `+help/write <topic>=<text>` — see \[write\].
       HELP`HELP:
         value: |-
           `+help` is this game's own help: the topics its installed packages carry, and the ones its
@@ -422,8 +485,6 @@ objects:
           - `+help/sources` — where the topics come from
 
           A topic name can be several words: `+help scene join`.
-
-          See also \[write\] and \[sources\].
       HELP`SEARCH:
         value: |-
           `+help/search <text>` lists every topic whose name or body contains `<text>`, as stored —
@@ -433,6 +494,24 @@ objects:
           `<text>` may contain `*` and `?`. Long results page: `+help/search combat=2`.
 
           To narrow by source instead, use `+help/list <source>`.
+      SEE:
+        value: |-
+          Cross-references, one leaf per topic at the same path it sits at under HELP. A
+          "|"-separated list of topic names, bare or qualified. Subtopics are NOT listed here:
+          those come from the tree.
+        flags: [no_command]
+      SEE`HELP:
+        value: |-
+          write|search|sources
+      SEE`SEARCH:
+        value: |-
+          help|write
+      SEE`SOURCES:
+        value: |-
+          write|help
+      SEE`WRITE:
+        value: |-
+          sources|help
       HELP`WRITE:
         value: |-
           Staff write this game's own topics in-game, rather than by editing a file:
@@ -456,7 +535,7 @@ objects:
           \(like this\) and the reader gets a clickable link to it.
 
           Game-authored topics live in the source `game`, and a `game` topic outranks a package's
-          when both claim the same name. See also \[sources\].
+          when both claim the same name.
       HELP`SOURCES:
         value: |-
           Topics come from two places, and `+help/sources` shows both.

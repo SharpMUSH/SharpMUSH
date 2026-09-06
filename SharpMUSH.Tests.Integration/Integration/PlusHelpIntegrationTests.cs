@@ -42,6 +42,36 @@ public class PlusHelpIntegrationTests
 	private async Task<CallState> God1(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
+	/// <summary>
+	/// What God is SHOWN by a command, as opposed to what the command returns. A $-command answers
+	/// by @pemit, so the CallState from CommandParse is empty and the output has to be read out of
+	/// the notification recorder — the same windowing <see cref="RunAs"/> does for a player.
+	///
+	/// <para>Used by the tests that assert RENDERING rather than permission: those need a reader,
+	/// not a new player, and every player a suite creates widens the window ProfileApiTests' whole-
+	/// database read has to survive (see its remarks).</para>
+	/// </summary>
+	private async Task<string> GodSees(string command)
+	{
+		var god = await GodRefAsync();
+		var before = Notifications.CountFor(god);
+		await God1(command);
+		return string.Join("\n", Notifications.For(god).Skip(before));
+	}
+
+	private DBRef? _godRef;
+
+	private async Task<DBRef> GodRefAsync()
+	{
+		if (_godRef is null)
+		{
+			var text = (await God1("think [num(me)]")).Message!.ToPlainText().Trim();
+			_godRef = DBRef.TryParse(text, out var parsed) && parsed is not null ? parsed.Value : new DBRef(1);
+		}
+
+		return _godRef.Value;
+	}
+
 	private async Task<IReadOnlyList<string>> RunAs(long handle, string command)
 	{
 		var actor = _actors[handle];
@@ -52,7 +82,7 @@ public class PlusHelpIntegrationTests
 
 	private static string Joined(IReadOnlyList<string> lines) => string.Join("\n", lines);
 
-	private async Task<string> CreatePlayerAsync(string name, long handle, bool wizard = false)
+	private async Task<string> CreatePlayerAsync(string name, long handle, bool wizard = false, bool pueblo = false)
 	{
 		await God1($"@pcreate {name}=pw-{Tag}-1");
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
@@ -67,7 +97,10 @@ public class PlusHelpIntegrationTests
 		}
 
 		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, null);
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
+			pueblo
+				? new ConcurrentDictionary<string, string>(new Dictionary<string, string> { ["PUEBLO"] = "1" })
+				: null);
 		await ConnectionService.Bind(handle, parsed.Value);
 		_actors[handle] = parsed.Value;
 		return dbref;
@@ -355,6 +388,122 @@ public class PlusHelpIntegrationTests
 		var broken = entries.Where(e => e.EndsWith("=BROKEN", StringComparison.Ordinal)).ToList();
 		await Assert.That(broken).IsEmpty()
 			.Because($"these topic bodies do not evaluate: {string.Join(", ", broken)}");
+	}
+
+	// ── Navigation ──────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Subtopics are DERIVED from the attribute tree, never declared: HELP`SCENE`JOIN is already a
+	/// child of HELP`SCENE. Nothing in scene's manifest lists them, so they cannot drift when a
+	/// topic is added or renamed.
+	/// </summary>
+	[Test]
+	public async Task ATopicWithSubtopics_ListsThemFromTheTree()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = await GodSees("+help scene");
+
+		await Assert.That(said).Contains("Subtopics:");
+		foreach (var child in new[] { "join", "pitch", "pose", "privacy", "schedule" })
+		{
+			await Assert.That(said).Contains(child).Because($"'scene {child}' is a child of 'scene'");
+		}
+	}
+
+	/// <summary>A topic with no children must not print an empty Subtopics line.</summary>
+	[Test]
+	public async Task ALeafTopic_HasNoSubtopicsLine()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = await GodSees("+help scene join");
+
+		await Assert.That(said).DoesNotContain("Subtopics:");
+		await Assert.That(said).Contains("See also:").Because("it declares cross-references instead");
+	}
+
+	/// <summary>
+	/// A subtopic is shown by its short name but must RUN the full one — the reader clicking "join"
+	/// under "scene" wants "+help scene join", not "+help join", which resolves to nothing.
+	/// </summary>
+	[Test]
+	public async Task ASubtopicLink_RunsTheFullTopicName()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		const long handle = 9732;
+		await CreatePlayerAsync($"Click{Tag}", handle, pueblo: true);
+
+		// Read the RAW notification: For() has already flattened the MString to text, and the MXP
+		// markup a command link is made of only exists in the unflattened form.
+		var actor = _actors[handle];
+		var before = Notifications.RawCountFor(actor);
+		await Parser.CommandParse(handle, ConnectionService, MModule.single("+help scene"));
+		var markup = string.Join("\n", Notifications.RawFor(actor).Skip(before)
+			.Select(m => m.Match(ms => ms.ToString(), str => str)));
+
+		await Assert.That(markup).Contains(">join<")
+			.Because("a subtopic is labelled by its short name");
+		await Assert.That(markup).Contains("xch_cmd=\"+help scene/scene join\"")
+			.Because("but it runs the QUALIFIED full name, which resolves whatever else is installed");
+	}
+
+	/// <summary>
+	/// See-also is declared in a parallel SEE tree, because a pointer at another SOURCE cannot be
+	/// derived. The names render as written and each is clickable.
+	/// </summary>
+	[Test]
+	public async Task SeeAlso_ComesFromTheDeclaredSeeTree()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = await GodSees("+help pot");
+
+		await Assert.That(said).Contains("See also:");
+		await Assert.That(said).Contains("scene pose").Because("a multi-word name survives the | split");
+	}
+
+	// ── The front page ──────────────────────────────────────────────────────
+
+	/// <summary>
+	/// The front page renders the "index" TOPIC above the source list, and lists what is installed
+	/// without topic counts — a reader choosing where to look is not helped by knowing one source
+	/// has four topics.
+	/// </summary>
+	[Test]
+	public async Task TheIndex_RendersTheIndexTopic_AndCountsNothing()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = await GodSees("+help");
+
+		await Assert.That(said).Contains("Available help");
+		await Assert.That(said).Contains("this game's own help").Because("the index topic is rendered");
+		await Assert.That(said).Contains("scene").Because("an installed source is listed");
+		await Assert.That(said).DoesNotContain(" topics").Because("the front page carries no counts");
+	}
+
+	/// <summary>
+	/// Because the front page is a topic, a game replaces it by writing its own: the game source
+	/// outranks a package's, so "index" resolves to the game's. No separate mechanism.
+	/// </summary>
+	[Test]
+	public async Task TheGameCanReplaceTheFrontPage_ByWritingItsOwnIndexTopic()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		try
+		{
+			await God1("+help/write index=Welcome to the game. Ask staff anything.");
+			var said = await GodSees("+help");
+
+			await Assert.That(said).Contains("Welcome to the game");
+			await Assert.That(said).DoesNotContain("this game's own help")
+				.Because("the game's index outranks the package's");
+		}
+		finally
+		{
+			await God1("+help/delete index");
+		}
+
+		var restored = await GodSees("+help");
+		await Assert.That(restored).Contains("this game's own help")
+			.Because("deleting the override hands the front page back to the package");
 	}
 
 	// ── Writing ─────────────────────────────────────────────────────────────

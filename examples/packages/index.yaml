@@ -8,7 +8,7 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.3.0
+    version: 1.4.0
     description: +who and +where commands
   - path: bbs-lite/
     name: BBS Lite
@@ -45,7 +45,7 @@ packages:
     description: "Global UI-helper functions: header(), footer(), line()"
   - path: scene/
     package: scene
-    version: 1.15.0
+    version: 1.16.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -60,5 +60,5 @@ packages:
   - path: wiki-reader/
     name: Wiki Reader
     package: wiki-reader
-    version: 1.2.0
+    version: 1.3.0
     description: +wiki — paged listings, a rendered article view, and an editorial audit

@@ -280,3 +280,28 @@ clear of parentheses and escape a literal bracket, which is also how a
 cross-reference is spelled; and `FUN`GET`RTEXT` falls back to the stored text when
 evaluation fails, so a badly written topic degrades to plain markdown rather than
 handing the reader a `#-1`.
+
+## Navigation, and the front page
+
+Added after the first live audit, on the observation that help systems are
+navigated as much as read.
+
+**Subtopics are derived, never declared.** `` HELP`SCENE`JOIN `` is already a
+child of `` HELP`SCENE ``, so `+help scene` lists `join` from the tree. Nothing
+in a manifest names it, so it cannot drift when a topic is added or renamed. A
+child is a record in the same source whose path is the parent's plus exactly one
+segment — computed with `after()` rather than by counting segments, because
+`words()` does not split on a backtick (`` words(HELP`SCENE`JOIN,`) `` is 1)
+though `last()` on the same input does return `JOIN`.
+
+**See-also is declared**, in a parallel `SEE` tree at the same path as the topic,
+holding a `|`-separated list. A pointer at another *source* cannot be derived,
+and keeping it out of `HELP` means a cross-reference leaf never becomes a topic
+itself. Both lines render as clickable `cmdtag()` links; a subtopic is labelled
+by its short name but runs the qualified full name.
+
+**The front page is a topic.** `+help` renders the `index` topic above the list
+of installed sources, and carries no topic counts — a reader choosing where to
+look is not helped by knowing one source has four topics. Because it is an
+ordinary topic, a game replaces it with `+help/write index=<text>`: the `game`
+source already outranks a package's, so no new mechanism was needed.

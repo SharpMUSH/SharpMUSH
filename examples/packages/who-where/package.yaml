@@ -1,6 +1,6 @@
 format: 1
 package: who-where
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+who and +where commands with a shared formatting object."
 license: MIT
@@ -47,20 +47,22 @@ objects:
     attributes:
       HELP: |-
         Seeing who is connected and where they are.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`WHO: |-
+        where
+      SEE`WHERE: |-
+        who
       HELP`WHO: |-
         `+who` lists everyone connected and how long each has been idle.
 
         It shows what a mortal may see, so anyone hiding from the who list is absent from yours as
         well as from theirs.
-
-        See also \[where\].
       HELP`WHERE: |-
         `+where` lists everyone connected and the room each is standing in.
 
         A player in an unfindable room, or one who has made themselves unfindable, is listed without
         a location rather than being hidden outright.
-
-        See also \[who\].
 
   - ref: ww_help_registration
     target: "{{plus-help/librarian}}"

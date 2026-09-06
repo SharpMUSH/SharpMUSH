@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -199,6 +199,10 @@ objects:
       # shown, leave alone what should be run. That is also how a \[cross-reference\] is spelled.
       HELP: |-
         Reading the wiki from in-game.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`WIKI`AUDIT: |-
+        wiki
       HELP`WIKI: |-
         The wiki holds this game's longer-form writing — setting, theme, policy — and `+wiki` reads
         it without leaving the game. Staff edit it with `@wiki` or through the portal.
@@ -214,15 +218,11 @@ objects:
         `+wiki/list main=2`.
 
         Drafts are invisible here — a page appears once it is published.
-
-        See also \[wiki audit\].
       HELP`WIKI`AUDIT: |-
         `+wiki/audit` is a staff verb. It counts the published pages and lists the ones missing a
         category or tags, which is what makes a wiki hard to navigate as it grows.
 
         It sees published pages only. For drafts, use `@wiki/list`.
-
-        See also \[wiki\].
 
   # ---- +help registration -----------------------------------------------------
   - ref: help_registration

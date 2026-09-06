@@ -31,7 +31,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	{
 		var package = await Registry.GetInstalledPackageAsync("scene");
 		await Assert.That(package.IsT0).IsTrue();
-		await Assert.That(package.AsT0.Version).IsEqualTo("1.15.0");
+		await Assert.That(package.AsT0.Version).IsEqualTo("1.16.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		// Two created objects: the WIZARD Logger that runs the verbs and the @hook overrides, and
