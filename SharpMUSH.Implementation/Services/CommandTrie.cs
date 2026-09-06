@@ -77,6 +77,8 @@ public class CommandTrie
 				}
 				catch (InvalidOperationException) when (attempt < 5)
 				{
+					// Let the mutating thread finish before enumerating again.
+					Thread.Yield();
 				}
 			}
 		}
