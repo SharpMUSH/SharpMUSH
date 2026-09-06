@@ -43,38 +43,17 @@ public class PlusHelpIntegrationTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 	/// <summary>
-	/// What God is SHOWN by a command, as opposed to what the command returns. A $-command answers
-	/// by @pemit, so the CallState from CommandParse is empty and the output has to be read out of
-	/// the notification recorder — the same windowing <see cref="RunAs"/> does for a player.
+	/// What the reader on <paramref name="handle"/> is SHOWN. A $-command answers with @pemit, so
+	/// the CallState from CommandParse is empty and the output has to be read out of the
+	/// notification recorder.
 	///
-	/// <para>Used by the tests that assert RENDERING rather than permission: those need a reader,
-	/// not a new player, and every player a suite creates widens the window ProfileApiTests' whole-
-	/// database read has to survive (see its remarks).</para>
+	/// <para>Handle 1 is God, bound by the factory, so the tests that assert RENDERING rather than
+	/// permission drive it through here instead of creating a player. Every player a suite creates
+	/// widens the window ProfileApiTests' whole-database read has to survive.</para>
 	/// </summary>
-	private async Task<string> GodSees(string command)
-	{
-		var god = await GodRefAsync();
-		var before = Notifications.CountFor(god);
-		await God1(command);
-		return string.Join("\n", Notifications.For(god).Skip(before));
-	}
-
-	private DBRef? _godRef;
-
-	private async Task<DBRef> GodRefAsync()
-	{
-		if (_godRef is null)
-		{
-			var text = (await God1("think [num(me)]")).Message!.ToPlainText().Trim();
-			_godRef = DBRef.TryParse(text, out var parsed) && parsed is not null ? parsed.Value : new DBRef(1);
-		}
-
-		return _godRef.Value;
-	}
-
 	private async Task<IReadOnlyList<string>> RunAs(long handle, string command)
 	{
-		var actor = _actors[handle];
+		var actor = handle == 1 ? WebAppFactoryArg.ExecutorDBRef : _actors[handle];
 		var before = Notifications.CountFor(actor);
 		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
 		return [.. Notifications.For(actor).Skip(before)];
@@ -401,7 +380,7 @@ public class PlusHelpIntegrationTests
 	public async Task ATopicWithSubtopics_ListsThemFromTheTree()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = await GodSees("+help scene");
+		var said = Joined(await RunAs(1, "+help scene"));
 
 		await Assert.That(said).Contains("Subtopics:");
 		foreach (var child in new[] { "join", "pitch", "pose", "privacy", "schedule" })
@@ -415,7 +394,7 @@ public class PlusHelpIntegrationTests
 	public async Task ALeafTopic_HasNoSubtopicsLine()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = await GodSees("+help scene join");
+		var said = Joined(await RunAs(1, "+help scene join"));
 
 		await Assert.That(said).DoesNotContain("Subtopics:");
 		await Assert.That(said).Contains("See also:").Because("it declares cross-references instead");
@@ -454,7 +433,7 @@ public class PlusHelpIntegrationTests
 	public async Task SeeAlso_ComesFromTheDeclaredSeeTree()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = await GodSees("+help pot");
+		var said = Joined(await RunAs(1, "+help pot"));
 
 		await Assert.That(said).Contains("See also:");
 		await Assert.That(said).Contains("scene pose").Because("a multi-word name survives the | split");
@@ -471,7 +450,7 @@ public class PlusHelpIntegrationTests
 	public async Task TheIndex_RendersTheIndexTopic_AndCountsNothing()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = await GodSees("+help");
+		var said = Joined(await RunAs(1, "+help"));
 
 		await Assert.That(said).Contains("Available help");
 		await Assert.That(said).Contains("this game's own help").Because("the index topic is rendered");
@@ -490,7 +469,7 @@ public class PlusHelpIntegrationTests
 		try
 		{
 			await God1("+help/write index=Welcome to the game. Ask staff anything.");
-			var said = await GodSees("+help");
+			var said = Joined(await RunAs(1, "+help"));
 
 			await Assert.That(said).Contains("Welcome to the game");
 			await Assert.That(said).DoesNotContain("this game's own help")
@@ -501,7 +480,7 @@ public class PlusHelpIntegrationTests
 			await God1("+help/delete index");
 		}
 
-		var restored = await GodSees("+help");
+		var restored = Joined(await RunAs(1, "+help"));
 		await Assert.That(restored).Contains("this game's own help")
 			.Because("deleting the override hands the front page back to the package");
 	}
