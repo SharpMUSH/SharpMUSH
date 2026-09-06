@@ -246,9 +246,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		var connectionService = provider.GetRequiredService<IConnectionService>();
 		var databaseService = provider.GetRequiredService<ISharpDatabase>();
 
-		// Migrate the database, which ensures we have a #1 object to bind to.
-		await databaseService.Migrate();
-
 		var realOne = await databaseService.GetObjectNodeAsync(new DBRef(1));
 		_one = realOne.Object()!.DBRef;
 		await connectionService.Register(1, "localhost", "locahost", "test", _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);

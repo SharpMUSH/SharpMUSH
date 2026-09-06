@@ -6,7 +6,7 @@ namespace SharpMUSH.Library.Commands.Database;
 
 /// <summary>
 /// Irrevocably removes an object from the database — the storage half of PennMUSH's
-/// <c>free_object()</c>. See <see cref="ISharpDatabase.DeleteObjectAsync"/> for what this does
+/// <c>free_object()</c>. See <see cref="IObjectStore.DeleteObjectAsync"/> for what this does
 /// <i>not</i> do; game-layer callers want <c>IObjectDestructionService.DestroyObjectAsync</c>.
 /// </summary>
 /// <remarks>

@@ -10,7 +10,7 @@ namespace SharpMUSH.Server.Services;
 /// Seeds the built-in portal roles (God/Wizard/Royalty/Builder/Player/Guest) at startup.
 /// Idempotent and non-destructive: only inserts a role that doesn't exist yet, so an admin's
 /// edits to a built-in's permissions, color, or priority survive restarts. Runs after the DB
-/// migration (which has already executed when the ISharpDatabase singleton was constructed).
+/// migration (which has already executed when the database provider singleton was constructed).
 /// </summary>
 public class RoleSeedService(IRoleRegistryService roles, ILogger<RoleSeedService> logger) : IHostedService
 {

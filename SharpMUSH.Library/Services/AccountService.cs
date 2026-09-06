@@ -7,7 +7,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Services;
 
 public class AccountService(
-	ISharpDatabase database,
+	IAccountStore database,
+	IObjectStore objects,
 	IPasswordService passwordService,
 	IAccountSessionStore accountSessionStore,
 	IBanEnforcer? banEnforcer = null,
@@ -27,7 +28,7 @@ public class AccountService(
 		SharpPlayer? namedCharacter = null;
 		if (account is null)
 		{
-			namedCharacter = await database.GetPlayerByNameOrAliasAsync(usernameOrEmail, ct)
+			namedCharacter = await objects.GetPlayerByNameOrAliasAsync(usernameOrEmail, ct)
 				.FirstOrDefaultAsync(ct);
 			if (namedCharacter is not null)
 				account = await database.GetAccountForCharacterAsync(

@@ -14,11 +14,11 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "every", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "register"])]
-	public static async ValueTask<CallState> Every(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> Every(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await EverySomeInternal(parser, isEvery: true);
 
 	[SharpFunction(Name = "some", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "register"])]
-	public static async ValueTask<CallState> Some(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> Some(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await EverySomeInternal(parser, isEvery: false);
 
 	/// <summary>
@@ -27,9 +27,9 @@ public partial class Functions
 	/// given, the NON-matching elements are stored in that q-register (delimiter-joined), and
 	/// short-circuiting is disabled so all failures are collected.
 	/// </summary>
-	private static async ValueTask<CallState> EverySomeInternal(IMUSHCodeParser parser, bool isEvery)
+	private async ValueTask<CallState> EverySomeInternal(IMUSHCodeParser parser, bool isEvery)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = MModule.plainText(rawAttrArg)!;
 
@@ -69,7 +69,7 @@ public partial class Functions
 			// matching the non-lambda branch below.
 			foreach (var item in list)
 			{
-				var result = await AttributeService!.EvaluateAttributeFunctionAsync(
+				var result = await AttributeService.EvaluateAttributeFunctionAsync(
 					parser, executor, rawAttrArg,
 					new Dictionary<string, CallState> { { "0", new CallState(item) } });
 
@@ -107,7 +107,7 @@ public partial class Functions
 			var (dbref, attrName) = objAttr.AsT0;
 			dbref ??= executor.ToString();
 
-			var locate = await LocateService!.LocateAndNotifyIfInvalid(
+			var locate = await LocateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, dbref, LocateFlags.All);
 			if (!locate.IsValid())
 			{
@@ -116,7 +116,7 @@ public partial class Functions
 
 			var located = locate.WithoutError().WithoutNone();
 
-			var maybeAttr = await AttributeService!.GetAttributeAsync(
+			var maybeAttr = await AttributeService.GetAttributeAsync(
 				executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
 			if (maybeAttr.IsNone)
 			{

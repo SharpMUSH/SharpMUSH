@@ -5,7 +5,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetNearbyObjectsQueryHandler(ISharpDatabase database)
+public class GetNearbyObjectsQueryHandler(INavigationStore database)
 	: IStreamQueryHandler<GetNearbyObjectsQuery, AnySharpObject>
 {
 	public IAsyncEnumerable<AnySharpObject> Handle(GetNearbyObjectsQuery request, CancellationToken cancellationToken)

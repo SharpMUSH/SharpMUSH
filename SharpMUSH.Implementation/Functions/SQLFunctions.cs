@@ -13,9 +13,9 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "sql", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["query", "rowsep", "fieldsep", "register"])]
-	public static async ValueTask<CallState> SQL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> SQL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
 		{
@@ -94,7 +94,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "sqlescape", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
-	public static ValueTask<CallState> SqlEscape(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> SqlEscape(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (SqlService is not { IsAvailable: true })
 		{
@@ -110,9 +110,9 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "mapsql", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["obj/attr", "query", "osep", "fieldnames"])]
-	public static async ValueTask<CallState> MapSql(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> MapSql(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
 		{
@@ -154,11 +154,11 @@ public partial class Functions
 
 		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,
 			async found =>
 			{
-				var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, found, attrName,
+				var maybeAttribute = await AttributeService.GetAttributeAsync(executor, found, attrName,
 					IAttributeService.AttributeMode.Execute);
 
 				if (!maybeAttribute.IsAttribute)

@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetObjectNameCommandHandler(ISharpDatabase database) : ICommandHandler<SetNameCommand, Unit>
+public class SetObjectNameCommandHandler(IObjectStore database) : ICommandHandler<SetNameCommand, Unit>
 {
 	public async ValueTask<Unit> Handle(SetNameCommand request, CancellationToken cancellationToken)
 	{
@@ -13,7 +13,7 @@ public class SetObjectNameCommandHandler(ISharpDatabase database) : ICommandHand
 	}
 }
 
-public class SetObjectHomeCommandHandler(ISharpDatabase database) : ICommandHandler<SetObjectHomeCommand, Unit>
+public class SetObjectHomeCommandHandler(IObjectStore database) : ICommandHandler<SetObjectHomeCommand, Unit>
 {
 	public async ValueTask<Unit> Handle(SetObjectHomeCommand request, CancellationToken cancellationToken)
 	{
@@ -22,7 +22,7 @@ public class SetObjectHomeCommandHandler(ISharpDatabase database) : ICommandHand
 	}
 }
 
-public class SetObjectLocationCommandHandler(ISharpDatabase database) : ICommandHandler<SetObjectLocationCommand, Unit>
+public class SetObjectLocationCommandHandler(IObjectStore database) : ICommandHandler<SetObjectLocationCommand, Unit>
 {
 	public async ValueTask<Unit> Handle(SetObjectLocationCommand request, CancellationToken cancellationToken)
 	{
@@ -31,7 +31,7 @@ public class SetObjectLocationCommandHandler(ISharpDatabase database) : ICommand
 	}
 }
 
-public class SetObjectOwnerCommandHandler(ISharpDatabase database) : ICommandHandler<SetObjectOwnerCommand, Unit>
+public class SetObjectOwnerCommandHandler(IObjectStore database) : ICommandHandler<SetObjectOwnerCommand, Unit>
 {
 	public async ValueTask<Unit> Handle(SetObjectOwnerCommand request, CancellationToken cancellationToken)
 	{
@@ -40,7 +40,7 @@ public class SetObjectOwnerCommandHandler(ISharpDatabase database) : ICommandHan
 	}
 }
 
-public class SetObjectParentCommandHandler(ISharpDatabase database) : ICommandHandler<SetObjectParentCommand, Unit>
+public class SetObjectParentCommandHandler(IObjectStore database) : ICommandHandler<SetObjectParentCommand, Unit>
 {
 	public async ValueTask<Unit> Handle(SetObjectParentCommand request, CancellationToken cancellationToken)
 	{
@@ -49,7 +49,7 @@ public class SetObjectParentCommandHandler(ISharpDatabase database) : ICommandHa
 	}
 }
 
-public class UnsetObjectParentCommandHandler(ISharpDatabase database) : ICommandHandler<UnsetObjectParentCommand, Unit>
+public class UnsetObjectParentCommandHandler(IObjectStore database) : ICommandHandler<UnsetObjectParentCommand, Unit>
 {
 	public async ValueTask<Unit> Handle(UnsetObjectParentCommand request, CancellationToken cancellationToken)
 	{
@@ -58,7 +58,7 @@ public class UnsetObjectParentCommandHandler(ISharpDatabase database) : ICommand
 	}
 }
 
-public class SetObjectZoneCommandHandler(ISharpDatabase database) : ICommandHandler<SetObjectZoneCommand, Unit>
+public class SetObjectZoneCommandHandler(IObjectStore database) : ICommandHandler<SetObjectZoneCommand, Unit>
 {
 	public async ValueTask<Unit> Handle(SetObjectZoneCommand request, CancellationToken cancellationToken)
 	{
@@ -67,7 +67,7 @@ public class SetObjectZoneCommandHandler(ISharpDatabase database) : ICommandHand
 	}
 }
 
-public class UnsetObjectZoneCommandHandler(ISharpDatabase database) : ICommandHandler<UnsetObjectZoneCommand, Unit>
+public class UnsetObjectZoneCommandHandler(IObjectStore database) : ICommandHandler<UnsetObjectZoneCommand, Unit>
 {
 	public async ValueTask<Unit> Handle(UnsetObjectZoneCommand request, CancellationToken cancellationToken)
 	{

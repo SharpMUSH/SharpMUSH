@@ -5,7 +5,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetContentsQueryHandler(ISharpDatabase database)
+public class GetContentsQueryHandler(INavigationStore database)
 	: IStreamQueryHandler<GetContentsQuery, AnySharpContent>
 {
 	public IAsyncEnumerable<AnySharpContent> Handle(GetContentsQuery request, CancellationToken cancellationToken)

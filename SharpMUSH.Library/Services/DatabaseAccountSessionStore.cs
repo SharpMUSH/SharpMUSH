@@ -7,7 +7,7 @@ namespace SharpMUSH.Library.Services;
 /// DB-backed account session store. Sessions persist across restarts and are revoked
 /// (deleted) by token, account, or origin IP for immediate ban enforcement.
 /// </summary>
-public sealed class DatabaseAccountSessionStore(ISharpDatabase database) : IAccountSessionStore
+public sealed class DatabaseAccountSessionStore(ISessionRecordStore database) : IAccountSessionStore
 {
 	/// <summary>
 	/// How far the rolling expiry must have drifted before <see cref="ValidateAsync"/> pays for a write,

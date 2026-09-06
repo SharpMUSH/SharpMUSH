@@ -636,6 +636,9 @@ public class PackageInstallServiceTests
 
 			var installer = new PackageInstallService(
 				Database,
+				Database,
+				Database,
+				Database,
 				Registry,
 				Applications,
 				WebAppFactoryArg.Services.GetRequiredService<IPackagePlanService>(),

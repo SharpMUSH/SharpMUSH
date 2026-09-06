@@ -126,17 +126,32 @@ A widget that accepts config must declare `ConfigType` and tag each property of 
 
 ### Server-Side: Commands & Functions
 
-Commands use `[SharpCommand]` attribute on static methods:
+Commands use `[SharpCommand]` attribute on instance methods of the partial `Commands` class:
 ```csharp
 [SharpCommand(Name = "@EMIT", Switches = ["NOEVAL"], Behavior = CB.Default | CB.EqSplit)]
-public static async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+public async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 ```
 
-Functions use `[SharpFunction]` attribute:
+Functions use `[SharpFunction]` attribute on instance methods of the partial `Functions` class:
 ```csharp
 [SharpFunction(Name = "NAME", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-public static ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+public ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 ```
+
+`Commands` and `Functions` are DI-constructed; their services are non-null members (`Mediator`,
+`NotifyService`, ...), never static and never null-forgiven. The source generators emit
+`CommandLibrary.Create(instance)` / `FunctionLibrary.Create(instance)` for instance methods and a
+static table for static methods, which is what plugin modules use.
+
+### Data trunk, stores and cache
+
+`docs/design/engine-data-trunk.md` is binding. In short: every read and write of game state is a
+Mediator request carrying its own cache policy (`ICacheable` / `ICacheInvalidating` /
+`ICacheInvalidatingByResult<T>`); handlers depend on the per-aggregate store they use
+(`IObjectStore`, `IAttributeStore`, `INavigationStore`, ... in `SharpMUSH.Library/Stores`), not on
+`ISharpDatabase`; no handler holds an `IFusionCache`; providers take no Mediator and no cache;
+a constructor cycle is broken with `Lazy<T>` (registered as an open generic), not with a request
+whose handler calls a service; migration is awaited once in `Program` right after the host is built, before any service that reads the database is resolved.
 
 ### Authentication Architecture
 
@@ -194,6 +209,7 @@ fails the gate.
 - `web-portal-vision.md` — feature overview and architecture diagram
 - `implementation-order.md` — dependency graph for building portal features in parallel
 - `url-strategy.md` — canonical route map (public, authenticated, admin, API)
+- `engine-data-trunk.md` — engine reads/writes through the Mediator, stores, cache coherence, single-process assumptions
 
 `docs/todo/area-NN-*.md` files track implementation status for each portal area.
 

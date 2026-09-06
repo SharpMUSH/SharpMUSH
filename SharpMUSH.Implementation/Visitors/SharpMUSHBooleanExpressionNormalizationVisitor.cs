@@ -13,7 +13,7 @@ namespace SharpMUSH.Implementation.Visitors;
 /// Resolves object names to dbrefs at lock-set time, matching PennMUSH behavior.
 /// </summary>
 public class SharpMUSHBooleanExpressionNormalizationVisitor(
-	IMediator? mediator = null,
+	ILockEvaluationServices? services = null,
 	AnySharpObject? executor = null)
 	: SharpMUSHBoolExpParserBaseVisitor<string>
 {
@@ -172,17 +172,14 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 		if (value.Equals("me", StringComparison.OrdinalIgnoreCase))
 			return value;
 
-		// No executor/mediator — can't resolve names, preserve as-is
-		if (mediator == null || executor == null)
+		// No executor or services: names cannot be resolved, so they are preserved as written
+		if (services == null || executor == null)
 			return value;
 
 		try
 		{
 			var exec = executor!;
-			var locateResult = mediator.Send(
-				new LocateObjectQuery(exec, exec, value, LocateFlags.All),
-				CancellationToken.None
-			).AsTask().GetAwaiter().GetResult();
+			var locateResult = services.LocateAsync(exec, exec, value, LocateFlags.All).AsTask().GetAwaiter().GetResult();
 
 			return locateResult.IsAnyObject
 				? $"#{locateResult.AsAnyObject.Object().DBRef.Number}"

@@ -13,15 +13,15 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "@ATRLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object/attribute", "on-off"])]
-	public static async ValueTask<Option<CallState>> AttributeLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> AttributeLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (!args.TryGetValue("0", out var objAttrArg))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
@@ -30,13 +30,13 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
 		var (dbref, attrName) = details;
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, dbref, LocateFlags.All);
 
 		if (locate.IsError)
@@ -46,19 +46,19 @@ public partial class Commands
 
 		var targetObject = locate.AsSharpObject;
 
-		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName,
+		var attribute = await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
 		IAttributeService.AttributeMode.Read);
 
 		if (!attribute.IsAttribute)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
 		if (!args.TryGetValue("1", out var valueArg))
 		{
 			var isLocked = attribute.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
-			await NotifyService!.NotifyLocalized(executor,
+			await NotifyService.NotifyLocalized(executor,
 				isLocked
 					? nameof(ErrorMessages.Notifications.AttributeIsLocked)
 					: nameof(ErrorMessages.Notifications.AttributeIsUnlocked),
@@ -79,33 +79,33 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgument), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgument), executor);
 			return new CallState(ErrorMessages.Returns.InvalidValue);
 		}
 
-		var canSet = await PermissionService!.CanSet(executor, targetObject);
+		var canSet = await PermissionService.CanSet(executor, targetObject);
 		if (!canSet)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (shouldLock)
 		{
-			await AttributeService!.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
+			await AttributeService.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
 
 			if (executor.IsPlayer)
 			{
 				var currentValue = attribute.AsAttribute.Last().Value;
-				await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
+				await AttributeService.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeLocked), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeLocked), executor);
 		}
 		else
 		{
-			await AttributeService!.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeUnlocked), executor);
+			await AttributeService.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeUnlocked), executor);
 		}
 
 		return new CallState(string.Empty);
@@ -113,16 +113,16 @@ public partial class Commands
 
 	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
-	public static async ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var copyFlags = !parser.CurrentState.Switches.Contains("NOFLAGCOPY");
 
 		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, "@cpattr");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, "@cpattr");
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
@@ -131,13 +131,13 @@ public partial class Commands
 
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
 			return new CallState(ErrorMessages.Returns.InvalidSource);
 		}
 
 		var (sourceDbref, sourceAttr) = sourceDetails;
 
-		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var sourceLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, sourceDbref, LocateFlags.All);
 
 		if (sourceLocate.IsError)
@@ -147,12 +147,12 @@ public partial class Commands
 
 		var sourceObject = sourceLocate.AsSharpObject;
 
-		var sourceAttribute = await AttributeService!.GetAttributeAsync(executor, sourceObject, sourceAttr,
+		var sourceAttribute = await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
 		IAttributeService.AttributeMode.Read);
 
 		if (!sourceAttribute.IsAttribute)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
@@ -175,36 +175,36 @@ public partial class Commands
 
 			if (!destSplit.TryPickT0(out var destDetails, out _))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
 				continue;
 			}
 
 			var (destDbref, destAttr) = destDetails;
 			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
 
-			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			var destLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, destDbref, LocateFlags.All);
 
 			if (destLocate.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
 				continue;
 			}
 
 			var destObject = destLocate.AsSharpObject;
 
-			var canSet = await PermissionService!.CanSet(executor, destObject);
+			var canSet = await PermissionService.CanSet(executor, destObject);
 			if (!canSet)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destDbref);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destDbref);
 				continue;
 			}
 
-			var setResult = await AttributeService!.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
+			var setResult = await AttributeService.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
 			if (setResult.IsT1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsT1.Value);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsT1.Value);
 				continue;
 			}
 
@@ -215,7 +215,7 @@ public partial class Commands
 				// attribute carrying both SAFE and (say) WIZARD would have WIZARD silently
 				// fail to copy once SAFE landed first - Penn's copy_attrib_flags checks once
 				// and applies the whole mask.
-				await AttributeService!.SetAttributeFlagsAsync(executor, destObject, targetAttrName,
+				await AttributeService.SetAttributeFlagsAsync(executor, destObject, targetAttrName,
 					attrFlags.Select(flag => flag.Name).ToList());
 			}
 
@@ -225,11 +225,11 @@ public partial class Commands
 		if (copiedCount > 0)
 		{
 			var destWord = copiedCount == 1 ? "destination" : "destinations";
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, copiedCount, destWord);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, copiedCount, destWord);
 		}
 		else
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeAny), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeAny), executor);
 			return new CallState(ErrorMessages.Returns.CopyFailed);
 		}
 
@@ -238,16 +238,16 @@ public partial class Commands
 
 	[SharpCommand(Name = "@MVATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
-	public static async ValueTask<Option<CallState>> MoveAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> MoveAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var copyFlags = !parser.CurrentState.Switches.Contains("NOFLAGCOPY");
 
 		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, "@mvattr");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, "@mvattr");
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
@@ -256,13 +256,13 @@ public partial class Commands
 
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
 			return new CallState(ErrorMessages.Returns.InvalidSource);
 		}
 
 		var (sourceDbref, sourceAttr) = sourceDetails;
 
-		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var sourceLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, sourceDbref, LocateFlags.All);
 
 		if (sourceLocate.IsError)
@@ -272,12 +272,12 @@ public partial class Commands
 
 		var sourceObject = sourceLocate.AsSharpObject;
 
-		var sourceAttribute = await AttributeService!.GetAttributeAsync(executor, sourceObject, sourceAttr,
+		var sourceAttribute = await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
 		IAttributeService.AttributeMode.Read);
 
 		if (!sourceAttribute.IsAttribute)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
@@ -300,36 +300,36 @@ public partial class Commands
 
 			if (!destSplit.TryPickT0(out var destDetails, out _))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
 				continue;
 			}
 
 			var (destDbref, destAttr) = destDetails;
 			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
 
-			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			var destLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, destDbref, LocateFlags.All);
 
 			if (destLocate.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
 				continue;
 			}
 
 			var destObject = destLocate.AsSharpObject;
 
-			var canSet = await PermissionService!.CanSet(executor, destObject);
+			var canSet = await PermissionService.CanSet(executor, destObject);
 			if (!canSet)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destDbref);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destDbref);
 				continue;
 			}
 
-			var setResult = await AttributeService!.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
+			var setResult = await AttributeService.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
 			if (setResult.IsT1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsT1.Value);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsT1.Value);
 				continue;
 			}
 
@@ -340,7 +340,7 @@ public partial class Commands
 				// attribute carrying both SAFE and (say) WIZARD would have WIZARD silently
 				// fail to copy once SAFE landed first - Penn's copy_attrib_flags checks once
 				// and applies the whole mask.
-				await AttributeService!.SetAttributeFlagsAsync(executor, destObject, targetAttrName,
+				await AttributeService.SetAttributeFlagsAsync(executor, destObject, targetAttrName,
 					attrFlags.Select(flag => flag.Name).ToList());
 			}
 
@@ -349,22 +349,22 @@ public partial class Commands
 
 		if (copiedCount > 0)
 		{
-			var clearResult = await AttributeService!.ClearAttributeAsync(executor, sourceObject, sourceAttr,
+			var clearResult = await AttributeService.ClearAttributeAsync(executor, sourceObject, sourceAttr,
 			IAttributeService.AttributePatternMode.Exact);
 
 			var destWord = copiedCount == 1 ? "destination" : "destinations";
 			if (clearResult.IsT1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, clearResult.AsT1.Value);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, clearResult.AsT1.Value);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor, copiedCount, destWord);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor, copiedCount, destWord);
 			}
 		}
 		else
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToMoveAttributeAny), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToMoveAttributeAny), executor);
 			return new CallState(ErrorMessages.Returns.MoveFailed);
 		}
 
@@ -372,15 +372,15 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@ATRCHOWN", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object/attribute", "player"])]
-	public static async ValueTask<Option<CallState>> ChangeAttributeOwner(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ChangeAttributeOwner(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var ownerArg))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
@@ -389,13 +389,13 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
 		var (dbref, attrName) = details;
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, dbref, LocateFlags.All);
 
 		if (locate.IsError)
@@ -405,22 +405,22 @@ public partial class Commands
 
 		var targetObject = locate.AsSharpObject;
 
-		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName,
+		var attribute = await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
 		IAttributeService.AttributeMode.Read);
 
 		if (!attribute.IsAttribute)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
 		var newOwnerText = MModule.plainText(ownerArg.Message!);
-		var ownerLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var ownerLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, newOwnerText, LocateFlags.All);
 
 		if (ownerLocate.IsError)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantFindThatPlayer), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantFindThatPlayer), executor);
 			return ownerLocate.AsError;
 		}
 
@@ -438,11 +438,11 @@ public partial class Commands
 
 		// Mortals can only chown to themselves; wizards can chown to anyone.
 		var isWizard = await executor.HasPower("WIZARD") || await executor.HasFlag("WIZARD");
-		var canSet = await PermissionService!.CanSet(executor, targetObject);
+		var canSet = await PermissionService.CanSet(executor, targetObject);
 
 		if (!canSet)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -450,7 +450,7 @@ public partial class Commands
 		{
 			if (executor.IsPlayer && newOwnerPlayer.Object.DBRef != executor.AsPlayer.Object.DBRef)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CanOnlyChownToYourself), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CanOnlyChownToYourself), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 			else if (!executor.IsPlayer)
@@ -458,35 +458,35 @@ public partial class Commands
 				var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 				if (executorOwner.Object.DBRef != newOwnerPlayer.Object.DBRef)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CanOnlyChownToYourself), executor);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CanOnlyChownToYourself), executor);
 					return new CallState(ErrorMessages.Returns.PermissionDenied);
 				}
 			}
 		}
 
 		var currentValue = attribute.AsAttribute.Last().Value;
-		var setResult = await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
+		var setResult = await AttributeService.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 
 		if (setResult.IsT1)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToChangeOwnershipFormat), executor, setResult.AsT1.Value);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToChangeOwnershipFormat), executor, setResult.AsT1.Value);
 			return new CallState(ErrorMessages.Returns.Failed);
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeOwnerChanged), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeOwnerChanged), executor);
 		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "@WIPE", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Wipe(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Wipe(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (args.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WipeWhat), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WipeWhat), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArgument);
 		}
 
@@ -495,13 +495,13 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
 
 		var (dbref, maybeAttribute) = details;
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor,
 		executor,
 		dbref,
@@ -514,17 +514,17 @@ public partial class Commands
 
 		var targetObject = locate.AsSharpObject;
 
-		var canModify = await PermissionService!.Controls(executor, targetObject);
+		var canModify = await PermissionService.Controls(executor, targetObject);
 		if (!canModify)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var isSafe = await targetObject.HasFlag("SAFE");
 		if (isSafe)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectIsProtectedSafe), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectIsProtectedSafe), executor);
 			return new CallState(ErrorMessages.Returns.Safe);
 		}
 
@@ -536,7 +536,7 @@ public partial class Commands
 		// doing so here too would either duplicate or (worse) silently override one class of
 		// outcome with a generic "success" line that used to print unconditionally.
 		var attributePattern = string.IsNullOrEmpty(maybeAttribute) ? "**" : maybeAttribute;
-		await AttributeService!.ClearAttributeAsync(executor, targetObject, attributePattern,
+		await AttributeService.ClearAttributeAsync(executor, targetObject, attributePattern,
 			IAttributeService.AttributePatternMode.Wildcard);
 
 		return new CallState(string.Empty);

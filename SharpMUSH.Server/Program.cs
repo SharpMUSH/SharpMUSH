@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Database;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Messaging.NATS.Strategy;
 using SharpMUSH.Server.Authentication;
@@ -61,6 +62,12 @@ public class Program
 		startup.ConfigureServices(builder.Services, builder.Configuration, builder.Environment);
 
 		var app = builder.Build();
+
+		// Migrate before anything is resolved that reads the database: the options factory reads
+		// server data on first use, and the hosted services are constructed before their lifecycle
+		// hooks run, so this is the one place that is both async and provably first. The provider's
+		// factory only constructs.
+		await app.Services.GetRequiredService<IDatabaseLifecycle>().Migrate();
 
 		if (databaseProvider == DatabaseProvider.ArangoDB)
 		{

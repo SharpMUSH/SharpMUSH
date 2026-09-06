@@ -55,6 +55,7 @@ public class SharpMUSHParserVisitor(
 	ICommandDiscoveryService CommandDiscoveryService,
 	IAttributeService AttributeService,
 	IHookService HookService,
+	ILockService LockService,
 	MString source)
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
@@ -1943,9 +1944,7 @@ public class SharpMUSHParserVisitor(
 				if (!string.IsNullOrEmpty(commandLockStr) && !executor.IsNone)
 				{
 					var executorObj = executor.Known();
-					var passesLock = await Mediator.Send(
-						new Library.Queries.EvaluateLockQuery(commandLockStr, executorObj, executorObj));
-					if (!passesLock)
+					if (!LockService.Evaluate(commandLockStr, executorObj, executorObj))
 					{
 						await NotifyService.NotifyLocalized(executorObj, nameof(ErrorMessages.Notifications.PermissionDenied));
 						return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -2497,7 +2496,7 @@ public class SharpMUSHParserVisitor(
 		// whole command line and whose flag may already be set from a sibling argument or an
 		// enclosing function call.
 		var subVisitor = new SharpMUSHParserVisitor(logger, evalParser, Configuration, Mediator, NotifyService,
-			ConnectionService, LocateService, CommandDiscoveryService, AttributeService, HookService, argumentSourceText);
+			ConnectionService, LocateService, CommandDiscoveryService, AttributeService, HookService, LockService, argumentSourceText);
 
 		var result = await subVisitor.Visit(ctx);
 

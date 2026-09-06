@@ -16,9 +16,9 @@ public partial class Commands
 	[SharpCommand(Name = "@HTTP",
 		Switches = ["DELETE", "POST", "PUT", "GET", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged | CB.NoGuest, MinArgs = 0, MaxArgs = 3, ParameterNames = ["url", "code"])]
-	public static async ValueTask<Option<CallState>> Http(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Http(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 
 		parser.CurrentState.Arguments.TryGetValue("0", out var objAttrArg);
@@ -27,13 +27,13 @@ public partial class Commands
 
 		if (objAttrArg is null)
 		{
-			await NotifyService!.Notify(executor, "What do you want to query?", executor);
+			await NotifyService.Notify(executor, "What do you want to query?", executor);
 			return new CallState(ErrorMessages.Returns.WhatDoYouWantToQuery);
 		}
 
 		if (uriArg is null)
 		{
-			await NotifyService!.Notify(executor, "Query where?", executor);
+			await NotifyService.Notify(executor, "Query where?", executor);
 			return new CallState(ErrorMessages.Returns.QueryWhere);
 		}
 
@@ -41,13 +41,13 @@ public partial class Commands
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
 		if (maybeObjAttr.IsT1)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Returns.InvalidObjectAttribute, executor);
+			await NotifyService.Notify(executor, ErrorMessages.Returns.InvalidObjectAttribute, executor);
 			return new CallState(ErrorMessages.Returns.InvalidObjectAttribute);
 		}
 
 		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,
 			async found =>
 			{
@@ -67,13 +67,13 @@ public partial class Commands
 
 				if (method == HttpMethod.Get && dataArg is not null)
 				{
-					await NotifyService!.Notify(executor, "GET requests cannot have a body.", executor);
+					await NotifyService.Notify(executor, "GET requests cannot have a body.", executor);
 					return new CallState(ErrorMessages.Returns.GetRequestsCannotHaveBody);
 				}
 
 				if (!Uri.TryCreate(uriArg.Message?.ToPlainText() ?? string.Empty, UriKind.Absolute, out var uri))
 				{
-					await NotifyService!.Notify(executor, "Invalid URI format.", executor);
+					await NotifyService.Notify(executor, "Invalid URI format.", executor);
 					return new CallState(ErrorMessages.Returns.InvalidUriFormat);
 				}
 
@@ -81,10 +81,10 @@ public partial class Commands
 				var requestBody = dataArg?.Message?.ToString();
 				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
 
-				await Mediator!.Send(new QueueAttributeRequest(
+				await Mediator.Send(new QueueAttributeRequest(
 					async () =>
 					{
-						var client = HttpClientFactory!.CreateClient("api");
+						var client = HttpClientFactory.CreateClient("api");
 
 						using var message = new HttpRequestMessage
 						{
@@ -124,9 +124,9 @@ public partial class Commands
 
 	[SharpCommand(Name = "@RESPOND", Switches = ["HEADER", "TYPE"], Behavior = CB.Default | CB.NoGagged | CB.EqSplit,
 		MinArgs = 1, MaxArgs = 2, ParameterNames = ["connection", "response"])]
-	public static async ValueTask<Option<CallState>> Respond(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Respond(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches.ToList();
 		var httpResponse = parser.CurrentState.HttpResponse;
 
@@ -140,7 +140,7 @@ public partial class Commands
 			parser.CurrentState.Arguments.TryGetValue("0", out var contentTypeArg);
 			if (contentTypeArg is null || string.IsNullOrWhiteSpace(contentTypeArg.Message?.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, "Content-Type cannot be empty.", executor);
+				await NotifyService.Notify(executor, "Content-Type cannot be empty.", executor);
 				return new CallState(ErrorMessages.Returns.ContentTypeCannotBeEmpty);
 			}
 
@@ -152,7 +152,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"(HTTP): Content-Type set to {contentType}", executor);
+				await NotifyService.Notify(executor, $"(HTTP): Content-Type set to {contentType}", executor);
 			}
 		}
 		else if (hasHeaderSwitch)
@@ -163,7 +163,7 @@ public partial class Commands
 
 			if (headerNameArg is null)
 			{
-				await NotifyService!.Notify(executor, "Header required.", executor);
+				await NotifyService.Notify(executor, "Header required.", executor);
 				return new CallState(ErrorMessages.Returns.HeaderRequired);
 			}
 
@@ -172,13 +172,13 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(headerName))
 			{
-				await NotifyService!.Notify(executor, "Header name cannot be empty.", executor);
+				await NotifyService.Notify(executor, "Header name cannot be empty.", executor);
 				return new CallState(ErrorMessages.Returns.HeaderNameCannotBeEmpty);
 			}
 
 			if (headerName.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
 			{
-				await NotifyService!.Notify(executor, "Cannot set Content-Length header.", executor);
+				await NotifyService.Notify(executor, "Cannot set Content-Length header.", executor);
 				return new CallState(ErrorMessages.Returns.CannotSetContentLengthHeader);
 			}
 
@@ -188,7 +188,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"(HTTP): Header {headerName}: {headerValue}", executor);
+				await NotifyService.Notify(executor, $"(HTTP): Header {headerName}: {headerValue}", executor);
 			}
 		}
 		else
@@ -198,7 +198,7 @@ public partial class Commands
 
 			if (statusArg is null)
 			{
-				await NotifyService!.Notify(executor, "Status code required.", executor);
+				await NotifyService.Notify(executor, "Status code required.", executor);
 				return new CallState(ErrorMessages.Returns.StatusCodeRequired);
 			}
 
@@ -217,7 +217,7 @@ public partial class Commands
 					|| !char.IsAsciiLetterOrDigit(fullStatusText[4])
 					|| fullStatusText.Any(c => !char.IsAscii(c)))
 			{
-				await NotifyService!.Notify(executor, "@respond must be 3 digits, space, then text .", executor);
+				await NotifyService.Notify(executor, "@respond must be 3 digits, space, then text .", executor);
 				return new CallState(ErrorMessages.Returns.StatusCodeMustBe3Digit);
 			}
 
@@ -225,7 +225,7 @@ public partial class Commands
 
 			if (statusLine.Length >= 40)
 			{
-				await NotifyService!.Notify(executor, "@respond status code too long.", executor);
+				await NotifyService.Notify(executor, "@respond status code too long.", executor);
 				return new CallState(ErrorMessages.Returns.StatusLineTooLong);
 			}
 
@@ -235,7 +235,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"(HTTP): Status {statusLine}", executor);
+				await NotifyService.Notify(executor, $"(HTTP): Status {statusLine}", executor);
 			}
 		}
 

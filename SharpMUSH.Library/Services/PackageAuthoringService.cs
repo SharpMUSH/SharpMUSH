@@ -15,7 +15,8 @@ namespace SharpMUSH.Library.Services;
 /// authoring UI iteration.
 /// </summary>
 public partial class PackageAuthoringService(
-	ISharpDatabase database,
+	IObjectStore database,
+	IAttributeStore attributeStore,
 	IPackageManifestService manifests) : IPackageAuthoringService
 {
 	[GeneratedRegex(@"#(?<number>\d+)(?::\d+)?")]
@@ -264,7 +265,7 @@ public partial class PackageAuthoringService(
 		var sharpObject = known.Object();
 
 		var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-		await foreach (var attribute in database.GetAttributesAsync(dbref.Value, "*", cancellationToken))
+		await foreach (var attribute in attributeStore.GetAttributesAsync(dbref.Value, "*", cancellationToken))
 		{
 			// The PM` tree is engine-managed ref indirection (decision 20.21) —
 			// the apply engine recreates it; exports must never carry it.

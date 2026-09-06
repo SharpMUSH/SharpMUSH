@@ -16,23 +16,23 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@CEMIT", Switches = ["NOEVAL", "NOISY", "SILENT", "SPOOF"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
-	public static async ValueTask<Option<CallState>> ChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
-			NotifyService!, executor, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			NotifyService, executor, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -41,9 +41,9 @@ public partial class Commands
 
 		var channel = maybeChannel.AsChannel;
 
-		if (await ChannelHelper.CemitRefusal(PermissionService!, executor, channel) is { } refusal)
+		if (await ChannelHelper.CemitRefusal(PermissionService, executor, channel) is { } refusal)
 		{
-			await NotifyService!.Notify(executor, refusal, executor);
+			await NotifyService.Notify(executor, refusal, executor);
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
@@ -52,13 +52,13 @@ public partial class Commands
 		if (maybeMemberStatus is null)
 		{
 			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
+			await NotifyService.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
 			return new CallState(notOnMsg);
 		}
 
 		var (_, status) = maybeMemberStatus;
 
-		await Mediator!.Publish(new ChannelMessageNotification(
+		await Mediator.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			INotifyService.NotificationType.Emit,
@@ -73,23 +73,23 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@CHAT", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
-	public static async ValueTask<Option<CallState>> Chat(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Chat(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
-			NotifyService!, executor, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			NotifyService, executor, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -99,9 +99,9 @@ public partial class Commands
 		var channel = maybeChannel.AsChannel;
 
 		// extchat.c:1533-1546 — the type gate, then Chan_Can_Speak, which LOUD bypasses.
-		if (await ChannelHelper.SpeechRefusal(PermissionService!, executor, channel) is { } refusal)
+		if (await ChannelHelper.SpeechRefusal(PermissionService, executor, channel) is { } refusal)
 		{
-			await NotifyService!.Notify(executor, refusal, executor);
+			await NotifyService.Notify(executor, refusal, executor);
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
@@ -110,7 +110,7 @@ public partial class Commands
 		if (maybeMemberStatus is null)
 		{
 			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
+			await NotifyService.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
 			return new CallState(notOnMsg);
 		}
 
@@ -121,7 +121,7 @@ public partial class Commands
 		// `<Public> Mike says, "Hello"` rendering.
 		var (chatType, chatMessage) = ClassifyChannelSpeech(message);
 
-		await Mediator!.Publish(new ChannelMessageNotification(
+		await Mediator.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			chatType,
@@ -135,7 +135,7 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
-	private static (INotifyService.NotificationType Type, MString Message) ClassifyChannelSpeech(MString message)
+	private (INotifyService.NotificationType Type, MString Message) ClassifyChannelSpeech(MString message)
 	{
 		var plain = message.ToPlainText();
 		var rest = MModule.substring(1, MModule.getLength(message) - 1, message);
@@ -150,23 +150,23 @@ public partial class Commands
 
 	[SharpCommand(Name = "@NSCEMIT", Switches = ["NOEVAL", "NOISY", "SILENT"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
-	public static async ValueTask<Option<CallState>> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
-			NotifyService!, executor, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			NotifyService, executor, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -175,9 +175,9 @@ public partial class Commands
 
 		var channel = maybeChannel.AsChannel;
 
-		if (await ChannelHelper.CemitRefusal(PermissionService!, executor, channel) is { } refusal)
+		if (await ChannelHelper.CemitRefusal(PermissionService, executor, channel) is { } refusal)
 		{
-			await NotifyService!.Notify(executor, refusal, executor);
+			await NotifyService.Notify(executor, refusal, executor);
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
@@ -186,7 +186,7 @@ public partial class Commands
 		if (maybeMemberStatus is null)
 		{
 			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
+			await NotifyService.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
 			return new CallState(notOnMsg);
 		}
 
@@ -194,7 +194,7 @@ public partial class Commands
 
 		var canNoSpoof = await executor.HasPower("CAN_SPOOF") || await executor.IsPriv();
 
-		await Mediator!.Publish(new ChannelMessageNotification(
+		await Mediator.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			canNoSpoof
@@ -212,15 +212,15 @@ public partial class Commands
 
 	[SharpCommand(Name = "ADDCOM", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["channel", "alias"])]
-	public static async ValueTask<Option<CallState>> AddCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> AddCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageAddcom), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageAddcom), executor);
 			return new CallState(ErrorMessages.Returns.UsageAddcom);
 		}
 
@@ -229,12 +229,12 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor);
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
-			NotifyService!, executor, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			NotifyService, executor, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
@@ -248,47 +248,47 @@ public partial class Commands
 			// addcom joins the channel, so it answers to the same join gate as @channel/on.
 			if (await executor.IsGuest())
 			{
-				await NotifyService!.Notify(executor, ErrorMessages.Notifications.ChatGuestsCantJoin, executor);
+				await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatGuestsCantJoin, executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			var joinCheck = await ChannelHelper.JoinRefusal(PermissionService!, executor, executor, channel);
+			var joinCheck = await ChannelHelper.JoinRefusal(PermissionService, executor, executor, channel);
 			if (joinCheck.Refused)
 			{
-				await NotifyService!.Notify(executor, joinCheck.Refusal!, executor);
+				await NotifyService.Notify(executor, joinCheck.Refusal!, executor);
 				return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 			}
 
 			if (joinCheck.Warning is not null)
 			{
-				await NotifyService!.Notify(executor, joinCheck.Warning, executor);
+				await NotifyService.Notify(executor, joinCheck.Warning, executor);
 			}
 
-			await Mediator!.Send(new AddUserToChannelCommand(channel, executor));
+			await Mediator.Send(new AddUserToChannelCommand(channel, executor));
 		}
 
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
-		var result = await AttributeService!.SetAttributeAsync(executor, executor, attributeName, channel.Name);
+		var result = await AttributeService.SetAttributeAsync(executor, executor, attributeName, channel.Name);
 
 		if (result.IsT1)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorSettingAliasFormat), executor, result.AsT1.Value);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorSettingAliasFormat), executor, result.AsT1.Value);
 			return new CallState($"#-1 Error setting alias: {result.AsT1.Value}");
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasAddedForChannelFormat), executor, alias, channel.Name.ToPlainText());
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasAddedForChannelFormat), executor, alias, channel.Name.ToPlainText());
 		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "DELCOM", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["alias"])]
-	public static async ValueTask<Option<CallState>> DeleteCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> DeleteCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!arg0Check)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageDelcom), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageDelcom), executor);
 			return new CallState(ErrorMessages.Returns.UsageDelcom);
 		}
 
@@ -296,36 +296,36 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor);
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
-		var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
+		var maybeAttribute = await AttributeService.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
 
 		if (maybeAttribute.IsNone)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, alias);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, alias);
 			return new CallState($"#-1 Alias '{alias}' not found.");
 		}
 
 		if (maybeAttribute.IsError)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasFormat), executor, maybeAttribute.AsError.Value);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasFormat), executor, maybeAttribute.AsError.Value);
 			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
 		}
 
 		var channelName = maybeAttribute.AsAttribute.Last().Value;
 
-		var clearResult = await AttributeService!.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact);
+		var clearResult = await AttributeService.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact);
 
 		if (clearResult.IsT1)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorDeletingAliasFormat), executor, clearResult.AsT1.Value);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorDeletingAliasFormat), executor, clearResult.AsT1.Value);
 			return new CallState($"#-1 Error deleting alias: {clearResult.AsT1.Value}");
 		}
 
-		var allAliases = await AttributeService!.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
+		var allAliases = await AttributeService.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
 
 		if (!allAliases.IsError)
 		{
@@ -340,20 +340,20 @@ public partial class Commands
 				// send RemoveUserFromChannelCommand, and delcom answers "Alias deleted." either way. There is
 				// no observable difference to leak. A visible lookup would instead strand a membership the
 				// player can no longer reach — leaving them on a channel they just removed their alias for.
-				var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator!, NotifyService!, channelName, false);
+				var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator, NotifyService, channelName, false);
 				if (!maybeChannel.IsError)
 				{
-					await Mediator!.Send(new RemoveUserFromChannelCommand(maybeChannel.AsChannel, executor));
+					await Mediator.Send(new RemoveUserFromChannelCommand(maybeChannel.AsChannel, executor));
 				}
 			}
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasDeletedFormat), executor, alias);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasDeletedFormat), executor, alias);
 		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "@CLIST", Switches = ["FULL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel"])]
-	public static async ValueTask<Option<CallState>> ChannelList(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ChannelList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @clist is an alias for @channel/list, with /full switch being ignored
 		var switches = parser.CurrentState.Switches.Contains("FULL")
@@ -362,10 +362,10 @@ public partial class Commands
 
 		return await ChannelCommand.ChannelList.Handle(
 			parser,
-			LocateService!,
-			PermissionService!,
-			Mediator!,
-			NotifyService!,
+			LocateService,
+			PermissionService,
+			Mediator,
+			NotifyService,
 			MModule.empty(),
 			MModule.empty(),
 			switches);
@@ -373,15 +373,15 @@ public partial class Commands
 
 	[SharpCommand(Name = "COMTITLE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["alias", "title"])]
-	public static async ValueTask<Option<CallState>> ComTitle(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ComTitle(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageComtitle), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageComtitle), executor);
 			return new CallState(ErrorMessages.Returns.UsageComtitle);
 		}
 
@@ -390,29 +390,29 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor);
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
-		var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
+		var maybeAttribute = await AttributeService.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
 
 		if (maybeAttribute.IsNone)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, alias);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, alias);
 			return new CallState($"#-1 Alias '{alias}' not found.");
 		}
 
 		if (maybeAttribute.IsError)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasFormat), executor, maybeAttribute.AsError.Value);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasFormat), executor, maybeAttribute.AsError.Value);
 			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
 		}
 
 		var channelName = maybeAttribute.AsAttribute.Last().Value;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
-			NotifyService!, executor, channelName, true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			NotifyService, executor, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
@@ -420,26 +420,26 @@ public partial class Commands
 
 		var channel = maybeChannel.AsChannel;
 
-		var result = await ChannelTitle.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, title);
+		var result = await ChannelTitle.Handle(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, title);
 
 		if (result.Message != null && !result.Message.ToPlainText().StartsWith("#-1"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TitleSetForAliasChannelFormat), executor, title.ToPlainText(), alias, channel.Name.ToPlainText());
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TitleSetForAliasChannelFormat), executor, title.ToPlainText(), alias, channel.Name.ToPlainText());
 		}
 
 		return result;
 	}
 
 	[SharpCommand(Name = "COMLIST", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> ComList(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ComList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var allAliases = await AttributeService!.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
+		var allAliases = await AttributeService.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
 
 		if (allAliases.IsError)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasesFormat), executor, allAliases.AsError.Value);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasesFormat), executor, allAliases.AsError.Value);
 			return new CallState($"#-1 Error reading aliases: {allAliases.AsError.Value}");
 		}
 
@@ -447,7 +447,7 @@ public partial class Commands
 
 		if (aliases.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases), executor);
 			return new CallState(string.Empty);
 		}
 
@@ -464,7 +464,7 @@ public partial class Commands
 			));
 		}
 
-		await NotifyService!.Notify(executor, MModule.multiple(outputLines.ToArray()), executor);
+		await NotifyService.Notify(executor, MModule.multiple(outputLines.ToArray()), executor);
 		return new CallState(string.Empty);
 	}
 }

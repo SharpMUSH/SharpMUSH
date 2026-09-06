@@ -4,7 +4,7 @@ using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
 namespace SharpMUSH.Library.Services;
 
-public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSHOptions>
+public class OptionsService(IExpandedDataStore database) : IOptionsFactory<SharpMUSHOptions>
 {
 	public SharpMUSHOptions Create(string _)
 	{

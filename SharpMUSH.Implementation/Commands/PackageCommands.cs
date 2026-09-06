@@ -51,18 +51,18 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 4,
 		ParameterNames = ["objects", "package", "version", "description"])]
-	public static async ValueTask<Option<CallState>> Package(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Package(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var objectList = args["0"].Message?.ToPlainText() ?? string.Empty;
 		var tokens = objectList.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 		if (tokens.Length == 0)
 		{
-			await NotifyService!.Notify(executor, "PACKAGE: You must name at least one object to package.", executor);
+			await NotifyService.Notify(executor, "PACKAGE: You must name at least one object to package.", executor);
 			return new CallState(string.Empty);
 		}
 
@@ -72,7 +72,7 @@ public partial class Commands
 		var knownByObjid = new Dictionary<string, AnySharpObject>(StringComparer.Ordinal);
 		foreach (var token in tokens)
 		{
-			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, token, LocateFlags.All);
+			var locate = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, token, LocateFlags.All);
 			if (!locate.IsValid())
 			{
 				return new None();
@@ -85,9 +85,9 @@ public partial class Commands
 			}
 
 			var known = found.Known();
-			if (!await PermissionService!.CanExamine(executor, known))
+			if (!await PermissionService.CanExamine(executor, known))
 			{
-				await NotifyService!.Notify(executor, $"PACKAGE: You can't examine {known.Object().Name}.", executor);
+				await NotifyService.Notify(executor, $"PACKAGE: You can't examine {known.Object().Name}.", executor);
 				return new CallState(string.Empty);
 			}
 
@@ -101,7 +101,7 @@ public partial class Commands
 		var scan = await authoring.ScanAsync(objids.Distinct().ToList());
 		if (scan.IsT1)
 		{
-			await NotifyService!.Notify(executor, $"PACKAGE: {scan.AsT1.Value}", executor);
+			await NotifyService.Notify(executor, $"PACKAGE: {scan.AsT1.Value}", executor);
 			return new CallState(string.Empty);
 		}
 
@@ -116,7 +116,7 @@ public partial class Commands
 			var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			if (knownByObjid.TryGetValue(obj.Objid, out var known))
 			{
-				var visible = await AttributeService!.GetVisibleAttributesAsync(executor, known);
+				var visible = await AttributeService.GetVisibleAttributesAsync(executor, known);
 				if (visible.IsAttribute)
 				{
 					foreach (var attr in visible.AsAttributes)
@@ -168,13 +168,13 @@ public partial class Commands
 				report.Append("Finish at: /admin/packages/author");
 			}
 
-			await NotifyService!.Notify(executor, report.ToString(), executor);
+			await NotifyService.Notify(executor, report.ToString(), executor);
 			return new CallState(string.Empty);
 		}
 
 		if (!args.TryGetValue("1", out var idArg) || string.IsNullOrWhiteSpace(idArg.Message?.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor,
+			await NotifyService.Notify(executor,
 				"PACKAGE: Usage: @package <objects>=<package-id>[,<version>[,<description>]]  (or @package/scan <objects>)",
 				executor);
 			return new CallState(string.Empty);
@@ -183,7 +183,7 @@ public partial class Commands
 		var packageId = idArg.Message!.ToPlainText().Trim();
 		if (!PackageIdRegex().IsMatch(packageId))
 		{
-			await NotifyService!.Notify(executor,
+			await NotifyService.Notify(executor,
 				$"PACKAGE: '{packageId}' is not a valid package id (lowercase letters, digits and hyphens; must start with a letter).",
 				executor);
 			return new CallState(string.Empty);
@@ -246,7 +246,7 @@ public partial class Commands
 			var hint = error.StartsWith("Unclassified", StringComparison.Ordinal)
 				? "\nThese objects reference the outside world — finish this package at: /admin/packages/author"
 				: string.Empty;
-			await NotifyService!.Notify(executor, $"PACKAGE: {error}{hint}", executor);
+			await NotifyService.Notify(executor, $"PACKAGE: {error}{hint}", executor);
 			return new CallState(string.Empty);
 		}
 
@@ -256,7 +256,7 @@ public partial class Commands
 		output.AppendLine("----- BEGIN package.yaml -----");
 		output.AppendLine(export.AsT0.TrimEnd());
 		output.Append("----- END package.yaml -----");
-		await NotifyService!.Notify(executor, output.ToString(), executor);
+		await NotifyService.Notify(executor, output.ToString(), executor);
 		return new CallState(string.Empty);
 	}
 
@@ -265,7 +265,7 @@ public partial class Commands
 	/// themselves in the selection. Mirrors the authoring service's scan, but scoped to
 	/// the attributes the executor may see so the scan report matches the export.
 	/// </summary>
-	private static List<(string Dbref, int Count, string Example)> ExternalDbrefsOverVisible(
+	private List<(string Dbref, int Count, string Example)> ExternalDbrefsOverVisible(
 		PackageAuthoringScan scanResult,
 		IReadOnlyDictionary<string, HashSet<string>> visibleByObjid,
 		IReadOnlySet<int> selectedNumbers)

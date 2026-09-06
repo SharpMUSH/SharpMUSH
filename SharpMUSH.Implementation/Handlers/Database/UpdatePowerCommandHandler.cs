@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class UpdatePowerCommandHandler(ISharpDatabase database) : ICommandHandler<UpdatePowerCommand, bool>
+public class UpdatePowerCommandHandler(IFlagAndPowerStore database) : ICommandHandler<UpdatePowerCommand, bool>
 {
 	public async ValueTask<bool> Handle(UpdatePowerCommand command, CancellationToken cancellationToken)
 	{

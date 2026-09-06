@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "html", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = ["tag", "text..."])]
-	public static ValueTask<CallState> HTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> HTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return new ValueTask<CallState>(new CallState(
 			MModule.concat(
@@ -23,11 +23,11 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "tag", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["tagname", "content", "attributes"])]
-	public static ValueTask<CallState> Tag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Tag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(ErrorMessages.Returns.UseTagwrapInstead);
 
 	[SharpFunction(Name = "endtag", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["tagname"])]
-	public static ValueTask<CallState> EndTag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> EndTag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(ErrorMessages.Returns.UseTagwrapInstead);
 
 	/// <summary>
@@ -35,7 +35,7 @@ public partial class Functions
 	/// argument, with the optional tag parameters in the middle (<c>help tagwrap</c>, and PennMUSH).
 	/// </summary>
 	[SharpFunction(Name = "tagwrap", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["tag", "parameters", "content"])]
-	public static ValueTask<CallState> TagWrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> TagWrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var tagName = args["0"].Message!.ToPlainText();
@@ -63,17 +63,17 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["message"])]
-	public static async ValueTask<CallState> websocket_json(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> websocket_json(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 
 		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
 			: "me";
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+		var locate = await LocateService.LocateAndNotifyIfInvalid(
 			parser,
 			executor,
 			executor,
@@ -121,14 +121,14 @@ public partial class Functions
 			data = dataObj
 		});
 
-		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
+		await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
 		{
 			if (connection.ConnectionType != "websocket")
 			{
 				continue;
 			}
 
-			await Mediator!.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
+			await Mediator.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
 				connection.Handle,
 				wsMessage));
 		}
@@ -138,17 +138,17 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["html"])]
-	public static async ValueTask<CallState> websocket_html(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> websocket_html(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 
 		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
 			: "me";
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+		var locate = await LocateService.LocateAndNotifyIfInvalid(
 			parser,
 			executor,
 			executor,
@@ -182,14 +182,14 @@ public partial class Functions
 			data = htmlContent
 		});
 
-		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
+		await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
 		{
 			if (connection.ConnectionType != "websocket")
 			{
 				continue;
 			}
 
-			await Mediator!.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
+			await Mediator.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
 				connection.Handle,
 				wsMessage));
 		}
@@ -200,16 +200,16 @@ public partial class Functions
 
 	[SharpFunction(Name = "WEBSOCKET_HTML", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
 		ParameterNames = ["html", "player"])]
-	public static async ValueTask<CallState> WebSocketHTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> WebSocketHTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		AnySharpObject target;
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
 		{
 			var targetRef = targetArg.Message!.ToPlainText();
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,

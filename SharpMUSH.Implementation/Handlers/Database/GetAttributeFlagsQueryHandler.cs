@@ -5,7 +5,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetAttributeFlagsQueryHandler(ISharpDatabase database)
+public class GetAttributeFlagsQueryHandler(IAttributeStore database)
 	: IStreamQueryHandler<GetAttributeFlagsQuery, SharpAttributeFlag>
 {
 	public IAsyncEnumerable<SharpAttributeFlag> Handle(GetAttributeFlagsQuery request,
