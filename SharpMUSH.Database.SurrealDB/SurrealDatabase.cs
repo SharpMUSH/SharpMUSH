@@ -23,6 +23,7 @@ public partial class SurrealDatabase(
 	ILogger<SurrealDatabase> logger,
 	ISurrealDbClient db,
 	IPasswordService passwordService,
+	IObjectRelationLoader relations,
 	IReadOnlyList<IMigrationSource>? migrationSources = null,
 	IReadOnlyList<PluginFlag>? pluginFlags = null
 ) : ISharpDatabase
@@ -336,9 +337,9 @@ public partial class SurrealDatabase(
 			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
 			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesForIdAsync(id, enumCt))),
 			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesForIdAsync(id, enumCt))),
-			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
-			Parent = new(async ct => await GetParentForObjectAsync(id, ct)),
-			Zone = new(async ct => await GetZoneAsync(id, ct)),
+			Owner = new(ct => relations.OwnerOf(id, record.key, ct)),
+			Parent = new(ct => relations.ParentOf(id, record.key, ct)),
+			Zone = new(ct => relations.ZoneOf(id, record.key, ct)),
 			Children = new(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(id, enumCt)!))
 		};
 	}
@@ -417,7 +418,7 @@ public partial class SurrealDatabase(
 			PasswordHash = playerRecord.passwordHash,
 			PasswordSalt = playerRecord.passwordSalt,
 			Quota = playerRecord.quota,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetHomeAsync(id, ct))
 		};
 	}
@@ -438,7 +439,7 @@ public partial class SurrealDatabase(
 		{
 			Id = id,
 			Object = sharpObj,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetHomeAsync(id, ct))
 		};
 	}
@@ -450,7 +451,7 @@ public partial class SurrealDatabase(
 			Id = id,
 			Object = sharpObj,
 			Aliases = exitRecord.aliases,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetExitDestinationAsync(id, ct))
 		};
 	}
@@ -549,7 +550,7 @@ public partial class SurrealDatabase(
 			_ => new None());
 	}
 
-	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct)
+	public async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
@@ -590,7 +591,7 @@ public partial class SurrealDatabase(
 		return await BuildTypedObjectFromObjectRecord(records[0], ct);
 	}
 
-	private async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct)
+	public async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };

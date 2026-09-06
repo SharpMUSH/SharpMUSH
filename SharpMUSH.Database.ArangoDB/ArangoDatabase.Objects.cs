@@ -486,7 +486,7 @@ public partial class ArangoDatabase
 			{
 				Id = id,
 				Object = convertObject,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.TypePlayer => new SharpPlayer
@@ -494,7 +494,7 @@ public partial class ArangoDatabase
 				Id = id,
 				Object = convertObject,
 				Aliases = res.Aliases,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
 				PasswordHash = res.PasswordHash,
 				PasswordSalt = res.PasswordSalt,
@@ -511,7 +511,7 @@ public partial class ArangoDatabase
 				Id = id,
 				Object = convertObject,
 				Aliases = res.Aliases,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetExitDestinationAsync(id, ct))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'")
@@ -553,13 +553,13 @@ public partial class ArangoDatabase
 			DatabaseConstants.Things => new SharpThing
 			{
 				Id = id, Object = convertObject,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.Players => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
 				PasswordHash = res.GetProperty("PasswordHash").GetString()!,
 				PasswordSalt = res.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
@@ -574,7 +574,7 @@ public partial class ArangoDatabase
 			DatabaseConstants.Exits => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, convertObject.Id!, ct)),
 				Home = new(async ct => await GetExitDestinationAsync(id, ct))
 			},
 			_ => new None(),
@@ -632,6 +632,7 @@ public partial class ArangoDatabase
 	private SharpObject SharpObjectQueryToSharpObject(System.Text.Json.JsonElement obj)
 	{
 		var id = obj.GetProperty("_id").GetString()!;
+		var key = int.Parse(obj.GetProperty("_key").GetString()!);
 		var type = obj.GetProperty("Type").GetString()!;
 		WarningType warnings = WarningType.None;
 		if (obj.TryGetProperty("Warnings", out var warningsProp))
@@ -641,7 +642,7 @@ public partial class ArangoDatabase
 		return new SharpObject
 		{
 			Id = id,
-			Key = int.Parse(obj.GetProperty("_key").GetString()!),
+			Key = key,
 			Name = obj.GetProperty("Name").GetString()!,
 			Type = type,
 			CreationTime = obj.GetProperty("CreationTime").GetInt64(),
@@ -656,9 +657,9 @@ public partial class ArangoDatabase
 			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
 			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesAsync(id, enumCt))),
 			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesAsync(id, enumCt))),
-			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
-			Parent = new(async ct => await GetParentAsync(id, ct)),
-			Zone = new(async ct => await GetZoneAsync(id, ct)),
+			Owner = new(ct => relations.OwnerOf(id, key, ct)),
+			Parent = new(ct => relations.ParentOf(id, key, ct)),
+			Zone = new(ct => relations.ZoneOf(id, key, ct)),
 			Children = new(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(id, enumCt)!))
 		};
 	}
@@ -724,9 +725,9 @@ public partial class ArangoDatabase
 			LazyAttributes = new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(obj.Id, enumCt))),
 			AllAttributes = new Lazy<IAsyncEnumerable<SharpAttribute>>(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesAsync(obj.Id, enumCt))),
 			LazyAllAttributes = new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesAsync(obj.Id, enumCt))),
-			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetObjectOwnerAsync(obj.Id, ct)),
-			Parent = new AsyncLazy<AnyOptionalSharpObject>(async ct => await GetParentAsync(obj.Id, ct)),
-			Zone = new AsyncLazy<AnyOptionalSharpObject>(async ct => await GetZoneAsync(obj.Id, ct)),
+			Owner = new(ct => relations.OwnerOf(obj.Id, int.Parse(obj.Key), ct)),
+			Parent = new(ct => relations.ParentOf(obj.Id, int.Parse(obj.Key), ct)),
+			Zone = new(ct => relations.ZoneOf(obj.Id, int.Parse(obj.Key), ct)),
 			Children = new Lazy<IAsyncEnumerable<SharpObject>?>(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(obj.Id, enumCt)!))
 		};
 	public async ValueTask SetLockAsync(SharpObject target, string lockName, Library.Models.SharpLockData lockData,

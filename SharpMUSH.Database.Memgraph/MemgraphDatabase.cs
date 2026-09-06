@@ -22,6 +22,7 @@ public partial class MemgraphDatabase(
 ILogger<MemgraphDatabase> logger,
 IDriver driver,
 IPasswordService passwordService,
+IObjectRelationLoader relations,
 IReadOnlyList<IMigrationSource>? migrationSources = null,
 IReadOnlyList<PluginFlag>? pluginFlags = null
 ) : ISharpDatabase
@@ -206,11 +207,11 @@ RETURN c.value AS nextKey
 	}
 
 	/// <summary>
-	/// Maps an object node; with <paramref name="relations"/> from a query that returned
+	/// Maps an object node; with <paramref name="preloaded"/> from a query that returned
 	/// <see cref="RelationColumns"/> the flags and powers are materialised, else they are read on
 	/// first use (the cold construction paths).
 	/// </summary>
-	private SharpObject MapNodeToSharpObject(INode node, (IReadOnlyList<INode>? Flags, IReadOnlyList<INode>? Powers) relations = default)
+	private SharpObject MapNodeToSharpObject(INode node, (IReadOnlyList<INode>? Flags, IReadOnlyList<INode>? Powers) preloaded = default)
 	{
 		var key = node["key"].As<int>();
 		var name = node["name"].As<string>();
@@ -233,15 +234,15 @@ RETURN c.value AS nextKey
 			ModifiedTime = modifiedTime,
 			Warnings = warnings,
 			Locks = DeserializeLocks(locksJson),
-			Flags = FlagsOf(id, type, relations.Flags),
-			Powers = PowersOf(id, relations.Powers),
+			Flags = FlagsOf(id, type, preloaded.Flags),
+			Powers = PowersOf(id, preloaded.Powers),
 			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),
 			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
 			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesForIdAsync(id, enumCt))),
 			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesForIdAsync(id, enumCt))),
-			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
-			Parent = new(async ct => await GetParentAsync(id, ct)),
-			Zone = new(async ct => await GetZoneAsync(id, ct)),
+			Owner = new(ct => relations.OwnerOf(id, key, ct)),
+			Parent = new(ct => relations.ParentOf(id, key, ct)),
+			Zone = new(ct => relations.ZoneOf(id, key, ct)),
 			Children = new(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(id, enumCt)!))
 		};
 	}
@@ -270,11 +271,11 @@ RETURN c.value AS nextKey
 	}
 
 	private async ValueTask<AnyOptionalSharpObject> BuildTypedObjectFromObjectNode(INode objNode, CancellationToken ct,
-		(IReadOnlyList<INode>? Flags, IReadOnlyList<INode>? Powers) relations = default)
+		(IReadOnlyList<INode>? Flags, IReadOnlyList<INode>? Powers) preloaded = default)
 	{
 		var key = objNode["key"].As<int>();
 		var type = objNode["type"].As<string>();
-		var sharpObj = MapNodeToSharpObject(objNode, relations);
+		var sharpObj = MapNodeToSharpObject(objNode, preloaded);
 
 		var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed, labels(typed) AS lbl", new { key }, ct);
 
@@ -316,7 +317,7 @@ RETURN c.value AS nextKey
 			PasswordHash = typedNode["passwordHash"].As<string>(),
 			PasswordSalt = typedNode.Properties.ContainsKey("passwordSalt") ? typedNode["passwordSalt"].As<string?>() : null,
 			Quota = typedNode["quota"].As<int>(),
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetHomeAsync(id, ct))
 		};
 	}
@@ -337,7 +338,7 @@ RETURN c.value AS nextKey
 		{
 			Id = id,
 			Object = sharpObj,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetHomeAsync(id, ct))
 		};
 	}
@@ -352,7 +353,7 @@ RETURN c.value AS nextKey
 			Id = id,
 			Object = sharpObj,
 			Aliases = aliases,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
 			Home = new(async ct => await GetExitDestinationAsync(id, ct))
 		};
 	}
@@ -452,7 +453,7 @@ RETURN destObj
 		_ => new None());
 	}
 
-	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct)
+	public async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
 		var result = await ExecuteWithRetryAsync("""
@@ -770,7 +771,7 @@ RETURN o, p
 		}
 	}
 
-	private async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct)
+	public async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
 		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_ZONE]->(z:Object) RETURN z" + RelationColumns("z"), new { key }, ct);

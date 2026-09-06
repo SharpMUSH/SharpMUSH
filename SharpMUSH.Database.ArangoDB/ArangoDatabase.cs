@@ -1,5 +1,4 @@
 using Core.Arango;
-using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Plugins;
@@ -11,7 +10,7 @@ public partial class ArangoDatabase(
 ILogger<ArangoDatabase> logger,
 IArangoContext arangoDb,
 ArangoHandle handle,
-IMediator mediator,
+IObjectRelationLoader relations,
 IPasswordService passwordService,
 IReadOnlyList<IMigrationSource>? migrationSources = null,
 IReadOnlyList<PluginFlag>? pluginFlags = null

@@ -36,7 +36,7 @@ public partial class SurrealDatabase
 		await stagingClient.Connect(ct);
 
 		var staging = new SurrealStagingDatabase(
-			logger, stagingClient, passwordService,
+			logger, stagingClient, passwordService, relations,
 			liveDatabase: this, liveClient: db,
 			stagingDbName: stagingDbName, stagingId: stagingId);
 

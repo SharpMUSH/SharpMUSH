@@ -89,13 +89,32 @@ the caller holds, the way `SetLockCommandHandler` does. Construction paths that 
 bare document (a few cold Memgraph lookups) fall back to a direct read on first use; none of
 them involve a mediator. The providers no longer take an `IMediator` for this.
 
-One consequence needed its own piece. The same object also sits inside *other* cached results,
-a room's contents list above all, and a flag write does not remove those entries; a cached
-contents list would keep showing an object as it was before `@set obj=DARK` (a test caught exactly
-that). `RelationsThroughCacheBehavior`, registered inside the caching behaviours so it runs once
-per value as it is stored, re-points every object embedded in a cached result to read its flags
-and powers through the cached object node, which is the entry a write does invalidate. The
-Mediator layer thus owns the coherence rule, and providers know nothing of it.
+One consequence needed its own rule. The same object also sits inside *other* cached results, a
+room's contents list, an occupant's location answer (`Where()` is the cached `GetCertainLocationQuery`,
+and its answer is the container's instance), a player-by-name lookup, and a flag write does not
+remove those entries; a cached contents list would keep showing an object as it was before
+`@set obj=DARK` (a test caught exactly that). So every cached result now carries one `obj:#N` tag
+per object it embeds, stamped by the caching behaviours from the value itself (`EmbeddedObjects`),
+and the invalidation behaviour expires `obj:#N` whenever a command removes `object:#N`. One rule,
+invalidating an object expires everything that embeds it, covers flags, powers, locks and names in
+every shape, with no code path that mutates cached instances. It is the same mechanism #854
+established: a tag is resolved against when the reading factory started. An entry that gains these
+tags loses fail-safe and eager refresh, the rule the Tagged profile encodes statically; the object
+node's own query is left untagged since its key is what a write removes. The read-side cost is one
+tag check per embedded object per hit: a fifty-object room's contents list pays fifty dictionary
+lookups, a few microseconds.
+
+The tags alone were not enough, because a loaded object also *memoised* other objects: `Location`,
+`Owner`, `Parent` and `Zone` were DotNext `AsyncLazy` fields resolved once per instance, and a
+cached node instance lives for minutes. The location entry was expired correctly by `obj:#room`,
+and the occupant's node kept handing back the old room from its memo regardless. Those four
+relations are now `AsyncRelation` (same `WithCancellation` shape, resolved on every read) and
+resolve through an `IObjectRelationLoader` seam owned by `SharpMUSH.Library`: the host implements
+it over the Mediator's cached queries (`GetCertainLocationQuery`, and new `GetOwnerOfQuery`,
+`GetParentOfQuery`, `GetZoneOfQuery`, each tagged with the subject object so a re-parent expires
+the answer, and with the embedded object so a write to the parent does too). Providers ask through
+the seam and know nothing of the cache; `ArangoDatabase` no longer takes an `IMediator`. Every
+`Where()` is now a cache hit that follows invalidation, rather than a memo that ignores it.
 
 `[add(1,2)]`: 389 µs → 7.6 µs, 1 → 0 requests. Ten nested calls: 2.55 ms → 48 µs.
 

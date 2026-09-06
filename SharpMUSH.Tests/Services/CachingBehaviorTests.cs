@@ -85,10 +85,10 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
-	/// An object's flags are loaded with it and cached under its own key, which a flag write removes.
-	/// The same object also sits inside the room's cached contents list, which a flag write does not
-	/// remove; a mortal's <c>lcon()</c> after <c>@set obj=DARK</c> read that list and still showed the
-	/// object. The embedded object's flags must follow the object node, not the list's snapshot.
+	/// An object's flags are loaded with it. The same object also sits inside the room's cached
+	/// contents list, and a flag write removes only the object's own key; a mortal's <c>lcon()</c>
+	/// after <c>@set obj=DARK</c> read that list and still showed the object. Every cached result
+	/// carries a tag per object it embeds, and invalidating the object expires them all.
 	/// </summary>
 	[Test]
 	public async Task AFlagSetAfterAContentsListWasCachedIsSeenThroughThatList()
@@ -110,7 +110,84 @@ public class CachingBehaviorTests
 		var embedded = after.Single(c => c.Object().DBRef.Number == thing.Number);
 
 		await Assert.That(await embedded.Object().HasFlag("DARK")).IsTrue()
-			.Because("the contents list is still the cached one; its object must read flags through the object node");
+			.Because("the contents list carried the object's tag, so the flag write expired it");
+	}
+
+	/// <summary>
+	/// The container an occupant's <c>Where()</c> answers with is a cached snapshot too (the location
+	/// query embeds the room). A flag set on the room must reach it, or every occupant keeps seeing
+	/// the room as it was.
+	/// </summary>
+	[Test]
+	public async Task AFlagSetOnARoomIsSeenThroughAnOccupantsCachedLocation()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@dig FlagThroughLocation Room"))).Message!.ToPlainText()!);
+		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@create FlagThroughLocation Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel #{thing.Number}=#{room.Number}"));
+
+		var occupant = (await mediator.Send(new GetObjectNodeQuery(thing))).Known();
+		var before = await occupant.Where();
+		await Assert.That(before.Object().DBRef.Number).IsEqualTo(room.Number);
+		await Assert.That(await before.Object().HasFlag("DARK")).IsFalse();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set #{room.Number}=DARK"));
+
+		var after = await (await mediator.Send(new GetObjectNodeQuery(thing))).Known().Where();
+		await Assert.That(await after.Object().HasFlag("DARK")).IsTrue()
+			.Because("the occupant's cached location embeds the room and carries its tag");
+	}
+
+	/// <summary>
+	/// A parent is resolved through a cached relation query and never memoised on the child's
+	/// instance, so a flag set on the parent is seen through the child immediately.
+	/// </summary>
+	[Test]
+	public async Task AFlagSetOnAParentIsSeenThroughItsChild()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var parent = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@create FlagThroughParent Parent"))).Message!.ToPlainText()!);
+		var child = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@create FlagThroughParent Child"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent #{child.Number}=#{parent.Number}"));
+
+		var node = (await mediator.Send(new GetObjectNodeQuery(child))).Known();
+		var before = await node.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(before.Known().Object().DBRef.Number).IsEqualTo(parent.Number);
+		await Assert.That(await before.Known().Object().HasFlag("DARK")).IsFalse();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set #{parent.Number}=DARK"));
+
+		var after = await node.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(await after.Known().Object().HasFlag("DARK")).IsTrue()
+			.Because("the same child instance resolves its parent afresh through the cache, which the flag write expired");
+	}
+
+	/// <summary>
+	/// A lookup by name is cached with the player embedded. A flag set on the player must reach it:
+	/// otherwise a de-wizarded player stays a wizard for whoever finds them by name.
+	/// </summary>
+	[Test]
+	public async Task AFlagSetOnAPlayerIsSeenThroughACachedLookupByName()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactory.Services, mediator, ConnectionService, "FlagThroughName");
+		var name = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known().Object().Name;
+
+		var before = await mediator.CreateStream(new GetPlayerQuery(name)).ToListAsync();
+		await Assert.That(await before.Single().Object.HasFlag("DARK")).IsFalse();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set #{player.DbRef.Number}=DARK"));
+
+		var after = await mediator.CreateStream(new GetPlayerQuery(name)).ToListAsync();
+		await Assert.That(await after.Single().Object.HasFlag("DARK")).IsTrue()
+			.Because("the name lookup embeds the player and carries their tag");
 	}
 
 	/// <summary>

@@ -509,6 +509,12 @@ public interface ISharpDatabase
 	/// <returns>The representing parent</returns>
 	ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken cancellationToken = default);
 
+	/// <summary>The owner of the object with provider id <paramref name="id"/>. The uncached read behind <c>GetOwnerOfQuery</c>.</summary>
+	ValueTask<SharpPlayer> GetObjectOwnerAsync(string id, CancellationToken cancellationToken = default);
+
+	/// <summary>The zone of the object with provider id <paramref name="id"/>, if any. The uncached read behind <c>GetZoneOfQuery</c>.</summary>
+	ValueTask<AnyOptionalSharpObject> GetZoneAsync(string id, CancellationToken cancellationToken = default);
+
 	/// <summary>
 	/// Get all powers the Server knows about.
 	/// </summary>

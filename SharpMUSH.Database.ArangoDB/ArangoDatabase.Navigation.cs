@@ -3,7 +3,6 @@ using Core.Arango.Migration;
 using Core.Arango.Protocol;
 using DotNext.Threading;
 using MarkupString;
-using Mediator;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Database.Models;
@@ -33,7 +32,7 @@ public partial class ArangoDatabase
 				new Dictionary<string, object> { { "start", id } }, cache: true,
 				cancellationToken: ct)
 			.Select(SharpObjectQueryToSharpObject);
-	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string id, CancellationToken ct = default)
+	public async ValueTask<SharpPlayer> GetObjectOwnerAsync(string id, CancellationToken ct = default)
 	{
 		var owner = (await arangoDb.Query.ExecuteAsync<string>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphObjectOwners} RETURN v._id", cancellationToken: ct))
@@ -346,14 +345,14 @@ public partial class ArangoDatabase
 			DatabaseConstants.Things => new SharpThing
 			{
 				Id = id, Object = sharpObject,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, sharpObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, sharpObject.Id!, ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.Players => new SharpPlayer
 			{
 				Id = id, Object = sharpObject,
 				Aliases = typedVertex.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, sharpObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, sharpObject.Id!, ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
 				PasswordHash = typedVertex.GetProperty("PasswordHash").GetString()!,
 				PasswordSalt = typedVertex.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
@@ -369,7 +368,7 @@ public partial class ArangoDatabase
 			{
 				Id = id, Object = sharpObject,
 				Aliases = typedVertex.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, sharpObject.Id!), ct)),
+				Location = new(ct => relations.LocationOf(id, sharpObject.Id!, ct)),
 				Home = new(async ct => await GetExitDestinationAsync(id, ct))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{objectVertex.GetProperty("Type").GetString()}'"),

@@ -176,6 +176,11 @@ public class Startup(
 		var pluginMigrationSources = pluginCatalog.MigrationSources;
 		var pluginFlags = pluginCatalog.AllFlags;
 
+		// Relations a provider cannot own - an object's location changes under other actors - resolve
+		// through the Mediator's cached queries; the providers ask through this seam and know nothing
+		// of the cache.
+		services.AddSingleton<IObjectRelationLoader, Implementation.Services.MediatorObjectRelationLoader>();
+
 		if (databaseProvider == DatabaseProvider.Memgraph)
 		{
 			services.AddSingleton<IDriver>(_ =>
@@ -187,7 +192,8 @@ public class Startup(
 				var dbLogger = x.GetRequiredService<ILogger<MemgraphDatabase>>();
 				var neo4JDriver = x.GetRequiredService<IDriver>();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password, pluginMigrationSources, pluginFlags);
+				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password,
+					x.GetRequiredService<IObjectRelationLoader>(), pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -215,7 +221,8 @@ public class Startup(
 				var surrealClient = x.GetRequiredService<ISurrealDbClient>();
 				surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new SurrealDatabase(dbLogger, surrealClient, password, pluginMigrationSources, pluginFlags);
+				var db = new SurrealDatabase(dbLogger, surrealClient, password,
+					x.GetRequiredService<IObjectRelationLoader>(), pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -229,9 +236,9 @@ public class Startup(
 				var dbLogger = x.GetRequiredService<ILogger<ArangoDatabase>>();
 				var context = x.GetRequiredService<IArangoContext>();
 				var handle = x.GetRequiredService<ArangoHandle>();
-				var mediator = x.GetRequiredService<IMediator>();
+				var relations = x.GetRequiredService<IObjectRelationLoader>();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new ArangoDatabase(dbLogger, context, handle, mediator, password, pluginMigrationSources, pluginFlags);
+				var db = new ArangoDatabase(dbLogger, context, handle, relations, password, pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -421,10 +428,6 @@ public class Startup(
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(typeof(IStreamPipelineBehavior<,>), typeof(StreamQueryCachingBehavior<,>));
-		// Registered after the caching behaviours so they run inside them: once per value as it is
-		// cached, not on every hit.
-		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(Implementation.Behaviors.RelationsThroughCacheBehavior<,>));
-		services.AddSingleton(typeof(IStreamPipelineBehavior<,>), typeof(Implementation.Behaviors.StreamRelationsThroughCacheBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
 		// Shared MUSH code intelligence — the single source of truth behind both the

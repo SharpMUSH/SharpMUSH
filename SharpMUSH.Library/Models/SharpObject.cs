@@ -32,7 +32,7 @@ public class SharpObject
 	public WarningType Warnings { get; set; } = WarningType.None;
 
 	[JsonIgnore]
-	public required AsyncLazy<SharpPlayer> Owner { get; set; }
+	public required AsyncRelation<SharpPlayer> Owner { get; set; }
 
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<SharpPower>> Powers { get; set; }
@@ -53,10 +53,10 @@ public class SharpObject
 	public required Lazy<IAsyncEnumerable<SharpObjectFlag>> Flags { get; set; }
 
 	[JsonIgnore]
-	public required AsyncLazy<AnyOptionalSharpObject> Parent { get; set; }
+	public required AsyncRelation<AnyOptionalSharpObject> Parent { get; set; }
 
 	[JsonIgnore]
-	public required AsyncLazy<AnyOptionalSharpObject> Zone { get; set; }
+	public required AsyncRelation<AnyOptionalSharpObject> Zone { get; set; }
 
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<SharpObject>?> Children { get; set; }

@@ -28,6 +28,7 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 				// hundred things in it is not the same cost as an empty one. Capped so that a list larger
 				// than the cache is still cacheable rather than refused and recomputed on every read.
 				ctx.Options.Size = Math.Clamp(result.Count, 1, CacheEntryProfiles.MaxEntrySize);
+				EmbeddedObjectTags.Apply(ctx, message, result);
 				return result;
 			},
 			options: CacheEntryProfiles.For(message.Profile),
