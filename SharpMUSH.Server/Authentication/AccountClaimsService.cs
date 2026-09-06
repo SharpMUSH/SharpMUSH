@@ -102,22 +102,24 @@ public class AccountClaimsService(
 	/// the (current, possibly admin-edited) built-in role for its flag-derived <paramref name="role"/>
 	/// unioned with its explicitly-assigned roles, resolved by priority/three-state.
 	/// </summary>
-	public async Task<IReadOnlySet<string>> ComputeGrantedScopesAsync(string accountId, PortalRole role)
+	public async Task<IReadOnlySet<string>> ComputeGrantedScopesAsync(string accountId, PortalRole role, CancellationToken ct = default)
+		// The factory's token, not the caller's: it is the one FusionCache cancels when the hard
+		// timeout expires, and with background completion off that is how the role queries stop.
 		=> await cache.GetOrSetAsync($"account-scopes:{accountId}:{role}",
-			async _ => await ComputeGrantedScopesCoreAsync(accountId, role),
+			async token => await ComputeGrantedScopesCoreAsync(accountId, role, token),
 			ClaimsEntryOptions,
 			tags: [AccountCacheTag(accountId)],
-			token: default);
+			token: ct);
 
-	private async Task<IReadOnlySet<string>> ComputeGrantedScopesCoreAsync(string accountId, PortalRole role)
+	private async Task<IReadOnlySet<string>> ComputeGrantedScopesCoreAsync(string accountId, PortalRole role, CancellationToken ct)
 	{
-		var allRoles = await roleRegistry.GetRolesAsync();
+		var allRoles = await roleRegistry.GetRolesAsync(ct);
 		var bySlug = allRoles.ToDictionary(r => r.Slug, StringComparer.OrdinalIgnoreCase);
 
 		var effective = new Dictionary<string, SharpRole>(StringComparer.OrdinalIgnoreCase);
 		if (bySlug.TryGetValue(BuiltInRoles.SlugFor(role), out var derived))
 			effective[derived.Slug] = derived;
-		foreach (var assigned in await roleRegistry.GetRolesForAccountAsync(accountId))
+		foreach (var assigned in await roleRegistry.GetRolesForAccountAsync(accountId, ct))
 			effective[assigned.Slug] = assigned;
 
 		// Expand umbrella scopes (e.g. wiki.admin ⇒ wiki.read/create/edit/delete) so the finer

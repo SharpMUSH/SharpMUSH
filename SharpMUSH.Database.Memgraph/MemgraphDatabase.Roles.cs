@@ -45,10 +45,10 @@ public partial class MemgraphDatabase : IRoleRegistryService
 			: MapRoleNode(result.Result[0]["r"].As<INode>());
 	}
 
-	public async Task<IReadOnlyList<SharpRole>> GetRolesAsync()
+	public async Task<IReadOnlyList<SharpRole>> GetRolesAsync(CancellationToken cancellationToken = default)
 	{
 		var result = await ExecuteWithRetryAsync(
-			"MATCH (r:SysRole) RETURN r ORDER BY r.priority DESC, r.slug");
+			"MATCH (r:SysRole) RETURN r ORDER BY r.priority DESC, r.slug", ct: cancellationToken);
 		return result.Result.Select(r => MapRoleNode(r["r"].As<INode>())).ToList();
 	}
 
@@ -76,13 +76,13 @@ public partial class MemgraphDatabase : IRoleRegistryService
 			""", new { id = key, slug = roleSlug });
 	}
 
-	public async Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId)
+	public async Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId, CancellationToken cancellationToken = default)
 	{
 		var key = accountId.Contains('/') ? accountId.Split('/')[1] : accountId;
 		var result = await ExecuteWithRetryAsync("""
 			MATCH (a:Account {id: $id})-[:ACCOUNT_HAS_ROLE]->(r:SysRole)
 			RETURN r ORDER BY r.priority DESC, r.slug
-			""", new { id = key });
+			""", new { id = key }, cancellationToken);
 		return result.Result.Select(r => MapRoleNode(r["r"].As<INode>())).ToList();
 	}
 

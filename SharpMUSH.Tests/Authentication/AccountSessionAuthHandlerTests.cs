@@ -86,8 +86,8 @@ public class AccountSessionAuthHandlerTests
 
 		roleDerivation.DeriveAccountRole(Arg.Any<IEnumerable<(int DbrefNumber, IEnumerable<SharpObjectFlag> Flags)>>())
 			.Returns(role);
-		roleRegistry.GetRolesAsync().Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
-		roleRegistry.GetRolesForAccountAsync(Arg.Any<string>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
+		roleRegistry.GetRolesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
+		roleRegistry.GetRolesForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
 		permissionResolver.Resolve(Arg.Any<IEnumerable<SharpRole>>()).Returns(new HashSet<string>(scopes));
 
 		var cache = new FusionCache(
