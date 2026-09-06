@@ -116,6 +116,18 @@ the answer, and with the embedded object so a write to the parent does too). Pro
 the seam and know nothing of the cache; `ArangoDatabase` no longer takes an `IMediator`. Every
 `Where()` is now a cache hit that follows invalidation, rather than a memo that ignores it.
 
+The follow-up (#868) finished the shape: `Home`, a room's drop-to and an exit's destination go
+through the same seam (`GetHomeOfQuery`, `GetDropToOfQuery`, `GetExitDestinationOfQuery`), so no
+provider-built object memoises another object anywhere; the cold Memgraph construction paths
+return their relation columns too, and a bare document is now an error rather than a slow path
+(which surfaced a bug the fallback had hidden: the Cypher projection's comprehension variables
+were `f` and `p`, so any query that had already bound `p` - the player queries bind it to the
+Player node - got an empty power list, and `connect guest` on Memgraph found no guests);
+the snapshot rule lives on `SharpObject` as `WithFlag`/`WithoutFlag`/`WithPower`/`WithoutPower`/
+`WithLock`/`WithoutLock`, which the handlers call; and the unused per-object flags query, its key
+and its tag are gone. What remains open there is list-shaped results caching object instances
+rather than dbrefs.
+
 `[add(1,2)]`: 389 µs → 7.6 µs, 1 → 0 requests. Ten nested calls: 2.55 ms → 48 µs.
 
 ### 3. Parser internals (parser)
@@ -175,10 +187,6 @@ entry outlives a tag removed while its factory ran, holding pre-write data. So t
 eager refresh, and no profile lets a timed-out factory complete in the background
 (`AllowTimedOutFactoryBackgroundCompletion = false`); a timed-out read is discarded and the next
 read retries.
-
-(The per-object flag and power *queries* an earlier revision of this branch added were removed
-once relations loaded with the object; `GetObjectFlagsQuery` remains as the pre-existing, still
-unused, cached read.)
 
 The cache's *registered* default is the Tagged profile, so an ad-hoc caller that only sets a
 duration (the account-claims cache, tag-invalidated on bans and role changes) can never inherit

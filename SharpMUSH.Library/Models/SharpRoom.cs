@@ -16,5 +16,5 @@ public class SharpRoom
 
 	// Drop-To for rooms
 	[JsonIgnore]
-	public required AsyncLazy<AnyOptionalSharpContainer> Location { get; set; }
+	public required AsyncRelation<AnyOptionalSharpContainer> Location { get; set; }
 }

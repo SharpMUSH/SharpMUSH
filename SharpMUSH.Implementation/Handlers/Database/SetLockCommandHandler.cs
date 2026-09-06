@@ -29,7 +29,7 @@ public class SetLockCommandHandler(ISharpDatabase database, IBooleanExpressionPa
 		await database.SetLockAsync(request.Target, request.LockName, lockData, cancellationToken);
 
 		// Update in-memory state so subsequent reads see the new lock without a DB round-trip
-		request.Target.Locks = request.Target.Locks.SetItem(request.LockName, lockData);
+		request.Target.WithLock(request.LockName, lockData);
 
 		// Invalidate the object cache so Locate calls see the updated locks
 		await cache.RemoveAsync(SharpMUSH.Library.Definitions.CacheKeys.Object(request.Target.DBRef), token: cancellationToken);
@@ -50,7 +50,7 @@ public class UnsetLockCommandHandler(ISharpDatabase database, IBooleanExpression
 
 		await database.UnsetLockAsync(request.Target, request.LockName, cancellationToken);
 
-		request.Target.Locks = request.Target.Locks.Remove(request.LockName);
+		request.Target.WithoutLock(request.LockName);
 
 		await cache.RemoveAsync(SharpMUSH.Library.Definitions.CacheKeys.Object(request.Target.DBRef), token: cancellationToken);
 

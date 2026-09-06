@@ -23,4 +23,13 @@ public class MediatorObjectRelationLoader(IMediator mediator) : IObjectRelationL
 
 	public async Task<AnyOptionalSharpObject> ZoneOf(string objectId, int number, CancellationToken cancellationToken)
 		=> await mediator.Send(new GetZoneOfQuery(objectId, number), cancellationToken);
+
+	public async Task<AnySharpContainer> HomeOf(string typedId, string objectId, int number, CancellationToken cancellationToken)
+		=> await mediator.Send(new GetHomeOfQuery(typedId, objectId, number), cancellationToken);
+
+	public async Task<AnyOptionalSharpContainer> DropToOf(string roomTypedId, string objectId, int number, CancellationToken cancellationToken)
+		=> await mediator.Send(new GetDropToOfQuery(roomTypedId, objectId, number), cancellationToken);
+
+	public async Task<AnyOptionalSharpContainer> ExitDestinationOf(string exitTypedId, string objectId, int number, CancellationToken cancellationToken)
+		=> await mediator.Send(new GetExitDestinationOfQuery(exitTypedId, objectId, number), cancellationToken);
 }

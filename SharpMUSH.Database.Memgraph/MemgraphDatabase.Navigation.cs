@@ -74,13 +74,13 @@ LIMIT 1
 		var maxHops = depth == -1 ? 999 : depth;
 		var cypher = "MATCH path = (start:" + typedLabel + " {key: $key})-[:AT_LOCATION*0.." + maxHops + "]->(dest) " +
 		"WITH dest, size(path) AS pathLen ORDER BY pathLen DESC LIMIT 1 " +
-		"MATCH (dest)-[:IS_OBJECT]->(destObj:Object) RETURN destObj";
+		"MATCH (dest)-[:IS_OBJECT]->(destObj:Object) RETURN destObj" + RelationColumns("destObj");
 		var result = await ExecuteWithRetryAsync(cypher, new { key }, cancellationToken);
 
 		if (result.Result.Count == 0) return new None();
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
-		var located = await BuildTypedObjectFromObjectNode(destObjNode, cancellationToken);
+		var located = await BuildTypedObjectFromObjectNode(destObjNode, cancellationToken, RelationsOf(result.Result[0]));
 		return located.Match<AnyOptionalSharpContainer>(
 		player => player,
 		room => room,
@@ -99,11 +99,11 @@ LIMIT 1
 		var maxHops = depth == -1 ? 999 : depth;
 		var cypher2 = "MATCH path = (start:" + typedLabel + " {key: $key})-[:AT_LOCATION*0.." + maxHops + "]->(dest) " +
 		"WITH dest, size(path) AS pathLen ORDER BY pathLen DESC LIMIT 1 " +
-		"MATCH (dest)-[:IS_OBJECT]->(destObj:Object) RETURN destObj";
+		"MATCH (dest)-[:IS_OBJECT]->(destObj:Object) RETURN destObj" + RelationColumns("destObj");
 		var result = await ExecuteWithRetryAsync(cypher2, new { key }, cancellationToken);
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
-		var located = await BuildTypedObjectFromObjectNode(destObjNode, cancellationToken);
+		var located = await BuildTypedObjectFromObjectNode(destObjNode, cancellationToken, RelationsOf(result.Result[0]));
 		return located.Match<AnySharpContainer>(
 		player => player,
 		room => room,

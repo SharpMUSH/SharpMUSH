@@ -19,5 +19,5 @@ public class SharpThing
 	public required AsyncRelation<AnySharpContainer> Location { get; set; }
 
 	[JsonIgnore]
-	public required AsyncLazy<AnySharpContainer> Home { get; set; }
+	public required AsyncRelation<AnySharpContainer> Home { get; set; }
 }

@@ -252,10 +252,10 @@ DELETE r
 		var result = await ExecuteWithRetryAsync("""
 MATCH (c:Channel {name: $name})-[:HAS_CHANNEL_OWNER]->(o:Object)
 RETURN o
-""", new { name = channelName }, ct);
+""" + RelationColumns("o"), new { name = channelName }, ct);
 
 		var objNode = result.Result[0]["o"].As<INode>();
-		var ownerObj = await BuildTypedObjectFromObjectNode(objNode, ct);
+		var ownerObj = await BuildTypedObjectFromObjectNode(objNode, ct, RelationsOf(result.Result[0]));
 		return ownerObj.AsPlayer;
 	}
 
@@ -264,13 +264,13 @@ RETURN o
 		var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object)-[r:ON_CHANNEL]->(c:Channel {name: $name})
 RETURN o, r
-""", new { name = channelName }, ct);
+""" + RelationColumns("o"), new { name = channelName }, ct);
 
 		foreach (var record in result.Result)
 		{
 			var objNode = record["o"].As<INode>();
 			var rel = record["r"].As<IRelationship>();
-			var memberObj = await BuildTypedObjectFromObjectNode(objNode, ct);
+			var memberObj = await BuildTypedObjectFromObjectNode(objNode, ct, RelationsOf(record));
 
 			var status = new SharpChannelStatus(
 			Combine: rel.Properties.ContainsKey("combine") ? rel["combine"].As<bool>() : false,

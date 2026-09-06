@@ -27,5 +27,5 @@ public class SharpExit
 	/// exit has none.
 	/// </summary>
 	[JsonIgnore]
-	public required AsyncLazy<AnyOptionalSharpContainer> Home { get; set; }
+	public required AsyncRelation<AnyOptionalSharpContainer> Home { get; set; }
 }

@@ -41,7 +41,7 @@ public partial class SurrealDatabase(
 		var upperType = type.ToUpper();
 		if (records is null)
 		{
-			return new(() => new FreshAsyncEnumerable<SharpObjectFlag>(ct => GetObjectFlagsForIdAsync(id, upperType, ct)));
+			throw new InvalidOperationException("Object loaded without its flags: every query that builds an object must select ObjectWithRelations.");
 		}
 
 		var flags = records.Select(MapRecordToFlag).Append(ObjectTypeFlag.For(upperType)).ToArray();
@@ -52,7 +52,7 @@ public partial class SurrealDatabase(
 	{
 		if (records is null)
 		{
-			return new(() => new FreshAsyncEnumerable<SharpPower>(ct => GetPowersForIdAsync(id, ct)));
+			throw new InvalidOperationException("Object loaded without its powers: every query that builds an object must select ObjectWithRelations.");
 		}
 
 		var powers = records.Select(MapRecordToPower).ToArray();
@@ -419,7 +419,7 @@ public partial class SurrealDatabase(
 			PasswordSalt = playerRecord.passwordSalt,
 			Quota = playerRecord.quota,
 			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
-			Home = new(async ct => await GetHomeAsync(id, ct))
+			Home = new(ct => relations.HomeOf(id, sharpObj.Id!, sharpObj.Key, ct))
 		};
 	}
 
@@ -429,7 +429,7 @@ public partial class SurrealDatabase(
 		{
 			Id = id,
 			Object = sharpObj,
-			Location = new(async ct => await GetDropToAsync(id, ct))
+			Location = new(ct => relations.DropToOf(id, sharpObj.Id!, sharpObj.Key, ct))
 		};
 	}
 
@@ -440,7 +440,7 @@ public partial class SurrealDatabase(
 			Id = id,
 			Object = sharpObj,
 			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
-			Home = new(async ct => await GetHomeAsync(id, ct))
+			Home = new(ct => relations.HomeOf(id, sharpObj.Id!, sharpObj.Key, ct))
 		};
 	}
 
@@ -452,7 +452,7 @@ public partial class SurrealDatabase(
 			Object = sharpObj,
 			Aliases = exitRecord.aliases,
 			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
-			Home = new(async ct => await GetExitDestinationAsync(id, ct))
+			Home = new(ct => relations.ExitDestinationOf(id, sharpObj.Id!, sharpObj.Key, ct))
 		};
 	}
 
@@ -479,7 +479,7 @@ public partial class SurrealDatabase(
 			_ => throw new InvalidOperationException($"No location found for {typedId}"));
 	}
 
-	private async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct)
+	public async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(typedId);
 		var table = ExtractTable(typedId);
@@ -505,7 +505,7 @@ public partial class SurrealDatabase(
 	/// <summary>
 	/// An exit's destination. Absent on a freshly @open'd or an @unlink'd exit, hence optional.
 	/// </summary>
-	private async ValueTask<AnyOptionalSharpContainer> GetExitDestinationAsync(string typedId, CancellationToken ct)
+	public async ValueTask<AnyOptionalSharpContainer> GetExitDestinationAsync(string typedId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(typedId);
 		var table = ExtractTable(typedId);
@@ -529,7 +529,7 @@ public partial class SurrealDatabase(
 			_ => new None());
 	}
 
-	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct)
+	public async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(roomId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
@@ -605,37 +605,6 @@ public partial class SurrealDatabase(
 		return await BuildTypedObjectFromObjectRecord(records[0], ct);
 	}
 
-	private async IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsForIdAsync(string objectId, string type, [EnumeratorCancellation] CancellationToken ct = default)
-	{
-		var key = ExtractKey(objectId);
-		var parameters = new Dictionary<string, object?> { ["key"] = key };
-		var result = await ExecuteAsync(
-			"SELECT * FROM object:$key->has_flags->object_flag",
-			parameters, ct);
-
-		var records = result.GetValue<List<FlagRecord>>(0)!;
-		foreach (var record in records)
-		{
-			yield return MapRecordToFlag(record);
-		}
-
-		yield return ObjectTypeFlag.For(type);
-	}
-
-	private async IAsyncEnumerable<SharpPower> GetPowersForIdAsync(string objectId, [EnumeratorCancellation] CancellationToken ct = default)
-	{
-		var key = ExtractKey(objectId);
-		var parameters = new Dictionary<string, object?> { ["key"] = key };
-		var result = await ExecuteAsync(
-			"SELECT * FROM object:$key->has_powers->power",
-			parameters, ct);
-
-		var records = result.GetValue<List<PowerRecord>>(0)!;
-		foreach (var record in records)
-		{
-			yield return MapRecordToPower(record);
-		}
-	}
 
 	private static SharpObjectFlag MapRecordToFlag(FlagRecord record)
 	{

@@ -515,6 +515,15 @@ public interface ISharpDatabase
 	/// <summary>The zone of the object with provider id <paramref name="id"/>, if any. The uncached read behind <c>GetZoneOfQuery</c>.</summary>
 	ValueTask<AnyOptionalSharpObject> GetZoneAsync(string id, CancellationToken cancellationToken = default);
 
+	/// <summary>The home of the typed player or thing <paramref name="typedId"/>. The uncached read behind <c>GetHomeOfQuery</c>.</summary>
+	ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken cancellationToken = default);
+
+	/// <summary>The drop-to of the room <paramref name="roomTypedId"/>, if any. The uncached read behind <c>GetDropToOfQuery</c>.</summary>
+	ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomTypedId, CancellationToken cancellationToken = default);
+
+	/// <summary>The destination of the exit <paramref name="exitTypedId"/>, if linked. The uncached read behind <c>GetExitDestinationOfQuery</c>.</summary>
+	ValueTask<AnyOptionalSharpContainer> GetExitDestinationAsync(string exitTypedId, CancellationToken cancellationToken = default);
+
 	/// <summary>
 	/// Get all powers the Server knows about.
 	/// </summary>
@@ -759,8 +768,6 @@ public interface ISharpDatabase
 	/// <returns>The deepest findable object based on depth</returns>
 	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default);
 
-	IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, string type,
-		CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<SharpMail> GetIncomingMailsAsync(SharpPlayer id, string folder, CancellationToken cancellationToken = default);
 
