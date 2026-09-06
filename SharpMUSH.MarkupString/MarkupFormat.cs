@@ -2,8 +2,9 @@ namespace MarkupString;
 
 /// <summary>
 /// An output format a <see cref="MarkupText"/> can be rendered to. Two formats are equal when
-/// their <see cref="Name"/>s match ordinally, ignoring case — the <see cref="Encoding"/> plays no
-/// part, so a <see cref="Custom"/> format named after a built-in addresses the same registry slots.
+/// their <see cref="Name"/>s match ordinally, ignoring case. <see cref="Custom"/> refuses a name
+/// that matches one of the six built-ins, so a caller cannot accidentally address a built-in's
+/// registry slots under a different <see cref="Encoding"/>.
 /// </summary>
 public sealed class MarkupFormat : IEquatable<MarkupFormat>
 {
@@ -24,9 +25,15 @@ public sealed class MarkupFormat : IEquatable<MarkupFormat>
 	public static readonly MarkupFormat BBCode = new("bbcode", TextEncoding.StripControls);
 
 	/// <summary>Declares a format outside the built-in six.</summary>
+	/// <exception cref="ArgumentException"><paramref name="name"/> matches a built-in format's name, ignoring case.</exception>
 	public static MarkupFormat Custom(string name, TextEncoding encoding)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(name);
+		var builtIn = TryParse(name);
+		if (builtIn is not null)
+		{
+			throw new ArgumentException($"'{name}' names a built-in format; use MarkupFormat.{builtIn.Name} or pick a different name.", nameof(name));
+		}
 		return new MarkupFormat(name, encoding);
 	}
 

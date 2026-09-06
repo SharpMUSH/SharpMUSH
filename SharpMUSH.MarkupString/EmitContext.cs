@@ -9,10 +9,10 @@ namespace MarkupString;
 public readonly ref struct EmitContext
 {
 	/// <summary>The format being rendered.</summary>
-	public MarkupFormat Format { get; init; }
+	public required MarkupFormat Format { get; init; }
 
 	/// <summary>The registry the render is running against — how a set emitter delegates layers it does not own.</summary>
-	public MarkupRegistry Registry { get; init; }
+	public required MarkupRegistry Registry { get; init; }
 
 	/// <summary>The previous run's markups, or <see langword="null"/> when a gap or the start of the text precedes this run.</summary>
 	public MarkupSet? Previous { get; init; }

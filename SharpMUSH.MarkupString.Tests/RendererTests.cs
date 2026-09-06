@@ -122,7 +122,7 @@ public class RendererTests
 		var reg = MarkupRegistry.Empty.With(new TagEmitter(MarkupFormat.Html));
 		var t = MarkupText.Wrap(new Tag("b"), "x");
 		var writer = new ArrayBufferWriter<char>(16);
-		t.Render(MarkupFormat.Html, writer, reg);
+		t.RenderTo(MarkupFormat.Html, writer, reg);
 		await Assert.That(new string(writer.WrittenSpan)).IsEqualTo("<b>x</b>");
 	}
 
@@ -197,6 +197,36 @@ public class RendererTests
 		await Assert.That(MarkupText.Plain("x").Render(MarkupFormat.Html, reg)).IsEqualTo("{x}");
 	}
 
+	/// <summary>
+	/// A run exists but carries no markup with a registered emitter — the body passes through
+	/// unchanged, and <c>anyRunEmitted</c> must report that no emitter actually wrote, not merely
+	/// that a run was present.
+	/// </summary>
+	[Test]
+	public async Task Render_Framer_ReportsFalseWhenARunsLayersHaveNoRegisteredEmitter()
+	{
+		var reg = MarkupRegistry.Empty.With(new BracketFramer(MarkupFormat.Html));
+		await Assert.That(MarkupText.Wrap(new Tag("b"), "x").Render(MarkupFormat.Html, reg)).IsEqualTo("{x}");
+	}
+
+	[Test]
+	public async Task Render_Framer_ReportsTrueWhenAPerMarkupEmitterRan()
+	{
+		var reg = MarkupRegistry.Empty
+			.With(new TagEmitter(MarkupFormat.Html))
+			.With(new BracketFramer(MarkupFormat.Html));
+		await Assert.That(MarkupText.Wrap(new Tag("b"), "x").Render(MarkupFormat.Html, reg)).IsEqualTo("{<b>x</b>}!");
+	}
+
+	[Test]
+	public async Task Render_Framer_ReportsTrueWhenASetEmitterClaimsTheRun()
+	{
+		var reg = MarkupRegistry.Empty
+			.With(new OuterSetEmitter(MarkupFormat.Html))
+			.With(new BracketFramer(MarkupFormat.Html));
+		await Assert.That(MarkupText.Wrap(new Tag("o"), "x").Render(MarkupFormat.Html, reg)).IsEqualTo("{[o]x[/o]}!");
+	}
+
 	[Test]
 	public async Task Render_UnknownMarkupLayer_PassesBodyThroughAndKeepsOtherLayers()
 	{
@@ -235,10 +265,29 @@ public class RendererTests
 	[Test]
 	public async Task Format_EqualityIsByNameIgnoringCase()
 	{
-		await Assert.That(MarkupFormat.Custom("HTML", TextEncoding.None)).IsEqualTo(MarkupFormat.Html);
+		await Assert.That(MarkupFormat.TryParse("HTML")).IsEqualTo(MarkupFormat.Html);
 		await Assert.That(MarkupFormat.Custom("bogus", TextEncoding.None)).IsNotEqualTo(MarkupFormat.Html);
-		await Assert.That(MarkupFormat.Html == MarkupFormat.Custom("html", TextEncoding.Html)).IsTrue();
-		await Assert.That(MarkupFormat.Html.GetHashCode()).IsEqualTo(MarkupFormat.Custom("Html", TextEncoding.Html).GetHashCode());
+		await Assert.That(MarkupFormat.Html == MarkupFormat.TryParse("html")).IsTrue();
+		await Assert.That(MarkupFormat.Html.GetHashCode()).IsEqualTo(MarkupFormat.TryParse("Html")!.GetHashCode());
+	}
+
+	[Test]
+	[Arguments("HTML")]
+	[Arguments("html")]
+	[Arguments("Plain")]
+	[Arguments("ANSI")]
+	[Arguments("Pueblo")]
+	[Arguments("mxp")]
+	[Arguments("BBCode")]
+	public async Task Format_Custom_RejectsANameThatMatchesABuiltIn(string name)
+		=> await Assert.That(() => MarkupFormat.Custom(name, TextEncoding.None)).Throws<ArgumentException>();
+
+	[Test]
+	public async Task Format_Custom_AllowsANameThatIsNotABuiltIn()
+	{
+		var format = MarkupFormat.Custom("bogus", TextEncoding.None);
+		await Assert.That(format.Name).IsEqualTo("bogus");
+		await Assert.That(format.Encoding).IsEqualTo(TextEncoding.None);
 	}
 
 	[Test]

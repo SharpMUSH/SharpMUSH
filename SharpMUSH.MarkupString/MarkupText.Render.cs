@@ -12,7 +12,7 @@ public sealed partial class MarkupText
 	}
 
 	/// <summary>Renders this text in <paramref name="format"/> straight into <paramref name="output"/>.</summary>
-	public void Render(MarkupFormat format, IBufferWriter<char> output, MarkupRegistry? registry = null) =>
+	public void RenderTo(MarkupFormat format, IBufferWriter<char> output, MarkupRegistry? registry = null) =>
 		MarkupTextRenderer.Render(this, format, registry ?? MarkupRegistry.Default, output);
 
 	/// <summary>

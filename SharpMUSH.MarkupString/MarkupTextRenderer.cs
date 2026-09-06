@@ -90,6 +90,7 @@ public static class MarkupTextRenderer
 		var content = text.Text.AsSpan();
 		var runs = text.Runs;
 		var position = 0;
+		var anyRunEmitted = false;
 		for (var i = 0; i < runs.Length; i++)
 		{
 			var run = runs[i];
@@ -103,15 +104,18 @@ public static class MarkupTextRenderer
 				IsFirstRun = i == 0,
 				IsLastRun = i == runs.Length - 1,
 			};
-			RenderRun(run, content.Slice(run.Start, run.Length), format, registry, context, output);
+			anyRunEmitted |= RenderRun(run, content.Slice(run.Start, run.Length), format, registry, context, output);
 			position = run.End;
 		}
 		if (position < content.Length) EncodeText(content[position..], format.Encoding, output);
 
-		framer?.WriteEpilogue(!runs.IsEmpty, output);
+		framer?.WriteEpilogue(anyRunEmitted, output);
 	}
 
-	private static void RenderRun(
+	/// <summary>Renders one run to <paramref name="output"/>. Returns whether an emitter actually wrote — a set
+	/// emitter that claimed the run, or at least one per-markup emitter along the layer stack — as against every
+	/// layer being unregistered and the body passing through unchanged.</summary>
+	private static bool RenderRun(
 		Run run,
 		ReadOnlySpan<char> body,
 		MarkupFormat format,
@@ -132,16 +136,18 @@ public static class MarkupTextRenderer
 				if (setEmitter.TryEmit(run.Markups, front.WrittenSpan, context, back))
 				{
 					output.Write(back.WrittenSpan);
-					return;
+					return true;
 				}
 				back.Clear();
 			}
 
+			var emitted = false;
 			for (var i = 0; i < run.Markups.Count; i++)
 			{
 				var markup = run.Markups[i];
 				var emitter = registry.FindEmitter(markup.GetType(), format);
 				if (emitter is null) continue;
+				emitted = true;
 				back ??= new PooledCharWriter(front.WrittenCount + 16);
 				back.Clear();
 				emitter.Emit(markup, front.WrittenSpan, context, back);
@@ -149,6 +155,7 @@ public static class MarkupTextRenderer
 			}
 
 			output.Write(front.WrittenSpan);
+			return emitted;
 		}
 		finally
 		{
