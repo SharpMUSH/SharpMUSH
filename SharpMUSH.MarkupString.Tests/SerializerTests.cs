@@ -238,4 +238,25 @@ public class SerializerTests
 	[Test]
 	public async Task Deserialize_NonStringText_IsEmpty()
 		=> await Assert.That(MarkupTextSerializer.Deserialize("""{"t":5}""", Registry)).IsSameReferenceAs(MarkupText.Empty);
+
+	/// <summary>
+	/// Two overflowing lengths accumulate past <see cref="int.MaxValue"/> and wrap position negative,
+	/// which used to sort runs out of order and trip <c>MarkupText</c>'s overlap check. The cover
+	/// stops as soon as it reaches the end of the text, so only the first (clipped) run survives.
+	/// </summary>
+	[Test]
+	public async Task Deserialize_OverflowingCoverLengths_ClipsAndStopsInsteadOfThrowing()
+	{
+		var text = MarkupTextSerializer.Deserialize(
+			"""{"t":"abcd","p":[null,[{"k":"neutral"}]],"r":[2147483647,1,2147483647,1,5,1]}""",
+			Registry);
+		await Assert.That(text.Text).IsEqualTo("abcd");
+		await Assert.That(text.Runs.Length).IsEqualTo(1);
+		await Assert.That(text.Runs[0]).IsEqualTo(new Run(0, 4, MarkupSet.Of(NeutralMarkup.Instance)));
+	}
+
+	[Test]
+	public async Task Deserialize_Utf8Span_WithTrailingContent_Throws()
+		=> await Assert.That(() => MarkupTextSerializer.Deserialize(Encoding.UTF8.GetBytes("""{"t":"ab"} xyz"""), Registry))
+			.Throws<JsonException>();
 }

@@ -197,12 +197,20 @@ public static class MarkupTextSerializer
 	/// <summary>Reads a <see cref="MarkupText"/> back from UTF-8 JSON. An empty span is <see cref="MarkupText.Empty"/>.</summary>
 	/// <param name="utf8Json">The UTF-8 JSON produced by <see cref="Serialize(MarkupText, IBufferWriter{byte}, MarkupRegistry?)"/>.</param>
 	/// <param name="registry">The codecs to use; <see cref="MarkupRegistry.Default"/> when null.</param>
+	/// <exception cref="JsonException">The payload has content after the JSON value.</exception>
 	public static MarkupText Deserialize(ReadOnlySpan<byte> utf8Json, MarkupRegistry? registry = null)
 	{
 		if (utf8Json.IsEmpty) return MarkupText.Empty;
 
 		var reader = new Utf8JsonReader(utf8Json);
 		using var document = JsonDocument.ParseValue(ref reader);
+
+		// ParseValue only consumes the one value; unlike JsonDocument.Parse(string), it does not by
+		// itself reject trailing content. Draining the reader keeps both overloads agreeing on what
+		// counts as valid input.
+		if (reader.Read())
+			throw new JsonException("Unexpected content after the JSON value.");
+
 		return Read(document.RootElement, registry);
 	}
 
@@ -231,11 +239,18 @@ public static class MarkupTextSerializer
 			if (!TryReadInt32(cover.Current, out var length) || length < 0) break;
 			if (!cover.MoveNext() || !TryReadInt32(cover.Current, out var index)) break;
 
+			// A cover already at (or past) the end of the text has nothing left to describe, and an
+			// unclipped length would let position overrun int range on the next add (two int.MaxValue
+			// entries wrap it negative, which sorts runs out of order and trips the overlap check
+			// below). Clipping here — rather than leaving it to the constructor — keeps position itself
+			// bounded by text.Length across every iteration.
+			if (position >= text.Length) break;
+			var runLength = Math.Min(length, text.Length - position);
+
 			// Slot 0 is the reserved "no markup" entry, and so is any index the palette does not have:
-			// both leave the stretch as a gap, which is plain text. Runs past the end of the text are
-			// clipped by the constructor.
-			if (index > 0 && index <= palette.Length) runs.Add(new Run(position, length, palette[index - 1]));
-			position += length;
+			// both leave the stretch as a gap, which is plain text.
+			if (index > 0 && index <= palette.Length) runs.Add(new Run(position, runLength, palette[index - 1]));
+			position += runLength;
 		}
 
 		return new MarkupText(text, runs.ToImmutable());
