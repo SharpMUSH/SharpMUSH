@@ -100,21 +100,15 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, Objec
 public static class EmbeddedObjectTags
 {
 	public static void Apply<TValue>(FusionCacheFactoryExecutionContext<TValue> ctx, ICacheable message, object? result)
-	{
-		if (message is GetObjectNodeByNumberQuery)
-		{
-			return;
-		}
-
-		Apply(ctx, message, EmbeddedObjects.TagsFor(result));
-	}
+		=> Apply(ctx, message, EmbeddedObjects.TagsFor(result));
 
 	public static void Apply<TValue>(FusionCacheFactoryExecutionContext<TValue> ctx, ICacheable message, int[] numbers)
 		=> Apply(ctx, message, numbers.Select(CacheKeys.ObjectTag).ToArray());
 
 	private static void Apply<TValue>(FusionCacheFactoryExecutionContext<TValue> ctx, ICacheable message, string[] embedded)
 	{
-		if (embedded.Length == 0)
+		// The node query's entry is what a write removes; a tag on it would cost it its fail-safe.
+		if (embedded.Length == 0 || message is GetObjectNodeByNumberQuery)
 		{
 			return;
 		}
