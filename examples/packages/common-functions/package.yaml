@@ -1,6 +1,6 @@
 format: 1
 package: common-functions
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional title, justified center (default) / left / right — and cmdtag(), a clickable command link."
 license: MIT
@@ -83,8 +83,15 @@ objects:
       #
       # No colour is applied: whether a link should stand out is the caller's decision, and wrapping
       # the markup in ansi() here would force it on every caller.
+      #
+      # The command and hint go into QUOTED markup attributes, so both are entity-encoded through
+      # FUN`CMDTAG`ATTR first: a bare quote in `say "hi"` would close xch_cmd early and hand the
+      # client `xch_cmd="say "` with the rest loose inside the tag. & is encoded before ", or the
+      # ampersand of &quot; would be encoded again.
       FUN`CMDTAG: |-
-        [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,xch_cmd="%2" xch_hint="[if(strlen(%3),%3,%2)]",%1)],%1)]
+        [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,xch_cmd="[u(%!/FUN`CMDTAG`ATTR,%2)]" xch_hint="[u(%!/FUN`CMDTAG`ATTR,if(strlen(%3),%3,%2))]",%1)],%1)]
+      FUN`CMDTAG`ATTR: |-
+        [edit(%0,&,&amp;,",&quot;)]
       FUN`CMDTAG`MINARGS: |-
         3
       FUN`CMDTAG`MAXARGS: |-

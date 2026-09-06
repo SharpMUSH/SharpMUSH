@@ -128,11 +128,15 @@ public static partial class Substitutions
 	/// evaluation, so a nested one names the outermost loop — the documented
 	/// <c>iter(red blue green, iter(fish shoe, #@:##))</c> answers red red blue blue green green.
 	/// TryPeek here took the stack TOP, which is the innermost.
+	///
+	/// <para>The register is returned as-is, the way <c>%i&lt;n&gt;</c> does. Interpolating it into a
+	/// string instead flattened the <c>MString</c>, baking any colour it carried into the plain text
+	/// as literal escape bytes.</para>
 	/// </summary>
 	private static CallState HandleITextOutermost(CallState symbol, IMUSHCodeParser parser) =>
-		$"{(parser.CurrentState.IterationRegisters.IsEmpty
-			? MModule.single(ErrorMessages.Returns.RegisterRange)
-			: parser.CurrentState.IterationRegisters.Last().Value)}";
+		parser.CurrentState.IterationRegisters.IsEmpty
+			? new CallState(ErrorMessages.Returns.RegisterRange)
+			: new CallState(parser.CurrentState.IterationRegisters.Last().Value);
 
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
 	{

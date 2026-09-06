@@ -542,6 +542,29 @@ public class PlusHelpIntegrationTests
 	}
 
 	/// <summary>
+	/// A topic name is constrained to letters, digits and <c>_ . -</c>, because the name becomes an
+	/// attribute path with spaces read as backticks — a <c>`</c>, a <c>*</c> or a <c>/</c> in it would
+	/// name a different attribute, or a whole branch, than the one the writer typed.
+	///
+	/// <para>The guard's character class is written <c>\[A-Z0-9_. -\]</c>: softcode consumes both
+	/// backslashes, so the regex engine sees a properly closed <c>[A-Z0-9_. -]</c>. Leaving the
+	/// opening bracket bare would have the evaluator eat the class before regmatch() ever saw it.
+	/// This pair of cases pins that down — an accepted name proves the class closes, a rejected one
+	/// proves it still constrains.</para>
+	/// </summary>
+	[Test]
+	[Arguments("bad*name", "a wildcard would match a branch rather than name one topic")]
+	[Arguments("bad`name", "a backtick would reach into the attribute tree")]
+	[Arguments("bad/name", "a slash reads as the source qualifier")]
+	public async Task Write_RefusesATopicNameThatIsNotWordCharacters(string topic, string why)
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = Joined(await RunAs(await StaffAsync(), $"+help/write {topic}=Should never be stored."));
+
+		await Assert.That(said).Contains("A topic name is").Because(why);
+	}
+
+	/// <summary>
 	/// Two sources claiming one name list the qualified candidates rather than picking by install
 	/// order — except that the game's own topic outranks a package's, which is the one case where a
 	/// bare name still resolves.

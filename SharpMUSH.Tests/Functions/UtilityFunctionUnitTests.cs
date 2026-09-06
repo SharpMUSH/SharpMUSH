@@ -423,6 +423,24 @@ public class UtilityFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// <c>%iL</c> hands back the register itself, colour and all. It used to interpolate the register
+	/// into a string, which flattens an <c>MString</c> to its plain text, so <c>iter(ansi(...),%iL)</c>
+	/// lost the colour that <c>%i0</c> — the same register, read the other way — kept.
+	/// </summary>
+	[Test]
+	[Arguments("%iL")]
+	[Arguments("%i0")]
+	[Arguments("[itext(L)]")]
+	public async Task TheOutermostIterationRegister_KeepsItsMarkup(string substitution)
+	{
+		var result = (await Parser.FunctionParse(MModule.single($"iter([ansi(+red,coloured)],{substitution})")))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("coloured");
+		await Assert.That(result.ToString()).Contains("\u001b[")
+			.Because("the register carries the colour, and reading it must not flatten it to plain text");
+	}
+
 	[Test]
 	public async Task Dig_CreateRoom()
 	{

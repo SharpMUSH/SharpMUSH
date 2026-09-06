@@ -32,10 +32,15 @@ public partial class RecursiveMarkdownRenderer
 	/// A list is one item per line, ordered or not. Unordered items used to be joined with ", " and
 	/// given no bullet at all, so a markdown bullet list rendered as a comma run — in helpfiles, in
 	/// <c>@wiki</c>, and anywhere <c>rendermarkdown()</c> was used.
+	///
+	/// <para>An ordered list numbers from the first item's own number, which markdown records on the
+	/// list as <see cref="ListBlock.OrderedStart"/>; counting from 1 regardless renumbered a list
+	/// that deliberately started elsewhere — "3. Third" came back as "1. Third", and a
+	/// <c>RENDERMARKUP`LISTITEM</c> template was handed the same wrong number.</para>
 	/// </summary>
 	private MString RenderList(ListBlock list)
 	{
-		var itemIndex = 0;
+		var itemIndex = FirstItemIndex(list);
 		var items = list
 			.OfType<ListItemBlock>()
 			.Select(listItem => RenderListItem(listItem, itemIndex++, list.IsOrdered))
@@ -43,6 +48,14 @@ public partial class RecursiveMarkdownRenderer
 
 		return MModule.multipleWithDelimiter(MModule.single("\n"), items);
 	}
+
+	/// <summary>
+	/// The zero-based index the first item counts from, so that the 1-based number every consumer
+	/// derives as <c>index + 1</c> is the one the source asked for. Unordered lists and an absent or
+	/// unparsable start both fall back to the usual 1.
+	/// </summary>
+	private static int FirstItemIndex(ListBlock list)
+		=> list.IsOrdered && int.TryParse(list.OrderedStart, out var start) ? start - 1 : 0;
 
 	/// <summary>The marker an item is introduced by: "1. " when ordered, a bullet when not.</summary>
 	protected MString ListMarker(int index, bool isOrdered)

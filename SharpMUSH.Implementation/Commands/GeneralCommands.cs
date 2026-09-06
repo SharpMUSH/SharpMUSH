@@ -6424,7 +6424,9 @@ public partial class Commands
 				return lastResult;
 			}
 
-			// Single target, or a /nobreak chain: run each target on its own (its break is contained).
+			// Single target, or a /nobreak chain: run each target on its own. RunOne still propagates a
+			// break to the calling list unless /nobreak was given — what "on its own" means here is
+			// that each target gets its own BreakPropagation, not that its break stops at the boundary.
 			foreach (var parts in targets.Select(target => target.Split('/', 2)))
 			{
 				if (parts.Length < 2)

@@ -18,9 +18,11 @@ answers nothing for `+scene/help` or `help scene`.
 
 ## What this builds
 
-A bundled softcode package, `plus-help`, creating one object — the **librarian** —
-in the master room. It answers `+help`, `+help <topic>`, `+help/search <text>` and
-a small surface around them, drawing topics from two sources:
+A bundled softcode package, `plus-help`, creating three objects: the **librarian**
+in the master room, which answers `+help`, `+help <topic>`, `+help/search <text>`
+and a small surface around them but carries no content of its own, and two topic
+objects it reads from like any other source — one holding `plus-help`'s own help,
+one holding the game's. Topics come from two kinds of source:
 
 1. **Topics packages carry.** A package holds its own help in a `HELP` attribute
    tree on one of its objects and registers that object with the librarian.

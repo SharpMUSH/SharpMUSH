@@ -28,9 +28,23 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	private async Task<string> Eval(string expression) =>
 		(await factory.FunctionParser.FunctionParse(MModule.single(expression)))?.Message?.ToString() ?? string.Empty;
 
-	/// <summary>A connected player whose client does or does not announce Pueblo.</summary>
+	/// <summary>
+	/// A connected player whose client does or does not announce Pueblo.
+	///
+	/// <para>Handles are picked by hand across this test project. A live handle registered twice is
+	/// kept, not replaced — <c>ConnectionService.Register</c> returns early — so a collision would
+	/// silently drop this player's Pueblo metadata and the capability assertions would read the other
+	/// test's client. Refuse an already-registered handle so that shows up as a failure naming the
+	/// number, rather than as a flake.</para>
+	/// </summary>
 	private async Task<string> CreatePlayerAsync(string name, long handle, bool pueblo)
 	{
+		if (ConnectionService.Get(handle) is not null)
+		{
+			throw new InvalidOperationException(
+				$"Handle {handle} is already registered; pick one no other test in this project uses.");
+		}
+
 		await factory.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@pcreate {name}=pw-{Tag}"));
 		var dbref = (await factory.CommandParser.CommandParse(1, ConnectionService, MModule.single($"think [pmatch({name})]")))
 			.Message!.ToPlainText().Trim();
@@ -54,7 +68,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	{
 		var package = await Registry.GetInstalledPackageAsync("common-functions");
 		await Assert.That(package.IsT0).IsTrue();
-		await Assert.That(package.AsT0.Version).IsEqualTo("1.2.0");
+		await Assert.That(package.AsT0.Version).IsEqualTo("1.3.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("common-functions");
 		await Assert.That(objects.Count).IsEqualTo(1);
@@ -149,6 +163,24 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 		var forPlain = await Eval($"cmdtag({plain},Read it,+help scene)");
 		await Assert.That(forPlain).IsEqualTo("Read it")
 			.Because("a client that renders neither Pueblo nor MXP must get the text, not the markup");
+	}
+
+	/// <summary>
+	/// The command and the hint are written into QUOTED markup attributes, so a quote inside either
+	/// would close the attribute early and hand the client a broken tag with the rest of the command
+	/// loose inside it. Both are entity-encoded on the way in.
+	/// </summary>
+	[Test]
+	public async Task CmdTag_EncodesQuotesAndAmpersandsInTheCommandAndHint()
+	{
+		const long handle = 9823;
+		var reader = await CreatePlayerAsync($"CmdTagQ{Tag}", handle, pueblo: true);
+
+		var result = await Eval($"cmdtag({reader},Say it,say \"hi\" & bye,A \"quoted\" hint)");
+
+		await Assert.That(result).Contains("xch_cmd=\"say &quot;hi&quot; &amp; bye\"")
+			.Because("a raw quote would end the attribute and leave the rest of the command in the tag");
+		await Assert.That(result).Contains("xch_hint=\"A &quot;quoted&quot; hint\"");
 	}
 
 	/// <summary>The hint is optional and falls back to the command it runs.</summary>
