@@ -5,9 +5,9 @@ using MarkupString;
 namespace SharpMUSH.Library.Markup;
 
 /// <summary>
-/// The MUSH-specific text operations that used to live on the markup library itself: list splitting
-/// with PennMUSH's space semantics, space compression, and glob/regexp matching that carries the
-/// markup of the input through into the captured groups.
+/// The MUSH-specific text operations: list splitting with PennMUSH's space semantics, space
+/// compression, and glob/regexp matching that carries the markup of the input through into the
+/// captured groups.
 /// <para>
 /// These are policy, not text mechanics, which is why they sit in the engine rather than in
 /// <c>MarkupString</c>: the space-delimiter rule and the single-line wildcard mode are PennMUSH

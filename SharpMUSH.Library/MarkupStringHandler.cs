@@ -9,8 +9,9 @@ namespace MarkupString;
 /// <summary>
 /// Custom interpolated string handler for <see cref="MString"/>.
 ///
-/// Because <see cref="MString"/> is an F# class that cannot receive new C# constructors,
-/// the handler is invoked via the <see cref="MStringInterpolation.Format"/> factory method:
+/// <see cref="MString"/> does not expose the constructor that would let <c>MString r = $"..."</c>
+/// route through this handler on its own, so it is invoked via the
+/// <see cref="MStringInterpolation.Format"/> factory method:
 ///
 /// <code>
 /// MString bold  = MModule.markupSingle(Ansi.Create(bold: true), "world");
@@ -289,9 +290,9 @@ public ref struct MarkupStringHandler
 /// Static factory for building <see cref="MString"/> values from interpolated strings.
 ///
 /// <para>
-/// Because <see cref="MString"/> is an immutable F# class, it cannot expose the constructor
-/// required to make <c>MString r = $"..."</c> route through <see cref="MarkupStringHandler"/>
-/// directly. Instead, pass the interpolated string to <see cref="Format"/>:
+/// <see cref="MString"/> does not expose the constructor required to make
+/// <c>MString r = $"..."</c> route through <see cref="MarkupStringHandler"/> directly. Instead,
+/// pass the interpolated string to <see cref="Format"/>:
 /// </para>
 ///
 /// <code>

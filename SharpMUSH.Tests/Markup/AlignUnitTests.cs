@@ -115,4 +115,17 @@ public class AlignUnitTests
 		await Assert.That(resultText.Contains("three")).IsTrue();
 		await Assert.That(resultText.Contains("four")).IsTrue();
 	}
+
+	/// <summary>
+	/// Columns are measured in terminal cells, not code units: a CJK character occupies two, so five
+	/// of them fill a ten-wide column exactly and nothing is padded after them.
+	/// </summary>
+	[Test]
+	public async Task AlignMeasuresWideCharactersInDisplayCells()
+	{
+		var result = CallAlign("10 4", [A.single("\u4f60\u597d\u4e16\u754c\u3002"), A.single("ok")],
+			A.single(" "), A.single(" "), A.single("\n"));
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("\u4f60\u597d\u4e16\u754c\u3002 ok  ");
+	}
 }

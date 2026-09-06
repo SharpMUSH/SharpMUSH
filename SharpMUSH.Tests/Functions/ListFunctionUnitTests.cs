@@ -83,7 +83,7 @@ public class ListFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single("ansi(hr,test)")))?.Message!;
 
-		await Assert.That(result.ToString()).Contains("\u001b[");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[");
 	}
 
 	[Test, NotInParallel]

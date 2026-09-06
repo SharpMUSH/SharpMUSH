@@ -280,7 +280,9 @@ public class StringFunctionUnitTests
 
 	[Test]
 	// TODO: Fix decomposeweb, and then fix this test.
-	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color:Red;background-color:inherit;text-decoration:inherit"">red</span>")]
+	// hr is bright red, which resolves through the xterm palette to #FF5555 rather than to a
+	// System.Drawing named colour.
+	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color:#FF5555;background-color:inherit;text-decoration:inherit"">red</span>")]
 	// TODO: decompsoe is not matching 'b' correctly it seems.
 	public async Task DecomposeWeb(string str, string expectedText)
 	{

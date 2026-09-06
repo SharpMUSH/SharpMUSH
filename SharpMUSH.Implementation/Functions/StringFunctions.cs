@@ -982,12 +982,33 @@ public partial class Functions
 			}));
 	}
 
+	/// <summary>
+	/// The text one grapheme cluster at a time, each piece keeping its markup. Character-level
+	/// rearrangement (flip, scramble) has to move whole clusters: splitting on UTF-16 code units
+	/// tears surrogate pairs and separates combining marks from what they combine with.
+	/// </summary>
+	private static MString[] SplitIntoGraphemes(MString text)
+	{
+		var plain = text.ToPlainText();
+		var pieces = new List<MString>(plain.Length);
+		var position = 0;
+		while (position < plain.Length)
+		{
+			var length = StringInfo.GetNextTextElementLength(plain.AsSpan(position));
+			if (length <= 0) length = 1;
+			pieces.Add(MModule.substring(position, length, text));
+			position += length;
+		}
+		return pieces.ToArray();
+	}
+
 	[SharpFunction(Name = "flip", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public static ValueTask<CallState> Flip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message;
-		var split = MModule.split("", arg0);
-		return new ValueTask<CallState>(new CallState(MModule.multiple(split.Reverse())));
+		var pieces = SplitIntoGraphemes(arg0 ?? MModule.empty());
+		Array.Reverse(pieces);
+		return new ValueTask<CallState>(new CallState(MModule.multiple(pieces)));
 	}
 
 	[SharpFunction(Name = "foreach", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse, ParameterNames = ["list", "pattern", "delimiter", "output-separator"])]
@@ -1702,8 +1723,8 @@ public partial class Functions
 	public static ValueTask<CallState> Scramble(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		var split = MModule.split("", arg0).Shuffle();
-		return ValueTask.FromResult<CallState>(string.Join("", split));
+		var shuffled = SplitIntoGraphemes(arg0).Shuffle();
+		return ValueTask.FromResult<CallState>(MModule.multiple(shuffled));
 	}
 
 	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]

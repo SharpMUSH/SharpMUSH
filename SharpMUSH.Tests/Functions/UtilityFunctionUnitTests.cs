@@ -447,7 +447,7 @@ public class UtilityFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single($"iter([ansi(+red,coloured)],{substitution})")))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("coloured");
-		await Assert.That(result.ToString()).Contains("\u001b[")
+		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[")
 			.Because("the register carries the colour, and reading it must not flatten it to plain text");
 	}
 
@@ -584,7 +584,7 @@ public class UtilityFunctionUnitTests
 
 		await Assert.That(plainText).IsEqualTo("test");
 
-		var fullText = result.ToString();
+		var fullText = result.Render(MarkupFormat.Ansi);
 		await Assert.That(fullText).Contains("test");
 		await Assert.That(fullText).Contains("\u001b[");
 	}
@@ -597,7 +597,7 @@ public class UtilityFunctionUnitTests
 
 		await Assert.That(plainText).IsEqualTo("test");
 
-		var fullText = result.ToString();
+		var fullText = result.Render(MarkupFormat.Ansi);
 		await Assert.That(fullText).Contains("test");
 		await Assert.That(fullText).Contains("\u001b[");
 	}
@@ -611,7 +611,7 @@ public class UtilityFunctionUnitTests
 
 		await Assert.That(plainText).IsEqualTo("test");
 
-		var fullText = result.ToString();
+		var fullText = result.Render(MarkupFormat.Ansi);
 		await Assert.That(fullText).Contains("test");
 		await Assert.That(fullText).Contains("\u001b[");
 	}
@@ -625,7 +625,7 @@ public class UtilityFunctionUnitTests
 
 		await Assert.That(plainText).IsEqualTo("test");
 
-		var fullText = result.ToString();
+		var fullText = result.Render(MarkupFormat.Ansi);
 		await Assert.That(fullText).Contains("test");
 		await Assert.That(fullText).Contains("\u001b[");
 	}
@@ -639,7 +639,7 @@ public class UtilityFunctionUnitTests
 
 		await Assert.That(plainText).IsEqualTo("test");
 
-		var fullText = result.ToString();
+		var fullText = result.Render(MarkupFormat.Ansi);
 		await Assert.That(fullText).Contains("test");
 		await Assert.That(fullText).Contains("\u001b[");
 		await Assert.That(fullText).Contains("38;2;255;0;0"); // RGB red color

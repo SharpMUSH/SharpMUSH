@@ -8,8 +8,8 @@ public static class StringExtensions
 	private const string Question = "\\?";
 
 	/// <summary>
-	/// Converts a glob pattern to a regex pattern.
-	/// Future consideration: Move to MModule for consistency with F# string handling.
+	/// Converts a glob pattern to a regex pattern. Unanchored and without the single-line mode
+	/// <see cref="SharpMUSH.Library.Markup.MushText.Glob"/> applies — the two are not interchangeable.
 	/// </summary>
 	/// <param name="str">Glob Pattern</param>
 	/// <returns>Regex Pattern</returns>

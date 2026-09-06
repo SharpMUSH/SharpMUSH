@@ -22,7 +22,7 @@ public static class TestHelpers
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool MessageContains(OneOf<MString, string> msg, string expected) =>
 		msg.Match(
-			ms => ms.ToString().Contains(expected),
+			ms => ms.Render(MarkupFormat.Ansi).Contains(expected),
 			s => s.Contains(expected));
 
 	/// <summary>

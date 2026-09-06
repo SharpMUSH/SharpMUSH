@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -21,7 +21,8 @@ public class AttributeFunctionUnitTests
 	public async Task SetAndGet(string input, string expected)
 	{
 		var result = await Parser.FunctionParse(MModule.single(input));
-		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+		// The ANSI byte stream, which ToString() no longer produces: it is the plain text now.
+		await Assert.That(result!.Message!.Render(MarkupFormat.Ansi)).IsEqualTo(expected);
 	}
 
 	[Test]

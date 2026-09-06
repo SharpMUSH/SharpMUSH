@@ -137,7 +137,7 @@ public class MarkdownFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 		// With hyperlink markup, only the link text is visible in plain text; the URL is embedded in ANSI escape codes
 		await Assert.That(result!.ToPlainText()).IsEqualTo("Click here");
-		var fullString = result.ToString();
+		var fullString = result.Render(MarkupFormat.Ansi);
 		await Assert.That(fullString).Contains("https://example.com");
 	}
 
@@ -148,7 +148,7 @@ public class MarkdownFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(<https://example.com>)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("https://example.com");
-		var fullString = result.ToString();
+		var fullString = result.Render(MarkupFormat.Ansi);
 		await Assert.That(fullString).Contains("\u001b]8;;");
 	}
 
@@ -160,7 +160,7 @@ public class MarkdownFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 		// Link text is shown, URL is in hyperlink metadata
 		await Assert.That(result!.ToPlainText()).IsEqualTo("https://example.com");
-		var fullString = result.ToString();
+		var fullString = result.Render(MarkupFormat.Ansi);
 		await Assert.That(fullString).Contains("\u001b]8;;");
 	}
 
@@ -577,7 +577,7 @@ public class MarkdownFunctionUnitTests
 
 		await Assert.That(plainText).Contains("QUOTE: This is a quote");
 
-		var fullString = result.ToString();
+		var fullString = result.Render(MarkupFormat.Ansi);
 
 		await Assert.That(fullString).Contains("\u001b[");
 
@@ -606,7 +606,7 @@ public class MarkdownFunctionUnitTests
 		await Assert.That(result.Render(MarkupFormat.Pueblo)).DoesNotContain("XCH_CMD");
 
 		// Still underlined, so nothing about the terminal rendering changed.
-		await Assert.That(result.ToString()).Contains(Underlined);
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 4)).IsTrue();
 	}
 
 	/// <summary>
@@ -753,7 +753,7 @@ public class MarkdownFunctionUnitTests
 		await Assert.That(plainText).Contains("RAW:**loud**");
 		// And the template can render the cell itself, which is where styling comes from.
 		await Assert.That(plainText).Contains("OUT:loud");
-		await Assert.That(result.ToString()).Contains(Bold);
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 1)).IsTrue();
 	}
 
 	/// <summary>
@@ -835,7 +835,7 @@ public class MarkdownFunctionUnitTests
 		// give — measured from the rendered cells, which is the thing a template cannot do for itself.
 		await Assert.That(lines).IsEquivalentTo(["Command          Effect     Cost", "--------------------------------", "@wiki        Show the index    0", "@wiki/search   Find pages      1", "@wiki/audit   Staff report"], CollectionOrdering.Matching);
 		// The cell's markdown was rendered by the template, so "index" really is bold.
-		await Assert.That(result.ToString()).Contains(Bold);
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 1)).IsTrue();
 	}
 
 	/// <summary>

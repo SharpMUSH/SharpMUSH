@@ -12,9 +12,9 @@ namespace SharpMUSH.Tests.Markup;
 /// <summary>
 /// Tests for the <see cref="MarkupStringHandler"/> interpolated string handler.
 ///
-/// Because <see cref="MString"/> is an F# class and cannot expose a C# constructor
-/// accepting a <see langword="ref struct"/> handler type, the interpolated string is
-/// routed through <see cref="MStringInterpolation.Format"/>:
+/// <see cref="MString"/> does not expose a constructor accepting a <see langword="ref struct"/>
+/// handler type, so the interpolated string is routed through
+/// <see cref="MStringInterpolation.Format"/>:
 /// <code>
 /// MString result = Format($"Hello, {bold}! Count: {42}.");
 /// </code>
@@ -69,7 +69,8 @@ public class MarkupStringHandlerTests
 		MString result = Format($"Hello, {bold}!");
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Hello, world!");
-		await Assert.That(result.Runs.Length).IsGreaterThanOrEqualTo(2);
+		// Runs cover only styled spans now, so the plain "Hello, " and "!" around the hole are gaps.
+		await Assert.That(result.Runs.Length).IsEqualTo(1);
 
 		var markedRun = result.Runs.FirstOrDefault(r => r.Start == 7 && r.Length == 5);
 		await Assert.That(markedRun.Markups.Count).IsEqualTo(1);

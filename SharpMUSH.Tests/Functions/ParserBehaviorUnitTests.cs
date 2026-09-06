@@ -84,7 +84,7 @@ public class ParserBehaviorUnitTests
 	public async Task LitPreservesMarkup()
 	{
 		var coloured = (await Parser.FunctionParse(MModule.single("ansi(+red,test)")))?.Message!;
-		await Assert.That(coloured.ToString()).Contains("[");
+		await Assert.That(coloured.Render(MarkupFormat.Ansi)).Contains("[");
 
 		// Equivalent to lit(<coloured text>) arriving from a stored attribute value.
 		var source = MModule.multiple([MModule.single("lit("), coloured, MModule.single(")")]);
@@ -92,7 +92,7 @@ public class ParserBehaviorUnitTests
 		var result = (await Parser.FunctionParse(source))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("test");
-		await Assert.That(result.ToString()).Contains("[");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("[");
 	}
 
 	// Penn fn.1-fn.3: fn() calls functions by name

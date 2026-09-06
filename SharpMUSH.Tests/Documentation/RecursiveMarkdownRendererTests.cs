@@ -1,5 +1,7 @@
 namespace SharpMUSH.Tests.Documentation;
 
+// These assertions are about the ANSI byte stream the terminal renderer produces. ToString() used
+// to be that stream; it is the plain text now, so they name the format.
 public class RecursiveMarkdownRendererTests
 {
 	private const string ESC = "\u001b";
@@ -20,7 +22,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Hello, world!");
-		await Assert.That(result.ToString()).IsEqualTo("Hello, world!");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("Hello, world!");
 	}
 
 	[Test]
@@ -32,9 +34,9 @@ public class RecursiveMarkdownRendererTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is bold text");
 
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains(Bold)).IsTrue();
-		await Assert.That(fullString.Contains(Foreground(255, 255, 255))).IsTrue();
+		var fullString = result.Render(MarkupFormat.Ansi);
+		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(fullString, 255, 255, 255)).IsTrue();
 		var boldIndex = fullString.IndexOf("bold");
 		var ansiIndex = fullString.IndexOf(Bold);
 		await Assert.That(ansiIndex).IsLessThan(boldIndex);
@@ -50,9 +52,9 @@ public class RecursiveMarkdownRendererTests
 		// italic is rendered as bold in this implementation
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is italic text");
 
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains(Bold)).IsTrue();
-		await Assert.That(fullString.Contains(Foreground(255, 255, 255))).IsTrue();
+		var fullString = result.Render(MarkupFormat.Ansi);
+		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(fullString, 255, 255, 255)).IsTrue();
 		var italicIndex = fullString.IndexOf("italic");
 		var ansiIndex = fullString.IndexOf(Bold);
 		await Assert.That(ansiIndex).IsLessThan(italicIndex);
@@ -98,7 +100,7 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(plainText.Contains("C1")).IsTrue();
 		await Assert.That(plainText.Contains("R1")).IsTrue();
 
-		await Assert.That(result.ToString().Contains(Faint)).IsTrue();
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 2)).IsTrue();
 	}
 
 	/// <summary>
@@ -118,7 +120,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("* Item 1\n* Item 2");
-		await Assert.That(result.ToString().Contains(Faint)).IsTrue()
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 2)).IsTrue()
 			.Because("the bullet is dim, like the ordered list's numbers");
 	}
 
@@ -130,7 +132,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("1. First\n2. Second");
-		await Assert.That(result.ToString().Contains(Faint)).IsTrue();
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 2)).IsTrue();
 	}
 
 	[Test]
@@ -141,9 +143,9 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Heading 1");
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains(Underlined)).IsTrue();
-		await Assert.That(fullString.Contains(Bold)).IsTrue();
+		var fullString = result.Render(MarkupFormat.Ansi);
+		await Assert.That(AnsiStream.Sets(fullString, 4)).IsTrue();
+		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
 		await Assert.That(fullString.Contains("Heading 1")).IsTrue();
 	}
 
@@ -155,9 +157,9 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Heading 2");
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains(Underlined)).IsTrue();
-		await Assert.That(fullString.Contains(Bold)).IsTrue();
+		var fullString = result.Render(MarkupFormat.Ansi);
+		await Assert.That(AnsiStream.Sets(fullString, 4)).IsTrue();
+		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
 		await Assert.That(fullString.Contains("Heading 2")).IsTrue();
 	}
 
@@ -169,8 +171,8 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Heading 3");
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains(Underlined)).IsTrue();
+		var fullString = result.Render(MarkupFormat.Ansi);
+		await Assert.That(AnsiStream.Sets(fullString, 4)).IsTrue();
 		await Assert.That(fullString.Contains("Heading 3")).IsTrue();
 	}
 
@@ -183,7 +185,7 @@ public class RecursiveMarkdownRendererTests
 
 		await Assert.That(result.ToPlainText()).Contains("code line 1");
 		await Assert.That(result.ToPlainText()).Contains("code line 2");
-		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+		await Assert.That(result.Render(MarkupFormat.Ansi).Contains(ESC)).IsTrue();
 	}
 
 	[Test]
@@ -194,7 +196,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).Contains("hello world");
-		await Assert.That(result.ToString()).Contains("\u001b[48;2;45;45;45m");
+		await Assert.That(AnsiStream.SetsBackground(result.Render(MarkupFormat.Ansi), 45, 45, 45)).IsTrue();
 	}
 
 	[Test]
@@ -205,7 +207,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is inline code here");
-		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+		await Assert.That(result.Render(MarkupFormat.Ansi).Contains(ESC)).IsTrue();
 	}
 
 	[Test]
@@ -216,7 +218,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Use name() to get the name");
-		await Assert.That(result.ToString()).Contains(Foreground(0x9C, 0xDC, 0xFE));
+		await Assert.That(AnsiStream.SetsForeground(result.Render(MarkupFormat.Ansi), 0x9C, 0xDC, 0xFE)).IsTrue();
 	}
 
 	[Test]
@@ -238,7 +240,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Link Text");
-		var fullString = result.ToString();
+		var fullString = result.Render(MarkupFormat.Ansi);
 		await Assert.That(fullString).Contains("https://example.com");
 		await Assert.That(fullString).Contains("\u001b]8;;");
 	}
@@ -288,7 +290,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is bold text");
-		await Assert.That(result.ToString().Contains(Bold)).IsTrue();
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 1)).IsTrue();
 	}
 
 	[Test]
@@ -299,7 +301,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is italic text");
-		await Assert.That(result.ToString().Contains(Italic)).IsTrue();
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 3)).IsTrue();
 	}
 
 	[Test]
@@ -310,7 +312,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is underlined text");
-		await Assert.That(result.ToString().Contains(Underlined)).IsTrue();
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 4)).IsTrue();
 	}
 
 	[Test]
@@ -321,7 +323,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
-		await Assert.That(result.ToString().Contains(Foreground(255, 0, 0))).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(result.Render(MarkupFormat.Ansi), 255, 0, 0)).IsTrue();
 	}
 
 	[Test]
@@ -332,7 +334,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
-		await Assert.That(result.ToString().Contains(Foreground(255, 0, 0))).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(result.Render(MarkupFormat.Ansi), 255, 0, 0)).IsTrue();
 	}
 
 	[Test]
@@ -365,7 +367,7 @@ public class RecursiveMarkdownRendererTests
 		var markdown = "```json\n{\"hello\": 42}\n```";
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
-		var ansi = result.ToString();
+		var ansi = result.Render(MarkupFormat.Ansi);
 
 		await Assert.That(result.ToPlainText().Trim()).Contains("hello");
 		await Assert.That(result.ToPlainText().Trim()).Contains("42");
@@ -389,7 +391,7 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(result.ToPlainText()).Contains("def");
 		await Assert.That(result.ToPlainText()).Contains("hello");
 
-		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+		await Assert.That(result.Render(MarkupFormat.Ansi).Contains(ESC)).IsTrue();
 	}
 
 	[Test]
@@ -406,8 +408,8 @@ public class RecursiveMarkdownRendererTests
 		var unlabeledResult = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(unlabeled);
 
 		await Assert.That(result.ToPlainText().Trim()).Contains("some code here");
-		await Assert.That(result.ToString()).Contains($"{ESC}[48;2;45;45;45m");
-		await Assert.That(result.ToString()).IsEqualTo(unlabeledResult.ToString());
+		await Assert.That(AnsiStream.SetsBackground(result.Render(MarkupFormat.Ansi), 45, 45, 45)).IsTrue();
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo(unlabeledResult.Render(MarkupFormat.Ansi));
 	}
 
 	[Test]
@@ -419,7 +421,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText().Trim()).Contains("plain indented code");
-		await Assert.That(result.ToString().Contains(ESC)).IsFalse();
+		await Assert.That(result.Render(MarkupFormat.Ansi).Contains(ESC)).IsFalse();
 	}
 
 	[Test]
@@ -435,7 +437,7 @@ public class RecursiveMarkdownRendererTests
 
 		// It is a command link: HTML renders xch_cmd (not href), ANSI has no OSC 8 link.
 		await Assert.That(result.Render(MarkupFormat.Html)).Contains("xch_cmd=\"help newbie2\"");
-		await Assert.That(result.ToString()).DoesNotContain("]8;;");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).DoesNotContain("]8;;");
 	}
 
 	[Test]
@@ -471,8 +473,8 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("See topic for more.");
-		await Assert.That(result.ToString()).Contains("https://example.com");
-		await Assert.That(result.ToString()).DoesNotContain("help topic");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("https://example.com");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).DoesNotContain("help topic");
 	}
 
 	[Test]
@@ -523,10 +525,10 @@ public class RecursiveMarkdownRendererTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("test");
 
-		var ansi = result.ToString();
-		await Assert.That(ansi.Contains(Bold)).IsTrue();
-		await Assert.That(ansi.Contains(Underlined)).IsTrue();
-		await Assert.That(ansi.Contains(Foreground(255, 255, 255))).IsTrue();
+		var ansi = result.Render(MarkupFormat.Ansi);
+		await Assert.That(AnsiStream.Sets(ansi, 1)).IsTrue();
+		await Assert.That(AnsiStream.Sets(ansi, 4)).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(ansi, 255, 255, 255)).IsTrue();
 		var textIdx = ansi.IndexOf("test");
 		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Bold));
 		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Underlined));
@@ -542,10 +544,10 @@ public class RecursiveMarkdownRendererTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("heading two");
 
-		var ansi = result.ToString();
-		await Assert.That(ansi.Contains(Bold)).IsTrue();
-		await Assert.That(ansi.Contains(Underlined)).IsTrue();
-		await Assert.That(ansi.Contains(Foreground(255, 255, 255))).IsTrue();
+		var ansi = result.Render(MarkupFormat.Ansi);
+		await Assert.That(AnsiStream.Sets(ansi, 1)).IsTrue();
+		await Assert.That(AnsiStream.Sets(ansi, 4)).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(ansi, 255, 255, 255)).IsTrue();
 		var textIdx = ansi.IndexOf("heading two");
 		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Bold));
 		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Underlined));
@@ -561,9 +563,9 @@ public class RecursiveMarkdownRendererTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("heading three");
 
-		var ansi = result.ToString();
-		await Assert.That(ansi.Contains(Underlined)).IsTrue();
-		await Assert.That(ansi.Contains(Foreground(255, 255, 255))).IsTrue();
+		var ansi = result.Render(MarkupFormat.Ansi);
+		await Assert.That(AnsiStream.Sets(ansi, 4)).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(ansi, 255, 255, 255)).IsTrue();
 		var textIdx = ansi.IndexOf("heading three");
 		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Underlined));
 		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Foreground(255, 255, 255)));
@@ -589,11 +591,11 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown("# Section Title");
 
-		var fullString = result.ToString();
+		var fullString = result.Render(MarkupFormat.Ansi);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Section Title");
-		await Assert.That(fullString.Contains(Bold)).IsTrue();
-		await Assert.That(fullString.Contains(Foreground(255, 255, 255))).IsTrue();
+		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(fullString, 255, 255, 255)).IsTrue();
 	}
 
 	/// <summary>
@@ -606,7 +608,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown("**bold** _italic_");
 
-		var fullString = result.ToString();
+		var fullString = result.Render(MarkupFormat.Ansi);
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText.Contains("bold")).IsTrue();
@@ -614,7 +616,7 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(fullString.Contains("**")).IsFalse();
 		await Assert.That(fullString.Contains("_italic_")).IsFalse();
 
-		await Assert.That(fullString.Contains(Bold)).IsTrue();
+		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
 	}
 
 	/// <summary>
@@ -642,7 +644,7 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(plainText.Contains("Arthas")).IsTrue();
 		await Assert.That(plainText.Contains("Jaina")).IsTrue();
 
-		await Assert.That(result.ToString().Contains(Faint)).IsTrue();
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 2)).IsTrue();
 	}
 
 	/// <summary>
@@ -690,12 +692,12 @@ public class RecursiveMarkdownRendererTests
 		// Command link, not navigation: xch_cmd rather than href, and no OSC 8 in the ANSI.
 		await Assert.That(result.Render(MarkupFormat.Html)).Contains("xch_cmd=\"@wiki main:general:getting_started\"");
 		await Assert.That(result.Render(MarkupFormat.Html)).DoesNotContain("href=");
-		await Assert.That(result.ToString()).DoesNotContain("]8;;");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).DoesNotContain("]8;;");
 
 		// Pueblo and MXP carry the same command; a plain telnet client still just sees underline.
 		await Assert.That(result.Render(MarkupFormat.Pueblo)).Contains("XCH_CMD=\"@wiki main:general:getting_started\"");
 		await Assert.That(result.Render(MarkupFormat.Mxp)).Contains("HREF=\"@wiki main:general:getting_started\"");
-		await Assert.That(result.ToString()).Contains(Underlined);
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 4)).IsTrue();
 	}
 
 	/// <summary>
@@ -751,7 +753,7 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(result.Render(MarkupFormat.Html)).DoesNotContain("xch_cmd");
 		await Assert.That(result.Render(MarkupFormat.Html)).DoesNotContain("@wiki");
 		await Assert.That(result.Render(MarkupFormat.Pueblo)).DoesNotContain("XCH_CMD");
-		await Assert.That(result.ToString()).Contains(Underlined);
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 4)).IsTrue();
 	}
 
 	/// <summary>
@@ -768,7 +770,7 @@ public class RecursiveMarkdownRendererTests
 		var standard = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown("See [[Getting Started]] for details.");
 
-		await Assert.That(command.ToString()).IsEqualTo(standard.ToString());
+		await Assert.That(command.Render(MarkupFormat.Ansi)).IsEqualTo(standard.Render(MarkupFormat.Ansi));
 	}
 }
 
@@ -791,16 +793,16 @@ public class RecursiveMarkdownRendererWithParserTests
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown(markdown, 78, parser);
-		var ansi = result.ToString();
+		var ansi = result.Render(MarkupFormat.Ansi);
 
 		await Assert.That(result.ToPlainText()).Contains("name");
 		await Assert.That(result.ToPlainText()).Contains("%#");
 
 		await Assert.That(ansi.Contains(ESC)).IsTrue();
 
-		await Assert.That(ansi.Contains(Foreground(0xDC, 0xDC, 0xAA))).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(ansi, 0xDC, 0xDC, 0xAA)).IsTrue();
 
-		await Assert.That(ansi.Contains(Foreground(0x4F, 0xC1, 0xFF))).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(ansi, 0x4F, 0xC1, 0xFF)).IsTrue();
 	}
 
 	[Test]
@@ -815,7 +817,7 @@ public class RecursiveMarkdownRendererWithParserTests
 		await Assert.That(result.ToPlainText()).Contains("get");
 		await Assert.That(result.ToPlainText()).Contains("#1");
 
-		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+		await Assert.That(result.Render(MarkupFormat.Ansi).Contains(ESC)).IsTrue();
 	}
 
 	[Test]
@@ -835,7 +837,7 @@ public class RecursiveMarkdownRendererWithParserTests
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown(markdown, 78, parser);
-		var ansi = result.ToString();
+		var ansi = result.Render(MarkupFormat.Ansi);
 
 		// Write ANSI output so the terminal screenshot can be taken
 		await File.WriteAllTextAsync(Path.Combine(Path.GetTempPath(), "sharp_commands_demo.txt"), ansi);
@@ -882,7 +884,7 @@ public class RecursiveMarkdownRendererWithParserTests
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown(markdown, 78, parser);
-		var ansi = result.ToString();
+		var ansi = result.Render(MarkupFormat.Ansi);
 
 		// Write ANSI output to a temp file so the snapshot can be captured externally
 		await File.WriteAllTextAsync(Path.Combine(Path.GetTempPath(), "sharp_demo_ansi.txt"), ansi);
@@ -893,7 +895,7 @@ public class RecursiveMarkdownRendererWithParserTests
 
 		await Assert.That(ansi.Contains(ESC)).IsTrue();
 
-		await Assert.That(ansi.Contains(Foreground(0xDC, 0xDC, 0xAA))).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(ansi, 0xDC, 0xDC, 0xAA)).IsTrue();
 	}
 
 	/// <summary>
