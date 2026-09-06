@@ -27,7 +27,7 @@ public partial class SurrealDatabase
 		var key = ExtractKey(id);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var response = await ExecuteAsync(
-			"SELECT * FROM object:$key->has_parent->object",
+			$"SELECT {ObjectWithRelations} FROM object:$key->has_parent->object",
 			parameters, cancellationToken);
 
 		var records = response.GetValue<List<ObjectRecord>>(0)!;
@@ -49,7 +49,7 @@ public partial class SurrealDatabase
 
 			var parameters = new Dictionary<string, object?> { ["key"] = currentKey };
 			var response = await ExecuteAsync(
-				"SELECT * FROM object:$key->has_parent->object",
+				$"SELECT {ObjectWithRelations} FROM object:$key->has_parent->object",
 				parameters, cancellationToken);
 
 			var records = response.GetValue<List<ObjectRecord>>(0)!;
@@ -111,7 +111,7 @@ public partial class SurrealDatabase
 		var zoneKey = zone.Object().Key;
 		var parameters = new Dictionary<string, object?> { ["key"] = zoneKey };
 		var response = await ExecuteAsync(
-			"SELECT * FROM object:$key<-has_zone<-object",
+			$"SELECT {ObjectWithRelations} FROM object:$key<-has_zone<-object",
 			parameters, cancellationToken);
 
 		var records = response.GetValue<List<ObjectRecord>>(0)!;
@@ -268,7 +268,7 @@ public partial class SurrealDatabase
 			var exitResults = exitResponse.GetValue<List<ExitRecord>>(0)!;
 			if (exitResults.Count == 0) continue;
 
-			var objResponse = await ExecuteAsync("SELECT * FROM object:$key", exitParams, ct);
+			var objResponse = await ExecuteAsync($"SELECT {ObjectWithRelations} FROM object:$key", exitParams, ct);
 			var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 			if (objResults.Count > 0)
 			{

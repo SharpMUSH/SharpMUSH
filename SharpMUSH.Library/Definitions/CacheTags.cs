@@ -13,7 +13,6 @@ public static class CacheTags
 	public const string ObjectList = "object-list";
 	public const string ObjectLocks = "object-locks";
 	public const string ObjectFlags = "object-flags";
-	public const string ObjectPowers = "object-powers";
 	public const string ChannelList = "channel-list";
 	public const string FlagList = "flag-list";
 	public const string PowerList = "power-list";

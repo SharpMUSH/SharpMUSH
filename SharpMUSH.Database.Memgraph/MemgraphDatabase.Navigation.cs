@@ -24,17 +24,17 @@ public partial class MemgraphDatabase
 	public async ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken cancellationToken = default)
 	{
 		var key = ExtractKey(id);
-		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT]->(parent:Object) RETURN parent", new { key }, cancellationToken);
+		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT]->(parent:Object) RETURN parent" + RelationColumns("parent"), new { key }, cancellationToken);
 		if (result.Result.Count == 0) return new None();
-		return await BuildTypedObjectFromObjectNode(result.Result[0]["parent"].As<INode>(), cancellationToken);
+		return await BuildTypedObjectFromObjectNode(result.Result[0]["parent"].As<INode>(), cancellationToken, RelationsOf(result.Result[0]));
 	}
 
 	public async IAsyncEnumerable<SharpObject> GetParentsAsync(string id, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var key = ExtractKey(id);
-		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..999]->(parent:Object) RETURN parent", new { key }, cancellationToken);
+		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..999]->(parent:Object) RETURN parent" + RelationColumns("parent"), new { key }, cancellationToken);
 		foreach (var record in result.Result)
-			yield return MapNodeToSharpObject(record["parent"].As<INode>());
+			yield return MapNodeToSharpObject(record["parent"].As<INode>(), RelationsOf(record));
 	}
 
 	public async ValueTask<bool> IsReachableViaParentOrZoneAsync(AnySharpObject startObject, AnySharpObject targetObject,
@@ -53,9 +53,9 @@ LIMIT 1
 	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var zoneKey = zone.Object().Key;
-		var result = await ExecuteWithRetryAsync("MATCH (o:Object)-[:HAS_ZONE]->(z:Object {key: $key}) RETURN o", new { key = zoneKey }, cancellationToken);
+		var result = await ExecuteWithRetryAsync("MATCH (o:Object)-[:HAS_ZONE]->(z:Object {key: $key}) RETURN o" + RelationColumns("o"), new { key = zoneKey }, cancellationToken);
 		foreach (var record in result.Result)
-			yield return MapNodeToSharpObject(record["o"].As<INode>());
+			yield return MapNodeToSharpObject(record["o"].As<INode>(), RelationsOf(record));
 	}
 
 	#endregion
@@ -122,11 +122,11 @@ LIMIT 1
 MATCH (content)-[:AT_LOCATION]->(container {key: $key})
 MATCH (content)-[:IS_OBJECT]->(contentObj:Object)
 RETURN contentObj
-""", new { key = typedKey }, cancellationToken);
+""" + RelationColumns("contentObj"), new { key = typedKey }, cancellationToken);
 
-		foreach (var contentObjNode in result.Result.Select(r => r["contentObj"].As<INode>()))
+		foreach (var record in result.Result)
 		{
-			var contentObj = await BuildTypedObjectFromObjectNode(contentObjNode, cancellationToken);
+			var contentObj = await BuildTypedObjectFromObjectNode(record["contentObj"].As<INode>(), cancellationToken, RelationsOf(record));
 			yield return contentObj.Match<AnySharpContent>(
 			player => player,
 			_ => throw new Exception("Room cannot be content"),
@@ -143,11 +143,11 @@ RETURN contentObj
 MATCH (content)-[:AT_LOCATION]->(container {key: $key})
 MATCH (content)-[:IS_OBJECT]->(contentObj:Object)
 RETURN contentObj
-""", new { key = containerKey }, cancellationToken);
+""" + RelationColumns("contentObj"), new { key = containerKey }, cancellationToken);
 
-		foreach (var contentObjNode in result.Result.Select(r => r["contentObj"].As<INode>()))
+		foreach (var record in result.Result)
 		{
-			var contentObj = await BuildTypedObjectFromObjectNode(contentObjNode, cancellationToken);
+			var contentObj = await BuildTypedObjectFromObjectNode(record["contentObj"].As<INode>(), cancellationToken, RelationsOf(record));
 			yield return contentObj.Match<AnySharpContent>(
 			player => player,
 			_ => throw new Exception("Room cannot be content"),
@@ -167,13 +167,13 @@ RETURN contentObj
 MATCH (e:Exit)-[:AT_LOCATION]->(container {key: $key})
 MATCH (e)-[:IS_OBJECT]->(o:Object {type: 'EXIT'})
 RETURN o, e
-""", new { key = containerKey }, cancellationToken);
+""" + RelationColumns("o"), new { key = containerKey }, cancellationToken);
 
 		foreach (var record in result.Result)
 		{
 			var objNode = record["o"].As<INode>();
 			var exitNode = record["e"].As<INode>();
-			var sharpObj = MapNodeToSharpObject(objNode);
+			var sharpObj = MapNodeToSharpObject(objNode, RelationsOf(record));
 			var key = objNode["key"].As<int>();
 			yield return BuildExit(ExitId(key), exitNode, sharpObj);
 		}
@@ -186,13 +186,13 @@ RETURN o, e
 MATCH (e:Exit)-[:AT_LOCATION]->(container {key: $key})
 MATCH (e)-[:IS_OBJECT]->(o:Object {type: 'EXIT'})
 RETURN o, e
-""", new { key = containerKey }, cancellationToken);
+""" + RelationColumns("o"), new { key = containerKey }, cancellationToken);
 
 		foreach (var record in result.Result)
 		{
 			var objNode = record["o"].As<INode>();
 			var exitNode = record["e"].As<INode>();
-			var sharpObj = MapNodeToSharpObject(objNode);
+			var sharpObj = MapNodeToSharpObject(objNode, RelationsOf(record));
 			var key = objNode["key"].As<int>();
 			yield return BuildExit(ExitId(key), exitNode, sharpObj);
 		}

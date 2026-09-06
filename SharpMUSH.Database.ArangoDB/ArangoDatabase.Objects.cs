@@ -463,7 +463,7 @@ public partial class ArangoDatabase
 			$"FILTER obj != null " +
 			$"LET typed = FIRST(FOR v IN 1..1 INBOUND obj GRAPH {DatabaseConstants.GraphObjects} RETURN v) " +
 			$"FILTER typed != null " +
-			$"FOR item IN [obj, typed] RETURN item",
+			$"FOR item IN [{ObjectWithRelations("obj")}, typed] RETURN item",
 			new Dictionary<string, object> { { "key", dbref.Number.ToString() } },
 			cache: true, cancellationToken: cancellationToken);
 
@@ -525,15 +525,17 @@ public partial class ArangoDatabase
 		if (dbId.StartsWith(DatabaseConstants.Objects))
 		{
 			query = await arangoDb.Query.ExecuteAsync<System.Text.Json.JsonElement>(handle,
-				$"FOR v IN 0..1 INBOUND {dbId} GRAPH {DatabaseConstants.GraphObjects} RETURN v",
+				$"FOR v IN 0..1 INBOUND @start GRAPH {DatabaseConstants.GraphObjects} RETURN {ObjectWithRelations("v")}",
+				new Dictionary<string, object> { { "start", dbId } },
 				cache: true, cancellationToken: cancellationToken);
 			query.Reverse();
 		}
 		else
 		{
 			query = await arangoDb.Query.ExecuteAsync<System.Text.Json.JsonElement>(handle,
-				$"FOR v IN 0..1 OUTBOUND {dbId} GRAPH {DatabaseConstants.GraphObjects} RETURN v", cache: true,
-				cancellationToken: cancellationToken);
+				$"FOR v IN 0..1 OUTBOUND @start GRAPH {DatabaseConstants.GraphObjects} RETURN {ObjectWithRelations("v")}",
+				new Dictionary<string, object> { { "start", dbId } },
+				cache: true, cancellationToken: cancellationToken);
 		}
 
 		if (query.Count < 2) return new None();
@@ -580,16 +582,52 @@ public partial class ArangoDatabase
 	}
 
 	/// <summary>
-	/// The object's flags via the cached <see cref="GetObjectFlagsQuery"/> rather than a traversal per
-	/// read. <c>HasFlag</c> runs on every function call (the DEBUG check) and on most permission
-	/// checks; uncached, each was a database round trip.
+	/// AQL: the Objects document <paramref name="variable"/> with its flag and power documents
+	/// attached, so an object arrives with its relations in the round trip that loads it. Every
+	/// <c>HasFlag</c> / <c>HasPower</c> then answers from the object; nothing re-reads storage
+	/// through a loaded instance.
 	/// </summary>
-	private IAsyncEnumerable<SharpObjectFlag> CachedObjectFlags(string id, string type, CancellationToken ct)
-		=> mediator.CreateStream(new GetObjectFlagsQuery(id, type.ToUpper()), ct);
+	private static string ObjectWithRelations(string variable) =>
+		$"MERGE({variable}, {{ FlagDocs: (FOR f IN 1..1 OUTBOUND {variable} GRAPH {DatabaseConstants.GraphFlags} RETURN f), " +
+		$"PowerDocs: (FOR p IN 1..1 OUTBOUND {variable} GRAPH {DatabaseConstants.GraphPowers} RETURN p) }})";
 
-	/// <summary>The object's powers via the cached <see cref="GetObjectPowersQuery"/>; same reasoning as flags.</summary>
-	private IAsyncEnumerable<SharpPower> CachedObjectPowers(string id, CancellationToken ct)
-		=> mediator.CreateStream(new GetObjectPowersQuery(id), ct);
+	private static readonly System.Text.Json.JsonSerializerOptions ArangoJson = new()
+	{
+		PropertyNamingPolicy = new Core.Arango.Serialization.Json.ArangoJsonDefaultPolicy()
+	};
+
+	/// <summary>
+	/// The object's flags: materialised from the documents that rode along with the object when the
+	/// query projected them, else a read of their own for the construction paths that still return
+	/// a bare document.
+	/// </summary>
+	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(string id, string type, SharpObjectFlagQueryResult[]? docs)
+	{
+		var upperType = type.ToUpper();
+		if (docs is null)
+		{
+			return new(() => new FreshAsyncEnumerable<SharpObjectFlag>(ct => GetObjectFlagsAsync(id, upperType, ct)));
+		}
+
+		var flags = docs.Select(SharpObjectFlagQueryToSharpFlag).Append(ObjectTypeFlag.For(upperType)).ToArray();
+		return new(() => flags.ToAsyncEnumerable());
+	}
+
+	private Lazy<IAsyncEnumerable<SharpPower>> PowersOf(string id, SharpPowerQueryResult[]? docs)
+	{
+		if (docs is null)
+		{
+			return new(() => new FreshAsyncEnumerable<SharpPower>(ct => GetPowersAsync(id, ct)));
+		}
+
+		var powers = docs.Select(SharpPowerQueryToSharpPower).ToArray();
+		return new(() => powers.ToAsyncEnumerable());
+	}
+
+	private static T[]? RelationDocs<T>(System.Text.Json.JsonElement obj, string property)
+		=> obj.TryGetProperty(property, out var el) && el.ValueKind == System.Text.Json.JsonValueKind.Array
+			? System.Text.Json.JsonSerializer.Deserialize<T[]>(el.GetRawText(), ArangoJson)
+			: null;
 
 	private SharpObject SharpObjectQueryToSharpObject(System.Text.Json.JsonElement obj)
 	{
@@ -612,8 +650,8 @@ public partial class ArangoDatabase
 			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty,
 			// FreshAsyncEnumerable, not the iterator directly: the Lazy caches one instance that every
 			// call site enumerates, and an async iterator's state machine is not safe to share. See #798.
-			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => CachedObjectFlags(id, type, enumCt))),
-			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(enumCt => CachedObjectPowers(id, enumCt))),
+			Flags = FlagsOf(id, type, RelationDocs<SharpObjectFlagQueryResult>(obj, "FlagDocs")),
+			Powers = PowersOf(id, RelationDocs<SharpPowerQueryResult>(obj, "PowerDocs")),
 			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),
 			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
 			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesAsync(id, enumCt))),
@@ -633,7 +671,7 @@ public partial class ArangoDatabase
 		// and GetObjectsByZoneAsync both branch on — was unreachable, and asking about a dbref that
 		// does not exist threw instead of answering. The other two providers already return null.
 		var result = await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
-			$"LET obj = DOCUMENT('{DatabaseConstants.Objects}', @key) FILTER obj != null RETURN obj",
+			$"LET obj = DOCUMENT('{DatabaseConstants.Objects}', @key) FILTER obj != null RETURN {ObjectWithRelations("obj")}",
 			bindVars: new Dictionary<string, object> { { "key", dbref.Number.ToString() } },
 			cache: true, cancellationToken: cancellationToken);
 
@@ -680,8 +718,8 @@ public partial class ArangoDatabase
 			Warnings = obj.Warnings,
 			// FreshAsyncEnumerable, not the iterator directly: the Lazy caches one instance that every
 			// call site enumerates, and an async iterator's state machine is not safe to share. See #798.
-			Flags = new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => CachedObjectFlags(obj.Id, obj.Type, enumCt))),
-			Powers = new Lazy<IAsyncEnumerable<SharpPower>>(() => new FreshAsyncEnumerable<SharpPower>(enumCt => CachedObjectPowers(obj.Id, enumCt))),
+			Flags = FlagsOf(obj.Id, obj.Type, obj.FlagDocs),
+			Powers = PowersOf(obj.Id, obj.PowerDocs),
 			Attributes = new Lazy<IAsyncEnumerable<SharpAttribute>>(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(obj.Id, enumCt))),
 			LazyAttributes = new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(obj.Id, enumCt))),
 			AllAttributes = new Lazy<IAsyncEnumerable<SharpAttribute>>(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesAsync(obj.Id, enumCt))),

@@ -187,8 +187,7 @@ public class Startup(
 				var dbLogger = x.GetRequiredService<ILogger<MemgraphDatabase>>();
 				var neo4JDriver = x.GetRequiredService<IDriver>();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password, pluginMigrationSources, pluginFlags,
-					x.GetRequiredService<IMediator>());
+				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password, pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -216,8 +215,7 @@ public class Startup(
 				var surrealClient = x.GetRequiredService<ISurrealDbClient>();
 				surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new SurrealDatabase(dbLogger, surrealClient, password, pluginMigrationSources, pluginFlags,
-					x.GetRequiredService<IMediator>());
+				var db = new SurrealDatabase(dbLogger, surrealClient, password, pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -423,6 +421,10 @@ public class Startup(
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(typeof(IStreamPipelineBehavior<,>), typeof(StreamQueryCachingBehavior<,>));
+		// Registered after the caching behaviours so they run inside them: once per value as it is
+		// cached, not on every hit.
+		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(Implementation.Behaviors.RelationsThroughCacheBehavior<,>));
+		services.AddSingleton(typeof(IStreamPipelineBehavior<,>), typeof(Implementation.Behaviors.StreamRelationsThroughCacheBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
 		// Shared MUSH code intelligence — the single source of truth behind both the

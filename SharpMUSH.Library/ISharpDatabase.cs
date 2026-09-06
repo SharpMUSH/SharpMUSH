@@ -753,14 +753,6 @@ public interface ISharpDatabase
 	/// <returns>The deepest findable object based on depth</returns>
 	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default);
 
-	/// <summary>
-	/// The powers set on one object, by its provider id - as opposed to
-	/// <see cref="GetObjectPowersAsync(CancellationToken)"/>, which lists every power the server
-	/// defines. The uncached read behind <c>GetObjectPowersQuery</c>; game code reads
-	/// <c>SharpObject.Powers</c>, which goes through that cached query.
-	/// </summary>
-	IAsyncEnumerable<SharpPower> GetPowersForObjectAsync(string id, CancellationToken cancellationToken = default);
-
 	IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, string type,
 		CancellationToken cancellationToken = default);
 

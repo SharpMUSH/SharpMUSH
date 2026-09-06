@@ -10,9 +10,3 @@ public class PowerQueryHandler(ISharpDatabase database) : IStreamQueryHandler<Ge
 	public IAsyncEnumerable<SharpPower> Handle(GetPowersQuery query, CancellationToken cancellationToken)
 		=> database.GetObjectPowersAsync(cancellationToken);
 }
-
-public class GetObjectPowersQueryHandler(ISharpDatabase database) : IStreamQueryHandler<GetObjectPowersQuery, SharpPower>
-{
-	public IAsyncEnumerable<SharpPower> Handle(GetObjectPowersQuery query, CancellationToken cancellationToken)
-		=> database.GetPowersForObjectAsync(query.Id, cancellationToken);
-}

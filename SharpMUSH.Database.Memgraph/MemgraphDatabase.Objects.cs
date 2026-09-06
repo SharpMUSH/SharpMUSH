@@ -251,7 +251,7 @@ RETURN count(o) AS cnt
 
 	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default)
 	{
-		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) RETURN o", new { key = dbref.Number }, cancellationToken);
+		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) RETURN o" + RelationColumns("o"), new { key = dbref.Number }, cancellationToken);
 
 		if (result.Result.Count == 0) return new None();
 
@@ -259,12 +259,12 @@ RETURN count(o) AS cnt
 		if (dbref.CreationMilliseconds is not null && objNode["creationTime"].As<long>() != dbref.CreationMilliseconds)
 			return new None();
 
-		return await BuildTypedObjectFromObjectNode(objNode, cancellationToken);
+		return await BuildTypedObjectFromObjectNode(objNode, cancellationToken, RelationsOf(result.Result[0]));
 	}
 
 	public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default)
 	{
-		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) RETURN o", new { key = dbref.Number }, cancellationToken);
+		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) RETURN o" + RelationColumns("o"), new { key = dbref.Number }, cancellationToken);
 
 		if (result.Result.Count == 0) return null;
 
@@ -272,7 +272,7 @@ RETURN count(o) AS cnt
 		if (dbref.CreationMilliseconds.HasValue && objNode["creationTime"].As<long>() != dbref.CreationMilliseconds)
 			return null;
 
-		return MapNodeToSharpObject(objNode);
+		return MapNodeToSharpObject(objNode, RelationsOf(result.Result[0]));
 	}
 
 	public async IAsyncEnumerable<SharpPlayer> GetPlayerByNameOrAliasAsync(string name, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -282,13 +282,13 @@ MATCH (o:Object {type: 'PLAYER'})
 MATCH (p:Player)-[:IS_OBJECT]->(o)
 WHERE o.name = $name OR $name IN p.aliases
 RETURN o, p
-""", new { name }, cancellationToken);
+""" + RelationColumns("o"), new { name }, cancellationToken);
 
 		foreach (var record in result.Result)
 		{
 			var objNode = record["o"].As<INode>();
 			var playerNode = record["p"].As<INode>();
-			var sharpObj = MapNodeToSharpObject(objNode);
+			var sharpObj = MapNodeToSharpObject(objNode, RelationsOf(record));
 			var key = objNode["key"].As<int>();
 			yield return BuildPlayer(PlayerId(key), playerNode, sharpObj);
 		}
@@ -296,11 +296,11 @@ RETURN o, p
 
 	public async IAsyncEnumerable<SharpObject> GetAllObjectsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var result = await ExecuteWithRetryAsync("MATCH (o:Object) RETURN o", ct: cancellationToken);
+		var result = await ExecuteWithRetryAsync("MATCH (o:Object) RETURN o" + RelationColumns("o"), ct: cancellationToken);
 
 		foreach (var record in result.Result)
 		{
-			yield return MapNodeToSharpObject(record["o"].As<INode>());
+			yield return MapNodeToSharpObject(record["o"].As<INode>(), RelationsOf(record));
 		}
 	}
 
@@ -311,7 +311,7 @@ RETURN o, p
 		// GetObjectNodeAsync per object and, crucially, bypasses the per-object FusionCache lock
 		// so that a full-database scan does not contend with concurrent player commands.
 		var result = await ExecuteWithRetryAsync(
-			"MATCH (typed)-[:IS_OBJECT]->(o:Object) RETURN o, typed, labels(typed) AS lbl",
+			"MATCH (typed)-[:IS_OBJECT]->(o:Object) RETURN o, typed, labels(typed) AS lbl" + RelationColumns("o"),
 			ct: cancellationToken);
 
 		foreach (var record in result.Result)
@@ -319,7 +319,7 @@ RETURN o, p
 			var objNode = record["o"].As<INode>();
 			var typedNode = record["typed"].As<INode>();
 			var labels = record["lbl"].As<List<object>>().Select(x => x.ToString()!).ToList();
-			var sharpObj = MapNodeToSharpObject(objNode);
+			var sharpObj = MapNodeToSharpObject(objNode, RelationsOf(record));
 			var typedId = GetTypedId(labels, objNode["key"].As<int>(), typedNode);
 
 			AnyOptionalSharpObject typed = sharpObj.Type switch

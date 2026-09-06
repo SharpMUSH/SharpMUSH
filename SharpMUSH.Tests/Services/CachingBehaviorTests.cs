@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -81,6 +82,35 @@ public class CachingBehaviorTests
 		var result2 = await mediator.Send(new GetObjectNodeQuery(dbRef));
 
 		await Assert.That(result1.IsT0).IsEqualTo(result2.IsT0);
+	}
+
+	/// <summary>
+	/// An object's flags are loaded with it and cached under its own key, which a flag write removes.
+	/// The same object also sits inside the room's cached contents list, which a flag write does not
+	/// remove; a mortal's <c>lcon()</c> after <c>@set obj=DARK</c> read that list and still showed the
+	/// object. The embedded object's flags must follow the object node, not the list's snapshot.
+	/// </summary>
+	[Test]
+	public async Task AFlagSetAfterAContentsListWasCachedIsSeenThroughThatList()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@dig FlagThroughContents Room"))).Message!.ToPlainText()!);
+		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@create FlagThroughContents Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel #{thing.Number}=#{room.Number}"));
+
+		// Populate the contents cache, then change a flag through the normal command path.
+		var before = await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
+		await Assert.That(before.Select(c => c.Object().DBRef.Number)).Contains(thing.Number);
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set #{thing.Number}=DARK"));
+
+		var after = await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
+		var embedded = after.Single(c => c.Object().DBRef.Number == thing.Number);
+
+		await Assert.That(await embedded.Object().HasFlag("DARK")).IsTrue()
+			.Because("the contents list is still the cached one; its object must read flags through the object node");
 	}
 
 	/// <summary>

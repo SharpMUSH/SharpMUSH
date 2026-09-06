@@ -75,16 +75,27 @@ reload case. `FromState` is now a record `with` copy.
 ### 2. Object flags and powers queried per check (database, hit from the parser)
 
 `SharpObject.Flags` / `.Powers` were `Lazy<FreshAsyncEnumerable>` over a direct provider query, so
-`HasFlag`, `IsWizard`, `HasPower`, `IsGuest` each cost a graph traversal. `GetObjectFlagsQuery`
-already existed as a cached Mediator stream query with invalidation wired from the flag commands,
-and had **zero callers**.
+`HasFlag`, `IsWizard`, `HasPower`, `IsGuest` each cost a graph traversal, and `VisitFunction`
+checks the executor's DEBUG flag on every call.
 
-Fix: all three providers build `Flags` over `mediator.CreateStream(new GetObjectFlagsQuery(id, type))`
-and `Powers` over a new `GetObjectPowersQuery(id)` (key `object-powers:{id}`). Memgraph and SurrealDB
-take an optional `IMediator` (bare test construction still works). `SetObjectPowerCommand` /
-`UnsetObjectPowerCommand` now invalidate the per-object key; both queries carry a tag that
-`DeleteObjectCommand` clears, because dbref numbers are reused. `PackageInstallService` wrote flags
-and powers straight to the database, bypassing invalidation; it now sends the commands.
+Fix: the object is the unit. Every provider loads an object's flag and power documents in the same
+round trip as the object (an AQL `MERGE` sub-query, a Cypher pattern comprehension, a SurrealQL
+graph projection) and materialises them on the `SharpObject`; the `Lazy<IAsyncEnumerable<>>`
+property shape is unchanged, so no call site moved. Because the object node is already cached under
+`object:#N` and every flag, power and lock write removes that key, the relations are cached and
+invalidated with it, with no second cache entry to keep coherent. A loaded object is therefore a
+snapshot, as its locks already were: the set/unset flag and power handlers update the instance
+the caller holds, the way `SetLockCommandHandler` does. Construction paths that still return a
+bare document (a few cold Memgraph lookups) fall back to a direct read on first use; none of
+them involve a mediator. The providers no longer take an `IMediator` for this.
+
+One consequence needed its own piece. The same object also sits inside *other* cached results,
+a room's contents list above all, and a flag write does not remove those entries; a cached
+contents list would keep showing an object as it was before `@set obj=DARK` (a test caught exactly
+that). `RelationsThroughCacheBehavior`, registered inside the caching behaviours so it runs once
+per value as it is stored, re-points every object embedded in a cached result to read its flags
+and powers through the cached object node, which is the entry a write does invalidate. The
+Mediator layer thus owns the coherence rule, and providers know nothing of it.
 
 `[add(1,2)]`: 389 µs → 7.6 µs, 1 → 0 requests. Ten nested calls: 2.55 ms → 48 µs.
 
@@ -145,6 +156,10 @@ entry outlives a tag removed while its factory ran, holding pre-write data. So t
 eager refresh, and no profile lets a timed-out factory complete in the background
 (`AllowTimedOutFactoryBackgroundCompletion = false`); a timed-out read is discarded and the next
 read retries.
+
+(The per-object flag and power *queries* an earlier revision of this branch added were removed
+once relations loaded with the object; `GetObjectFlagsQuery` remains as the pre-existing, still
+unused, cached read.)
 
 The cache's *registered* default is the Tagged profile, so an ad-hoc caller that only sets a
 duration (the account-claims cache, tag-invalidated on bans and role changes) can never inherit

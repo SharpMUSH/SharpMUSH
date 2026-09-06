@@ -332,7 +332,7 @@ public partial class SurrealDatabase
 	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default)
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = dbref.Number };
-		var response = await ExecuteAsync("SELECT * FROM object:$key", parameters, cancellationToken);
+		var response = await ExecuteAsync($"SELECT {ObjectWithRelations} FROM object:$key", parameters, cancellationToken);
 
 		var results = response.GetValue<List<ObjectRecord>>(0)!;
 		if (results.Count == 0) return new None();
@@ -347,7 +347,7 @@ public partial class SurrealDatabase
 	public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default)
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = dbref.Number };
-		var response = await ExecuteAsync("SELECT * FROM object:$key", parameters, cancellationToken);
+		var response = await ExecuteAsync($"SELECT {ObjectWithRelations} FROM object:$key", parameters, cancellationToken);
 
 		var results = response.GetValue<List<ObjectRecord>>(0)!;
 		if (results.Count == 0) return null;
@@ -364,7 +364,7 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["name"] = name };
 
 		var objResponse = await ExecuteAsync(
-			"SELECT * FROM object WHERE type = 'PLAYER' AND name = $name",
+			$"SELECT {ObjectWithRelations} FROM object WHERE type = 'PLAYER' AND name = $name",
 			parameters, cancellationToken);
 
 		var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
@@ -398,7 +398,7 @@ public partial class SurrealDatabase
 			if (foundKeys.Add(key))
 			{
 				var objParams = new Dictionary<string, object?> { ["key"] = key };
-				var objResp = await ExecuteAsync("SELECT * FROM object:$key", objParams, cancellationToken);
+				var objResp = await ExecuteAsync($"SELECT {ObjectWithRelations} FROM object:$key", objParams, cancellationToken);
 				var objRecs = objResp.GetValue<List<ObjectRecord>>(0)!;
 				if (objRecs.Count > 0)
 				{
@@ -411,7 +411,7 @@ public partial class SurrealDatabase
 
 	public async IAsyncEnumerable<SharpObject> GetAllObjectsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var response = await ExecuteAsync("SELECT * FROM object", cancellationToken);
+		var response = await ExecuteAsync($"SELECT {ObjectWithRelations} FROM object", cancellationToken);
 
 		var results = response.GetValue<List<ObjectRecord>>(0)!;
 		foreach (var record in results)
@@ -422,7 +422,7 @@ public partial class SurrealDatabase
 
 	public async IAsyncEnumerable<AnySharpObject> GetAllTypedObjectsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var objResponse = await ExecuteAsync("SELECT * FROM object", cancellationToken);
+		var objResponse = await ExecuteAsync($"SELECT {ObjectWithRelations} FROM object", cancellationToken);
 		var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 
 		var playerResponse = await ExecuteAsync("SELECT * FROM player", cancellationToken);
@@ -557,7 +557,7 @@ public partial class SurrealDatabase
 		}
 
 		var prelude = bindings.Count > 0 ? string.Join(";", bindings) + ";" : "";
-		var query = $"{prelude}SELECT * FROM object {whereClause} {limitClause}";
+		var query = $"{prelude}SELECT {ObjectWithRelations} FROM object {whereClause} {limitClause}";
 		var response = await ExecuteAsync(query, parameters, cancellationToken);
 
 		// The SELECT is the last statement; each LET above occupies a response slot ahead of it.
@@ -577,7 +577,7 @@ public partial class SurrealDatabase
 		{
 			var key = playerRecord.key;
 			var objParams = new Dictionary<string, object?> { ["key"] = key };
-			var objResponse = await ExecuteAsync("SELECT * FROM object:$key", objParams, cancellationToken);
+			var objResponse = await ExecuteAsync($"SELECT {ObjectWithRelations} FROM object:$key", objParams, cancellationToken);
 			var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 			if (objResults.Count > 0)
 			{
@@ -646,7 +646,7 @@ public partial class SurrealDatabase
 			var exitResults = exitResponse.GetValue<List<ExitRecord>>(0)!;
 			if (exitResults.Count == 0) continue;
 
-			var objResponse = await ExecuteAsync("SELECT * FROM object:$key", exitParams, cancellationToken);
+			var objResponse = await ExecuteAsync($"SELECT {ObjectWithRelations} FROM object:$key", exitParams, cancellationToken);
 			var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 			if (objResults.Count > 0)
 			{

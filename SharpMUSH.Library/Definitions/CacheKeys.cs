@@ -43,7 +43,4 @@ public static class CacheKeys
 
 	/// <summary>An object's flag SET, keyed by its stable graph _id. Invalidated on @set/@unset flag.</summary>
 	public static string ObjectFlags(string id) => $"object-flags:{id}";
-
-	/// <summary>An object's power SET, keyed by its stable graph _id. Invalidated on @power set/unset.</summary>
-	public static string ObjectPowers(string id) => $"object-powers:{id}";
 }
