@@ -44,10 +44,19 @@ public class AnsiCodeParserTests
 	[Test]
 	public async Task Highlight_RaisesTheFollowingColourToItsBrightTwin()
 	{
-		await Assert.That(AnsiCodeParser.Parse("hr").Style.Foreground)
-			.IsEqualTo(new AnsiColor.Standard(1, true));
-		await Assert.That(AnsiCodeParser.Parse("hR").Style.Background)
-			.IsEqualTo(new AnsiColor.Standard(1, true));
+		var style = AnsiCodeParser.Parse("hr").Style;
+		await Assert.That(style.Foreground).IsEqualTo(new AnsiColor.Standard(1, true));
+		await Assert.That(style.Bold).IsFalse();
+	}
+
+	[Test]
+	public async Task Highlight_OnABackgroundLetter_SetsBoldInsteadOfBrightening()
+	{
+		// PennMUSH's 'h' is SGR 1 (bold); there is no "bright background" SGR distinct from bold
+		// text, so 'h' before a background letter must not produce a brightened background.
+		var style = AnsiCodeParser.Parse("hR").Style;
+		await Assert.That(style.Background).IsEqualTo(new AnsiColor.Standard(1, false));
+		await Assert.That(style.Bold).IsTrue();
 	}
 
 	[Test]

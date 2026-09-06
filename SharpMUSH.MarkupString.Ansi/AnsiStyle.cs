@@ -84,7 +84,7 @@ public readonly record struct AnsiStyle
 			Blink = outer.Blink || inner.Blink,
 			Inverted = outer.Inverted || inner.Inverted,
 			StrikeThrough = outer.StrikeThrough || inner.StrikeThrough,
-			Clear = inner.Clear,
+			Clear = outer.Clear || inner.Clear,
 			LinkUrl = linkUrl,
 			LinkText = linkText,
 			LinkKind = linkKind

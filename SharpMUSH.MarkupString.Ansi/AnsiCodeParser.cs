@@ -15,9 +15,12 @@ namespace MarkupString.Ansi;
 ///
 /// <para>
 /// Codes are space-separated. Within a token, attribute letters are processed left to right and the
-/// <c>h</c> (highlight) modifier raises the colours that follow it to their bright variant for the
-/// rest of that token only. A leading <c>/</c> on a token targets the background. Unrecognised
-/// tokens and malformed colours are ignored rather than throwing.
+/// <c>h</c> (highlight) modifier raises a following foreground letter to its bright variant, for the
+/// rest of that token only. A following background letter has no bright variant — terminals have no
+/// "bright background" SGR distinct from bold text — so <c>h</c> there sets
+/// <see cref="AnsiStyle.Bold"/> instead and leaves the background colour at its normal intensity. A
+/// leading <c>/</c> on a token targets the background. Unrecognised tokens and malformed colours are
+/// ignored rather than throwing.
 /// </para>
 /// </summary>
 public static class AnsiCodeParser
@@ -82,6 +85,7 @@ public static class AnsiCodeParser
 		AnsiColor? foreground = null;
 		AnsiColor? background = null;
 		var blink = false;
+		var bold = false;
 		var clear = false;
 		var inverted = false;
 		var underlined = false;
@@ -155,6 +159,7 @@ public static class AnsiCodeParser
 						foreground = null;
 						background = null;
 						blink = false;
+						bold = false;
 						inverted = false;
 						underlined = false;
 						highlight = false;
@@ -169,14 +174,16 @@ public static class AnsiCodeParser
 					case 'm': foreground = new AnsiColor.Standard(5, highlight); break;
 					case 'c': foreground = new AnsiColor.Standard(6, highlight); break;
 					case 'w': foreground = new AnsiColor.Standard(7, highlight); break;
-					case 'X': background = new AnsiColor.Standard(0, highlight); break;
-					case 'R': background = new AnsiColor.Standard(1, highlight); break;
-					case 'G': background = new AnsiColor.Standard(2, highlight); break;
-					case 'Y': background = new AnsiColor.Standard(3, highlight); break;
-					case 'B': background = new AnsiColor.Standard(4, highlight); break;
-					case 'M': background = new AnsiColor.Standard(5, highlight); break;
-					case 'C': background = new AnsiColor.Standard(6, highlight); break;
-					case 'W': background = new AnsiColor.Standard(7, highlight); break;
+					// 'h' before a background letter is SGR 1 (bold), not a bright background —
+					// terminals have no "bright background" attribute distinct from bold text.
+					case 'X': background = new AnsiColor.Standard(0, false); bold |= highlight; break;
+					case 'R': background = new AnsiColor.Standard(1, false); bold |= highlight; break;
+					case 'G': background = new AnsiColor.Standard(2, false); bold |= highlight; break;
+					case 'Y': background = new AnsiColor.Standard(3, false); bold |= highlight; break;
+					case 'B': background = new AnsiColor.Standard(4, false); bold |= highlight; break;
+					case 'M': background = new AnsiColor.Standard(5, false); bold |= highlight; break;
+					case 'C': background = new AnsiColor.Standard(6, false); bold |= highlight; break;
+					case 'W': background = new AnsiColor.Standard(7, false); bold |= highlight; break;
 				}
 			}
 		}
@@ -185,6 +192,7 @@ public static class AnsiCodeParser
 			foreground: foreground,
 			background: background,
 			blink: blink,
+			bold: bold,
 			clear: clear,
 			inverted: inverted,
 			underlined: underlined);

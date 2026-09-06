@@ -117,13 +117,23 @@ public class AnsiStyleTests
 	}
 
 	[Test]
-	public async Task Combine_OuterClear_IsNotInherited()
+	public async Task Combine_OuterClear_IsKept()
 	{
+		// Clear says "this run begins by resetting ambient SGR state" — a statement about the
+		// previous run, not something a fold may consume. An outer span that clears must still
+		// carry that reset after an inner span (that does not itself clear) is folded onto it.
 		var outer = new AnsiStyle { Clear = true, Foreground = Red };
 		var result = outer.Combine(new AnsiStyle { Bold = true });
-		await Assert.That(result.Clear).IsFalse();
+		await Assert.That(result.Clear).IsTrue();
 		await Assert.That(result.Foreground).IsEqualTo(Red);
 		await Assert.That(result.Bold).IsTrue();
+	}
+
+	[Test]
+	public async Task Combine_WithNone_KeepsClear()
+	{
+		var style = new AnsiStyle { Clear = true, Foreground = Red };
+		await Assert.That(style.Combine(AnsiStyle.None)).IsEqualTo(style);
 	}
 
 	[Test]
