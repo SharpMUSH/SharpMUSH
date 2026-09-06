@@ -62,24 +62,24 @@ public partial class Commands
 	/// This is engine bookkeeping, not a player write; routing it through the executor would
 	/// deny every mortal FOLLOW, DESERT, DISMISS and UNFOLLOW.
 	/// </remarks>
-	private static async ValueTask<OneOf<Success, Error<string>>> ClearFollowingAsync(
+	private async ValueTask<OneOf<Success, Error<string>>> ClearFollowingAsync(
 		AnySharpObject follower)
-		=> await AttributeService!.ClearAttributeAsync(await HelperFunctions.GetGod(Mediator!), follower,
+		=> await AttributeService.ClearAttributeAsync(await HelperFunctions.GetGod(Mediator), follower,
 			AttrFollowing, IAttributeService.AttributePatternMode.Exact);
 
 	/// <inheritdoc cref="ClearFollowingAsync"/>
-	private static async ValueTask<OneOf<Success, Error<string>>> SetFollowingAsync(
+	private async ValueTask<OneOf<Success, Error<string>>> SetFollowingAsync(
 		AnySharpObject follower, AnySharpObject leader)
-		=> await AttributeService!.SetAttributeAsync(await HelperFunctions.GetGod(Mediator!), follower,
+		=> await AttributeService.SetAttributeAsync(await HelperFunctions.GetGod(Mediator), follower,
 			AttrFollowing, MModule.single(leader.Object().DBRef.ToString()));
 
 
 	[SharpCommand(Name = "@CLOCK", Switches = ["JOIN", "SPEAK", "MOD", "SEE", "HIDE"], Behavior = CB.Default | CB.EqSplit,
 		MinArgs = 1, MaxArgs = 2, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> ChannelLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ChannelLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
@@ -93,8 +93,8 @@ public partial class Commands
 		// channel that does not exist, or @clock reports which names are taken. notify: true because the
 		// gate emits ONE refusal for both cases: suppressing it does not make the two cases more alike, it
 		// only makes a mistyped channel name fail in silence.
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService!, Mediator!,
-			NotifyService!, executor, channelName, notify: true);
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			NotifyService, executor, channelName, notify: true);
 
 		if (maybeChannel.IsError)
 		{
@@ -108,9 +108,9 @@ public partial class Commands
 		// any channel — and no channel has a ModLock, because CreateChannelCommand never writes one.
 		// ChannelCanModifyAsync now skips an unset lock rather than evaluating it; going through it means
 		// this command cannot drift away from that rule again.
-		if (!await PermissionService!.ChannelCanModifyAsync(executor, channel))
+		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -126,19 +126,19 @@ public partial class Commands
 
 		if (lockType is not ("JOIN" or "SPEAK" or "SEE" or "HIDE" or "MOD"))
 		{
-			await NotifyService!.Notify(executor, $"Invalid lock type: {lockType}", executor);
+			await NotifyService.Notify(executor, $"Invalid lock type: {lockType}", executor);
 			return new CallState(ErrorMessages.Returns.InvalidLockType);
 		}
 
-		await Mediator!.Send(updateCommand);
+		await Mediator.Send(updateCommand);
 
 		if (string.IsNullOrEmpty(lockKey))
 		{
-			await NotifyService!.Notify(executor, $"{lockType} lock removed from channel {channel.Name.ToPlainText()}.", executor);
+			await NotifyService.Notify(executor, $"{lockType} lock removed from channel {channel.Name.ToPlainText()}.", executor);
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"{lockType} lock set on channel {channel.Name.ToPlainText()}.", executor);
+			await NotifyService.Notify(executor, $"{lockType} lock set on channel {channel.Name.ToPlainText()}.", executor);
 		}
 
 		return CallState.Empty;
@@ -170,7 +170,7 @@ public partial class Commands
 	/// The order is load-bearing, not incidental: "f" reaches <c>functions</c> by prefix before it can
 	/// reach the exact-match-only <c>flags</c>, exactly as it does in PennMUSH.
 	/// </remarks>
-	private static ListKind? ResolveListKind(string argument)
+	private ListKind? ResolveListKind(string argument)
 	{
 		var arg = argument.Trim();
 		if (arg.Length == 0) return null;
@@ -196,9 +196,9 @@ public partial class Commands
 			"LOWERCASE", "MOTD", "LOCKS", "FLAGS", "FUNCTIONS", "POWERS", "COMMANDS", "ATTRIBS", "ALLOCATIONS", "ALL",
 			"BUILTIN", "LOCAL"
 		], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["type"])]
-	public static async ValueTask<Option<CallState>> List(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> List(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var useLowercase = switches.Contains("LOWERCASE");
 
@@ -220,7 +220,7 @@ public partial class Commands
 
 		if (kind is null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListNotUnderstood), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListNotUnderstood), executor);
 			return CallState.Empty;
 		}
 
@@ -228,10 +228,10 @@ public partial class Commands
 		{
 			var isWizard = await executor.IsWizard();
 
-			var motdFile = Configuration!.CurrentValue.Message.MessageOfTheDayFile;
+			var motdFile = Configuration.CurrentValue.Message.MessageOfTheDayFile;
 			var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
 
-			await NotifyService!.Notify(executor, "Current Message of the Day settings:", executor);
+			await NotifyService.Notify(executor, "Current Message of the Day settings:", executor);
 			await NotifyService.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}", executor);
 			await NotifyService.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}", executor);
 
@@ -259,7 +259,7 @@ public partial class Commands
 			output.AppendLine(headerLine);
 			output.AppendLine("-------------------- ------ -------------------");
 
-			var flags = Mediator!.CreateStream(new GetAllObjectFlagsQuery());
+			var flags = Mediator.CreateStream(new GetAllObjectFlagsQuery());
 			await foreach (var flag in flags)
 			{
 				var flagName = useLowercase ? flag.Name?.ToLower() ?? "" : flag.Name ?? "";
@@ -268,7 +268,7 @@ public partial class Commands
 				output.AppendLine($"{flagName,-20} {symbol,-6} {types}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -284,7 +284,7 @@ public partial class Commands
 			output.AppendLine(headerLine);
 			output.AppendLine("-------------------- ------ ------------------ -------------------");
 
-			var powers = Mediator!.CreateStream(new GetPowersQuery());
+			var powers = Mediator.CreateStream(new GetPowersQuery());
 			await foreach (var power in powers)
 			{
 				var powerName = useLowercase ? power.Name.ToLower() : power.Name;
@@ -294,7 +294,7 @@ public partial class Commands
 				output.AppendLine($"{powerName,-20} {power.Symbol,-6} {alias,-18} {types}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -311,7 +311,7 @@ public partial class Commands
 				output.AppendLine($"  {displayName}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -321,14 +321,14 @@ public partial class Commands
 			var header = useLowercase ? "Standard Attributes:" : "STANDARD ATTRIBUTES:";
 			output.AppendLine(header);
 
-			var attributes = Mediator!.CreateStream(new GetAllAttributeEntriesQuery());
+			var attributes = Mediator.CreateStream(new GetAllAttributeEntriesQuery());
 			await foreach (var attr in attributes.OrderBy(x => x.Name))
 			{
 				var attrName = useLowercase ? attr.Name.ToLower() : attr.Name;
 				output.AppendLine($"  {attrName}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -341,7 +341,7 @@ public partial class Commands
 			var filterBuiltin = switches.Contains("BUILTIN");
 			var filterLocal = switches.Contains("LOCAL");
 
-			var commandPairs = CommandLibrary!.AsEnumerable();
+			var commandPairs = CommandLibrary.AsEnumerable();
 
 			if (filterBuiltin && !filterLocal)
 			{
@@ -362,7 +362,7 @@ public partial class Commands
 				output.AppendLine($"  {displayName}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -375,7 +375,7 @@ public partial class Commands
 			var filterBuiltin = switches.Contains("BUILTIN");
 			var filterLocal = switches.Contains("LOCAL");
 
-			var functionPairs = FunctionLibrary!.AsEnumerable();
+			var functionPairs = FunctionLibrary.AsEnumerable();
 
 			if (filterBuiltin && !filterLocal)
 			{
@@ -396,7 +396,7 @@ public partial class Commands
 				output.AppendLine($"  {displayName}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -405,7 +405,7 @@ public partial class Commands
 			var isWizard = await executor.IsWizard();
 			if (!isWizard)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
@@ -416,7 +416,7 @@ public partial class Commands
 			output.AppendLine($"  GC Gen 1 Collections: {GC.CollectionCount(1)}");
 			output.AppendLine($"  GC Gen 2 Collections: {GC.CollectionCount(2)}");
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -426,14 +426,14 @@ public partial class Commands
 
 	[SharpCommand(Name = "@LOGWIPE", Switches = ["CHECK", "CMD", "CONN", "ERR", "TRACE", "WIZ", "ROTATE", "TRIM", "WIPE"],
 		Behavior = CB.Default | CB.NoGagged | CB.God, MinArgs = 0, MaxArgs = 0, ParameterNames = ["type"])]
-	public static async ValueTask<Option<CallState>> LogWipe(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> LogWipe(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 
 		if (!executor.IsGod())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -445,20 +445,20 @@ public partial class Commands
 
 		if (specifiedLogType == null && specifiedAction == "CHECK")
 		{
-			await NotifyService!.Notify(executor, "Log Management Status:", executor);
-			await NotifyService!.Notify(executor, "  SharpMUSH uses .NET logging infrastructure", executor);
-			await NotifyService!.Notify(executor, "  Logs are managed by configured logging providers", executor);
-			await NotifyService!.Notify(executor, "  Available log types: CMD, CONN, ERR, TRACE, WIZ", executor);
-			await NotifyService!.Notify(executor, "  Available actions: ROTATE, TRIM, WIPE", executor);
-			await NotifyService!.Notify(executor, "  Note: Direct log file manipulation not yet implemented", executor);
+			await NotifyService.Notify(executor, "Log Management Status:", executor);
+			await NotifyService.Notify(executor, "  SharpMUSH uses .NET logging infrastructure", executor);
+			await NotifyService.Notify(executor, "  Logs are managed by configured logging providers", executor);
+			await NotifyService.Notify(executor, "  Available log types: CMD, CONN, ERR, TRACE, WIZ", executor);
+			await NotifyService.Notify(executor, "  Available actions: ROTATE, TRIM, WIPE", executor);
+			await NotifyService.Notify(executor, "  Note: Direct log file manipulation not yet implemented", executor);
 			Logger?.LogInformation("@LOGWIPE/CHECK executed by {Executor}", executor.Object().Name);
 		}
 		else
 		{
 			var logDesc = specifiedLogType ?? "all logs";
-			await NotifyService!.Notify(executor, $"@LOGWIPE/{specifiedAction}: Would {specifiedAction.ToLower()} {logDesc}", executor);
-			await NotifyService!.Notify(executor, "Direct log file manipulation not yet implemented.", executor);
-			await NotifyService!.Notify(executor, "Configure log rotation through appsettings.json or hosting provider.", executor);
+			await NotifyService.Notify(executor, $"@LOGWIPE/{specifiedAction}: Would {specifiedAction.ToLower()} {logDesc}", executor);
+			await NotifyService.Notify(executor, "Direct log file manipulation not yet implemented.", executor);
+			await NotifyService.Notify(executor, "Configure log rotation through appsettings.json or hosting provider.", executor);
 			Logger?.LogWarning("@LOGWIPE/{Action} requested for {LogType} by {Executor} - not implemented",
 				specifiedAction, logDesc, executor.Object().Name);
 		}
@@ -468,10 +468,10 @@ public partial class Commands
 
 	[SharpCommand(Name = "@LSET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
 		MaxArgs = 2, ParameterNames = ["list", "position", "value"])]
-	public static async ValueTask<Option<CallState>> LockSet(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> LockSet(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		var objectLock = args["0"].Message!.ToPlainText();
@@ -480,7 +480,7 @@ public partial class Commands
 		var slashIndex = objectLock.LastIndexOf('/');
 		if (slashIndex == -1)
 		{
-			await NotifyService!.Notify(executor, "Invalid format. Use: @lset <object>/<lock type>=[!]<flag>", executor);
+			await NotifyService.Notify(executor, "Invalid format. Use: @lset <object>/<lock type>=[!]<flag>", executor);
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
@@ -490,19 +490,19 @@ public partial class Commands
 		var isClearing = flagValue.StartsWith('!');
 		var flagName = isClearing ? flagValue[1..] : flagValue;
 
-		if (!LockService!.LockPrivileges.TryGetValue(flagName.ToLower(), out var flagInfo))
+		if (!LockService.LockPrivileges.TryGetValue(flagName.ToLower(), out var flagInfo))
 		{
-			await NotifyService!.Notify(executor, $"Invalid flag: {flagName}", executor);
+			await NotifyService.Notify(executor, $"Invalid flag: {flagName}", executor);
 			return new CallState(ErrorMessages.Returns.InvalidFlag);
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, objectName, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -513,7 +513,7 @@ public partial class Commands
 					.FirstOrDefault(k => string.Equals(k, lockType, StringComparison.OrdinalIgnoreCase));
 				if (lockKey == null || !obj.Object().Locks.TryGetValue(lockKey, out var lockData))
 				{
-					await NotifyService!.Notify(executor, $"No such lock: {lockType}", executor);
+					await NotifyService.Notify(executor, $"No such lock: {lockType}", executor);
 					return new CallState(ErrorMessages.Returns.NoSuchLock);
 				}
 
@@ -524,9 +524,9 @@ public partial class Commands
 
 				var updatedLockData = new Library.Models.SharpLockData(lockData.LockString, newFlags);
 
-				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, updatedLockData.LockString));
+				await Mediator.Send(new SetLockCommand(obj.Object(), lockType, updatedLockData.LockString));
 
-				await NotifyService!.Notify(executor, $"Flag {flagName} {(isClearing ? "cleared" : "set")} on {lockType} lock.", executor);
+				await NotifyService.Notify(executor, $"Flag {flagName} {(isClearing ? "cleared" : "set")} on {lockType} lock.", executor);
 				return CallState.Empty;
 			}
 		);
@@ -538,15 +538,15 @@ public partial class Commands
 			"SET", "CREATE", "DESTROY", "DESCRIBE", "RENAME", "STATS", "CHOWN", "NUKE", "ADD", "REMOVE", "LIST", "ALL", "WHO",
 			"MEMBERS", "USEFLAG", "SEEFLAG"
 		], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["alias", "list"])]
-	public static async ValueTask<Option<CallState>> MailAlias(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> MailAlias(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 
 		var action = switches.FirstOrDefault() ?? "LIST";
 
-		await NotifyService!.Notify(executor, $"@MALIAS/{action}: Mail alias system not yet implemented.", executor);
-		await NotifyService!.Notify(executor, "This command would manage mail distribution lists and aliases.", executor);
+		await NotifyService.Notify(executor, $"@MALIAS/{action}: Mail alias system not yet implemented.", executor);
+		await NotifyService.Notify(executor, "This command would manage mail distribution lists and aliases.", executor);
 
 		return CallState.Empty;
 	}
@@ -565,9 +565,9 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "@SOCKSET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSArgs,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = ["socket", "option", "value"])]
-	public static async ValueTask<Option<CallState>> SocketSet(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> SocketSet(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var isWizard = await executor.IsWizard();
 
@@ -576,7 +576,7 @@ public partial class Commands
 		var target = await ResolveSocksetTarget(parser, executor, descriptorArg, isWizard);
 		if (target is null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SocksetInvalidDescriptor), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SocksetInvalidDescriptor), executor);
 			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
@@ -586,7 +586,7 @@ public partial class Commands
 
 		if (!isOwnDescriptor && !isWizard)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -599,21 +599,21 @@ public partial class Commands
 
 		if (pairs.Length == 0)
 		{
-			await NotifyService!.Notify(executor, SocketOptions.Show(target, "\n"), executor);
+			await NotifyService.Notify(executor, SocketOptions.Show(target, "\n"), executor);
 			return CallState.Empty;
 		}
 
 		for (var i = 0; i + 1 < pairs.Length; i += 2)
 		{
 			var result = SocketOptions.Set(target, pairs[i], pairs[i + 1]);
-			await NotifyService!.NotifyLocalized(executor, result.Key, result.Arguments);
+			await NotifyService.NotifyLocalized(executor, result.Key, result.Arguments);
 		}
 
 		// An odd trailing element means the last option arrived without a value; PennMUSH answers the
 		// same way it answers an empty option name.
 		if (pairs.Length % 2 != 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SocksetSetWhatOption), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SocksetSetWhatOption), executor);
 		}
 
 		return CallState.Empty;
@@ -630,7 +630,7 @@ public partial class Commands
 	/// permission error: refusing by permission would tell a mortal which handle numbers are live.
 	/// </para>
 	/// </summary>
-	private static async ValueTask<IConnectionService.ConnectionData?> ResolveSocksetTarget(
+	private async ValueTask<IConnectionService.ConnectionData?> ResolveSocksetTarget(
 		IMUSHCodeParser parser, AnySharpObject executor, string descriptorArg, bool isWizard)
 	{
 		if (descriptorArg.Length == 0)
@@ -640,14 +640,14 @@ public partial class Commands
 
 		if (long.TryParse(descriptorArg, out var handle))
 		{
-			var connection = ConnectionService!.Get(handle);
+			var connection = ConnectionService.Get(handle);
 
 			return connection is not null && (isWizard || connection.Ref == executor.Object().DBRef)
 				? connection
 				: null;
 		}
 
-		var player = await Mediator!.CreateStream(new GetPlayerQuery(descriptorArg)).FirstOrDefaultAsync();
+		var player = await Mediator.CreateStream(new GetPlayerQuery(descriptorArg)).FirstOrDefaultAsync();
 		if (player is null) return null;
 
 		var playerRef = new DBRef(player.Object.Key, player.Object.CreationTime);
@@ -657,11 +657,11 @@ public partial class Commands
 			: null;
 	}
 
-	private static async ValueTask<IConnectionService.ConnectionData?> LeastIdleConnection(DBRef who)
+	private async ValueTask<IConnectionService.ConnectionData?> LeastIdleConnection(DBRef who)
 	{
 		IConnectionService.ConnectionData? best = null;
 
-		await foreach (var connection in ConnectionService!.Get(who))
+		await foreach (var connection in ConnectionService.Get(who))
 		{
 			if (best is null || (connection.Idle ?? TimeSpan.MaxValue) < (best.Idle ?? TimeSpan.MaxValue))
 			{
@@ -674,54 +674,54 @@ public partial class Commands
 
 	[SharpCommand(Name = "@SLAVE", Switches = ["RESTART"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
 		MinArgs = 0, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Slave(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Slave(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		await NotifyService!.Notify(executor, "Slave command does nothing for SharpMUSH.", executor);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		await NotifyService.Notify(executor, "Slave command does nothing for SharpMUSH.", executor);
 		return new None();
 	}
 
 	[SharpCommand(Name = "@UNRECYCLE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> UnRecycle(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> UnRecycle(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		await NotifyService!.Notify(executor, "@UNRECYCLE: Object recovery system not yet implemented.", executor);
-		await NotifyService!.Notify(executor, "This command would restore objects from the recycle bin.", executor);
+		await NotifyService.Notify(executor, "@UNRECYCLE: Object recovery system not yet implemented.", executor);
+		await NotifyService.Notify(executor, "This command would restore objects from the recycle bin.", executor);
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@WARNINGS", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Warnings(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Warnings(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message?.ToString()))
 		{
-			await NotifyService!.Notify(executor, "Usage: @warnings <object>=<warning list>", executor);
-			await NotifyService!.Notify(executor, "Available warnings: none, serious, normal, extra, all", executor);
-			await NotifyService!.Notify(executor, "Individual: exit-unlinked, exit-oneway, exit-multiple, exit-msgs, exit-desc,", executor);
-			await NotifyService!.Notify(executor, "           thing-msgs, thing-desc, room-desc, my-desc, lock-checks", executor);
-			await NotifyService!.Notify(executor, "Use !warning to negate (e.g., 'all !exit-desc')", executor);
+			await NotifyService.Notify(executor, "Usage: @warnings <object>=<warning list>", executor);
+			await NotifyService.Notify(executor, "Available warnings: none, serious, normal, extra, all", executor);
+			await NotifyService.Notify(executor, "Individual: exit-unlinked, exit-oneway, exit-multiple, exit-msgs, exit-desc,", executor);
+			await NotifyService.Notify(executor, "           thing-msgs, thing-desc, room-desc, my-desc, lock-checks", executor);
+			await NotifyService.Notify(executor, "Use !warning to negate (e.g., 'all !exit-desc')", executor);
 			return CallState.Empty;
 		}
 
 		if (!args.TryGetValue("1", out var warningListArg))
 		{
-			await NotifyService!.Notify(executor, "Usage: @warnings <object>=<warning list>", executor);
+			await NotifyService.Notify(executor, "Usage: @warnings <object>=<warning list>", executor);
 			return CallState.Empty;
 		}
 
 		var objectString = objectArg.Message?.ToString() ?? string.Empty;
-		var target = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectString,
+		var target = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectString,
 			LocateFlags.All);
 
 		if (target.IsError)
@@ -731,9 +731,9 @@ public partial class Commands
 
 		var targetObj = target.AsSharpObject.Object();
 
-		if (!await PermissionService!.Controls(executor, target.AsSharpObject))
+		if (!await PermissionService.Controls(executor, target.AsSharpObject))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -743,21 +743,21 @@ public partial class Commands
 
 		foreach (var unknown in unknownWarnings)
 		{
-			await NotifyService!.Notify(executor, $"Unknown warning: {unknown}", executor);
+			await NotifyService.Notify(executor, $"Unknown warning: {unknown}", executor);
 		}
 
 		var oldWarnings = targetObj.Warnings;
 
-		await Mediator!.Send(new SetObjectWarningsCommand(target.AsSharpObject, newWarnings));
+		await Mediator.Send(new SetObjectWarningsCommand(target.AsSharpObject, newWarnings));
 
 		if (newWarnings != WarningType.None)
 		{
 			var warningString = WarningTypeHelper.UnparseWarnings(newWarnings);
-			await NotifyService!.Notify(executor, $"Warnings set to: {warningString}", executor);
+			await NotifyService.Notify(executor, $"Warnings set to: {warningString}", executor);
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Warnings cleared.", executor);
+			await NotifyService.Notify(executor, "Warnings cleared.", executor);
 		}
 
 		Logger?.LogInformation("@WARNINGS: {Executor} set warnings on {Target} from {Old} to {New}",
@@ -767,9 +767,9 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@WCHECK", Switches = ["ALL", "ME"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> WizardCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> WizardCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
@@ -780,21 +780,21 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "You'd better check your wizbit first.", executor);
+				await NotifyService.Notify(executor, "You'd better check your wizbit first.", executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			await NotifyService!.Notify(executor, "Running database topology warning checks...", executor);
-			var checkedCount = await WarningService!.CheckAllObjectsAsync();
-			await NotifyService!.Notify(executor, $"Warning checks complete. Checked {checkedCount} objects.", executor);
+			await NotifyService.Notify(executor, "Running database topology warning checks...", executor);
+			var checkedCount = await WarningService.CheckAllObjectsAsync();
+			await NotifyService.Notify(executor, $"Warning checks complete. Checked {checkedCount} objects.", executor);
 
 			Logger?.LogInformation("@WCHECK/ALL executed by {Executor}, checked {Count} objects",
 				executor.Object().Name, checkedCount);
 		}
 		else if (checkMe)
 		{
-			await NotifyService!.Notify(executor, "Checking objects you own...", executor);
-			var warningCount = await WarningService!.CheckOwnedObjectsAsync(executor);
+			await NotifyService.Notify(executor, "Checking objects you own...", executor);
+			var warningCount = await WarningService.CheckOwnedObjectsAsync(executor);
 
 			Logger?.LogInformation("@WCHECK/ME executed by {Executor}, found {Count} warnings",
 				executor.Object().Name, warningCount);
@@ -803,12 +803,12 @@ public partial class Commands
 		{
 			if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message?.ToString()))
 			{
-				await NotifyService!.Notify(executor, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all", executor);
+				await NotifyService.Notify(executor, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all", executor);
 				return CallState.Empty;
 			}
 
 			var objectString = objectArg.Message?.ToString() ?? string.Empty;
-			var target = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectString,
+			var target = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectString,
 				LocateFlags.All);
 
 			if (target.IsError)
@@ -821,12 +821,12 @@ public partial class Commands
 
 			if (!(await executor.IsSee_All() || targetOwner.Object.DBRef.Equals(executor.Object().DBRef)))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			await WarningService!.CheckObjectAsync(executor, target.AsSharpObject);
-			await NotifyService!.Notify(executor, "@wcheck complete.", executor);
+			await WarningService.CheckObjectAsync(executor, target.AsSharpObject);
+			await NotifyService.Notify(executor, "@wcheck complete.", executor);
 
 			Logger?.LogInformation("@WCHECK executed by {Executor} on {Target}",
 				executor.Object().Name, targetObj.Name);
@@ -836,34 +836,34 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "BUY", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 3, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Buy(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Buy(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		var itemName = args["0"].Message!.ToPlainText();
-		await NotifyService!.Notify(executor, $"You try to buy '{itemName}'.", executor);
-		await NotifyService!.Notify(executor, "The BUY command requires a full economy system implementation.", executor);
-		await NotifyService!.Notify(executor, "Features needed: PRICELIST attribute parsing, @lock/pay checking, penny transfers.", executor);
+		await NotifyService.Notify(executor, $"You try to buy '{itemName}'.", executor);
+		await NotifyService.Notify(executor, "The BUY command requires a full economy system implementation.", executor);
+		await NotifyService.Notify(executor, "Features needed: PRICELIST attribute parsing, @lock/pay checking, penny transfers.", executor);
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "BRIEF", Switches = ["OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> Brief(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Brief(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		AnyOptionalSharpObject viewing;
 
 		if (args.Count == 1)
 		{
 			var argText = args["0"].Message!.ToString();
 
-			var locate = await LocateService!.LocateAndNotifyIfInvalid(
+			var locate = await LocateService.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
@@ -881,7 +881,7 @@ public partial class Commands
 		}
 		else
 		{
-			viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
+			viewing = (await Mediator.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
 		}
 
 		if (viewing.IsNone())
@@ -891,19 +891,19 @@ public partial class Commands
 
 		var viewingKnown = viewing.Known();
 
-		var canExamine = await PermissionService!.CanExamine(executor, viewingKnown);
+		var canExamine = await PermissionService.CanExamine(executor, viewingKnown);
 
 		if (!canExamine)
 		{
 			var limitedObj = viewingKnown.Object();
 			var limitedOwnerObj = (await limitedObj.Owner.WithCancellation(CancellationToken.None)).Object;
-			await NotifyService!.Notify(enactor, $"{limitedObj.Name} is owned by {limitedOwnerObj.Name}.", enactor);
+			await NotifyService.Notify(enactor, $"{limitedObj.Name} is owned by {limitedOwnerObj.Name}.", enactor);
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
 		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
-			: await Mediator!.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
+			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
 				.ToArrayAsync();
 
 		var obj = viewingKnown.Object()!;
@@ -917,7 +917,7 @@ public partial class Commands
 
 		var outputSections = new List<MString>();
 
-		var showFlags = Configuration!.CurrentValue.Cosmetic.FlagsOnExamine;
+		var showFlags = Configuration.CurrentValue.Cosmetic.FlagsOnExamine;
 		var nameRow = showFlags
 			? MModule.multiple([
 				name.Hilight(),
@@ -952,7 +952,7 @@ public partial class Commands
 				{
 					var lockName = kvp.Key;
 					var lockData = kvp.Value;
-					var flagsStr = LockService!.FormatLockFlags(lockData.Flags);
+					var flagsStr = LockService.FormatLockFlags(lockData.Flags);
 					var flagsDisplay = string.IsNullOrEmpty(flagsStr) ? "" : $"[{flagsStr}]";
 					return $"{lockName}{flagsDisplay}: {lockData.LockString}";
 				})
@@ -982,15 +982,15 @@ public partial class Commands
 
 		outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}"));
 
-		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections), enactor);
+		await NotifyService.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections), enactor);
 
 		if (!switches.Contains("OPAQUE") && contents.Length > 0)
 		{
 			var contentNames = contents.Select(x => x.Object().Name);
-			await NotifyService!.Notify(enactor, $"Contents:", enactor);
+			await NotifyService.Notify(enactor, $"Contents:", enactor);
 			foreach (var contentName in contentNames)
 			{
-				await NotifyService!.Notify(enactor, $"  {contentName}", enactor);
+				await NotifyService.Notify(enactor, $"  {contentName}", enactor);
 			}
 		}
 
@@ -998,9 +998,9 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "DESERT", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 1, ParameterNames = ["follower"])]
-	public static async ValueTask<Option<CallState>> Desert(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Desert(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
@@ -1008,11 +1008,11 @@ public partial class Commands
 			var selfCleared = await ClearFollowingAsync(executor);
 			if (selfCleared.IsT1)
 			{
-				await NotifyService!.Notify(executor, selfCleared.AsT1.Value, executor);
+				await NotifyService.Notify(executor, selfCleared.AsT1.Value, executor);
 				return CallState.Empty;
 			}
 
-			var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
+			var allObjects = Mediator.CreateStream(new GetAllObjectsQuery());
 			var executorDbref = executor.Object().DBRef.ToString();
 
 			await foreach (var obj in allObjects)
@@ -1022,7 +1022,7 @@ public partial class Commands
 				{
 					if (attr.LongName == AttrFollowing && attr.Value.ToPlainText() == executorDbref)
 					{
-						var locateResult = await LocateService!.Locate(parser, executor, executor,
+						var locateResult = await LocateService.Locate(parser, executor, executor,
 							obj.DBRef.ToString(), LocateFlags.All);
 						if (locateResult.IsValid())
 						{
@@ -1034,24 +1034,24 @@ public partial class Commands
 				}
 			}
 
-			await NotifyService!.Notify(executor, "You stop following and dismiss all followers.", executor);
+			await NotifyService.Notify(executor, "You stop following and dismiss all followers.", executor);
 			return CallState.Empty;
 		}
 
 		var targetName = args["0"].Message!.ToPlainText();
 
-		var targetResult = await LocateService!.LocateAndNotifyIfInvalid(
+		var targetResult = await LocateService.LocateAndNotifyIfInvalid(
 			parser, executor, executor, targetName, LocateFlags.All);
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
 		var target = targetResult.WithoutError().WithoutNone();
 
-		var followingAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrFollowing,
+		var followingAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrFollowing,
 			IAttributeService.AttributeMode.Read, false);
 
 		if (followingAttr.IsAttribute)
@@ -1062,15 +1062,15 @@ public partial class Commands
 				var cleared = await ClearFollowingAsync(executor);
 				if (cleared.IsT1)
 				{
-					await NotifyService!.Notify(executor, cleared.AsT1.Value, executor);
+					await NotifyService.Notify(executor, cleared.AsT1.Value, executor);
 					return CallState.Empty;
 				}
 
-				await NotifyService!.Notify(executor, $"You stop following {target.Object().Name}.", executor);
+				await NotifyService.Notify(executor, $"You stop following {target.Object().Name}.", executor);
 			}
 		}
 
-		var targetFollowingAttr = await AttributeService!.GetAttributeAsync(executor, target, AttrFollowing,
+		var targetFollowingAttr = await AttributeService.GetAttributeAsync(executor, target, AttrFollowing,
 			IAttributeService.AttributeMode.Read, false);
 
 		if (targetFollowingAttr.IsAttribute)
@@ -1081,12 +1081,12 @@ public partial class Commands
 				var dismissed = await ClearFollowingAsync(target);
 				if (dismissed.IsT1)
 				{
-					await NotifyService!.Notify(executor, dismissed.AsT1.Value, executor);
+					await NotifyService.Notify(executor, dismissed.AsT1.Value, executor);
 					return CallState.Empty;
 				}
 
-				await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
-				await NotifyService!.Notify(target, $"{executor.Object().Name} deserts you. You stop following.");
+				await NotifyService.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
+				await NotifyService.Notify(target, $"{executor.Object().Name} deserts you. You stop following.");
 			}
 		}
 
@@ -1094,14 +1094,14 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "DISMISS", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Dismiss(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Dismiss(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
+			var allObjects = Mediator.CreateStream(new GetAllObjectsQuery());
 			var dismissedCount = 0;
 			var executorDbref = executor.Object().DBRef.ToString();
 
@@ -1112,7 +1112,7 @@ public partial class Commands
 				{
 					if (attr.LongName == AttrFollowing && attr.Value.ToPlainText() == executorDbref)
 					{
-						var locateResult = await LocateService!.Locate(parser, executor, executor,
+						var locateResult = await LocateService.Locate(parser, executor, executor,
 							obj.DBRef.ToString(), LocateFlags.All);
 						if (locateResult.IsValid())
 						{
@@ -1122,7 +1122,7 @@ public partial class Commands
 								continue;
 							}
 
-							await NotifyService!.Notify(objAny, $"{executor.Object().Name} dismisses you. You stop following.");
+							await NotifyService.Notify(objAny, $"{executor.Object().Name} dismisses you. You stop following.");
 							dismissedCount++;
 						}
 						break;
@@ -1130,65 +1130,65 @@ public partial class Commands
 				}
 			}
 
-			await NotifyService!.Notify(executor, $"You dismiss all your followers. ({dismissedCount} dismissed)", executor);
+			await NotifyService.Notify(executor, $"You dismiss all your followers. ({dismissedCount} dismissed)", executor);
 			return CallState.Empty;
 		}
 
 		var targetName = args["0"].Message!.ToPlainText();
 
-		var targetResult = await LocateService!.LocateAndNotifyIfInvalid(
+		var targetResult = await LocateService.LocateAndNotifyIfInvalid(
 			parser, executor, executor, targetName, LocateFlags.All);
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
 		var target = targetResult.WithoutError().WithoutNone();
 
-		var followingAttr = await AttributeService!.GetAttributeAsync(executor, target, AttrFollowing,
+		var followingAttr = await AttributeService.GetAttributeAsync(executor, target, AttrFollowing,
 			IAttributeService.AttributeMode.Read, false);
 
 		if (followingAttr.IsNone || followingAttr.IsError)
 		{
-			await NotifyService!.Notify(executor, $"{target.Object().Name} is not following you.", executor);
+			await NotifyService.Notify(executor, $"{target.Object().Name} is not following you.", executor);
 			return CallState.Empty;
 		}
 
 		var followingDbref = followingAttr.AsAttribute.Last().Value.ToPlainText();
 		if (followingDbref != executor.Object().DBRef.ToString())
 		{
-			await NotifyService!.Notify(executor, $"{target.Object().Name} is not following you.", executor);
+			await NotifyService.Notify(executor, $"{target.Object().Name} is not following you.", executor);
 			return CallState.Empty;
 		}
 
 		var targetDismissed = await ClearFollowingAsync(target);
 		if (targetDismissed.IsT1)
 		{
-			await NotifyService!.Notify(executor, targetDismissed.AsT1.Value, executor);
+			await NotifyService.Notify(executor, targetDismissed.AsT1.Value, executor);
 			return CallState.Empty;
 		}
 
-		await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
-		await NotifyService!.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.");
+		await NotifyService.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
+		await NotifyService.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.");
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "DROP", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Drop(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Drop(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var objectName = args["0"].Message!.ToPlainText();
 
-		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
+		var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
 
 		if (!locateResult.IsValid() || locateResult.IsRoom || locateResult.IsExit)
 		{
-			await NotifyService!.Notify(executor, "You can't drop that.", executor);
+			await NotifyService.Notify(executor, "You can't drop that.", executor);
 			return CallState.Empty;
 		}
 
@@ -1205,27 +1205,27 @@ public partial class Commands
 
 		if (!isCarrying)
 		{
-			await NotifyService!.Notify(executor, "You aren't carrying that.", executor);
+			await NotifyService.Notify(executor, "You aren't carrying that.", executor);
 			return CallState.Empty;
 		}
 
 		var currentRoom = executorLocation;
 
-		if (!LockService!.Evaluate(LockType.Drop, objectToDrop, executor))
+		if (!LockService.Evaluate(LockType.Drop, objectToDrop, executor))
 		{
-			await NotifyService!.Notify(executor, "You can't drop that.", executor);
+			await NotifyService.Notify(executor, "You can't drop that.", executor);
 			return CallState.Empty;
 		}
 
-		if (!LockService!.Evaluate(LockType.DropIn, currentRoom.WithExitOption(), objectToDrop))
+		if (!LockService.Evaluate(LockType.DropIn, currentRoom.WithExitOption(), objectToDrop))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantSeemToDropThingsHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantSeemToDropThingsHere), executor);
 			return CallState.Empty;
 		}
 
 		// Move object to current location using MoveService for proper hook triggering
 		var contentToDrop = objectToDrop.AsContent;
-		var moveResult = await MoveService!.ExecuteMoveAsync(
+		var moveResult = await MoveService.ExecuteMoveAsync(
 			parser,
 			contentToDrop,
 			currentRoom,
@@ -1235,27 +1235,27 @@ public partial class Commands
 
 		if (moveResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
+			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
 			return CallState.Empty;
 		}
 
-		var dropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, AttrDrop, IAttributeService.AttributeMode.Read, true);
+		var dropAttr = await AttributeService.GetAttributeAsync(executor, objectToDrop, AttrDrop, IAttributeService.AttributeMode.Read, true);
 		if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
 		{
 			var dropMsg = dropAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(dropMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, dropMsg, executor);
+				await NotifyService.Notify(executor, dropMsg, executor);
 			}
 		}
 
-		var odropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, AttrODrop, IAttributeService.AttributeMode.Read, true);
+		var odropAttr = await AttributeService.GetAttributeAsync(executor, objectToDrop, AttrODrop, IAttributeService.AttributeMode.Read, true);
 		if (odropAttr.IsAttribute && odropAttr.AsT0.Length > 0)
 		{
 			var odropMsg = odropAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(odropMsg.ToPlainText()))
 			{
-				await CommunicationService!.SendToRoomAsync(
+				await CommunicationService.SendToRoomAsync(
 					executor,
 					currentRoom,
 					_ => odropMsg,
@@ -1265,7 +1265,7 @@ public partial class Commands
 		}
 
 		// Executor = the dropped object; enactor = the player who dropped it (PennMUSH @a* semantics)
-		var adropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, AttrADrop, IAttributeService.AttributeMode.Read, true);
+		var adropAttr = await AttributeService.GetAttributeAsync(executor, objectToDrop, AttrADrop, IAttributeService.AttributeMode.Read, true);
 		if (adropAttr.IsAttribute && adropAttr.AsT0.Length > 0)
 		{
 			var adropActions = adropAttr.AsT0[0].Value;
@@ -1284,7 +1284,7 @@ public partial class Commands
 
 			if (!dropToLocation.IsT3) // Not None
 			{
-				if (LockService!.Evaluate(LockType.DropTo, room, objectToDrop))
+				if (LockService.Evaluate(LockType.DropTo, room, objectToDrop))
 				{
 					var dropToContainer = dropToLocation.Match<AnySharpContainer>(
 						player => player,
@@ -1292,44 +1292,44 @@ public partial class Commands
 						thing => thing,
 						_ => currentRoom);
 
-					if (await MoveService!.WouldCreateLoop(contentToDrop, dropToContainer))
+					if (await MoveService.WouldCreateLoop(contentToDrop, dropToContainer))
 					{
-						await NotifyService!.Notify(executor, $"Cannot drop {objectToDrop.Object().Name} there - it would create a containment loop.", executor);
+						await NotifyService.Notify(executor, $"Cannot drop {objectToDrop.Object().Name} there - it would create a containment loop.", executor);
 						return CallState.Empty;
 					}
 
-					await Mediator!.Send(new MoveObjectCommand(contentToDrop, dropToContainer));
+					await Mediator.Send(new MoveObjectCommand(contentToDrop, dropToContainer));
 
-					await NotifyService!.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.", executor);
+					await NotifyService.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.", executor);
 					return CallState.Empty;
 				}
 			}
 		}
 
-		await NotifyService!.Notify(executor, "Dropped.", executor);
+		await NotifyService.Notify(executor, "Dropped.", executor);
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "EMPTY", Switches = [], CommandLock = "(TYPE^PLAYER|TYPE^THING)&!FLAG^GAGGED",
 		Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Empty(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Empty(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var objectName = args["0"].Message!.ToPlainText();
 
 		if (string.IsNullOrWhiteSpace(objectName))
 		{
-			await NotifyService!.Notify(executor, "Empty what?", executor);
+			await NotifyService.Notify(executor, "Empty what?", executor);
 			return CallState.Empty;
 		}
 
-		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
+		var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
 
 		if (!locateResult.IsValid())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1337,7 +1337,7 @@ public partial class Commands
 
 		if (!objectToEmpty.IsThing && !objectToEmpty.IsPlayer)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantEmptyThatFromHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantEmptyThatFromHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1357,25 +1357,25 @@ public partial class Commands
 
 		if (!isHolding && !sameLocation)
 		{
-			await NotifyService!.Notify(executor, "You must be holding that object or in the same location as it.", executor);
+			await NotifyService.Notify(executor, "You must be holding that object or in the same location as it.", executor);
 			return CallState.Empty;
 		}
 
 		var objectFlags = await objectToEmpty.Object().Flags.Value.ToArrayAsync();
 		var hasEnterOk = objectFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
 
-		if (!hasEnterOk && !await PermissionService!.Controls(executor, objectToEmpty))
+		if (!hasEnterOk && !await PermissionService.Controls(executor, objectToEmpty))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
 		var container = objectToEmpty.AsContainer;
-		var contents = await container.Content(Mediator!).ToListAsync();
+		var contents = await container.Content(Mediator).ToListAsync();
 
 		if (contents.Count == 0)
 		{
-			await NotifyService!.Notify(executor, $"{objectToEmpty.Object().Name} is already empty.", executor);
+			await NotifyService.Notify(executor, $"{objectToEmpty.Object().Name} is already empty.", executor);
 			return CallState.Empty;
 		}
 
@@ -1402,13 +1402,13 @@ public partial class Commands
 				continue;
 			}
 
-			if (!LockService!.Evaluate(LockType.Basic, itemObj, executor))
+			if (!LockService.Evaluate(LockType.Basic, itemObj, executor))
 			{
 				failedCount++;
 				continue;
 			}
 
-			if (!LockService!.Evaluate(LockType.Take, container.WithExitOption(), executor))
+			if (!LockService.Evaluate(LockType.Take, container.WithExitOption(), executor))
 			{
 				failedCount++;
 				continue;
@@ -1416,26 +1416,26 @@ public partial class Commands
 
 			if (isHolding)
 			{
-				if (await MoveService!.WouldCreateLoop(itemObj.AsContent, destination))
+				if (await MoveService.WouldCreateLoop(itemObj.AsContent, destination))
 				{
 					failedCount++;
 					continue;
 				}
 
-				await Mediator!.Send(new MoveObjectCommand(itemObj.AsContent, destination));
+				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, destination));
 
-				var successAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
+				var successAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
 				if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
 				{
 					var successMsg = successAttr.AsT0[0].Value;
 					if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
 					{
-						await NotifyService!.Notify(executor, successMsg, executor);
+						await NotifyService.Notify(executor, successMsg, executor);
 					}
 				}
 
 				// Executor = the item being picked up; enactor = player (PennMUSH @a* semantics)
-				var asuccessAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrASuccess, IAttributeService.AttributeMode.Read, true);
+				var asuccessAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrASuccess, IAttributeService.AttributeMode.Read, true);
 				if (asuccessAttr.IsAttribute && asuccessAttr.AsT0.Length > 0)
 				{
 					var asuccessActions = asuccessAttr.AsT0[0].Value;
@@ -1452,56 +1452,56 @@ public partial class Commands
 			else
 			{
 				// If in same location, temporarily move to inventory then drop (like GET then DROP)
-				if (await MoveService!.WouldCreateLoop(itemObj.AsContent, executor.AsContainer))
+				if (await MoveService.WouldCreateLoop(itemObj.AsContent, executor.AsContainer))
 				{
 					failedCount++;
 					continue;
 				}
 
-				await Mediator!.Send(new MoveObjectCommand(itemObj.AsContent, executor.AsContainer));
+				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, executor.AsContainer));
 
-				var successAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
+				var successAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
 				if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
 				{
 					var successMsg = successAttr.AsT0[0].Value;
 					if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
 					{
-						await NotifyService!.Notify(executor, successMsg, executor);
+						await NotifyService.Notify(executor, successMsg, executor);
 					}
 				}
 
-				if (!LockService!.Evaluate(LockType.Drop, itemObj, executor))
+				if (!LockService.Evaluate(LockType.Drop, itemObj, executor))
 				{
 					failedCount++;
 					continue;
 				}
 
-				if (!LockService!.Evaluate(LockType.DropIn, destination.WithExitOption(), itemObj))
+				if (!LockService.Evaluate(LockType.DropIn, destination.WithExitOption(), itemObj))
 				{
 					failedCount++;
 					continue;
 				}
 
-				if (await MoveService!.WouldCreateLoop(itemObj.AsContent, destination))
+				if (await MoveService.WouldCreateLoop(itemObj.AsContent, destination))
 				{
 					failedCount++;
 					continue;
 				}
 
-				await Mediator!.Send(new MoveObjectCommand(itemObj.AsContent, destination));
+				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, destination));
 
-				var dropAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrDrop, IAttributeService.AttributeMode.Read, true);
+				var dropAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrDrop, IAttributeService.AttributeMode.Read, true);
 				if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
 				{
 					var dropMsg = dropAttr.AsT0[0].Value;
 					if (!string.IsNullOrEmpty(dropMsg.ToPlainText()))
 					{
-						await NotifyService!.Notify(executor, dropMsg, executor);
+						await NotifyService.Notify(executor, dropMsg, executor);
 					}
 				}
 
 				// Executor = the dropped item; enactor = player (PennMUSH @a* semantics)
-				var adropAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrADrop, IAttributeService.AttributeMode.Read, true);
+				var adropAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrADrop, IAttributeService.AttributeMode.Read, true);
 				if (adropAttr.IsAttribute && adropAttr.AsT0.Length > 0)
 				{
 					var adropActions = adropAttr.AsT0[0].Value;
@@ -1519,33 +1519,33 @@ public partial class Commands
 
 		if (movedCount > 0 && failedCount == 0)
 		{
-			await NotifyService!.Notify(executor, $"Emptied {objectToEmpty.Object().Name}.", executor);
+			await NotifyService.Notify(executor, $"Emptied {objectToEmpty.Object().Name}.", executor);
 		}
 		else if (movedCount > 0 && failedCount > 0)
 		{
-			await NotifyService!.Notify(executor, $"Emptied {movedCount} item(s) from {objectToEmpty.Object().Name}. {failedCount} item(s) could not be moved.", executor);
+			await NotifyService.Notify(executor, $"Emptied {movedCount} item(s) from {objectToEmpty.Object().Name}. {failedCount} item(s) could not be moved.", executor);
 		}
 		else if (movedCount == 0 && failedCount > 0)
 		{
-			await NotifyService!.Notify(executor, $"Could not empty {objectToEmpty.Object().Name}.", executor);
+			await NotifyService.Notify(executor, $"Could not empty {objectToEmpty.Object().Name}.", executor);
 		}
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "ENTER", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Enter(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Enter(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var objectName = args["0"].Message!.ToPlainText();
 
-		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
+		var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
 
 		if (!locateResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "You can't see that here.", executor);
+			await NotifyService.Notify(executor, "You can't see that here.", executor);
 			return CallState.Empty;
 		}
 
@@ -1553,11 +1553,11 @@ public partial class Commands
 
 		if (!objectToEnter.IsThing && !objectToEnter.IsPlayer)
 		{
-			await NotifyService!.Notify(executor, "You can't enter that.", executor);
+			await NotifyService.Notify(executor, "You can't enter that.", executor);
 			return CallState.Empty;
 		}
 
-		bool canEnter = await PermissionService!.Controls(executor, objectToEnter);
+		bool canEnter = await PermissionService.Controls(executor, objectToEnter);
 
 		if (!canEnter)
 		{
@@ -1566,35 +1566,35 @@ public partial class Commands
 
 			if (!hasEnterOk)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return CallState.Empty;
 			}
 		}
 
-		if (!LockService!.Evaluate(LockType.Enter, objectToEnter, executor))
+		if (!LockService.Evaluate(LockType.Enter, objectToEnter, executor))
 		{
-			var efailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrEFail, IAttributeService.AttributeMode.Read, true);
+			var efailAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrEFail, IAttributeService.AttributeMode.Read, true);
 			if (efailAttr.IsAttribute && efailAttr.AsT0.Length > 0)
 			{
 				var efailMsg = efailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(efailMsg.ToPlainText()))
 				{
-					await NotifyService!.Notify(executor, efailMsg, executor);
+					await NotifyService.Notify(executor, efailMsg, executor);
 				}
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "You can't enter that.", executor);
+				await NotifyService.Notify(executor, "You can't enter that.", executor);
 			}
 
-			var oefailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrOEFail, IAttributeService.AttributeMode.Read, true);
+			var oefailAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrOEFail, IAttributeService.AttributeMode.Read, true);
 			if (oefailAttr.IsAttribute && oefailAttr.AsT0.Length > 0)
 			{
 				var oefailMsg = oefailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(oefailMsg.ToPlainText()))
 				{
 					var currentLocation = await executor.Where();
-					await CommunicationService!.SendToRoomAsync(
+					await CommunicationService.SendToRoomAsync(
 						executor,
 						currentLocation,
 						_ => oefailMsg,
@@ -1604,7 +1604,7 @@ public partial class Commands
 			}
 
 			// Executor = the container whose enter-lock failed; enactor = player (PennMUSH @a* semantics)
-			var aefailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrAEFail, IAttributeService.AttributeMode.Read, true);
+			var aefailAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrAEFail, IAttributeService.AttributeMode.Read, true);
 			if (aefailAttr.IsAttribute && aefailAttr.AsT0.Length > 0)
 			{
 				var aefailActions = aefailAttr.AsT0[0].Value;
@@ -1625,7 +1625,7 @@ public partial class Commands
 		// Move executor into object using MoveService for proper hook triggering
 		var executorAsContent = executor.AsContent;
 		var containerToEnter = objectToEnter.AsContainer;
-		var moveResult = await MoveService!.ExecuteMoveAsync(
+		var moveResult = await MoveService.ExecuteMoveAsync(
 			parser,
 			executorAsContent,
 			containerToEnter,
@@ -1635,27 +1635,27 @@ public partial class Commands
 
 		if (moveResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
+			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
 			return CallState.Empty;
 		}
 
-		var enterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrEnter, IAttributeService.AttributeMode.Read, true);
+		var enterAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrEnter, IAttributeService.AttributeMode.Read, true);
 		if (enterAttr.IsAttribute && enterAttr.AsT0.Length > 0)
 		{
 			var enterMsg = enterAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(enterMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, enterMsg, executor);
+				await NotifyService.Notify(executor, enterMsg, executor);
 			}
 		}
 
-		var oenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrOEnter, IAttributeService.AttributeMode.Read, true);
+		var oenterAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrOEnter, IAttributeService.AttributeMode.Read, true);
 		if (oenterAttr.IsAttribute && oenterAttr.AsT0.Length > 0)
 		{
 			var oenterMsg = oenterAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(oenterMsg.ToPlainText()))
 			{
-				await CommunicationService!.SendToRoomAsync(
+				await CommunicationService.SendToRoomAsync(
 					executor,
 					containerToEnter,
 					_ => oenterMsg,
@@ -1664,13 +1664,13 @@ public partial class Commands
 			}
 		}
 
-		var oxenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrOXEnter, IAttributeService.AttributeMode.Read, true);
+		var oxenterAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrOXEnter, IAttributeService.AttributeMode.Read, true);
 		if (oxenterAttr.IsAttribute && oxenterAttr.AsT0.Length > 0)
 		{
 			var oxenterMsg = oxenterAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(oxenterMsg.ToPlainText()))
 			{
-				await CommunicationService!.SendToRoomAsync(
+				await CommunicationService.SendToRoomAsync(
 					executor,
 					oldLocation,
 					_ => oxenterMsg,
@@ -1680,7 +1680,7 @@ public partial class Commands
 		}
 
 		// Executor = the container being entered; enactor = player (PennMUSH @a* semantics)
-		var aenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrAEnter, IAttributeService.AttributeMode.Read, true);
+		var aenterAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrAEnter, IAttributeService.AttributeMode.Read, true);
 		if (aenterAttr.IsAttribute && aenterAttr.AsT0.Length > 0)
 		{
 			var aenterActions = aenterAttr.AsT0[0].Value;
@@ -1692,31 +1692,31 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"You enter {objectToEnter.Object().Name}.", executor);
+		await NotifyService.Notify(executor, $"You enter {objectToEnter.Object().Name}.", executor);
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "FOLLOW", Switches = [], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Follow(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Follow(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Follow whom?", executor);
+			await NotifyService.Notify(executor, "Follow whom?", executor);
 			return CallState.Empty;
 		}
 
 		var targetName = args["0"].Message!.ToPlainText();
 
-		var targetResult = await LocateService!.LocateAndNotifyIfInvalid(
+		var targetResult = await LocateService.LocateAndNotifyIfInvalid(
 			parser, executor, executor, targetName, LocateFlags.All);
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1724,41 +1724,41 @@ public partial class Commands
 
 		if (target.Object().DBRef.Equals(executor.Object().DBRef))
 		{
-			await NotifyService!.Notify(executor, "You can't follow yourself.", executor);
+			await NotifyService.Notify(executor, "You can't follow yourself.", executor);
 			return CallState.Empty;
 		}
 
 		if (!target.IsPlayer && !target.IsThing)
 		{
-			await NotifyService!.Notify(executor, "You can't follow that.", executor);
+			await NotifyService.Notify(executor, "You can't follow that.", executor);
 			return CallState.Empty;
 		}
 
 		var followSet = await SetFollowingAsync(executor, target);
 		if (followSet.IsT1)
 		{
-			await NotifyService!.Notify(executor, followSet.AsT1.Value, executor);
+			await NotifyService.Notify(executor, followSet.AsT1.Value, executor);
 			return CallState.Empty;
 		}
 
-		await NotifyService!.Notify(executor, $"You are now following {target.Object().Name}.", executor);
-		await NotifyService!.Notify(target, $"{executor.Object().Name} is now following you.");
+		await NotifyService.Notify(executor, $"You are now following {target.Object().Name}.", executor);
+		await NotifyService.Notify(target, $"{executor.Object().Name} is now following you.");
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "GET", Switches = [], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 1, MaxArgs = 0, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Get(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Get(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		var fullArg = args["0"].Message!.ToPlainText();
 
 		if (string.IsNullOrWhiteSpace(fullArg))
 		{
-			await NotifyService!.Notify(executor, "Get what?", executor);
+			await NotifyService.Notify(executor, "Get what?", executor);
 			return CallState.Empty;
 		}
 
@@ -1776,11 +1776,11 @@ public partial class Commands
 			var containerName = fullArg[..possessiveIndex].Trim();
 			objectName = fullArg[(possessiveIndex + 3)..].Trim();
 
-			var containerResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, containerName, LocateFlags.All);
+			var containerResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, containerName, LocateFlags.All);
 
 			if (!containerResult.IsValid() || (!containerResult.IsPlayer && !containerResult.IsThing))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 				return CallState.Empty;
 			}
 
@@ -1789,9 +1789,9 @@ public partial class Commands
 			var containerFlags = await container.Object().Flags.Value.ToArrayAsync();
 			var hasEnterOk = containerFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
 
-			if (!hasEnterOk && !await PermissionService!.Controls(executor, container))
+			if (!hasEnterOk && !await PermissionService.Controls(executor, container))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return CallState.Empty;
 			}
 
@@ -1803,11 +1803,11 @@ public partial class Commands
 			sourceLocation = await executor.Where();
 		}
 
-		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, sourceLocation.WithExitOption(), objectName, LocateFlags.All);
+		var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, sourceLocation.WithExitOption(), objectName, LocateFlags.All);
 
 		if (!locateResult.IsValid() || locateResult.IsRoom || locateResult.IsExit)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1822,26 +1822,26 @@ public partial class Commands
 
 		if (alreadyCarrying)
 		{
-			await NotifyService!.Notify(executor, "You already have that.", executor);
+			await NotifyService.Notify(executor, "You already have that.", executor);
 			return CallState.Empty;
 		}
 
-		if (!LockService!.Evaluate(LockType.Basic, objectToGet, executor))
+		if (!LockService.Evaluate(LockType.Basic, objectToGet, executor))
 		{
-			await NotifyService!.Notify(executor, "You can't pick that up.", executor);
+			await NotifyService.Notify(executor, "You can't pick that up.", executor);
 			return CallState.Empty;
 		}
 
-		if (!LockService!.Evaluate(LockType.Take, sourceLocation.WithExitOption(), executor))
+		if (!LockService.Evaluate(LockType.Take, sourceLocation.WithExitOption(), executor))
 		{
-			await NotifyService!.Notify(executor, "You can't take that from there.", executor);
+			await NotifyService.Notify(executor, "You can't take that from there.", executor);
 			return CallState.Empty;
 		}
 
 		// Move object to executor's inventory using MoveService for proper hook triggering
 		var executorContainer = executor.AsContainer;
 		var contentToGet = objectToGet.AsContent;
-		var moveResult = await MoveService!.ExecuteMoveAsync(
+		var moveResult = await MoveService.ExecuteMoveAsync(
 			parser,
 			contentToGet,
 			executorContainer,
@@ -1851,31 +1851,31 @@ public partial class Commands
 
 		if (moveResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
+			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
 			return CallState.Empty;
 		}
 
-		var successAttr = await AttributeService!.GetAttributeAsync(executor, objectToGet, AttrSuccess, IAttributeService.AttributeMode.Read, true);
+		var successAttr = await AttributeService.GetAttributeAsync(executor, objectToGet, AttrSuccess, IAttributeService.AttributeMode.Read, true);
 		if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
 		{
 			var successMsg = successAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, successMsg, executor);
+				await NotifyService.Notify(executor, successMsg, executor);
 			}
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Taken.", executor);
+			await NotifyService.Notify(executor, "Taken.", executor);
 		}
 
-		var osuccessAttr = await AttributeService!.GetAttributeAsync(executor, objectToGet, AttrOSuccess, IAttributeService.AttributeMode.Read, true);
+		var osuccessAttr = await AttributeService.GetAttributeAsync(executor, objectToGet, AttrOSuccess, IAttributeService.AttributeMode.Read, true);
 		if (osuccessAttr.IsAttribute && osuccessAttr.AsT0.Length > 0)
 		{
 			var osuccessMsg = osuccessAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(osuccessMsg.ToPlainText()))
 			{
-				await CommunicationService!.SendToRoomAsync(
+				await CommunicationService.SendToRoomAsync(
 					executor,
 					sourceLocation,
 					_ => osuccessMsg,
@@ -1885,7 +1885,7 @@ public partial class Commands
 		}
 
 		// Executor = the object being gotten; enactor = player (PennMUSH @a* semantics)
-		var asuccessAttr = await AttributeService!.GetAttributeAsync(executor, objectToGet, AttrASuccess, IAttributeService.AttributeMode.Read, true);
+		var asuccessAttr = await AttributeService.GetAttributeAsync(executor, objectToGet, AttrASuccess, IAttributeService.AttributeMode.Read, true);
 		if (asuccessAttr.IsAttribute && asuccessAttr.AsT0.Length > 0)
 		{
 			var asuccessActions = asuccessAttr.AsT0[0].Value;
@@ -1902,10 +1902,10 @@ public partial class Commands
 
 	[SharpCommand(Name = "GIVE", Switches = ["SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
 		MaxArgs = 0, ParameterNames = ["player", "amount"])]
-	public static async ValueTask<Option<CallState>> Give(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Give(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var isSilent = parser.CurrentState.Switches.Contains("SILENT");
 
@@ -1914,21 +1914,21 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(recipientName))
 		{
-			await NotifyService!.Notify(executor, "Give to whom?", executor);
+			await NotifyService.Notify(executor, "Give to whom?", executor);
 			return CallState.Empty;
 		}
 
 		if (string.IsNullOrWhiteSpace(thingToGive))
 		{
-			await NotifyService!.Notify(executor, "Give what?", executor);
+			await NotifyService.Notify(executor, "Give what?", executor);
 			return CallState.Empty;
 		}
 
-		var recipientResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, recipientName, LocateFlags.All);
+		var recipientResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, recipientName, LocateFlags.All);
 
 		if (!recipientResult.IsValid() || recipientResult.IsRoom || recipientResult.IsExit)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1936,21 +1936,21 @@ public partial class Commands
 
 		if (!recipient.IsPlayer && !recipient.IsThing)
 		{
-			await NotifyService!.Notify(executor, "You can't give things to that.", executor);
+			await NotifyService.Notify(executor, "You can't give things to that.", executor);
 			return CallState.Empty;
 		}
 
 		if (int.TryParse(thingToGive, out var amount))
 		{
-			await NotifyService!.Notify(executor, "Money transfer will not be implemented.", executor);
+			await NotifyService.Notify(executor, "Money transfer will not be implemented.", executor);
 			return CallState.Empty;
 		}
 
-		var objectResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, thingToGive, LocateFlags.All);
+		var objectResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, thingToGive, LocateFlags.All);
 
 		if (!objectResult.IsValid() || objectResult.IsRoom || objectResult.IsExit)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontHaveThat), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontHaveThat), executor);
 			return CallState.Empty;
 		}
 
@@ -1965,70 +1965,70 @@ public partial class Commands
 
 		if (!isCarrying)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontHaveThat), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontHaveThat), executor);
 			return CallState.Empty;
 		}
 
 		var recipientFlags = await recipient.Object().Flags.Value.ToArrayAsync();
 		var hasEnterOk = recipientFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
 
-		if (!hasEnterOk && !await PermissionService!.Controls(executor, recipient))
+		if (!hasEnterOk && !await PermissionService.Controls(executor, recipient))
 		{
-			await NotifyService!.Notify(executor, $"{recipient.Object().Name} is not accepting things.", executor);
+			await NotifyService.Notify(executor, $"{recipient.Object().Name} is not accepting things.", executor);
 			return CallState.Empty;
 		}
 
-		if (!LockService!.Evaluate(LockType.From, recipient, executor))
+		if (!LockService.Evaluate(LockType.From, recipient, executor))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
-		if (!LockService!.Evaluate(LockType.Give, objectToGive, executor))
+		if (!LockService.Evaluate(LockType.Give, objectToGive, executor))
 		{
-			await NotifyService!.Notify(executor, "You can't give that away.", executor);
+			await NotifyService.Notify(executor, "You can't give that away.", executor);
 			return CallState.Empty;
 		}
 
 		// Check @lock/receive on recipient (object must pass this)
-		if (!LockService!.Evaluate(LockType.Receive, recipient, objectToGive))
+		if (!LockService.Evaluate(LockType.Receive, recipient, objectToGive))
 		{
-			await NotifyService!.Notify(executor, $"{recipient.Object().Name} doesn't want that.", executor);
+			await NotifyService.Notify(executor, $"{recipient.Object().Name} doesn't want that.", executor);
 			return CallState.Empty;
 		}
 
 		var recipientContainer = recipient.AsContainer;
-		if (await MoveService!.WouldCreateLoop(objectToGive.AsContent, recipientContainer))
+		if (await MoveService.WouldCreateLoop(objectToGive.AsContent, recipientContainer))
 		{
-			await NotifyService!.Notify(executor, "You can't give that - it would create a containment loop.", executor);
+			await NotifyService.Notify(executor, "You can't give that - it would create a containment loop.", executor);
 			return CallState.Empty;
 		}
 
 		var contentToGive = objectToGive.AsContent;
-		await Mediator!.Send(new MoveObjectCommand(contentToGive, recipientContainer));
+		await Mediator.Send(new MoveObjectCommand(contentToGive, recipientContainer));
 
-		var giveAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrGive, IAttributeService.AttributeMode.Read, true);
+		var giveAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrGive, IAttributeService.AttributeMode.Read, true);
 		if (giveAttr.IsAttribute && giveAttr.AsT0.Length > 0)
 		{
 			var giveMsg = giveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(giveMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, giveMsg, executor);
+				await NotifyService.Notify(executor, giveMsg, executor);
 			}
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Given.", executor);
+			await NotifyService.Notify(executor, "Given.", executor);
 		}
 
-		var ogiveAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrOGive, IAttributeService.AttributeMode.Read, true);
+		var ogiveAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrOGive, IAttributeService.AttributeMode.Read, true);
 		if (ogiveAttr.IsAttribute && ogiveAttr.AsT0.Length > 0)
 		{
 			var ogiveMsg = ogiveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(ogiveMsg.ToPlainText()))
 			{
 				var executorLocation = await executor.Where();
-				await CommunicationService!.SendToRoomAsync(
+				await CommunicationService.SendToRoomAsync(
 					executor,
 					executorLocation,
 					_ => ogiveMsg,
@@ -2037,7 +2037,7 @@ public partial class Commands
 			}
 		}
 
-		var agiveAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrAGive, IAttributeService.AttributeMode.Read, true);
+		var agiveAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrAGive, IAttributeService.AttributeMode.Read, true);
 		if (agiveAttr.IsAttribute && agiveAttr.AsT0.Length > 0)
 		{
 			var agiveActions = agiveAttr.AsT0[0].Value;
@@ -2047,28 +2047,28 @@ public partial class Commands
 			}
 		}
 
-		var receiveAttr = await AttributeService!.GetAttributeAsync(executor, recipient, AttrReceive, IAttributeService.AttributeMode.Read, true);
+		var receiveAttr = await AttributeService.GetAttributeAsync(executor, recipient, AttrReceive, IAttributeService.AttributeMode.Read, true);
 		if (receiveAttr.IsAttribute && receiveAttr.AsT0.Length > 0)
 		{
 			var receiveMsg = receiveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(receiveMsg.ToPlainText()) && !isSilent)
 			{
-				await NotifyService!.Notify(recipient, receiveMsg);
+				await NotifyService.Notify(recipient, receiveMsg);
 			}
 		}
 		else if (!isSilent)
 		{
-			await NotifyService!.Notify(recipient, $"{executor.Object().Name} gave you {objectToGive.Object().Name}.");
+			await NotifyService.Notify(recipient, $"{executor.Object().Name} gave you {objectToGive.Object().Name}.");
 		}
 
-		var oreceiveAttr = await AttributeService!.GetAttributeAsync(executor, recipient, AttrOReceive, IAttributeService.AttributeMode.Read, true);
+		var oreceiveAttr = await AttributeService.GetAttributeAsync(executor, recipient, AttrOReceive, IAttributeService.AttributeMode.Read, true);
 		if (oreceiveAttr.IsAttribute && oreceiveAttr.AsT0.Length > 0)
 		{
 			var oreceiveMsg = oreceiveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(oreceiveMsg.ToPlainText()))
 			{
 				var recipientLocation = await recipient.Where();
-				await CommunicationService!.SendToRoomAsync(
+				await CommunicationService.SendToRoomAsync(
 					executor,
 					recipientLocation,
 					_ => oreceiveMsg,
@@ -2078,7 +2078,7 @@ public partial class Commands
 		}
 
 		// Executor = the recipient; enactor = player who gave (PennMUSH @a* semantics)
-		var areceiveAttr = await AttributeService!.GetAttributeAsync(executor, recipient, AttrAReceive, IAttributeService.AttributeMode.Read, true);
+		var areceiveAttr = await AttributeService.GetAttributeAsync(executor, recipient, AttrAReceive, IAttributeService.AttributeMode.Read, true);
 		if (areceiveAttr.IsAttribute && areceiveAttr.AsT0.Length > 0)
 		{
 			var areceiveActions = areceiveAttr.AsT0[0].Value;
@@ -2091,7 +2091,7 @@ public partial class Commands
 		}
 
 		// Executor = the object being given; enactor = player who gave (PennMUSH @a* semantics)
-		var successAttr = await AttributeService!.GetAttributeAsync(executor, objectToGive, AttrSuccess, IAttributeService.AttributeMode.Read, true);
+		var successAttr = await AttributeService.GetAttributeAsync(executor, objectToGive, AttrSuccess, IAttributeService.AttributeMode.Read, true);
 		if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
 		{
 			var successActions = successAttr.AsT0[0].Value;
@@ -2107,13 +2107,13 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "HOME", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> Home(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Home(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!executor.IsPlayer && !executor.IsThing)
 		{
-			await NotifyService!.Notify(executor, "Only players and things can go home.", executor);
+			await NotifyService.Notify(executor, "Only players and things can go home.", executor);
 			return CallState.Empty;
 		}
 
@@ -2123,7 +2123,7 @@ public partial class Commands
 
 		if (homeObj.DBRef.Number < 0)
 		{
-			await NotifyService!.Notify(executor, "You have no home.", executor);
+			await NotifyService.Notify(executor, "You have no home.", executor);
 			return CallState.Empty;
 		}
 
@@ -2131,19 +2131,19 @@ public partial class Commands
 
 		if (currentLocation.Object().DBRef.Equals(homeObj.DBRef))
 		{
-			await NotifyService!.Notify(executor, "You are already home.", executor);
+			await NotifyService.Notify(executor, "You are already home.", executor);
 			return CallState.Empty;
 		}
 
-		if (await MoveService!.WouldCreateLoop(executor.AsContent, homeLocation))
+		if (await MoveService.WouldCreateLoop(executor.AsContent, homeLocation))
 		{
-			await NotifyService!.Notify(executor, "You can't go home - it would create a containment loop.", executor);
+			await NotifyService.Notify(executor, "You can't go home - it would create a containment loop.", executor);
 			return CallState.Empty;
 		}
 
-		await Mediator!.Send(new MoveObjectCommand(executor.AsContent, homeLocation));
+		await Mediator.Send(new MoveObjectCommand(executor.AsContent, homeLocation));
 
-		await NotifyService!.Notify(executor, "There's no place like home...", executor);
+		await NotifyService.Notify(executor, "There's no place like home...", executor);
 
 		if (executor.IsPlayer)
 		{
@@ -2154,18 +2154,18 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "INVENTORY", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> Inventory(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Inventory(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!executor.IsPlayer && !executor.IsThing)
 		{
-			await NotifyService!.Notify(executor, "You can't carry anything.", executor);
+			await NotifyService.Notify(executor, "You can't carry anything.", executor);
 			return CallState.Empty;
 		}
 
 		var container = executor.AsContainer;
-		var contents = container.Content(Mediator!);
+		var contents = container.Content(Mediator);
 
 		// PennMUSH: own inventory always shows Name(#dbrefFlags)
 		var items = new System.Collections.Generic.List<string>();
@@ -2176,14 +2176,14 @@ public partial class Commands
 
 		if (items.Count == 0)
 		{
-			await NotifyService!.Notify(executor, "You aren't carrying anything.", executor);
+			await NotifyService.Notify(executor, "You aren't carrying anything.", executor);
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "You are carrying:", executor);
+			await NotifyService.Notify(executor, "You are carrying:", executor);
 			foreach (var itemName in items)
 			{
-				await NotifyService!.Notify(executor, itemName, executor);
+				await NotifyService.Notify(executor, itemName, executor);
 			}
 		}
 
@@ -2191,13 +2191,13 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "LEAVE", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> Leave(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Leave(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!executor.IsPlayer && !executor.IsThing)
 		{
-			await NotifyService!.Notify(executor, "Only players and things can leave.", executor);
+			await NotifyService.Notify(executor, "Only players and things can leave.", executor);
 			return CallState.Empty;
 		}
 
@@ -2205,7 +2205,7 @@ public partial class Commands
 
 		if (!currentLocation.IsThing && !currentLocation.IsPlayer)
 		{
-			await NotifyService!.Notify(executor, "You can't leave a room. Use an exit or HOME.", executor);
+			await NotifyService.Notify(executor, "You can't leave a room. Use an exit or HOME.", executor);
 			return CallState.Empty;
 		}
 
@@ -2216,35 +2216,35 @@ public partial class Commands
 			async room => await ValueTask.FromResult<AnySharpContainer>(room),
 			async thing => await thing.Location.WithCancellation(CancellationToken.None));
 
-		if (!LockService!.Evaluate(LockType.Leave, container, executor))
+		if (!LockService.Evaluate(LockType.Leave, container, executor))
 		{
-			var lfailAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrLFail, IAttributeService.AttributeMode.Read, true);
+			var lfailAttr = await AttributeService.GetAttributeAsync(executor, container, AttrLFail, IAttributeService.AttributeMode.Read, true);
 			if (lfailAttr.IsAttribute && lfailAttr.AsT0.Length > 0)
 			{
 				var lfailMsg = lfailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(lfailMsg.ToPlainText()))
 				{
-					await NotifyService!.Notify(executor, lfailMsg, executor);
+					await NotifyService.Notify(executor, lfailMsg, executor);
 				}
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "You can't leave.", executor);
+				await NotifyService.Notify(executor, "You can't leave.", executor);
 			}
 
-			var olfailAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrOLFail, IAttributeService.AttributeMode.Read, true);
+			var olfailAttr = await AttributeService.GetAttributeAsync(executor, container, AttrOLFail, IAttributeService.AttributeMode.Read, true);
 			if (olfailAttr.IsAttribute && olfailAttr.AsT0.Length > 0)
 			{
 				var olfailMsg = olfailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(olfailMsg.ToPlainText()))
 				{
-					await CommunicationService!.SendToRoomAsync(executor, currentLocation, _ => olfailMsg,
+					await CommunicationService.SendToRoomAsync(executor, currentLocation, _ => olfailMsg,
 						INotifyService.NotificationType.Emit, excludeObjects: [executor]);
 				}
 			}
 
 			// Executor = the container whose leave-lock failed; enactor = player (PennMUSH @a* semantics)
-			var alfailAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrALFail, IAttributeService.AttributeMode.Read, true);
+			var alfailAttr = await AttributeService.GetAttributeAsync(executor, container, AttrALFail, IAttributeService.AttributeMode.Read, true);
 			if (alfailAttr.IsAttribute && alfailAttr.AsT0.Length > 0)
 			{
 				var alfailActions = alfailAttr.AsT0[0].Value;
@@ -2260,7 +2260,7 @@ public partial class Commands
 		}
 
 		// Move to the container's location using MoveService for proper hook triggering
-		var moveResult = await MoveService!.ExecuteMoveAsync(
+		var moveResult = await MoveService.ExecuteMoveAsync(
 			parser,
 			executor.AsContent,
 			destinationLocation,
@@ -2270,48 +2270,48 @@ public partial class Commands
 
 		if (moveResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
+			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
 			return CallState.Empty;
 		}
 
-		var leaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrLeave, IAttributeService.AttributeMode.Read, true);
+		var leaveAttr = await AttributeService.GetAttributeAsync(executor, container, AttrLeave, IAttributeService.AttributeMode.Read, true);
 		if (leaveAttr.IsAttribute && leaveAttr.AsT0.Length > 0)
 		{
 			var leaveMsg = leaveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(leaveMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, leaveMsg, executor);
+				await NotifyService.Notify(executor, leaveMsg, executor);
 			}
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"You leave {currentLocation.Object().Name}.", executor);
+			await NotifyService.Notify(executor, $"You leave {currentLocation.Object().Name}.", executor);
 		}
 
-		var oleaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrOLeave, IAttributeService.AttributeMode.Read, true);
+		var oleaveAttr = await AttributeService.GetAttributeAsync(executor, container, AttrOLeave, IAttributeService.AttributeMode.Read, true);
 		if (oleaveAttr.IsAttribute && oleaveAttr.AsT0.Length > 0)
 		{
 			var oleaveMsg = oleaveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(oleaveMsg.ToPlainText()))
 			{
-				await CommunicationService!.SendToRoomAsync(executor, currentLocation, _ => oleaveMsg,
+				await CommunicationService.SendToRoomAsync(executor, currentLocation, _ => oleaveMsg,
 					INotifyService.NotificationType.Emit, excludeObjects: [executor]);
 			}
 		}
 
-		var oxleaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrOXLeave, IAttributeService.AttributeMode.Read, true);
+		var oxleaveAttr = await AttributeService.GetAttributeAsync(executor, container, AttrOXLeave, IAttributeService.AttributeMode.Read, true);
 		if (oxleaveAttr.IsAttribute && oxleaveAttr.AsT0.Length > 0)
 		{
 			var oxleaveMsg = oxleaveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(oxleaveMsg.ToPlainText()))
 			{
-				await CommunicationService!.SendToRoomAsync(executor, destinationLocation, _ => oxleaveMsg,
+				await CommunicationService.SendToRoomAsync(executor, destinationLocation, _ => oxleaveMsg,
 					INotifyService.NotificationType.Emit, excludeObjects: [executor]);
 			}
 		}
 
 		// Executor = the container left; enactor = player (PennMUSH @a* semantics)
-		var aleaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrALeave, IAttributeService.AttributeMode.Read, true);
+		var aleaveAttr = await AttributeService.GetAttributeAsync(executor, container, AttrALeave, IAttributeService.AttributeMode.Read, true);
 		if (aleaveAttr.IsAttribute && aleaveAttr.AsT0.Length > 0)
 		{
 			var aleaveActions = aleaveAttr.AsT0[0].Value;
@@ -2333,10 +2333,10 @@ public partial class Commands
 
 	[SharpCommand(Name = "PAGE", Switches = ["LIST", "NOEVAL", "PORT", "OVERRIDE"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["player", "message"])]
-	public static async ValueTask<Option<CallState>> Page(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Page(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var isNoEval = parser.CurrentState.Switches.Contains("NOEVAL");
 		var isOverride = parser.CurrentState.Switches.Contains("OVERRIDE");
 
@@ -2353,7 +2353,7 @@ public partial class Commands
 		// If no recipients provided, use last paged
 		if (string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) && !string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
 		{
-			var lastPagedAttr = await AttributeService!.GetAttributeAsync(executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Set, false);
+			var lastPagedAttr = await AttributeService.GetAttributeAsync(executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Set, false);
 			recipientsText = lastPagedAttr.Match(
 				attr => attr.Last().Value.ToPlainText(),
 				_ => string.Empty,
@@ -2362,7 +2362,7 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(recipientsText))
 			{
-				await NotifyService!.Notify(executor, "Who do you want to page?", executor);
+				await NotifyService.Notify(executor, "Who do you want to page?", executor);
 				return CallState.Empty;
 			}
 		}
@@ -2373,7 +2373,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "What do you want to page?", executor);
+			await NotifyService.Notify(executor, "What do you want to page?", executor);
 			return CallState.Empty;
 		}
 
@@ -2382,7 +2382,7 @@ public partial class Commands
 
 		foreach (var recipientName in recipientNames)
 		{
-			var recipientResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+			var recipientResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(
 				parser, executor, executor, recipientName, LocateFlags.All);
 
 			if (!recipientResult.IsAnySharpObject)
@@ -2397,17 +2397,17 @@ public partial class Commands
 				var recipientFlags = recipient.Object().Flags.Value;
 				if (await recipientFlags.AnyAsync(f => f.Name.Equals("HAVEN", StringComparison.OrdinalIgnoreCase)))
 				{
-					await NotifyService!.Notify(executor, $"{recipient.Object().Name} is not accepting pages.", executor);
+					await NotifyService.Notify(executor, $"{recipient.Object().Name} is not accepting pages.", executor);
 					continue;
 				}
 			}
 
 			if (!isOverride)
 			{
-				var lockResult = await PermissionService!.CanInteract(executor, recipient, IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page);
+				var lockResult = await PermissionService.CanInteract(executor, recipient, IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page);
 				if (!lockResult)
 				{
-					var failureAttr = await AttributeService!.GetAttributeAsync(executor, recipient, "PAGE_LOCK`FAILURE", IAttributeService.AttributeMode.Read);
+					var failureAttr = await AttributeService.GetAttributeAsync(executor, recipient, "PAGE_LOCK`FAILURE", IAttributeService.AttributeMode.Read);
 
 					switch (failureAttr)
 					{
@@ -2418,7 +2418,7 @@ public partial class Commands
 							}
 						case { IsAttribute: true, AsAttribute: var attr }:
 							{
-								await NotifyService!.Notify(executor, attr.Last().Value, executor);
+								await NotifyService.Notify(executor, attr.Last().Value, executor);
 								break;
 							}
 					}
@@ -2434,7 +2434,7 @@ public partial class Commands
 							}
 						case { IsAttribute: true, AsAttribute: var attr }:
 							{
-								await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), _ => attr.Last().Value,
+								await CommunicationService.SendToRoomAsync(executor, await executor.Where(), _ => attr.Last().Value,
 									INotifyService.NotificationType.Emit, excludeObjects: [executor, recipient]);
 								break;
 							}
@@ -2464,7 +2464,7 @@ public partial class Commands
 			}
 
 			var pageMessage = $"From afar, {executor.Object().Name} pages: {messageArg}";
-			await NotifyService!.Notify(recipient, pageMessage, executor, INotifyService.NotificationType.Say);
+			await NotifyService.Notify(recipient, pageMessage, executor, INotifyService.NotificationType.Say);
 
 			successfulRecipients.Add(recipient);
 		}
@@ -2472,14 +2472,14 @@ public partial class Commands
 		if (successfulRecipients.Count > 0)
 		{
 			var recipientList = string.Join(", ", successfulRecipients.Select(r => r.Object().DBRef));
-			await NotifyService!.Notify(executor, $"You paged {recipientList} with '{messageArg}'.", executor);
+			await NotifyService.Notify(executor, $"You paged {recipientList} with '{messageArg}'.", executor);
 
 			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
-			await AttributeService!.SetAttributeAsync(executor, executor, "LASTPAGED", MModule.single(lastPagedText));
+			await AttributeService.SetAttributeAsync(executor, executor, "LASTPAGED", MModule.single(lastPagedText));
 		}
 		else if (recipientNames.Length > 0)
 		{
-			await NotifyService!.Notify(executor, "No one to page.", executor);
+			await NotifyService.Notify(executor, "No one to page.", executor);
 		}
 
 		return CallState.Empty;
@@ -2487,10 +2487,10 @@ public partial class Commands
 
 	[SharpCommand(Name = "POSE", Switches = ["NOEVAL", "NOSPACE"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 1, ParameterNames = ["message"])]
-	public static async ValueTask<Option<CallState>> Pose(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Pose(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var executorLocation = await executor.Where();
 		var isNoSpace = parser.CurrentState.Switches.Contains("NOSPACE");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
@@ -2499,9 +2499,9 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
-		if (!LockService!.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
+		if (!LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
 			return CallState.Empty;
 		}
 
@@ -2510,7 +2510,7 @@ public partial class Commands
 			? MModule.concat(executorName, MModule.trim(message, " ", global::MarkupString.TrimType.TrimStart))
 			: MModule.ConcatMany([executorName, MModule.Space(), message]);
 
-		await CommunicationService!.SendToRoomAsync(executor, executorLocation,
+		await CommunicationService.SendToRoomAsync(executor, executorLocation,
 			_ => poseMessage,
 			INotifyService.NotificationType.Pose);
 
@@ -2518,21 +2518,21 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "SCORE", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> Score(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Score(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		await NotifyService!.Notify(executor, "The SCORE command is not supported.", executor);
-		await NotifyService!.Notify(executor, "SharpMUSH does not track money or pennies.", executor);
+		await NotifyService.Notify(executor, "The SCORE command is not supported.", executor);
+		await NotifyService.Notify(executor, "SharpMUSH does not track money or pennies.", executor);
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "SAY", Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["message"])]
-	public static async ValueTask<Option<CallState>> Say(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Say(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var executorLocation = await executor.Where();
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
@@ -2540,9 +2540,9 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
-		if (!LockService!.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
+		if (!LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
 			return CallState.Empty;
 		}
 
@@ -2550,9 +2550,9 @@ public partial class Commands
 		var youSayMessage = MModule.multiple([MModule.single("You say, \""), message, MModule.single("\"")]);
 		var namesSaysMessage = MModule.multiple([executorName, MModule.single(" says, \""), message, MModule.single("\"")]);
 
-		await NotifyService!.Notify(executor, youSayMessage, executor, INotifyService.NotificationType.Say);
+		await NotifyService.Notify(executor, youSayMessage, executor, INotifyService.NotificationType.Say);
 
-		await CommunicationService!.SendToRoomAsync(executor, executorLocation,
+		await CommunicationService.SendToRoomAsync(executor, executorLocation,
 			_ => namesSaysMessage,
 			INotifyService.NotificationType.Say,
 			excludeObjects: [executor]);
@@ -2562,10 +2562,10 @@ public partial class Commands
 
 	[SharpCommand(Name = "SEMIPOSE", Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["message"])]
-	public static async ValueTask<Option<CallState>> SemiPose(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> SemiPose(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var executorLocation = await executor.Where();
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
@@ -2573,16 +2573,16 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
-		if (!LockService!.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
+		if (!LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
 			return CallState.Empty;
 		}
 
 		var executorName = MModule.single(executor.Object().Name);
 		var semiposeMessage = MModule.concat(executorName, message);
 
-		await CommunicationService!.SendToRoomAsync(executor, executorLocation,
+		await CommunicationService.SendToRoomAsync(executor, executorLocation,
 			_ => semiposeMessage,
 			INotifyService.NotificationType.SemiPose);
 
@@ -2590,9 +2590,9 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "TEACH", Switches = ["LIST"], Behavior = CB.Default | CB.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = ["player", "attribute"])]
-	public static async ValueTask<Option<CallState>> Teach(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Teach(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.Arguments;
 
@@ -2600,14 +2600,14 @@ public partial class Commands
 		{
 			if (!args.ContainsKey("0"))
 			{
-				await NotifyService!.Notify(executor, "Teach what action list?", executor);
+				await NotifyService.Notify(executor, "Teach what action list?", executor);
 				return CallState.Empty;
 			}
 
 			var actionList = args["0"].Message!.ToPlainText();
 
 			var executorLocation = await executor.Where();
-			await CommunicationService!.SendToRoomAsync(executor, executorLocation,
+			await CommunicationService.SendToRoomAsync(executor, executorLocation,
 				_ => MModule.single($"{executor.Object().Name} types --> {actionList}"),
 				INotifyService.NotificationType.Emit, excludeObjects: [executor]);
 
@@ -2618,14 +2618,14 @@ public partial class Commands
 
 		if (!args.ContainsKey("0"))
 		{
-			await NotifyService!.Notify(executor, "Teach what?", executor);
+			await NotifyService.Notify(executor, "Teach what?", executor);
 			return CallState.Empty;
 		}
 
 		var command = args["0"].Message!.ToPlainText();
 
 		var location = await executor.Where();
-		await CommunicationService!.SendToRoomAsync(executor, location,
+		await CommunicationService.SendToRoomAsync(executor, location,
 			_ => MModule.single($"{executor.Object().Name} types --> {command}"),
 			INotifyService.NotificationType.Emit, excludeObjects: [executor]);
 
@@ -2636,85 +2636,85 @@ public partial class Commands
 
 	[SharpCommand(Name = "UNFOLLOW", Switches = [], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> UnFollow(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> UnFollow(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var followingAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrFollowing,
+		var followingAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrFollowing,
 			IAttributeService.AttributeMode.Read, false);
 
 		if (followingAttr.IsNone || followingAttr.IsError)
 		{
-			await NotifyService!.Notify(executor, "You aren't following anyone.", executor);
+			await NotifyService.Notify(executor, "You aren't following anyone.", executor);
 			return CallState.Empty;
 		}
 
 		var unfollowed = await ClearFollowingAsync(executor);
 		if (unfollowed.IsT1)
 		{
-			await NotifyService!.Notify(executor, unfollowed.AsT1.Value, executor);
+			await NotifyService.Notify(executor, unfollowed.AsT1.Value, executor);
 			return CallState.Empty;
 		}
 
-		await NotifyService!.Notify(executor, "You stop following.", executor);
+		await NotifyService.Notify(executor, "You stop following.", executor);
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "USE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Use(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Use(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Use what?", executor);
+			await NotifyService.Notify(executor, "Use what?", executor);
 			return CallState.Empty;
 		}
 
 		var objectName = args["0"].Message!.ToPlainText();
 
-		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+		var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 			parser, executor, executor, objectName, LocateFlags.All);
 
 		if (!locateResult.IsValid())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
 		var objectToUse = locateResult.WithoutError().WithoutNone();
 
-		if (!LockService!.Evaluate(LockType.Use, objectToUse, executor))
+		if (!LockService.Evaluate(LockType.Use, objectToUse, executor))
 		{
-			var ufailAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "UFAIL", IAttributeService.AttributeMode.Read, true);
+			var ufailAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "UFAIL", IAttributeService.AttributeMode.Read, true);
 			if (ufailAttr.IsAttribute && ufailAttr.AsT0.Length > 0)
 			{
 				var ufailMsg = ufailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(ufailMsg.ToPlainText()))
 				{
-					await NotifyService!.Notify(executor, ufailMsg, executor);
+					await NotifyService.Notify(executor, ufailMsg, executor);
 				}
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "You can't use that.", executor);
+				await NotifyService.Notify(executor, "You can't use that.", executor);
 			}
 
-			var oufailAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "OUFAIL", IAttributeService.AttributeMode.Read, true);
+			var oufailAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "OUFAIL", IAttributeService.AttributeMode.Read, true);
 			if (oufailAttr.IsAttribute && oufailAttr.AsT0.Length > 0)
 			{
 				var oufailMsg = oufailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(oufailMsg.ToPlainText()))
 				{
 					var executorLocation = await executor.Where();
-					await CommunicationService!.SendToRoomAsync(executor, executorLocation, _ => oufailMsg,
+					await CommunicationService.SendToRoomAsync(executor, executorLocation, _ => oufailMsg,
 						INotifyService.NotificationType.Emit, excludeObjects: [executor]);
 				}
 			}
 
 			// Executor = the object with @AUFAIL; enactor = player (PennMUSH @a* semantics)
-			var aufailAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "AUFAIL", IAttributeService.AttributeMode.Read, true);
+			var aufailAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "AUFAIL", IAttributeService.AttributeMode.Read, true);
 			if (aufailAttr.IsAttribute && aufailAttr.AsT0.Length > 0)
 			{
 				var aufailActions = aufailAttr.AsT0[0].Value;
@@ -2729,34 +2729,34 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var useAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "USE", IAttributeService.AttributeMode.Read, true);
+		var useAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "USE", IAttributeService.AttributeMode.Read, true);
 		if (useAttr.IsAttribute && useAttr.AsT0.Length > 0)
 		{
 			var useMsg = useAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(useMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, useMsg, executor);
+				await NotifyService.Notify(executor, useMsg, executor);
 			}
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"You use {objectToUse.Object().Name}.", executor);
+			await NotifyService.Notify(executor, $"You use {objectToUse.Object().Name}.", executor);
 		}
 
-		var ouseAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "OUSE", IAttributeService.AttributeMode.Read, true);
+		var ouseAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "OUSE", IAttributeService.AttributeMode.Read, true);
 		if (ouseAttr.IsAttribute && ouseAttr.AsT0.Length > 0)
 		{
 			var ouseMsg = ouseAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(ouseMsg.ToPlainText()))
 			{
 				var executorLocation = await executor.Where();
-				await CommunicationService!.SendToRoomAsync(executor, executorLocation, _ => ouseMsg,
+				await CommunicationService.SendToRoomAsync(executor, executorLocation, _ => ouseMsg,
 					INotifyService.NotificationType.Emit, excludeObjects: [executor]);
 			}
 		}
 
 		// Executor = the object used; enactor = player (PennMUSH @a* semantics)
-		var auseAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "AUSE", IAttributeService.AttributeMode.Read, true);
+		var auseAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "AUSE", IAttributeService.AttributeMode.Read, true);
 		if (auseAttr.IsAttribute && auseAttr.AsT0.Length > 0)
 		{
 			var auseActions = auseAttr.AsT0[0].Value;
@@ -2773,9 +2773,9 @@ public partial class Commands
 
 	[SharpCommand(Name = "WHISPER", Switches = ["LIST", "NOISY", "SILENT", "NOEVAL"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["player", "message"])]
-	public static async ValueTask<Option<CallState>> Whisper(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Whisper(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var switches = parser.CurrentState.Switches;
 
@@ -2783,7 +2783,7 @@ public partial class Commands
 
 		if (switches.Contains("LIST"))
 		{
-			var contents = executorLocation.Content(Mediator!);
+			var contents = executorLocation.Content(Mediator);
 			var players = new List<string>();
 
 			await foreach (var obj in contents)
@@ -2796,11 +2796,11 @@ public partial class Commands
 
 			if (players.Count == 0)
 			{
-				await NotifyService!.Notify(executor, "There is no one here to whisper to.", executor);
+				await NotifyService.Notify(executor, "There is no one here to whisper to.", executor);
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"You can whisper to: {string.Join(", ", players)}", executor);
+				await NotifyService.Notify(executor, $"You can whisper to: {string.Join(", ", players)}", executor);
 			}
 
 			return CallState.Empty;
@@ -2816,13 +2816,13 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(targetArg.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Whisper to whom?", executor);
+			await NotifyService.Notify(executor, "Whisper to whom?", executor);
 			return CallState.Empty;
 		}
 
 		if (string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Whisper what?", executor);
+			await NotifyService.Notify(executor, "Whisper what?", executor);
 			return CallState.Empty;
 		}
 
@@ -2831,12 +2831,12 @@ public partial class Commands
 
 		foreach (var targetName in targetNames)
 		{
-			var targetResult = await LocateService!.LocateAndNotifyIfInvalid(
+			var targetResult = await LocateService.LocateAndNotifyIfInvalid(
 				parser, executor, executorLocation.WithExitOption(), targetName, LocateFlags.All);
 
 			if (!targetResult.IsValid() || !targetResult.IsPlayer)
 			{
-				await NotifyService!.Notify(executor, $"I don't see {targetName} here.", executor);
+				await NotifyService.Notify(executor, $"I don't see {targetName} here.", executor);
 				continue;
 			}
 
@@ -2844,14 +2844,14 @@ public partial class Commands
 
 			if (target.Object().DBRef.Equals(executor.Object().DBRef))
 			{
-				await NotifyService!.Notify(executor, "You can't whisper to yourself.", executor);
+				await NotifyService.Notify(executor, "You can't whisper to yourself.", executor);
 				continue;
 			}
 
 			var targetLocation = await target.Where();
 			if (!targetLocation.Object().DBRef.Equals(executorLocation.Object().DBRef))
 			{
-				await NotifyService!.Notify(executor, $"{target.Object().Name} is not here.", executor);
+				await NotifyService.Notify(executor, $"{target.Object().Name} is not here.", executor);
 				continue;
 			}
 
@@ -2877,18 +2877,18 @@ public partial class Commands
 		foreach (var target in successfulTargets)
 		{
 			var whisperMsg = $"{executor.Object().Name} whispers, \"{displayText}\"";
-			await NotifyService!.Notify(target, whisperMsg, executor, INotifyService.NotificationType.Say);
+			await NotifyService.Notify(target, whisperMsg, executor, INotifyService.NotificationType.Say);
 		}
 
 		if (!isSilent)
 		{
 			var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
-			await NotifyService!.Notify(executor, $"You whisper \"{displayText}\" to {targetList}.", executor);
+			await NotifyService.Notify(executor, $"You whisper \"{displayText}\" to {targetList}.", executor);
 		}
 
 		if (isNoisy)
 		{
-			var contents = executorLocation.Content(Mediator!);
+			var contents = executorLocation.Content(Mediator);
 			await foreach (var obj in contents)
 			{
 				if (obj.Object().DBRef.Equals(executor.Object().DBRef) ||
@@ -2898,7 +2898,7 @@ public partial class Commands
 				}
 
 				var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
-				await NotifyService!.Notify(obj.WithRoomOption(),
+				await NotifyService.Notify(obj.WithRoomOption(),
 					$"{executor.Object().Name} whispers something to {targetList}.");
 			}
 		}
@@ -2908,21 +2908,21 @@ public partial class Commands
 
 	[SharpCommand(Name = "WITH", Switches = ["NOEVAL", "ROOM"], Behavior = CB.Player | CB.Thing | CB.EqSplit, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> With(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> With(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "With whom?", executor);
+			await NotifyService.Notify(executor, "With whom?", executor);
 			return CallState.Empty;
 		}
 
 		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace(arg1.Message?.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Do what with them?", executor);
+			await NotifyService.Notify(executor, "Do what with them?", executor);
 			return CallState.Empty;
 		}
 
@@ -2933,12 +2933,12 @@ public partial class Commands
 			? (await executor.Where()).WithExitOption()
 			: executor;
 
-		var targetResult = await LocateService!.LocateAndNotifyIfInvalid(
+		var targetResult = await LocateService.LocateAndNotifyIfInvalid(
 			parser, executor, searchLocation, targetName, LocateFlags.All);
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -2946,13 +2946,13 @@ public partial class Commands
 
 		if (!target.IsPlayer && !target.IsThing)
 		{
-			await NotifyService!.Notify(executor, "You can't do that with that.", executor);
+			await NotifyService.Notify(executor, "You can't do that with that.", executor);
 			return CallState.Empty;
 		}
 
-		if (!await PermissionService!.Controls(executor, target))
+		if (!await PermissionService.Controls(executor, target))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
@@ -2968,9 +2968,9 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["message"])]
-	public static async ValueTask<Option<CallState>> Doing(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Doing(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		var isAdmin = await executor.IsWizard() ||
@@ -2979,7 +2979,7 @@ public partial class Commands
 
 		var pattern = args.ContainsKey("0") ? args["0"].Message?.ToPlainText() : null;
 
-		var everyone = ConnectionService!.GetAll();
+		var everyone = ConnectionService.GetAll();
 		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
 		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
 
@@ -2991,7 +2991,7 @@ public partial class Commands
 				continue;
 			}
 
-			var obj = await Mediator!.Send(new GetObjectNodeQuery(connection.Ref!.Value));
+			var obj = await Mediator.Send(new GetObjectNodeQuery(connection.Ref!.Value));
 			var playerName = obj.Known.Object().Name;
 
 			if (!isAdmin && await obj.Known.HasFlag("DARK"))
@@ -3017,12 +3017,12 @@ public partial class Commands
 		var footer = $"{playerList.Count} players logged in.";
 		var message = $"{header}\n{string.Join('\n', playerList)}\n{footer}";
 
-		await NotifyService!.Notify(executor, message, executor);
+		await NotifyService.Notify(executor, message, executor);
 
 		return new None();
 	}
 
-	private static bool MatchesPattern(string playerName, string pattern)
+	private bool MatchesPattern(string playerName, string pattern)
 	{
 		if (pattern.Contains('*') || pattern.Contains('?'))
 		{
@@ -3032,9 +3032,9 @@ public partial class Commands
 		return playerName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
 	}
 
-	private static async ValueTask<string> GetDoingText(AnySharpObject executor, AnySharpObject player)
+	private async ValueTask<string> GetDoingText(AnySharpObject executor, AnySharpObject player)
 	{
-		var doingAttr = await AttributeService!.GetAttributeAsync(
+		var doingAttr = await AttributeService.GetAttributeAsync(
 			executor,
 			player,
 			"DOING",
@@ -3049,11 +3049,11 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "SESSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> Session(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Session(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var allConnections = ConnectionService!.GetAll();
+		var allConnections = ConnectionService.GetAll();
 		IConnectionService.ConnectionData? connection = null;
 
 		await foreach (var conn in allConnections)
@@ -3067,7 +3067,7 @@ public partial class Commands
 
 		if (connection == null)
 		{
-			await NotifyService!.Notify(executor, "No session information available.", executor);
+			await NotifyService.Notify(executor, "No session information available.", executor);
 			return CallState.Empty;
 		}
 
@@ -3090,7 +3090,7 @@ public partial class Commands
 			output.AppendLine($"  Host: {connection.HostName}");
 		}
 
-		await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+		await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 		return CallState.Empty;
 	}
 
@@ -3103,7 +3103,7 @@ public partial class Commands
 	/// acknowledgements — so the confirmation lives only on <c>SOCKSET OUTPUTPREFIX=...</c>.
 	/// </summary>
 	[SharpCommand(Name = "OUTPUTPREFIX", Switches = [], Behavior = CB.SOCKET | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["prefix"])]
-	public static ValueTask<Option<CallState>> OutputPrefix(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> OutputPrefix(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> SetUserString(parser, "OutputPrefix");
 
 	/// <summary>
@@ -3111,7 +3111,7 @@ public partial class Commands
 	/// silent for the same reason.
 	/// </summary>
 	[SharpCommand(Name = "OUTPUTSUFFIX", Switches = [], Behavior = CB.SOCKET | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["suffix"])]
-	public static ValueTask<Option<CallState>> OutputSuffix(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> OutputSuffix(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> SetUserString(parser, "OutputSuffix");
 
 	/// <summary>
@@ -3119,7 +3119,7 @@ public partial class Commands
 	/// value clears the setting, and trailing whitespace is kept — a prefix of <c>"&gt;&gt; "</c> is a
 	/// legitimate thing to ask for.
 	/// </summary>
-	private static ValueTask<Option<CallState>> SetUserString(IMUSHCodeParser parser, string key)
+	private ValueTask<Option<CallState>> SetUserString(IMUSHCodeParser parser, string key)
 	{
 		var connection = CurrentConnection(parser);
 		if (connection is null)
@@ -3151,9 +3151,9 @@ public partial class Commands
 	/// Locale strings are BCP-47 tags (e.g. "en", "fr", "de").
 	/// </summary>
 	[SharpCommand(Name = "@LOCALE", Switches = [], Behavior = CB.Default | CB.NoParse | CB.EqSplit, MinArgs = 0, MaxArgs = 1, ParameterNames = ["locale"])]
-	public static async ValueTask<Option<CallState>> SetLocale(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> SetLocale(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
 		// No '=' sign at all → display current locale.
@@ -3164,7 +3164,7 @@ public partial class Commands
 			if (handle.HasValue)
 			{
 				// Use the specific connection that ran @locale to avoid multi-session ambiguity.
-				var conn = ConnectionService!.Get(handle.Value);
+				var conn = ConnectionService.Get(handle.Value);
 				if (conn is not null && conn.Metadata.TryGetValue("Locale", out var stored) && !string.IsNullOrEmpty(stored))
 				{
 					current = stored;
@@ -3173,7 +3173,7 @@ public partial class Commands
 			else
 			{
 				// No direct handle (e.g. @force context) — fall back to persisted LOCALE attribute.
-				var localeAttrs = Database!.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None);
+				var localeAttrs = Database.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None);
 				await foreach (var attr in localeAttrs)
 				{
 					var saved = attr.Value.ToPlainText();
@@ -3184,7 +3184,7 @@ public partial class Commands
 					}
 				}
 			}
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleCurrentFormat), executor, current);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleCurrentFormat), executor, current);
 			return CallState.Empty;
 		}
 
@@ -3193,18 +3193,18 @@ public partial class Commands
 		// Explicit empty argument (@locale =) → clear locale back to server default.
 		if (string.IsNullOrEmpty(locale))
 		{
-			await AttributeService!.ClearAttributeAsync(executor, executor, "LOCALE",
+			await AttributeService.ClearAttributeAsync(executor, executor, "LOCALE",
 				IAttributeService.AttributePatternMode.Exact);
 
-			await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+			await foreach (var conn in ConnectionService.Get(executor.Object().DBRef))
 			{
 				if (conn.State == IConnectionService.ConnectionState.LoggedIn)
 				{
-					ConnectionService!.Update(conn.Handle, "Locale", string.Empty);
+					ConnectionService.Update(conn.Handle, "Locale", string.Empty);
 				}
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleCleared), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleCleared), executor);
 			return CallState.Empty;
 		}
 
@@ -3215,30 +3215,30 @@ public partial class Commands
 		}
 		catch (System.Globalization.CultureNotFoundException)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleInvalidFormat), executor, locale);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleInvalidFormat), executor, locale);
 			return CallState.Empty;
 		}
 
 		var canonicalLocale = culture.Name; // e.g. "en-US" → "en-US", "fr" → "fr"
 
 		// Persist to the player's LOCALE attribute so it survives reconnects.
-		await AttributeService!.SetAttributeAsync(executor, executor, "LOCALE", MModule.single(canonicalLocale));
+		await AttributeService.SetAttributeAsync(executor, executor, "LOCALE", MModule.single(canonicalLocale));
 
-		await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+		await foreach (var conn in ConnectionService.Get(executor.Object().DBRef))
 		{
 			if (conn.State == IConnectionService.ConnectionState.LoggedIn)
 			{
-				ConnectionService!.Update(conn.Handle, "Locale", canonicalLocale);
+				ConnectionService.Update(conn.Handle, "Locale", canonicalLocale);
 			}
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleSetFormat), executor, canonicalLocale);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleSetFormat), executor, canonicalLocale);
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "WARN_ON_MISSING", Switches = [], Behavior = CB.Default | CB.NoParse | CB.Internal | CB.NoOp,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> WarnOnMissing(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> WarnOnMissing(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Internal no-op command for warning system
 		await ValueTask.CompletedTask;
@@ -3247,11 +3247,11 @@ public partial class Commands
 
 	[SharpCommand(Name = "UNIMPLEMENTED_COMMAND", Switches = [],
 		Behavior = CB.Default | CB.NoParse | CB.Internal | CB.NoOp, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> UnimplementedCommand(IMUSHCodeParser parser,
+	public async ValueTask<Option<CallState>> UnimplementedCommand(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);
-		await NotifyService!.Notify(executor, "Huh?  (Type \"help\" for help.)", executor);
+		var executor = await parser.CurrentState.KnownEnactorObject(Mediator);
+		await NotifyService.Notify(executor, "Huh?  (Type \"help\" for help.)", executor);
 		return new None();
 	}
 }

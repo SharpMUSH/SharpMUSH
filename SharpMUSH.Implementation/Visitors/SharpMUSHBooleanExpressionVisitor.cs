@@ -17,10 +17,12 @@ namespace SharpMUSH.Implementation.Visitors;
 /// evaluation, indirect, DBRef list, IP/hostname, channel, and bit locks.
 /// Uses mediator queries to access services without creating circular dependencies.
 /// </summary>
-/// <param name="med">Mediator for database and service queries</param>
+/// <param name="services">The locate, attribute and lock services a compiled lock reaches at evaluation time</param>
+/// <param name="med">Mediator for database queries</param>
 /// <param name="gated">Expression parameter representing the object being locked</param>
 /// <param name="unlocker">Expression parameter representing the object attempting to pass the lock</param>
 public class SharpMUSHBooleanExpressionVisitor(
+	ILockEvaluationServices services,
 	IMediator med,
 	ParameterExpression gated,
 	ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
@@ -162,9 +164,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				// Note: Parser is null as substitutions should have been pre-evaluated
 				// A name, not a dbref — the dbref case returned above. AbsoluteMatch names no scope, so on
 				// its own it could only ever resolve "#N", which is the branch that already ran.
-				var locateResult = med.Send(
-					new LocateObjectQuery(gatedObj, gatedObj, target, LocateFlags.All),
-					CancellationToken.None)
+				var locateResult = services.LocateAsync(gatedObj, gatedObj, target, LocateFlags.All)
 					.AsTask()
 					.ConfigureAwait(false).GetAwaiter().GetResult();
 
@@ -237,10 +237,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 			{
 				// MAT_POSSESSION | MAT_CONTENTS — PennMUSH's MAT_OBJ_CONTENTS shape. MAT_CONTENTS on its own
 				// is a filter over whatever the scopes turn up, not a scope, so it names nowhere to look.
-				var locateResult = med.Send(
-					new LocateObjectQuery(unlockerObj, unlockerObj, target,
-						LocateFlags.MatchObjectsInLookerInventory | LocateFlags.OnlyMatchObjectsInLookerInventory),
-					CancellationToken.None)
+				var locateResult = services.LocateAsync(unlockerObj, unlockerObj, target, LocateFlags.MatchObjectsInLookerInventory | LocateFlags.OnlyMatchObjectsInLookerInventory)
 					.AsTask()
 					.ConfigureAwait(false).GetAwaiter().GetResult();
 
@@ -318,9 +315,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 		// DBRef list locks check if the unlocker's dbref is in a space-separated list stored in an attribute
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, attrName) =>
 		{
-			var attrResult = med.Send(
-					new GetAttributeServiceQuery(gatedObj, gatedObj, attrName, IAttributeService.AttributeMode.Execute, true),
-					CancellationToken.None)
+			var attrResult = services.GetAttributeAsync(gatedObj, gatedObj, attrName, IAttributeService.AttributeMode.Execute, true)
 				.AsTask()
 				.ConfigureAwait(false).GetAwaiter().GetResult();
 
@@ -384,9 +379,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				var ownerTask = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
 				var owner = ownerTask.GetAwaiter().GetResult();
 
-				var attrResult = med.Send(
-						new GetAttributeServiceQuery(owner, owner, "LASTIP", IAttributeService.AttributeMode.Execute, true),
-						CancellationToken.None)
+				var attrResult = services.GetAttributeAsync(owner, owner, "LASTIP", IAttributeService.AttributeMode.Execute, true)
 					.AsTask()
 					.ConfigureAwait(false).GetAwaiter().GetResult();
 
@@ -428,9 +421,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				var ownerTask = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
 				var owner = ownerTask.GetAwaiter().GetResult();
 
-				var attrResult = med.Send(
-						new GetAttributeServiceQuery(owner, owner, "LASTSITE", IAttributeService.AttributeMode.Execute, true),
-						CancellationToken.None)
+				var attrResult = services.GetAttributeAsync(owner, owner, "LASTSITE", IAttributeService.AttributeMode.Execute, true)
 					.AsTask()
 					.ConfigureAwait(false).GetAwaiter().GetResult();
 
@@ -551,9 +542,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 		Func<AnySharpObject, string, string, bool> func = (unlockerObj, attrName, expectedValue) =>
 		{
-			var attrResult = med.Send(
-					new GetAttributeServiceQuery(unlockerObj, unlockerObj, attrName, IAttributeService.AttributeMode.Execute, true),
-					CancellationToken.None)
+			var attrResult = services.GetAttributeAsync(unlockerObj, unlockerObj, attrName, IAttributeService.AttributeMode.Execute, true)
 				.AsTask()
 				.ConfigureAwait(false).GetAwaiter().GetResult();
 
@@ -602,10 +591,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 		// as MUSHcode with the unlocker as enactor (%#), then compare result to pattern.
 		Func<AnySharpObject, AnySharpObject, string, string, bool> func = (gatedObj, unlockerObj, attrName, expected) =>
 		{
-			// Use the mediator query to evaluate the attribute as MUSHcode
-			var evalResult = med.Send(
-					new EvaluateAttributeForLockQuery(gatedObj, unlockerObj, attrName),
-					CancellationToken.None)
+			var evalResult = services.EvaluateAttributeAsync(gatedObj, unlockerObj, attrName)
 				.AsTask()
 				.ConfigureAwait(false).GetAwaiter().GetResult();
 
@@ -657,9 +643,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				{
 					// Name-based lookup using mediator query — again, the dbref case is handled above, so
 					// AbsoluteMatch on its own would leave this branch with nowhere to search.
-					var locateResult = med.Send(
-						new LocateObjectQuery(gatedObj, gatedObj, target, LocateFlags.All),
-						CancellationToken.None)
+					var locateResult = services.LocateAsync(gatedObj, gatedObj, target, LocateFlags.All)
 						.AsTask()
 						.ConfigureAwait(false).GetAwaiter().GetResult();
 
@@ -684,13 +668,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				var lockData = targetObj.Object().Locks.GetValueOrDefault(lockType, new Library.Models.SharpLockData("#TRUE"));
 				var lockString = lockData.LockString;
 
-				// Use mediator query to recursively evaluate the lock
-				// This breaks the circular dependency between parser and lock service
-				var evaluateResult = med.Send(
-					new EvaluateLockQuery(lockString, targetObj, unlockerObj),
-					CancellationToken.None)
-					.AsTask()
-					.ConfigureAwait(false).GetAwaiter().GetResult();
+				var evaluateResult = services.EvaluateLock(lockString, targetObj, unlockerObj);
 
 				return evaluateResult;
 			}

@@ -19,7 +19,7 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class ConfigurationController(
 	IOptionsWrapper<SharpMUSHOptions> options,
-	ISharpDatabase database,
+	IExpandedDataStore database,
 	ConfigurationReloadService configReloadService,
 	ILogger<ConfigurationController> logger)
 	: ControllerBase

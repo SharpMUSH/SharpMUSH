@@ -571,7 +571,7 @@ public class CachingBehaviorTests
 	{
 		using var cache = new FusionCache(new FusionCacheOptions());
 		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache);
-		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache);
+		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache, new ObjectVersions());
 		var probe = new StaleReadProbe();
 		var write = new StaleReadWrite(byKey ? [probe.CacheKey] : [], byTag ? probe.CacheTags : []);
 

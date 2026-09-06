@@ -19,7 +19,7 @@ namespace SharpMUSH.Server.Controllers;
 [ApiController]
 [Route("api/packages")]
 public class PackagesController(
-	ISharpDatabase database,
+	IPackageRegistryService registry,
 	IPackageSourceService source,
 	IPackageManifestService manifests,
 	IPackageInstallService installer,
@@ -40,8 +40,6 @@ public class PackagesController(
 	private static readonly PackageRemoteRecord CatalogueRemote = new(
 		BundledPackages.RemoteName, BundledPackages.SourceRepo, PackageRemoteTrust.Official, null);
 
-	private IPackageRegistryService Registry => (IPackageRegistryService)database;
-
 	/// <summary>
 	/// Lists accepted community repos: aggregates the <c>community/</c>
 	/// listing folders of every configured official remote (falling back to
@@ -54,7 +52,7 @@ public class PackagesController(
 
 	private async Task<CommunityReposResponse> BuildCommunityDirectoryAsync(CancellationToken cancellationToken)
 	{
-		var remotes = await Registry.GetPackageRemotesAsync();
+		var remotes = await registry.GetPackageRemotesAsync();
 		var officials = remotes.Where(r => r.Trust == PackageRemoteTrust.Official).ToList();
 		if (officials.Count == 0)
 		{
@@ -101,7 +99,7 @@ public class PackagesController(
 			return BadRequest("'url' is required.");
 		}
 
-		var remotes = await Registry.GetPackageRemotesAsync();
+		var remotes = await registry.GetPackageRemotesAsync();
 		var configured = remotes.FirstOrDefault(r => string.Equals(r.Url, url, StringComparison.OrdinalIgnoreCase));
 
 		CommunityRepoListing? accepted = null;
@@ -156,15 +154,15 @@ public class PackagesController(
 	[Authorize]
 	public async Task<ActionResult<IReadOnlyList<InstalledPackageDto>>> GetInstalled()
 	{
-		var installed = await Registry.GetInstalledPackagesAsync();
+		var installed = await registry.GetInstalledPackagesAsync();
 		var result = new List<InstalledPackageDto>();
 		foreach (var package in installed)
 		{
 			result.Add(new InstalledPackageDto(
 				package,
-				(await Registry.GetManagedAttributesAsync(package.Id)).Count,
-				(await Registry.GetPackageObjectsAsync(package.Id)).Count,
-				(await Registry.GetPackageDependentsAsync(package.Id)).Select(d => d.PackageId).ToList()));
+				(await registry.GetManagedAttributesAsync(package.Id)).Count,
+				(await registry.GetPackageObjectsAsync(package.Id)).Count,
+				(await registry.GetPackageDependentsAsync(package.Id)).Select(d => d.PackageId).ToList()));
 		}
 
 		return Ok(result);
@@ -175,7 +173,7 @@ public class PackagesController(
 	[Authorize]
 	public async Task<ActionResult<IReadOnlyList<RevisionDto>>> GetRevisions(string id)
 	{
-		var revisions = await Registry.GetPackageRevisionsAsync(id);
+		var revisions = await registry.GetPackageRevisionsAsync(id);
 		return Ok(revisions
 			.Select(r => new RevisionDto(r.Revision, r.Kind.ToString().ToLowerInvariant(), r.Version, r.Commit, r.AppliedAt))
 			.ToList());
@@ -211,7 +209,7 @@ public class PackagesController(
 	[Authorize]
 	public async Task<ActionResult<PackageUpdateInfo>> CheckForUpdate(string id, CancellationToken cancellationToken)
 	{
-		var installed = await Registry.GetInstalledPackageAsync(id);
+		var installed = await registry.GetInstalledPackageAsync(id);
 		if (installed.IsT1)
 		{
 			return NotFound($"'{id}' is not installed.");
@@ -226,7 +224,7 @@ public class PackagesController(
 			return Ok(CatalogueUpdateInfo(installed.AsT0));
 		}
 
-		var remotes = await Registry.GetPackageRemotesAsync();
+		var remotes = await registry.GetPackageRemotesAsync();
 		var remote = remotes.FirstOrDefault(r =>
 				string.Equals(r.Url, installed.AsT0.SourceRepo, StringComparison.OrdinalIgnoreCase))
 			?? new PackageRemoteRecord(
@@ -248,7 +246,7 @@ public class PackagesController(
 	[Authorize]
 	public async Task<ActionResult<IReadOnlyList<PackageRemoteRecord>>> GetRemotes()
 	{
-		var configured = await Registry.GetPackageRemotesAsync();
+		var configured = await registry.GetPackageRemotesAsync();
 		return Ok(configured
 			.Where(r => !BundledPackages.IsCatalogueRemote(r.Name))
 			.Prepend(CatalogueRemote)
@@ -275,7 +273,7 @@ public class PackagesController(
 			return BadRequest("Trust must be official, community, or unknown.");
 		}
 
-		await Registry.UpsertPackageRemoteAsync(new PackageRemoteRecord(
+		await registry.UpsertPackageRemoteAsync(new PackageRemoteRecord(
 			request.Name.Trim(), request.Url.Trim(), trust,
 			string.IsNullOrWhiteSpace(request.Branch) ? null : request.Branch.Trim()));
 		return NoContent();
@@ -292,7 +290,7 @@ public class PackagesController(
 				$"'{BundledPackages.RemoteName}' is the catalogue shipped with this server and cannot be removed.");
 		}
 
-		await Registry.RemovePackageRemoteAsync(name);
+		await registry.RemovePackageRemoteAsync(name);
 		return NoContent();
 	}
 
@@ -306,7 +304,7 @@ public class PackagesController(
 			return Ok(BrowseCatalogue());
 		}
 
-		var remote = await Registry.GetPackageRemoteAsync(name);
+		var remote = await registry.GetPackageRemoteAsync(name);
 		if (remote.IsT1)
 		{
 			return NotFound($"No configured remote named '{name}'.");
@@ -373,7 +371,7 @@ public class PackagesController(
 		var isCatalogue = BundledPackages.IsCatalogueRemote(request.Remote);
 		var remote = isCatalogue
 			? CatalogueRemote
-			: (await Registry.GetPackageRemoteAsync(request.Remote)).AsT0;
+			: (await registry.GetPackageRemoteAsync(request.Remote)).AsT0;
 
 		// Managed packages (Phase 4) carry a compiled DLL alongside package.yaml;
 		// resolve a binary reader over the same commit so the installer can verify
@@ -427,7 +425,7 @@ public class PackagesController(
 		}
 		else
 		{
-			var remote = await Registry.GetPackageRemoteAsync(remoteName);
+			var remote = await registry.GetPackageRemoteAsync(remoteName);
 			if (remote.IsT1)
 			{
 				return NotFound($"No configured remote named '{remoteName}'.");
@@ -626,7 +624,7 @@ public class PackagesController(
 				: Ok(new ReadmeResponse(markdown, Markdown.RenderToHtml(markdown)));
 		}
 
-		var remote = await Registry.GetPackageRemoteAsync(name);
+		var remote = await registry.GetPackageRemoteAsync(name);
 		if (remote.IsT1)
 		{
 			return NotFound($"No configured remote named '{name}'.");

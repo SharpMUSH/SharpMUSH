@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetPlayerPasswordCommandHandler(ISharpDatabase database) : ICommandHandler<SetPlayerPasswordCommand, ValueTask<Unit>>
+public class SetPlayerPasswordCommandHandler(IObjectStore database, IServerStateStore serverState) : ICommandHandler<SetPlayerPasswordCommand, ValueTask<Unit>>
 {
 	public async ValueTask<ValueTask<Unit>> Handle(SetPlayerPasswordCommand command, CancellationToken cancellationToken)
 	{
@@ -16,9 +16,9 @@ public class SetPlayerPasswordCommandHandler(ISharpDatabase database) : ICommand
 		// non-empty password check, so it cannot fire on an unclaimed game.)
 		if (command.Player.Object.Key == 1 && !string.IsNullOrEmpty(command.Password))
 		{
-			var state = await database.GetServerStateAsync(cancellationToken);
+			var state = await serverState.GetServerStateAsync(cancellationToken);
 			if (!state.SetupCompleted)
-				await database.SetServerSetupCompletedAsync(true, cancellationToken);
+				await serverState.SetServerSetupCompletedAsync(true, cancellationToken);
 		}
 
 		return ValueTask.FromResult(new Unit());

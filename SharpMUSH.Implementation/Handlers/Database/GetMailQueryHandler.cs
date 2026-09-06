@@ -5,13 +5,13 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetMailQueryHandler(ISharpDatabase database) : IQueryHandler<GetMailQuery, SharpMail?>
+public class GetMailQueryHandler(IMailStore database) : IQueryHandler<GetMailQuery, SharpMail?>
 {
 	public async ValueTask<SharpMail?> Handle(GetMailQuery query, CancellationToken cancellationToken) =>
 		await database.GetIncomingMailAsync(query.Player, query.Folder, query.Mail, cancellationToken);
 }
 
-public class GetMailListQueryHandler(ISharpDatabase database)
+public class GetMailListQueryHandler(IMailStore database)
 	: IStreamQueryHandler<GetMailListQuery, SharpMail>
 {
 	public IAsyncEnumerable<SharpMail>
@@ -19,7 +19,7 @@ public class GetMailListQueryHandler(ISharpDatabase database)
 		=> database.GetIncomingMailsAsync(query.Player, query.Folder, cancellationToken);
 }
 
-public class GetAllMailListQueryHandler(ISharpDatabase database)
+public class GetAllMailListQueryHandler(IMailStore database)
 	: IStreamQueryHandler<GetAllMailListQuery, SharpMail>
 {
 	public IAsyncEnumerable<SharpMail>
@@ -27,13 +27,13 @@ public class GetAllMailListQueryHandler(ISharpDatabase database)
 		=> database.GetAllIncomingMailsAsync(query.Player, cancellationToken);
 }
 
-public class GetSentMailQueryHandler(ISharpDatabase database) : IQueryHandler<GetSentMailQuery, SharpMail?>
+public class GetSentMailQueryHandler(IMailStore database) : IQueryHandler<GetSentMailQuery, SharpMail?>
 {
 	public async ValueTask<SharpMail?> Handle(GetSentMailQuery query, CancellationToken cancellationToken) =>
 		await database.GetSentMailAsync(query.Sender, query.Recipient, query.Mail, cancellationToken);
 }
 
-public class GetSentMailListQueryHandler(ISharpDatabase database)
+public class GetSentMailListQueryHandler(IMailStore database)
 	: IStreamQueryHandler<GetSentMailListQuery, SharpMail>
 {
 	public IAsyncEnumerable<SharpMail>
@@ -41,7 +41,7 @@ public class GetSentMailListQueryHandler(ISharpDatabase database)
 		database.GetSentMailsAsync(query.Sender, query.Recipient, cancellationToken);
 }
 
-public class GetAllSentMailListQueryHandler(ISharpDatabase database)
+public class GetAllSentMailListQueryHandler(IMailStore database)
 	: IStreamQueryHandler<GetAllSentMailListQuery, SharpMail>
 {
 	public IAsyncEnumerable<SharpMail>
@@ -49,7 +49,7 @@ public class GetAllSentMailListQueryHandler(ISharpDatabase database)
 		database.GetAllSentMailsAsync(query.Sender, cancellationToken);
 }
 
-public class GetAllSystemMailQueryHandler(ISharpDatabase database)
+public class GetAllSystemMailQueryHandler(IMailStore database)
 	: IStreamQueryHandler<GetAllSystemMailQuery, SharpMail>
 {
 	public IAsyncEnumerable<SharpMail>

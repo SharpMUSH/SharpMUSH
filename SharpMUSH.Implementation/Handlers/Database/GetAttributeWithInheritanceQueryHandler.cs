@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 /// with full parent/zone inheritance resolution in a single database call.
 /// Returns the complete attribute path (FOO → BAR → BAZ) as a stream of AttributeWithInheritance instances.
 /// </summary>
-public class GetAttributeWithInheritanceQueryHandler(ISharpDatabase database)
+public class GetAttributeWithInheritanceQueryHandler(IAttributeStore database)
 	: IStreamQueryHandler<GetAttributeWithInheritanceQuery, AttributeWithInheritance>
 {
 	public IAsyncEnumerable<AttributeWithInheritance> Handle(
@@ -30,7 +30,7 @@ public class GetAttributeWithInheritanceQueryHandler(ISharpDatabase database)
 /// with full parent/zone inheritance resolution in a single database call (lazy version).
 /// Returns the complete attribute path (FOO → BAR → BAZ) as a stream of LazyAttributeWithInheritance instances.
 /// </summary>
-public class GetLazyAttributeWithInheritanceQueryHandler(ISharpDatabase database)
+public class GetLazyAttributeWithInheritanceQueryHandler(IAttributeStore database)
 	: IStreamQueryHandler<GetLazyAttributeWithInheritanceQuery, LazyAttributeWithInheritance>
 {
 	public IAsyncEnumerable<LazyAttributeWithInheritance> Handle(

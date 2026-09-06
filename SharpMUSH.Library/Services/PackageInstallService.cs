@@ -24,7 +24,10 @@ namespace SharpMUSH.Library.Services;
 /// Package Manager wizard (config <c>package_manager</c>, default #3).
 /// </summary>
 public class PackageInstallService(
-	ISharpDatabase database,
+	IObjectStore database,
+	IAttributeStore attributeStore,
+	IFlagAndPowerStore flags,
+	INavigationStore navigation,
 	IPackageRegistryService registry,
 	IApplicationRegistryService applications,
 	IPackagePlanService planner,
@@ -228,7 +231,7 @@ public class PackageInstallService(
 		var attributeFlags = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
 		foreach (var attribute in attributes)
 		{
-			var leaf = await database
+			var leaf = await attributeStore
 				.GetAttributeAsync(dbref.Value, attribute.Split('`'), cancellationToken)
 				.LastOrDefaultAsync(cancellationToken);
 			if (leaf is not null)
@@ -239,7 +242,7 @@ public class PackageInstallService(
 		}
 
 		var hasContents = checkContents
-			&& await database.GetContentsAsync(dbref.Value, cancellationToken).AnyAsync(cancellationToken);
+			&& await navigation.GetContentsAsync(dbref.Value, cancellationToken).AnyAsync(cancellationToken);
 
 		// Full live object structure for the three-way structure merge.
 		var sharpObject = known.Object();
@@ -793,12 +796,13 @@ public class PackageInstallService(
 		List<string> notes,
 		CancellationToken cancellationToken)
 	{
-		var dbref = ParseObjid(objid);
-		if (dbref is null)
+		var parsed = ParseObjid(objid);
+		if (parsed is null)
 		{
 			return $"Internal error: invalid objid '{objid}'.";
 		}
 
+		var target = parsed.Value;
 		var path = change.Attribute.Split('`');
 
 		async Task WriteAsync(string value)
@@ -808,7 +812,7 @@ public class PackageInstallService(
 				preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue));
 			}
 
-			await database.SetAttributeAsync(dbref.Value, path, MModule.single(value), pmWizard, cancellationToken);
+			await attributeStore.SetAttributeAsync(target, path, MModule.single(value), pmWizard, cancellationToken);
 		}
 
 		async Task BaselineAsync(string packageValue, string? effectiveValue)
@@ -843,7 +847,7 @@ public class PackageInstallService(
 
 			case PackageAttributeAction.Delete:
 				preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue!));
-				await database.ClearAttributeAsync(dbref.Value, path, cancellationToken);
+				await attributeStore.ClearAttributeAsync(target, path, cancellationToken);
 				await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
 				return null;
 
@@ -859,7 +863,7 @@ public class PackageInstallService(
 						case PackageConflictResolution.TakeTheirs when change.Conflict == PackageConflictKind.ModifyDelete:
 							// "Theirs" is the deletion.
 							preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue!));
-							await database.ClearAttributeAsync(dbref.Value, path, cancellationToken);
+							await attributeStore.ClearAttributeAsync(target, path, cancellationToken);
 							await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
 							return null;
 						case PackageConflictResolution.TakeTheirs:
@@ -938,8 +942,8 @@ public class PackageInstallService(
 			case PackageStructureKind.ObjectFlag:
 				if (change.Action is PackageStructureAction.Add or PackageStructureAction.Remove)
 				{
-					var flag = await database.GetObjectFlagAsync(change.Element.ToUpperInvariant(), cancellationToken)
-						?? await database.GetObjectFlagAsync(change.Element, cancellationToken);
+					var flag = await flags.GetObjectFlagAsync(change.Element.ToUpperInvariant(), cancellationToken)
+						?? await flags.GetObjectFlagAsync(change.Element, cancellationToken);
 					if (flag is null)
 					{
 						notes.Add($"{change.TargetRef}: unknown flag '{change.Element}' skipped.");
@@ -961,8 +965,8 @@ public class PackageInstallService(
 			case PackageStructureKind.ObjectPower:
 				if (change.Action is PackageStructureAction.Add or PackageStructureAction.Remove)
 				{
-					var power = await database.GetPowerAsync(change.Element.ToUpperInvariant(), cancellationToken)
-						?? await database.GetPowerAsync(change.Element, cancellationToken);
+					var power = await flags.GetPowerAsync(change.Element.ToUpperInvariant(), cancellationToken)
+						?? await flags.GetPowerAsync(change.Element, cancellationToken);
 					if (power is null)
 					{
 						notes.Add($"{change.TargetRef}: unknown power '{change.Element}' skipped.");
@@ -982,8 +986,8 @@ public class PackageInstallService(
 			case PackageStructureKind.AttributeFlag:
 				if (change.Action is PackageStructureAction.Add or PackageStructureAction.Remove)
 				{
-					var flag = await database.GetAttributeFlagAsync(change.Element.ToUpperInvariant(), cancellationToken)
-						?? await database.GetAttributeFlagAsync(change.Element, cancellationToken);
+					var flag = await attributeStore.GetAttributeFlagAsync(change.Element.ToUpperInvariant(), cancellationToken)
+						?? await attributeStore.GetAttributeFlagAsync(change.Element, cancellationToken);
 					var path = change.Attribute!.Split('`');
 					if (flag is null)
 					{
@@ -995,12 +999,12 @@ public class PackageInstallService(
 						// flag the package adds to an attribute the admin deleted locally
 						// has nothing to land on.
 						var dbref = ParseObjid(objid);
-						var exists = dbref is not null && await database
+						var exists = dbref is not null && await attributeStore
 							.GetAttributeAsync(dbref.Value, path, cancellationToken)
 							.AnyAsync(cancellationToken);
 						if (exists)
 						{
-							await database.SetAttributeFlagAsync(node.Object(), path, flag, cancellationToken);
+							await attributeStore.SetAttributeFlagAsync(node.Object(), path, flag, cancellationToken);
 						}
 						else
 						{
@@ -1009,7 +1013,7 @@ public class PackageInstallService(
 					}
 					else
 					{
-						await database.UnsetAttributeFlagAsync(node.Object(), path, flag, cancellationToken);
+						await attributeStore.UnsetAttributeFlagAsync(node.Object(), path, flag, cancellationToken);
 					}
 				}
 
@@ -1136,7 +1140,7 @@ public class PackageInstallService(
 			var dbref = ParseObjid(managed.Objid);
 			if (dbref is not null)
 			{
-				await database.ClearAttributeAsync(dbref.Value, managed.Attribute.Split('`'), cancellationToken);
+				await attributeStore.ClearAttributeAsync(dbref.Value, managed.Attribute.Split('`'), cancellationToken);
 			}
 		}
 
@@ -1195,7 +1199,7 @@ public class PackageInstallService(
 				continue;
 			}
 
-			await database.SetAttributeAsync(
+			await attributeStore.SetAttributeAsync(
 				dbref.Value, attribute.Attribute.Split('`'), MModule.single(attribute.Value), pmWizard, cancellationToken);
 			await registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
 				packageId, attribute.Objid, attribute.Attribute.ToUpperInvariant(),
@@ -1210,7 +1214,7 @@ public class PackageInstallService(
 			var dbref = ParseObjid(managed.Objid);
 			if (dbref is not null)
 			{
-				await database.ClearAttributeAsync(dbref.Value, managed.Attribute.Split('`'), cancellationToken);
+				await attributeStore.ClearAttributeAsync(dbref.Value, managed.Attribute.Split('`'), cancellationToken);
 			}
 
 			await registry.RemoveManagedAttributeAsync(packageId, managed.Objid, managed.Attribute);
@@ -1352,7 +1356,7 @@ public class PackageInstallService(
 			return;
 		}
 
-		var going = await database.GetObjectFlagAsync("GOING", cancellationToken);
+		var going = await flags.GetObjectFlagAsync("GOING", cancellationToken);
 		if (going is null)
 		{
 			notes.Add($"{objid}: GOING flag unavailable; object left in place.");

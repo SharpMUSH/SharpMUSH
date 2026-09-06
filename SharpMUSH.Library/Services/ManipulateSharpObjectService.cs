@@ -14,7 +14,7 @@ namespace SharpMUSH.Library.Services;
 
 public class ManipulateSharpObjectService(
 	IMediator mediator,
-	ISharpDatabase database,
+	IObjectStore database,
 	IPermissionService permissionService,
 	IPasswordService passwordService,
 	IValidateService validateService,

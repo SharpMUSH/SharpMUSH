@@ -7,7 +7,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetAttributeQueryHandler(ISharpDatabase database)
+public class GetAttributeQueryHandler(IAttributeStore database)
 	: IStreamQueryHandler<GetAttributeQuery, SharpAttribute>
 {
 	public IAsyncEnumerable<SharpAttribute> Handle(GetAttributeQuery request,
@@ -15,7 +15,7 @@ public class GetAttributeQueryHandler(ISharpDatabase database)
 		=> database.GetAttributeAsync(request.DBRef, request.Attribute.Select(x => x.ToUpper()).ToArray(), cancellationToken);
 }
 
-public class GetLazyAttributeQueryHandler(ISharpDatabase database)
+public class GetLazyAttributeQueryHandler(IAttributeStore database)
 	: IStreamQueryHandler<GetLazyAttributeQuery, LazySharpAttribute>
 {
 	public IAsyncEnumerable<LazySharpAttribute> Handle(GetLazyAttributeQuery request,
@@ -24,7 +24,8 @@ public class GetLazyAttributeQueryHandler(ISharpDatabase database)
 }
 
 public class GetAttributesQueryHandler(
-	ISharpDatabase database,
+	IAttributeStore database,
+	IObjectStore objects,
 	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: IStreamQueryHandler<GetAttributesQuery, AttributeWithSource>
 {
@@ -64,7 +65,7 @@ public class GetAttributesQueryHandler(
 				yield return new AttributeWithSource(attr, request.DBRef);
 		}
 
-		var obj = await database.GetObjectNodeAsync(request.DBRef, cancellationToken);
+		var obj = await objects.GetObjectNodeAsync(request.DBRef, cancellationToken);
 		if (obj.IsNone) yield break;
 
 		var maxDepth = (int)configuration.CurrentValue.Limit.MaxParents;
@@ -136,7 +137,7 @@ public class GetAttributesQueryHandler(
 	}
 }
 
-public class GetLazyAttributesQueryHandler(ISharpDatabase database)
+public class GetLazyAttributesQueryHandler(IAttributeStore database)
 	: IStreamQueryHandler<GetLazyAttributesQuery, LazyAttributeWithSource>
 {
 	// This handler does not walk the parent chain at all (it ignores request.CheckParents), so

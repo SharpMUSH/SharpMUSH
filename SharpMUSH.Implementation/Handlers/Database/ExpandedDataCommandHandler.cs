@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class ExpandedDataCommandHandler(ISharpDatabase database) : ICommandHandler<SetExpandedDataCommand>, ICommandHandler<SetExpandedServerDataCommand>
+public class ExpandedDataCommandHandler(IExpandedDataStore database) : ICommandHandler<SetExpandedDataCommand>, ICommandHandler<SetExpandedServerDataCommand>
 {
 	public async ValueTask<Unit> Handle(SetExpandedDataCommand command, CancellationToken cancellationToken)
 	{

@@ -15,7 +15,7 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class BannedNamesController(
 	IOptionsWrapper<SharpMUSHOptions> options,
-	ISharpDatabase database,
+	IExpandedDataStore database,
 	ConfigurationReloadService configReloadService,
 	ILogger<BannedNamesController> logger)
 	: ControllerBase

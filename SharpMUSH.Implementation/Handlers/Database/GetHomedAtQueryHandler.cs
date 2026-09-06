@@ -5,7 +5,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetHomedAtQueryHandler(ISharpDatabase database)
+public class GetHomedAtQueryHandler(INavigationStore database)
 	: IStreamQueryHandler<GetHomedAtQuery, AnySharpContent>
 {
 	public IAsyncEnumerable<AnySharpContent> Handle(GetHomedAtQuery request, CancellationToken cancellationToken)

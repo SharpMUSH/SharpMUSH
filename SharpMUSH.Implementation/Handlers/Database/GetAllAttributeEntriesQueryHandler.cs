@@ -5,7 +5,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetAllAttributeEntriesQueryHandler(ISharpDatabase database) : IStreamQueryHandler<GetAllAttributeEntriesQuery, SharpAttributeEntry>
+public class GetAllAttributeEntriesQueryHandler(IAttributeStore database) : IStreamQueryHandler<GetAllAttributeEntriesQuery, SharpAttributeEntry>
 {
 	public IAsyncEnumerable<SharpAttributeEntry> Handle(GetAllAttributeEntriesQuery query, CancellationToken cancellationToken)
 	{

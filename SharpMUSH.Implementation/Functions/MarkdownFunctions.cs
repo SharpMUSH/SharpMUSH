@@ -16,7 +16,7 @@ public partial class Functions
 	/// <param name="_2">Function attribute metadata</param>
 	/// <returns>Rendered markdown as MarkupString</returns>
 	[SharpFunction(Name = "rendermarkdown", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["text"])]
-	public static ValueTask<CallState> RenderMarkdown(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> RenderMarkdown(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 
@@ -55,10 +55,10 @@ public partial class Functions
 	/// <param name="_2">Function attribute metadata</param>
 	/// <returns>Rendered markdown as MarkupString with custom templates applied</returns>
 	[SharpFunction(Name = "rendermarkdowncustom", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["text"])]
-	public static async ValueTask<CallState> RenderMarkdownCustom(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> RenderMarkdownCustom(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var markdown = "";
 		if (args.TryGetValue("0", out var markdownArg))
@@ -78,14 +78,14 @@ public partial class Functions
 			}
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, templateObjRef, LocateFlags.All,
 			async templateObj =>
 			{
 				try
 				{
 					var customRenderer = new CustomizableMarkdownRenderer(
-						parser, executor, templateObj, AttributeService!, width);
+						parser, executor, templateObj, AttributeService, width);
 					var result = customRenderer.RenderMarkdown(markdown);
 					return new CallState(result);
 				}

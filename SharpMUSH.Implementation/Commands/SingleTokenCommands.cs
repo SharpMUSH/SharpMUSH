@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "]", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> NoParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> NoParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Re-parse the command with NoEval mode. This is necessary because the command
 		// was already tokenized in Default mode by the time we reach this handler.
@@ -36,7 +36,7 @@ public partial class Commands
 	/// is not executed.
 	/// </summary>
 	[SharpCommand(Name = "~", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> StrictParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> StrictParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var oldCommand = RebuildTokenlessCommand(parser);
 		if (MModule.getLength(oldCommand) == 0)
@@ -56,7 +56,7 @@ public partial class Commands
 	/// token itself removed, so it can be re-dispatched. An empty result means the player typed the bare
 	/// token and there is nothing to re-dispatch — re-parsing then would re-enter this same command.
 	/// </summary>
-	private static MString RebuildTokenlessCommand(IMUSHCodeParser parser)
+	private MString RebuildTokenlessCommand(IMUSHCodeParser parser)
 	{
 		var parts = parser.CurrentState.ArgumentsOrdered.Values
 			.Select(x => x.Message ?? MModule.empty())
@@ -77,13 +77,13 @@ public partial class Commands
 	// The SetAttribute handler handles DirectInput vs queue context to evaluate vs store raw.
 	[SharpCommand(Name = "&", Behavior = CommandBehavior.SingleToken | CommandBehavior.RSNoParse | CommandBehavior.RSBrace | CommandBehavior.EqSplit,
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["object/attribute", "value"])]
-	public static async ValueTask<Option<CallState>> SetAttribute(IMUSHCodeParser parser,
+	public async ValueTask<Option<CallState>> SetAttribute(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
 		// This will come in as arg[0] = <attr>, arg[1]: <object> and arg[2] as [value]
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
-		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 
 		// The attribute name (arg["0"]) is extracted from the raw command token (e.g. &hdr_%q1 obj=val
 		// → attr="hdr_%q1"). In PennMUSH, the attribute name IS evaluated so that register
@@ -92,13 +92,13 @@ public partial class Commands
 		var attrNameParsed = (await parser.FunctionParse(attrNameRaw))?.Message ?? attrNameRaw;
 		var attrName = MModule.plainText(attrNameParsed);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			enactor,
 			executor,
 			args["1"].Message!.ToString(), LocateFlags.All, async realLocated =>
 			{
 				if (!args.TryGetValue("2", out var tmpContents)
-					|| (!Configuration!.CurrentValue.Attribute.EmptyAttributes
+					|| (!Configuration.CurrentValue.Attribute.EmptyAttributes
 						&& string.IsNullOrEmpty(tmpContents.Message?.ToPlainText())))
 				{
 					// PennMUSH: & attr obj (no '=') always clears.
@@ -108,10 +108,10 @@ public partial class Commands
 					// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/cmds.c#L1790
 					// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/attrib.c#L2449
 					// Notifications go to executor so softcoded WIZARD objects don't leak confirmations to players.
-					var clearResult = await AttributeService!.ClearAttributeAsync(
+					var clearResult = await AttributeService.ClearAttributeAsync(
 						executor, realLocated, attrName,
 						IAttributeService.AttributePatternMode.Exact);
-					await NotifyService!.Notify(executor,
+					await NotifyService.Notify(executor,
 						clearResult.Match(
 							_ => string.Format(ErrorMessages.Notifications.AttributeCleared, realLocated.Object().Name, attrName),
 							failure => failure.Value), executor);
@@ -135,8 +135,8 @@ public partial class Commands
 				// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/attrib.c#L2449
 				// Notifications go to executor so softcoded WIZARD objects don't leak confirmations to players.
 				var setResult =
-					await AttributeService!.SetAttributeAsync(executor, realLocated, attrName, contents);
-				await NotifyService!.Notify(executor,
+					await AttributeService.SetAttributeAsync(executor, realLocated, attrName, contents);
+				await NotifyService.Notify(executor,
 					setResult.Match(
 						_ => string.Format(ErrorMessages.Notifications.AttributeSet, realLocated.Object().Name, attrNameParsed),
 						failure => failure.Value), executor);

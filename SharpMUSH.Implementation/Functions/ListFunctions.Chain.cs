@@ -14,9 +14,9 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "chain", MinArgs = 2, MaxArgs = 32, Flags = FunctionFlags.Regular, ParameterNames = ["attributes", "base", "arguments..."])]
-	public static async ValueTask<CallState> Chain(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> Chain(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var attrListStr = MModule.plainText(parser.CurrentState.Arguments["0"].Message!)!;
 		var tokens = attrListStr.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -58,7 +58,7 @@ public partial class Functions
 				var (dbref, attrName) = objAttr.AsT0;
 				dbref ??= executor.ToString();
 
-				var locate = await LocateService!.LocateAndNotifyIfInvalid(
+				var locate = await LocateService.LocateAndNotifyIfInvalid(
 					parser, executor, executor, dbref, LocateFlags.All);
 				if (!locate.IsValid())
 				{
@@ -67,7 +67,7 @@ public partial class Functions
 
 				var located = locate.WithoutError().WithoutNone();
 
-				var maybeAttr = await AttributeService!.GetAttributeAsync(
+				var maybeAttr = await AttributeService.GetAttributeAsync(
 					executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
 				if (maybeAttr.IsNone)
 				{

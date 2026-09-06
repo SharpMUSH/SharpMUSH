@@ -5,7 +5,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class CreateAttributeEntryCommandHandler(ISharpDatabase database) : ICommandHandler<CreateAttributeEntryCommand, SharpAttributeEntry?>
+public class CreateAttributeEntryCommandHandler(IAttributeStore database) : ICommandHandler<CreateAttributeEntryCommand, SharpAttributeEntry?>
 {
 	public async ValueTask<SharpAttributeEntry?> Handle(CreateAttributeEntryCommand request, CancellationToken cancellationToken)
 	{

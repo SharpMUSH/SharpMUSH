@@ -5,7 +5,7 @@ using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetObjectFlagCommandHandler(ISharpDatabase database) : ICommandHandler<SetObjectFlagCommand, bool>
+public class SetObjectFlagCommandHandler(IFlagAndPowerStore database) : ICommandHandler<SetObjectFlagCommand, bool>
 {
 	public async ValueTask<bool> Handle(SetObjectFlagCommand request, CancellationToken cancellationToken)
 	{
@@ -19,7 +19,7 @@ public class SetObjectFlagCommandHandler(ISharpDatabase database) : ICommandHand
 	}
 }
 
-public class UnsetObjectFlagCommandHandler(ISharpDatabase database) : ICommandHandler<UnsetObjectFlagCommand, bool>
+public class UnsetObjectFlagCommandHandler(IFlagAndPowerStore database) : ICommandHandler<UnsetObjectFlagCommand, bool>
 {
 	public async ValueTask<bool> Handle(UnsetObjectFlagCommand request, CancellationToken cancellationToken)
 	{

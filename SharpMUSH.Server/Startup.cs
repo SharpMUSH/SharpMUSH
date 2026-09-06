@@ -68,6 +68,46 @@ public class Startup(
 	// Must match the [FromKeyedServices] key used in BooleanExpressionParser.
 	public const string CompiledExpressionsCacheName = "compiled-expressions";
 
+	/// <summary>
+	/// Exposes one concrete database provider under every interface it serves. The provider is a
+	/// single instance registered as its own type; each interface here forwards to that instance,
+	/// so the compiler checks that <typeparamref name="TProvider"/> implements every surface
+	/// handed out, and a provider that drops one of them fails to build instead of failing to cast.
+	/// </summary>
+	private static void RegisterDatabaseProvider<TProvider>(IServiceCollection services)
+		where TProvider : class, ISharpDatabase, IWikiService, IPackageRegistryService,
+		IApplicationRegistryService, ILayoutRegistryService, IRoleRegistryService
+	{
+		services.AddSingleton<ISharpDatabase>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IDatabaseLifecycle>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IObjectStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IFlagAndPowerStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<INavigationStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IAttributeStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IMailStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IExpandedDataStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IChannelStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IAccountStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IServerStateStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<ISessionRecordStore>(sp => sp.GetRequiredService<TProvider>());
+
+		// Portal subsystems the provider also backs: wiki, package registry, layout registry, RBAC roles.
+		services.AddSingleton<IWikiService>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IPackageRegistryService>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<ILayoutRegistryService>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IRoleRegistryService>(sp => sp.GetRequiredService<TProvider>());
+
+		// Dynamic Application registry (Area 21), wrapped in a read-only overlay decorator so the
+		// PluginCatalog's IApplicationSource contributions are unioned into reads while their plugins
+		// are loaded (DB/built-in wins on a slug collision; plugin apps are not persisted and not
+		// admin-editable). The provider is the decorator's inner.
+		services.AddSingleton<IApplicationRegistryService>(sp =>
+			new Implementation.Services.PluginApplicationRegistryDecorator(
+				sp.GetRequiredService<TProvider>(),
+				sp.GetRequiredService<Implementation.Services.PluginCatalog>(),
+				sp.GetRequiredService<ILogger<Implementation.Services.PluginApplicationRegistryDecorator>>()));
+	}
+
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
 		// Compress what we send. Only the Blazor _framework files arrived compressed before, because
@@ -187,20 +227,20 @@ public class Startup(
 				GraphDatabase.Driver(
 					memgraphUri ?? "bolt://localhost:7687",
 					o => o.WithEncryptionLevel(EncryptionLevel.None)));
-			services.AddSingleton<ISharpDatabase, MemgraphDatabase>(x =>
+			services.AddSingleton<MemgraphDatabase>(x =>
 			{
 				var dbLogger = x.GetRequiredService<ILogger<MemgraphDatabase>>();
 				var neo4JDriver = x.GetRequiredService<IDriver>();
 				var password = x.GetRequiredService<IPasswordService>();
 				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password,
 					x.GetRequiredService<IObjectRelationLoader>(), pluginMigrationSources, pluginFlags);
-				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
+			RegisterDatabaseProvider<MemgraphDatabase>(services);
 			// Host-shared storage accessor for storage plugins (e.g. the Scene plugin). Generic seam over the
 			// active provider's connection; carries no subsystem concept.
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.IMemgraphStorageAccessor>(sp =>
-				(SharpMUSH.Library.Plugins.Storage.IMemgraphStorageAccessor)sp.GetRequiredService<ISharpDatabase>());
+				sp.GetRequiredService<MemgraphDatabase>());
 		}
 		else if (databaseProvider == DatabaseProvider.SurrealDB)
 		{
@@ -215,7 +255,7 @@ public class Startup(
 			services.AddSurreal($"Endpoint={surrealEndpoint};Namespace=sharpmush;Database=world")
 				.AddInMemoryProvider()
 				.AddRocksDbProvider();
-			services.AddSingleton<ISharpDatabase, SurrealDatabase>(x =>
+			services.AddSingleton<SurrealDatabase>(x =>
 			{
 				var dbLogger = x.GetRequiredService<ILogger<SurrealDatabase>>();
 				var surrealClient = x.GetRequiredService<ISurrealDbClient>();
@@ -223,15 +263,15 @@ public class Startup(
 				var password = x.GetRequiredService<IPasswordService>();
 				var db = new SurrealDatabase(dbLogger, surrealClient, password,
 					x.GetRequiredService<IObjectRelationLoader>(), pluginMigrationSources, pluginFlags);
-				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
+			RegisterDatabaseProvider<SurrealDatabase>(services);
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ISurrealStorageAccessor>(sp =>
-				(SharpMUSH.Library.Plugins.Storage.ISurrealStorageAccessor)sp.GetRequiredService<ISharpDatabase>());
+				sp.GetRequiredService<SurrealDatabase>());
 		}
 		else
 		{
-			services.AddSingleton<ISharpDatabase, ArangoDatabase>(x =>
+			services.AddSingleton<ArangoDatabase>(x =>
 			{
 				var dbLogger = x.GetRequiredService<ILogger<ArangoDatabase>>();
 				var context = x.GetRequiredService<IArangoContext>();
@@ -239,11 +279,11 @@ public class Startup(
 				var relations = x.GetRequiredService<IObjectRelationLoader>();
 				var password = x.GetRequiredService<IPasswordService>();
 				var db = new ArangoDatabase(dbLogger, context, handle, relations, password, pluginMigrationSources, pluginFlags);
-				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
+			RegisterDatabaseProvider<ArangoDatabase>(services);
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.IArangoStorageAccessor>(sp =>
-				(SharpMUSH.Library.Plugins.Storage.IArangoStorageAccessor)sp.GetRequiredService<ISharpDatabase>());
+				sp.GetRequiredService<ArangoDatabase>());
 		}
 
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
@@ -357,30 +397,15 @@ public class Startup(
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
 
-		// Wiki subsystem — backed by whichever ISharpDatabase is active (all three DB backends implement IWikiService).
+		// Wiki subsystem — IWikiService is the active database provider (see RegisterDatabaseProvider).
 		services.AddSingleton<WikiMarkdigPipeline>();
-		services.AddSingleton<IWikiService>(sp => (IWikiService)sp.GetRequiredService<ISharpDatabase>());
 
 		// Locale fallback rules (pure) and the one localized-read service every reader path goes through.
 		services.AddSingleton<IWikiLocaleResolver, WikiLocaleResolver>();
 		services.AddSingleton<IWikiLocalizationService, WikiLocalizationService>();
 
-		// Package registry — backed by whichever ISharpDatabase is active (all three DB backends implement IPackageRegistryService).
-		services.AddSingleton<IPackageRegistryService>(sp => (IPackageRegistryService)sp.GetRequiredService<ISharpDatabase>());
-
-		// Dynamic Application registry (Area 21) — same pattern; every DB backend implements IApplicationRegistryService.
-		// Wrapped in a read-only overlay decorator so the PluginCatalog's IApplicationSource contributions are unioned
-		// into reads while their plugins are loaded (DB/built-in wins on a slug collision; plugin apps are not
-		// persisted and not admin-editable). The DB-backed impl is the decorator's inner.
-		services.AddSingleton<IApplicationRegistryService>(sp =>
-			new Implementation.Services.PluginApplicationRegistryDecorator(
-				(IApplicationRegistryService)sp.GetRequiredService<ISharpDatabase>(),
-				sp.GetRequiredService<Implementation.Services.PluginCatalog>(),
-				sp.GetRequiredService<ILogger<Implementation.Services.PluginApplicationRegistryDecorator>>()));
-		// Admin-customized layout registry — same cast pattern; every DB backend implements ILayoutRegistryService.
-		services.AddSingleton<ILayoutRegistryService>(sp => (ILayoutRegistryService)sp.GetRequiredService<ISharpDatabase>());
-		// Portal RBAC role registry — same cast pattern; every DB backend implements IRoleRegistryService.
-		services.AddSingleton<IRoleRegistryService>(sp => (IRoleRegistryService)sp.GetRequiredService<ISharpDatabase>());
+		// Package, application, layout and role registries are the active database provider too
+		// (see RegisterDatabaseProvider).
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
@@ -425,11 +450,16 @@ public class Startup(
 		services.AddSingleton<ConfigurationReloadService>();
 		services.AddSingleton<IOptionsChangeTokenSource<SharpMUSHOptions>>(sp =>
 			sp.GetRequiredService<ConfigurationReloadService>());
+		services.AddSingleton<ObjectVersions>();
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(typeof(IStreamPipelineBehavior<,>), typeof(StreamQueryCachingBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
+		// Lazy<T> for the services only reachable through a cycle: the lock service owns the expression
+		// parser, and the locate and attribute services reach the lock service through permissions.
+		services.AddTransient(typeof(Lazy<>), typeof(Library.Services.LazyService<>));
+		services.AddSingleton<ILockEvaluationServices, Implementation.Services.LockEvaluationServices>();
 		// Shared MUSH code intelligence — the single source of truth behind both the
 		// Language Server (for editors) and the in-server MCP tools (for agents/tooling).
 		services.AddSingleton<IMushCodeAnalyzer, MushCodeAnalyzer>();

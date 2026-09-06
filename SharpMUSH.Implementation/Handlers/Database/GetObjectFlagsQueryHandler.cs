@@ -5,7 +5,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetAllObjectFlagsQueryHandler(ISharpDatabase database)
+public class GetAllObjectFlagsQueryHandler(IFlagAndPowerStore database)
 	: IStreamQueryHandler<GetAllObjectFlagsQuery, SharpObjectFlag>
 {
 	public IAsyncEnumerable<SharpObjectFlag> Handle(GetAllObjectFlagsQuery request,
@@ -13,7 +13,7 @@ public class GetAllObjectFlagsQueryHandler(ISharpDatabase database)
 		database.GetObjectFlagsAsync(cancellationToken);
 }
 
-public class GetObjectFlagQueryHandler(ISharpDatabase database)
+public class GetObjectFlagQueryHandler(IFlagAndPowerStore database)
 	: IQueryHandler<GetObjectFlagQuery, SharpObjectFlag?>
 {
 	public async ValueTask<SharpObjectFlag?> Handle(GetObjectFlagQuery request,

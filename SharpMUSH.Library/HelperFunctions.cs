@@ -282,7 +282,7 @@ public static partial class HelperFunctions
 	/// <c>MONITOR</c> — while <c>HasPower</c> one screen up already matched a power's alias. See #834.
 	/// <para>
 	/// The database-level <c>HasFlag</c> predicate in
-	/// <see cref="ISharpDatabase.GetFilteredObjectsAsync"/> is defined to agree with this helper and is
+	/// <see cref="IObjectStore.GetFilteredObjectsAsync"/> is defined to agree with this helper and is
 	/// pinned against it on all three providers, so the two move together.
 	/// </para>
 	/// <para>
@@ -429,7 +429,7 @@ public static partial class HelperFunctions
 	/// <paramref name="newRelated"/> are the same object; <see cref="RelationshipSafety.Cycle"/> if
 	/// <paramref name="start"/> is otherwise reachable from <paramref name="newRelated"/>.
 	/// </returns>
-	public static async ValueTask<RelationshipSafety> SafeToAddRelationship(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newRelated, CancellationToken cancellationToken = default)
+	public static async ValueTask<RelationshipSafety> SafeToAddRelationship(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newRelated, CancellationToken cancellationToken = default)
 	{
 		var startDbRef = start.Object().DBRef;
 		var newRelatedDbRef = newRelated.Object().DBRef;
@@ -452,7 +452,7 @@ public static partial class HelperFunctions
 	/// (<see cref="RelationshipSafety"/>) because PennMUSH's <c>do_parent</c> notifies the player
 	/// with different text for each (<c>src/set.c:1432,1477</c>).
 	/// </summary>
-	public static async ValueTask<RelationshipSafety> SafeToAddParent(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newParent, CancellationToken cancellationToken = default)
+	public static async ValueTask<RelationshipSafety> SafeToAddParent(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newParent, CancellationToken cancellationToken = default)
 		=> await SafeToAddRelationship(mediator, database, start, newParent, cancellationToken);
 
 	/// <summary>
@@ -464,7 +464,7 @@ public static partial class HelperFunctions
 	/// to route to. If zone messaging is split to match Penn later, wire it from
 	/// <see cref="SafeToAddRelationship"/> directly rather than reusing the parent-flavoured keys.
 	/// </summary>
-	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newZone, CancellationToken cancellationToken = default)
+	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newZone, CancellationToken cancellationToken = default)
 		=> await SafeToAddRelationship(mediator, database, start, newZone, cancellationToken) == RelationshipSafety.Safe;
 
 	public static OneOf<(string db, string? Attribute), bool> SplitDbRefAndOptionalAttr(string DBRefAttr)

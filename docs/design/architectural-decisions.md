@@ -869,6 +869,13 @@ invalidated on content edit. Not pre-generated for all pages.
 **Decision:** On server start: layout config + front page widgets only.
 Everything else lazy-populated. No bulk warm-up.
 
+### 15.5 Engine Cache
+
+**Decision:** The game engine's cache (FusionCache behind the Mediator pipeline) is a separate
+concern from the portal caches above and is specified in `engine-data-trunk.md`: policy on the
+request, invalidation by key and tag, per-object versions for the key-invalidated object node,
+one engine process per database until a backplane is configured.
+
 ---
 
 ## Area 16: Forums / BBS
@@ -1181,6 +1188,7 @@ new `kind`/`application` keys. Decision: confirmed 2026-06-13.
 | front-page-and-navigation.md      | Complete  | Front page, omnisearch, help, onboard|
 | ui-patterns.md                    | Complete  | 17 UX patterns + anti-patterns      |
 | architectural-decisions.md        | Complete  | This document                       |
+| engine-data-trunk.md              | Complete  | Mediator trunk, stores, cache coherence|
 | scene-system.md                   | Complete  | Scene lifecycle, UI, real-time       |
 | character-profiles.md             | Complete  | Profile pages, sheets, gallery       |
 | content-rendering-pipeline.md     | Complete  | MString shared lib, Markdig, sanitization|

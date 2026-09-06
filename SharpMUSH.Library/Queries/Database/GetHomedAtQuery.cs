@@ -7,7 +7,7 @@ namespace SharpMUSH.Library.Queries.Database;
 /// <summary>
 /// Everything whose home is <paramref name="Home"/> — players and things that go there on
 /// <c>home</c>, plus exits that lead there. Rooms are excluded; see
-/// <see cref="ISharpDatabase.GetHomedAtAsync"/>.
+/// <see cref="INavigationStore.GetHomedAtAsync"/>.
 /// </summary>
 /// <remarks>
 /// Deliberately not <c>ICacheable</c>. Its only caller is object destruction, which must see the

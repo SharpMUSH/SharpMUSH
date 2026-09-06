@@ -5,7 +5,7 @@ using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetObjectWarningsCommandHandler(ISharpDatabase database) : ICommandHandler<SetObjectWarningsCommand>
+public class SetObjectWarningsCommandHandler(IObjectStore database) : ICommandHandler<SetObjectWarningsCommand>
 {
 	public async ValueTask<Unit> Handle(SetObjectWarningsCommand request, CancellationToken cancellationToken)
 	{

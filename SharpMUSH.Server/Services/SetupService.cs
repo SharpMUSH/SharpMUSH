@@ -14,7 +14,8 @@ namespace SharpMUSH.Server.Services;
 /// flips SetupCompleted.
 /// </summary>
 public class SetupService(
-	ISharpDatabase database,
+	IServerStateStore database,
+	IObjectStore objects,
 	IAccountService accountService,
 	IPasswordService passwordService,
 	ILogger<SetupService> logger)
@@ -102,7 +103,7 @@ public class SetupService(
 	{
 		try
 		{
-			var god = await database.GetObjectNodeAsync(new DBRef(1), ct);
+			var god = await objects.GetObjectNodeAsync(new DBRef(1), ct);
 			if (!god.IsT0)
 			{
 				logger.LogError(

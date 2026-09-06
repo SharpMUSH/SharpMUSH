@@ -4,7 +4,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
 
-public record CreatePlayerCommand(string Name, string Password, DBRef Location, DBRef Home, int Quota, string? Salt = null) : ICommand<DBRef>, ICacheInvalidating
+public record CreatePlayerCommand(string Name, string Password, DBRef Location, DBRef Home, int Quota, string? Salt = null) : ICommand<DBRef>, ICacheInvalidating, ICacheInvalidatingByResult<DBRef>
 {
 	public string[] CacheKeys => [Definitions.CacheKeys.Contents(Location)];
 
@@ -14,4 +14,7 @@ public record CreatePlayerCommand(string Name, string Password, DBRef Location, 
 		Definitions.CacheTags.PlayerList,
 		Definitions.CacheTags.PlayerNames,
 		Definitions.CacheKeys.ContentsTag(Location.Number)];
+
+	/// <summary>The dbref the write allocated may have been resolved, and cached as missing, before it existed.</summary>
+	public string[] CacheKeysFor(DBRef created) => [Definitions.CacheKeys.Object(created)];
 }

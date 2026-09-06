@@ -25,13 +25,13 @@ public partial class Commands
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["page", "content"])]
-	public static async ValueTask<Option<CallState>> Wiki(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Wiki(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
 		MString? arg0, arg1;
 		var switches = parser.CurrentState.Switches.ToArray();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// NOEVAL, SOURCE, DRAFT and MD are modifiers, not actions: leaving any of them in this set would
 		// make "@wiki/view/source foo" look like two actions and trip TooManySwitches.
@@ -47,7 +47,7 @@ public partial class Commands
 		var showDraft = switches.Contains("DRAFT");
 		if (actions.Length > 1)
 		{
-			await NotifyService!.Notify(executor, "WIKI: Too many switches passed to @wiki.");
+			await NotifyService.Notify(executor, "WIKI: Too many switches passed to @wiki.");
 			return new CallState(ErrorMessages.Returns.TooManySwitches);
 		}
 
@@ -79,42 +79,42 @@ public partial class Commands
 		var response = action switch
 		{
 			"LIST" when !hasArg1
-				=> await ListWiki.List(parser, Mediator!, wikiService, localization, NotifyService!, arg0, locale, forceSource),
+				=> await ListWiki.List(parser, Mediator, wikiService, localization, NotifyService, arg0, locale, forceSource),
 			"SEARCH" when hasArg0 && !hasArg1
-				=> await ListWiki.Search(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource),
+				=> await ListWiki.Search(parser, Mediator, wikiService, localization, NotifyService, arg0!, locale, forceSource),
 			"RECENT" when !hasArg1
-				=> await ListWiki.Recent(parser, Mediator!, wikiService, localization, NotifyService!, arg0, locale, forceSource),
+				=> await ListWiki.Recent(parser, Mediator, wikiService, localization, NotifyService, arg0, locale, forceSource),
 			"HISTORY" when hasArg0 && !hasArg1
-				=> await ViewWiki.History(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource, showDraft),
+				=> await ViewWiki.History(parser, Mediator, wikiService, localization, NotifyService, arg0!, locale, forceSource, showDraft),
 			"CREATE" when hasArg0 && hasArg1
-				=> await EditWiki.Create(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1!),
+				=> await EditWiki.Create(parser, Mediator, wikiService, NotifyService, arg0!, arg1!),
 			"EDIT" when hasArg0 && hasArg1
-				=> await EditWiki.Edit(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1!, append: false),
+				=> await EditWiki.Edit(parser, Mediator, wikiService, NotifyService, arg0!, arg1!, append: false),
 			"APPEND" when hasArg0 && hasArg1
-				=> await EditWiki.Edit(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1!, append: true),
+				=> await EditWiki.Edit(parser, Mediator, wikiService, NotifyService, arg0!, arg1!, append: true),
 			"ROLLBACK" when hasArg0 && hasArg1
-				=> await EditWiki.Rollback(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1!),
+				=> await EditWiki.Rollback(parser, Mediator, wikiService, NotifyService, arg0!, arg1!),
 			// The one write that takes a locale, and it takes it from arg0 ("<page>/<lang>") rather than
 			// from `locale` above. That variable is the reader's LOCALE: guessing with it here would file
 			// a translator's prose under whatever language they happen to read the game in.
 			"TRANSLATE" when hasArg0 && hasArg1
-				=> await EditWiki.Translate(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, arg1!),
+				=> await EditWiki.Translate(parser, Mediator, wikiService, localization, NotifyService, arg0!, arg1!),
 			"DELETE" when hasArg0 && !hasArg1
-				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Delete),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Delete),
 			"PROTECT" when hasArg0 && !hasArg1
-				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Protect),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Protect),
 			"UNPROTECT" when hasArg0 && !hasArg1
-				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Unprotect),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Unprotect),
 			"PUBLISH" when hasArg0 && !hasArg1
-				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Publish),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Publish),
 			"UNPUBLISH" when hasArg0 && !hasArg1
-				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Unpublish),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Unpublish),
 			"CATEGORY" when hasArg0
-				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Category),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Category),
 			"TAG" when hasArg0
-				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Tag),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Tag),
 			"VIEW" when hasArg0 && !hasArg1
-				=> await ViewWiki.Handle(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource, showDraft, showRaw),
+				=> await ViewWiki.Handle(parser, Mediator, wikiService, localization, NotifyService, arg0!, locale, forceSource, showDraft, showRaw),
 			_ => MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand),
 		};
 

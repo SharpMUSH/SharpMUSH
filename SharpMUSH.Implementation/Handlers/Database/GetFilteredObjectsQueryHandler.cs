@@ -5,7 +5,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetFilteredObjectsQueryHandler(ISharpDatabase database)
+public class GetFilteredObjectsQueryHandler(IObjectStore database)
 	: IStreamQueryHandler<GetFilteredObjectsQuery, SharpObject>
 {
 	public IAsyncEnumerable<SharpObject> Handle(GetFilteredObjectsQuery request, CancellationToken cancellationToken)

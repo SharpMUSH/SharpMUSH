@@ -20,7 +20,7 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@RECYCLE", Switches = ["OVERRIDE"], Behavior = CB.Default | CB.NoGagged, MinArgs = 1,
 		MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Recycle(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Recycle(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @recycle is an alias for @destroy
 		return await Destroy(parser, _2);
@@ -31,36 +31,36 @@ public partial class Commands
 	/// NOTE: Cost parameter requires economy/quota system implementation.
 	/// </remarks>
 	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
-	public static async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.Arguments;
 		var name = args["0"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
+		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
-		var location = await Mediator!.Send(new GetObjectNodeQuery(defaultHomeDbref));
+		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
 
 		if (location.IsNone || location.IsExit)
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.NotARoom,
 				notifyMessage: ErrorMessages.Notifications.DefaultHomeLocationInvalid,
 				shouldNotify: true);
 		}
 
-		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
+		if (!await ValidateService.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.BadObjectName,
 				notifyMessage: ErrorMessages.Notifications.InvalidNameThing,
 				shouldNotify: true);
 		}
 
-		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
+		var thing = await Mediator.Send(new CreateThingCommand(name.ToPlainText(),
 			executor.AsContainer,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
@@ -72,16 +72,16 @@ public partial class Commands
 			if (!newThing.IsNone)
 			{
 				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, Database!, newThing.Known, creatorZone.Known))
+				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newThing.Known, creatorZone.Known))
 				{
 					await Mediator.Send(new SetObjectZoneCommand(newThing.Known, creatorZone.Known));
 				}
 			}
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Created), executor, name, thing);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Created), executor, name, thing);
 
-		await EventService!.TriggerEventAsync(
+		await EventService.TriggerEventAsync(
 			parser,
 			"OBJECT`CREATE",
 			executor.Object().DBRef,
@@ -99,22 +99,22 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@FIRSTEXIT", Switches = [], Behavior = CB.Default | CB.Args, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> FirstExit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> FirstExit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
 		await foreach (var exit in args.ToAsyncEnumerable())
 		{
 			// NOTE: Should verify executor has CONTROL permission over the room containing the exit
-			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 				executor, executor, exit.Value.Message!.ToPlainText(),
 				LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsPreference,
 				async o =>
 				{
 					var oldData = o.AsExit;
 					var oldLocation = await oldData.Location.WithCancellation(CancellationToken.None);
-					await Mediator!.Send(new UnlinkExitCommand(oldData));
+					await Mediator.Send(new UnlinkExitCommand(oldData));
 					await Mediator.Send(new LinkExitCommand(oldData, oldLocation));
 					return CallState.Empty;
 				}
@@ -126,25 +126,25 @@ public partial class Commands
 
 	[SharpCommand(Name = "@NAME", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.NoGuest,
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "name"])]
-	public static async ValueTask<Option<CallState>> Rename(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Rename(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var name = parser.CurrentState.Arguments["1"].Message!;
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target,
 			LocateFlags.All,
 			async found =>
 			{
 				var oldName = found.Object().Name;
-				var result = await ManipulateSharpObjectService!.SetName(executor, found, name, true);
+				var result = await ManipulateSharpObjectService.SetName(executor, found, name, true);
 
 				// If rename was successful, trigger OBJECT`RENAME event
 				// PennMUSH spec: object`rename (objid, new name, old name)
 				if (result.ToString() != ErrorMessages.Returns.PermissionDenied)
 				{
-					await EventService!.TriggerEventAsync(
+					await EventService.TriggerEventAsync(
 						parser,
 						"OBJECT`RENAME",
 						executor.Object().DBRef,
@@ -159,13 +159,13 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SET", Behavior = CB.RSArgs | CB.EqSplit, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "attribute", "value"])]
-	public static async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(args["0"].Message!));
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
-		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 
 		if (!split.TryPickT0(out var details, out _))
 		{
@@ -174,7 +174,7 @@ public partial class Commands
 
 		var (dbref, maybeAttribute) = details;
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			enactor,
 			executor,
 			dbref,
@@ -197,11 +197,11 @@ public partial class Commands
 				.Select(MModule.plainText)
 				.ToList();
 
-			var flagResult = await AttributeService!.SetAttributeFlagsAsync(executor, realLocated, maybeAttribute, flagTokens);
+			var flagResult = await AttributeService.SetAttributeFlagsAsync(executor, realLocated, maybeAttribute, flagTokens);
 
 			if (flagResult.IsT1)
 			{
-				await NotifyService!.Notify(executor, flagResult.AsT1.Value, executor);
+				await NotifyService.Notify(executor, flagResult.AsT1.Value, executor);
 			}
 
 			return new CallState(flagResult.Match(_ => string.Empty, failure => failure.Value));
@@ -215,16 +215,16 @@ public partial class Commands
 			var content = MModule.substring(maybeColonLocation + 1, MModule.getLength(arg1), arg1);
 
 			var setResult =
-				await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(attribute), content);
+				await AttributeService.SetAttributeAsync(executor, realLocated, MModule.plainText(attribute), content);
 
 			if (setResult.IsT0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
 					realLocated.Object().Name, MModule.plainText(attribute));
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, setResult.AsT1.Value, executor);
+				await NotifyService.Notify(executor, setResult.AsT1.Value, executor);
 			}
 
 			return new CallState(setResult.Match(
@@ -234,7 +234,7 @@ public partial class Commands
 
 		foreach (var flag in MModule.splitList(MModule.single(" "), args["1"].Message!))
 		{
-			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
+			await ManipulateSharpObjectService.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
 		}
 
 		return CallState.Empty;
@@ -243,22 +243,22 @@ public partial class Commands
 
 	[SharpCommand(Name = "@CHOWN", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
 		MaxArgs = 2, ParameterNames = ["object", "player"])]
-	public static async ValueTask<Option<CallState>> ChangeOwner(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ChangeOwner(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 		var newOwnerName = args["1"].Message!.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -271,14 +271,14 @@ public partial class Commands
 					{
 						if (!newOwnerObj.IsPlayer)
 						{
-							return await NotifyService!.NotifyAndReturn(
+							return await NotifyService.NotifyAndReturn(
 								executor.Object().DBRef,
 								errorReturn: ErrorMessages.Returns.InvalidPlayer,
 								notifyMessage: ErrorMessages.Notifications.MustBePlayer,
 								shouldNotify: true);
 						}
 
-						var result = await ManipulateSharpObjectService!.SetOwner(executor, obj, newOwnerObj.AsPlayer, true);
+						var result = await ManipulateSharpObjectService.SetOwner(executor, obj, newOwnerObj.AsPlayer, true);
 
 						if (!preserve)
 						{
@@ -301,15 +301,15 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@DESTROY", Switches = ["OVERRIDE"], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Destroy(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Destroy(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 		var override_ = parser.CurrentState.Switches.Contains("OVERRIDE");
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
 			async obj => await DestroyObjectAsync(parser, executor, obj, override_)
 		);
@@ -327,7 +327,7 @@ public partial class Commands
 	/// ("we allow indirect locks to refer to destroyed objects").
 	/// </para>
 	/// </summary>
-	private static async ValueTask<CallState> DestroyObjectAsync(
+	private async ValueTask<CallState> DestroyObjectAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject obj,
@@ -338,7 +338,7 @@ public partial class Commands
 		// Guests may not destroy anything.
 		if (await executor.IsGuest())
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.GuestCantDestroy,
@@ -348,7 +348,7 @@ public partial class Commands
 		// Nobody may destroy God.
 		if (obj.IsGod())
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.DestroyGodBlasphemous,
@@ -358,9 +358,9 @@ public partial class Commands
 		// Protect special configuration objects (player_start, master_room, base_room, default_home,
 		// God, probate_judge) — PennMUSH special_object(). Shared with the destruction service so the
 		// two cannot drift; a GOING special object is refused there too rather than freed.
-		if (ObjectDestructionService!.IsSpecialObject(obj.Object().DBRef))
+		if (ObjectDestructionService.IsSpecialObject(obj.Object().DBRef))
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.TooSpecialToDestroy,
@@ -369,9 +369,9 @@ public partial class Commands
 
 		// --- Standard permission and safety checks ---
 
-		if (!await PermissionService!.Controls(executor, obj))
+		if (!await PermissionService.Controls(executor, obj))
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -380,7 +380,7 @@ public partial class Commands
 
 		if (await obj.HasFlag("SAFE") && !override_)
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.SafeObject,
 				notifyMessage: ErrorMessages.Notifications.SafeObjectUseNuke,
@@ -393,7 +393,7 @@ public partial class Commands
 			// Only a wizard can destroy a player.
 			if (!await executor.IsWizard())
 			{
-				return await NotifyService!.NotifyAndReturn(
+				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.NoSuicideAllowed,
@@ -403,7 +403,7 @@ public partial class Commands
 			// Only God can destroy another wizard.
 			if (await obj.IsWizard() && !executor.IsGod())
 			{
-				return await NotifyService!.NotifyAndReturn(
+				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.EvenYouCantDoThat,
@@ -411,12 +411,12 @@ public partial class Commands
 			}
 
 			// Connected players may not be destroyed.
-			var isConnected = await ConnectionService!
+			var isConnected = await ConnectionService
 				.Get(obj.Object().DBRef)
 				.AnyAsync(x => x.State == IConnectionService.ConnectionState.LoggedIn);
 			if (isConnected)
 			{
-				return await NotifyService!.NotifyAndReturn(
+				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.MayNotDestroyConnectedPlayer,
@@ -426,7 +426,7 @@ public partial class Commands
 			// Plain @destroy cannot target a player — @nuke (= override) is required.
 			if (!override_)
 			{
-				return await NotifyService!.NotifyAndReturn(
+				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.MustUseNukeToDestroyPlayer,
@@ -443,16 +443,16 @@ public partial class Commands
 			// plugin hook can still read it; after FreeObjectAsync there is nothing left to read.
 			await NotifyObjectDestroyingAsync(parser, obj.Object().DBRef);
 
-			if (!await ObjectDestructionService!.FreeObjectAsync(parser, obj))
+			if (!await ObjectDestructionService.FreeObjectAsync(parser, obj))
 			{
-				return await NotifyService!.NotifyAndReturn(
+				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.TooSpecialToDestroy,
 					shouldNotify: true);
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Destroyed), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Destroyed), executor);
 			return CallState.Empty;
 		}
 
@@ -469,16 +469,16 @@ public partial class Commands
 		// destruction) but still present in the DB, so a plugin hook can read it before it is gone.
 		await NotifyObjectDestroyingAsync(parser, obj.Object().DBRef);
 
-		await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
+		await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "GOING", false);
 
 		var destroyMsg = obj.IsPlayer
 			? string.Format(ErrorMessages.Notifications.ObjectAndPossessionsScheduledDestroyedFormat, obj.Object().Name)
 			: string.Format(ErrorMessages.Notifications.ObjectScheduledDestroyedFormat, obj.Object().Name);
-		await NotifyService!.Notify(executor, destroyMsg, executor);
+		await NotifyService.Notify(executor, destroyMsg, executor);
 
 		try
 		{
-			await AttributeService!.EvaluateAttributeFunctionAsync(
+			await AttributeService.EvaluateAttributeFunctionAsync(
 				parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
 		}
 		catch (Exception)
@@ -512,7 +512,7 @@ public partial class Commands
 	/// </list>
 	/// <para>Lock expressions are left unchanged per PennMUSH invariants.</para>
 	/// </summary>
-	private static async ValueTask NotifyObjectDestroyingAsync(IMUSHCodeParser parser, DBRef obj)
+	private async ValueTask NotifyObjectDestroyingAsync(IMUSHCodeParser parser, DBRef obj)
 	{
 		// Phase 2b: notify plugin IObjectLifecycleHooks that obj is about to be destroyed. No-op when no
 		// dispatcher (or no hooks) is registered, so normal @destroy flow is unchanged. The object is still
@@ -524,17 +524,17 @@ public partial class Commands
 		}
 	}
 
-	private static async ValueTask HandlePlayerPossessionsAsync(
+	private async ValueTask HandlePlayerPossessionsAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject playerObj)
 	{
-		var config = Configuration!.CurrentValue.Command;
+		var config = Configuration.CurrentValue.Command;
 		var playerDbRefNumber = playerObj.Object().DBRef.Number;
 
 		// Resolve the probate player; fall back to God (#1) if the config value is invalid.
 		var probateDbRef = new DBRef((int)config.ProbateJudge);
-		var probateNode = await Mediator!.Send(new GetObjectNodeQuery(probateDbRef));
+		var probateNode = await Mediator.Send(new GetObjectNodeQuery(probateDbRef));
 		SharpPlayer probatePlayer;
 		if (!probateNode.IsNone && probateNode.Known.IsPlayer)
 		{
@@ -603,7 +603,7 @@ public partial class Commands
 			else
 			{
 				// Pre-destroy: mark for destruction, matching PennMUSH pre_destroy().
-				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, fullObj, "GOING", false);
+				await ManipulateSharpObjectService.SetOrUnsetFlag(executor, fullObj, "GOING", false);
 			}
 		}
 
@@ -617,21 +617,21 @@ public partial class Commands
 
 	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
 		MaxArgs = 2, ParameterNames = ["object", "destination"])]
-	public static async ValueTask<Option<CallState>> Link(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Link(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var exitName = args["0"].Message!.ToPlainText();
 		var destName = args["1"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, exitName, LocateFlags.All,
 			async exitObj =>
 			{
-				if (!await PermissionService!.Controls(executor, exitObj))
+				if (!await PermissionService.Controls(executor, exitObj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -642,18 +642,18 @@ public partial class Commands
 				{
 					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
 					{
-						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeHome));
-						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToHome), executor);
+						await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeHome));
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToHome), executor);
 						return CallState.Empty;
 					}
 					else if (destName.Equals(LinkTypeVariable, StringComparison.InvariantCultureIgnoreCase))
 					{
-						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeVariable));
-						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToVariable), executor);
+						await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeVariable));
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToVariable), executor);
 						return CallState.Empty;
 					}
 
-					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
@@ -661,7 +661,7 @@ public partial class Commands
 							// Only another exit is not a place you can end up.
 							if (!destObj.IsContainer)
 							{
-								return await NotifyService!.NotifyAndReturn(
+								return await NotifyService.NotifyAndReturn(
 										executor.Object().DBRef,
 										errorReturn: ErrorMessages.Returns.InvalidDestination,
 										notifyMessage: ErrorMessages.Notifications.InvalidDestinationExit,
@@ -672,7 +672,7 @@ public partial class Commands
 
 							if (!await CanLinkTo(executor, destObj))
 							{
-								return await NotifyService!.NotifyAndReturn(
+								return await NotifyService.NotifyAndReturn(
 									executor.Object().DBRef,
 									errorReturn: ErrorMessages.Returns.PermissionDenied,
 									notifyMessage: ErrorMessages.Notifications.CantLinkToThat,
@@ -683,17 +683,17 @@ public partial class Commands
 							var executorObj = executor.Object();
 							var executorOwner = await executorObj.Owner.WithCancellation(CancellationToken.None);
 
-							var exitNotControlled = !await PermissionService!.Controls(executor, exitObj);
+							var exitNotControlled = !await PermissionService.Controls(executor, exitObj);
 							var isOwnedByOther = exitOwner.Object.Id != executorOwner.Object.Id;
 
 							// When linking an exit owned by someone else that executor doesn't control:
 							// Check @lock/link, transfer ownership, and set HALT flag
 							if (isOwnedByOther && exitNotControlled)
 							{
-								var linkLockPasses = LockService!.Evaluate(LockType.Link, exitObj, executor);
+								var linkLockPasses = LockService.Evaluate(LockType.Link, exitObj, executor);
 								if (!linkLockPasses)
 								{
-									return await NotifyService!.NotifyAndReturn(
+									return await NotifyService.NotifyAndReturn(
 										executor.Object().DBRef,
 										errorReturn: ErrorMessages.Returns.PermissionDenied,
 										notifyMessage: ErrorMessages.Notifications.DontPassLinkLock,
@@ -704,11 +704,11 @@ public partial class Commands
 								{
 									try
 									{
-										await Mediator!.Send(new SetObjectOwnerCommand(exitObj, executor.AsPlayer));
+										await Mediator.Send(new SetObjectOwnerCommand(exitObj, executor.AsPlayer));
 									}
 									catch (Exception)
 									{
-										return await NotifyService!.NotifyAndReturn(
+										return await NotifyService.NotifyAndReturn(
 											executor.Object().DBRef,
 											errorReturn: ErrorMessages.Returns.PermissionDenied,
 											notifyMessage: ErrorMessages.Notifications.FailedToTransferOwnership,
@@ -717,14 +717,14 @@ public partial class Commands
 								}
 
 								// Set HALT flag to prevent looping
-								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, exitObj, "HALT", true);
+								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, exitObj, "HALT", true);
 							}
 
-							await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
+							await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
 
-							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destination));
+							await Mediator.Send(new LinkExitCommand(exitObj.AsExit, destination));
 
-							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, exitObj.Object().DBRef.Number, destination.Object().DBRef.Number);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, exitObj.Object().DBRef.Number, destination.Object().DBRef.Number);
 							return CallState.Empty;
 						}
 					);
@@ -737,7 +737,7 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-								return await NotifyService!.NotifyAndReturn(
+								return await NotifyService.NotifyAndReturn(
 									executor.Object().DBRef,
 									errorReturn: ErrorMessages.Returns.InvalidDestination,
 									notifyMessage: ErrorMessages.Notifications.HomeMustBeRoom,
@@ -746,8 +746,8 @@ public partial class Commands
 
 							// Convert to AnySharpContent for SetObjectHomeCommand
 							var contentObj = exitObj.AsContent;
-							await Mediator!.Send(new SetObjectHomeCommand(contentObj, destObj.AsRoom));
-							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HomeSet), executor);
+							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsRoom));
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HomeSet), executor);
 							return CallState.Empty;
 						}
 					);
@@ -760,21 +760,21 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-								return await NotifyService!.NotifyAndReturn(
+								return await NotifyService.NotifyAndReturn(
 									executor.Object().DBRef,
 									errorReturn: ErrorMessages.Returns.InvalidDestination,
 									notifyMessage: ErrorMessages.Notifications.DropToMustBeRoom,
 									shouldNotify: true);
 							}
 
-							await Mediator!.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
-							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToSet), executor);
+							await Mediator.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToSet), executor);
 							return CallState.Empty;
 						}
 					);
 				}
 
-				return await NotifyService!.NotifyAndReturn(
+				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.InvalidObjectType,
 					notifyMessage: ErrorMessages.Notifications.InvalidObjectTypeForLinking,
@@ -784,35 +784,35 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@NUKE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Nuke(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Nuke(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// @nuke is @destroy/override: it bypasses the SAFE flag and the "use @nuke" player guard.
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
 			async obj => await DestroyObjectAsync(parser, executor, obj, override_: true)
 		);
 	}
 
 	[SharpCommand(Name = "@UNDESTROY", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> UnDestroy(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> UnDestroy(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -821,7 +821,7 @@ public partial class Commands
 
 				if (!await obj.HasFlag("GOING"))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.NotGoing,
 						notifyMessage: ErrorMessages.Notifications.NotMarkedForDestruction,
@@ -830,18 +830,18 @@ public partial class Commands
 
 				if (await obj.HasFlag("GOING"))
 				{
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!GOING", false);
+					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!GOING", false);
 				}
 				if (await obj.HasFlag("GOING_TWICE"))
 				{
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!GOING_TWICE", false);
+					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!GOING_TWICE", false);
 				}
 
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SparedFromDestructionFormat), executor, obj.Object().Name);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SparedFromDestructionFormat), executor, obj.Object().Name);
 
 				try
 				{
-					await AttributeService!.EvaluateAttributeFunctionAsync(
+					await AttributeService.EvaluateAttributeFunctionAsync(
 						parser, executor, obj, "STARTUP", new Dictionary<string, CallState>(), evalParent: false);
 				}
 				catch (Exception)
@@ -856,22 +856,22 @@ public partial class Commands
 
 	[SharpCommand(Name = "@CHZONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "zone"])]
-	public static async ValueTask<Option<CallState>> ChangeZone(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ChangeZone(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 		var zoneName = args["1"].Message!.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -880,8 +880,8 @@ public partial class Commands
 
 				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
 				{
-					await Mediator!.Send(new UnsetObjectZoneCommand(obj));
-					await NotifyService!.Notify(executor, "Zone cleared.", executor);
+					await Mediator.Send(new UnsetObjectZoneCommand(obj));
+					await NotifyService.Notify(executor, "Zone cleared.", executor);
 					return CallState.Empty;
 				}
 
@@ -889,11 +889,11 @@ public partial class Commands
 					executor, executor, zoneName, LocateFlags.All,
 					async zoneObj =>
 					{
-						bool canZone = await PermissionService!.Controls(executor, zoneObj);
+						bool canZone = await PermissionService.Controls(executor, zoneObj);
 
-						if (!canZone && !LockService!.Evaluate(LockType.ChZone, zoneObj, executor))
+						if (!canZone && !LockService.Evaluate(LockType.ChZone, zoneObj, executor))
 						{
-							return await NotifyService!.NotifyAndReturn(
+							return await NotifyService.NotifyAndReturn(
 									executor.Object().DBRef,
 									errorReturn: ErrorMessages.Returns.PermissionDenied,
 									notifyMessage: ErrorMessages.Notifications.PermissionDeniedCannotZoneTo,
@@ -901,16 +901,16 @@ public partial class Commands
 						}
 
 						// Check for cycles before setting the zone
-						if (!await HelperFunctions.SafeToAddZone(Mediator!, Database!, obj, zoneObj))
+						if (!await HelperFunctions.SafeToAddZone(Mediator, Database, obj, zoneObj))
 						{
-							return await NotifyService!.NotifyAndReturn(
+							return await NotifyService.NotifyAndReturn(
 								executor.Object().DBRef,
 								errorReturn: ErrorMessages.Returns.ZoneLoop,
 								notifyMessage: ErrorMessages.Notifications.CantMakeCircularZones,
 								shouldNotify: true);
 						}
 
-						await Mediator!.Send(new SetObjectZoneCommand(obj, zoneObj));
+						await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
 
 						// Default ChZone lock is the zone object itself (allows controlled objects)
 						if (!zoneObj.Object().Locks.ContainsKey("ChZone"))
@@ -923,25 +923,25 @@ public partial class Commands
 						{
 							if (await obj.HasFlag("WIZARD"))
 							{
-								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
+								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
 							}
 							if (await obj.HasFlag("ROYALTY"))
 							{
-								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
+								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
 							}
 							if (await obj.HasFlag("TRUST"))
 							{
-								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
+								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 							}
 
 							var allPowers = obj.Object().Powers.Value;
 							await foreach (var power in allPowers)
 							{
-								await Mediator!.Send(new UnsetObjectPowerCommand(obj, power));
+								await Mediator.Send(new UnsetObjectPowerCommand(obj, power));
 							}
 						}
 
-						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged), executor);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged), executor);
 						return CallState.Empty;
 					}
 				);
@@ -951,11 +951,11 @@ public partial class Commands
 
 	[SharpCommand(Name = "@DIG", Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 6, ParameterNames = ["name", "exits"])]
-	public static async ValueTask<Option<CallState>> Dig(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Dig(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// NOTE: We discard arguments 4-6.
-		var executorBase = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executorBase = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var executor = executorBase.Object();
 		var roomName = parser.CurrentState.Arguments["0"].Message!;
 		parser.CurrentState.Arguments.TryGetValue("1", out var exitToCallState);
@@ -965,7 +965,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToString()))
 		{
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.DigWhat), executorBase);
+			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.DigWhat), executorBase);
 			return new CallState(ErrorMessages.Returns.NoRoomNameSpecified);
 		}
 
@@ -973,9 +973,9 @@ public partial class Commands
 		// - Can executor create rooms (quota check)
 		// - Does executor have DIG permission
 
-		var response = await Mediator!.Send(new CreateRoomCommand(MModule.plainText(roomName),
+		var response = await Mediator.Send(new CreateRoomCommand(MModule.plainText(roomName),
 			await executor.Owner.WithCancellation(CancellationToken.None)));
-		await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executorBase, roomName, response.Number);
+		await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executorBase, roomName, response.Number);
 
 		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
 		if (!creatorZone.IsNone)
@@ -984,7 +984,7 @@ public partial class Commands
 			if (!newRoom.IsNone)
 			{
 				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, Database!, newRoom.Known, creatorZone.Known))
+				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newRoom.Known, creatorZone.Known))
 				{
 					await Mediator.Send(new SetObjectZoneCommand(newRoom.Known, creatorZone.Known));
 				}
@@ -1000,15 +1000,15 @@ public partial class Commands
 			var toExitResponse = await Mediator.Send(new CreateExitCommand(exitToName.First(),
 				exitToName.Skip(1).ToArray(), await executorBase.Where(),
 				await executor.Owner.WithCancellation(CancellationToken.None)));
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{toExitResponse.Number}");
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
+			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{toExitResponse.Number}");
+			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
 
 			var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
 			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(toExitResponse));
 
 			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
 
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, toExitResponse.Number, response.Number);
+			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, toExitResponse.Number, response.Number);
 		}
 
 		if (!string.IsNullOrWhiteSpace(exitFrom?.ToString()))
@@ -1024,13 +1024,13 @@ public partial class Commands
 				await executor.Owner.WithCancellation(CancellationToken.None)));
 			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(fromExitResponse));
 
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{fromExitResponse.Number}");
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
+			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{fromExitResponse.Number}");
+			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
 
 			var where = await executorBase.Where();
 			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
 
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, fromExitResponse.Number, where.Object().DBRef.Number);
+			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, fromExitResponse.Number, where.Object().DBRef.Number);
 		}
 
 		return new CallState(response.ToString());
@@ -1038,10 +1038,10 @@ public partial class Commands
 
 	[SharpCommand(Name = "@LOCK", Switches = ["*"], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "locktype", "key"])]
-	public static async ValueTask<Option<CallState>> Lock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Lock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var target = args["0"].Message!.ToPlainText();
 		var lockKey = args["1"].Message!.ToPlainText();
@@ -1051,26 +1051,26 @@ public partial class Commands
 		{
 			var switchName = parser.CurrentState.Switches.First();
 			// Resolve to canonical lock name (e.g. "USE" -> "Use") if it's a known system lock
-			var canonicalName = LockService!.SystemLocks.Keys
+			var canonicalName = LockService.SystemLocks.Keys
 				.FirstOrDefault(k => string.Equals(k, switchName, StringComparison.OrdinalIgnoreCase));
 			lockType = canonicalName ?? switchName;
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, target, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, lockKey, executor));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, lockType);
+				await Mediator.Send(new SetLockCommand(obj.Object(), lockType, lockKey, executor));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, lockType);
 				return CallState.Empty;
 			}
 		);
@@ -1078,10 +1078,10 @@ public partial class Commands
 
 	[SharpCommand(Name = "@UNLOCK", Switches = ["*"], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object", "locktype"])]
-	public static async ValueTask<Option<CallState>> Unlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Unlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var target = args["0"].Message!.ToPlainText();
 
@@ -1089,26 +1089,26 @@ public partial class Commands
 		if (parser.CurrentState.Switches.Any())
 		{
 			var switchName = parser.CurrentState.Switches.First();
-			var canonicalName = LockService!.SystemLocks.Keys
+			var canonicalName = LockService.SystemLocks.Keys
 				.FirstOrDefault(k => string.Equals(k, switchName, StringComparison.OrdinalIgnoreCase));
 			lockType = canonicalName ?? switchName;
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, target, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new UnsetLockCommand(obj.Object(), lockType));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, lockType);
+				await Mediator.Send(new UnsetLockCommand(obj.Object(), lockType));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, lockType);
 				return CallState.Empty;
 			}
 		);
@@ -1116,30 +1116,30 @@ public partial class Commands
 
 	[SharpCommand(Name = "@ELOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
-	public static async ValueTask<Option<CallState>> ELock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ELock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// @ELOCK is an alias for @lock/enter
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var target = args["0"].Message!.ToPlainText();
 		var lockKey = args["1"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, target, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new SetLockCommand(obj.Object(), "Enter", lockKey, executor));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Enter");
+				await Mediator.Send(new SetLockCommand(obj.Object(), "Enter", lockKey, executor));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Enter");
 				return CallState.Empty;
 			}
 		);
@@ -1147,29 +1147,29 @@ public partial class Commands
 
 	[SharpCommand(Name = "@EUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> EUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> EUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// @EUNLOCK is an alias for @unlock/enter
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var target = args["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, target, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Enter"));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Enter");
+				await Mediator.Send(new UnsetLockCommand(obj.Object(), "Enter"));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Enter");
 				return CallState.Empty;
 			}
 		);
@@ -1177,30 +1177,30 @@ public partial class Commands
 
 	[SharpCommand(Name = "@ULOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
-	public static async ValueTask<Option<CallState>> ULock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ULock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// @ULOCK is an alias for @lock/use
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var target = args["0"].Message!.ToPlainText();
 		var lockKey = args["1"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, target, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new SetLockCommand(obj.Object(), "Use", lockKey, executor));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Use");
+				await Mediator.Send(new SetLockCommand(obj.Object(), "Use", lockKey, executor));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Use");
 				return CallState.Empty;
 			}
 		);
@@ -1208,29 +1208,29 @@ public partial class Commands
 
 	[SharpCommand(Name = "@UUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> UUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> UUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// @UUNLOCK is an alias for @unlock/use
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var target = args["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, target, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Use"));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Use");
+				await Mediator.Send(new UnsetLockCommand(obj.Object(), "Use"));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Use");
 				return CallState.Empty;
 			}
 		);
@@ -1241,9 +1241,9 @@ public partial class Commands
 	/// or at somewhere flagged LINK_OK. Both <c>@link</c> and <c>@open</c> gate on this — without it,
 	/// accepting any container as a destination would let anyone link an exit into someone else's object.
 	/// </summary>
-	private static async ValueTask<bool> CanLinkTo(AnySharpObject executor, AnySharpObject destination)
+	private async ValueTask<bool> CanLinkTo(AnySharpObject executor, AnySharpObject destination)
 	{
-		if (await PermissionService!.Controls(executor, destination))
+		if (await PermissionService.Controls(executor, destination))
 		{
 			return true;
 		}
@@ -1255,10 +1255,10 @@ public partial class Commands
 
 	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 5, ParameterNames = ["exit", "destination"])]
-	public static async ValueTask<Option<CallState>> Open(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Open(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var exitName = args["0"].Message!.ToPlainText();
 
@@ -1270,27 +1270,27 @@ public partial class Commands
 		if (args.ContainsKey("2") && !string.IsNullOrWhiteSpace(args["2"].Message!.ToPlainText()))
 		{
 			var sourceRoomName = args["2"].Message!.ToPlainText();
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			var locateResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor, executor, sourceRoomName, LocateFlags.All);
 
 			if (locateResult.IsError || !locateResult.AsSharpObject.IsRoom)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SourceMustBeARoom), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SourceMustBeARoom), executor);
 				return new CallState(ErrorMessages.Returns.NotARoom);
 			}
 			sourceRoom = locateResult.AsSharpObject.AsRoom;
 		}
 
-		if (!await PermissionService!.Controls(executor, sourceRoom.WithExitOption()))
+		if (!await PermissionService.Controls(executor, sourceRoom.WithExitOption()))
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 				shouldNotify: true);
 		}
 
-		var exitDbRef = await Mediator!.Send(new CreateExitCommand(
+		var exitDbRef = await Mediator.Send(new CreateExitCommand(
 			primaryName,
 			aliases,
 			sourceRoom,
@@ -1304,19 +1304,19 @@ public partial class Commands
 			if (!newExit.IsNone)
 			{
 				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, Database!, newExit.Known, creatorZone.Known))
+				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newExit.Known, creatorZone.Known))
 				{
 					await Mediator.Send(new SetObjectZoneCommand(newExit.Known, creatorZone.Known));
 				}
 			}
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OpenedExit), executor, $"#{exitDbRef.Number}");
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OpenedExit), executor, $"#{exitDbRef.Number}");
 
 		if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 		{
 			var destName = args["1"].Message!.ToPlainText();
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			var locateResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor, executor, destName, LocateFlags.All);
 
 			if (locateResult.IsError)
@@ -1331,13 +1331,13 @@ public partial class Commands
 			if (!locateResult.AsSharpObject.IsContainer
 					|| !await CanLinkTo(executor, locateResult.AsSharpObject))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
 				return new CallState(exitDbRef.ToString());
 			}
 
 			var exitObj = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
 			await Mediator.Send(new LinkExitCommand(exitObj.AsExit, locateResult.AsSharpObject.AsContainer));
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToNameFormat), executor, destName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToNameFormat), executor, destName);
 		}
 
 		return new CallState(exitDbRef.ToString());
@@ -1345,34 +1345,34 @@ public partial class Commands
 
 	[SharpCommand(Name = "@CLONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "name", "cost"])]
-	public static async ValueTask<Option<CallState>> Clone(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Clone(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
-		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
+		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
-		var location = await Mediator!.Send(new GetObjectNodeQuery(defaultHomeDbref));
+		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
 
 		if (location.IsNone || location.IsExit)
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.NotARoom,
 					notifyMessage: ErrorMessages.Notifications.DefaultHomeLocationInvalid,
 					shouldNotify: true);
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -1381,7 +1381,7 @@ public partial class Commands
 
 				if (obj.IsPlayer)
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 							executor.Object().DBRef,
 							errorReturn: ErrorMessages.Returns.InvalidObjectType,
 							notifyMessage: ErrorMessages.Notifications.CannotClonePlayers,
@@ -1399,7 +1399,7 @@ public partial class Commands
 
 				if (obj.IsThing)
 				{
-					cloneDbRef = await Mediator!.Send(new CreateThingCommand(
+					cloneDbRef = await Mediator.Send(new CreateThingCommand(
 						newName,
 						await executor.Where(),
 						owner,
@@ -1408,7 +1408,7 @@ public partial class Commands
 				}
 				else if (obj.IsRoom)
 				{
-					cloneDbRef = await Mediator!.Send(new CreateRoomCommand(
+					cloneDbRef = await Mediator.Send(new CreateRoomCommand(
 						newName,
 						owner
 					));
@@ -1416,7 +1416,7 @@ public partial class Commands
 				else if (obj.IsExit)
 				{
 					var nameParts = newName.Split(";");
-					cloneDbRef = await Mediator!.Send(new CreateExitCommand(
+					cloneDbRef = await Mediator.Send(new CreateExitCommand(
 						nameParts[0],
 						nameParts.Skip(1).ToArray(),
 						await executor.Where(),
@@ -1425,14 +1425,14 @@ public partial class Commands
 				}
 				else
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.InvalidObjectType,
 						notifyMessage: ErrorMessages.Notifications.CannotCloneThisObjectType,
 						shouldNotify: true);
 				}
 
-				var clonedObjOptional = await Mediator!.Send(new GetObjectNodeQuery(cloneDbRef));
+				var clonedObjOptional = await Mediator.Send(new GetObjectNodeQuery(cloneDbRef));
 				var clonedObj = clonedObjOptional.WithoutNone();
 
 				// Penn's atr_cpy (attrib.c:1692-1710) walks the source's flat, sorted attribute
@@ -1450,7 +1450,7 @@ public partial class Commands
 				// skip-propagation depends on.
 				var skippedAttributes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-				await foreach (var sourceAttribute in Mediator!.CreateStream(
+				await foreach (var sourceAttribute in Mediator.CreateStream(
 					new GetAttributesQuery(obj.Object().DBRef, ".*", false,
 						IAttributeService.AttributePatternMode.Regex)))
 				{
@@ -1475,7 +1475,7 @@ public partial class Commands
 					// AL_CREATOR(ptr) is passed through unchanged in atr_cpy (attrib.c:1706) - a
 					// cloned attribute keeps its original creator, not the cloner.
 					var creator = await attr.Owner.WithCancellation(CancellationToken.None) ?? owner;
-					var setResult = await AttributeService!.SetAttributeAsync(executor, clonedObj, longName, attr.Value, creator);
+					var setResult = await AttributeService.SetAttributeAsync(executor, clonedObj, longName, attr.Value, creator);
 
 					// A failed set means the branch was NOT actually copied. Treating it as
 					// skipped keeps the invariant this whole loop depends on: a LongName only
@@ -1505,7 +1505,7 @@ public partial class Commands
 					// SetAttributeFlagCommand/UnsetAttributeFlagCommand (no permission checks in
 					// either handler) rather than AttributeService.SetAttributeFlagsAsync, for the
 					// same bypass reason atr_new_add itself bypasses can_write_attr.
-					var destAttribute = await Mediator!.CreateStream(new GetAttributeQuery(clonedObj.Object().DBRef, attrPath))
+					var destAttribute = await Mediator.CreateStream(new GetAttributeQuery(clonedObj.Object().DBRef, attrPath))
 						.LastOrDefaultAsync();
 
 					if (destAttribute is not null)
@@ -1515,12 +1515,12 @@ public partial class Commands
 
 						foreach (var flag in destAttribute.Flags.Where(f => !sourceFlagNames.Contains(f.Name)))
 						{
-							await Mediator!.Send(new UnsetAttributeFlagCommand(clonedObj.Object().DBRef, destAttribute, flag));
+							await Mediator.Send(new UnsetAttributeFlagCommand(clonedObj.Object().DBRef, destAttribute, flag));
 						}
 
 						foreach (var flag in attr.Flags.Where(f => !destFlagNames.Contains(f.Name)))
 						{
-							await Mediator!.Send(new SetAttributeFlagCommand(clonedObj.Object().DBRef, destAttribute, flag));
+							await Mediator.Send(new SetAttributeFlagCommand(clonedObj.Object().DBRef, destAttribute, flag));
 						}
 					}
 					else
@@ -1541,31 +1541,31 @@ public partial class Commands
 				{
 					if (preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
 					{
-						await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, clonedObj, flag.Name, false);
+						await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, flag.Name, false);
 					}
 				}
 
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ClonedNewObjectFormat), executor, cloneDbRef.Number);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ClonedNewObjectFormat), executor, cloneDbRef.Number);
 				return new CallState(cloneDbRef.ToString());
 			}
 		);
 	}
 
 	[SharpCommand(Name = "@MONIKER", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "moniker"])]
-	public static async ValueTask<Option<CallState>> Moniker(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Moniker(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -1574,33 +1574,33 @@ public partial class Commands
 
 				if (!args.ContainsKey("1") || string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 				{
-					await AttributeService!.SetAttributeAsync(executor, obj, "MONIKER", MModule.single(""));
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MonikerCleared), executor);
+					await AttributeService.SetAttributeAsync(executor, obj, "MONIKER", MModule.single(""));
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MonikerCleared), executor);
 					return CallState.Empty;
 				}
 
 				var moniker = args["1"].Message!;
-				await AttributeService!.SetAttributeAsync(executor, obj, "MONIKER", moniker);
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MonikerSet), executor);
+				await AttributeService.SetAttributeAsync(executor, obj, "MONIKER", moniker);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MonikerSet), executor);
 				return CallState.Empty;
 			}
 		);
 	}
 
 	[SharpCommand(Name = "@PARENT", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "parent"])]
-	public static async ValueTask<Option<CallState>> Parent(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Parent(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
 			async target =>
 			{
-				if (!await PermissionService!.Controls(executor, target))
+				if (!await PermissionService.Controls(executor, target))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -1613,14 +1613,14 @@ public partial class Commands
 					case { Count: 2 } when args["1"].Message!.ToPlainText()
 						.Equals("none", StringComparison.InvariantCultureIgnoreCase):
 
-						return await ManipulateSharpObjectService!.UnsetParent(executor, target, true);
+						return await ManipulateSharpObjectService.UnsetParent(executor, target, true);
 					default:
 
 						return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 							parser, executor, executor,
 							args["1"].Message!.ToPlainText(), LocateFlags.All,
 							async newParent
-								=> await ManipulateSharpObjectService!.SetParent(executor, target, newParent, true));
+								=> await ManipulateSharpObjectService.SetParent(executor, target, newParent, true));
 				}
 			}
 		);
@@ -1628,20 +1628,20 @@ public partial class Commands
 
 
 	[SharpCommand(Name = "@UNLINK", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Unlink(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Unlink(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService!.Controls(executor, obj))
+				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -1650,20 +1650,20 @@ public partial class Commands
 
 				if (obj.IsExit)
 				{
-					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
+					await AttributeService.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
 
-					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UnlinkedExit), executor, obj.Object().DBRef.Number);
+					await Mediator.Send(new UnlinkExitCommand(obj.AsExit));
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UnlinkedExit), executor, obj.Object().DBRef.Number);
 					return CallState.Empty;
 				}
 				else if (obj.IsRoom)
 				{
-					await Mediator!.Send(new UnlinkRoomCommand(obj.AsRoom));
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToRemoved), executor);
+					await Mediator.Send(new UnlinkRoomCommand(obj.AsRoom));
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToRemoved), executor);
 					return CallState.Empty;
 				}
 
-				return await NotifyService!.NotifyAndReturn(
+				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.InvalidObjectType,
 					notifyMessage: ErrorMessages.Notifications.InvalidObjectTypeGeneric,

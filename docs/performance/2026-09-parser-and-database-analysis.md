@@ -279,52 +279,36 @@ the baseline run was stopped as too slow to wait on.
    releases carry no performance changes, and Mediator's pipeline chain is built once under the
    Singleton lifetime this app uses.
 
-## Architecture: what the data trunk still needs
+## Architecture: fencing the data trunk
 
 The Mediator is the data trunk: every read and write of game state is a request type that carries
 its own cache policy, and the caching and invalidation behaviours apply it. #867 and #869 made the
-providers pure storage behind that trunk. What follows is the structural work that fences it, in
-the order it pays off.
+providers pure storage behind that trunk; the follow-up made the rest of the engine respect it.
+The decisions are recorded in `docs/design/engine-data-trunk.md`; what changed:
 
-1. **Split `ISharpDatabase` along its existing seams.** The provider files are already partitioned
-   into objects, navigation, mail, channels, flags and powers. Per-aggregate interfaces registered
-   explicitly replace the casts in Startup and let a handler depend on the store it uses. Two
-   vocabularies, request types and provider methods, are kept in sync by hand today. Smaller
-   interfaces make the drift visible.
-2. **Retire the static service locator in `Commands` and `Functions`.** DI constructs each class
-   once and copies 27 services into static properties, which is why `Mediator!` appears everywhere
-   and why an optional `IMediator? mediator = null` felt natural in a provider. Every command
-   already receives the parser. A services context carried by the parser or `CallState` lets
-   commands take what they need as a parameter and removes the null-forgiving operators. Migrate
-   one command file at a time.
-3. **Move migration out of the DI factory.** The provider singleton runs `Migrate()` with
-   sync-over-async inside the factory lambda. A hosted service that migrates before the app serves
-   keeps the container free of blocking work and makes first-resolve ordering explicit.
-4. **Close the remaining coherence window with versions, not more invalidation.** A read that
-   issues its query before a commit and stores after the second invalidation caches a pre-write
-   answer. Tagged entries do not have this window: FusionCache stamps a foreground factory's entry
-   at factory start, so a tag removed mid-read expires the result (section 5). The key-invalidated
-   object node does, because a key removal during the factory says nothing about the entry stored
-   after it. A per-object version counter bumped on every invalidation closes it, but not as a
-   check before the store: an invalidation can land between that check and FusionCache's set.
-   The behaviour captures the version before the factory runs and compares again *after*
-   `GetOrSet` returns, removing the key if it moved. The removal then happens after the store,
-   whichever order the write and the read interleaved, so a stale entry never outlives the
-   comparison. This pairs with #868 item 3, since dbref-only lists shrink what a version covers.
-5. **Keep the single-process assumptions named.** The design is single-process today: Startup
-   registers the in-memory FusionCache only, with no distributed cache and no backplane, so a
-   write on a second engine node would leave the first node's entries stale. `AsyncRelation`, the
-   snapshot rule and the in-memory tag index share that assumption. The path to more than one
-   node is a configured backplane, which carries key and tag removals between nodes and keeps the
-   design's shape, plus the version counter in point 4 moved into the distributed cache. Until
-   that is configured, run one engine process per database.
+1. **`ISharpDatabase` is a composite of eleven per-aggregate stores** (`SharpMUSH.Library/Stores`),
+   and every handler and service depends on the store it uses. The concrete provider is the one
+   registered singleton; every interface it serves is forwarded from it by a compile-checked
+   registration instead of a cast.
+2. **`Commands` and `Functions` are instance classes.** The generators emit a factory that binds
+   each command or function to the instance, so services are ordinary non-null members and the
+   three thousand `Service!` operators are gone. Plugin modules keep static methods and a static
+   table.
+3. **Migration is awaited once in `Program`**, right after the host is built and before any
+   service that reads the database is resolved; the provider factories only construct. A hosted
+   lifecycle hook was tried and is too late: hosted services are constructed before it runs, and
+   constructing them resolves the options factory, which reads server data.
+4. **The read-before-commit window on the object node is closed by version**, not by more
+   invalidation: `ObjectVersions` moves before a key removal, and `QueryCachingBehavior` compares
+   after its store and removes what it just stored if the version moved. Tagged entries never had
+   the window, since FusionCache stamps a foreground factory's entry at factory start.
+5. **The single-process assumption is stated** in the design document and on `ObjectVersions`:
+   in-memory cache only, no backplane; one engine process per database until one is configured.
 
-Two smaller fences belong with these: the create handlers remove the new object's key themselves
-because `ICacheInvalidating.CacheKeys` cannot name a dbref the write allocates, so the contract wants
-a result-derived hook and no handler should hold an `IFusionCache`; and the four service-shaped
-requests (`GetAttributeServiceQuery`, `LocateObjectQuery`, `EvaluateLockQuery`,
-`EvaluateAttributeForLockQuery`) exist only to reach across the attribute/permission/lock
-constructor cycle, which lazy injection or a passed evaluator dissolves without a bus.
+Two smaller fences landed with these: a create declares the key its result names through
+`ICacheInvalidatingByResult<T>` and no handler holds an `IFusionCache` any more; and the
+attribute/permission/lock constructor cycle resolves through `ILockEvaluationServices` over
+`Lazy<T>`, so the four requests whose handlers only called a service are gone.
 
 ## Reproducing
 

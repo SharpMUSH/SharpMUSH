@@ -16,7 +16,8 @@ public class ConnectionStateChangeHandler(
 	ILogger<ConnectionStateChangeHandler> logger,
 	IConnectionService connectionService,
 	INotifyService notifyService,
-	ISharpDatabase database)
+	IAttributeStore attributes,
+	IObjectStore objects)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
@@ -55,7 +56,7 @@ public class ConnectionStateChangeHandler(
 
 					if (notification.PlayerRef.HasValue)
 					{
-						var localeAttrs = database.GetAttributeAsync(notification.PlayerRef.Value, ["LOCALE"], cancellationToken);
+						var localeAttrs = attributes.GetAttributeAsync(notification.PlayerRef.Value, ["LOCALE"], cancellationToken);
 						await foreach (var attr in localeAttrs)
 						{
 							var savedLocale = attr.Value.ToPlainText();
@@ -119,7 +120,7 @@ public class ConnectionStateChangeHandler(
 	{
 		if (!playerRef.HasValue) return null;
 
-		var node = await database.GetObjectNodeAsync(playerRef.Value, cancellationToken);
+		var node = await objects.GetObjectNodeAsync(playerRef.Value, cancellationToken);
 		return node.IsNone() ? null : node.Known().Object().Name;
 	}
 }

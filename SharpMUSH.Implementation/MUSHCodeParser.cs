@@ -49,6 +49,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	private readonly ICommandDiscoveryService _commandDiscoveryService = ServiceProvider.GetRequiredService<ICommandDiscoveryService>();
 	private readonly IAttributeService _attributeService = ServiceProvider.GetRequiredService<IAttributeService>();
 	private readonly IHookService _hookService = ServiceProvider.GetRequiredService<IHookService>();
+	private readonly ILockService _lockService = ServiceProvider.GetRequiredService<ILockService>();
 
 	// Lexer vocabulary is static and immutable — cached once to avoid allocating a new lexer on every fallback classification
 	private static readonly IVocabulary LexerVocabulary =
@@ -363,6 +364,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			_commandDiscoveryService,
 			_attributeService,
 			_hookService,
+			_lockService,
 			text);
 
 		var result = await visitor.Visit(context);
@@ -584,7 +586,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			_locateService,
 			_commandDiscoveryService,
 			_attributeService,
-			_hookService, text);
+			_hookService, _lockService, text);
 
 		return () => visitor.Visit(chatContext);
 	}

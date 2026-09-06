@@ -15,7 +15,7 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class SitelockController(
 	IOptionsWrapper<SharpMUSHOptions> options,
-	ISharpDatabase database,
+	IExpandedDataStore database,
 	ConfigurationReloadService configReloadService,
 	IBanEnforcer banEnforcer,
 	ILogger<SitelockController> logger)

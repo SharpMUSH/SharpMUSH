@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Visitors;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Linq.Expressions;
@@ -9,6 +10,7 @@ using ZiggyCreatures.Caching.Fusion;
 namespace SharpMUSH.Implementation;
 
 public class BooleanExpressionParser(
+	ILockEvaluationServices services,
 	IMediator mediator,
 	[FromKeyedServices("compiled-expressions")] IFusionCache cache) : IBooleanExpressionParser
 {
@@ -113,7 +115,7 @@ public class BooleanExpressionParser(
 
 		var parameter = Expression.Parameter(typeof(AnySharpObject), "gated");
 		var parameter2 = Expression.Parameter(typeof(AnySharpObject), "unlocker");
-		SharpMUSHBooleanExpressionVisitor visitor = new(mediator, parameter, parameter2);
+		SharpMUSHBooleanExpressionVisitor visitor = new(services, mediator, parameter, parameter2);
 		var expression = visitor.Visit(chatContext);
 
 		return Expression.Lambda<Func<AnySharpObject, AnySharpObject, bool>>(expression, parameter, parameter2).Compile();
@@ -164,7 +166,7 @@ public class BooleanExpressionParser(
 			return text;
 		}
 
-		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new(mediator, executor);
+		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new(services, executor);
 
 		var normalized = visitor.Visit(chatContext);
 

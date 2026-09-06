@@ -21,9 +21,14 @@ namespace SharpMUSH.Library.Behaviors;
 /// exercised in the configuration it shipped in. Both passes now always run.
 /// </para>
 /// <para>
-/// A narrower window remains and is not closed here: a read that issues its query before the commit
-/// and stores its result after the second invalidation still caches a pre-write answer. Closing that
-/// needs the read side to carry a version, not more invalidation.
+/// A read that issues its query before the commit and stores its result after the second invalidation
+/// would still cache a pre-write answer. Every object key removed here also bumps the object's
+/// <see cref="ObjectVersions"/>, which the read side compares after its store.
+/// </para>
+/// <para>
+/// A write whose keys are only known from its result (a create, which allocates the dbref it must
+/// clear) declares them through <see cref="ICacheInvalidatingByResult{TResponse}"/>; they are removed
+/// in the pass after the handler.
 /// </para>
 /// <para>
 /// The second pass runs on the failure path too, and under <see cref="CancellationToken.None"/>. A
@@ -31,7 +36,7 @@ namespace SharpMUSH.Library.Behaviors;
 /// left one behind entirely; in both cases the entry is stale and nobody else is going to clear it.
 /// </para>
 /// </remarks>
-public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache)
+public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache, ObjectVersions versions)
 	: IPipelineBehavior<TRequest, TResponse>
 	where TRequest : ICommand<TResponse>, ICacheInvalidating
 {
@@ -51,6 +56,10 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache)
 			// whether or not the caller is still interested. Passing the request token here would let a
 			// cancellation leave exactly the poisoned entry this pass exists to remove.
 			await InvalidateCacheAsync(message, CancellationToken.None);
+			if (message is ICacheInvalidatingByResult<TResponse> byResult)
+			{
+				await RemoveKeysAsync(byResult.CacheKeysFor(result), CancellationToken.None);
+			}
 
 			return result;
 		}
@@ -75,22 +84,35 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache)
 
 	private async ValueTask InvalidateCacheAsync(TRequest message, CancellationToken cancellationToken)
 	{
-		foreach (var key in message.CacheKeys)
+		await RemoveKeysAsync(message.CacheKeys, cancellationToken);
+
+		if (message.CacheTags.Length != 0)
 		{
+			await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
+		}
+	}
+
+	private async ValueTask RemoveKeysAsync(string[] keys, CancellationToken cancellationToken)
+	{
+		foreach (var key in keys)
+		{
+			// The version moves before the key goes, so a read that stores after this removal and
+			// compares afterwards sees the change whichever side of the removal its store landed on.
+			var isObject = CacheKeys.TryParseObjectNumber(key, out var number);
+			if (isObject)
+			{
+				versions.Bump(number);
+			}
+
 			await cache.RemoveAsync(key, token: cancellationToken);
 
 			// A write to an object reaches every cached result holding a snapshot of it, not only
 			// its node: the contents list it sits in, an occupant's location answer, a lookup by
 			// name. Those carry the object's tag (see EmbeddedObjects); expire them with the key.
-			if (CacheKeys.TryParseObjectNumber(key, out var number))
+			if (isObject)
 			{
 				await cache.RemoveByTagAsync(CacheKeys.ObjectTag(number), token: cancellationToken);
 			}
-		}
-
-		if (message.CacheTags.Length != 0)
-		{
-			await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
 		}
 	}
 }

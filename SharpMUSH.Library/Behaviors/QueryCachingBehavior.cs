@@ -1,11 +1,12 @@
 using Mediator;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Queries.Database;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Library.Behaviors;
 
-public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
+public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, ObjectVersions versions)
 	: IPipelineBehavior<TRequest, TResponse>
 	where TRequest : IQuery<TResponse>, ICacheable
 {
@@ -15,9 +16,17 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 		CancellationToken cancellationToken
 	)
 	{
+		// A key-invalidated object entry carries no tag stamp, so a write that lands while the factory
+		// runs would leave the stored entry pre-write. The version is read before and compared after
+		// the store: the removal then happens after the store in every interleaving (see ObjectVersions).
+		var number = 0;
+		var versioned = message.Profile == CacheEntryProfile.Object
+										&& CacheKeys.TryParseObjectNumber(message.CacheKey, out number);
+		var before = versioned ? versions.Of(number) : 0;
+
 		// The factory runs under FusionCache's token, which carries the profile's hard timeout, so
 		// a hung database call is cut loose from the command rather than holding its key lock.
-		return await cache.GetOrSetAsync<TResponse>(message.CacheKey,
+		var value = await cache.GetOrSetAsync<TResponse>(message.CacheKey,
 			async (ctx, ct) =>
 			{
 				var result = await next(message, ct);
@@ -27,6 +36,13 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 			options: CacheEntryProfiles.For(message.Profile),
 			tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
 			token: cancellationToken);
+
+		if (versioned && versions.Of(number) != before)
+		{
+			await cache.RemoveAsync(message.CacheKey, token: CancellationToken.None);
+		}
+
+		return value;
 	}
 }
 

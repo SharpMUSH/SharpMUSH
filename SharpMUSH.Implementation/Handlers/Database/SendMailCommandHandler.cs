@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SendMailCommandHandler(ISharpDatabase database) : ICommandHandler<SendMailCommand>
+public class SendMailCommandHandler(IMailStore database) : ICommandHandler<SendMailCommand>
 {
 	public async ValueTask<Unit> Handle(SendMailCommand command, CancellationToken cancellationToken)
 	{
@@ -13,7 +13,7 @@ public class SendMailCommandHandler(ISharpDatabase database) : ICommandHandler<S
 	}
 }
 
-public class UpdateMailCommandHandler(ISharpDatabase database) : ICommandHandler<UpdateMailCommand>
+public class UpdateMailCommandHandler(IMailStore database) : ICommandHandler<UpdateMailCommand>
 {
 	public async ValueTask<Unit> Handle(UpdateMailCommand command, CancellationToken cancellationToken)
 	{
@@ -22,7 +22,7 @@ public class UpdateMailCommandHandler(ISharpDatabase database) : ICommandHandler
 	}
 }
 
-public class DeleteMailHandler(ISharpDatabase database) : ICommandHandler<DeleteMailCommand>
+public class DeleteMailHandler(IMailStore database) : ICommandHandler<DeleteMailCommand>
 {
 	public async ValueTask<Unit> Handle(DeleteMailCommand command, CancellationToken cancellationToken)
 	{
@@ -31,7 +31,7 @@ public class DeleteMailHandler(ISharpDatabase database) : ICommandHandler<Delete
 	}
 }
 
-public class RenameMailFolderHandler(ISharpDatabase database) : ICommandHandler<RenameMailFolderCommand>
+public class RenameMailFolderHandler(IMailStore database) : ICommandHandler<RenameMailFolderCommand>
 {
 	public async ValueTask<Unit> Handle(RenameMailFolderCommand command, CancellationToken cancellationToken)
 	{
@@ -40,7 +40,7 @@ public class RenameMailFolderHandler(ISharpDatabase database) : ICommandHandler<
 	}
 }
 
-public class MoveMailFolderHandler(ISharpDatabase database) : ICommandHandler<MoveMailFolderCommand>
+public class MoveMailFolderHandler(IMailStore database) : ICommandHandler<MoveMailFolderCommand>
 {
 	public async ValueTask<Unit> Handle(MoveMailFolderCommand command, CancellationToken cancellationToken)
 	{
