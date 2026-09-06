@@ -175,7 +175,7 @@ public class AccountSessionAuthHandlerTests
 		// AccountClaimsService.ComputeAccountRoleAsync only calls DeriveAccountRole (mocked below
 		// to return Wizard) when the account has at least one character; an empty list short-
 		// circuits to the Guest floor regardless of the mock.
-		accountServiceForClaims.GetCharactersAsync("node_accounts/1")
+		accountServiceForClaims.GetCharactersAsync("node_accounts/1", Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[MakePlayer(1, "Alice")]));
 
 		var accountClaims = MakeAccountClaims(accountServiceForClaims, PortalRole.Wizard, "players.view");
@@ -214,7 +214,7 @@ public class AccountSessionAuthHandlerTests
 			.Returns(new ValueTask<SharpAccount?>(MakeAccount()));
 		accountService.GetCharactersAsync("node_accounts/1")
 			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[MakePlayer(42, "Alice", 987654321L)]));
-		accountServiceForClaims.GetCharactersAsync("node_accounts/1")
+		accountServiceForClaims.GetCharactersAsync("node_accounts/1", Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[MakePlayer(42, "Alice", 987654321L)]));
 
 		var accountClaims = MakeAccountClaims(accountServiceForClaims, PortalRole.Wizard, "players.view");
@@ -244,7 +244,7 @@ public class AccountSessionAuthHandlerTests
 			new IAccountSessionStore.SessionIdentity("node_accounts/1", 7, 777L)));
 		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
 		accountService.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
-		accountServiceForClaims.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+		accountServiceForClaims.GetCharactersAsync("node_accounts/1", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
 
 		return (sessionStore, accountService, MakeAccountClaims(accountServiceForClaims, PortalRole.Wizard, "players.view"));
 	}
@@ -295,7 +295,7 @@ public class AccountSessionAuthHandlerTests
 			new IAccountSessionStore.SessionIdentity("node_accounts/1", 7, 777L)));
 		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
 		accountService.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
-		accountServiceForClaims.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+		accountServiceForClaims.GetCharactersAsync("node_accounts/1", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
 
 		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService,
 			MakeAccountClaims(accountServiceForClaims, PortalRole.Player), authorizationHeader: "Bearer good");
@@ -328,7 +328,7 @@ public class AccountSessionAuthHandlerTests
 		IReadOnlyList<SharpPlayer> roster = [MakePlayer(12, "Gwendolyn", 555L)];
 		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
 		accountService.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
-		accountServiceForClaims.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+		accountServiceForClaims.GetCharactersAsync("node_accounts/1", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
 
 		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService,
 			MakeAccountClaims(accountServiceForClaims, PortalRole.Player), authorizationHeader: "Bearer registration-token");
@@ -357,7 +357,7 @@ public class AccountSessionAuthHandlerTests
 		IReadOnlyList<SharpPlayer> roster = [MakePlayer(9, "Zed", 999L), MakePlayer(3, "Alice", 333L)];
 		accountService.GetByIdAsync("node_accounts/1").Returns(new ValueTask<SharpAccount?>(MakeAccount()));
 		accountService.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
-		accountServiceForClaims.GetCharactersAsync("node_accounts/1").Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
+		accountServiceForClaims.GetCharactersAsync("node_accounts/1", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>(roster));
 
 		var handler = await CreateHandlerWithHeaderAsync(sessionStore, accountService,
 			MakeAccountClaims(accountServiceForClaims, PortalRole.Player), authorizationHeader: "Bearer unbound");

@@ -38,17 +38,20 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
-	/// The engine cache's defaults are the Object profile: ad-hoc Set/GetOrSet callers (the lock
-	/// service, account claims) inherit its size unit, which the bounded memory cache requires, and
-	/// its fail-safe, which is safe for them because they are all invalidated by key.
+	/// The engine cache's registered defaults are the Tagged profile, the one that can never serve
+	/// stale. Ad-hoc Set/GetOrSet callers (the lock service, the account claims cache) inherit its
+	/// size unit, which the bounded memory cache requires, and must not inherit fail-safe: the
+	/// claims cache is invalidated by tag on a ban or role change. Only the caching behaviour hands
+	/// out fail-safe, to key-invalidated queries.
 	/// </summary>
 	[Test]
-	public async Task FusionCache_DefaultsAreTheObjectProfile()
+	public async Task FusionCache_DefaultsAreTheTaggedProfile()
 	{
 		var defaults = Cache.DefaultEntryOptions;
 		await Assert.That(defaults.Size).IsEqualTo(1);
-		await Assert.That(defaults.IsFailSafeEnabled).IsTrue();
-		await Assert.That(defaults.Duration).IsEqualTo(Library.Behaviors.CacheEntryProfiles.Object.Duration);
+		await Assert.That(defaults.IsFailSafeEnabled).IsFalse();
+		await Assert.That(defaults.EagerRefreshThreshold).IsNull();
+		await Assert.That(defaults.Duration).IsEqualTo(Library.Behaviors.CacheEntryProfiles.Tagged.Duration);
 	}
 
 	/// <summary>

@@ -146,6 +146,10 @@ eager refresh, and no profile lets a timed-out factory complete in the backgroun
 (`AllowTimedOutFactoryBackgroundCompletion = false`); a timed-out read is discarded and the next
 read retries.
 
+The cache's *registered* default is the Tagged profile, so an ad-hoc caller that only sets a
+duration (the account-claims cache, tag-invalidated on bans and role changes) can never inherit
+fail-safe; only the caching behaviour hands out the Object profile, to key-invalidated queries.
+
 The memory cache is bounded at 250,000 units (one per document, one per element of a cached list,
 compacting the least recently used tenth), so a full-database sweep fills the cache instead of
 growing the process without limit. Every factory runs under FusionCache's token with a 5 s hard

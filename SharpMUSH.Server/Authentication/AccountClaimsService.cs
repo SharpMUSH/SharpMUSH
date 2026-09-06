@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Behaviors;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Server.Authentication;
@@ -50,9 +52,17 @@ public class AccountClaimsService(
 	public async Task<PortalRole> ComputeAccountRoleAsync(string accountId, PortalRole activeRole, CancellationToken ct = default)
 		=> await cache.GetOrSetAsync($"account-role:{accountId}:{activeRole}",
 			async token => await ComputeAccountRoleCoreAsync(accountId, activeRole, token),
-			options => options.Duration = TimeSpan.FromSeconds(30),
+			ClaimsEntryOptions,
 			tags: [AccountCacheTag(accountId)],
 			token: ct);
+
+	/// <summary>
+	/// Short-lived, and explicitly the profile that is never served stale: these entries are
+	/// invalidated by tag when a ban or a role change lands, and a fail-safe fallback during a slow
+	/// database would hand a revoked role back. See <see cref="CacheEntryProfile"/>.
+	/// </summary>
+	private static readonly FusionCacheEntryOptions ClaimsEntryOptions =
+		CacheEntryProfiles.Tagged.Duplicate(TimeSpan.FromSeconds(30));
 
 	private async Task<PortalRole> ComputeAccountRoleCoreAsync(string accountId, PortalRole activeRole, CancellationToken ct)
 	{
@@ -95,7 +105,7 @@ public class AccountClaimsService(
 	public async Task<IReadOnlySet<string>> ComputeGrantedScopesAsync(string accountId, PortalRole role)
 		=> await cache.GetOrSetAsync($"account-scopes:{accountId}:{role}",
 			async _ => await ComputeGrantedScopesCoreAsync(accountId, role),
-			options => options.Duration = TimeSpan.FromSeconds(30),
+			ClaimsEntryOptions,
 			tags: [AccountCacheTag(accountId)],
 			token: default);
 

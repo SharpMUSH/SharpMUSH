@@ -4,6 +4,7 @@ using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using System.Reflection;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests.Services;
@@ -155,8 +156,10 @@ public class CacheEntryProfileTests
 				.ToArray();
 			return ctor.Invoke(args) as ICacheable;
 		}
-		catch
+		catch (Exception ex) when (ex is InvalidOperationException or MemberAccessException
+			or TargetInvocationException or ArgumentException or NotSupportedException)
 		{
+			// Not every ICacheable has a constructor this can satisfy; those are simply not checked.
 			return null;
 		}
 	}

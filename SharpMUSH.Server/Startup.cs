@@ -484,8 +484,12 @@ public class Startup(
 			});
 
 		// The engine cache. Its own bounded memory cache rather than the registered one (which the
-		// prerender service shares), default options from the Object profile, and the per-query
-		// profiles applied by the caching behaviours - see CacheEntryProfile for the fail-safe rule.
+		// prerender service shares), and the per-query profiles applied by the caching behaviours -
+		// see CacheEntryProfile for the fail-safe rule. The registered default is the Tagged profile,
+		// the one that can never serve stale: an ad-hoc caller that only sets a duration (the account
+		// claims cache, invalidated by tag when a ban or role change lands) inherits everything else
+		// from here, and must not inherit fail-safe. Only the caching behaviour hands out the Object
+		// profile, and only to queries whose invalidation is by key.
 		services.AddFusionCache()
 			.TryWithAutoSetup()
 			.WithMemoryCache(_ => new MemoryCache(new MemoryCacheOptions
@@ -493,7 +497,7 @@ public class Startup(
 				SizeLimit = CacheEntryProfiles.MemoryCacheSizeLimit,
 				CompactionPercentage = CacheEntryProfiles.MemoryCacheCompactionPercentage,
 			}))
-			.WithDefaultEntryOptions(CacheEntryProfiles.Object);
+			.WithDefaultEntryOptions(CacheEntryProfiles.Tagged);
 
 		// Dedicated cache for compiled boolean-lock expressions.
 		// Uses a size-limited memory cache (max 1024 entries, 25% compaction) so rarely-used
