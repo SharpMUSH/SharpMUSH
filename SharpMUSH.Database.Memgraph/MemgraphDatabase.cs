@@ -45,7 +45,7 @@ IMediator? mediator = null
 			? GetPowersForIdAsync(id, ct)
 			: mediator.CreateStream(new GetObjectPowersQuery(id), ct);
 
-	public IAsyncEnumerable<SharpPower> GetObjectPowersAsync(string id, CancellationToken cancellationToken = default)
+	public IAsyncEnumerable<SharpPower> GetPowersForObjectAsync(string id, CancellationToken cancellationToken = default)
 		=> GetPowersForIdAsync(id, cancellationToken);
 
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);

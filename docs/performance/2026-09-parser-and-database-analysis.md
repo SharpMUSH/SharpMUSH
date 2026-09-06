@@ -108,9 +108,11 @@ From the post-fix trace:
 Every Arango attribute reader returned bare documents and `SharpAttributeQueryToSharpAttribute` then
 ran `GetAttributeFlagsAsync` per attribute. The SurrealDB provider already fetched flags inline.
 
-Fix: the 15 reader AQL sites return `MERGE(v, { FlagDocs: (sub-query over edge_has_attribute_flag) })`,
-and the converters use `FlagDocs` when present. An attribute write followed by an uncached `lattr(me)`
-on an object with three attributes went from 11 to 8 requests; the remaining ~6 are the write.
+Fix: the 21 reader AQL sites (including the self/parent/zone sub-queries of the inheritance lookup)
+return `MERGE(v, { FlagDocs: (sub-query over edge_has_attribute_flag) })`, and the converters use
+`FlagDocs` when present. An attribute write followed by an uncached `lattr(me)` on an object with
+three attributes went from 11 to 8 requests, and write plus uncached `get()` from 8.8 to 6.9; the
+remaining ~6 are the write.
 
 ### 5. `cache: true` on AQL queries is a no-op (database)
 
@@ -140,6 +142,7 @@ baseline (after fixing the benchmark-validity bugs, before any engine change).
 | `[haspower(me,see_all)]` | — | 5.3 | — | 12.3 | (1 per call by code) → 0 |
 | `&ATTR me=x` (write) | — | 6,548 | — | 85 | 6.2 |
 | write then uncached `lattr(me)` | — | — | 170 | 143 | 11.0 → 8.0 |
+| write then uncached `get(me/FN)` | — | — | 165 | 149 | 8.8 → 6.9 |
 
 Step-by-step for `[add(1,2)]`: baseline 245 KB / 389 µs → trie fix 28 KB / 267 µs → flag cache
 15 KB / 7.6 µs → parser internals 11.4 KB / 4.2 µs.

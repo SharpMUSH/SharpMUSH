@@ -132,7 +132,7 @@ public partial class ArangoDatabase
 		return true;
 	}
 
-	public IAsyncEnumerable<SharpPower> GetObjectPowersAsync(string id, CancellationToken cancellationToken = default)
+	public IAsyncEnumerable<SharpPower> GetPowersForObjectAsync(string id, CancellationToken cancellationToken = default)
 		=> GetPowersAsync(id, cancellationToken);
 
 	private IAsyncEnumerable<SharpPower> GetPowersAsync(string id, CancellationToken ct = default) =>

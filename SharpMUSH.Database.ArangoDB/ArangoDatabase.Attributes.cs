@@ -925,7 +925,7 @@ public partial class ArangoDatabase
 				FOR v,e,p IN 1..maxDepth OUTBOUND startThing GRAPH {DatabaseConstants.GraphAttributes}
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 					FILTER !condition
-					RETURN v
+					RETURN {AttributeWithFlags}
 			)
 			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
 				attributes: selfAttrs,
@@ -940,7 +940,7 @@ public partial class ArangoDatabase
 						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
 							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 							FILTER !condition
-							RETURN v
+							RETURN {AttributeWithFlags}
 					)
 					FILTER LENGTH(parentAttrs) > 0
 					RETURN {{
@@ -963,7 +963,7 @@ public partial class ArangoDatabase
 							FOR v,e,p IN 1..maxDepth OUTBOUND zoneThing GRAPH {DatabaseConstants.GraphAttributes}
 								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 								FILTER !condition
-								RETURN v
+								RETURN {AttributeWithFlags}
 						)
 						FILTER LENGTH(zoneAttrs) > 0
 						RETURN {{
@@ -1138,7 +1138,7 @@ public partial class ArangoDatabase
 				FOR v,e,p IN 1..maxDepth OUTBOUND startThing GRAPH {DatabaseConstants.GraphAttributes}
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 					FILTER !condition
-					RETURN v
+					RETURN {AttributeWithFlags}
 			)
 			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
 				attributes: selfAttrs,
@@ -1153,7 +1153,7 @@ public partial class ArangoDatabase
 						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
 							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 							FILTER !condition
-							RETURN v
+							RETURN {AttributeWithFlags}
 					)
 					FILTER LENGTH(parentAttrs) > 0
 					RETURN {{
@@ -1176,7 +1176,7 @@ public partial class ArangoDatabase
 							FOR v,e,p IN 1..maxDepth OUTBOUND zoneThing GRAPH {DatabaseConstants.GraphAttributes}
 								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 								FILTER !condition
-								RETURN v
+								RETURN {AttributeWithFlags}
 						)
 						FILTER LENGTH(zoneAttrs) > 0
 						RETURN {{

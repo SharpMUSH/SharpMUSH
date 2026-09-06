@@ -58,8 +58,14 @@ public sealed class ProfileHarness : BaseBenchmark
 		{
 			switch (args[i])
 			{
-				case "--seconds": seconds = int.Parse(args[++i]); break;
-				case "--wait": wait = int.Parse(args[++i]); break;
+				case "--seconds":
+					if (++i >= args.Length || !int.TryParse(args[i], out seconds) || seconds <= 0)
+						throw new ArgumentException("--seconds requires a positive integer.");
+					break;
+				case "--wait":
+					if (++i >= args.Length || !int.TryParse(args[i], out wait) || wait < 0)
+						throw new ArgumentException("--wait requires a non-negative integer.");
+					break;
 				default: selected.AddRange(args[i].Split(',', StringSplitOptions.RemoveEmptyEntries)); break;
 			}
 		}

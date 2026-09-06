@@ -78,7 +78,13 @@ public class CommandTrie
 	{
 		if (Cache.TryGetValue(commandLibrary, out var cached))
 		{
-			cached.Trie = null;
+			// Under the build lock: a build that finished enumerating the library before this
+			// invalidation but publishes after it would otherwise install a trie holding the removed
+			// commands, with a count that matches the library.
+			lock (cached)
+			{
+				cached.Trie = null;
+			}
 		}
 	}
 
