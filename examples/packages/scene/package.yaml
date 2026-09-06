@@ -332,11 +332,9 @@ objects:
       # most overdue sits at the top, flagged up-next. Columns align to width(%#).
       FUN`POT_MS: |-
         firstof(scenepose(%0,sceneposes(%0,%1,1),createdat),0)
-      # secs(), not msecs(): msecs(<object>) is an OBJECT's modification time in seconds
-      # (help MSECS), so msecs() with no argument tried to locate an object named "" — one
-      # "I can't see that here." per member — and the arithmetic on its #-1 filled every Idle
-      # cell with "#-1 ARGUMENT MUST BE INTEGER". POT_MS is milliseconds, so it is the stored
-      # value that is converted down, not the clock that is multiplied up.
+      # secs(), not msecs(): msecs(<object>) is an OBJECT's modification time in seconds (help
+      # MSECS), so msecs() with no argument located an object named "" and every Idle cell read
+      # "#-1 ARGUMENT MUST BE INTEGER". POT_MS is milliseconds, so the stored value converts down.
       FUN`POT_IDLE: |-
         switch(setr(ms,u(%!/FUN`POT_MS,%0,%1)),0,-,timestring(sub(secs(),div(%q<ms>,1000))))
       FUN`POT_KEY: |-

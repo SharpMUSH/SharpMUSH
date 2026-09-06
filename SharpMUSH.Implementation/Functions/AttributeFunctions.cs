@@ -36,13 +36,11 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// The <c>"&lt;object&gt;/&lt;attr&gt; - Set."</c> confirmation <c>attrib_set()</c> prints.
-	/// PennMUSH's <c>fun_attrib_set</c> passes <c>0x01</c> to <c>do_set_atr</c>
-	/// (<c>src/fundb.c:2294-2300</c>), which is the flag that asks for exactly this line
-	/// (<c>src/attrib.c:2446-2452</c>) — so the function is NOT silent, and the message goes to the
-	/// EXECUTOR, not the enactor. It is suppressed the two ways Penn suppresses it: a QUIET player
-	/// or a QUIET object they own, and an attribute carrying the <c>quiet</c> flag. Failures are not
-	/// announced here; they come back as the function's return value.
+	/// The <c>"&lt;object&gt;/&lt;attr&gt; - Set."</c> confirmation <c>attrib_set()</c> prints:
+	/// <c>fun_attrib_set</c> passes <c>0x01</c> to <c>do_set_atr</c> (<c>src/fundb.c:2294-2300</c>),
+	/// the flag that asks for this line (<c>src/attrib.c:2446-2452</c>). It goes to the EXECUTOR,
+	/// and is suppressed by a QUIET player, a QUIET object they own, or a <c>quiet</c> attribute.
+	/// Failures come back as the return value instead.
 	/// </summary>
 	private static async ValueTask NotifyOfSet(AnySharpObject executor, AnySharpObject thing, string attribute,
 		bool succeeded, bool wasSet)
@@ -74,7 +72,6 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitObjectAndAttr(MModule.plainText(args["0"].Message!));
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
 		if (!split.TryPickT0(out var details, out _))
@@ -111,7 +108,6 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitObjectAndAttr(MModule.plainText(args["0"].Message!));
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (!split.TryPickT0(out var details, out _))

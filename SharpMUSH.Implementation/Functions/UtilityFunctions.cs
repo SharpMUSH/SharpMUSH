@@ -736,10 +736,9 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// <c>isint()</c> is 64-bit: <c>fun_isint</c> reads with <c>parse_ival_full</c>, which is
-	/// <c>parse_int64</c> (<c>src/funmath.c:82-84, 1408-1416</c>). Parsing as a 32-bit int said no to
-	/// every value above 2147483647 — a millisecond timestamp among them — while <c>add()</c>,
-	/// <c>sub()</c> and <c>div()</c> all handled the same value as an integer quite happily.
+	/// 64-bit, as <c>fun_isint</c> is (<c>parse_ival_full</c> = <c>parse_int64</c>,
+	/// <c>src/funmath.c:82-84</c>). A 32-bit parse said no to every value above 2147483647 that
+	/// <c>add()</c>, <c>sub()</c> and <c>div()</c> all handled as an integer.
 	/// </summary>
 	[SharpFunction(Name = "isint", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IsInt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>

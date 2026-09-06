@@ -198,16 +198,14 @@ public class IterationWrapper<T>
 /// <summary>
 /// Lets one command list hand its <c>@break</c>/<c>@assert</c> up to the list that ran it.
 ///
-/// <para><c>VisitCommandList</c> pops the break marker when the list it is visiting stops, which is
-/// right for an action list at the top of a queue entry: the break has done its job there. It is
-/// wrong for a list that is only nested because a command chose to run it — <c>@include</c> is
-/// documented to insert the included actions into the CALLING list, so a guard inside it must stop
-/// the caller too, and <c>/nobreak</c> exists precisely to suppress that (<c>help @include</c>).</para>
+/// <para><c>VisitCommandList</c> pops the break marker when its list stops, which is right at the
+/// top of a queue entry and wrong for a list a command chose to run: <c>@include</c> inserts the
+/// included actions into the CALLING list, so a guard inside it must stop the caller too, and
+/// <c>/nobreak</c> exists to suppress that (<c>help @include</c>).</para>
 ///
 /// <para>Reference type, so the flags are shared across the immutable ParserState records made
-/// while the nested list runs. <see cref="PreserveNext"/> is a ONE-SHOT, consumed by the next
-/// command list to begin: lists nested deeper inside the included text see it already cleared and
-/// keep today's containment.</para>
+/// while the nested list runs. <see cref="PreserveNext"/> is a ONE-SHOT consumed by the next
+/// command list to begin, so lists nested deeper keep containing their own breaks.</para>
 /// </summary>
 public class BreakPropagation
 {

@@ -7,7 +7,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using Mediator;
 
-namespace SharpMUSH.Tests.Integration.Integration;
+namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
 /// End-to-end proof of the Phase 1 C# plugin loader. The SamplePlugin fixture DLL (+ plugin.json) is

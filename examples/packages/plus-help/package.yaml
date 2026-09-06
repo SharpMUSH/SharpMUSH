@@ -16,25 +16,21 @@ depends:
       path: examples/packages/common-functions/
       branch: main
 
-# `+help` is the game's own help: what THIS game installed and what THIS game's staff wrote.
-# `help` is the engine's corpus — markdown files indexed at startup, which a game cannot write to.
-# The two never merge, and a +help miss points across rather than falling through, so +help stays
-# able to answer "does this GAME document this?".
+# `+help` is the game's own help: what THIS game installed and what THIS game's staff wrote. `help`
+# is the engine's corpus, which a game cannot write to. The two never merge, and a +help miss points
+# across rather than falling through, so +help can answer "does this GAME document this?".
 #
-# README.md is the contributor's guide: how a package attaches its topics, how names collide, and
-# the four things that bite. What follows is why this file is shaped the way it is.
+# README.md is the contributor's guide. What follows is why this file is shaped the way it is.
 #
-# Every source — a package's topics, this package's own, the game's — is an ordinary object with a
-# HELP attribute tree, registered by one SRC leaf here. The librarian holds no content at all: the
-# registry, the commands and the rendering, nothing else. That is what keeps reading a topic one
-# code path whoever wrote it, and it is why a source object must be UNFLAGGED: u() on a WIZARD or
-# ROYALTY object's attribute is refused unless the evaluator is privileged too.
+# Every source is an ordinary object with a HELP tree, registered by one SRC leaf here; the librarian
+# holds the registry, the commands and the rendering, and no content. That keeps reading a topic one
+# code path, and it is why a source must be UNFLAGGED — u() on a privileged object's attribute is
+# refused unless the evaluator is privileged too.
 #
 # A topic's name is its attribute path below the root with backticks read as spaces, so
-# HELP`SCENE`JOIN is the topic "scene join". Bodies are run through u(), not read with get(), which
-# is what lets one carry colour, the current configuration or the reader's own name; what should be
-# shown rather than run is escaped, as in any other attribute. Topic authors are package authors and
-# staff, and +help/write is gated on staff — that gate is the security boundary.
+# HELP`SCENE`JOIN is "scene join". Bodies are run through u(), not get(), which is what lets one
+# carry colour or the reader's own name; what should be shown is escaped, as in any attribute.
+# +help/write is gated on staff, and that gate is the security boundary.
 objects:
   - ref: librarian
     type: thing
@@ -334,15 +330,12 @@ objects:
         value: |-
           @@ no arguments — writing help is a staff verb, checked against the caller's flags; @assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.
         flags: [cmdsyntax]
-      # Two checks, in the order the name is transformed. First what +help reserves: "/" separates
-      # source from topic and "*" and "?" are its wildcards, so a name carrying one would be stored
-      # and then be unaddressable. Then whether the derived PATH can be stored at all, asked of
-      # valid(attrname) — the engine's own rule, rather than a character class here that would have
-      # to re-derive the backtick rules the space-to-backtick conversion can trip.
+      # Two checks, in the order the name is transformed. First what +help reserves — "/" separates
+      # source from topic, "*" and "?" are its wildcards — then whether the derived PATH can be
+      # stored, asked of valid(attrname) rather than restated in a character class here.
       #
-      # regmatch() matches the WHOLE string (help REGMATCH: the regexp-equivalent of strmatch), so
-      # the reserved test is written as what a name may be made OF. Its brackets are escaped because
-      # "[" would otherwise open an evaluation bracket and be eaten before regmatch() saw it.
+      # regmatch() matches the WHOLE string (help REGMATCH), so the reserved test says what a name
+      # may be made OF; its brackets are escaped or "[" opens an evaluation bracket instead.
       #
       # %q<topic> is the caller's staged, trimmed, upper-cased name; this leaves %q<attr> set.
       INC`IS`TOPICNAME:

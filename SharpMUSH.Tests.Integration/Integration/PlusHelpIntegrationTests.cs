@@ -14,15 +14,8 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
-/// What <c>+help</c> answers. The stock helpfiles tell players that local commands live under
-/// <c>+help</c>; before the <c>plus-help</c> package there was nothing there, so a game's entire
-/// installed surface was undiscoverable from inside it.
-///
-/// <para>These drive the softcode through the command parser rather than asserting registry rows,
-/// because the claims worth defending are about what a reader sees: that a package's topics show up
-/// without anyone registering them by hand, that a bare name resolves when it is unique and lists
-/// candidates when it is not, that a miss points at the engine's <c>help</c> instead of silently
-/// rendering it, and that writing a topic is staff-only and stores what was typed.</para>
+/// What <c>+help</c> answers, driven through the command parser rather than asserted against
+/// registry rows: every claim worth defending here is about what a reader sees.
 /// </summary>
 [NotInParallel]
 public class PlusHelpIntegrationTests
@@ -47,9 +40,8 @@ public class PlusHelpIntegrationTests
 	private string? _pueblo;
 
 	/// <summary>
-	/// A plain mortal. Reading help has to work for one, so every READING test drives this rather
-	/// than a wizard — and never God, who is root here: #1 passes every lock, so a permission
-	/// regression in +help would render perfectly and the test would still pass.
+	/// A plain mortal — every reading test drives this. Never God: #1 passes every lock, so a
+	/// permission regression would render perfectly and still pass.
 	/// </summary>
 	private async Task<long> ReaderAsync()
 	{
@@ -57,7 +49,7 @@ public class PlusHelpIntegrationTests
 		return ReaderHandle;
 	}
 
-	/// <summary>A wizard, for the staff verbs. Still not God — a wizard is what a game actually has.</summary>
+	/// <summary>A wizard, for the staff verbs.</summary>
 	private async Task<long> StaffAsync()
 	{
 		_staff ??= await CreatePlayerAsync($"Staff{Tag}", StaffHandle, wizard: true);
@@ -76,13 +68,10 @@ public class PlusHelpIntegrationTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 	/// <summary>
-	/// What the reader on <paramref name="handle"/> is SHOWN. A $-command answers with @pemit, so
-	/// the CallState from CommandParse is empty and the output has to be read out of the
-	/// notification recorder.
-	///
-	/// <para>The suite shares three characters — see <see cref="ReaderAsync"/> — rather than making
-	/// one per test: every player a suite creates widens the window ProfileApiTests' whole-database
-	/// read has to survive.</para>
+	/// What the reader on <paramref name="handle"/> is SHOWN: a $-command answers with @pemit, so
+	/// CommandParse returns empty and the output comes from the notification recorder. The suite
+	/// shares three characters because every player it creates widens the window ProfileApiTests'
+	/// whole-database read has to survive.
 	/// </summary>
 	private async Task<IReadOnlyList<string>> RunAs(long handle, string command)
 	{
@@ -119,9 +108,8 @@ public class PlusHelpIntegrationTests
 	}
 
 	/// <summary>
-	/// One of the three objects the package creates: the <c>librarian</c> carries the registry, the
-	/// commands and the rendering; <c>plus_help_own</c> carries +help's own topics and <c>game_help</c> the
-	/// game's, each a source with a HELP tree like any package's. The librarian holds no content.
+	/// One of the package's three objects: <c>librarian</c> (registry, commands, rendering, no
+	/// content), <c>plus_help_own</c> and <c>game_help</c> (each a source with a HELP tree).
 	/// </summary>
 	private async Task<string> ObjectAsync(string reference)
 	{
@@ -230,13 +218,9 @@ public class PlusHelpIntegrationTests
 	}
 
 	/// <summary>
-	/// Every registered source must resolve to a DIFFERENT object.
-	///
-	/// <para>An installed <c>{{ref}}</c> is a <c>[v(PM`REFS`&lt;REF&gt;)]</c> recall against this
-	/// librarian, and <c>PM`REFS</c> namespaces only the cross-package <c>{{pkg/ref}}</c> form — so
-	/// two contributors that both name their object <c>help</c> share one leaf and the later install
-	/// steals the earlier's topics. Scene and plus-help did exactly that, and the symptom was scene's
-	/// topics vanishing while an unrelated bare name turned ambiguous.</para>
+	/// Every registered source must resolve to a DIFFERENT object. <c>PM`REFS</c> namespaces only the
+	/// cross-package <c>{{pkg/ref}}</c> form, so two contributors that both name their object
+	/// <c>help</c> share one leaf and the later install steals the earlier's topics.
 	/// </summary>
 	[Test]
 	public async Task EverySourceResolvesToItsOwnObject()
@@ -310,8 +294,8 @@ public class PlusHelpIntegrationTests
 	}
 
 	/// <summary>
-	/// A miss says so and points across. It does not render the engine's entry: falling through
-	/// would cost +help the ability to answer "does this GAME document this?".
+	/// A miss points across rather than rendering the engine's entry, which would cost +help the
+	/// ability to answer "does this GAME document this?".
 	/// </summary>
 	[Test]
 	public async Task AMiss_PointsAtTheEnginesHelpInsteadOfRenderingIt()
@@ -348,14 +332,10 @@ public class PlusHelpIntegrationTests
 	}
 
 	/// <summary>
-	/// Every shipped topic must EVALUATE. A body is run through <c>u()</c>, so <c>[</c>, <c>(</c>
-	/// and <c>)</c> are softcode syntax in it — including inside a markdown code span, because
-	/// backticks are markdown and the parser has never heard of them. An unescaped one ends the
-	/// expression and the body fails to parse.
-	///
-	/// <para>Asserted here because <c>FUN`GET`RTEXT</c> falls back to the stored text when evaluation
-	/// fails — right for a reader, and a very good way not to notice: the topic still renders, just
-	/// without any of its evaluated content.</para>
+	/// Every shipped topic must EVALUATE — a body runs through <c>u()</c>, so an unescaped
+	/// <c>[</c>, <c>(</c> or <c>)</c> ends the expression, markdown code span or not. Asserted
+	/// because <c>FUN`GET`RTEXT</c> falls back to the stored text on failure: the topic still
+	/// renders, just without any of its evaluated content.
 	/// </summary>
 	[Test]
 	public async Task EveryShippedTopicEvaluates()
@@ -379,9 +359,8 @@ public class PlusHelpIntegrationTests
 	// ── Navigation ──────────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Subtopics are DERIVED from the attribute tree, never declared: HELP`SCENE`JOIN is already a
-	/// child of HELP`SCENE. Nothing in scene's manifest lists them, so they cannot drift when a
-	/// topic is added or renamed.
+	/// Subtopics are DERIVED from the tree, never declared, so they cannot drift: HELP`SCENE`JOIN is
+	/// already a child of HELP`SCENE and nothing in scene's manifest lists it.
 	/// </summary>
 	[Test]
 	public async Task ATopicWithSubtopics_ListsThemFromTheTree()
@@ -448,9 +427,7 @@ public class PlusHelpIntegrationTests
 	// ── The front page ──────────────────────────────────────────────────────
 
 	/// <summary>
-	/// The front page renders the "index" TOPIC above the source list, and lists what is installed
-	/// without topic counts — a reader choosing where to look is not helped by knowing one source
-	/// has four topics.
+	/// The front page renders the "index" TOPIC above the source list, without topic counts.
 	/// </summary>
 	[Test]
 	public async Task TheIndex_RendersTheIndexTopic_AndCountsNothing()
@@ -506,11 +483,9 @@ public class PlusHelpIntegrationTests
 	}
 
 	/// <summary>
-	/// A topic body is stored as typed and evaluated when READ — that is the whole point of using
-	/// u() rather than get(). The command line a player types is itself evaluated once on the way
-	/// in, exactly as it is for <c>&amp;attr obj=...</c>, so staff escape the brackets of anything
-	/// meant for the reader; what lands in the attribute is then the unresolved code, and it is the
-	/// READER's name that comes back, not the writer's.
+	/// A body is stored as typed and evaluated when READ. The command line is itself evaluated once
+	/// on the way in, as <c>&amp;attr obj=...</c> is, so staff escape what is meant for the reader —
+	/// and it is the READER's name that comes back, not the writer's.
 	/// </summary>
 	[Test]
 	public async Task Write_StoresTheBodyVerbatim_AndItEvaluatesForTheReader()
@@ -549,9 +524,8 @@ public class PlusHelpIntegrationTests
 	}
 
 	/// <summary>
-	/// A topic name becomes an attribute path, so the PATH is checked — by asking
-	/// <c>valid(attrname,…)</c> rather than by restating the engine's rule in a character class here.
-	/// A doubled or leading backtick is what a local whitelist would have to re-derive.
+	/// A topic name becomes an attribute path, so the PATH is what <c>valid(attrname,…)</c> checks —
+	/// the engine's rule, not a character class restating it here.
 	/// </summary>
 	[Test]
 	[Arguments("bad``name", "a doubled backtick is not an attribute name")]

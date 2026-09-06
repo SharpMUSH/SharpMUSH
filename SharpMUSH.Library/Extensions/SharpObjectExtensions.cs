@@ -15,9 +15,8 @@ public static class SharpObjectExtensions
 	}
 
 	/// <summary>
-	/// PennMUSH's <c>AreQuiet(&lt;player&gt;, &lt;thing&gt;)</c> (<c>hdrs/dbdefs.h:198</c>): the
-	/// "&lt;object&gt;/&lt;attr&gt; - Set." confirmation is suppressed when the player is QUIET, or
-	/// when the thing is QUIET and the player owns it.
+	/// PennMUSH's <c>AreQuiet(&lt;player&gt;, &lt;thing&gt;)</c> (<c>hdrs/dbdefs.h:198</c>): the player
+	/// is QUIET, or the thing is QUIET and the player owns it.
 	/// </summary>
 	public static async Task<bool> AreQuietAsync(this SharpObject thing, AnySharpObject player)
 	{

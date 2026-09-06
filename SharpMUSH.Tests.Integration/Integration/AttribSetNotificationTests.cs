@@ -3,7 +3,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 
-namespace SharpMUSH.Tests.Integration.Integration;
+namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
 /// <c>attrib_set()</c> prints the same "&lt;object&gt;/&lt;attr&gt; - Set." confirmation
@@ -11,9 +11,8 @@ namespace SharpMUSH.Tests.Integration.Integration;
 /// (<c>src/fundb.c:2294-2300</c>), and that flag is precisely what asks for the line
 /// (<c>src/attrib.c:2446-2452</c>).
 ///
-/// <para>It goes to the EXECUTOR, not the enactor, and QUIET is how a game turns it off — on the
-/// player, on an object they own, or on the attribute itself. Deleting the notification instead
-/// would have been a parity break; these pin both halves so it cannot be deleted by accident.</para>
+/// <para>It goes to the EXECUTOR, not the enactor, and QUIET turns it off — on the player, on an
+/// object they own, or on the attribute itself.</para>
 /// </summary>
 [NotInParallel]
 public class AttribSetNotificationTests

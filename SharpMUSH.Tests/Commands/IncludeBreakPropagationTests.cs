@@ -16,14 +16,12 @@ namespace SharpMUSH.Tests.Commands;
 ///
 /// and documents <c>/nobreak</c> as the switch that suppresses it.
 ///
-/// <para>It did neither. The break was contained at the <c>@include</c> boundary — the included
-/// list stopped and the caller carried on — so every guard written the documented way was inert,
-/// and <c>/nobreak</c> was a no-op because the default already behaved as it. That is a permission
-/// hole wherever the guard is an authorization check: the command prints its refusal and then does
-/// the thing anyway. It shipped that way in <c>wiki-reader</c>'s <c>+wiki/audit</c>.</para>
+/// <para>It did neither: the break stopped at the <c>@include</c> boundary, so every guard written
+/// the documented way was inert and <c>/nobreak</c> was a no-op. Where the guard is an
+/// authorization check that is a permission hole — the command prints its refusal and proceeds.</para>
 ///
-/// <para>Each case writes a marker after the <c>@include</c>; the marker is present exactly when
-/// the caller was allowed to keep going.</para>
+/// <para>Each case writes a marker after the <c>@include</c>, present exactly when the caller was
+/// allowed to keep going.</para>
 /// </summary>
 [NotInParallel]
 public class IncludeBreakPropagationTests
@@ -106,10 +104,9 @@ public class IncludeBreakPropagationTests
 	}
 
 	/// <summary>
-	/// A break propagates as far up the nesting as there are plain <c>@include</c>s between it and
-	/// the top, not one level. PennMUSH's <c>do_entry</c> RETURNS whether a break happened, so a
-	/// break inside a nested include sets <c>inplace_break_called</c> at that level, stops that list,
-	/// and is returned again to the level above (<c>src/cque.c:1209-1251</c>).
+	/// A break propagates through every plain <c>@include</c> above it, not one level:
+	/// <c>do_entry</c> RETURNS whether a break happened, so each level stops and reports it upward
+	/// (<c>src/cque.c:1209-1251</c>).
 	/// </summary>
 	[Test]
 	public async ValueTask ABreak_PropagatesThroughEveryLevelOfPlainIncludes()
@@ -147,9 +144,8 @@ public class IncludeBreakPropagationTests
 	}
 
 	/// <summary>
-	/// The two-argument form runs its action and then breaks. The braced action list is a list of
-	/// its own and does not break anything by existing; the break belongs to the list the @assert
-	/// is in, which is the included one, so it reaches the caller.
+	/// The two-argument form runs its action then breaks. The break belongs to the list the
+	/// <c>@assert</c> is in — the included one — so it reaches the caller.
 	/// </summary>
 	[Test]
 	public async ValueTask AFailingAssertWithAnAction_RunsTheActionThenStopsBothLists()

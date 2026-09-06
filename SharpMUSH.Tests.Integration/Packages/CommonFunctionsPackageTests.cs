@@ -30,13 +30,9 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 		(await factory.FunctionParser.FunctionParse(MModule.single(expression)))?.Message?.ToString() ?? string.Empty;
 
 	/// <summary>
-	/// A connected player whose client does or does not announce Pueblo.
-	///
-	/// <para>Handles are picked by hand across this test project. A live handle registered twice is
-	/// kept, not replaced — <c>ConnectionService.Register</c> returns early — so a collision would
-	/// silently drop this player's Pueblo metadata and the capability assertions would read the other
-	/// test's client. Refuse an already-registered handle so that shows up as a failure naming the
-	/// number, rather than as a flake.</para>
+	/// A connected player whose client does or does not announce Pueblo. Handles are picked by hand
+	/// across this project and <c>Register</c> KEEPS an existing live handle, so a collision would
+	/// silently drop this player's Pueblo metadata; refuse one already registered instead.
 	/// </summary>
 	private async Task<string> CreatePlayerAsync(string name, long handle, bool pueblo)
 	{
@@ -139,9 +135,8 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// STARTUP walks the FUN` tree rather than listing the functions again, so every branch head must
-	/// come back registered. An unregistered name evaluates to its own call text — that is what a
-	/// missed registration would look like, and it is what this rules out for every head at once.
+	/// STARTUP walks the FUN` tree rather than listing the functions, so every branch head must come
+	/// back registered. An unregistered name evaluates to its own call text.
 	/// </summary>
 	[Test]
 	public async Task EveryFunctionInTheTree_IsRegistered()
@@ -160,14 +155,10 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// cmdtag(&lt;person&gt;, &lt;visible&gt;, &lt;command&gt;[, &lt;hint&gt;]) writes a clickable command link for a
-	/// client that can render one, and hands back the plain text for one that cannot.
-	///
-	/// <para>The person is an ARGUMENT rather than %#, because the object rendering a line is often
-	/// not the enactor — a global building one row per room occupant, or an attribute evaluated on
-	/// someone else's behalf, both have a viewer that %# does not name. These run as God (#1, no
-	/// Pueblo), so a %#-based implementation would answer "plain" for everyone and the Pueblo case
-	/// below would fail.</para>
+	/// cmdtag() writes a clickable command link for a client that can render one and plain text for
+	/// one that cannot. The person is an ARGUMENT rather than %#, because the object rendering a
+	/// line is often not the enactor — these run as God, which has no Pueblo, so a %#-based
+	/// implementation would answer "plain" for everyone and fail the case below.
 	/// </summary>
 	[Test]
 	public async Task CmdTag_AsksTheNamedPerson_NotTheEnactor()
