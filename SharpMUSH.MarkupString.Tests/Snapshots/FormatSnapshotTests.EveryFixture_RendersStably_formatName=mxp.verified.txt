@@ -25,4 +25,4 @@
 25 html-b-in-colour   | <b><ESC>[32mbold green<ESC>[0m</b>
 26 unicode            | <ESC>[31m日本語 😀 café<ESC>[0m
 27 needs-encoding     | <ESC>[1m&lt;a href=&quot;x&quot;&gt; &amp; &#39;y&#39; &lt;/a&gt;<ESC>[0m
-28 clear-after-colour | <ESC>[31mred<ESC>[0m<ESC>[0mcleared<ESC>[0m
+28 clear-after-colour | <ESC>[31mred<ESC>[0m<ESC>[0mcleared

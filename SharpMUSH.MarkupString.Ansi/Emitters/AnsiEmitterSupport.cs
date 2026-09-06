@@ -135,12 +135,22 @@ internal static class AnsiEmitterSupport
 		var style = Fold(set, context.Format);
 
 		using var core = new PooledCharWriter(body.Length + 64);
-		var styled = SgrWriter.Transition(AnsiStyle.None, style, core);
+		SgrWriter.Transition(AnsiStyle.None, style, core);
 		WriteTaggedLink(style, body, core, flavour);
-		if (styled) SgrWriter.Reset(core);
+		if (LeavesState(style)) SgrWriter.Reset(core);
 
 		WriteWrapped(set, core.WrittenSpan, context, output);
 	}
+
+	/// <summary>
+	/// Whether the style leaves the terminal in a state that has to be closed. A link alone does
+	/// not — OSC 8 closes itself — and neither does <see cref="AnsiStyle.Clear"/>, which is the
+	/// reset <see cref="SgrWriter.Transition"/> already wrote.
+	/// </summary>
+	internal static bool LeavesState(in AnsiStyle style) =>
+		style.Foreground is not null || style.Background is not null
+		|| style.Bold || style.Faint || style.Italic || style.Underlined
+		|| style.Overlined || style.Blink || style.Inverted || style.StrikeThrough;
 
 	private static void WriteTaggedLink(
 		in AnsiStyle style,

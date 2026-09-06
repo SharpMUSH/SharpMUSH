@@ -31,7 +31,7 @@ public sealed class AnsiHtmlEmitter : IMarkupSetEmitter
 		var foregroundHex = foreground?.ToHex() ?? string.Empty;
 		var backgroundHex = background?.ToHex() ?? string.Empty;
 		var hasStyle = foregroundHex.Length > 0 || backgroundHex.Length > 0;
-		var hasClasses = HasClasses(style);
+		var hasClasses = HasClasses(style, hasStyle);
 
 		using var core = new PooledCharWriter(body.Length + 96);
 
@@ -59,7 +59,7 @@ public sealed class AnsiHtmlEmitter : IMarkupSetEmitter
 			if (hasClasses)
 			{
 				core.Write(" class=\"");
-				WriteClasses(style, core);
+				WriteClasses(style, hasStyle, core);
 				core.Write("\"");
 			}
 
@@ -76,11 +76,17 @@ public sealed class AnsiHtmlEmitter : IMarkupSetEmitter
 		return true;
 	}
 
-	private static bool HasClasses(in AnsiStyle style) =>
+	/// <summary>
+	/// Whether the run needs a class attribute at all. <see cref="AnsiStyle.Inverted"/> only earns
+	/// one when there is no colour for it to swap — <c>ms-invert</c> takes over the swap itself,
+	/// via the fixed colours the stylesheet declares for it, once the run has none of its own.
+	/// </summary>
+	private static bool HasClasses(in AnsiStyle style, bool hasColourStyle) =>
 		style.Bold || style.Faint || style.Italic || style.Underlined
-		|| style.StrikeThrough || style.Overlined || style.Blink;
+		|| style.StrikeThrough || style.Overlined || style.Blink
+		|| (style.Inverted && !hasColourStyle);
 
-	private static void WriteClasses(in AnsiStyle style, IBufferWriter<char> output)
+	private static void WriteClasses(in AnsiStyle style, bool hasColourStyle, IBufferWriter<char> output)
 	{
 		var first = true;
 		AppendClass(style.Bold, "ms-bold", ref first, output);
@@ -90,6 +96,7 @@ public sealed class AnsiHtmlEmitter : IMarkupSetEmitter
 		AppendClass(style.StrikeThrough, "ms-strike", ref first, output);
 		AppendClass(style.Overlined, "ms-overline", ref first, output);
 		AppendClass(style.Blink, "ms-blink", ref first, output);
+		AppendClass(style.Inverted && !hasColourStyle, "ms-invert", ref first, output);
 	}
 
 	private static void AppendClass(bool on, string name, ref bool first, IBufferWriter<char> output)

@@ -235,6 +235,24 @@ public class AnsiRenderTests
 		await Assert.That(Render(text, MarkupFormat.Html)).IsEqualTo("x");
 	}
 
+	[Test]
+	public async Task Html_LoneInverted_EmitsTheInvertClass()
+	{
+		var text = MarkupText.Wrap(AnsiMarkup.Create(inverted: true), "x");
+		await Assert.That(Render(text, MarkupFormat.Html)).IsEqualTo("<span class=\"ms-invert\">x</span>");
+	}
+
+	[Test]
+	public async Task Html_InvertedWithColours_SwapsWithoutTheInvertClass()
+	{
+		var markup = AnsiMarkup.Create(
+			foreground: new AnsiColor.Rgb(255, 0, 0), background: new AnsiColor.Rgb(0, 0, 255), inverted: true);
+		var text = MarkupText.Wrap(markup, "x");
+		var html = Render(text, MarkupFormat.Html);
+		await Assert.That(html).IsEqualTo("<span style=\"color: #0000ff; background-color: #ff0000\">x</span>");
+		await Assert.That(html).DoesNotContain("ms-invert");
+	}
+
 	// ── Pueblo and MXP ───────────────────────────────────────────────────────────
 
 	[Test]
@@ -289,6 +307,14 @@ public class AnsiRenderTests
 		var text = MarkupText.Wrap(AnsiMarkup.Create(linkUrl: "javascript:alert(1)"), "click");
 		await Assert.That(Render(text, MarkupFormat.Pueblo)).IsEqualTo("click");
 		await Assert.That(Render(text, MarkupFormat.Mxp)).IsEqualTo("click");
+	}
+
+	[Test]
+	public async Task PuebloAndMxp_ClearOnly_WritesExactlyOneReset()
+	{
+		var text = MarkupText.Wrap(AnsiMarkup.Create(clear: true), "x");
+		await Assert.That(Render(text, MarkupFormat.Pueblo)).IsEqualTo($"{Esc}[0mx");
+		await Assert.That(Render(text, MarkupFormat.Mxp)).IsEqualTo($"{Esc}[0mx");
 	}
 
 	[Test]

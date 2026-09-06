@@ -27,19 +27,9 @@ public sealed class AnsiSetEmitter : IMarkupSetEmitter
 
 		// Nothing follows that would diff this state away, so close it here rather than leaving the
 		// terminal coloured for whatever the connection writes next.
-		if (context.Next is null && LeavesState(effective)) SgrWriter.Reset(core);
+		if (context.Next is null && AnsiEmitterSupport.LeavesState(effective)) SgrWriter.Reset(core);
 
 		AnsiEmitterSupport.WriteWrapped(set, core.WrittenSpan, context, output);
 		return true;
 	}
-
-	/// <summary>
-	/// Whether the style leaves the terminal in a state that has to be closed. A link alone does
-	/// not — OSC 8 closes itself — and neither does <see cref="AnsiStyle.Clear"/>, which is the
-	/// reset.
-	/// </summary>
-	private static bool LeavesState(in AnsiStyle style) =>
-		style.Foreground is not null || style.Background is not null
-		|| style.Bold || style.Faint || style.Italic || style.Underlined
-		|| style.Overlined || style.Blink || style.Inverted || style.StrikeThrough;
 }

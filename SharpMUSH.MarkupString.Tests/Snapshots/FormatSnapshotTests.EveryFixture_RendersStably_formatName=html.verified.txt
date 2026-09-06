@@ -5,7 +5,7 @@
 05 underlined         | <span class="ms-underline">underlined</span>
 06 overlined          | <span class="ms-overline">overlined</span>
 07 blink              | <span class="ms-blink">blink</span>
-08 inverted           | inverted
+08 inverted           | <span class="ms-invert">inverted</span>
 09 strikethrough      | <span class="ms-strike">strikethrough</span>
 10 fg-standard        | <span style="color: #aa0000">red</span>
 11 fg-bright          | <span style="color: #ff5555">bright red</span>
