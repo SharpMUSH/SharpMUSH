@@ -913,9 +913,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var semanticTokens = new List<SemanticToken>(tokenCount);
 
-		// Use the pre-built TokenArray (set when Fill() reaches EOF) to avoid the LINQ
-		// enumerator allocation from tokenStream.tokens.Where(...). EOF is always the
-		// last element in TokenArray, so iterate all-but-last.
+		// Iterate the stream's token list directly rather than through a LINQ filter. EOF is
+		// always its last element, so iterate all-but-last.
 		if (tokenArray.Count > 0)
 		{
 			for (var i = 0; i < tokenArray.Count - 1; i++)
