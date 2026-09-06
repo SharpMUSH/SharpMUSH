@@ -19,6 +19,13 @@ public static class SharpAttributeExtensions
 		=> attribute.Flags.Any(x => x.Name.Equals("locked", StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>
+	/// PennMUSH's <c>AF_QUIET</c>: setting the attribute does not print the "- Set." confirmation
+	/// (<c>do_set_atr</c>, <c>src/attrib.c:2446-2452</c>).
+	/// </summary>
+	public static bool IsQuiet(this SharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name.Equals("quiet", StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>
 	/// PennMUSH's <c>AF_NOPROG</c>, which <c>attr_privs_set</c> spells <c>no_command</c>
 	/// (<c>src/atr_tab.c:34</c>) - "noprog" is the C symbol, never a stored flag name, so this
 	/// tested for a flag no provider seeds and could never be true.

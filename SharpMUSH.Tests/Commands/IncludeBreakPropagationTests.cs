@@ -105,6 +105,28 @@ public class IncludeBreakPropagationTests
 			.Because("a break the inner /nobreak swallowed must not resurface in the outer caller");
 	}
 
+	/// <summary>
+	/// A break propagates as far up the nesting as there are plain <c>@include</c>s between it and
+	/// the top, not one level. PennMUSH's <c>do_entry</c> RETURNS whether a break happened, so a
+	/// break inside a nested include sets <c>inplace_break_called</c> at that level, stops that list,
+	/// and is returned again to the level above (<c>src/cque.c:1209-1251</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask ABreak_PropagatesThroughEveryLevelOfPlainIncludes()
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclThree");
+		await Cmd($"&INC`INNER {obj}=@assert 0=&OUT`GATE %!=refused");
+		await Cmd($"&INC`OUTER {obj}=@include %!/INC`INNER; &OUT`MIDDLE %!=the middle kept going");
+		await Cmd($"&RUN {obj}=@include %!/INC`OUTER; &OUT`REACHED %!=the caller kept going");
+		await Cmd($"@trigger {obj}/RUN");
+
+		await Assert.That(await Eval($"get({obj}/OUT`GATE)")).IsEqualTo("refused");
+		await Assert.That(await Eval($"get({obj}/OUT`MIDDLE)")).IsEmpty()
+			.Because("the innermost break stops the list that included it");
+		await Assert.That(await Eval($"get({obj}/OUT`REACHED)")).IsEmpty()
+			.Because("and that list's break is returned again, stopping the one above it too");
+	}
+
 	/// <summary>A chain short-circuits at the failing link, and stops the list that ran the chain.</summary>
 	[Test]
 	public async ValueTask AChain_ShortCircuits_AndStopsTheIncludingList()
