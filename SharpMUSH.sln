@@ -85,6 +85,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.MarkupString.Test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.MarkupString.Ansi", "SharpMUSH.MarkupString.Ansi\SharpMUSH.MarkupString.Ansi.csproj", "{E76F8298-6D3E-4EB9-9DC3-D1F466940B40}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.MarkupString.Html", "SharpMUSH.MarkupString.Html\SharpMUSH.MarkupString.Html.csproj", "{9AF87356-7954-42D0-B752-F8FE1D69ABE5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -467,6 +469,18 @@ Global
 		{E76F8298-6D3E-4EB9-9DC3-D1F466940B40}.Release|x64.Build.0 = Release|Any CPU
 		{E76F8298-6D3E-4EB9-9DC3-D1F466940B40}.Release|x86.ActiveCfg = Release|Any CPU
 		{E76F8298-6D3E-4EB9-9DC3-D1F466940B40}.Release|x86.Build.0 = Release|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Debug|x64.Build.0 = Debug|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Debug|x86.Build.0 = Debug|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Release|x64.ActiveCfg = Release|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Release|x64.Build.0 = Release|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Release|x86.ActiveCfg = Release|Any CPU
+		{9AF87356-7954-42D0-B752-F8FE1D69ABE5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
