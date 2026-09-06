@@ -9,6 +9,15 @@ public class GraphemeTests
 	/// <summary>Three emoji joined by ZERO WIDTH JOINER; one cluster, 8 UTF-16 units.</summary>
 	private const string Family = "\U0001F468\u200D\U0001F469\u200D\U0001F467";
 
+	/// <summary>HANGUL CHOSEONG KIYEOK + JUNGSEONG A: one L+V cluster (GB6, GB7).</summary>
+	private const string HangulLv = "\u1100\u1161";
+
+	/// <summary>The same plus HANGUL JONGSEONG KIYEOK: one L+V+T cluster (GB8).</summary>
+	private const string HangulLvt = "\u1100\u1161\u11A8";
+
+	/// <summary>ARABIC NUMBER SIGN (Prepend) + ARABIC-INDIC DIGIT ONE: one cluster (GB9b).</summary>
+	private const string Prepended = "\u0600\u0661";
+
 	[Test]
 	public async Task SnapStart_InsideSurrogatePair_MovesDown()
 		=> await Assert.That(Graphemes.SnapStart(Emoji, 2)).IsEqualTo(1);
@@ -58,6 +67,24 @@ public class GraphemeTests
 		await Assert.That(Graphemes.IsBoundary("a\r\nb", 2)).IsFalse();
 		await Assert.That(Graphemes.SnapStart("a\r\nb", 2)).IsEqualTo(1);
 		await Assert.That(Graphemes.SnapEnd("a\r\nb", 2)).IsEqualTo(3);
+	}
+
+	[Test]
+	public async Task HangulSyllable_IsOneCluster()
+	{
+		await Assert.That(Graphemes.IsBoundary(HangulLv, 1)).IsFalse();
+		await Assert.That(Graphemes.IsBoundary(HangulLvt, 1)).IsFalse();
+		await Assert.That(Graphemes.IsBoundary(HangulLvt, 2)).IsFalse();
+		await Assert.That(Graphemes.SnapStart(HangulLvt, 2)).IsEqualTo(0);
+		await Assert.That(Graphemes.SnapEnd(HangulLvt, 1)).IsEqualTo(3);
+	}
+
+	[Test]
+	public async Task PrependCharacter_JoinsWhatFollows()
+	{
+		await Assert.That(Graphemes.IsBoundary(Prepended, 1)).IsFalse();
+		await Assert.That(Graphemes.SnapStart(Prepended, 1)).IsEqualTo(0);
+		await Assert.That(Graphemes.SnapEnd(Prepended, 1)).IsEqualTo(2);
 	}
 
 	[Test]

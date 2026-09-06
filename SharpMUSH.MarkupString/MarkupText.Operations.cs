@@ -110,10 +110,17 @@ public sealed partial class MarkupText
 	/// (<see cref="TruncationType.Truncate"/>, then filled if a wide character left a cell short)
 	/// or returned unchanged (<see cref="TruncationType.Overflow"/>).
 	/// </summary>
+	/// <remarks>
+	/// The result is exactly <paramref name="width"/> display cells wide, with two exceptions:
+	/// <see cref="TruncationType.Overflow"/> keeps text that is already wider, and
+	/// <see cref="PadType.Full"/> has nowhere to put the cells when the text has no word gap to
+	/// widen. Cells that <paramref name="fill"/> cannot express, such as the single cell left over
+	/// by a two-cell fill, are taken by spaces, so the width holds whatever the fill is.
+	/// </remarks>
 	public MarkupText Pad(MarkupText fill, int width, PadType type, TruncationType truncation)
 	{
 		ArgumentNullException.ThrowIfNull(fill);
-		if (type == PadType.Full) return PadFull(width, truncation);
+		if (type == PadType.Full) return PadFull(fill, width, truncation);
 
 		var cells = DisplayWidth;
 		if (cells < width) return PadTo(this, fill, fill, width - cells, type);
@@ -128,6 +135,11 @@ public sealed partial class MarkupText
 	/// Centres the text in <paramref name="width"/> display cells between two different fills,
 	/// the odd cell going to the right.
 	/// </summary>
+	/// <remarks>
+	/// The result is exactly <paramref name="width"/> display cells wide unless
+	/// <see cref="TruncationType.Overflow"/> keeps text that is already wider. Cells neither fill
+	/// can express are taken by spaces.
+	/// </remarks>
 	public MarkupText Center(MarkupText fillLeft, MarkupText fillRight, int width, TruncationType truncation)
 	{
 		ArgumentNullException.ThrowIfNull(fillLeft);
@@ -329,24 +341,32 @@ public sealed partial class MarkupText
 		};
 
 	/// <summary>
-	/// <paramref name="fill"/> repeated and cut to at most <paramref name="cells"/> display cells,
-	/// keeping the fill's own markup.
+	/// <paramref name="fill"/> repeated and cut to exactly <paramref name="cells"/> display cells.
+	/// The fill's own markup survives; cells the fill cannot express, because its last cluster is
+	/// wider than what is left to fill (or because it has no width at all), take spaces instead.
 	/// </summary>
 	private static MarkupText BuildFill(MarkupText fill, int cells)
 	{
 		if (cells <= 0) return Empty;
 		var unit = fill.DisplayWidth;
-		if (unit <= 0) return Empty;
+		if (unit <= 0) return Space.Repeat(cells);
 		var repeated = fill.Repeat(cells / unit + 1);
-		return repeated.Substring(0, Cells.IndexAtWidth(repeated.Text, cells));
+		var built = repeated.Substring(0, Cells.IndexAtWidth(repeated.Text, cells));
+		var residue = cells - built.DisplayWidth;
+		return residue <= 0 ? built : Concat(built, Space.Repeat(residue));
 	}
 
 	/// <summary>Widens the gaps between space-separated words instead of appending fill.</summary>
-	private MarkupText PadFull(int width, TruncationType truncation)
+	private MarkupText PadFull(MarkupText fill, int width, TruncationType truncation)
 	{
 		var cells = DisplayWidth;
 		if (cells >= width)
-			return truncation == TruncationType.Truncate ? Substring(0, Cells.IndexAtWidth(Text, width)) : this;
+		{
+			if (truncation == TruncationType.Overflow) return this;
+			var cut = Substring(0, Cells.IndexAtWidth(Text, width));
+			var deficit = width - cut.DisplayWidth;
+			return deficit <= 0 ? cut : PadTo(cut, fill, fill, deficit, PadType.Right);
+		}
 
 		var words = Split(" ");
 		var fences = words.Length - 1;

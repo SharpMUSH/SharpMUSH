@@ -66,7 +66,13 @@ public static class Graphemes
 
 	/// <summary>
 	/// Cheap over-approximation: false guarantees <paramref name="index"/> is a boundary, true
-	/// only means the cluster walk has to decide. Never under-reports.
+	/// only means the cluster walk has to decide. Never under-reports, because every character
+	/// that can take part in a UAX #29 no-break rule is caught here: nothing below U+0300 joins
+	/// anything except CR LF (GB3); surrogates carry every non-BMP participant (emoji modifiers,
+	/// regional indicators, the non-BMP prepend characters); ZWJ covers GB11; the Hangul ranges
+	/// cover GB6-GB8; and marks, format characters and the handful of
+	/// <see cref="IsExtendingChar"/> exceptions cover GB9, GB9a, GB9b and GB9c, on either side of
+	/// the index.
 	/// </summary>
 	private static bool MayBeInsideCluster(ReadOnlySpan<char> text, int index)
 	{
@@ -75,8 +81,28 @@ public static class Graphemes
 		if (current < '\u0300' && previous < '\u0300') return previous == '\r' && current == '\n';
 		if (char.IsSurrogate(current) || char.IsSurrogate(previous)) return true;
 		if (current == ZeroWidthJoiner || previous == ZeroWidthJoiner) return true;
-		return IsExtending(CharUnicodeInfo.GetUnicodeCategory(current));
+		if (IsHangul(current) || IsHangul(previous)) return true;
+		return IsExtendingChar(current) || IsExtendingChar(previous);
 	}
+
+	/// <summary>
+	/// Hangul jamo (conjoining and extended) and precomposed Hangul syllables: the characters
+	/// GB6, GB7 and GB8 join into a single syllable cluster.
+	/// </summary>
+	private static bool IsHangul(char c) => c
+		is >= '\u1100' and <= '\u11FF'
+		or >= '\uA960' and <= '\uA97C'
+		or >= '\uAC00' and <= '\uD7A3'
+		or >= '\uD7B0' and <= '\uD7FB';
+
+	/// <summary>
+	/// A character that can bind to its neighbour without being a mark or a format character:
+	/// the halfwidth katakana sound marks (Other_Grapheme_Extend), the Thai and Lao sara am
+	/// (SpacingMark) and MALAYALAM LETTER DOT REPH (Prepend).
+	/// </summary>
+	private static bool IsExtendingChar(char c) =>
+		c is '\u0E33' or '\u0EB3' or '\u0D4E' or '\uFF9E' or '\uFF9F'
+		|| IsExtending(CharUnicodeInfo.GetUnicodeCategory(c));
 
 	private static bool IsExtending(UnicodeCategory category) => category
 		is UnicodeCategory.NonSpacingMark

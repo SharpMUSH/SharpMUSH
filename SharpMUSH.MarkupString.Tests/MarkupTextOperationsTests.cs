@@ -63,6 +63,24 @@ public class MarkupTextOperationsTests
 		await Assert.That(t.Substring(0, 2).Text).IsEqualTo("e\u0301");
 	}
 
+	[Test]
+	public async Task Substring_KeepsHangulSyllableWhole()
+	{
+		// Conjoining jamo form one cluster: L+V, L+V+T, and a precomposed LV followed by a T.
+		await Assert.That(MarkupText.Plain("\u1100\u1161").Substring(0, 1).Text).IsEqualTo("");
+		await Assert.That(MarkupText.Plain("\u1100\u1161\u11A8").Substring(0, 1).Text).IsEqualTo("");
+		await Assert.That(MarkupText.Plain("\u1100\u1161\u11A8").Substring(0, 2).Text).IsEqualTo("");
+		await Assert.That(MarkupText.Plain("\uAC00\u11A8").Substring(0, 1).Text).IsEqualTo("");
+		await Assert.That(MarkupText.Plain("\u1100\u1161x").Substring(0, 2).Text).IsEqualTo("\u1100\u1161");
+	}
+
+	[Test]
+	public async Task Substring_KeepsPrependCharacterWithWhatItPrepends()
+	{
+		await Assert.That(MarkupText.Plain("\u0600\u0661").Substring(0, 1).Text).IsEqualTo("");
+		await Assert.That(MarkupText.Plain("\u0600\u0661").Substring(0, 2).Text).IsEqualTo("\u0600\u0661");
+	}
+
 	// Split
 
 	[Test]
@@ -180,6 +198,42 @@ public class MarkupTextOperationsTests
 		await Assert.That(result.Text).IsEqualTo("Hi..");
 		await Assert.That(result.Runs.Length).IsEqualTo(1);
 		await Assert.That(result.Runs[0]).IsEqualTo(new Run(2, 2, MarkupSet.Of(Red)));
+	}
+
+	[Test]
+	public async Task Pad_FillWiderThanTheCellsLeftToFill_StillReachesWidth()
+	{
+		var result = MarkupText.Plain("Hi").Pad(MarkupText.Plain("\u65E5"), 5, PadType.Right, TruncationType.Overflow);
+
+		await Assert.That(result.Text).IsEqualTo("Hi\u65E5 ");
+		await Assert.That(result.DisplayWidth).IsEqualTo(5);
+	}
+
+	[Test]
+	public async Task Pad_TruncateDeficitTooSmallForTheFill_TakesSpaces()
+	{
+		var result = MarkupText.Plain("\u65E5\u672C\u8A9E").Pad(MarkupText.Plain("\u65E5"), 5, PadType.Right, TruncationType.Truncate);
+
+		await Assert.That(result.Text).IsEqualTo("\u65E5\u672C ");
+		await Assert.That(result.DisplayWidth).IsEqualTo(5);
+	}
+
+	[Test]
+	public async Task Pad_Full_TruncateFillsTheDeficitLikeTheOtherPadTypes()
+	{
+		var result = MarkupText.Plain("\u65E5\u672C\u8A9E").Pad(MarkupText.Space, 5, PadType.Full, TruncationType.Truncate);
+
+		await Assert.That(result.Text).IsEqualTo("\u65E5\u672C ");
+		await Assert.That(result.DisplayWidth).IsEqualTo(5);
+	}
+
+	[Test]
+	public async Task Center_FillWiderThanTheCellsLeftToFill_StillReachesWidth()
+	{
+		var result = MarkupText.Plain("Hi").Center(MarkupText.Plain("\u65E5"), MarkupText.Plain("\u65E5"), 7, TruncationType.Overflow);
+
+		await Assert.That(result.DisplayWidth).IsEqualTo(7);
+		await Assert.That(result.Text).IsEqualTo("\u65E5Hi\u65E5 ");
 	}
 
 	[Test]
