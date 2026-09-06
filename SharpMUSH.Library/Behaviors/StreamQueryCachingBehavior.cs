@@ -25,8 +25,9 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 			{
 				var result = await MaterializeAsync(message, next, ct);
 				// A list weighs what it holds against the memory cache's size limit: a room with three
-				// hundred things in it is not the same cost as an empty one.
-				ctx.Options.Size = Math.Max(1, result.Count);
+				// hundred things in it is not the same cost as an empty one. Capped so that a list larger
+				// than the cache is still cacheable rather than refused and recomputed on every read.
+				ctx.Options.Size = Math.Clamp(result.Count, 1, CacheEntryProfiles.MaxEntrySize);
 				return result;
 			},
 			options: CacheEntryProfiles.For(message.Profile),

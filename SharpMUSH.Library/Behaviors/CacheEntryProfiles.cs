@@ -35,6 +35,13 @@ public static class CacheEntryProfiles
 
 	public const double MemoryCacheCompactionPercentage = 0.1;
 
+	/// <summary>
+	/// The most a single cached list may weigh. A list heavier than the whole cache would be refused
+	/// by the memory cache (not stored, silently) and recomputed on every read; capping the weight
+	/// keeps such a list cacheable while still making it the first thing compacted away.
+	/// </summary>
+	public const long MaxEntrySize = MemoryCacheSizeLimit / 10;
+
 	private static readonly TimeSpan LongDuration = TimeSpan.FromMinutes(10);
 	private static readonly TimeSpan LongJitter = TimeSpan.FromSeconds(60);
 	private static readonly TimeSpan HardTimeout = TimeSpan.FromSeconds(5);
