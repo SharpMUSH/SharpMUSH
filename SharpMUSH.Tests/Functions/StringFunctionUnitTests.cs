@@ -272,10 +272,43 @@ public class StringFunctionUnitTests
 	[Arguments("decompose(ansi(ub,red))", @"ansi\(ub\,red\)")]
 	// Penn decompose.3: tab and newline characters → %t and %r
 	[Arguments("decompose(tab\treturn\n)", "tab%treturn%r")]
+	// AnsiColor.Default round-trips through its letter code rather than being dropped silently.
+	[Arguments("decompose(ansi(d,x))", @"ansi\(d\,x\)")]
+	[Arguments("decompose(ansi(D,x))", @"ansi\(D\,x\)")]
 	public async Task Decompose(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	/// <summary>
+	/// An xterm-256 palette colour reconstructs as <c>+xtermN</c> / <c>/+xtermN</c> rather than
+	/// being dropped, for <see cref="AnsiColor.Xterm"/> values that were never resolved to a
+	/// concrete RGB triple (the way the <c>ansi()</c> function's own <c>+xtermN</c> syntax resolves
+	/// immediately via the colour config). This markup is what a legacy PennMUSH database's
+	/// <c>38;5;N</c> escape codes decode to, so the input here is built directly rather than
+	/// through <c>ansi()</c>, which cannot express it.
+	/// </summary>
+	[Test]
+	public async Task Decompose_XtermForeground_ReconstructsAsPlusXtermCode()
+	{
+		var coloredX = MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Xterm(200)), "x");
+		var source = MarkupText.Concat(MarkupText.Plain("decompose("), MarkupText.Concat(coloredX, MarkupText.Plain(")")));
+
+		var result = (await Parser.FunctionParse(source))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo(@"ansi\(+xterm200\,x\)");
+	}
+
+	[Test]
+	public async Task Decompose_XtermBackground_ReconstructsAsSlashPlusXtermCode()
+	{
+		var coloredX = MarkupText.Wrap(AnsiMarkup.Create(background: new AnsiColor.Xterm(200)), "x");
+		var source = MarkupText.Concat(MarkupText.Plain("decompose("), MarkupText.Concat(coloredX, MarkupText.Plain(")")));
+
+		var result = (await Parser.FunctionParse(source))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo(@"ansi\(/+xterm200\,x\)");
 	}
 
 	[Test]

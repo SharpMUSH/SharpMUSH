@@ -31,11 +31,11 @@
 		<ProjectReference Include="..\..\..\SharpMUSH.MarkupString.Ansi\SharpMUSH.MarkupString.Ansi.csproj">
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
-				</ProjectReference>
+		</ProjectReference>
 		<ProjectReference Include="..\..\..\SharpMUSH.MarkupString.Html\SharpMUSH.MarkupString.Html.csproj">
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
-				</ProjectReference>
+		</ProjectReference>
 		<!-- Source generator as an analyzer: this assembly gets its own
 		     SharpMUSH.Implementation.Generated.CommandLibrary/FunctionLibrary that PluginBase reflects. -->
 		<ProjectReference Include="..\..\..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj"

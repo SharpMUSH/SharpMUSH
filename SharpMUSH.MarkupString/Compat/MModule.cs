@@ -17,6 +17,17 @@ namespace MarkupString;
 /// must stay semantically identical.
 /// </para>
 /// <para>This whole file is deleted in task 15, once no call site names it.</para>
+/// <para>
+/// <c>MarkupSingle2(markup, MarkupText.Empty)</c> returns <see cref="MarkupText.Empty"/>, not a
+/// zero-length marked run — <see cref="MarkupText.Wrap(IMarkup, MarkupText)"/> deliberately drops an
+/// empty inner rather than tagging nothing.
+/// </para>
+/// <para>
+/// This shim's MUSH-only members (<c>splitList</c>, <c>compressSpaces</c>, the wildcard helpers) are
+/// null-tolerant, matching the old lowercase spellings; <c>MushText</c>'s equivalents throw on null.
+/// A Phase 2 call site migrating off a lowercase shim member onto <c>MushText</c> with a value that
+/// may be null needs an explicit <c>?? MarkupText.Empty</c> at the call site.
+/// </para>
 /// </summary>
 public static partial class MarkupStringModule
 {

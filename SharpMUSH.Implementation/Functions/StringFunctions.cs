@@ -15,6 +15,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.Library.Markup;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -1253,14 +1254,19 @@ public partial class Functions
 	/// </summary>
 	internal static string ConvertAnsiColorToCode(AnsiColor? color, bool isBackground = false) => color switch
 	{
+		null => string.Empty,
+		AnsiColor.Default => isBackground ? "D" : "d",
 		AnsiColor.Rgb rgb => isBackground
 			? $"/{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}"
 			: $"{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}",
-		AnsiColor.Standard standard when standard.Index < 8 =>
+		AnsiColor.Standard standard =>
 			(standard.Bright ? "h" : string.Empty)
 			+ (isBackground ? BackgroundLetters[standard.Index] : ForegroundLetters[standard.Index]),
 		AnsiColor.Xterm xterm => isBackground ? $"/+xterm{xterm.Index}" : $"+xterm{xterm.Index}",
-		_ => string.Empty
+		// AnsiColor is a closed hierarchy (Default/Standard/Xterm/Rgb, private constructor); the
+		// compiler cannot see that, so this arm exists only to satisfy exhaustiveness. Reaching it
+		// means a fifth case was added to AnsiColor without updating this switch.
+		_ => throw new UnreachableException($"Unhandled {nameof(AnsiColor)} subtype {color.GetType()}.")
 	};
 
 	/// <summary>

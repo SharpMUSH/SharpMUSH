@@ -128,7 +128,7 @@ public static class SemanticTokenRenderer
 
 	/// <summary>
 	/// Structural equality for run-merging. <see cref="Ansi"/> (<c>AnsiMarkup</c>) is a plain class
-	/// with no <c>Equals</c> override (<c>SharpMUSH.MarkupString/Markup/Markup.cs</c>), so comparing
+	/// with no <c>Equals</c> override (<c>SharpMUSH.MarkupString.Ansi/AnsiMarkup.cs</c>), so comparing
 	/// the markup instances themselves would be reference equality — which happens to hold today
 	/// because <see cref="SemanticTokenAnsiPalette.GetStyle"/> is called once per token and the same
 	/// instance is reused across its characters, but a caller-supplied <c>overrideAt</c> is not
