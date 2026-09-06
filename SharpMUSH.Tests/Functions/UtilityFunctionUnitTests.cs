@@ -144,6 +144,16 @@ public class UtilityFunctionUnitTests
 	[Arguments("isint(abc)", "0")]
 	[Arguments("isint(12.34)", "0")]
 	[Arguments("isint()", "0")]
+	// 64-bit, as fun_isint is: it reads with parse_ival_full, which is parse_int64
+	// (src/funmath.c:82-84, 1408-1416). Parsing as a 32-bit int answered 0 for every value above
+	// 2147483647 — a millisecond timestamp among them — while add(), sub() and div() all treated
+	// the same value as an integer.
+	[Arguments("isint(2147483647)", "1")]
+	[Arguments("isint(2147483648)", "1")]
+	[Arguments("isint(1788678403736)", "1")]
+	[Arguments("isint(9223372036854775807)", "1")]
+	[Arguments("isint(-9223372036854775808)", "1")]
+	[Arguments("isint(9223372036854775808)", "0")]
 	public async Task Isint(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

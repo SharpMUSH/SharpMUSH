@@ -735,9 +735,15 @@ public partial class Functions
 		return new CallState(!(await Mediator!.Send(new GetObjectNodeQuery(parsed.AsValue()))).IsNone);
 	}
 
+	/// <summary>
+	/// <c>isint()</c> is 64-bit: <c>fun_isint</c> reads with <c>parse_ival_full</c>, which is
+	/// <c>parse_int64</c> (<c>src/funmath.c:82-84, 1408-1416</c>). Parsing as a 32-bit int said no to
+	/// every value above 2147483647 — a millisecond timestamp among them — while <c>add()</c>,
+	/// <c>sub()</c> and <c>div()</c> all handled the same value as an integer quite happily.
+	/// </summary>
 	[SharpFunction(Name = "isint", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IsInt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult<CallState>(new(int.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
+		ValueTask.FromResult<CallState>(new(long.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
 
 	[SharpFunction(Name = "isnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IsNum(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
