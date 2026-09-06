@@ -2813,10 +2813,25 @@ public class SharpMUSHParserVisitor(
 
 	public override async ValueTask<CallState?> VisitCommandList([NotNull] CommandListContext context)
 	{
+		// Claim the one-shot before the children run, so only THIS list — the outermost of the parse
+		// the caller started — reports its break upward. Lists nested deeper inside it find the flag
+		// already cleared and keep containing their own breaks.
+		var propagation = parser.CurrentState.BreakPropagation;
+		var reportBreak = propagation is { PreserveNext: true };
+		if (reportBreak)
+		{
+			propagation!.PreserveNext = false;
+		}
+
 		var result = await VisitChildrenOrBreak(context, BreakTriggered);
 
 		if (BreakTriggered())
 		{
+			if (reportBreak)
+			{
+				propagation!.Broke = true;
+			}
+
 			parser.CurrentState.ExecutionStack.TryPop(out _);
 		}
 

@@ -506,11 +506,18 @@ public partial class Functions
 			pad = 0;
 		}
 
-		var timeSpan = TimeSpan.FromSeconds(totalSecs);
-		var days = (long)timeSpan.TotalDays;
-		var hours = timeSpan.Hours;
-		var minutes = timeSpan.Minutes;
-		var seconds = timeSpan.Seconds;
+		// Divided out rather than handed to TimeSpan, which overflows past ~9.2e11 seconds and made
+		// the function return EMPTY — the one answer a caller cannot tell from a real one. Integer
+		// division covers the whole non-negative long and cannot throw.
+		//
+		// PennMUSH stops well short of that: fun_timestring reads its seconds into an "unsigned int"
+		// (src/funtime.c:484-501), so it refuses anything past 32 bits. That ceiling is a property of
+		// the C type rather than of timestring, and SharpMUSH is 64-bit throughout, so it is not
+		// reproduced here.
+		var days = totalSecs / 86400;
+		var hours = totalSecs % 86400 / 3600;
+		var minutes = totalSecs % 3600 / 60;
+		var seconds = totalSecs % 60;
 
 		return pad switch
 		{

@@ -28,45 +28,44 @@ public partial class RecursiveMarkdownRenderer
 		return MModule.trim(content, " ", TrimType.TrimEnd);
 	}
 
+	/// <summary>One item per line, each with a marker; an ordered list numbers from its own start.</summary>
 	private MString RenderList(ListBlock list)
 	{
-		if (!list.IsOrdered)
-		{
-			var unorderedItems = list
-				.OfType<ListItemBlock>()
-				.Select(listItem => RenderListItem(listItem))
-				.ToList();
-			return MModule.multipleWithDelimiter(MModule.single(", "), unorderedItems);
-		}
-
-		var itemIndex = 1;
+		var itemIndex = FirstItemIndex(list);
 		var items = list
 			.OfType<ListItemBlock>()
-			.Select(listItem =>
-			{
-				var prefix = MModule.MarkupSingle(_dimStyle, $"{itemIndex}. ");
-
-				var content = RenderListItem(listItem, itemIndex - 1, list.IsOrdered);
-				itemIndex++;
-				return MModule.concat(prefix, content);
-			})
+			.Select(listItem => RenderListItem(listItem, itemIndex++, list.IsOrdered))
 			.ToList();
 
 		return MModule.multipleWithDelimiter(MModule.single("\n"), items);
 	}
 
-	protected virtual MString RenderListItem(ListItemBlock listItem, int index = 0, bool isOrdered = false)
+	/// <summary>
+	/// The zero-based index the first item counts from, so the 1-based number every consumer derives
+	/// as <c>index + 1</c> is the one the source asked for. Falls back to 1.
+	/// </summary>
+	private static int FirstItemIndex(ListBlock list)
+		=> list.IsOrdered && int.TryParse(list.OrderedStart, out var start) ? start - 1 : 0;
+
+	protected MString ListMarker(int index, bool isOrdered)
+		=> MModule.MarkupSingle(_dimStyle, isOrdered ? $"{index + 1}. " : "* ");
+
+	/// <summary>
+	/// An item's rendered content, WITHOUT its marker, so a renderer that supplies its own marker —
+	/// a <c>RENDERMARKUP`LISTITEM</c> template — does not end up prefixing two.
+	/// </summary>
+	protected MString RenderListItemContent(ListItemBlock listItem)
 	{
 		var parts = listItem
 			.Select(child => Render(child))
 			.Where(rendered => rendered.Length > 0)
 			.ToList();
 
-		var combined = MModule.multiple(parts);
-
-		var trimmed = MModule.trim(combined, " ", TrimType.TrimBoth);
-		return trimmed;
+		return MModule.trim(MModule.multiple(parts), " ", TrimType.TrimBoth);
 	}
+
+	protected virtual MString RenderListItem(ListItemBlock listItem, int index = 0, bool isOrdered = false)
+		=> MModule.concat(ListMarker(index, isOrdered), RenderListItemContent(listItem));
 
 	protected virtual MString RenderQuote(QuoteBlock quote)
 	{

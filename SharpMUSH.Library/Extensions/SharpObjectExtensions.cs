@@ -15,6 +15,28 @@ public static class SharpObjectExtensions
 	}
 
 	/// <summary>
+	/// PennMUSH's <c>AreQuiet(&lt;player&gt;, &lt;thing&gt;)</c> (<c>hdrs/dbdefs.h:198</c>): the player
+	/// is QUIET, or the thing is QUIET and the player owns it.
+	/// </summary>
+	public static async Task<bool> AreQuietAsync(this SharpObject thing, AnySharpObject player)
+	{
+		if (await player.Object().HasQuietFlagAsync())
+		{
+			return true;
+		}
+
+		return await thing.HasQuietFlagAsync()
+			&& (await thing.Owner.WithCancellation(CancellationToken.None)).Object.DBRef == player.Object().DBRef;
+	}
+
+	/// <summary>Check if an object has the QUIET flag set.</summary>
+	public static async Task<bool> HasQuietFlagAsync(this SharpObject obj)
+	{
+		var flags = await obj.Flags.Value.ToListAsync();
+		return flags.Any(x => x.Name == "QUIET");
+	}
+
+	/// <summary>
 	/// Check if an object is marked as GOING (being destroyed)
 	/// </summary>
 	public static async Task<bool> IsGoingAsync(this SharpObject obj)

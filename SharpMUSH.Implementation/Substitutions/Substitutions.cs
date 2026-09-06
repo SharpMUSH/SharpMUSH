@@ -114,17 +114,27 @@ public static partial class Substitutions
 		if (context.REG_NUM() is not null) return HandleRegistrySymbol(symbol, parser);
 		if (context.REG_ALPHA() is not null) return HandleRegistrySymbol(symbol, parser);
 		if (context.ITEXT_NUM() is not null) return HandleITextNumber(symbol, parser);
-		if (context.ITEXT_LAST() is not null) return HandleITextTop(symbol, parser);
+		if (context.ITEXT_LAST() is not null) return HandleITextOutermost(symbol, parser);
 		if (context.STEXT_NUM() is not null) return HandleSTextNumber(symbol, parser);
 		if (context.STEXT_LAST() is not null) return HandleSTextLast(parser);
 		if (context.VWX() is not null) return await HandleVWX(symbol, parser, mediator, attributeService);
 		return HandleRegistrySymbol(symbol, parser);
 	}
 
-	private static CallState HandleITextTop(CallState symbol, IMUSHCodeParser parser) =>
-		$"{(parser.CurrentState.IterationRegisters.TryPeek(out var result)
-			? result.Value
-			: MModule.single(ErrorMessages.Returns.RegisterRange))}";
+	/// <summary>
+	/// <c>%iL</c> — the OUTERMOST iteration, matching <c>itext(L)</c> and <c>itext(ilev())</c>
+	/// (<c>help ITEXT()</c>). It is also what <c>##</c> resolves to: iter(), foreach() and @dolist
+	/// rewrite <c>##</c> to <c>%iL</c>, and PennMUSH's <c>##</c> is spliced textually before
+	/// evaluation, so a nested one names the outermost loop — the documented
+	/// <c>iter(red blue green, iter(fish shoe, #@:##))</c> answers red red blue blue green green.
+	///
+	/// <para>The register is returned as-is, the way <c>%i&lt;n&gt;</c> does; interpolating it into a
+	/// string flattens the <c>MString</c> and bakes any colour into the plain text.</para>
+	/// </summary>
+	private static CallState HandleITextOutermost(CallState symbol, IMUSHCodeParser parser) =>
+		parser.CurrentState.IterationRegisters.IsEmpty
+			? new CallState(ErrorMessages.Returns.RegisterRange)
+			: new CallState(parser.CurrentState.IterationRegisters.Last().Value);
 
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
 	{

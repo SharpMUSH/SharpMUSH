@@ -73,6 +73,14 @@ public class TimeFunctionUnitTests
 	[Arguments("timestring(301)", " 5m  1s")]
 	[Arguments("timestring(301,1)", "0d  0h  5m  1s")]
 	[Arguments("timestring(301,2)", "00d 00h 05m 01s")]
+	// Formats across the whole non-negative long. TimeSpan.FromSeconds overflowed past ~9.2e11
+	// seconds and the function came back EMPTY, which a caller cannot tell from a real answer.
+	// PennMUSH refuses anything past 32 bits, its seconds being an "unsigned int"
+	// (src/funtime.c:484-501); that ceiling belongs to the C type, and SharpMUSH is 64-bit.
+	[Arguments("timestring(4294967295)", " 49710d  6h  28m  15s")]
+	[Arguments("timestring(4294967296)", " 49710d  6h  28m  16s")]
+	[Arguments("timestring(1788678403736)", " 20702296d  8h  8m  56s")]
+	[Arguments("timestring(9223372036854775807)", " 106751991167300d  15h  30m  7s")]
 	public async Task Timestring(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

@@ -1,12 +1,22 @@
 format: 1
 package: scene
-version: 1.13.0
+version: 1.18.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [scene, rp, logging, capture, hooks]
 requires_server: ">=0.1"
+
+# +help carries the topics below. The dependency is what makes {{plus-help/librarian}} a legal
+# attach target, and it is what makes uninstalling scene take its help registration with it.
+depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
 
 # Create mode: a single owned WIZARD thing carries the capture hooks and the
 # +scene/* verbs. It MUST be WIZARD — it is the @hook/override target, runs the
@@ -313,17 +323,20 @@ objects:
       # space input delimiter (an `@` input delim collapsed the whole list into one bogus
       # id → #-1). %r is the output separator (one pose content per line).
       CMD`RECALL: |-
-        $+scene/recall *: @pemit %#=[iter(sceneposes(scenefocus(%#),,%0),scenepose(scenefocus(%#),##,content),%b,%r)]
+        $+scene/recall *: @pemit %#=[iter(sceneposes(scenefocus(%#),,%0),scenepose(scenefocus(%#),%iL,content),%b,%r)]
 
       # ---- pose tracker (+pot): query-on-run turn tracker for the focused scene --
       # No hooks, no state: rebuilt each run from the recorded poses. A member's last
       # pose time is sceneposes(scene,member,1) -> scenepose(...,createdat) (Unix-millis,
-      # diffed against msecs()). Members are ordered OLDEST-pose-first, so whoever is
+      # diffed against the clock). Members are ordered OLDEST-pose-first, so whoever is
       # most overdue sits at the top, flagged up-next. Columns align to width(%#).
       FUN`POT_MS: |-
         firstof(scenepose(%0,sceneposes(%0,%1,1),createdat),0)
+      # secs(), not msecs(): msecs(<object>) is an OBJECT's modification time in seconds (help
+      # MSECS), so msecs() with no argument located an object named "" and every Idle cell read
+      # "#-1 ARGUMENT MUST BE INTEGER". POT_MS is milliseconds, so the stored value converts down.
       FUN`POT_IDLE: |-
-        switch(setr(ms,u(%!/FUN`POT_MS,%0,%1)),0,-,timestring(div(sub(msecs(),%q<ms>),1000)))
+        switch(setr(ms,u(%!/FUN`POT_MS,%0,%1)),0,-,timestring(sub(secs(),div(%q<ms>,1000))))
       FUN`POT_KEY: |-
         [rjust(u(%!/FUN`POT_MS,%0,%1),15,0)]~%1
       FUN`POT_ROW: |-
@@ -333,7 +346,7 @@ objects:
       # for the same reason the approval guard is — an @assert behind an @include does not stop the caller,
       # so the guard used to print "you are not focused" and then render a tracker for scene "#-1 NOT FOUND".
       INC`DISPLAY`POT: |-
-        @pemit %#=[header(Pose Tracker - Scene %0,width(%#))]%r[iter(sort(iter(scenemembers(%0),u(%!/FUN`POT_KEY,%0,##))),u(%!/FUN`POT_ROW,%0,after(##,~),inum(0),width(%#)),,%r)]%r[footer([words(scenemembers(%0))] in scene - oldest pose is up next,width(%#))]
+        @pemit %#=[header(Pose Tracker - Scene %0,width(%#))]%r[iter(sort(iter(scenemembers(%0),u(%!/FUN`POT_KEY,%0,%iL))),u(%!/FUN`POT_ROW,%0,after(%iL,~),inum(0),width(%#)),,%r)]%r[footer([words(scenemembers(%0))] in scene - oldest pose is up next,width(%#))]
       CMD`POT: |-
         $+pot: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=You are not focused on a scene. Use +scene/join <id> or +scene/create <title>.; @include %!/INC`DISPLAY`POT=%q<SceneID>
 
@@ -346,7 +359,7 @@ objects:
       FUN`LIST_ROW: |-
         align(<10 <[sub(%2,41)] <14 >5 <8,left(%0,10),left(u(%!/FUN`LIST_TITLE,%0),sub(%2,42)),left(scene(%0,roomname),14),words(scenemembers(%0)),scene(%0,status),%1)
       FUN`LIST_RENDER: |-
-        [setq(lst,scenelist(%0))][header(Scenes: %0,%1)]%r[align(<10 <[sub(%1,41)] <14 >5 <8,ID,Title,Where,Cast,Status,%b)]%r[iter(%q<lst>,u(%!/FUN`LIST_ROW,##,%b,%1),,%r)]%r[footer([words(%q<lst>)] scenes,%1)]
+        [setq(lst,scenelist(%0))][header(Scenes: %0,%1)]%r[align(<10 <[sub(%1,41)] <14 >5 <8,ID,Title,Where,Cast,Status,%b)]%r[iter(%q<lst>,u(%!/FUN`LIST_ROW,%iL,%b,%1),,%r)]%r[footer([words(%q<lst>)] scenes,%1)]
       CMD`BROWSE: |-
         $+scene: @pemit %#=[u(%!/FUN`LIST_RENDER,active,width(%#))]
       CMD`OLD: |-
@@ -367,7 +380,7 @@ objects:
       FUN`SCHED_ROW: |-
         align(<10 <[sub(%1,42)] <24 >6,left(%0,10),left(u(%!/FUN`LIST_TITLE,%0),sub(%1,43)),convsecs(div(scene(%0,scheduledfor),1000)),words(scenemembers(%0)))
       CMD`UPCOMING: |-
-        $+scene/upcoming: @pemit %#=[setq(lst,scenelist(scheduled))][header(Scheduled Scenes,width(%#))]%r[align(<10 <[sub(width(%#),42)] <24 >6,ID,Title,When,RSVP)]%r[iter(%q<lst>,u(%!/FUN`SCHED_ROW,##,width(%#)),,%r)]%r[footer([words(%q<lst>)] scheduled,width(%#))]
+        $+scene/upcoming: @pemit %#=[setq(lst,scenelist(scheduled))][header(Scheduled Scenes,width(%#))]%r[align(<10 <[sub(width(%#),42)] <24 >6,ID,Title,When,RSVP)]%r[iter(%q<lst>,u(%!/FUN`SCHED_ROW,%iL,width(%#)),,%r)]%r[footer([words(%q<lst>)] scheduled,width(%#))]
 
       # ---- participation (+scene/deactivate | /activate): pause/resume w/o leaving -
       # /deactivate clears your focus so poses stop recording, but keeps your membership
@@ -411,14 +424,14 @@ objects:
       # <a href="..."> instead of the address. So the capability is asked for rather than assumed.
       # %0 is who is reading, %1 the address.
       FUN`URL_TEXT: |-
-        [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,%1,href="%1")],%1)]
+        [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,href="%1",%1)],%1)]
 
       # mud_url is written both ways by different admins, and joining a trailing slash to a leading
       # one gives a path no server answers.
       FUN`NO_TRAILING_SLASH: |-
         [switch(right(%0,1),/,[left(%0,sub(strlen(%0),1))],%0)]
       INC`DISPLAY`INFO: |-
-        @pemit %#=[header(<< Scene %0: '[u(%!/FUN`LIST_TITLE,%0)]' >>,width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)))]%r[u(%!/FUN`INFO_LINE,Created,u(%!/FUN`WHEN,scene(%0,startedat)))]%r[u(%!/FUN`SCHEDULED_LINE,%0)][u(%!/FUN`INFO_LINE,Watchers,[switch(scene(%0,public),1,Anyone,Members only)])]%r[center(< Pitch >,width(%#),-)]%r[u(%!/FUN`SCENE_FIELD,%0,summary,-)]%r[u(%!/FUN`URL_LINE,%0)][center(< Players >,width(%#),=)]%r[ansi(h,[align(<12 <40 <8,Status,Name,Poses)])]%r[iter(scenemembers(%0),u(%!/FUN`CAST`ROW,%0,##),%b,%r)]%r[footer(,width(%#))]
+        @pemit %#=[header(<< Scene %0: '[u(%!/FUN`LIST_TITLE,%0)]' >>,width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)))]%r[u(%!/FUN`INFO_LINE,Created,u(%!/FUN`WHEN,scene(%0,startedat)))]%r[u(%!/FUN`SCHEDULED_LINE,%0)][u(%!/FUN`INFO_LINE,Watchers,[switch(scene(%0,public),1,Anyone,Members only)])]%r[line(Pitch,width(%#))]%r[u(%!/FUN`SCENE_FIELD,%0,summary,-)]%r[u(%!/FUN`URL_LINE,%0)][header(Players,width(%#))]%r[ansi(h,[align(<12 <40 <8,Status,Name,Poses)])]%r[iter(scenemembers(%0),u(%!/FUN`CAST`ROW,%0,%iL),%b,%r)]%r[footer(,width(%#))]
       CMD`PITCH: |-
         $+scene/pitch *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/summary=%0; @pemit %#=Pitch set for scene %q<SceneID>.
       # Scene DETAILS card. `+scene <id>` and `+scene/info <id>` are the same question asked two
@@ -437,9 +450,125 @@ objects:
       CMD`INFO: |-
         $+scene/info *: @assert not(strmatch(scene(setr(SceneID,%0),status),#-1*))=@pemit %#=No such scene: %0; @include %!/INC`DISPLAY`INFO=%q<SceneID>
 
+      # +scene/help is the thing a player actually types when they are lost, and before +help
+      # existed it was a bare Huh? — issue #860 opens on exactly that transcript. It does not
+      # duplicate the topic; it hands the reader the one command that reads it.
+      CMD`HELP: |-
+        $+scene/help: @pemit %#=Scene help lives under +help. Try: +help scene
+
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).
       AINSTALL: |-
         @teleport %!=#2; @trigger %!/STARTUP
       STARTUP: |-
         @hook/override POSE=%!,CMD`CAPTURE`POSE; @hook/override SAY=%!,CMD`CAPTURE`SAY; @hook/override SEMIPOSE=%!,CMD`CAPTURE`SEMI; @hook/override @EMIT=%!,CMD`CAPTURE`EMIT
+
+  # ---- help storage -------------------------------------------------------
+  # An ordinary, unflagged thing holding the +help topics, deliberately NOT the Scene Logger: the
+  # Logger must be WIZARD, and the librarian cannot u() a privileged object's attribute. See
+  # plus-help's README for that rule and for how an evaluated body is escaped.
+  - ref: scene_help
+    type: thing
+    name: Scene Help
+    attributes:
+      HELP: |-
+        Shared scenes: joining one, posing in it, and reading the log.
+
+      # Cross-references, declared: one SEE leaf per topic at the path it sits at under HELP, a
+      # "|"-separated list of topic names. Subtopics are not listed -- HELP`SCENE`JOIN is already a
+      # child of HELP`SCENE and +help derives that from the tree.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`SCENE: |-
+        pot
+      SEE`SCENE`JOIN: |-
+        scene pose|pot
+      SEE`SCENE`POSE: |-
+        scene join
+      SEE`SCENE`PITCH: |-
+        scene privacy
+      SEE`SCENE`PRIVACY: |-
+        scene join|scene pitch
+      SEE`SCENE`SCHEDULE: |-
+        scene join
+      SEE`POT: |-
+        scene pose|scene join
+      HELP`SCENE: |-
+        A **scene** is a shared, logged piece of roleplay. Anyone in the room can be in one; the log
+        is readable afterwards, in-game and in the portal.
+
+        ## Getting in
+
+        - `+scene` — the scenes running now
+        - `+scene <id>` — what a scene is, where it is, and who is in it
+        - `+scene/join <id>` — join it and make it your focus
+        - `+scene/leave` — stop posing into it
+
+        Once you have joined, ordinary `pose`, `say` and `@emit` in that room are recorded. You do
+        not have to use a special command to speak.
+
+        ## Running one
+
+        - `+scene/create <title>` — start one here and focus it
+        - `+scene/pitch <text>` — say what it is about, so people can decide to come
+        - `+scene/finish` — close it
+      HELP`SCENE`JOIN: |-
+        `+scene/join <id>` puts you in a scene and makes it your **focus** — the scene your poses are
+        recorded into. `+scene` lists the ids.
+
+        - `+scene/tag <id>` — RSVP to a scheduled scene without joining it yet
+        - `+scene/untag <id>` — withdraw the RSVP
+        - `+scene/leave` — leave the focused scene; if you never posed, you leave no trace
+        - `+scene/deactivate` — stay a member but stop recording; `+scene/activate <id>` resumes
+
+        Joining needs an approved character.
+      HELP`SCENE`POSE: |-
+        With a scene focused, ordinary `pose`, `say`, `semipose` and `@emit` in its room are captured
+        as you write them — nothing extra to type.
+
+        The explicit forms name the scene instead of inferring it from the room, which is what the
+        portal's compose box sends:
+
+        - `+scene/pose <id>=<text>` · `+scene/say <id>=<text>` · `+scene/semipose <id>=<text>`
+        - `+scene/emit <id>=<text>`
+        - `+scene/as <name>` — pose under a different name from here on
+        - `+scene/edit <id>=<old>^^^<new>` — fix a typo in your own pose
+        - `+scene/undo <id>` · `+scene/redo <id>`
+        - `+scene/recall <n>` — the last `<n>` poses of your focused scene
+      HELP`SCENE`PITCH: |-
+        `+scene/pitch <text>` sets the one-line summary shown beside a scene in `+scene` and on its
+        card. It is how someone browsing decides whether to come.
+
+        Only the scene's owner \(or staff\) can set it.
+      HELP`SCENE`PRIVACY: |-
+        Scenes are **public** by default: they appear in `+scene` and their log is readable.
+
+        - `+scene/private` — hide the focused scene and its log from everyone but its members
+        - `+scene/public` — put it back
+
+        Only the scene's owner \(or staff\) can change this. Privacy is about who may *read*; who may
+        *pose* is decided by who has joined.
+      HELP`SCENE`SCHEDULE: |-
+        A scene can be announced before it happens, so people can plan around it.
+
+        - `+scene/schedule <title>=<when>` — announce one
+        - `+scene/upcoming` — what is scheduled, and how many have RSVP'd
+        - `+scene/tag <id>` — RSVP
+        - `+scene/reschedule <id>=<when>` · `+scene/unschedule <id>`
+
+        A scheduled scene records nothing until someone starts it.
+      HELP`POT: |-
+        `+pot` — "pose tracker" — shows who is in your focused scene and how long since each of them
+        last posed, so a table can tell whose turn it is.
+
+        It needs a focused scene: `+scene/join <id>` or `+scene/create <title>` first.
+
+  # ---- +help registration ---------------------------------------------------
+  # Attach mode: one leaf on the librarian saying "scene's topics live on the Scene Logger". The
+  # package manager writes it at install and clears it at uninstall, so the librarian's registry
+  # cannot drift from what is actually installed — there is nothing to keep in sync by hand.
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`SCENE: |-
+        {{scene_help}}

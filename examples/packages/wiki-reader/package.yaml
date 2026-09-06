@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.0.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -8,8 +8,14 @@ keywords: [wiki, help, navigation, ui]
 requires_server: ">=0.1"
 
 depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
   - package: common-functions
-    version: ">=1.1"
+    version: ">=1.2"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/common-functions/
@@ -59,7 +65,7 @@ objects:
       # can click one, and stays highlighted prose for everyone else.
       RENDERMARKUP`WIKILINK:
         value: |-
-          [if(pueblo(%#),[tagwrap(a,xch_cmd="+wiki %1" xch_hint="%2",%0)],[ansi(hc,%0)])]
+          [ansi(hc,[cmdtag(%#,%0,+wiki %1,%2)])]
         flags: [funsyntax]
 
       INC`DISPLAY`ERROR:
@@ -98,10 +104,9 @@ objects:
           not(wiki(%0,tags))
         flags: [funsyntax]
 
-      # xch_cmd requires the Send_OOB @power; without it the ref still prints.
       FUN`DISPLAY`REF:
         value: |-
-          [@@(%0 a page reference — clickable where the client can take a command)][if(pueblo(%#),[tagwrap(a,xch_cmd="+wiki %0" xch_hint="Read %0",%0)],%0)]
+          [@@(%0 a page reference — clickable where the client can take a command)][cmdtag(%#,%0,+wiki %0,Read %0)]
         flags: [funsyntax]
       FUN`DISPLAY`ROW:
         value: |-
@@ -183,3 +188,41 @@ objects:
         value: |-
           $^\+wiki/audit$:@include %!/INC`IS`ADMIN; think [setq(published,wikilist())]; @assert %q<published>=@include %!/INC`DISPLAY`INFO=No published pages to audit yet.; think [setq(uncategorised,filterq(categorised,%!/FUN`IS`UNCATEGORISED,%q<published>),untagged,filterq(tagged,%!/FUN`IS`UNTAGGED,%q<published>))]; @pemit %#=[u(%!/FUN`DISPLAY`AUDIT,%q<published>,%q<uncategorised>,%q<untagged>)]
         flags: [regexp, cmdsyntax]
+
+      # ---- +help topics -------------------------------------------------------
+      # These sit on wiki_global itself, which is fine because it carries no privileged flag — the
+      # librarian cannot u() a privileged object's attribute, so a package whose command object must
+      # be WIZARD (scene's Logger) needs a plain one for its help instead.
+      HELP: |-
+        Reading the wiki from in-game.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`WIKI`AUDIT: |-
+        wiki
+      HELP`WIKI: |-
+        The wiki holds this game's longer-form writing — setting, theme, policy — and `+wiki` reads
+        it without leaving the game. Staff edit it with `@wiki` or through the portal.
+
+        - `+wiki` — what is there, by namespace
+        - `+wiki <page>` — read one, rendered
+        - `+wiki/list [<namespace>]` — every published page, or one namespace's
+        - `+wiki/search <text>` — pages matching the text
+        - `+wiki/recent [<n>]` — what changed lately
+        - `+wiki/info <page>` — a page's title, category, tags and revision
+
+        A page is named `<namespace>:<category>:<slug>`, and long listings page with `=<n>`:
+        `+wiki/list main=2`.
+
+        Drafts are invisible here — a page appears once it is published.
+      HELP`WIKI`AUDIT: |-
+        `+wiki/audit` is a staff verb. It counts the published pages and lists the ones missing a
+        category or tags, which is what makes a wiki hard to navigate as it grows.
+
+        It sees published pages only. For drafts, use `@wiki/list`.
+
+  # ---- +help registration -----------------------------------------------------
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`WIKI-READER: |-
+        {{wiki_global}}

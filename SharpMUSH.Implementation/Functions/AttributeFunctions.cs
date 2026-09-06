@@ -35,6 +35,33 @@ public partial class Functions
 				}));
 	}
 
+	/// <summary>
+	/// The <c>"&lt;object&gt;/&lt;attr&gt; - Set."</c> confirmation <c>attrib_set()</c> prints:
+	/// <c>fun_attrib_set</c> passes <c>0x01</c> to <c>do_set_atr</c> (<c>src/fundb.c:2294-2300</c>),
+	/// the flag that asks for this line (<c>src/attrib.c:2446-2452</c>). It goes to the EXECUTOR,
+	/// and is suppressed by a QUIET player, a QUIET object they own, or a <c>quiet</c> attribute.
+	/// Failures come back as the return value instead.
+	/// </summary>
+	private static async ValueTask NotifyOfSet(AnySharpObject executor, AnySharpObject thing, string attribute,
+		bool succeeded, bool wasSet)
+	{
+		if (!succeeded || await thing.Object().AreQuietAsync(executor))
+		{
+			return;
+		}
+
+		// Read back the attribute that was just written, as Penn does, so its own quiet flag counts.
+		var written = await AttributeService!.GetAttributeAsync(executor, thing, attribute,
+			mode: IAttributeService.AttributeMode.Read, parent: false);
+		if (written is { IsAttribute: true } && written.AsAttribute.Last().IsQuiet())
+		{
+			return;
+		}
+
+		await NotifyService!.Notify(executor,
+			$"{thing.Object().Name}/{attribute.ToUpperInvariant()} - {(wasSet ? "Set" : "Cleared")}.");
+	}
+
 	[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute"])]
 	public static async ValueTask<CallState> AttributeSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -45,7 +72,6 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitObjectAndAttr(MModule.plainText(args["0"].Message!));
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
 		if (!split.TryPickT0(out var details, out _))
@@ -64,11 +90,7 @@ public partial class Functions
 
 				var setResult = await AttributeService!.SetAttributeAsync(executor, realLocated, attribute, contents);
 
-				await NotifyService!.Notify(enactor,
-					setResult.Match(
-						_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
-						failure => failure.Value)
-				);
+				await NotifyOfSet(executor, realLocated, attribute, setResult.IsT0, args.ContainsKey("1"));
 
 				return new CallState(setResult.Match(
 					_ => string.Empty,
@@ -86,7 +108,6 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitObjectAndAttr(MModule.plainText(args["0"].Message!));
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (!split.TryPickT0(out var details, out _))
@@ -105,11 +126,7 @@ public partial class Functions
 
 				var setResult = await AttributeService!.SetAttributeAsync(executor, realLocated, attribute, contents);
 
-				await NotifyService!.Notify(enactor,
-					setResult.Match(
-						_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
-						failure => failure.Value)
-				);
+				await NotifyOfSet(executor, realLocated, attribute, setResult.IsT0, args.ContainsKey("1"));
 
 				return new CallState(setResult.Match(
 					_ => $"{realLocated.Object().Name}/{args["0"].Message}",

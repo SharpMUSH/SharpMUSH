@@ -1,6 +1,6 @@
 format: 1
 package: who-where
-version: 1.2.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+who and +where commands with a shared formatting object."
 license: MIT
@@ -8,6 +8,20 @@ homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [who, where, social]
 convention_prefix: WW_
 requires_server: ">=0.1"
+
+depends:
+  - package: common-functions
+    version: ">=1.2"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/common-functions/
+      branch: main
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
 
 objects:
   - ref: ww_global
@@ -25,5 +39,40 @@ objects:
     name: Who-Where Function Object
     flags: [no_command]
     attributes:
+      # header() is common-functions'. The hand-rolled rule this replaces was a fixed 76 columns
+      # whatever the reader's screen was, so it wrapped on a narrow client and stopped short on a
+      # wide one; header() sizes from width(%#).
       WW_FN_HEADER: |-
-        [repeat(=,5)]%b%0%b[repeat(=,70)]
+        [header(%0,width(%#))]
+
+  # ---- +help topics ---------------------------------------------------------
+  # On the function object, which is unflagged — the librarian cannot u() a privileged object's
+  # attribute. See plus-help's README for that rule and for how an evaluated body is escaped.
+  - ref: ww_help
+    type: thing
+    name: Who-Where Help
+    attributes:
+      HELP: |-
+        Seeing who is connected and where they are.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`WHO: |-
+        where
+      SEE`WHERE: |-
+        who
+      HELP`WHO: |-
+        `+who` lists everyone connected and how long each has been idle.
+
+        It shows what a mortal may see, so anyone hiding from the who list is absent from yours as
+        well as from theirs.
+      HELP`WHERE: |-
+        `+where` lists everyone connected and the room each is standing in.
+
+        A player in an unfindable room, or one who has made themselves unfindable, is listed without
+        a location rather than being hidden outright.
+
+  - ref: ww_help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`WHO-WHERE: |-
+        {{ww_help}}

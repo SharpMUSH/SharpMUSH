@@ -144,6 +144,16 @@ public class UtilityFunctionUnitTests
 	[Arguments("isint(abc)", "0")]
 	[Arguments("isint(12.34)", "0")]
 	[Arguments("isint()", "0")]
+	// 64-bit, as fun_isint is: it reads with parse_ival_full, which is parse_int64
+	// (src/funmath.c:82-84, 1408-1416). Parsing as a 32-bit int answered 0 for every value above
+	// 2147483647 — a millisecond timestamp among them — while add(), sub() and div() all treated
+	// the same value as an integer.
+	[Arguments("isint(2147483647)", "1")]
+	[Arguments("isint(2147483648)", "1")]
+	[Arguments("isint(1788678403736)", "1")]
+	[Arguments("isint(9223372036854775807)", "1")]
+	[Arguments("isint(-9223372036854775808)", "1")]
+	[Arguments("isint(9223372036854775808)", "0")]
 	public async Task Isint(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -388,6 +398,57 @@ public class UtilityFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// Nesting semantics, asserted against the worked examples in <c>help ITEXT2</c>: level 0 is the
+	/// CURRENT (innermost) iteration, level 1 the one it is nested in, and "L" — equivalently
+	/// <c>itext(ilev())</c> — the outermost. <c>%i&lt;n&gt;</c> is documented as an alias for
+	/// <c>itext(&lt;n&gt;)</c>, so the two must agree.
+	///
+	/// <para>They did not. <c>itext()</c>/<c>inum()</c> reverse-indexed a stack that already
+	/// enumerates innermost-first, so <c>itext(0)</c> answered the OUTERMOST iteration and
+	/// <c>itext(ilev())</c> the innermost — the exact opposite of both the helpfile and
+	/// <c>%i&lt;n&gt;</c>, which indexes the same stack directly.</para>
+	/// </summary>
+	[Test]
+	[Arguments("iter(red blue green,iter(fish shoe,%i1:%i0))",
+		"red:fish red:shoe blue:fish blue:shoe green:fish green:shoe")]
+	[Arguments("iter(red blue green,iter(fish shoe,[itext(1)]:[itext(0)]))",
+		"red:fish red:shoe blue:fish blue:shoe green:fish green:shoe")]
+	[Arguments("iter(red blue green,iter(fish shoe,inum(0):[itext(0)]))",
+		"1:fish 2:shoe 1:fish 2:shoe 1:fish 2:shoe")]
+	[Arguments("iter(red blue green,iter(fish shoe,inum(ilev()):[itext(1)]))",
+		"1:red 1:red 2:blue 2:blue 3:green 3:green")]
+	[Arguments("iter(red blue green,iter(fish shoe,%iL))", "red red blue blue green green")]
+	[Arguments("iter(red blue green,iter(fish shoe,[itext(L)]))", "red red blue blue green green")]
+	// ## and #@ are rewritten to %iL by iter()/foreach()/@dolist, so a nested one names the
+	// OUTERMOST loop — help ITEXT2's first worked example.
+	[Arguments("iter(red blue green,iter(fish shoe,##))", "red red blue blue green green")]
+	[Arguments("iter(a b,ilev())", "0 0")]
+	[Arguments("iter(a,iter(b,ilev()))", "1")]
+	public async Task ITextAndINum_CountFromTheInnermostIteration(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// <c>%iL</c> hands back the register itself, colour and all. It used to interpolate the register
+	/// into a string, which flattens an <c>MString</c> to its plain text, so <c>iter(ansi(...),%iL)</c>
+	/// lost the colour that <c>%i0</c> — the same register, read the other way — kept.
+	/// </summary>
+	[Test]
+	[Arguments("%iL")]
+	[Arguments("%i0")]
+	[Arguments("[itext(L)]")]
+	public async Task TheOutermostIterationRegister_KeepsItsMarkup(string substitution)
+	{
+		var result = (await Parser.FunctionParse(MModule.single($"iter([ansi(+red,coloured)],{substitution})")))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("coloured");
+		await Assert.That(result.ToString()).Contains("\u001b[")
+			.Because("the register carries the colour, and reading it must not flatten it to plain text");
 	}
 
 	[Test]

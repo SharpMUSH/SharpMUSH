@@ -735,9 +735,14 @@ public partial class Functions
 		return new CallState(!(await Mediator!.Send(new GetObjectNodeQuery(parsed.AsValue()))).IsNone);
 	}
 
+	/// <summary>
+	/// 64-bit, as <c>fun_isint</c> is (<c>parse_ival_full</c> = <c>parse_int64</c>,
+	/// <c>src/funmath.c:82-84</c>). A 32-bit parse said no to every value above 2147483647 that
+	/// <c>add()</c>, <c>sub()</c> and <c>div()</c> all handled as an integer.
+	/// </summary>
 	[SharpFunction(Name = "isint", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IsInt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult<CallState>(new(int.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
+		ValueTask.FromResult<CallState>(new(long.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
 
 	[SharpFunction(Name = "isnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IsNum(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
@@ -817,9 +822,9 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 		}
 
-		// Iteration registers are stored innermost-first (stack top = current iteration),
-		// so level 0 = current (top), level 1 = parent, etc. requires reverse indexing.
-		var value = parser.CurrentState.IterationRegisters.ElementAt(maxCount - level - 1).Value;
+		// The stack enumerates innermost-first, so the level IS the index: 0 = current, 1 = parent.
+		// The "L" branch above takes the other end, which is what itext(ilev()) resolves to.
+		var value = parser.CurrentState.IterationRegisters.ElementAt(level).Value;
 		return ValueTask.FromResult(new CallState(value));
 	}
 

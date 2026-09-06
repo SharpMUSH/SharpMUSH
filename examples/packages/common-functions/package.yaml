@@ -1,16 +1,16 @@
 format: 1
 package: common-functions
-version: 1.1.0
+version: 1.4.0
 authors: [SharpMUSH]
-description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional title, justified center (default) / left / right."
+description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional title, justified center (default) / left / right — and cmdtag(), a clickable command link."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [ui, formatting, functions]
 requires_server: ">=0.1"
 
 # Create mode: a single owned thing carries the softcode the global functions evaluate. AINSTALL
-# registers header()/footer()/line() once at install; STARTUP re-registers them on every boot (the
-# global-function registry is in-memory).
+# registers them once at install; STARTUP re-registers them on every boot (the global-function
+# registry is in-memory) by walking the FUN` tree, so adding one is adding its subtree.
 #
 # Each function is self-describing via its FUN` attribute subtree:
 #   FUN`<NAME>                  — the function body (a dispatcher for justified variants)
@@ -68,6 +68,28 @@ objects:
       FUN`LINE`MAXARGS: |-
         2
 
+      # cmdtag(<person>, <visible>, <command>[, <hint>]) — text that runs <command> when clicked.
+      #
+      # <person> is WHO IS READING, passed rather than taken from %#: the object rendering a line is
+      # often not the enactor — a global building one row per occupant, an attribute evaluated on
+      # someone else's behalf — so %# would name the wrong client to ask about.
+      #
+      # tagwrap() writes the anchor as Pueblo/MXP markup, which a client understanding neither would
+      # show literally, so the capability is asked for rather than assumed and everyone else gets
+      # plain <visible> back. No colour is applied: that is the caller's decision.
+      #
+      # Command and hint go into QUOTED attributes, so both are entity-encoded through
+      # FUN`CMDTAG`ATTR — a bare quote in `say "hi"` would close xch_cmd early. & before ", or the
+      # ampersand of &quot; is encoded again.
+      FUN`CMDTAG: |-
+        [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,xch_cmd="[u(%!/FUN`CMDTAG`ATTR,%2)]" xch_hint="[u(%!/FUN`CMDTAG`ATTR,if(strlen(%3),%3,%2))]",%1)],%1)]
+      FUN`CMDTAG`ATTR: |-
+        [edit(%0,&,&amp;,",&quot;)]
+      FUN`CMDTAG`MINARGS: |-
+        3
+      FUN`CMDTAG`MAXARGS: |-
+        4
+
       # AINSTALL (once): just run STARTUP. The function body u()s its own object's FUN`<NAME>`DISPLAY`<TYPE>
       # leaf, which is safe for ANY caller: a global @function "runs as the backing object, with its
       # powers" (PennMUSH `help @function2`, and SharpMUSH matches this — SharpMUSHParserVisitor evaluates
@@ -75,7 +97,15 @@ objects:
       # OWN attribute regardless of who called header()/footer().
       AINSTALL: |-
         @trigger %!/STARTUP
-      # STARTUP (every boot): re-establish the in-memory global-function registrations, reading each
-      # function's arg counts from its MINARGS/MAXARGS leaf (one source of truth).
+      # STARTUP (every boot): re-establish the in-memory global-function registrations by WALKING the
+      # FUN` tree, not by naming each function again here.
+      #
+      # lattr(FUN`*) lists the branch heads only — "*" does not cross a backtick — so FUN`HEADER is
+      # listed and FUN`HEADER`MINARGS below it is not. Adding a function is adding its subtree, and
+      # one cannot be half-added: declared as a subtree but forgotten in a registration list.
+      #
+      # after(%iL,FUN`), not rest(%iL,`): the backtick is part of one attribute name, not a list
+      # delimiter, so the name is cut at a known prefix instead of split on it. %iL, not ##: ## is
+      # spliced in as TEXT before evaluation; %iL substitutes the value.
       STARTUP: |-
-        @function header=%!,FUN`HEADER,[get(%!/FUN`HEADER`MINARGS)],[get(%!/FUN`HEADER`MAXARGS)]; @function footer=%!,FUN`FOOTER,[get(%!/FUN`FOOTER`MINARGS)],[get(%!/FUN`FOOTER`MAXARGS)]; @function line=%!,FUN`LINE,[get(%!/FUN`LINE`MINARGS)],[get(%!/FUN`LINE`MAXARGS)]
+        @dolist [lattr(%!/FUN`*)]={@function [lcstr(after(%iL,FUN`))]=%!,%iL,[get(%!/%iL`MINARGS)],[get(%!/%iL`MAXARGS)]}

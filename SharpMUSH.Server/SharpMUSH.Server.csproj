@@ -146,6 +146,10 @@
       <Link>BundledPackages\common-functions.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.common-functions.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\plus-help\package.yaml">
+      <Link>BundledPackages\plus-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.plus-help.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\scene\package.yaml">
       <Link>BundledPackages\scene.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene.package.yaml</LogicalName>

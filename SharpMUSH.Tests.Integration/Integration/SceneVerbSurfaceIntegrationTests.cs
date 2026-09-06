@@ -76,7 +76,7 @@ public class SceneVerbSurfaceIntegrationTests
 	{
 		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var objects = await registry.GetPackageObjectsAsync("scene");
-		return PackageInstallService.ParseObjid(objects.Single().Objid)!.Value.ToString();
+		return PackageInstallService.ParseObjid(objects.Single(o => o.Ref == "logger").Objid)!.Value.ToString();
 	}
 
 	/// <summary>The Logger's $-commands only match from the master room; other suites move it.</summary>
@@ -117,23 +117,33 @@ public class SceneVerbSurfaceIntegrationTests
 	}
 
 	/// <summary>
-	/// A wizard is deliberately allowed to administer anyone's scene — FUN`OWNS grants it — so the
-	/// refusal above must be about the missing focus, not about permission. Focused, the same command
-	/// works on a scene the wizard does not own.
+	/// A wizard is deliberately allowed to administer anyone's scene — <c>FUN`OWNS</c> grants it —
+	/// so the refusal above must be about the missing focus, not about permission. Focused, the same
+	/// command works on a scene the wizard does not own.
 	/// </summary>
+	/// <remarks>
+	/// Driven by a WIZARD character, not by God. #1 is root: it passes every lock whatever the
+	/// softcode says, so running this as God would pass even if <c>FUN`OWNS</c> granted wizards
+	/// nothing at all — which is the one thing this test exists to establish.
+	/// </remarks>
 	[Test]
 	public async Task AWizardFocusedOnAnotherPlayersScene_CanStillAdministerIt()
 	{
 		await PutLoggerInMasterRoomAsync();
 		const long ownerHandle = 9501;
+		const long wizardHandle = 9504;
 		await CreatePlayerAsync($"Perr{Tag}", ownerHandle);
+		var wizard = await CreatePlayerAsync($"Wiz{Tag}", wizardHandle);
+		await God1($"@set {wizard}=WIZARD");
+		await Assert.That(await Eval($"orflags({wizard},Wr)")).IsEqualTo("1")
+			.Because("the character has to actually be a wizard for this to test anything");
 
 		await RunAs(ownerHandle, $"+scene/create Perr Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
 		await Assert.That(sceneId).DoesNotStartWith("#-1");
 
-		await God1($"+scene/join {sceneId}");
-		await God1("+scene/pitch A wizard was here.");
+		await RunAs(wizardHandle, $"+scene/join {sceneId}");
+		await RunAs(wizardHandle, "+scene/pitch A wizard was here.");
 
 		await Assert.That(await Eval($"scene({sceneId},summary)")).IsEqualTo("A wizard was here.");
 	}
