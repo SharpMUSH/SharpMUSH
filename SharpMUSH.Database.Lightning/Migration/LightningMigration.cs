@@ -8,6 +8,7 @@ namespace SharpMUSH.Database.Lightning;
 public sealed partial class LightningDatabase
 {
 	private const string InitialSeedMigrationId = "0001_initial_seed";
+	private const string AncestorFormatsMigrationId = "0002_ancestor_formats";
 
 	/// <summary>
 	/// Idempotent world seed, run under <see cref="MigrateLock"/>:
@@ -30,6 +31,15 @@ public sealed partial class LightningDatabase
 			{
 				await Store.WriteAsync(ApplyInitialObjectSeed, cancellationToken);
 				await RecordMigrationAsync(InitialSeedMigrationId, cancellationToken);
+			}
+
+			// Runs after the object seed because it writes attributes onto #4 owned by #1, and through
+			// SetAttributeAsync rather than raw puts so all providers seed byte-identical values.
+			var ancestorFormatsApplied = Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("mig:" + AncestorFormatsMigrationId), out _));
+			if (!ancestorFormatsApplied)
+			{
+				await AncestorSeed.SeedAncestorPlayerFormatsAsync(this, cancellationToken);
+				await RecordMigrationAsync(AncestorFormatsMigrationId, cancellationToken);
 			}
 
 			foreach (var source in _migrationSources)

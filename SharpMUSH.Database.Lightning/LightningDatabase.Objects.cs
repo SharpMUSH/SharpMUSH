@@ -625,11 +625,12 @@ public sealed partial class LightningDatabase
 			Locks = MapLocks(record.Locks),
 			Flags = FlagsOf(dbref, type),
 			Powers = PowersOf(dbref),
-			// Attribute reads land in Task 9; every one of these throws until then.
-			Attributes = new(() => throw new NotImplementedException("Attribute reads land in Task 9.")),
-			LazyAttributes = new(() => throw new NotImplementedException("Attribute reads land in Task 9.")),
-			AllAttributes = new(() => throw new NotImplementedException("Attribute reads land in Task 9.")),
-			LazyAllAttributes = new(() => throw new NotImplementedException("Attribute reads land in Task 9.")),
+			// Attributes: the object's own top level, and the whole tree, both streamed from the
+			// dbref-prefixed attr.meta range (see LightningDatabase.Attributes.cs).
+			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(ct => TopLevelAttributesCoreAsync(dbref, ct))),
+			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(ct => TopLevelLazyAttributesCoreAsync(dbref, ct))),
+			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(ct => AllAttributesCoreAsync(dbref, ct))),
+			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(ct => AllLazyAttributesCoreAsync(dbref, ct))),
 			Owner = new(_ => Task.FromResult(GetOwnerCore(dbref))),
 			Parent = new(_ => Task.FromResult(GetOptionalRelatedCore(Tables.Parent.Forward, dbref))),
 			Zone = new(_ => Task.FromResult(GetOptionalRelatedCore(Tables.Zone.Forward, dbref))),
