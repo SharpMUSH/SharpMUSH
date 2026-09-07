@@ -45,7 +45,7 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 			{
 				var regex = isRegex
 					? SoftcodeRegex.Create(pattern, RegexOptions.Compiled)
-					: SoftcodeRegex.Create(MModule.getWildcardMatchAsRegex(MModule.single(pattern)), RegexOptions.Compiled);
+					: SoftcodeRegex.Wildcard(pattern, RegexOptions.Compiled);
 
 				listenAttributes.Add(new ListenAttributeCache(
 					attr,

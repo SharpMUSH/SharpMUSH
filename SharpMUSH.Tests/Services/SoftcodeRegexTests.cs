@@ -68,9 +68,10 @@ public class SoftcodeRegexTests
 	}
 
 	/// <summary>
-	/// The bound exists because the pattern text is player-supplied. Checking the count and then adding
-	/// are two steps, so concurrent misses could each pass the check and insert — leaving the cache over
-	/// its bound for the life of the process, once per race, forever.
+	/// The bound exists because the pattern text is player-supplied. It is a least-recently-used bound,
+	/// not a stop-admitting one: a cache that refuses everything once full would let the first thousand
+	/// patterns a server saw lock out every pattern after them, including the ones actually being used.
+	/// So this both fills it past capacity and then checks a fresh pattern still gets in.
 	/// </summary>
 	[Test]
 	public async Task ConcurrentMissesDoNotPushTheCacheOverItsBound()
@@ -85,6 +86,25 @@ public class SoftcodeRegexTests
 			})));
 
 		await Assert.That(SoftcodeRegex.CachedCount).IsLessThanOrEqualTo(SoftcodeRegex.Capacity);
+
+		// And a pattern arriving after saturation is still admitted, or the cache is useless on any
+		// server that has been up long enough to see a thousand of them. Eventually, not instantly:
+		// MemoryCache compacts on a background thread, and until it has caught up with a burst this
+		// size a Set is simply dropped. Retried rather than slept on, and bounded so it can still fail.
+		var readmitted = false;
+		for (var attempt = 0; attempt < 100 && !readmitted; attempt++)
+		{
+			var first = SoftcodeRegex.Create("^admitted after the flood$", RegexOptions.None);
+			readmitted = ReferenceEquals(first,
+				SoftcodeRegex.Create("^admitted after the flood$", RegexOptions.None));
+			if (!readmitted)
+			{
+				await Task.Delay(20);
+			}
+		}
+
+		await Assert.That(readmitted).IsTrue()
+			.Because("a bound that stops admitting for good would lock out the patterns actually in use");
 	}
 
 	/// <summary>

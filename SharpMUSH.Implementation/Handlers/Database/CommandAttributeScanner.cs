@@ -104,7 +104,7 @@ public static class CommandAttributeScanner
 			{
 				var regex = isRegex
 					? SoftcodeRegex.Create(pattern, RegexOptions.Compiled)
-					: SoftcodeRegex.Create(MModule.getWildcardMatchAsRegex(MModule.single(pattern)), RegexOptions.Compiled);
+					: SoftcodeRegex.Wildcard(pattern, RegexOptions.Compiled);
 
 				commandAttributes.Add(new CommandAttributeCache(
 					attr with { CommandListIndex = commandBodyStart },

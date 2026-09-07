@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+using Microsoft.Extensions.Caching.Memory;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Utilities;
@@ -33,22 +33,29 @@ public static class SoftcodeRegex
 	public static readonly TimeSpan MatchTimeout = TimeSpan.FromMilliseconds(100);
 
 	/// <summary>
-	/// How many compiled patterns to keep. Past this the cache stops admitting new ones rather than
-	/// growing: the excess is recompiled per use, which is the old behaviour and still bounded work.
+	/// How many compiled patterns to keep. The pattern text is player-supplied, so an unbounded map
+	/// keyed by it is a memory leak with a name.
 	/// </summary>
 	public const int Capacity = 1024;
 
+	/// <summary>
+	/// A least-recently-used cache rather than a dictionary with a bound, which is what this was first.
+	/// A dictionary that stops admitting once it is full never admits again: the first thousand
+	/// patterns a server happened to see would hold the cache for its whole life, and the $-command
+	/// every player types a hundred times a day could be locked out by a thousand one-off
+	/// <c>lattr</c> globs from the morning. Compaction evicts the coldest tenth instead, so a hot
+	/// pattern can always get back in.
+	/// </summary>
+	private static readonly MemoryCache Cache = new(new MemoryCacheOptions
+	{
+		SizeLimit = Capacity,
+		CompactionPercentage = 0.1,
+	});
+
+	private static readonly MemoryCacheEntryOptions EntryOptions = new() { Size = 1 };
+
 	/// <summary>How many are held. For the test that the bound holds under concurrent misses.</summary>
 	public static int CachedCount => Cache.Count;
-
-	private static readonly ConcurrentDictionary<(string Pattern, RegexOptions Options), Regex> Cache = new();
-
-	/// <summary>
-	/// Held only across the count-and-admit on a miss. Reading the count and then adding are two steps,
-	/// and concurrent misses could each see room and each insert, putting the cache over its bound for
-	/// the life of the process. Hits never reach it.
-	/// </summary>
-	private static readonly Lock Admission = new();
 
 	/// <summary>
 	/// A regex for <paramref name="pattern"/>, time-bounded and shared with other callers asking for
@@ -57,21 +64,18 @@ public static class SoftcodeRegex
 	/// <exception cref="ArgumentException">The pattern is not a valid regular expression.</exception>
 	public static Regex Create(string pattern, RegexOptions options)
 	{
-		if (Cache.TryGetValue((pattern, options), out var cached))
+		var key = (pattern, options);
+		if (Cache.TryGetValue(key, out Regex? cached) && cached is not null)
 		{
 			return cached;
 		}
 
-		// Built outside the map so an invalid pattern throws to the caller rather than being retried
-		// by every subsequent request, and so the constructor never runs under a dictionary lock.
+		// Built before it is stored so an invalid pattern throws to the caller, and so the constructor
+		// never runs while the cache holds a lock. A concurrent miss on the same key builds a second
+		// instance and one of them wins; they are equivalent, and the loser is collected.
 		var regex = new Regex(pattern, options, MatchTimeout);
-
-		lock (Admission)
-		{
-			return Cache.Count >= Capacity
-				? regex
-				: Cache.GetOrAdd((pattern, options), regex);
-		}
+		Cache.Set(key, regex, EntryOptions);
+		return regex;
 	}
 
 	/// <summary>
@@ -110,4 +114,57 @@ public static class SoftcodeRegex
 			return null;
 		}
 	}
+
+	/// <summary>
+	/// A regex for a MUSH wildcard pattern, matching what PennMUSH's <c>wild_match_test</c>
+	/// (<c>src/wild.c</c>) does with the same pattern: whole-string, case-insensitive, one capture
+	/// register per <c>*</c> or <c>?</c>, and <c>\</c> making the next character literal.
+	/// </summary>
+	/// <remarks>
+	/// A single glob is linear no matter what it is matched against. Two or more can backtrack
+	/// polynomially — a subject the pattern cannot match has to be re-split every way before the engine
+	/// gives up, which measured at 2.3 seconds for six stars over sixty characters — so those, and only
+	/// those, get the non-backtracking engine and its linear guarantee. It costs about half again as
+	/// much per match, which is worth paying to remove seconds and not worth paying on the <c>tes*</c>
+	/// that nearly every real pattern is. <c>Compiled</c> is dropped when it applies, the two being
+	/// mutually exclusive.
+	/// </remarks>
+	/// <param name="caseSensitive">
+	/// PennMUSH takes this as an argument: <c>quick_wild</c> passes 0, so a $-command, an @listen and
+	/// grab() are all case-insensitive, and that is the default here. <c>grep_util</c> passes 1 unless
+	/// the caller used the "i" variant, so wildgrep asks for true.
+	/// </param>
+	public static Regex Wildcard(string wildcardPattern, RegexOptions options = RegexOptions.None,
+		bool caseSensitive = false)
+	{
+		var pattern = MModule.getWildcardMatchAsRegex2(wildcardPattern);
+
+		if (!caseSensitive)
+		{
+			options |= RegexOptions.IgnoreCase;
+		}
+
+		if (GlobGroups(pattern) >= 2)
+		{
+			options = (options & ~RegexOptions.Compiled) | RegexOptions.NonBacktracking;
+		}
+
+		return Create(pattern, options);
+	}
+
+	/// <summary>How many <c>*</c> the pattern turned into, counted on the translated form.</summary>
+	private static int GlobGroups(string pattern)
+	{
+		var count = 0;
+		var at = pattern.IndexOf(GlobGroup, StringComparison.Ordinal);
+		while (at >= 0)
+		{
+			count++;
+			at = pattern.IndexOf(GlobGroup, at + GlobGroup.Length, StringComparison.Ordinal);
+		}
+
+		return count;
+	}
+
+	private const string GlobGroup = "(.*?)";
 }

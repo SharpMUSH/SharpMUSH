@@ -985,7 +985,7 @@ public partial class Commands
 				: string.Empty;
 			var patternRegex = string.IsNullOrEmpty(pattern)
 				? null
-				: SoftcodeRegex.Create(MModule.getWildcardMatchAsRegex2(pattern), RegexOptions.IgnoreCase);
+				: SoftcodeRegex.Wildcard(pattern);
 			var showDisabled = executor.IsGod();
 
 			var output = new System.Text.StringBuilder();

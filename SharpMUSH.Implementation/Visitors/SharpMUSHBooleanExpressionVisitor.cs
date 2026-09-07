@@ -8,6 +8,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Visitors;
 
@@ -47,12 +48,14 @@ public class SharpMUSHBooleanExpressionVisitor(
 		=> dbRef.Object().Type == type;
 
 	// For name matching, we need to convert the pattern to regex outside the expression tree
-	// because MModule.getWildcardMatchAsRegex2 cannot be compiled into an expression tree
+	// because MModule.getWildcardMatchAsRegex2 cannot be compiled into an expression tree.
+	// A lock is evaluated on every movement and every permission check, so the pattern is built once
+	// and shared rather than rebuilt per evaluation, and it carries the wildcard match bound with it.
 	private bool MatchesName(AnySharpObject dbRef, string pattern)
 	{
-		var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
-		return Regex.IsMatch(dbRef.Object().Name, regexPattern, RegexOptions.IgnoreCase)
-			|| (dbRef.Aliases != null && dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), regexPattern, RegexOptions.IgnoreCase)));
+		var regex = SoftcodeRegex.Wildcard(pattern);
+		return SoftcodeRegex.IsMatch(regex, dbRef.Object().Name)
+			|| (dbRef.Aliases != null && dbRef.Aliases.Any(alias => SoftcodeRegex.IsMatch(regex, alias.Trim())));
 	}
 
 	private static readonly string[] defaultStringArrayValue = [];
@@ -392,8 +395,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 						var actualIp = MModule.plainText(attributes.First().Value);
 
 						// Use wildcard matching for IP pattern
-						var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
-						return Regex.IsMatch(actualIp, regexPattern, RegexOptions.IgnoreCase);
+						return SoftcodeRegex.IsMatch(SoftcodeRegex.Wildcard(pattern), actualIp);
 					},
 					none => false,
 					error => false
@@ -566,8 +568,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 					}
 					else if (expectedValue.Contains('*') || expectedValue.Contains('?'))
 					{
-						var pattern = MModule.getWildcardMatchAsRegex2(expectedValue);
-						return Regex.IsMatch(actualValue, pattern, RegexOptions.IgnoreCase);
+						return SoftcodeRegex.IsMatch(SoftcodeRegex.Wildcard(expectedValue), actualValue);
 					}
 					else
 					{

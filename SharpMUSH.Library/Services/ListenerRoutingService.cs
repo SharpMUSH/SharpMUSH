@@ -129,9 +129,7 @@ public class ListenerRoutingService(
 		if (!passesListenLock)
 			return;
 
-		var regex = SoftcodeRegex.Create(
-			MModule.getWildcardMatchAsRegex(MModule.single(listenPattern)),
-			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+		var regex = SoftcodeRegex.Wildcard(listenPattern);
 
 		// Not the raw IsMatch: a LISTEN pattern that cannot finish must not take the puppet relay below
 		// down with it, and NotifyService would swallow the exception without either happening.

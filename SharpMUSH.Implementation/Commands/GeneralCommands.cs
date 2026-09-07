@@ -4778,8 +4778,7 @@ public partial class Commands
 				}
 				else
 				{
-					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
-					var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.None);
+					var regex = SoftcodeRegex.Wildcard(pattern);
 					matches = SoftcodeRegex.IsMatch(regex, testString);
 				}
 
@@ -4976,8 +4975,7 @@ public partial class Commands
 				var trimmedPattern = pattern.Trim();
 				if (string.IsNullOrEmpty(trimmedPattern)) continue;
 
-				var regexPattern = MModule.getWildcardMatchAsRegex2(trimmedPattern);
-				var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.None);
+				var regex = SoftcodeRegex.Wildcard(trimmedPattern);
 
 				if (SoftcodeRegex.IsMatch(regex, testString))
 				{
@@ -6153,9 +6151,10 @@ public partial class Commands
 			{
 				try
 				{
-					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
-					var regexOptions = isNoCase ? System.Text.RegularExpressions.RegexOptions.IgnoreCase : System.Text.RegularExpressions.RegexOptions.None;
-					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, regexPattern, regexOptions, TimeSpan.FromSeconds(1));
+					// grep_util passes cs = ((flags & GREP_NOCASE) == 0), so the wildcard grep is
+					// case-SENSITIVE unless this is the "i" variant — unlike every other wildcard in
+					// the game, which goes through quick_wild and its cs = 0.
+					matches = SoftcodeRegex.Wildcard(pattern, caseSensitive: !isNoCase).IsMatch(attrValue);
 				}
 				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 				{
