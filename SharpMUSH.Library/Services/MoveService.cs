@@ -194,7 +194,7 @@ public class MoveService(
 			return false;
 		}
 
-		if (!permissionService.PassesLock(who, dest, LockType.Enter))
+		if (!await permissionService.PassesLock(who, dest, LockType.Enter))
 		{
 			return false;
 		}
@@ -222,7 +222,7 @@ public class MoveService(
 			if (!locQuery.IsNone)
 			{
 				var locObj = locQuery.Known;
-				if (!permissionService.PassesLock(who, locObj, LockType.Leave))
+				if (!await permissionService.PassesLock(who, locObj, LockType.Leave))
 				{
 					return false;
 				}

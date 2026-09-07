@@ -1205,7 +1205,7 @@ public partial class Functions
 		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
-			if (!LockService.Evaluate(LockType.Zone, zone, executor))
+			if (!await LockService.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
@@ -1261,7 +1261,7 @@ public partial class Functions
 		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
-			if (!LockService.Evaluate(LockType.Zone, zone, executor))
+			if (!await LockService.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
@@ -1316,7 +1316,7 @@ public partial class Functions
 		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
-			if (!LockService.Evaluate(LockType.Zone, zone, executor))
+			if (!await LockService.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}

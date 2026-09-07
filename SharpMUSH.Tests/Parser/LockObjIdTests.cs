@@ -36,7 +36,7 @@ public class LockObjIdTests
 		await Assert.That(bep.Validate(lockString, god)).IsTrue();
 
 		// Should match the object (ignoring creation time since lock doesn't specify it)
-		await Assert.That(bep.Compile(lockString)(god, testObj)).IsTrue();
+		await Assert.That(await bep.Compile(lockString)(god, testObj)).IsTrue();
 	}
 
 	[Test]
@@ -57,7 +57,7 @@ public class LockObjIdTests
 		await Assert.That(bep.Validate(lockString, god)).IsTrue();
 
 		// Should match the object (both number and creation time match)
-		await Assert.That(bep.Compile(lockString)(god, testObj)).IsTrue();
+		await Assert.That(await bep.Compile(lockString)(god, testObj)).IsTrue();
 	}
 
 	[Test]
@@ -79,7 +79,7 @@ public class LockObjIdTests
 		await Assert.That(bep.Validate(lockString, god)).IsTrue();
 
 		// Should NOT match the object (creation time differs)
-		await Assert.That(bep.Compile(lockString)(god, testObj)).IsFalse();
+		await Assert.That(await bep.Compile(lockString)(god, testObj)).IsFalse();
 	}
 
 	[Test]
@@ -104,7 +104,7 @@ public class LockObjIdTests
 		await Assert.That(bep.Validate(lockString, lockHolder)).IsTrue();
 
 		// Should match the object (ignoring creation time since list has bare dbref)
-		await Assert.That(bep.Compile(lockString)(lockHolder, testObj)).IsTrue();
+		await Assert.That(await bep.Compile(lockString)(lockHolder, testObj)).IsTrue();
 	}
 
 	[Test]
@@ -131,7 +131,7 @@ public class LockObjIdTests
 		await Assert.That(bep.Validate(lockString, lockHolder)).IsTrue();
 
 		// Should match the object (both number and creation time match)
-		await Assert.That(bep.Compile(lockString)(lockHolder, testObj)).IsTrue();
+		await Assert.That(await bep.Compile(lockString)(lockHolder, testObj)).IsTrue();
 	}
 
 	[Test]
@@ -159,7 +159,7 @@ public class LockObjIdTests
 		await Assert.That(bep.Validate(lockString, lockHolder)).IsTrue();
 
 		// Should NOT match the object (creation time differs)
-		await Assert.That(bep.Compile(lockString)(lockHolder, testObj)).IsFalse();
+		await Assert.That(await bep.Compile(lockString)(lockHolder, testObj)).IsFalse();
 	}
 
 	[Test]
@@ -191,10 +191,10 @@ public class LockObjIdTests
 
 		await Assert.That(bep.Validate(lockString, lockHolder)).IsTrue();
 
-		await Assert.That(bep.Compile(lockString)(lockHolder, testObj1)).IsTrue();
-		await Assert.That(bep.Compile(lockString)(lockHolder, testObj2)).IsTrue();
+		await Assert.That(await bep.Compile(lockString)(lockHolder, testObj1)).IsTrue();
+		await Assert.That(await bep.Compile(lockString)(lockHolder, testObj2)).IsTrue();
 
 		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
-		await Assert.That(bep.Compile(lockString)(lockHolder, god)).IsFalse();
+		await Assert.That(await bep.Compile(lockString)(lockHolder, god)).IsFalse();
 	}
 }

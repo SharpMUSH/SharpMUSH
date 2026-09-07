@@ -9,11 +9,11 @@ public interface ILockService
 
 	Dictionary<string, LockService.LockFlags> SystemLocks { get; }
 
-	bool Evaluate(string lockString, AnySharpObject gated, AnySharpObject unlocker);
+	ValueTask<bool> Evaluate(string lockString, AnySharpObject gated, AnySharpObject unlocker);
 
-	bool Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker);
+	ValueTask<bool> Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker);
 
-	bool Evaluate(LockType standardType, AnySharpObject gated, AnySharpObject unlocker);
+	ValueTask<bool> Evaluate(LockType standardType, AnySharpObject gated, AnySharpObject unlocker);
 
 	bool Validate(string lockString, AnySharpObject lockee);
 

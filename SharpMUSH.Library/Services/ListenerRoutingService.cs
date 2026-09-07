@@ -126,7 +126,7 @@ public class ListenerRoutingService(
 		if (string.IsNullOrWhiteSpace(listenPattern))
 			return;
 
-		var passesListenLock = lockService.Evaluate(LockType.Listen, listener, speaker);
+		var passesListenLock = await lockService.Evaluate(LockType.Listen, listener, speaker);
 		if (!passesListenLock)
 			return;
 
@@ -192,10 +192,10 @@ public class ListenerRoutingService(
 		if (!hasMonitor)
 			return;
 
-		var passesUseLock = lockService.Evaluate(LockType.Use, listener, speaker);
-		var passesListenLock = lockService.Evaluate(LockType.Listen, listener, speaker);
-
-		if (!passesUseLock || !passesListenLock)
+		// Both locks have to pass, so a failing Use lock settles it — and a lock evaluation is now a
+		// chain of awaited reads, not a field test, so the second one is worth not asking for.
+		if (!await lockService.Evaluate(LockType.Use, listener, speaker)
+				|| !await lockService.Evaluate(LockType.Listen, listener, speaker))
 			return;
 
 		var matches = await patternMatcher.MatchListenPatternsAsync(listener, message, speaker);

@@ -378,7 +378,7 @@ public partial class Functions
 			return "0";
 		}
 
-		var passes = LockService.Evaluate(lockString, targetObj, executor);
+		var passes = await LockService.Evaluate(lockString, targetObj, executor);
 		return new CallState(passes ? "1" : "0");
 	}
 
@@ -1959,16 +1959,16 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, victimName, LocateFlags.All,
-			victim =>
+			async victim =>
 			{
 				if (!LockService.Validate(lockString, executor))
 				{
-					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidLock));
+					return new CallState(ErrorMessages.Returns.InvalidLock);
 				}
 
 				// Evaluate the lock: does victim pass the lock expression?
-				var passes = LockService.Evaluate(lockString, executor, victim);
-				return ValueTask.FromResult(new CallState(passes ? "1" : "0"));
+				var passes = await LockService.Evaluate(lockString, executor, victim);
+				return new CallState(passes ? "1" : "0");
 			});
 	}
 

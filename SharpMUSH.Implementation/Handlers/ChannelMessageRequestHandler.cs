@@ -58,7 +58,7 @@ public class ChannelMessageRequestHandler(
 				var mogrifierObj = mogrifierResult.Known();
 				var source = notification.Source.IsNone ? mogrifierObj : notification.Source.Known();
 
-				var passesUseLock = permissionService.PassesLock(source, mogrifierObj, LockType.Use);
+				var passesUseLock = await permissionService.PassesLock(source, mogrifierObj, LockType.Use);
 
 				if (passesUseLock)
 				{

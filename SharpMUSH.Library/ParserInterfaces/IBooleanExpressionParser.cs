@@ -4,7 +4,7 @@ namespace SharpMUSH.Library.ParserInterfaces;
 
 public interface IBooleanExpressionParser
 {
-	Func<AnySharpObject, AnySharpObject, bool> Compile(string text);
+	Func<AnySharpObject, AnySharpObject, ValueTask<bool>> Compile(string text);
 	bool Validate(string text, AnySharpObject lockee);
 	void InvalidateCache(string? text = null);
 

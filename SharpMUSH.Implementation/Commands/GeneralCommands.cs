@@ -1510,7 +1510,7 @@ public partial class Commands
 		var destinationFlags = await destination.Object().Flags.Value.ToArrayAsync();
 
 		return destinationFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase))
-					 && LockService.Evaluate(LockType.Link, destination, exitObject);
+					 && await LockService.Evaluate(LockType.Link, destination, exitObject);
 	}
 
 	[SharpCommand(Name = "GOTO", Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
@@ -1717,7 +1717,7 @@ public partial class Commands
 
 						if (!sourceZoneDbRef.Equals(destZoneDbRef))
 						{
-							if (!LockService.Evaluate(LockType.Zone, sourceObj, executor))
+							if (!await LockService.Evaluate(LockType.Zone, sourceObj, executor))
 							{
 								await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoZoneTeleport), executor);
 								continue;
@@ -1732,7 +1732,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				var destObj = destinationContainer.WithExitOption();
-				if (!LockService.Evaluate(LockType.TPort, destObj, executor))
+				if (!await LockService.Evaluate(LockType.TPort, destObj, executor))
 				{
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed), executor);
 					continue;
@@ -5513,7 +5513,7 @@ public partial class Commands
 		}
 
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
-		if (!LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
+		if (!await LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
 			return CallState.Empty;
